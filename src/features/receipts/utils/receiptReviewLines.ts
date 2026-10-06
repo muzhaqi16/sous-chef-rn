@@ -1,5 +1,5 @@
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
-import type { ParsedReceipt } from './structureReceipt';
+import type { ParsedReceipt } from './parsedReceipt';
 import { toCents } from './money';
 
 /** One bought product as the review list shows it. */

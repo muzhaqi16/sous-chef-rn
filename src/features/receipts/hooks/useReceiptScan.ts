@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 import DocumentScanner, {
   ResponseType,
   ScanDocumentResponseStatus,
@@ -21,8 +22,9 @@ import { redactReceiptText } from '../utils/redactReceiptText';
 import { readReceiptDate } from '../utils/receiptDate';
 import { todayKey } from '#/utils/dateUtils';
 import { getDeviceDateOrder } from '#/utils/deviceLocale';
-import type { ParsedReceipt } from '../utils/structureReceipt';
+import type { ParsedReceipt } from '../utils/parsedReceipt';
 import { parseReceiptOnDevice } from '../utils/onDeviceReceiptParser';
+import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   useReceiptDraft,
   useReceiptDraftActions,
@@ -81,6 +83,11 @@ interface UseReceiptScanOptions {
 export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const draft = useReceiptDraft();
   const { saveDraft, clearDraft } = useReceiptDraftActions();
+  const client = useApolloClient();
+  // A new scan or a discard ends the saved receipt, and its lookups with it.
+  const endSaved = () => {
+    if (draft) forgetReceipt(client.cache, draft.serverParse?.id);
+  };
   const [phase, setStatus] = useState<ReceiptScanStatus>('idle');
   // The draft store hydrates asynchronously, so a saved draft can arrive after
   // the first render; it is read on every render, never only as a seed.
@@ -138,6 +145,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       scannedAt: new Date().toISOString(),
       ...(purchasedOn ? { purchasedOn } : {}),
     };
+    endSaved();
     saveDraft(next);
 
     let parsed: ParsedReceipt | null = null;
@@ -237,6 +245,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       setStatus('failed');
       return;
     }
+    endSaved();
     saveDraft({
       pages: [],
       photoKeys: keys,
@@ -254,6 +263,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   };
 
   const discard = () => {
+    endSaved();
     clearDraft();
     setFromLibrary(false);
     setStatus('idle');

@@ -7,7 +7,7 @@ import {
   type MockDataFor,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { useAddScannedItem } from '../useAddScannedItem';
 
@@ -229,5 +229,65 @@ describe('restocking the row a scan duplicated', () => {
         fragment: VERSION,
       })?.version,
     ).toBe(5);
+  });
+
+  describe('what one scanned container restocks', () => {
+    const heldIn = (type: UnitType, unitId: string) => {
+      const cache = cacheWithRow(3);
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
+        fragment: gql`
+          fragment _RestockStackUnit on PantryItem {
+            id
+            unit {
+              id
+              type
+              symbol
+            }
+          }
+        `,
+        data: {
+          __typename: 'PantryItem',
+          id: ROW_ID,
+          unit: { __typename: 'Unit', id: unitId, type, symbol: unitId },
+        },
+      });
+      return cache;
+    };
+    const firedAmount = async (
+      cache: ReturnType<typeof makeCache>,
+      packageSize?: { netWeight: number; netWeightUnitId: string },
+    ) => {
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
+        { cache, operationMocks: [restock.mock] },
+      );
+      await act(async () => {
+        await result.current.restockDuplicate(ROW_ID, packageSize);
+      });
+      return (restock.fired[0]?.input as { amount: unknown }).amount;
+    };
+
+    it('is one of a counted stack', async () => {
+      expect(await firedAmount(heldIn(UnitType.Count, 'unit-bottle'))).toEqual({
+        measured: { quantity: 1, unitId: 'unit-bottle' },
+      });
+    });
+
+    it('is one package of the size entered, on a stack held by volume', async () => {
+      const size = { netWeight: 500, netWeightUnitId: 'unit-ml' };
+      expect(
+        await firedAmount(heldIn(UnitType.Volume, 'unit-ml'), size),
+      ).toEqual({ packages: { count: 1, size } });
+    });
+
+    it('is one package for the server to size, never 1 mL', async () => {
+      expect(await firedAmount(heldIn(UnitType.Volume, 'unit-ml'))).toEqual({
+        packages: { count: 1 },
+      });
+    });
   });
 });

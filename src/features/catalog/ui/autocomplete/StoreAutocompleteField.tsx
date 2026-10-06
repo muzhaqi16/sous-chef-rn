@@ -9,13 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { Icon } from '#utils/iconUtils';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
-
-/** A store on file, or the typed name offered as a store to add. */
-type StoreOption = StoreItem & { isNew?: true };
-
-const ADD_STORE_ID = 'add-store';
 
 interface StoreAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -60,9 +54,6 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
     !store.displayItems.some(
       item => item.name.trim().toLowerCase() === term.toLowerCase(),
     );
-  const items: StoreOption[] = offersNew
-    ? [...store.displayItems, { id: ADD_STORE_ID, name: term, isNew: true }]
-    : store.displayItems;
 
   const choose = (id: string, name: string) => {
     onChangeText(name);
@@ -71,7 +62,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
 
   return (
     <>
-      <GenericAutocompleteField<StoreOption>
+      <GenericAutocompleteField<StoreItem>
         variant={variant}
         label={label}
         value={value}
@@ -84,32 +75,24 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
           store.handleSearchTermChange(text);
           onStoreSelected?.(null, null);
         }}
-        items={items}
+        items={store.displayItems}
         loading={store.isLoading}
-        renderItem={item =>
-          item.isNew ? (
-            <AutocompleteRow
-              iconElement={
-                <Icon name="add-circle-outline" size={24} tone="primary" />
-              }
-              title={t('autocomplete.addStore', { term: item.name })}
-              subtitle={t('autocomplete.addStoreHint')}
-            />
-          ) : (
-            <AutocompleteRow
-              title={item.name}
-              subtitle={firstNonBlank(item.address)}
-            />
-          )
-        }
+        renderItem={item => (
+          <AutocompleteRow
+            title={item.name}
+            subtitle={firstNonBlank(item.address)}
+          />
+        )}
         keyExtractor={item => item.id}
         onSelect={item => {
           store.setSearchTerm('');
-          if (!item.isNew) {
-            choose(item.id, item.name);
-            return;
-          }
-          void createStore({ name: item.name }).then(created => {
+          choose(item.id, item.name);
+        }}
+        showAddNew={offersNew}
+        addNewLabel={t('labels.addNamed', { name: term })}
+        onAddNew={() => {
+          store.setSearchTerm('');
+          void createStore({ name: term }).then(created => {
             if (created) choose(created.id, created.name);
           });
         }}

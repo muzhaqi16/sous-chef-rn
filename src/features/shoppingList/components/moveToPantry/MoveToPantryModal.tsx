@@ -27,11 +27,17 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
+import {
+  totalFromUnitPrice,
+  unitPriceFromTotal,
+} from '#features/shoppingList/utils/purchasePrice';
 import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { logValidationErrors } from '#/utils/validation/common';
+import {
+  logValidationErrors,
+  parseMoneyInput,
+} from '#/utils/validation/common';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   moveToPantryDefaults,
@@ -237,7 +243,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   };
 
   const handlePriceChange = (value: string) => {
-    setValue('actualPriceInput', value);
+    // Re-run only a refusal already shown, so a fix clears it.
+    setValue('actualPriceInput', value, {
+      shouldValidate: getFieldState('actualPriceInput').invalid,
+    });
     setAmountsTouched(true);
     setPriceTouched(true);
   };
@@ -248,16 +257,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // Shown only when the split is not trivial — at quantity 1 the per-unit price
   // IS the total. Mirrors PurchaseAmountSheet.
   const enteredQuantity = parseFractionalInput(quantityInput);
-  const enteredTotal = actualPriceInput
-    ? parseDecimalInput(actualPriceInput)
-    : null;
+  const enteredTotal = parseMoneyInput(actualPriceInput);
   const perUnitPrice =
     enteredQuantity !== null &&
     !isNaN(enteredQuantity) &&
     enteredQuantity > 0 &&
     enteredQuantity !== 1 &&
-    enteredTotal !== null &&
-    !isNaN(enteredTotal)
+    enteredTotal != null
       ? unitPriceFromTotal(enteredTotal, enteredQuantity)
       : null;
 
@@ -299,9 +305,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
-    const totalPaid = confirmedPrice
-      ? parseDecimalInput(confirmedPrice)
-      : undefined;
+    const totalPaid = parseMoneyInput(confirmedPrice) ?? undefined;
 
     setIsMoving(true);
     const moved = await onConfirm({
@@ -310,8 +314,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       storageState,
       expiresOn: confirmedExpiry ? toDateKey(confirmedExpiry) : undefined,
       removeFromList,
-      totalCost:
-        totalPaid === undefined || isNaN(totalPaid) ? undefined : totalPaid,
+      totalCost: totalPaid,
       notes: notes || undefined,
     });
     setIsMoving(false);
@@ -390,7 +393,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 <View style={styles.unitField}>
                   <UnitAutocompleteField
                     variant="inline"
-                    label={t('storageLocationForm.unit')}
+                    label={t('labels.unit')}
                     value={unitValue}
                     onChangeText={value =>
                       setValue('unitValue', value, { shouldValidate: true })
@@ -421,7 +424,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     name="packageSizeInput"
                     render={({ field, fieldState }) => (
                       <FormInput
-                        label={t('moveToPantry.packageSizeLabel')}
+                        label={t('labels.packageSize')}
                         value={field.value}
                         onChangeText={text => {
                           field.onChange(text);
@@ -441,7 +444,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     render={({ field, fieldState }) => (
                       <UnitAutocompleteField
                         variant="inline"
-                        label={t('storageLocationForm.unit')}
+                        label={t('labels.unit')}
                         value={field.value}
                         onChangeText={field.onChange}
                         placeholder={t('labels.ozGMl')}
@@ -484,11 +487,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Total paid (Optional) */}
             <View style={styles.section}>
               <FormInput
-                label={t('purchaseAmountSheet.totalPrice')}
+                label={t('labels.totalPaid')}
                 value={actualPriceInput}
                 onChangeText={handlePriceChange}
                 placeholder={localizeNumericHint('0.00')}
                 keyboardType="decimal-pad"
+                error={errors.actualPriceInput?.message}
               />
               {perUnitPrice != null ? (
                 <Text

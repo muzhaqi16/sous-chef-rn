@@ -8,7 +8,7 @@ jest.mock('#/services/errorService');
 
 const mockAddItem = jest.fn();
 jest.mock('#features/pantry/hooks/usePantryIntake', () => ({
-  usePantryIntake: () => ({ addItem: mockAddItem }),
+  usePantryIntake: () => ({ addItem: mockAddItem, heldUnitOf: () => null }),
 }));
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({ pantry: { id: 'p1', name: 'Kitchen' } }),

@@ -6,7 +6,7 @@ import {
 import type {
   ParsedReceipt,
   ParsedReceiptLine,
-} from '../../utils/structureReceipt';
+} from '../../utils/parsedReceipt';
 
 /** A line chosen as one of a catalog item, in no unit, at no price. */
 export const lineChoice = (

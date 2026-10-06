@@ -18,7 +18,7 @@ import {
   StorageState,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { ReadStackUnitType_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
+import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
@@ -524,7 +524,7 @@ describe('usePantryItemSubmission', () => {
     });
     const cache = makeCache();
     cache.writeFragment({
-      fragment: ReadStackUnitType_PantryItemFragmentDoc,
+      fragment: ReadStackUnit_PantryItemFragmentDoc,
       data: {
         __typename: 'PantryItem',
         id: 'existing-1',
@@ -842,6 +842,60 @@ describe('usePantryItemSubmission', () => {
       );
       expect(m.fired).toHaveLength(0);
       expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it('moves the held row at once when the restock is queued offline', async () => {
+      const cache = seedStocked('Milk');
+      // What the pantry list caches beside the row: the amount held and its unit.
+      cache.writeFragment({
+        id: 'PantryItem:pi-1',
+        fragment: gql`
+          fragment _HeldStockSeed on PantryItem {
+            heldQuantity
+            unit {
+              id
+              symbol
+            }
+          }
+        `,
+        data: {
+          __typename: 'PantryItem',
+          heldQuantity: 3,
+          unit: { __typename: 'Unit', id: 'unit-1', symbol: 'cups' },
+        },
+      });
+      // A queued local-first write: `queueLink` resolves with a null payload.
+      const queued = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSubmission(defaultParams),
+        { cache, operationMocks: [queued.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+      const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+        text: string;
+        onPress?: () => void;
+      }[];
+      await act(async () => {
+        buttons[1]?.onPress?.();
+      });
+
+      await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
+      expect(
+        cache.readFragment({
+          id: 'PantryItem:pi-1',
+          fragment: gql`
+            fragment _QueuedRestockProbe on PantryItem {
+              quantity
+              heldQuantity
+            }
+          `,
+        }),
+      ).toMatchObject({ quantity: 5, heldQuantity: 5 });
     });
 
     it('leaves a free-text unit to the server', async () => {

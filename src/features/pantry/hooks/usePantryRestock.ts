@@ -1,21 +1,28 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { addToPantryItemsCache } from '#features/pantry/cache/items';
-import { writeHeldStock } from '#features/pantry/cache/stock';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
+import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
+import { boughtAmountOf } from '#domain/stockAmount';
+import {
+  settleMutation,
+  type SettleOptions,
+} from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
-import { stockAmountOf } from '#domain/stockAmount';
 import { useTranslation } from '#/i18n';
-import type { RestockPantryItemInput } from '#/graphql/generated/schemaTypes';
+import type {
+  PackageSizeInput,
+  RestockPantryItemInput,
+  StockAmountInput,
+} from '#/graphql/generated/schemaTypes';
 
 /**
  * A restock's variables. `input.today` dates its default expiry; the key
  * dedupes the restock ledger row on replay.
  */
-export function restockVariables(
+function restockVariables(
   input: Omit<RestockPantryItemInput, 'today' | 'idempotencyKey'>,
 ) {
   const today = todayKey();
@@ -29,19 +36,35 @@ export type PantryRestockOutcome =
   | { status: 'restocked' }
   | { status: 'rejected' };
 
-interface PantryRestockOptions {
-  /** How many of the stack's own unit go in. */
-  quantity: number;
-  /**
-   * The row's count as cached, bumped now because offline the mutation's
-   * `update` never runs; null leaves the count to the response.
-   */
-  cachedQuantity: number | null;
-  /** `'none'` leaves telling the user about a refusal to the caller. */
-  present: 'alert' | 'none';
-}
+type RestockDetails = Pick<
+  RestockPantryItemInput,
+  'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
+>;
 
-/** Restocks a stack the pantry already holds, instead of adding a second one. */
+/**
+ * What went in: an amount as stated, or a count of the product bought with no
+ * unit, which the stack's own unit decides (`boughtAmountOf`).
+ */
+type Stated =
+  | { amount: StockAmountInput; bought?: never }
+  | {
+      bought: { count: number; packageSize?: PackageSizeInput | null };
+      amount?: never;
+    };
+
+type PantryRestockOptions = RestockDetails &
+  Stated & {
+    /** `'none'` leaves telling the user about a refusal to the caller. */
+    present: 'alert' | 'none';
+    fallback?: string;
+    on?: SettleOptions['on'];
+  };
+
+/**
+ * The one restock of a stack the pantry already holds. The row moves at once
+ * for an amount it can count in its own unit, offline included; packages wait
+ * for the server to size them.
+ */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -60,46 +83,83 @@ export function usePantryRestock(pantryId: string | undefined) {
     },
   });
 
+  const moveBatchCount = (pantryItemId: string, by: 1 | -1) => {
+    const id = client.cache.identify({
+      __typename: 'PantryItem',
+      id: pantryItemId,
+    });
+    if (!id) return;
+    client.cache.modify({
+      id,
+      fields: {
+        activeBatchCount: (existing: number = 0) => Math.max(0, existing + by),
+      },
+    });
+  };
+
   const restock = async (
     pantryItemId: string,
-    { quantity, cachedQuantity, present }: PantryRestockOptions,
+    {
+      amount: stated,
+      bought,
+      present,
+      fallback,
+      on,
+      ...details
+    }: PantryRestockOptions,
   ): Promise<PantryRestockOutcome> => {
-    const entity =
-      cachedQuantity === null
-        ? undefined
-        : { __typename: 'PantryItem', id: pantryItemId };
-    writeEntityFields(client.cache, entity, {
-      quantity: (cachedQuantity ?? 0) + quantity,
-    });
-    // The amount the screens show moves with the count.
-    const undoHeld =
-      cachedQuantity === null
-        ? () => {}
-        : writeHeldStock(client.cache, pantryItemId, held => held + quantity);
+    const amount =
+      stated ??
+      boughtAmountOf(bought.count, {
+        heldUnit: readStackUnit(client.cache, pantryItemId),
+        packageSize: bought.packageSize,
+      });
+    const added = amount.measured
+      ? inTrackingUnit(
+          client.cache,
+          pantryItemId,
+          amount.measured.quantity,
+          amount.measured.unitId,
+        )
+      : null;
+    const undoStock =
+      added === null ? () => {} : bumpStock(client.cache, pantryItemId, added);
+    // Every restock is a batch of its own.
+    moveBatchCount(pantryItemId, 1);
 
     const settled = await settleMutation(
       () =>
         restockPantryItem({
           variables: restockVariables({
             id: pantryItemId,
-            amount: stockAmountOf(quantity),
+            amount,
+            ...details,
           }),
         }),
       {
         document: RestockPantryItemDocument,
-        fallback: t('errors.restockFailedRetry'),
+        fallback: fallback ?? t('errors.restockFailedRetry'),
         onFailed: () => {
-          writeEntityFields(client.cache, entity, {
-            quantity: cachedQuantity ?? undefined,
-          });
-          undoHeld();
+          undoStock();
+          moveBatchCount(pantryItemId, -1);
         },
+        on,
         present,
       },
     );
-    return settled.status === 'failed'
-      ? { status: 'rejected' }
-      : { status: 'restocked' };
+    if (settled.status === 'failed') return { status: 'rejected' };
+
+    // The new batch row is the server's to build, so drop the connection and
+    // let the screen refetch it — but only once the server answered. A queued
+    // write has no response, and nothing would refill it.
+    if (settled.status === 'applied') {
+      client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'pantryItemBatchesConnection',
+        args: { pantryItemId },
+      });
+    }
+    return { status: 'restocked' };
   };
 
   return { restock };

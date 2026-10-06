@@ -141,4 +141,32 @@ describe('a load-all that stops on a failed page', () => {
 
     expect(state.loadMore).toHaveBeenCalledTimes(1);
   });
+
+  it('stops at the rows the cache keeps, and says the rest went unread', () => {
+    // Four 25-row pages fill a 100-row window; a fifth would push the first
+    // rows out of the cache every other reader shares.
+    const full = page({
+      items: Array.from({ length: 100 }, (_, i) => `row-${i}`),
+    });
+    const { result } = renderHook(() =>
+      useLoadRemainingPages(true, false, full, '', 100),
+    );
+
+    expect(result.current).toEqual(
+      expect.objectContaining({
+        isLoadingRemainingPages: false,
+        incomplete: true,
+      }),
+    );
+    expect(full.loadMore).not.toHaveBeenCalled();
+  });
+
+  it('keeps paging below the rows the cache keeps', async () => {
+    const short = page({
+      items: Array.from({ length: 75 }, (_, i) => `row-${i}`),
+    });
+    renderHook(() => useLoadRemainingPages(true, false, short, '', 100));
+
+    await waitFor(() => expect(short.loadMore).toHaveBeenCalled());
+  });
 });

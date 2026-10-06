@@ -44,8 +44,8 @@ export interface InlineAutocompleteProps<T> {
   keyExtractor: (item: T) => string;
   onSelect: (item: T) => void;
 
-  // Footer
-  footerComponent?: React.ReactNode;
+  // Footer: a row after the suggestions; pressing it closes the list as a pick does.
+  footer?: { content: React.ReactNode; onPress: () => void };
 
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -79,7 +79,7 @@ export function InlineAutocomplete<T>({
   renderItem,
   keyExtractor,
   onSelect,
-  footerComponent,
+  footer,
   autoCapitalize = 'none',
   reserveDropdownSpace = false,
 }: InlineAutocompleteProps<T>) {
@@ -103,7 +103,7 @@ export function InlineAutocomplete<T>({
   // so one condition drives both the list and its reserved space — the space can
   // never be held open for a list that isn't there.
   const isDropdownOpen =
-    shouldShowDropdown && (slicedItems.length > 0 || !!footerComponent);
+    shouldShowDropdown && (slicedItems.length > 0 || !!footer);
 
   // The list goes momentarily empty mid-search — a debounce running, a page in
   // flight — and the reserved space is held across that. Releasing it would step
@@ -174,15 +174,17 @@ export function InlineAutocomplete<T>({
     }, debounceMs);
   };
 
-  const handleSelect = (item: T) => {
+  // Drops a pending debounce too, so the value sync lands the pick at once.
+  const closeList = () => {
     setShowDropdown(false);
-
-    // Clear pending debounce so value sync effect works immediately
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
+  };
 
+  const handleSelect = (item: T) => {
+    closeList();
     onSelect(item);
   };
 
@@ -250,7 +252,16 @@ export function InlineAutocomplete<T>({
                   {index < slicedItems.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
-              {footerComponent}
+              {footer ? (
+                <AppPressable
+                  onPress={() => {
+                    closeList();
+                    footer.onPress();
+                  }}
+                >
+                  {footer.content}
+                </AppPressable>
+              ) : null}
             </ScrollView>
           </View>
         )}

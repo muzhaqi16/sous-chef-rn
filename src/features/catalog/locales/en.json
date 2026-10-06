@@ -31,7 +31,6 @@
     "climateControlled": "Climate Controlled",
     "capacity": "Capacity",
     "capacityPlaceholder": "e.g., 100",
-    "unit": "Unit",
     "unitPlaceholder": "Select unit",
     "setAsDefault": "Set as Default Location",
     "typeRefrigerator": "Refrigerator",
@@ -383,8 +382,6 @@
     "noUnits": "No units found",
     "typeMoreToAdd": "Continue typing to add \"{{term}}\"",
     "typeMoreToAddBrand": "Continue typing to add \"{{term}}\" as a custom brand",
-    "addStore": "Add \"{{term}}\"",
-    "addStoreHint": "New store",
     "typeAtLeastTwo": "Type at least 2 characters to search",
     "tryDifferentTerm": "Try a different search term",
     "typeMoreToAddCategory": "Continue typing to use \"{{term}}\" as a custom category"

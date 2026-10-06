@@ -54,6 +54,7 @@ export const shoppingListTestIDs = {
   purchaseQuantityInput: 'purchase-quantity-input',
   purchaseQuantityError: 'purchase-quantity-error',
   purchasePriceInput: 'purchase-price-input',
+  purchasePriceError: 'purchase-price-error',
 
   itemDetail: 'shopping-item-detail',
   itemDetailEditButton: 'shopping-item-edit-button',

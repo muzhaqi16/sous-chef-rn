@@ -2,6 +2,8 @@ import {
   emailRule,
   lazyMessage,
   nameRule,
+  optionalMoneyRule,
+  parseMoneyInput,
   passwordRule,
   positiveDecimalRule,
   quantityRule,
@@ -136,5 +138,42 @@ describe('positiveDecimalRule', () => {
     });
     await expect(optional.validate(' ')).resolves.toBe(' ');
     await expect(optional.validate('0')).rejects.toThrow();
+  });
+});
+
+describe('parseMoneyInput', () => {
+  it.each(['', '  '])('reads %p as unstated', value => {
+    expect(parseMoneyInput(value)).toBeNull();
+  });
+
+  it.each([
+    ['3.49', 3.49],
+    ['4,99', 4.99],
+    ['0', 0],
+    [' 12 ', 12],
+  ])('reads %p as %p', (value, amount) => {
+    expect(parseMoneyInput(value)).toBe(amount);
+  });
+
+  // `parseFloat` reads a leading number and drops the rest.
+  it.each(['-3', '4,99x', 'abc', '$3', '.', '1/2'])(
+    'reads %p as unusable',
+    value => {
+      expect(parseMoneyInput(value)).toBeUndefined();
+    },
+  );
+});
+
+describe('optionalMoneyRule', () => {
+  const rule = optionalMoneyRule('errors.invalidAmountPaid');
+
+  it.each(['', '3.49', '0'])('accepts %p', async value => {
+    await expect(rule.validate(value)).resolves.toBe(value);
+  });
+
+  it.each(['-3', '4,99x'])('refuses %p', async value => {
+    await expect(rule.validate(value)).rejects.toThrow(
+      'Enter the amount paid, like 3.49, or leave it empty.',
+    );
   });
 });

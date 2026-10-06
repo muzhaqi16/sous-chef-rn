@@ -4,95 +4,249 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { restockVariables, usePantryRestock } from '../usePantryRestock';
+import {
+  GetPantryItemBatchesDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { usePantryRestock } from '../usePantryRestock';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const ROW_ID = 'pi-oats';
 
-const QUANTITY = gql`
-  fragment _PantryRestockProbe on PantryItem {
+const ROW = gql`
+  fragment _PantryRestockRow on PantryItem {
     id
     quantity
+    heldQuantity
+    activeBatchCount
+    unit {
+      id
+      symbol
+    }
   }
 `;
 
-function cacheWithRow(quantity: number) {
+type Row = {
+  quantity: number;
+  heldQuantity: number;
+  activeBatchCount: number;
+};
+
+function cacheWithRow(held = 3) {
   const cache = makeCache();
   cache.writeFragment({
-    fragment: QUANTITY,
-    data: { __typename: 'PantryItem', id: ROW_ID, quantity },
+    fragment: ROW,
+    data: {
+      __typename: 'PantryItem',
+      id: ROW_ID,
+      quantity: held,
+      heldQuantity: held,
+      activeBatchCount: 1,
+      unit: { __typename: 'Unit', id: 'unit-bag', symbol: 'bag' },
+    },
   });
   return cache;
 }
 
-const readQuantity = (cache: ReturnType<typeof makeCache>) =>
-  cache.readFragment<{ quantity: number }>({
+const readRow = (cache: ReturnType<typeof makeCache>) =>
+  cache.readFragment<Row>({
     id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-    fragment: QUANTITY,
-  })?.quantity;
+    fragment: ROW,
+  });
+
+/** A queued local-first write: `queueLink` resolves with a null payload. */
+const queuedRestock = () => {
+  const data: MockDataFor<typeof RestockPantryItemDocument> = {
+    restockPantryItem: null,
+  };
+  return recordMock(RestockPantryItemDocument, { data });
+};
+
+const refusedRestock = (code: ErrorCode = ErrorCode.ValidationFailed) =>
+  recordMock(RestockPantryItemDocument, {
+    data: {
+      restockPantryItem: {
+        __typename: 'ValidationError',
+        code,
+        message: 'nope',
+        field: 'amount',
+      },
+    },
+  });
+
+const appliedRestock = () =>
+  recordMock(RestockPantryItemDocument, {
+    data: {
+      restockPantryItem: {
+        __typename: 'RestockPantryItemPayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          pantryItem: { __typename: 'PantryItem', id: ROW_ID },
+        },
+      },
+    },
+  });
 
 describe('usePantryRestock', () => {
-  it.each([
-    [3, 4],
-    [null, 3],
-  ])(
-    'with a cached count of %p, shows %p before the server answers',
-    async (cachedQuantity, shown) => {
-      const cache = cacheWithRow(3);
-      const restock = recordMock(RestockPantryItemDocument, {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('moves the row at once for a measured amount, offline included', async () => {
+    const cache = cacheWithRow(3);
+    const restock = queuedRestock();
+    const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+      cache,
+      operationMocks: [restock.mock],
+    });
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.restock(ROW_ID, {
+        amount: { measured: { quantity: 2 } },
+        present: 'none',
+      });
+    });
+
+    expect(outcome).toEqual({ status: 'restocked' });
+    expect(readRow(cache)).toMatchObject({
+      quantity: 5,
+      heldQuantity: 5,
+      activeBatchCount: 2,
+    });
+    const [fired] = restock.fired;
+    expect(fired?.input).toMatchObject({
+      id: ROW_ID,
+      amount: { measured: { quantity: 2 } },
+      today: fired?.today,
+      idempotencyKey: expect.any(String),
+    });
+  });
+
+  it('leaves the amount to the server for packages', async () => {
+    const cache = cacheWithRow(3);
+    const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+      cache,
+      operationMocks: [queuedRestock().mock],
+    });
+
+    await act(async () => {
+      await result.current.restock(ROW_ID, {
+        amount: { packages: { count: 1 } },
+        present: 'none',
+      });
+    });
+
+    expect(readRow(cache)).toMatchObject({ quantity: 3, heldQuantity: 3 });
+  });
+
+  it('puts the amount and the batch count back when the restock is refused', async () => {
+    const cache = cacheWithRow(3);
+    const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+      cache,
+      operationMocks: [refusedRestock().mock],
+    });
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.restock(ROW_ID, {
+        amount: { measured: { quantity: 2 } },
+        present: 'none',
+      });
+    });
+
+    expect(outcome).toEqual({ status: 'rejected' });
+    expect(readRow(cache)).toMatchObject({
+      quantity: 3,
+      heldQuantity: 3,
+      activeBatchCount: 1,
+    });
+  });
+
+  it('runs the handler the caller gave for a refusal code', async () => {
+    const onUnitInvalid = jest.fn();
+    const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+      cache: cacheWithRow(),
+      operationMocks: [refusedRestock(ErrorCode.UnitInvalid).mock],
+    });
+
+    await act(async () => {
+      await result.current.restock(ROW_ID, {
+        amount: { measured: { quantity: 1, unitId: 'unit-slice' } },
+        present: 'none',
+        on: { [TopLevelErrorCode.UnitInvalid]: onUnitInvalid },
+      });
+    });
+
+    expect(onUnitInvalid).toHaveBeenCalledTimes(1);
+  });
+
+  describe('the batches the server builds', () => {
+    const cacheWithBatches = () => {
+      const cache = cacheWithRow();
+      cache.writeQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: ROW_ID },
         data: {
-          restockPantryItem: {
-            __typename: 'RestockPantryItemPayload',
-            pantryItemUsage: {
-              __typename: 'PantryItemUsage',
-              pantryItem: { __typename: 'PantryItem', id: ROW_ID, quantity: 4 },
+          __typename: 'Query',
+          pantryItemBatchesConnection: {
+            __typename: 'PantryItemBatchConnection',
+            totalCount: 0,
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
             },
+            edges: [],
           },
         },
       });
+      return cache;
+    };
+    const readBatches = (cache: ReturnType<typeof makeCache>) =>
+      cache.readQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: ROW_ID },
+      });
+
+    it('are dropped for a refetch once the server answered', async () => {
+      const cache = cacheWithBatches();
       const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
         cache,
-        operationMocks: [restock.mock],
+        operationMocks: [appliedRestock().mock],
       });
 
-      let beforeAnswer;
       await act(async () => {
-        const restocked = result.current.restock(ROW_ID, {
-          quantity: 1,
-          cachedQuantity,
+        await result.current.restock(ROW_ID, {
+          amount: { measured: { quantity: 1 } },
           present: 'none',
         });
-        beforeAnswer = readQuantity(cache);
-        await restocked;
       });
 
-      expect(beforeAnswer).toBe(shown);
-      expect(restock.fired[0]?.input).toMatchObject({
-        id: ROW_ID,
-        amount: { measured: { quantity: 1 } },
+      expect(readBatches(cache)).toBeNull();
+    });
+
+    it('are kept while the restock waits in the queue', async () => {
+      const cache = cacheWithBatches();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache,
+        operationMocks: [queuedRestock().mock],
       });
-    },
-  );
-});
 
-describe('restockVariables', () => {
-  it('dates the restock and keys its ledger row, once per call', () => {
-    const first = restockVariables({
-      id: ROW_ID,
-      amount: { measured: { quantity: 1 } },
-    });
-    const second = restockVariables({
-      id: ROW_ID,
-      amount: { measured: { quantity: 1 } },
-    });
+      await act(async () => {
+        await result.current.restock(ROW_ID, {
+          amount: { measured: { quantity: 1 } },
+          present: 'none',
+        });
+      });
 
-    expect(first.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(first.input).toMatchObject({ id: ROW_ID, today: first.today });
-    expect(first.input.idempotencyKey).toEqual(expect.any(String));
-    expect(second.input.idempotencyKey).not.toBe(first.input.idempotencyKey);
+      expect(readBatches(cache)).not.toBeNull();
+    });
   });
 });

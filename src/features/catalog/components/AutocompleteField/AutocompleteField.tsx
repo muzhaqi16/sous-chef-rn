@@ -1,6 +1,6 @@
 import React from 'react';
+import { View } from 'react-native';
 
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '#features/catalog/components/BottomSheetAutocompleteInput';
@@ -51,15 +51,9 @@ export type AutocompleteFieldProps<TItem> =
   | InlineVariantProps<TItem>
   | ModalVariantProps<TItem>;
 
-function AddNewFooter({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
+function AddNewRow({ label }: { label: string }) {
   return (
-    <AppPressable onPress={onPress} style={footerStyles.container}>
+    <View style={footerStyles.container}>
       <Text
         role="subheading"
         tone="accent"
@@ -71,7 +65,7 @@ function AddNewFooter({
       <Text role="bodyStrong" tone="accent">
         {label}
       </Text>
-    </AppPressable>
+    </View>
   );
 }
 
@@ -90,10 +84,13 @@ const footerStyles = StyleSheet.create(theme => ({
 }));
 
 export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
-  const addNewFooter = (() => {
-    if (!props.showAddNew || !props.onAddNew || !props.addNewLabel) return null;
-    return <AddNewFooter label={props.addNewLabel} onPress={props.onAddNew} />;
-  })();
+  const addNew =
+    props.showAddNew && props.onAddNew && props.addNewLabel
+      ? {
+          content: <AddNewRow label={props.addNewLabel} />,
+          onPress: props.onAddNew,
+        }
+      : undefined;
 
   if (props.variant === 'inline') {
     return (
@@ -114,7 +111,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         keyExtractor={props.keyExtractor}
         onSelect={props.onSelect}
         autoCapitalize={props.autoCapitalize}
-        footerComponent={addNewFooter}
+        footer={addNew}
         reserveDropdownSpace={props.reserveDropdownSpace}
       />
     );
@@ -148,7 +145,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
       onModalOpen={props.onModalOpen}
       onModalClose={props.onModalClose}
       autoCapitalize={props.autoCapitalize}
-      listFooterComponent={addNewFooter}
+      footer={addNew}
     />
   );
 }

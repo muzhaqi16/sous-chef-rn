@@ -12,6 +12,7 @@ import {
 import {
   ErrorCode,
   PantrySuggestionSource,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -130,8 +131,11 @@ describe('AddToPantrySheet', () => {
 
   it('offers a receipt scan, which opens the receipt scanner', () => {
     renderWithApollo(<AddToPantrySheet {...defaultProps} />);
-    const { onReceiptPress } = sheetProps.current;
-    expect(onReceiptPress).toBe(useAppNavigation().toReceiptScan);
+    const { receiptAction } = sheetProps.current;
+    expect(receiptAction).toEqual({
+      onPress: useAppNavigation().toReceiptScan,
+      accessibilityLabel: 'Add from a receipt',
+    });
   });
 
   it('renders without crashing when pantryId is undefined', () => {
@@ -559,10 +563,27 @@ describe('AddToPantrySheet', () => {
       expect(toastService.success).toHaveBeenCalledTimes(1);
     });
 
-    it('bumps the quantity locally, so the change shows before the server replies', () => {
+    const typedUnit = (
+      cache: ReturnType<typeof makeCache>,
+      id: string,
+      type: UnitType,
+    ) =>
+      cache.writeFragment({
+        id: `Unit:${id}`,
+        fragment: gql`
+          fragment StockedUnitType on Unit {
+            id
+            type
+          }
+        `,
+        data: { __typename: 'Unit', id, type },
+      });
+
+    it('bumps a counted stack locally, so the change shows before the server replies', () => {
       // Offline the restock's `update` never runs. Without the local write the
       // toast would claim a change the list does not show.
       const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Count);
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
         operationMocks: [restocked],
@@ -574,6 +595,30 @@ describe('AddToPantrySheet', () => {
       quickAdd(milkInLitres);
 
       expect(readQuantity(cache)).toBe(4);
+    });
+
+    it('restocks a stack held by volume by one package, never by 1 L', async () => {
+      const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Volume);
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: restockData,
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [restock.mock],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd(milkInLitres);
+
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]?.input).toMatchObject({
+        amount: { packages: { count: 1 } },
+      });
+      // Only the server can size a package, so the row waits for its answer.
+      expect(readQuantity(cache)).toBe(3);
     });
 
     it('leaves the count alone — a restock adds no row', async () => {

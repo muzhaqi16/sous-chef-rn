@@ -10,16 +10,15 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { localQuantity } from '#domain/stockAmount';
-import { unitPriceFromTotal } from '#domain/purchasePrice';
+import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
-  addToPantryItemsCache,
-  adjustPantryItemCount,
+  addPantryItemLocally,
   reconcileCreatedPantryItem,
-  removeFromPantryItemsCache,
+  revertOptimisticPantryItem,
   type PantryItemRef,
 } from '#features/pantry/cache/items';
 import type { ListCounterChange } from '#features/shoppingList/cache/connections';
@@ -35,10 +34,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
-import {
-  evictLocalPantryItemSeeds,
-  writeLocalPantryItem,
-} from '#features/pantry/cache/writeLocalPantryItem';
+import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -237,14 +233,12 @@ export function useMoveToPantry({
       // state; `useIsCreateUnconfirmed` skips it until the server confirms.
       unconfirmedCreates.mark(pantryItemId);
       writeLocalPantryItem(client.cache, pantryItemId, localRow);
-      addToPantryItemsCache(client.cache, input.pantryId, {
+      // Publishes the row AND counts it: offline the mutation's `update` never
+      // runs to correct the count.
+      addPantryItemLocally(client.cache, input.pantryId, {
         __typename: 'PantryItem',
         id: pantryItemId,
       });
-      // The count travels with the row: offline the mutation's `update` never
-      // runs, and `usePantryScreen` branches on this value to pick server vs
-      // client sorting, so a stale one selects the wrong mode too.
-      adjustPantryItemCount(client.cache, input.pantryId, 1);
       if (unlinkFromListId) {
         counterChange = removeItemFromShoppingListForMoveToPantry(
           client.cache,
@@ -273,11 +267,7 @@ export function useMoveToPantry({
     const revert = () => {
       try {
         // Evicted, not only unlinked: a cached row persists and a detail read finds it.
-        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
-          evictItem: true,
-        });
-        adjustPantryItemCount(client.cache, input.pantryId, -1);
-        evictLocalPantryItemSeeds(client.cache, pantryItemId);
+        revertOptimisticPantryItem(client.cache, input.pantryId, pantryItemId);
         let exact = true;
         if (input.removeFromList) {
           exact = restoreItemToShoppingListAfterMoveToPantry(

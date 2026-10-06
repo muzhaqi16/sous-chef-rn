@@ -1,7 +1,11 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
-import { lazyMessage, quantityRule } from '#/utils/validation/common';
+import {
+  lazyMessage,
+  optionalMoneyRule,
+  parseMoneyInput,
+  quantityRule,
+} from '#/utils/validation/common';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
@@ -28,25 +32,13 @@ const parsedQuantity = (value: string) => {
   return parsed !== null && !Number.isNaN(parsed) && parsed > 0 ? parsed : null;
 };
 
-const parsedPrice = (value: string) => {
-  if (!value.trim()) return null;
-  const parsed = parseDecimalInput(value);
-  return Number.isNaN(parsed) || parsed < 0 ? undefined : parsed;
-};
-
 export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
   itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
   itemId: string().nullable().defined(),
   quantityInput: quantityRule('errors.invalidQuantity'),
   unitValue: string().defined(),
   unitId: string().nullable().defined(),
-  priceInput: string()
-    .defined()
-    .test(
-      'price',
-      lazyMessage('receipts.review.invalidPrice'),
-      value => parsedPrice(value) !== undefined,
-    ),
+  priceInput: optionalMoneyRule('errors.invalidAmountPaid'),
   offList: boolean().defined(),
 });
 
@@ -77,6 +69,6 @@ export const toLineChoice = (
   quantity: parsedQuantity(values.quantityInput) ?? 1,
   unitId: values.unitId,
   unitText: values.unitValue.trim(),
-  price: parsedPrice(values.priceInput) ?? null,
+  price: parseMoneyInput(values.priceInput) ?? null,
   ...(values.offList ? { offList: true } : {}),
 });

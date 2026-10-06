@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { InfoRow } from '#components/atoms/InfoRow';
 import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import { Reveal } from '#components/atoms/Reveal';
 import { StyleSheet } from 'react-native-unistyles';
@@ -22,6 +24,11 @@ interface DatePickerFieldProps {
   /** A set date can be cleared back to none. */
   clearable?: boolean;
   error?: string;
+  /**
+   * `'row'` shows a date already known as text, tapped to change it, rather
+   * than as an input waiting for one.
+   */
+  presentation?: 'field' | 'row';
   /** The field's; the calendar's is `kitTestIDs.datePickerCalendar(testID)`. */
   testID?: string;
 }
@@ -40,10 +47,56 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   required,
   clearable,
   error,
+  presentation = 'field',
   testID,
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+
+  const calendar = (
+    <Reveal open={open}>
+      <MonthCalendar
+        selectedDate={value}
+        onSelectDate={date => {
+          onChange(date);
+          setOpen(false);
+        }}
+        {...(minimumDate ? { minDate: minimumDate } : {})}
+        {...(maximumDate ? { maxDate: maximumDate } : {})}
+        {...(testID ? { testID: kitTestIDs.datePickerCalendar(testID) } : {})}
+      />
+    </Reveal>
+  );
+
+  if (presentation === 'row') {
+    return (
+      <View testID={testID}>
+        <AppPressable
+          onPress={() => setOpen(prev => !prev)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+        >
+          <InfoRow
+            label={label ?? t('labels.selectDate')}
+            value={null}
+            icon="calendar-outline"
+            showColon={false}
+            showBorder={false}
+          >
+            <View style={styles.rowValue}>
+              <Text role="bodyStrong">
+                {value
+                  ? formatMonthDayYear(value)
+                  : placeholder ?? t('labels.selectDate')}
+              </Text>
+              <ExpandChevron expanded={open} />
+            </View>
+          </InfoRow>
+        </AppPressable>
+        {calendar}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} testID={testID}>
@@ -79,18 +132,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
           {error}
         </Text>
       ) : null}
-      <Reveal open={open}>
-        <MonthCalendar
-          selectedDate={value}
-          onSelectDate={date => {
-            onChange(date);
-            setOpen(false);
-          }}
-          {...(minimumDate ? { minDate: minimumDate } : {})}
-          {...(maximumDate ? { maxDate: maximumDate } : {})}
-          {...(testID ? { testID: kitTestIDs.datePickerCalendar(testID) } : {})}
-        />
-      </Reveal>
+      {calendar}
     </View>
   );
 };
@@ -132,5 +174,10 @@ const styles = StyleSheet.create(theme => ({
   },
   errorText: {
     marginTop: theme.spacing.xs,
+  },
+  rowValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
 }));

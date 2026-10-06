@@ -1,6 +1,12 @@
-import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
+import {
+  ErrorCode,
+  ReceiptLineKind,
+  ReceiptParseStatus,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
 import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
-import { fromServerReceipt } from '../serverReceipt';
+import { classifyCreateResult, fromServerReceipt } from '../serverReceipt';
 import { receiptReviewLines } from '../receiptReviewLines';
 import { receiptTotalsGap } from '../receiptTotalsGap';
 
@@ -414,5 +420,79 @@ describe('fromServerReceipt', () => {
     expect(fromServerReceipt({ merchant: merchant(null), lines: [] })).toEqual({
       lines: [],
     });
+  });
+});
+
+describe('classifyCreateResult', () => {
+  const refusedWith = (code: string) =>
+    new CombinedGraphQLErrors({
+      errors: [{ message: 'refused', extensions: { code } }],
+    });
+  const httpStatus = (status: number) =>
+    new ServerError('HTTP', {
+      response: new Response('', { status }),
+      bodyText: '',
+    });
+  const ask = (error: unknown, refusedField: string | null = null) =>
+    classifyCreateResult(
+      { accepted: false, parse: null, refusedField, error },
+      Date.parse('2026-10-06T12:00:00Z'),
+    ).kind;
+
+  it('polls an accepted parse that is still running', () => {
+    const running: ReceiptParseReadersFragment = {
+      __typename: 'ReceiptParse',
+      id: 'rp-1',
+      status: ReceiptParseStatus.Pending,
+      warnings: [],
+      receipt: null,
+    };
+    expect(
+      classifyCreateResult({
+        accepted: true,
+        parse: running,
+        refusedField: null,
+        error: undefined,
+      }),
+    ).toEqual({ kind: 'poll' });
+  });
+
+  it('settles a refusal on the pages as too long', () => {
+    expect(
+      classifyCreateResult({
+        accepted: false,
+        parse: null,
+        refusedField: 'pages',
+        error: undefined,
+      }),
+    ).toEqual({ kind: 'settle', outcome: 'tooLong' });
+  });
+
+  it.each([
+    ['a refusal in the payload', undefined],
+    [
+      'a request the API refuses as invalid',
+      refusedWith(ErrorCode.ValidationFailed),
+    ],
+    ['a forbidden request', httpStatus(403)],
+  ])('settles %s as the verdict it is', (_, error) => {
+    expect(ask(error)).toBe('settle');
+  });
+
+  it.each([
+    ['a server fault', httpStatus(502)],
+    ['an internal error', refusedWith(TopLevelErrorCode.InternalServerError)],
+    ['a traffic limit on the connection', httpStatus(429)],
+    ['a request timeout', httpStatus(408)],
+    ['a session mid-refresh', httpStatus(401)],
+    ['a request that never left', new Error('Network request failed')],
+  ])('resends after %s', (_, error) => {
+    expect(ask(error)).toBe('resend');
+  });
+
+  it('waits for the next visit when the app must be updated', () => {
+    expect(ask(refusedWith(TopLevelErrorCode.ClientUpgradeRequired))).toBe(
+      'later',
+    );
   });
 });

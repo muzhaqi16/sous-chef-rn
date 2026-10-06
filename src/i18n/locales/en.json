@@ -132,6 +132,7 @@
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
     "invalidQuantity": "Please enter a valid quantity",
+    "invalidAmountPaid": "Enter the amount paid, like 3.49, or leave it empty.",
     "itemNotFound": "Item not found",
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
@@ -489,7 +490,6 @@
     "thisFieldIsRequired": "This field is required",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "This item isn't in the catalog any more — it may have been removed.",
     "tips": "Tips",
-    "totalCost": "Total Cost",
     "stockValue": "Stock value",
     "avgCostPerUnit": "Avg Cost/Unit",
     "totalPaid": "Total paid",
@@ -514,7 +514,9 @@
     "durationDays_one": "{{count}} day",
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
-    "today": "Today"
+    "today": "Today",
+    "packageSize": "Package size",
+    "unit": "Unit"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

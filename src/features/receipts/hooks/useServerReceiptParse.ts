@@ -5,21 +5,11 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { useTranslation } from '#/i18n';
-import {
-  ReceiptParseStatus,
-  ReceiptParseWarningCode,
-  TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
-import { todayKey } from '#/utils/dateUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { backoffDelay } from '#/utils/backoff';
 import { useIsOnline } from '#store/useAppStore';
 import {
@@ -29,17 +19,11 @@ import {
 import {
   useReceiptDraft,
   useReceiptDraftActions,
-  type PrintedStore,
-  type ServerParseOutcome,
 } from '../store/receiptDraftStore';
-import { fromServerReceipt } from '../utils/serverReceipt';
-import { isPlausibleReceiptDay } from '../utils/receiptDate';
-import { receiptReviewLines } from '../utils/receiptReviewLines';
-import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
+import { classifyCreateResult, outcomeOf } from '../utils/serverReceipt';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
-  type ReceiptParseQuery,
 } from './useServerReceiptParse.generated';
 
 // The API asks for a poll every 2–3 s and allows 120 a minute.
@@ -59,104 +43,6 @@ export type ServerReadingStatus =
   | 'unavailable'
   | 'tooLong'
   | 'limited';
-
-const PASSING_CODES: readonly string[] = [
-  TopLevelErrorCode.InternalServerError,
-  TopLevelErrorCode.ServiceUnavailable,
-];
-
-/**
- * Whether a failed ask is the API's answer on this receipt, which stands. One
- * that never arrived, a server fault and a session mid-refresh are not: the
- * same ask may well succeed when sent again.
- */
-function isVerdict(error: unknown): boolean {
-  if (ServerError.is(error)) {
-    return error.statusCode < 500 && error.statusCode !== 401;
-  }
-  if (!CombinedGraphQLErrors.is(error)) return false;
-  return error.errors.every(({ extensions }) => {
-    const code = extensions?.code;
-    return (
-      typeof code === 'string' &&
-      !PASSING_CODES.includes(code) &&
-      !isAuthRefusalCode(code)
-    );
-  });
-}
-
-/**
- * The server's verdict that its lines do not add up to the receipt. A mismatch
- * without figures predates the API's discount rule, which counted a receipt's
- * savings summary as discounts: it is not shown.
- */
-function totalsGapOf(
-  warnings: NonNullable<ReceiptParseQuery['receiptParse']>['warnings'],
-): ReceiptTotalsGap | undefined {
-  const mismatch = warnings.find(
-    warning => warning.code === ReceiptParseWarningCode.TotalsMismatch,
-  );
-  if (mismatch?.counted == null || mismatch.printed == null) return undefined;
-  return { counted: mismatch.counted, printed: mismatch.printed };
-}
-
-/** The shop the parse read, when it read a name. */
-function printedStoreOf({
-  name,
-  address,
-  storeNumber,
-}: NonNullable<
-  NonNullable<ReceiptParseQuery['receiptParse']>['receipt']
->['merchant']): PrintedStore | undefined {
-  const named = firstNonBlank(name);
-  if (!named) return undefined;
-  const printedAddress = firstNonBlank(address);
-  const printedNumber = firstNonBlank(storeNumber);
-  return {
-    name: named.trim(),
-    ...(printedAddress ? { address: printedAddress } : {}),
-    ...(printedNumber ? { storeNumber: printedNumber } : {}),
-  };
-}
-
-/** What a finished parse leaves on the draft; nothing while it runs. */
-function outcomeOf(
-  parse: NonNullable<ReceiptParseQuery['receiptParse']>,
-): ServerParseOutcome | undefined {
-  switch (parse.status) {
-    case ReceiptParseStatus.Pending:
-      return undefined;
-    case ReceiptParseStatus.Failed:
-      return 'failed';
-    case ReceiptParseStatus.Unavailable:
-      return 'unavailable';
-    case ReceiptParseStatus.Parsed: {
-      const { receipt } = parse;
-      const lowText = parse.warnings.some(
-        warning => warning.code === ReceiptParseWarningCode.LowText,
-      );
-      const parsed = receipt ? fromServerReceipt(receipt) : null;
-      // Never an empty review: too little text to read is a retake.
-      if (!receipt || !parsed || lowText) return 'unreadable';
-      if (receiptReviewLines(parsed).length === 0) return 'unreadable';
-      const totalsGap = totalsGapOf(parse.warnings);
-      const printedStore = printedStoreOf(receipt.merchant);
-      // Held to the phone's own window: a misread day would date the prices
-      // and the shelf life, and the API refuses one after tomorrow.
-      const purchasedOn =
-        receipt.purchasedOn &&
-        isPlausibleReceiptDay(receipt.purchasedOn, todayKey())
-          ? receipt.purchasedOn
-          : undefined;
-      return {
-        parsed,
-        ...(purchasedOn ? { purchasedOn } : {}),
-        ...(totalsGap ? { totalsGap } : {}),
-        ...(printedStore ? { printedStore } : {}),
-      };
-    }
-  }
-}
 
 /**
  * Asks the server to read a saved receipt the phone could not structure, and
@@ -233,42 +119,38 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           present: 'none',
         },
       );
-      const { error } = settled;
-      const accepted = appliedPayload(settled.data);
-      const retryAfter = getRateLimitDetails(error)?.retryAfter;
-      if (accepted) {
-        // A finished parse (a resend, or a fast worker) is settled from what
-        // the payload wrote to the cache, without a poll.
-        const parse = client.cache.readFragment<ReceiptParseReadersFragment>({
-          id: client.cache.identify({ __typename: 'ReceiptParse', id }),
-          fragment: ReceiptParseReadersFragmentDoc,
-        });
-        const outcome = parse ? outcomeOf(parse) : undefined;
-        if (outcome === undefined) setPolling(id);
-        else settleServerParse(id, outcome);
-      } else if (settled.failure?.field === 'pages') {
-        // Every refusal on `pages` is a size bound: the scan caps the pages at
-        // ten, so it is the character limit, which only the API knows.
-        settleServerParse(id, 'tooLong');
-      } else if (retryAfter && retryAfter > 0) {
-        // The daily allowance is asked again once it says.
-        settleServerParse(id, {
-          retryAt: new Date(Date.now() + retryAfter * 1000).toISOString(),
-        });
-      } else if (error === undefined || isVerdict(error)) {
-        // A refusal, in the payload or not, stands, as UNAVAILABLE does.
-        settleServerParse(id, 'unavailable');
-      } else {
-        // No verdict: still pending, sent again shortly, then next visit.
-        if (resends >= RESENDS_PER_VISIT) {
+      // A finished parse (a resend, or a fast worker) is settled from what
+      // the payload wrote to the cache, without a poll.
+      const parse = client.cache.readFragment<ReceiptParseReadersFragment>({
+        id: client.cache.identify({ __typename: 'ReceiptParse', id }),
+        fragment: ReceiptParseReadersFragmentDoc,
+      });
+      const result = classifyCreateResult({
+        accepted: !!appliedPayload(settled.data),
+        parse,
+        refusedField: settled.failure?.field ?? null,
+        error: settled.error,
+      });
+      switch (result.kind) {
+        case 'poll':
+          setPolling(id);
+          return;
+        case 'settle':
+          settleServerParse(id, result.outcome);
+          return;
+        case 'later':
           setGaveUp(true);
-        } else {
+          return;
+        case 'resend':
+          if (resends >= RESENDS_PER_VISIT) {
+            setGaveUp(true);
+            return;
+          }
           resendTimer.current = setTimeout(() => {
             if (sent.current !== id) return;
             sent.current = null;
             setResends(count => count + 1);
           }, backoffDelay(resends, { baseMs: POLL_MS }));
-        }
       }
     };
     void send();

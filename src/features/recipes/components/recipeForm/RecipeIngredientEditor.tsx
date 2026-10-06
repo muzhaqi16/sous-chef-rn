@@ -171,7 +171,7 @@ export const RecipeIngredientEditor = forwardRef<
             />
             <UnitAutocompleteField
               variant="modal"
-              label={t('storageLocationForm.unit')}
+              label={t('labels.unit')}
               value={unit}
               onChangeText={setUnit}
               onUnitSelected={handleUnitSelect}

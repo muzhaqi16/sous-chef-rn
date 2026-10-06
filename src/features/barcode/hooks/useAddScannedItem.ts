@@ -1,9 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  UseAddScannedItem_RestockQuantityFragmentDoc,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
-import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import type { ScannedItem } from '#features/barcode/types';
 import {
   AcquisitionMethod,
   type PackageSizeInput,
@@ -67,7 +64,8 @@ export function useAddScannedItem({
 
   // No `unit`, and `netWeight` only when the record states no pack size and the
   // user entered one: the scan's own figure is the record's to store, and one
-  // sent here is kept as the user's.
+  // sent here is kept as the user's. A refusal of an add carrying that size is
+  // left to the caller, whose prompt can show it on the size.
   const addToPantry = (item: ScannedItem, packageSize?: PackageSizeInput) =>
     addItem(
       item.name,
@@ -82,27 +80,21 @@ export function useAddScannedItem({
           unitId: scannedUnitId(item),
           acquisitionMethod: AcquisitionMethod.BarcodeScan,
         },
-        present: 'alert',
+        present: packageSize ? 'none' : 'alert',
       },
     );
 
   /**
-   * Bump the row the duplicate check named instead of creating a second one.
-   * Resolves whether the restock stands, having told the user when it does not.
+   * Restock the row the duplicate check named by one container, of the size
+   * the user entered when the record states none. Resolves whether the restock
+   * stands, having told the user when it does not.
    */
   const restockDuplicate = async (
     existingPantryItemId: string,
+    packageSize?: PackageSizeInput,
   ): Promise<boolean> => {
-    const cached = client.cache.readFragment({
-      id: client.cache.identify({
-        __typename: 'PantryItem',
-        id: existingPantryItemId,
-      }),
-      fragment: UseAddScannedItem_RestockQuantityFragmentDoc,
-    });
     const outcome = await restock(existingPantryItemId, {
-      quantity: SCANNED_QUANTITY,
-      cachedQuantity: cached?.quantity ?? null,
+      bought: { count: SCANNED_QUANTITY, packageSize },
       present: 'alert',
     });
     return outcome.status === 'restocked';

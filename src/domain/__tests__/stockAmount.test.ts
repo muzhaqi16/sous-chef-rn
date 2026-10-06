@@ -1,7 +1,52 @@
 import { UnitType } from '#/graphql/generated/schemaTypes';
-import { localQuantity, stockAmountOf } from '#domain/stockAmount';
+import {
+  boughtAmountOf,
+  localQuantity,
+  stockAmountOf,
+} from '#domain/stockAmount';
 
 const JAR = { netWeight: 500, netWeightUnitId: 'g' };
+
+describe('boughtAmountOf', () => {
+  const PIECE = { id: 'piece', type: UnitType.Count };
+  const ML = { id: 'ml', type: UnitType.Volume };
+
+  it('counts it in the counted stack the pantry holds', () => {
+    expect(boughtAmountOf(1, { heldUnit: PIECE })).toStrictEqual({
+      measured: { quantity: 1, unitId: 'piece' },
+    });
+  });
+
+  it('states packages for a stack held by weight or volume, never an amount', () => {
+    expect(boughtAmountOf(1, { heldUnit: ML })).toStrictEqual({
+      packages: { count: 1 },
+    });
+  });
+
+  it('states packages when the pantry holds none', () => {
+    expect(boughtAmountOf(2)).toStrictEqual({ packages: { count: 2 } });
+    expect(boughtAmountOf(2, { heldUnit: null })).toStrictEqual({
+      packages: { count: 2 },
+    });
+  });
+
+  it('states packages of a known size, whatever the stack', () => {
+    expect(boughtAmountOf(1, { heldUnit: ML, packageSize: JAR })).toStrictEqual(
+      { packages: { count: 1, size: JAR } },
+    );
+    expect(
+      boughtAmountOf(1, { heldUnit: PIECE, packageSize: JAR }),
+    ).toStrictEqual({ packages: { count: 1, size: JAR } });
+  });
+
+  it('never states a measured amount for a weighed or volume stack', () => {
+    for (const type of [UnitType.Weight, UnitType.Volume]) {
+      expect(
+        boughtAmountOf(3, { heldUnit: { id: 'u', type } }).measured,
+      ).toBeUndefined();
+    }
+  });
+});
 
 describe('stockAmountOf', () => {
   it('states an amount in the unit given', () => {

@@ -1,4 +1,7 @@
-import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
+import {
+  totalFromUnitPrice,
+  unitPriceFromTotal,
+} from '#features/shoppingList/utils/purchasePrice';
 
 describe('unitPriceFromTotal', () => {
   it('divides the total paid by the quantity', () => {

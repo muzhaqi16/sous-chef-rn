@@ -112,13 +112,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
    * one. The toast fires ahead of the result and is corrected on refusal — a
    * queued restock has no result to wait for.
    */
-  const runRestock = async (
-    pantryItemId: string,
-    name: string,
-    cachedQuantity: number | null,
-  ) => {
+  const runRestock = async (pantryItemId: string, name: string) => {
     toastService.success(t('addToPantry.restocked', { name }));
-    const outcome = await restockItem(pantryItemId, cachedQuantity);
+    const outcome = await restockItem(pantryItemId);
     if (outcome.status === 'rejected') {
       toastService.error(t('addToPantry.restockFailed'));
       return;
@@ -138,11 +134,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     const cachedDuplicate = findCachedDuplicate(item.id, item.defaultUnit?.id);
     if (cachedDuplicate) {
       removeSuggestion(item.id);
-      await runRestock(
-        cachedDuplicate.existingPantryItemId,
-        item.name,
-        cachedDuplicate.quantity,
-      );
+      await runRestock(cachedDuplicate.existingPantryItemId, item.name);
       pendingItemIds.current.delete(item.id);
       return;
     }
@@ -156,7 +148,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     if (outcome.status === 'duplicate') {
       // Backstop for what the local check could not see — a windowed list, or a
       // collaborator's add.
-      await runRestock(outcome.existingPantryItemId, item.name, null);
+      await runRestock(outcome.existingPantryItemId, item.name);
       pendingItemIds.current.delete(item.id);
       return;
     }
@@ -186,11 +178,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       pantryItem.defaultUnitId,
     );
     if (cachedDuplicate) {
-      await runRestock(
-        cachedDuplicate.existingPantryItemId,
-        pantryItem.name,
-        cachedDuplicate.quantity,
-      );
+      await runRestock(cachedDuplicate.existingPantryItemId, pantryItem.name);
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
@@ -200,7 +188,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // replay.
     const heldStackId = heldStackOf(pantryItem);
     if (heldStackId) {
-      await runRestock(heldStackId, pantryItem.name, null);
+      await runRestock(heldStackId, pantryItem.name);
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
@@ -211,7 +199,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
     const outcome = await addItem(pantryItem.itemId, pantryItem.name);
     if (outcome.status === 'duplicate') {
-      await runRestock(outcome.existingPantryItemId, pantryItem.name, null);
+      await runRestock(outcome.existingPantryItemId, pantryItem.name);
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
@@ -260,7 +248,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
-      onReceiptPress={toReceiptScan}
+      receiptAction={{
+        onPress: toReceiptScan,
+        accessibilityLabel: t('addToPantry.fromReceipt'),
+      }}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

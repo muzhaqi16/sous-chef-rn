@@ -5,11 +5,8 @@ import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { Text } from '#components/atoms/Text';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
-import { InfoRow } from '#components/atoms/InfoRow';
 import { Reveal } from '#components/atoms/Reveal';
-import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconTone } from '#utils/iconUtils';
 import { Button } from '#components/molecules/Button';
@@ -22,7 +19,6 @@ import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
-import { formatMonthDayYear } from '#/utils/formatters/date';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
@@ -115,6 +111,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     pendingCount,
     applying,
     listLoading,
+    listIncomplete,
     chooseLine,
     listItemNameFor,
     addChosen,
@@ -137,7 +134,6 @@ export const ReceiptReviewScreen: React.FC = () => {
   const [storeText, setStoreText] = useState<string | null>(null);
   const storeTitle = store?.name ?? proposedStoreName ?? merchant;
   const showStore = storeUnrecognized || changingStore;
-  const [changingDate, setChangingDate] = useState(false);
 
   // Kept after closing, so the sheet animates out full.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -318,40 +314,16 @@ export const ReceiptReviewScreen: React.FC = () => {
                     </Text>
                   </View>
                 ) : (
-                  <>
-                    <AppPressable
-                      onPress={() => setChangingDate(open => !open)}
-                      accessibilityRole="button"
-                      accessibilityState={{ expanded: changingDate }}
-                      testID={receiptsTestIDs.reviewDateRow}
-                    >
-                      <InfoRow
-                        label={t('receipts.review.dateLabel')}
-                        value={null}
-                        icon="calendar-outline"
-                        showColon={false}
-                        showBorder={false}
-                      >
-                        <View style={styles.dateValue}>
-                          <Text role="bodyStrong">
-                            {formatMonthDayYear(fromDateKey(purchasedOn))}
-                          </Text>
-                          <ExpandChevron expanded={changingDate} />
-                        </View>
-                      </InfoRow>
-                    </AppPressable>
-                    <Reveal open={changingDate}>
-                      <MonthCalendar
-                        selectedDate={fromDateKey(purchasedOn)}
-                        onSelectDate={date => {
-                          setPurchasedOn(toDateKey(date));
-                          setChangingDate(false);
-                        }}
-                        maxDate={fromDateKey(today)}
-                        testID={receiptsTestIDs.reviewDate}
-                      />
-                    </Reveal>
-                  </>
+                  <DatePickerField
+                    presentation="row"
+                    label={t('receipts.review.dateLabel')}
+                    value={fromDateKey(purchasedOn)}
+                    onChange={date => {
+                      if (date) setPurchasedOn(toDateKey(date));
+                    }}
+                    maximumDate={fromDateKey(today)}
+                    testID={receiptsTestIDs.reviewDate}
+                  />
                 )}
               </View>
               <Text role="body" tone="secondary">
@@ -373,6 +345,16 @@ export const ReceiptReviewScreen: React.FC = () => {
                   testID={receiptsTestIDs.reviewMatchRetry}
                 />
               )}
+              {listIncomplete ? (
+                <AlertBanner
+                  variant="info"
+                  icon="list-outline"
+                  iconLibrary="Ionicons"
+                  title={t('receipts.review.listIncompleteTitle')}
+                  subtitle={t('receipts.review.listIncompleteBody')}
+                  testID={receiptsTestIDs.reviewListIncomplete}
+                />
+              ) : null}
               {!!totalsGap && (
                 <AlertBanner
                   variant="warning"
@@ -418,11 +400,6 @@ export const ReceiptReviewScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  dateValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
   // In the revealed content, so the gap opens and closes with the field.
   revealedStore: {
     paddingBottom: theme.spacing.md,

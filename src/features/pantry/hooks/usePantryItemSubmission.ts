@@ -1,18 +1,16 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type {
   StorageState,
   ItemCondition,
 } from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { restockVariables } from '#features/pantry/hooks/usePantryRestock';
+import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import {
   findCachedPantryItemDuplicate,
-  readStackUnitType,
+  readStackUnit,
 } from '#features/pantry/utils/pantryCacheReaders';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { stockAmountOf } from '#domain/stockAmount';
@@ -87,11 +85,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   const client = useApolloClient();
 
   const { addItem, adding } = usePantryIntake(pantryId);
-
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
-    // Replays as the canonical mutation, deduped by its idempotencyKey.
-    context: { localFirst: true },
-  });
+  const { restock } = usePantryRestock(pantryId);
 
   const handleConfirm = async () => {
     if (!pantryId) return;
@@ -256,32 +250,23 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           asPackages:
             statedNetWeight !== null &&
             Number.isInteger(quantity) &&
-            readStackUnitType(client.cache, existingPantryItemId) ===
+            readStackUnit(client.cache, existingPantryItemId)?.type ===
               UnitType.Count,
           packageSize: statedNetWeight,
         });
-        const settled = await settleMutation(
-          () =>
-            restockPantryItem({
-              variables: restockVariables({
-                id: existingPantryItemId,
-                amount,
-                // Forward the purchase details the user just entered so the
-                // restock records an ItemPriceHistory observation.
-                ...(costValue !== undefined && { costPerUnit: costValue }),
-                ...(storeId && { storeId }),
-                ...(expiresOn && { expiresOn }),
-              }),
-            }),
-          {
-            document: RestockPantryItemDocument,
-            fallback: t('errors.restockFailedRetry'),
-          },
-        );
-        if (settled.status === 'failed') return;
+        const restocked = await restock(existingPantryItemId, {
+          amount,
+          // Forward the purchase details the user just entered so the
+          // restock records an ItemPriceHistory observation.
+          ...(costValue !== undefined && { costPerUnit: costValue }),
+          ...(storeId && { storeId }),
+          ...(expiresOn && { expiresOn }),
+          present: 'alert',
+        });
+        if (restocked.status === 'rejected') return;
         onSuccess();
       };
-      // `settleMutation` never rejects, so the restock needs no catch here.
+      // The restock never rejects, so it needs no catch here.
       promptPantryDuplicate({
         onRestock: () => {
           void restockExisting();

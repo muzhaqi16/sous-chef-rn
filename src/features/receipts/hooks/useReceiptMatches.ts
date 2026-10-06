@@ -129,8 +129,10 @@ export function useReceiptMatches(
               })),
             },
           },
-          // A lookup for one receipt: nothing to resync.
+          // A lookup for one receipt: nothing to resync, and a return to the
+          // review reads the answer it already has.
           refetchOn: false,
+          fetchPolicy: 'cache-first',
         }
       : skipToken,
   );

@@ -79,9 +79,11 @@ const languageChanged =
         current = next;
         if (client.getObservableQueries('all').size === 0) return;
         stopNavigation ??= onNavigation?.(() => {
-          if (canCatchUp()) observer.next({ switched: false });
+          if (canCatchUp()) observer.next();
         });
-        observer.next({ switched: true });
+        // What was answered before the switch is in the old language.
+        startAnswersForSwitch();
+        observer.next();
       });
       return () => {
         stopLanguage();
@@ -196,9 +198,6 @@ export const createRefetchEventManager = (): RefetchEventManager => {
   // Returns synchronously, as a handler must; the waits are `resync`'s.
   const coalescingHandler: RefetchEventManager.EventHandler = context => {
     const { client, source, matchesRefetchOn } = context;
-    if (context.source === 'languageChanged' && context.payload.switched) {
-      startAnswersForSwitch();
-    }
     pending ??= {
       sources: new Set(),
       matchers: [],

@@ -1,6 +1,7 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
 import {
   lazyMessage,
+  optionalMoneyRule,
   positiveDecimalRule,
   quantityRule,
 } from '#/utils/validation/common';
@@ -49,7 +50,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
     .required(),
   expirationDate: date().optional(),
   removeFromList: boolean().defined(),
-  actualPriceInput: string().defined(),
+  actualPriceInput: optionalMoneyRule('errors.invalidAmountPaid'),
   notes: string().defined(),
   // Both or neither: a size needs the unit it is measured in.
   packageSizeInput: positiveDecimalRule('errors.field.netWeight', {

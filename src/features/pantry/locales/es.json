@@ -249,7 +249,6 @@
     "failedItems_one": "No se pudo mover {{names}}",
     "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}",
     "nothingLeftToMove": "Todo lo comprado ya está en tu despensa",
-    "packageSizeLabel": "Tamaño del paquete",
     "packageSizeHint": "Solo si este paquete difiere del tamaño habitual, como un frasco de 22 oz. Déjalo vacío para usar el tamaño habitual.",
     "packageSizeNeedsCount": "El tamaño del paquete va con un número entero de paquetes en una unidad contable, como 2 frascos. Déjalo vacío para una cantidad como 500 g."
   },
@@ -271,6 +270,7 @@
   },
   "addToPantry": {
     "restocked": "Se reabasteció {{name}}",
+    "fromReceipt": "Añadir desde un recibo",
     "amountLeft_one": "Queda {{amount}}",
     "amountLeft_other": "Quedan {{amount}}",
     "lowStockSettings": "Ajustes de stock bajo",

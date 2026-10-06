@@ -59,9 +59,6 @@ const mockState: Record<string, unknown> = {
   setShowBiometricSetup: jest.fn(),
   setPostLoginCredentials: jest.fn(),
   scannerSheetVisible: false,
-  searchError: null,
-  scannerSheetIndex: 0,
-  isSearching: false,
   hideBottomSheet: jest.fn(),
   showBottomSheet: jest.fn(),
   setSelectedPantryId: jest.fn(),
@@ -73,11 +70,6 @@ const mockState: Record<string, unknown> = {
   setLanguage: jest.fn(),
   getUserNavigationState: jest.fn(),
   setOnBoardingStep: jest.fn(),
-  searchResults: [],
-  setSearchResults: jest.fn(),
-  setSearching: jest.fn(),
-  setSearchError: jest.fn(),
-  clearSearch: jest.fn(),
 };
 
 // Mock the store module so hooks read from mockState

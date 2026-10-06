@@ -24,15 +24,6 @@ import {
   type MoveToPantryOutcome,
 } from '../useMoveToPantry';
 
-// Spread the real module: a partial factory silently omits whatever the hook
-// imports NEXT — the local-first move added two more updaters, and a trimmed
-// mock fails at import time with "is not a function" rather than at the
-// assertion. See the module's other consumers before narrowing this.
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-}));
-
 jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   ...jest.requireActual('#features/shoppingList/cache/moveToPantry'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
@@ -450,6 +441,20 @@ describe('useMoveToPantry pantry item count', () => {
     }
   `;
 
+  // The rows the count describes: a row is counted when it joins them.
+  const ROWS_FRAGMENT = gql`
+    fragment PantryRowsProbe on Pantry {
+      id
+      itemsConnection {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  `;
+
   function seededCache() {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
@@ -460,6 +465,15 @@ describe('useMoveToPantry pantry item count', () => {
         __typename: 'Pantry',
         id: 'pantry-1',
         stats: { __typename: 'PantryStats', totalItems: 63 },
+      },
+    });
+    cache.writeFragment({
+      id: 'Pantry:pantry-1',
+      fragment: ROWS_FRAGMENT,
+      data: {
+        __typename: 'Pantry',
+        id: 'pantry-1',
+        itemsConnection: { __typename: 'PantryItemConnection', edges: [] },
       },
     });
     return cache;

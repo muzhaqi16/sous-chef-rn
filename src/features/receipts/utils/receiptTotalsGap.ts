@@ -1,4 +1,4 @@
-import type { ParsedReceipt, ParsedReceiptLine } from './structureReceipt';
+import type { ParsedReceipt, ParsedReceiptLine } from './parsedReceipt';
 import { toCents } from './money';
 
 /** What the read lines add up to, against what the receipt printed for them. */

@@ -384,7 +384,7 @@ describe('MoveToPantryModal', () => {
     renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
       cache: makeCache(),
     });
-    expect(screen.getByText('Total price')).toBeTruthy();
+    expect(screen.getByText('Total paid')).toBeTruthy();
   });
 
   describe('seeding from the recorded purchase', () => {
@@ -507,7 +507,7 @@ describe('MoveToPantryModal', () => {
       );
       // The field shows the TOTAL; the API stores the $0.59 per unit.
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('2.95');
     });
 
@@ -548,6 +548,55 @@ describe('MoveToPantryModal', () => {
       expect(sent).not.toHaveProperty('actualPrice');
     });
 
+    describe('a total paid that is no amount', () => {
+      const INVALID_PAID =
+        'Enter the amount paid, like 3.49, or leave it empty.';
+      const typeTotal = (text: string) =>
+        fireEvent.changeText(
+          screen.getByTestId('move-to-pantry-field-Total paid'),
+          text,
+        );
+
+      // It was dropped without a word, or sent below zero.
+      it.each(['-3', '4,99x'])(
+        'refuses %p on the field and does not move',
+        async typed => {
+          const onConfirm = openWithPurchase(5, 0.59);
+          await waitFor(() =>
+            expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+          );
+
+          typeTotal(typed);
+          fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+          expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+          expect(onConfirm).not.toHaveBeenCalled();
+        },
+      );
+
+      it('clears the refusal once fixed, and sends the total', async () => {
+        const onConfirm = openWithPurchase(5, 0.59);
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        );
+        typeTotal('4,99x');
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+        expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+
+        typeTotal('3.49');
+        await waitFor(() =>
+          expect(screen.queryByText(INVALID_PAID)).toBeNull(),
+        );
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        await waitFor(() =>
+          expect(onConfirm).toHaveBeenCalledWith(
+            expect.objectContaining({ totalCost: 3.49 }),
+          ),
+        );
+      });
+    });
+
     it('holds the per-unit price when fewer units are stocked', async () => {
       const onConfirm = openWithPurchase(5, 0.59);
       await waitFor(() =>
@@ -558,7 +607,7 @@ describe('MoveToPantryModal', () => {
 
       // The total follows the quantity; the unit price is what was paid.
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('1.77');
 
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
@@ -694,7 +743,7 @@ describe('MoveToPantryModal', () => {
       );
       await waitFor(() =>
         expect(
-          screen.getByTestId('move-to-pantry-field-Total price').props.value,
+          screen.getByTestId('move-to-pantry-field-Total paid').props.value,
         ).toBe('2.5'),
       );
 
@@ -872,7 +921,7 @@ describe('MoveToPantryModal', () => {
         '2',
       );
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('');
     });
   });

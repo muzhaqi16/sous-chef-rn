@@ -7,7 +7,11 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { AcquisitionMethod, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  ErrorCode,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { usePantryIntake } from '../usePantryIntake';
 
@@ -214,7 +218,7 @@ describe('usePantryIntake', () => {
         quantity: 1,
       });
     });
-    expect(outcome).toMatchObject({ status: 'rejected' });
+    expect(outcome).toMatchObject({ status: 'rejected', field: 'quantity' });
     expect(alertService.alert).not.toHaveBeenCalled();
 
     const told = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
@@ -228,5 +232,94 @@ describe('usePantryIntake', () => {
       );
     });
     expect(alertService.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the unit the pantry holds an item in, and null for one it does not', () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: gql`
+        query SeedHeldUnit(
+          $id: ID!
+          $itemsFirst: Int
+          $itemsFilter: PantryItemFilters
+          $itemsOrderBy: PantryItemOrderBy
+        ) {
+          pantry(id: $id) {
+            __typename
+            id
+            itemsConnection(
+              first: $itemsFirst
+              filters: $itemsFilter
+              orderBy: $itemsOrderBy
+            ) {
+              __typename
+              totalCount
+              edges {
+                __typename
+                cursor
+                node {
+                  __typename
+                  id
+                  itemName
+                  quantity
+                  item {
+                    __typename
+                    id
+                  }
+                  unit {
+                    __typename
+                    id
+                    type
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        id: PANTRY_ID,
+        itemsFirst: 100,
+        itemsFilter: undefined,
+        itemsOrderBy: undefined,
+      },
+      data: {
+        pantry: {
+          __typename: 'Pantry',
+          id: PANTRY_ID,
+          itemsConnection: {
+            __typename: 'PantryItemConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'PantryItemEdge',
+                cursor: 'pi-bananas',
+                node: {
+                  __typename: 'PantryItem',
+                  id: 'pi-bananas',
+                  itemName: 'Bananas',
+                  quantity: 4,
+                  item: { __typename: 'Item', id: 'cat-bananas' },
+                  unit: {
+                    __typename: 'Unit',
+                    id: 'unit-piece',
+                    type: UnitType.Count,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+    });
+
+    expect(result.current.heldUnitOf('cat-bananas')).toMatchObject({
+      id: 'unit-piece',
+      type: UnitType.Count,
+    });
+    expect(result.current.heldUnitOf('cat-milk')).toBeNull();
   });
 });

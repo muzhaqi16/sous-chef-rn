@@ -295,7 +295,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
           <View style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('storageLocationForm.unit')}
+              {t('labels.unit')}
             </SectionHeader>
 
             {itemUnits.length > 0 && (

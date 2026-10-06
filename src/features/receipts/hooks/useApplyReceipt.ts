@@ -11,8 +11,11 @@ import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useMoveToPantry } from '#features/shoppingList/hooks/useMoveToPantry';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import { refByIdOrName } from '#/utils/refInput';
-import { stockAmountOf } from '#domain/stockAmount';
-import { unitPriceFromTotal } from '#domain/purchasePrice';
+import {
+  boughtAmountOf,
+  stockAmountOf,
+  type HeldUnit,
+} from '#domain/stockAmount';
 import { errorService } from '#/services/errorService';
 import {
   useReceiptDraftActions,
@@ -38,54 +41,54 @@ const statedQuantity = (choice: ReceiptLineChoice) =>
     ? choice.quantity
     : undefined;
 
-// What an add off the list records. A printed count with no unit (2 @) is that
-// many packages, which the server sizes, else counts in a counted stack.
-const intakeOf = (choice: ReceiptLineChoice) => {
+const namesUnit = (choice: ReceiptLineChoice) =>
+  choice.unitId !== null || choice.unitText !== '';
+
+// What an add off the list records. A printed count with no unit (2 @) is what
+// was bought, as its stack counts it; null for a part of something no unit names.
+const intakeOf = (choice: ReceiptLineChoice, heldUnit: HeldUnit) => {
   const quantity = statedQuantity(choice);
   if (quantity === undefined) return {};
-  if (!choice.unitId && !choice.unitText && Number.isInteger(quantity)) {
-    return { amount: stockAmountOf(quantity, { asPackages: true }) };
+  if (namesUnit(choice)) {
+    return { quantity, unit: refByIdOrName(choice.unitId, choice.unitText) };
   }
-  return { quantity, unit: refByIdOrName(choice.unitId, choice.unitText) };
+  return Number.isInteger(quantity)
+    ? { amount: boughtAmountOf(quantity, { heldUnit }) }
+    : null;
 };
 
-// The total is the API's authoritative figure. A rate goes with it only for a
-// stated amount, per package for a count: the receipt's price history is
-// recorded from the rate, and a rate for an amount the API defaults would price
-// the wrong quantity.
-const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
-  const quantity = statedQuantity(choice);
-  return {
-    acquisitionMethod: AcquisitionMethod.Purchased,
-    receipt,
-    priceSource: PriceSource.ReceiptScan,
-    ...(choice.price === null
-      ? {}
-      : {
-          totalCost: choice.price,
-          ...(quantity === undefined
-            ? {}
-            : { costPerUnit: unitPriceFromTotal(choice.price, quantity) }),
-        }),
-  };
-};
+// The total is the API's authoritative figure; it derives the unit price.
+const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => ({
+  acquisitionMethod: AcquisitionMethod.Purchased,
+  receipt,
+  priceSource: PriceSource.ReceiptScan,
+  ...(choice.price === null ? {} : { totalCost: choice.price }),
+});
 
 /**
  * What a move records for a receipt line, as the receipt states it: the API
  * owns the package arithmetic. A line with a unit is that amount. A printed
- * count (2 @) is that many packages, which the server turns into the line's
- * unit. A bare 1 says only that it was bought, so the list's amount stands.
+ * count (2 @) on a line in a unit is that many packages, which the server
+ * turns into the line's unit; a bare 1 says only that it was bought, so the
+ * list's amount stands. With no unit on either, it is what was bought, as its
+ * stack counts it; null for a part of something no unit names.
  */
 const lineAmountOf = (
   choice: ReceiptLineChoice,
   line: ShoppingListItemNode,
-): StockAmountInput => {
+  heldUnit: HeldUnit,
+): StockAmountInput | null => {
   const lineUnit = line.unit;
-  if (choice.unitId !== null || choice.unitText !== '' || !lineUnit) {
+  if (namesUnit(choice)) {
     // A typed unit links only to a line in that unit, so the line's id stands for it.
     return stockAmountOf(choice.quantity, {
       unitId: choice.unitId ?? lineUnit?.id,
     });
+  }
+  if (!lineUnit) {
+    return Number.isInteger(choice.quantity)
+      ? boughtAmountOf(choice.quantity, { heldUnit })
+      : null;
   }
   if (choice.quantity !== 1 && Number.isInteger(choice.quantity)) {
     return stockAmountOf(choice.quantity, { asPackages: true });
@@ -104,7 +107,7 @@ export function useApplyReceipt(listId: string | undefined) {
   const { t } = useTranslation();
   const { pantry } = useCurrentPantry();
   const pantryId = pantry?.id;
-  const { addItem } = usePantryIntake(pantryId);
+  const { addItem, heldUnitOf } = usePantryIntake(pantryId);
   const { moveToPantry } = useMoveToPantry({
     currentListId: listId,
     present: 'none',
@@ -117,11 +120,16 @@ export function useApplyReceipt(listId: string | undefined) {
     choice: ReceiptLineChoice,
     receipt: ReceiptRefInput,
   ) => {
+    const intake = intakeOf(
+      choice,
+      choice.itemId ? heldUnitOf(choice.itemId) : null,
+    );
+    if (!intake) return t('receipts.review.needsUnit');
     const outcome = await addItem(choice.itemName, {
       item: choice.itemId
         ? { id: choice.itemId }
         : { inline: { name: choice.itemName } },
-      ...intakeOf(choice),
+      ...intake,
       forceAdd: true,
       purchase: purchaseOf(choice, receipt),
     });
@@ -142,9 +150,16 @@ export function useApplyReceipt(listId: string | undefined) {
     receipt: ReceiptRefInput,
   ) => {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
+    const itemId = choice.itemId ?? listLine.item?.id;
+    const amount = lineAmountOf(
+      choice,
+      listLine,
+      itemId ? heldUnitOf(itemId) : null,
+    );
+    if (!amount) return t('receipts.review.needsUnit');
     const outcome = await moveToPantry(listLine, {
       pantryId,
-      amount: lineAmountOf(choice, listLine),
+      amount,
       removeFromList: true,
       receipt,
       // Labels the price paid: with none read, the API records the price typed

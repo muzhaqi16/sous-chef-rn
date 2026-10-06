@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import type { ParsedReceipt } from '../utils/structureReceipt';
+import type { ParsedReceipt } from '../utils/parsedReceipt';
 import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
 
 /** What one receipt line becomes in the pantry. */

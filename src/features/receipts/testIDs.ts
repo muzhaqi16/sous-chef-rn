@@ -12,11 +12,12 @@ export const receiptsTestIDs = {
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
   reviewTotalsGap: 'receipt-review-totals-gap',
-  /** The review's store and purchase-date fields. */
+  /** The note that the list is longer than the review could match against. */
+  reviewListIncomplete: 'receipt-review-list-incomplete',
+  /** The review's store field. */
   reviewStore: 'receipt-review-store',
+  /** The purchase date field; its calendar is the kit's `datePickerCalendar`. */
   reviewDate: 'receipt-review-date',
-  /** A date read from the receipt, shown as text; it opens the date field. */
-  reviewDateRow: 'receipt-review-date-row',
   /** The banner that asks the API again after a failed match. */
   reviewMatchRetry: 'receipt-review-match-retry',
   /** Prefix of each line's row: `receipt-review-line-<index>`. */

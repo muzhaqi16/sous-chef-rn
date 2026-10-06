@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useSelectedShoppingListId } from '#store/useAppStore';
+import { useApolloClient } from '@apollo/client/react';
 import { useToday } from '#hooks/useToday';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
+import { MAX_WINDOW_EDGES } from '#/apollo/cacheFieldPolicies';
 import { usePaginatedShoppingItems } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
@@ -16,6 +17,7 @@ import {
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { receiptTotalsGap } from '../utils/receiptTotalsGap';
+import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
   listLineFor,
@@ -65,19 +67,20 @@ export function useReceiptReview() {
   const { chooseLine, setPurchasedOn, chooseStore, clearDraft } =
     useReceiptDraftActions();
   const today = useToday();
-  const selectedListId = useSelectedShoppingListId();
-  // Until the list tab has opened one, the active list is the default, as there.
-  const { lists } = useShoppingListsLite({ skip: !!selectedListId });
-  const activeListId = useActiveShoppingListId(lists);
-  const listId = selectedListId ?? activeListId;
+  const client = useApolloClient();
+  // The list the user works in, checked against the lists they still have.
+  const { lists, loading: listsLoading } = useShoppingListsLite();
+  const listId = useActiveShoppingListId(lists);
   const { state: list } = usePaginatedShoppingItems({ listId });
-  // A receipt line matches an open list line on any page.
-  const { isLoadingRemainingPages } = useLoadRemainingPages(
-    !!listId,
-    list.loading,
-    list.unpurchased,
-    listId ?? '',
-  );
+  // A receipt line matches an open list line on any page the cache keeps.
+  const { isLoadingRemainingPages, incomplete: listIncomplete } =
+    useLoadRemainingPages(
+      !!listId,
+      list.loading,
+      list.unpurchased,
+      listId ?? '',
+      MAX_WINDOW_EDGES,
+    );
   const { pantryName, applying, failures, apply } = useApplyReceipt(listId);
 
   const lines = draft?.parsed ? receiptReviewLines(draft.parsed) : [];
@@ -254,11 +257,18 @@ export function useReceiptReview() {
     pendingCount: pending.length,
     applying: applying || placingStore,
     /** Later list pages are still loading: adding now could miss a list line. */
-    listLoading: isLoadingRemainingPages,
+    listLoading:
+      isLoadingRemainingPages || (listsLoading && lists.length === 0),
+    /** The list is longer than the review can see, so a line may miss its list line. */
+    listIncomplete,
     chooseLine,
     /** The list line a line would tick off with this product and unit, as they are picked. */
     listItemNameFor,
     addChosen,
-    finish: clearDraft,
+    finish: () => {
+      const parseId = draft?.serverParse?.id;
+      clearDraft();
+      forgetReceipt(client.cache, parseId);
+    },
   };
 }

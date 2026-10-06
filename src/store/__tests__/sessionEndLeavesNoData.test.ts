@@ -220,15 +220,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
     expect(registeredSessionScopedStores()).toContain('notifications');
   });
 
-  it('clears the scanner results, which name what the previous person scanned', async () => {
-    useBarcodeScannerStore
-      .getState()
-      .setSearchResults([{ id: 's1', name: 'Pregnancy test', upc: '0123' }]);
-    expect(useBarcodeScannerStore.getState().searchResults).toHaveLength(1);
+  it('resets the scanner; what it found lives in the cache a session end clears', async () => {
+    useBarcodeScannerStore.getState().setScanning(true);
+    useBarcodeScannerStore.getState().showBottomSheet();
 
     await useStore.getState().resetStore('LOGOUT');
 
-    expect(useBarcodeScannerStore.getState().searchResults).toEqual([]);
+    expect(useBarcodeScannerStore.getState()).toMatchObject({
+      isScanning: false,
+      scannerSheetVisible: false,
+    });
     expect(registeredSessionScopedStores()).toContain('barcodeScanner');
   });
 

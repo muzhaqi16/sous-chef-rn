@@ -28,7 +28,7 @@ import {
   priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { totalFromUnitPrice } from '#domain/purchasePrice';
+import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';

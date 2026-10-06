@@ -87,12 +87,9 @@ export function useAddToPantry({
         })
       : null;
 
-  /**
-   * Restock the row by one. A null `cachedQuantity` skips the local bump, for a
-   * duplicate the server named: that reaches us only online.
-   */
-  const restockItem = (pantryItemId: string, cachedQuantity: number | null) =>
-    restock(pantryItemId, { quantity: 1, cachedQuantity, present: 'none' });
+  /** Restock the row by one of the product, as its stack counts it. */
+  const restockItem = (pantryItemId: string) =>
+    restock(pantryItemId, { bought: { count: 1 }, present: 'none' });
 
   /** The sheet adds a catalog item as-is: the server fills quantity and unit. */
   const addItem = (itemId: string, itemName: string) =>

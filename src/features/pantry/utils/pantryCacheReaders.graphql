@@ -20,9 +20,9 @@ fragment findCachedPantryItemDuplicate_pantry on Pantry {
   }
 }
 
-# The unit a stack is counted in: a restock with a package size sends packages
-# only to a counted stack (readStackUnitType).
-fragment readStackUnitType_pantryItem on PantryItem {
+# The unit a stack is counted in: a count with no unit goes to a counted stack
+# as a count, and anywhere else as packages (readStackUnit).
+fragment readStackUnit_pantryItem on PantryItem {
   id
   unit {
     id

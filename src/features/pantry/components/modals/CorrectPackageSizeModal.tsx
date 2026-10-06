@@ -205,7 +205,7 @@ export const CorrectPackageSizeModal: React.FC<
               render={({ field }) => (
                 <UnitAutocompleteField
                   variant="modal"
-                  label={t('storageLocationForm.unit')}
+                  label={t('labels.unit')}
                   value={field.value}
                   onChangeText={field.onChange}
                   onUnitSelected={handleUnitSelected}

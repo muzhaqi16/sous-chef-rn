@@ -76,7 +76,7 @@ export const StorageLocationAdvancedSection: React.FC<
               containerStyle={styles.capacityInput}
             />
             <FormSelect
-              label={t('storageLocationForm.unit')}
+              label={t('labels.unit')}
               value={capacityUnit}
               onValueChange={onCapacityUnitChange}
               options={buildCapacityUnitOptions(t)}

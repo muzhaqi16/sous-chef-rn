@@ -11,6 +11,8 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { t } from '#/i18n';
+import type { PackSizeOutcome } from '../PackSizeSheet';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -115,15 +117,21 @@ jest.mock('../ProductResultCard', () => ({
   },
 }));
 
-// The sheet's own form is pinned in `packSizeFormConfig.test.ts`; here it
-// only has to hand back a size when shown.
+// The sheet's own form is pinned in `PackSizeSheet.test.tsx`; here it hands
+// back a size when shown, and closes as the real one does: only on `done`.
+const mockPackSizeOutcomes: PackSizeOutcome[] = [];
 jest.mock('../PackSizeSheet', () => ({
   PackSizeSheet: ({
     visible,
     onConfirm,
+    onDismiss,
   }: {
     visible: boolean;
-    onConfirm: (size: { netWeight: number; netWeightUnitId: string }) => void;
+    onConfirm: (size: {
+      netWeight: number;
+      netWeightUnitId: string;
+    }) => Promise<PackSizeOutcome>;
+    onDismiss: () => void;
   }) => {
     if (!visible) return null;
     const RN = require('react-native');
@@ -132,7 +140,14 @@ jest.mock('../PackSizeSheet', () => ({
       RN.Pressable,
       {
         testID: 'pack-size-stub',
-        onPress: () => onConfirm({ netWeight: 32, netWeightUnitId: 'unit-oz' }),
+        onPress: async () => {
+          const outcome = await onConfirm({
+            netWeight: 32,
+            netWeightUnitId: 'unit-oz',
+          });
+          mockPackSizeOutcomes.push(outcome);
+          if (outcome.status === 'done') onDismiss();
+        },
       },
       R.createElement(RN.Text, null, 'size'),
     );
@@ -175,6 +190,8 @@ describe('SearchResults', () => {
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,
+    canEdit: false,
+    canSuggest: true,
   };
 
   const defaultProps: SearchResultsProps = {
@@ -186,6 +203,7 @@ describe('SearchResults', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPackSizeOutcomes.length = 0;
   });
 
   it('renders item name', () => {
@@ -327,9 +345,11 @@ describe('SearchResults', () => {
 
     it('asks for the pack size it lacks, then stores the one entered', async () => {
       const rec = created();
+      const onScanAnother = jest.fn();
       renderWithApollo(
         <SearchResults
           {...defaultProps}
+          onScanAnother={onScanAnother}
           item={{
             ...mockItem,
             source: 'OPENFOODFACTS',
@@ -354,6 +374,79 @@ describe('SearchResults', () => {
         netWeightUnitId: 'unit-oz',
       });
       expect(firedInput.item).toEqual({ variation: 'off-1' });
+      // The prompt closes only once the add has landed.
+      await waitFor(() =>
+        expect(mockPackSizeOutcomes).toEqual([{ status: 'done' }]),
+      );
+      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
+      expect(onScanAnother).toHaveBeenCalledTimes(1);
+    });
+
+    describe('a refused add', () => {
+      const offItem = {
+        ...mockItem,
+        source: 'OPENFOODFACTS',
+        netWeight: undefined,
+        variationId: 'off-1',
+      };
+      const refusedOn = (field: string) =>
+        recordMock(CreatePantryItemDocument, {
+          data: {
+            createPantryItem: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'refused',
+              field,
+            },
+          },
+        });
+
+      it('keeps the prompt open with the reason on the size, and no alert', async () => {
+        const rec = refusedOn('netWeight');
+        const onScanAnother = jest.fn();
+        renderWithApollo(
+          <SearchResults
+            {...defaultProps}
+            onScanAnother={onScanAnother}
+            item={offItem}
+          />,
+          { operationMocks: [rec.mock] },
+        );
+
+        fireEvent.press(screen.getByTestId('primary-btn'));
+        fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+        await waitFor(() =>
+          expect(mockPackSizeOutcomes).toEqual([
+            { status: 'refused', sizeError: t('errors.field.netWeight') },
+          ]),
+        );
+        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        const { alertService } = jest.requireMock('#/services/alertService');
+        expect(alertService.alert).not.toHaveBeenCalled();
+        expect(onScanAnother).not.toHaveBeenCalled();
+      });
+
+      it('alerts any other refusal, with the prompt still open', async () => {
+        const rec = refusedOn('quantity');
+        renderWithApollo(<SearchResults {...defaultProps} item={offItem} />, {
+          operationMocks: [rec.mock],
+        });
+
+        fireEvent.press(screen.getByTestId('primary-btn'));
+        fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+        await waitFor(() =>
+          expect(mockPackSizeOutcomes).toEqual([{ status: 'refused' }]),
+        );
+        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        const { alertService } = jest.requireMock('#/services/alertService');
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+        expect(alertService.alert).toHaveBeenCalledWith(
+          t('labels.error'),
+          t('errors.field.quantity'),
+        );
+      });
     });
 
     it('adds in one tap when the record states its pack size', async () => {

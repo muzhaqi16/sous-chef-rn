@@ -1,4 +1,4 @@
-import type { ParsedLineKind } from '../structureReceipt';
+import type { ParsedLineKind } from '../parsedReceipt';
 import { receiptTotalsGap } from '../receiptTotalsGap';
 import { parsedReceipt } from '../../__tests__/helpers/receiptFixtures';
 

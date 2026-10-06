@@ -95,6 +95,25 @@ export const quantityRule = (
       return allowZero ? parsed >= 0 : parsed > 0;
     });
 
+// An amount paid: null when blank (unstated), undefined when unusable. Only
+// digits and separators pass: `parseFloat` reads `4,99x` as 4.99, and a sign
+// makes it no price.
+export const parseMoneyInput = (value: string): number | null | undefined => {
+  if (!value.trim()) return null;
+  if (!/^[\d.,\s]+$/.test(value)) return undefined;
+  const parsed = parseDecimalInput(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+export const optionalMoneyRule = (key: TranslationKey) =>
+  string()
+    .defined()
+    .test(
+      'money',
+      lazyMessage(key),
+      value => parseMoneyInput(value) !== undefined,
+    );
+
 // A measure such as a package size: a decimal above zero, never a fraction.
 export const positiveDecimalRule = (
   key: TranslationKey,

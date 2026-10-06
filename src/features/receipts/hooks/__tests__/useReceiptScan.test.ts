@@ -1,4 +1,5 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
@@ -69,7 +70,7 @@ const RECEIPT: RecognizedPage[] = [
 
 const renderScan = () => {
   const onCancel = jest.fn();
-  const view = renderHook(() => useReceiptScan({ onCancel }));
+  const view = renderHookWithApollo(() => useReceiptScan({ onCancel }));
   return { ...view, onCancel };
 };
 

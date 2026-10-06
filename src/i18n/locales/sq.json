@@ -132,6 +132,7 @@
     "queuedRemovalKept": "Një heqje nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
+    "invalidAmountPaid": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
     "itemNotFound": "Artikulli nuk u gjet",
     "parentContextRequired": "Kërkohet konteksti prind",
     "createStorageLocationFailed": "Krijimi i vendndodhjes së ruajtjes dështoi",
@@ -489,7 +490,6 @@
     "thisFieldIsRequired": "Kjo fushë është e detyrueshme",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
     "tips": "Këshilla",
-    "totalCost": "Kostoja totale",
     "stockValue": "Vlera e stokut",
     "avgCostPerUnit": "Kosto mes./njësi",
     "totalPaid": "Totali i paguar",
@@ -514,7 +514,9 @@
     "durationDays_one": "{{count}} ditë",
     "durationDays_other": "{{count}} ditë",
     "currency": "Monedha",
-    "today": "Sot"
+    "today": "Sot",
+    "packageSize": "Madhësia e paketimit",
+    "unit": "Njësia"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",

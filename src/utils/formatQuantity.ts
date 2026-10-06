@@ -165,30 +165,25 @@ export function formatQuantityForInput(
  */
 const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
 
-/** Primary display, with g→kg / mL→L upscaling: 1500g → "1.5kg". */
+/** Primary display, with g→kg / mL→L upscaling: 1500 g → "1.5 kg". */
 export function formatQuantityDisplay(quantity: number, unit?: string): string {
   const unitStr = unit ?? '';
   if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
-    return `${formatQuantity(quantity / 1000)}${unitStr === 'g' ? 'kg' : 'L'}`;
+    return `${formatQuantity(quantity / 1000)} ${unitStr === 'g' ? 'kg' : 'L'}`;
   }
   return `${formatQuantityForDisplay(quantity)} ${unitStr}`.trim();
 }
 
-/** A package size, with g→kg / mL→L upscaling and no "ea": 1500 g → "1.5 kg". */
+/** A package size, as `formatQuantityDisplay` shows it; null when none is stated. */
 export function formatNetWeightDisplay(
   netWeight?: number | null,
   netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
 ): string | null {
   if (!netWeight) return null;
-  const unitStr =
-    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name) ?? '';
-  if (netWeight >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
-    return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
-  }
-  const formatted = Number.isInteger(netWeight)
-    ? netWeight.toString()
-    : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
-  return `${formatted} ${unitStr}`.trim();
+  return formatQuantityDisplay(
+    netWeight,
+    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name),
+  );
 }
 
 /** Prefers the unit's symbol over its name. */

@@ -31,7 +31,6 @@
     "climateControlled": "Climatizado",
     "capacity": "Capacidad",
     "capacityPlaceholder": "p. ej., 100",
-    "unit": "Unidad",
     "unitPlaceholder": "Seleccionar unidad",
     "setAsDefault": "Establecer como ubicación predeterminada",
     "typeRefrigerator": "Refrigerador",
@@ -383,8 +382,6 @@
     "noUnits": "No se encontraron unidades",
     "typeMoreToAdd": "Sigue escribiendo para añadir «{{term}}»",
     "typeMoreToAddBrand": "Sigue escribiendo para añadir «{{term}}» como marca personalizada",
-    "addStore": "Añadir «{{term}}»",
-    "addStoreHint": "Tienda nueva",
     "typeAtLeastTwo": "Escribe al menos 2 caracteres para buscar",
     "tryDifferentTerm": "Prueba con otro término de búsqueda",
     "typeMoreToAddCategory": "Sigue escribiendo para usar «{{term}}» como categoría personalizada"

@@ -132,6 +132,7 @@
     "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
     "invalidQuantity": "Introduce una cantidad válida",
+    "invalidAmountPaid": "Introduce el importe pagado, como 3,49, o déjalo vacío.",
     "itemNotFound": "Artículo no encontrado",
     "parentContextRequired": "Se requiere el contexto principal",
     "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
@@ -489,7 +490,6 @@
     "thisFieldIsRequired": "Este campo es obligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
     "tips": "Consejos",
-    "totalCost": "Coste total",
     "stockValue": "Valor del stock",
     "avgCostPerUnit": "Costo prom./unidad",
     "totalPaid": "Total pagado",
@@ -514,7 +514,9 @@
     "durationDays_one": "{{count}} día",
     "durationDays_other": "{{count}} días",
     "currency": "Moneda",
-    "today": "Hoy"
+    "today": "Hoy",
+    "packageSize": "Tamaño del paquete",
+    "unit": "Unidad"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",

@@ -17,6 +17,7 @@ import {
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
 import {
   GetShoppingListItemsFilteredDocument,
+  GetShoppingListsLiteDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useStore } from '#store';
@@ -292,7 +293,18 @@ async function setup({
   held = PANTRY,
   paged = false,
   listDelay,
+  move = recordMock(MoveShoppingItemToPantryDocument, { dataFor: movedFor }),
+  listFor = (vars: Record<string, unknown>) => listItems(vars, paged),
+  cache = makeCache(),
 }: {
+  /** The cache to render with, to see what one visit leaves the next. */
+  cache?: ReturnType<typeof makeCache>;
+  /** The list's pages as the API answers them. */
+  listFor?: (
+    vars: Record<string, unknown>,
+  ) => MockDataFor<typeof GetShoppingListItemsFilteredDocument>;
+  /** What the move answers; it echoes the line by default. */
+  move?: ReturnType<typeof recordMock>;
   /** The list's open lines come a page at a time, the beef on the second. */
   paged?: boolean;
   /** How long each page of the list takes to answer. */
@@ -306,14 +318,32 @@ async function setup({
   /** What the pantry holds before the receipt is added. */
   held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
-  const cache = makeCache();
   const getPantry = recordMock(GetPantryDocument, { data: held });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
-    dataFor: vars => listItems(vars, paged),
+    dataFor: listFor,
     ...(listDelay !== undefined ? { delay: listDelay } : {}),
   });
-  const move = recordMock(MoveShoppingItemToPantryDocument, {
-    dataFor: movedFor,
+  // The user's lists: list-1 while a test has selected it, else none.
+  const lists = recordMock(GetShoppingListsLiteDocument, {
+    dataFor: (): MockDataFor<typeof GetShoppingListsLiteDocument> => ({
+      shoppingLists: {
+        __typename: 'ShoppingListConnection',
+        edges: useStore.getState().selectedShoppingListId
+          ? [
+              {
+                __typename: 'ShoppingListEdge',
+                cursor: 'list-1',
+                node: {
+                  __typename: 'ShoppingList',
+                  id: 'list-1',
+                  name: 'Groceries',
+                  isDefault: false,
+                },
+              },
+            ]
+          : [],
+      },
+    }),
   });
   const record = recordMock(RecordReceiptMatchesDocument, {
     data: {
@@ -334,6 +364,7 @@ async function setup({
       operationMocks: [
         getPantry.mock,
         create.mock,
+        lists.mock,
         list.mock,
         move.mock,
         record.mock,
@@ -455,8 +486,8 @@ describe('useReceiptReview', () => {
       expect.objectContaining({
         item: { id: 'cat-milk' },
         forceAdd: true,
-        // A scanned receipt's price, observed on the day it printed. No rate:
-        // the bare 1 is the API's to default, so a rate could price the wrong amount.
+        // A scanned receipt's price, observed on the day it printed. The total
+        // only: the API derives the rate from the amount it records.
         purchase: {
           acquisitionMethod: AcquisitionMethod.Purchased,
           totalCost: 2.79,
@@ -466,10 +497,9 @@ describe('useReceiptReview', () => {
       }),
       expect.objectContaining({
         item: { inline: { name: 'Bananas' } },
-        // A stated amount carries its rate, which the price history records.
-        purchase: expect.objectContaining({
-          totalCost: 1.26,
-          costPerUnit: 1.26 / 2.14,
+        // The total only: the API derives the rate from the stated amount.
+        purchase: expect.not.objectContaining({
+          costPerUnit: expect.anything(),
         }),
         quantity: 2.14,
         unit: { name: 'lb' },
@@ -687,7 +717,7 @@ describe('useReceiptReview', () => {
     expect(input).not.toHaveProperty('purchase.costPerUnit');
   });
 
-  it('adds a printed count as that many packages, priced per package', async () => {
+  it('adds a printed count as that many packages, priced by their total', async () => {
     const { result, create } = await setup();
     await act(async () => {
       result.current.review.chooseLine(1, {
@@ -707,10 +737,7 @@ describe('useReceiptReview', () => {
     expect(input).toEqual(
       expect.objectContaining({
         amount: { packages: { count: 2 } },
-        purchase: expect.objectContaining({
-          totalCost: 5.58,
-          costPerUnit: 2.79,
-        }),
+        purchase: expect.objectContaining({ totalCost: 5.58 }),
       }),
     );
     expect(input).not.toHaveProperty('quantity');
@@ -772,6 +799,34 @@ describe('useReceiptReview', () => {
           },
         },
       ]);
+    });
+
+    it('reads its matches from the cache on a return, and drops them once finished', async () => {
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: RESOLVED,
+        maxUsageCount: 2,
+      });
+      const cache = makeCache();
+      const first = await setup({ resolve, cache });
+      await waitFor(() =>
+        expect(first.result.current.review.matchState).toBe('done'),
+      );
+      first.unmount();
+
+      const second = await setup({ resolve, cache });
+      await waitFor(() =>
+        expect(second.result.current.review.matchState).toBe('done'),
+      );
+      expect(resolve.fired).toHaveLength(1);
+
+      act(() => {
+        second.result.current.review.finish();
+      });
+      expect(
+        Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
+          key.startsWith('resolveReceiptLines'),
+        ),
+      ).toBe(false);
     });
 
     it('waits for the pantry to be known rather than asking twice', async () => {
@@ -1335,12 +1390,13 @@ describe('useReceiptReview', () => {
       });
 
       expect(outcome).toEqual({ added: 2, failed: 0 });
-      // The amount and price the review shows, whatever the list asked for.
+      // Neither line names a unit and the pantry holds no milk: one package,
+      // for the API to size, never 1 of a unit nobody named.
       expect(move.fired.map(vars => vars.input)).toEqual([
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
           pantryId: 'p1',
-          amount: { measured: { quantity: 1 } },
+          amount: { packages: { count: 1 } },
           totalCost: 2.79,
           removeFromList: true,
           receipt: { purchasedOn: '2026-09-28' },
@@ -1418,6 +1474,132 @@ describe('useReceiptReview', () => {
       );
     });
 
+    it('matches against the list the user still has when the selected one is gone', async () => {
+      useStore.getState().setSelectedShoppingListId('list-gone');
+      const { result } = await setup();
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+      });
+
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.onList).toBe(true),
+      );
+    });
+
+    it('says when the list is longer than the review can see', async () => {
+      // Every page is full and another always follows: the cache keeps 100.
+      const endless = (
+        vars: Record<string, unknown>,
+      ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {
+        const from = Number(vars.after ?? 0);
+        return {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              totalCount: vars.isPurchased ? 0 : 500,
+              pageInfo: {
+                hasNextPage: !vars.isPurchased,
+                endCursor: String(from + 25),
+              },
+              edges: vars.isPurchased
+                ? []
+                : Array.from({ length: 25 }, (_, i) => ({
+                    cursor: String(from + i + 1),
+                    node: {
+                      id: `sli-${from + i}`,
+                      itemName: `Item ${from + i}`,
+                      quantity: 1,
+                      unit: null,
+                      item: { id: `cat-${from + i}` },
+                      shoppingList: { id: 'list-1' },
+                      purchaseInfo: {
+                        isPurchased: false,
+                        movedToPantryAt: null,
+                      },
+                    },
+                  })),
+            },
+          },
+        };
+      };
+      const { result } = await setup({ listFor: endless });
+
+      await waitFor(
+        () => expect(result.current.review.listIncomplete).toBe(true),
+        { timeout: 5000 },
+      );
+      expect(result.current.review.listLoading).toBe(false);
+    });
+
+    it('counts a line no unit names in the counted stack the pantry holds', async () => {
+      const held: MockDataFor<typeof GetPantryDocument> = {
+        pantry: {
+          __typename: 'Pantry',
+          id: 'p1',
+          stats: { totalItems: 1 },
+          itemsConnection: {
+            totalCount: 1,
+            pageInfo: { hasNextPage: false, endCursor: null },
+            edges: [
+              {
+                node: {
+                  id: 'pi-milk',
+                  itemName: 'Milk',
+                  quantity: 2,
+                  item: { id: 'cat-milk' },
+                  unit: {
+                    id: 'unit-carton',
+                    symbol: 'carton',
+                    type: UnitType.Count,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+      const { move, chooseOnListAndAdd } = await setup({ held });
+      await chooseOnListAndAdd(1, MILK);
+
+      expect(move.fired[0]?.input).toMatchObject({
+        amount: { measured: { quantity: 1, unitId: 'unit-carton' } },
+      });
+    });
+
+    it('names a line the API cannot size, and adds the rest', async () => {
+      const refused = recordMock(MoveShoppingItemToPantryDocument, {
+        data: {
+          moveShoppingItemToPantry: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'No package size',
+            field: 'amount.packages.size',
+          },
+        },
+      });
+      const { result, create } = await setup({ move: refused });
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+        result.current.review.chooseLine(3, {
+          ...BANANAS,
+          itemId: 'cat-bananas',
+        });
+      });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.onList).toBe(true),
+      );
+
+      let outcome: unknown;
+      await act(async () => {
+        outcome = await result.current.review.addChosen();
+      });
+
+      expect(outcome).toEqual({ added: 1, failed: 1 });
+      expect(create.fired).toHaveLength(1);
+      expect(result.current.review.pendingCount).toBe(1);
+    });
+
     it('sends the receipt but no price for a line whose price was not read', async () => {
       const { move, chooseOnListAndAdd } = await setup();
       await chooseOnListAndAdd(1, { ...MILK, price: null });
@@ -1426,7 +1608,7 @@ describe('useReceiptReview', () => {
       expect(input).toEqual(
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
-          amount: { measured: { quantity: 1 } },
+          amount: { packages: { count: 1 } },
           // The purchase keeps the receipt's store and day.
           receipt: { purchasedOn: '2026-09-28' },
           priceSource: PriceSource.ReceiptScan,

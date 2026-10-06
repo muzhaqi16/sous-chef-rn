@@ -85,6 +85,7 @@ export function PantryModalsProvider({
     handleEditItem,
     handleDeleteItem,
   } = usePantryItemActions({
+    pantryId,
     removeItem,
     navigateTo,
   });

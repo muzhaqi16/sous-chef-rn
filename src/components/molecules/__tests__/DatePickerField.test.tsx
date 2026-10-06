@@ -100,4 +100,30 @@ describe('DatePickerField', () => {
     render(<DatePickerField {...defaultProps} />);
     expect(screen.getByTestId(FIELD)).toBeTruthy();
   });
+
+  it('shows a known date as a row of text that opens the same calendar', async () => {
+    jest.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const onChange = jest.fn();
+    render(
+      <DatePickerField
+        {...defaultProps}
+        presentation="row"
+        label="Bought on"
+        value={new Date(2024, 5, 15)}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByText('Bought on')).toBeTruthy();
+    expect(screen.queryByTestId(CALENDAR)).toBeNull();
+
+    await user.press(screen.getByRole('button', { expanded: false }));
+    await user.press(screen.getByTestId(`${CALENDAR}.day_2024-06-20`));
+    expect(onChange).toHaveBeenCalledWith(new Date(2024, 5, 20));
+    act(() => {
+      jest.advanceTimersByTime(motion.timing.STANDARD);
+    });
+    expect(screen.queryByTestId(CALENDAR)).toBeNull();
+    jest.useRealTimers();
+  });
 });

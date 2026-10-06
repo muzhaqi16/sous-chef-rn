@@ -364,7 +364,13 @@ describe('AddItemSheet', () => {
     expect(screen.queryByTestId('search-bar-receipt-outline')).toBeNull();
 
     rerender(
-      <AddItemSheet {...defaultProps} onReceiptPress={onReceiptPress} />,
+      <AddItemSheet
+        {...defaultProps}
+        receiptAction={{
+          onPress: onReceiptPress,
+          accessibilityLabel: 'Add from a receipt',
+        }}
+      />,
     );
     await user.press(screen.getByTestId('search-bar-receipt-outline'));
 

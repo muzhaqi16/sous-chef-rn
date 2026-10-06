@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -20,11 +20,18 @@ import {
   type PackSizeFormValues,
 } from './packSizeFormConfig';
 
+/** What became of a confirmed size. Only `done` closes the sheet. */
+export type PackSizeOutcome =
+  | { status: 'done' }
+  /** `sizeError` is why the size was refused; without one, the user was told. */
+  | { status: 'refused'; sizeError?: string };
+
 interface PackSizeSheetProps {
   visible: boolean;
   itemName: string;
   onDismiss: () => void;
-  onConfirm: (packSize: PackageSizeInput) => void;
+  /** Settles the add; never rejects. A refusal keeps the sheet and its values. */
+  onConfirm: (packSize: PackageSizeInput) => Promise<PackSizeOutcome>;
 }
 
 /** Asks for the one fact a scanned product needs before it can be added. */
@@ -35,7 +42,8 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit, setValue, reset } =
+  const [isAdding, setIsAdding] = useState(false);
+  const { control, handleSubmit, setValue, setError, reset } =
     useForm<PackSizeFormValues>({
       resolver: yupResolver(packSizeSchema),
       defaultValues: packSizeDefaults(),
@@ -48,14 +56,22 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
     onDismiss();
   };
 
-  const submit = handleSubmit(values => {
+  const submit = handleSubmit(async values => {
     const { unitId } = values;
     if (!unitId) return;
-    onConfirm({
+    setIsAdding(true);
+    const outcome = await onConfirm({
       netWeight: parseDecimalInput(values.sizeInput),
       netWeightUnitId: unitId,
     });
-    reset(packSizeDefaults());
+    setIsAdding(false);
+    if (outcome.status === 'done') {
+      close();
+      return;
+    }
+    if (outcome.sizeError) {
+      setError('sizeInput', { type: 'server', message: outcome.sizeError });
+    }
   }, logValidationErrors);
 
   return (
@@ -68,12 +84,13 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
     >
       <BottomSheetHeader
         contentPadding="md"
-        title={t('moveToPantry.packageSizeLabel')}
+        title={t('labels.packageSize')}
         onCancel={close}
         onConfirm={() => {
           void submit();
         }}
         confirmLabel={t('labels.add')}
+        saving={isAdding}
         confirmTestID={barcodeTestIDs.packSizeConfirm}
       />
 
@@ -113,7 +130,7 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
           render={({ field }) => (
             <UnitAutocompleteField
               variant="modal"
-              label={t('storageLocationForm.unit')}
+              label={t('labels.unit')}
               required
               value={field.value}
               onChangeText={field.onChange}

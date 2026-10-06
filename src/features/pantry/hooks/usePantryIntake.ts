@@ -9,7 +9,9 @@ import {
   writeLocalPantryItem,
   type LocalPantryItem,
 } from '#features/pantry/cache/writeLocalPantryItem';
+import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
+import { localQuantity } from '#domain/stockAmount';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -23,8 +25,11 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 export type AddPantryItemOutcome =
   | { status: 'added' }
   | { status: 'duplicate'; existingPantryItemId: string }
-  /** `reason` is the refusal as the user is told it. */
-  | { status: 'rejected'; reason: string };
+  /**
+   * `reason` is the refusal as the user is told it; `field` names the input it
+   * refused, when it named one.
+   */
+  | { status: 'rejected'; reason: string; field?: string };
 
 interface AddItemOptions {
   /** What the row shows before the server answers, over what `input` states. */
@@ -98,8 +103,7 @@ export function usePantryIntake(pantryId: string | undefined) {
       itemId: input.item.id ?? null,
       quantity:
         input.quantity ??
-        input.amount?.measured?.quantity ??
-        input.amount?.packages?.count,
+        (input.amount ? localQuantity(input.amount, {}) : undefined),
       unitId:
         input.unit?.id ??
         input.amount?.measured?.unitId ??
@@ -167,9 +171,11 @@ export function usePantryIntake(pantryId: string | undefined) {
         },
       );
       if (settled.status === 'failed') {
+        const field = settled.failure?.field ?? undefined;
         outcome = {
           status: 'rejected',
           reason: settled.failure?.body ?? fallback,
+          ...(field ? { field } : {}),
         };
       }
     }
@@ -180,5 +186,9 @@ export function usePantryIntake(pantryId: string | undefined) {
     return outcome;
   };
 
-  return { addItem, adding };
+  /** The unit this pantry holds `itemId` in, a counted stack first; null if none. */
+  const heldUnitOf = (itemId: string) =>
+    readHeldStackUnit(client.cache, pantryId, itemId);
+
+  return { addItem, adding, heldUnitOf };
 }

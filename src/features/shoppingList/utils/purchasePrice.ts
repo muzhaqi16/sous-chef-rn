@@ -1,7 +1,7 @@
 /**
- * The API's per-unit prices (`purchasedPrice`, `costPerUnit`) are recorded as
- * `total = price × quantity`, while the Mark Purchased sheet, a move and a
- * receipt state the TOTAL paid. The conversion lives here.
+ * The list's per-unit prices (`estimatedPrice`, `purchasedPrice`) are recorded
+ * as `total = price × quantity`, while Mark Purchased and the move sheet ask
+ * for the TOTAL paid. The conversion between the two lives here.
  */
 
 /**

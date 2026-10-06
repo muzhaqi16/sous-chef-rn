@@ -9,34 +9,11 @@ import {
   type ReceiptLineReading,
 } from './readReceiptLine';
 import { toCents } from './money';
-
-export type ParsedLineKind =
-  | 'item'
-  | 'discount'
-  | 'tax'
-  | 'subtotal'
-  | 'total'
-  | 'payment'
-  | 'other';
-
-export interface ParsedReceiptLine {
-  index: number;
-  rawText: string;
-  kind: ParsedLineKind;
-  product?: string;
-  code?: string;
-  quantity?: number;
-  unit?: string;
-  unitPrice?: number;
-  lineTotal?: number;
-  /** A discount's item, or the item a weight or count line describes. */
-  appliesToIndex?: number;
-}
-
-export interface ParsedReceipt {
-  merchant?: string;
-  lines: ParsedReceiptLine[];
-}
+import type {
+  ParsedLineKind,
+  ParsedReceipt,
+  ParsedReceiptLine,
+} from './parsedReceipt';
 
 // The printed words decide these whatever the model said.
 const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [

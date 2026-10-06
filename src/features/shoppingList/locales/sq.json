@@ -179,7 +179,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Shëno si të blerë",
-    "totalPrice": "Çmimi total",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} për njësi",

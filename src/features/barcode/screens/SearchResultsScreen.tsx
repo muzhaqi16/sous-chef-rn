@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -18,8 +18,7 @@ import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import { useSearchResults } from '../hooks/useSearchResults';
-import type { BarcodeSource } from '#features/barcode/types';
-import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
 import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
@@ -71,14 +70,8 @@ export const SearchResultsScreen: React.FC<
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
-  // PERFORMANCE: Group bottom sheet state with useShallow (Zustand v5 API)
-  const {
-    scannerSheetVisible,
-    searchError,
-    isSearching,
-    hideBottomSheet,
-    showBottomSheet,
-  } = useBottomSheetState();
+  const { scannerSheetVisible, hideBottomSheet, showBottomSheet } =
+    useBottomSheetState();
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     visible: scannerSheetVisible,
@@ -86,32 +79,11 @@ export const SearchResultsScreen: React.FC<
     snapPoints: ['50%', '65%', '85%'],
   });
 
-  const {
-    searchResults,
-    loading,
-    addingItem,
-    handleAddItem,
-    handleRetry,
-    clearSearch,
-  } = useSearchResults(barcode, format, pantryId);
+  const { item, loading, error, addingItem, handleAddItem, handleRetry } =
+    useSearchResults(barcode, format, pantryId);
 
-  // Hide bottom sheet when search results are found or barcode changes
-  // This prevents the AddItemForm from showing when there's already a match
-  // Only auto-hide for initial search results, not after edit/variant actions
-  useEffect(() => {
-    if (
-      searchResults.length > 0 &&
-      scannerSheetVisible &&
-      sheetMode === 'create'
-    ) {
-      hideBottomSheet();
-    }
-  }, [searchResults.length, scannerSheetVisible, hideBottomSheet, sheetMode]);
-
-  const handleScanAnother = () => {
-    clearSearch();
-    goBack(); // Pop SearchResults and return to existing BarcodeScanner
-  };
+  // Pop SearchResults and return to the scanner beneath it.
+  const handleScanAnother = () => goBack();
 
   const handleBackPress = () => {
     // Dismiss the Barcode modal stack to reveal Home
@@ -123,44 +95,28 @@ export const SearchResultsScreen: React.FC<
     }
   };
 
-  const handleShowAddItemForm = () => {
-    setSheetMode('create');
-    showBottomSheet(1);
+  const openSheet = (mode: AddItemFormMode) => {
+    setSheetMode(mode);
+    showBottomSheet();
   };
 
-  const handleEditItem = () => {
-    setSheetMode('edit');
-    showBottomSheet(1);
-  };
-
-  const handleCreateVariant = () => {
-    setSheetMode('variant');
-    showBottomSheet(1);
-  };
-
-  const currentItem = searchResults[0];
   const formInitialData =
-    currentItem && sheetMode === 'variant'
-      ? buildInitialDataFromItem(currentItem)
+    item && sheetMode === 'variant'
+      ? buildInitialDataFromItem(item)
       : undefined;
 
-  // Cosmetic only — the sheet re-reads the flags from the authoritative item
-  // snapshot. They are absent on a cached scan, and the suggestion wording is
-  // the safe default.
+  // Cosmetic only — the sheet re-reads the flags from the item's snapshot.
   const editActionLabel =
-    currentItem && writesItemDirectly(currentItem)
+    item && writesItemDirectly(item)
       ? t('labels.edit')
       : t('labels.suggestEdit');
 
   // Withholding onEditItem drops the action rather than offering an edit that
-  // could only be refused on submit. Only an EXPLICIT false on both hides it —
-  // a cached scan carries neither flag, and the sheet loads the authoritative
-  // snapshot anyway.
-  const isReadOnly =
-    currentItem?.canEdit === false && currentItem.canSuggest === false;
+  // could only be refused on submit.
+  const isReadOnly = !!item && !item.canEdit && !item.canSuggest;
 
   const renderContent = () => {
-    if (isSearching || loading) {
+    if (loading && !item) {
       return (
         <LoadingBranded
           message={t('searchResults.searching')}
@@ -171,25 +127,14 @@ export const SearchResultsScreen: React.FC<
       );
     }
 
-    if (searchError && !searchResults.length) {
-      return (
-        <ErrorState
-          title={t('errors.searchFailed')}
-          message={searchError}
-          onRetry={handleRetry}
-        />
-      );
-    }
-
-    const [firstResult] = searchResults;
-    if (firstResult) {
+    if (item) {
       return (
         <SearchResults
-          item={firstResult}
+          item={item}
           format={format}
           onScanAnother={handleScanAnother}
-          onEditItem={isReadOnly ? undefined : handleEditItem}
-          onCreateVariant={handleCreateVariant}
+          onEditItem={isReadOnly ? undefined : () => openSheet('edit')}
+          onCreateVariant={() => openSheet('variant')}
           editActionLabel={editActionLabel}
           source={source}
           pantryId={pantryId}
@@ -198,7 +143,19 @@ export const SearchResultsScreen: React.FC<
       );
     }
 
-    return <ItemNotFound barcode={barcode} onAddItem={handleShowAddItemForm} />;
+    if (error) {
+      return (
+        <ErrorState
+          title={t('errors.searchFailed')}
+          message={error}
+          onRetry={handleRetry}
+        />
+      );
+    }
+
+    return (
+      <ItemNotFound barcode={barcode} onAddItem={() => openSheet('create')} />
+    );
   };
 
   return (
@@ -229,13 +186,13 @@ export const SearchResultsScreen: React.FC<
           style={styles.bottomSheetContent}
           keyboardShouldPersistTaps="handled"
         >
-          {sheetMode === 'edit' && currentItem ? (
+          {sheetMode === 'edit' && item ? (
             <SuggestEditForm
-              key={`edit-${currentItem.id}`}
-              itemId={currentItem.id}
+              key={`edit-${item.id}`}
+              itemId={item.id}
               barcode={barcode}
               format={format}
-              scan={scannedPackOf(currentItem)}
+              scan={scannedPackOf(item)}
               onClose={hideBottomSheet}
             />
           ) : (

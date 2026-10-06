@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
@@ -24,8 +23,8 @@ import {
   type ShownQuantity,
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
+import { parseMoneyInput } from '#/utils/validation/common';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -53,29 +52,41 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [confirmRefused, setConfirmRefused] = useState(false);
 
   const handleReset = () => {
     setQuantityInput('1');
     setCostPerUnitInput('');
     setTotalCostInput('');
     setExpiresAt(null);
+    setConfirmRefused(false);
+  };
+
+  const quantityValue = parseFractionalInput(quantityInput);
+  const quantityIsUsable =
+    quantityValue !== null && !isNaN(quantityValue) && quantityValue > 0;
+  const costPerUnit = parseMoneyInput(costPerUnitInput);
+  const totalCost = parseMoneyInput(totalCostInput);
+  // On the fields once a confirm is refused, then live; until then the
+  // quantity field's own format hint speaks.
+  const errorOn = (refused: boolean, key: TranslationKey) =>
+    confirmRefused && refused ? t(key) : undefined;
+  const errors = {
+    quantity: errorOn(!quantityIsUsable, 'errors.invalidQuantity'),
+    costPerUnit: errorOn(costPerUnit === undefined, 'errors.invalidAmountPaid'),
+    totalCost: errorOn(totalCost === undefined, 'errors.invalidAmountPaid'),
   };
 
   const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItemId) return;
-
-    const quantityValue = parseFractionalInput(quantityInput);
-    if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
+    if (
+      !quantityIsUsable ||
+      costPerUnit === undefined ||
+      totalCost === undefined
+    ) {
+      setConfirmRefused(true);
       return;
     }
-
-    const costPerUnit = costPerUnitInput
-      ? parseDecimalInput(costPerUnitInput)
-      : undefined;
-    const totalCost = totalCostInput
-      ? parseDecimalInput(totalCostInput)
-      : undefined;
 
     // Pass the quantity and unit directly — the backend handles conversion
     onConfirm(
@@ -83,8 +94,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       quantityInput,
       shared.notes,
       shared.activeUnitId,
-      costPerUnit === undefined || isNaN(costPerUnit) ? undefined : costPerUnit,
-      totalCost === undefined || isNaN(totalCost) ? undefined : totalCost,
+      costPerUnit ?? undefined,
+      totalCost ?? undefined,
       expiresAt,
     );
     onClose();
@@ -113,6 +124,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
           setTotalCostInput={setTotalCostInput}
           expiresAt={expiresAt}
           setExpiresAt={setExpiresAt}
+          errors={errors}
           shared={shared}
         />
       )}
@@ -129,6 +141,7 @@ const RestockActionFields: React.FC<{
   setTotalCostInput: (v: string) => void;
   expiresAt: Date | null;
   setExpiresAt: (v: Date | null) => void;
+  errors: Record<'quantity' | 'costPerUnit' | 'totalCost', string | undefined>;
   shared: PantryActionSharedState;
 }> = ({
   quantityInput,
@@ -139,6 +152,7 @@ const RestockActionFields: React.FC<{
   setTotalCostInput,
   expiresAt,
   setExpiresAt,
+  errors,
   shared,
 }) => {
   const { t } = useTranslation();
@@ -198,6 +212,7 @@ const RestockActionFields: React.FC<{
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           useBottomSheetInput
           required
+          error={errors.quantity}
         />
         {newQuantity !== null || shared.isConvertedUnit ? (
           <View style={commonStyles.bottomSheetInfoRow}>
@@ -239,16 +254,18 @@ const RestockActionFields: React.FC<{
               placeholder={localizeNumericHint('0.00')}
               keyboardType="decimal-pad"
               useBottomSheetInput
+              error={errors.costPerUnit}
             />
           </View>
           <View style={styles.costField}>
             <FormInput
-              label={t('labels.totalCost')}
+              label={t('labels.totalPaid')}
               value={totalCostInput}
               onChangeText={setTotalCostInput}
               placeholder={localizeNumericHint('0.00')}
               keyboardType="decimal-pad"
               useBottomSheetInput
+              error={errors.totalCost}
             />
           </View>
         </View>

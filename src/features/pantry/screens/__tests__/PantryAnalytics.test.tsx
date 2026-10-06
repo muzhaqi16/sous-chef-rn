@@ -613,7 +613,7 @@ describe('PantryAnalytics', () => {
     expect(screen.getByText('+1/2')).toBeTruthy();
     expect(screen.getByText('-1 2/3')).toBeTruthy();
     expect(screen.getByText('-2.456')).toBeTruthy();
-    expect(screen.getByText('1.5kg')).toBeTruthy();
+    expect(screen.getByText('1.5 kg')).toBeTruthy();
     expect(screen.getByText('3/4 cup')).toBeTruthy();
   });
 });

@@ -196,7 +196,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               render={({ field }) => (
                 <UnitAutocompleteField
                   variant="inline"
-                  label={t('storageLocationForm.unit')}
+                  label={t('labels.unit')}
                   value={field.value}
                   onChangeText={field.onChange}
                   onUnitSelected={id => setValue('unitId', id)}

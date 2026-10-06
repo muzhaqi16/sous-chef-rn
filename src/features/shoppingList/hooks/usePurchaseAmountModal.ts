@@ -4,7 +4,7 @@ import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
 import { t } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { unitPriceFromTotal } from '#domain/purchasePrice';
+import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 
 export interface PurchaseAmountItem {
   id: string;

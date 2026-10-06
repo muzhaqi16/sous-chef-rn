@@ -41,9 +41,3 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
     }
   }
 }
-
-# The duplicate's count, bumped locally so an offline restock shows at once.
-fragment useAddScannedItem_restockQuantity on PantryItem {
-  id
-  quantity
-}

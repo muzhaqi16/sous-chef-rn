@@ -9,8 +9,8 @@ import {
   isUsableReceipt,
   linesThroughTotal,
   structureReceipt,
-  type ParsedReceipt,
 } from './structureReceipt';
+import type { ParsedReceipt } from './parsedReceipt';
 
 /**
  * Structures the draft's pages with the phone's own model, or answers null:

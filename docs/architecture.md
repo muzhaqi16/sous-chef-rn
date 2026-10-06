@@ -460,14 +460,15 @@ seam has one home, and a new source extends it rather than adding a parallel
 path. The API and the admin app own the server side; this client never edits
 those repos.
 
-| Seam                                                                                               | A new source                                                                 |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver | sends `today` from its intake hook; supplies shelf-life data to the resolver |
-| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                 | adds one resolution step                                                     |
-| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue            | adds a mapper and its precedence entries                                     |
-| The barcode miss/result flow; the embedding model                                                  | reaches the scan through a resolution step, never its own lookup             |
-| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`             | implements `ReceiptParser`                                                   |
-| Per-language names and search; the language header; the `languageChanged` resync event             | adds names as synonyms in their language                                     |
+| Seam                                                                                                                                                    | A new source                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver                                                      | sends `today` from its intake hook; supplies shelf-life data to the resolver                                                                                     |
+| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                                                                      | adds one resolution step                                                                                                                                         |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue                                                                 | adds a mapper and its precedence entries                                                                                                                         |
+| The barcode miss/result flow; the embedding model                                                                                                       | reaches the scan through a resolution step, never its own lookup                                                                                                 |
+| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`                                                                  | implements `ReceiptParser`                                                                                                                                       |
+| Stock writes: `stockAmountOf` / `boughtAmountOf` (`src/domain/stockAmount.ts`), the one create `usePantryIntake` and the one restock `usePantryRestock` | states what was bought through `stockAmount.ts` and writes through those two hooks, never its own mutation; a count naming no unit goes through `boughtAmountOf` |
+| Per-language names and search; the language header; the `languageChanged` resync event                                                                  | adds names as synonyms in their language                                                                                                                         |
 
 Four rules keep parallel work apart:
 

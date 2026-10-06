@@ -179,7 +179,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Marcar como comprado",
-    "totalPrice": "Precio total",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} por unidad",
