@@ -295,9 +295,10 @@ jobs:
   # verdict needs BOTH p < 0.02 and a >=5% effect size, so a change that is
   # merely consistent is not reported as a regression.
   #
-  # The baseline is measured on THIS runner, minutes before the current one, by
-  # checking out the merge base. That adjacency is the noise control; comparing
-  # against a stored number from another machine would not be meaningful.
+  # The baseline is measured on THIS runner, minutes before the current one, in
+  # a worktree of the merge base with its own install. That adjacency is the
+  # noise control; comparing against a stored number from another machine would
+  # not be meaningful.
   #
   # `continue-on-error` is deliberate and is why this job is absent from
   # `pr-status`'s `needs`. Mobile render measurements are noisy, and a gate set
@@ -333,19 +334,27 @@ jobs:
         # this climbs, the comparison below stops meaning anything.
         run: npm run perf:stability
 
-      - name: Measure baseline (merge base) and current (PR head)
+      - name: Measure baseline (merge base) and current (PR merge result)
         env:
           BASELINE_REF: ${{ github.event.pull_request.base.sha }}
+          BASELINE_DIR: ${{ runner.temp }}/baseline
         run: |
           set -e
-          git switch --detach "$BASELINE_REF"
-          # `npx reassure`, NOT `npm run perf:baseline`: this step runs with the
-          # BASE commit's package.json checked out, so an npm script added by
-          # the PR under review does not exist yet and the step dies before
-          # measuring anything. The binary comes from the head's node_modules,
-          # which is installed and never switched.
-          npx reassure --baseline
-          git switch --detach "${{ github.event.pull_request.head.sha }}"
+          # The stability check left its own files here; if a measurement below
+          # fails, they must not be published as this PR's comparison.
+          rm -f .reassure/baseline.perf .reassure/current.perf .reassure/output.*
+          # Each side runs on the node_modules and generated GraphQL files of its
+          # own commit. Sharing the checkout's install fails the baseline as soon
+          # as a PR drops a package or operation the merge base still imports.
+          git worktree add --detach "$BASELINE_DIR" "$BASELINE_REF"
+          (
+            cd "$BASELINE_DIR"
+            npm ci
+            npm run codegen
+            npx reassure --baseline
+          )
+          mkdir -p .reassure
+          cp "$BASELINE_DIR/.reassure/baseline.perf" .reassure/baseline.perf
           npx reassure
 
       - name: Publish comparison
