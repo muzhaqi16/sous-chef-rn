@@ -194,7 +194,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
   errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
 - **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
-  user-scoped. Survives restart. The persisted `context` is an **allowlisted subset** (`localFirst`
+  user-scoped. Survives restart. Each distinct document is stored once and named by the entries that
+  send it (blob v2), so a burst of one operation does not re-serialize its AST per entry per save; the
+  reader still takes the v1 array an older build wrote. The persisted `context` is an **allowlisted subset** (`localFirst`
   only) — the live Apollo operation context carries client internals that don't survive JSON
   serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
   enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not

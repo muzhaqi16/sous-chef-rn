@@ -51,13 +51,109 @@ function isTerminal(status: QueueStatus): boolean {
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
-/**
- * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
- * except the `mutation` DocumentNode is stored as a serialized JSON string.
- */
-type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
-  mutation: string;
-};
+type StoredEntry = Omit<QueuedMutation, 'mutation'>;
+
+/** Blob v1: every entry carries its own serialized document. */
+type QueueBlobV1 = Array<StoredEntry & { mutation: string }>;
+
+/** Blob v2: each distinct document once, named by the entries that send it. */
+interface QueueBlobV2 {
+  v: 2;
+  documents: Record<string, string>;
+  entries: Array<StoredEntry & { document: string }>;
+}
+
+interface SerializedDocument {
+  json: string;
+  hash: string;
+}
+
+// A generated mutation document is tens of KB of AST, shared by every entry
+// that sends it: each document object is serialized once per process.
+const serializedDocuments = new WeakMap<DocumentNode, SerializedDocument>();
+
+/** FNV-1a: tells one operation's documents from different builds apart. */
+function hashOf(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = Math.imul(hash ^ text.charCodeAt(index), 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function remember(document: DocumentNode, json: string): SerializedDocument {
+  const serialized = { json, hash: hashOf(json) };
+  serializedDocuments.set(document, serialized);
+  return serialized;
+}
+
+function serializedDocument(document: DocumentNode): SerializedDocument {
+  return (
+    serializedDocuments.get(document) ??
+    remember(
+      document,
+      JSON.stringify({
+        kind: document.kind,
+        definitions: document.definitions,
+        loc: document.loc,
+      }),
+    )
+  );
+}
+
+function serializeQueue(mutations: readonly QueuedMutation[]): string {
+  const documents = new Map<string, string>();
+  const keys = new Map<DocumentNode, string>();
+  const keyOf = (operationName: string, document: DocumentNode): string => {
+    const { json, hash } = serializedDocument(document);
+    let key = `${operationName}:${hash}`;
+    // A hash collision takes its own key, never another document's.
+    while (documents.has(key) && documents.get(key) !== json) key += "'";
+    documents.set(key, json);
+    keys.set(document, key);
+    return key;
+  };
+  const entries = mutations.map(({ mutation, ...entry }) => ({
+    ...entry,
+    document: keys.get(mutation) ?? keyOf(entry.operationName, mutation),
+  }));
+  const blob: QueueBlobV2 = {
+    v: 2,
+    documents: Object.fromEntries(documents),
+    entries,
+  };
+  return JSON.stringify(blob);
+}
+
+/** Entries naming one stored document share one parsed object. */
+function documentParser(): (
+  ref: string,
+  json: string | undefined,
+) => DocumentNode {
+  const parsed = new Map<string, DocumentNode>();
+  return (ref, json) => {
+    const known = parsed.get(ref);
+    if (known) return known;
+    if (json === undefined) {
+      throw new Error(`Queue blob holds no document ${ref}`);
+    }
+    const stored = JSON.parse(json) as DocumentNode;
+    const document = withoutRemovedFields(stored);
+    if (document === stored) remember(document, json);
+    parsed.set(ref, document);
+    return document;
+  };
+}
+
+const loadedEntry = (
+  entry: StoredEntry,
+  mutation: DocumentNode,
+): QueuedMutation => ({
+  ...entry,
+  operationName: currentOperationName(entry.operationName),
+  mutation,
+  variables: withRefInputs(mutation, withExpiresOn(mutation, entry.variables)),
+});
 
 /** User-scoped mutation queue persisted to MMKV. */
 export class QueueStore {
@@ -106,22 +202,15 @@ export class QueueStore {
         return [];
       }
 
-      const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
-
-      const queue: QueuedMutation[] = parsed.map(item => {
-        const mutation = withoutRemovedFields(
-          JSON.parse(item.mutation) as DocumentNode,
-        );
-        return {
-          ...item,
-          operationName: currentOperationName(item.operationName),
-          mutation,
-          variables: withRefInputs(
-            mutation,
-            withExpiresOn(mutation, item.variables),
-          ),
-        };
-      });
+      const blob = JSON.parse(queueJson) as QueueBlobV1 | QueueBlobV2;
+      const documentFor = documentParser();
+      const queue = Array.isArray(blob)
+        ? blob.map(({ mutation, ...entry }) =>
+            loadedEntry(entry, documentFor(mutation, mutation)),
+          )
+        : blob.entries.map(({ document, ...entry }) =>
+            loadedEntry(entry, documentFor(document, blob.documents[document])),
+          );
 
       this.cache = queue;
 
@@ -134,21 +223,11 @@ export class QueueStore {
 
   private saveQueue(mutations: QueuedMutation[]): void {
     try {
-      // The DocumentNode has to be serialized to survive MMKV.
-      const serialized = mutations.map(m => ({
-        ...m,
-        mutation: JSON.stringify({
-          kind: m.mutation.kind,
-          definitions: m.mutation.definitions,
-          loc: m.mutation.loc,
-        }),
-      }));
-
       // A queued mutation carries its full variables, so it is written only to
       // the encrypted instance. The in-memory cache below still updates, so a
       // quarantined session queues and replays normally within its lifetime.
       if (!isRecoveryStorage()) {
-        storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
+        storage.set(QUEUE_STORAGE_KEY, serializeQueue(mutations));
       }
 
       this.cache = mutations;
