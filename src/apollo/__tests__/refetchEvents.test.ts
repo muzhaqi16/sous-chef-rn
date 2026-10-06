@@ -13,6 +13,8 @@ import type { StoreApi } from 'zustand';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
+import { changeLanguage, getResolvedLanguage } from '#/i18n';
+import { languageLink } from '../links/languageLink';
 import {
   connectResyncSources,
   createRefetchEventManager,
@@ -75,6 +77,20 @@ const SearchQuery = gql`
     search
   }
 `;
+const DetailQuery = gql`
+  query DetailForResync {
+    detail
+  }
+`;
+
+const navigationListeners = new Set<() => void>();
+const navigate = () => navigationListeners.forEach(listener => listener());
+const onNavigation = (listener: () => void) => {
+  navigationListeners.add(listener);
+  return () => {
+    navigationListeners.delete(listener);
+  };
+};
 
 const elapse = (ms: number) =>
   act(async () => {
@@ -109,9 +125,14 @@ const triggers = {
     useStore.setState({ apiReachable: true });
   },
   wsReconnected: () => mockReconnectListeners.forEach(listener => listener()),
+  languageChanged: () => {
+    void changeLanguage(getResolvedLanguage() === 'es' ? 'en' : 'es');
+  },
 };
 
 let requests: string[];
+/** Operations the server fails with a 503 until cleared. */
+let failing: Set<string>;
 let heldResponses: Array<() => void> | null;
 let client: ApolloClient;
 
@@ -140,6 +161,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockReconnectListeners.clear();
+  navigationListeners.clear();
   resetSessionEndingGate();
   useStore.setState({
     user: { id: 'user-1' },
@@ -147,22 +169,34 @@ beforeEach(async () => {
     apiReachable: true,
   });
   requests = [];
+  failing = new Set();
   heldResponses = null;
   client = new ApolloClient({
     cache: new InMemoryCache(),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    link: new ApolloLink(
-      operation =>
-        new Observable(observer => {
-          requests.push(operation.operationName ?? '');
-          const respond = () => {
-            observer.next({ data: { list: 'value', search: 'value' } });
-            observer.complete();
-          };
-          if (heldResponses) heldResponses.push(respond);
-          else respond();
-        }),
-    ),
+    // The production language link in front: it records what was answered
+    // in the language a catch-up asks for.
+    link: ApolloLink.from([
+      languageLink,
+      new ApolloLink(
+        operation =>
+          new Observable(observer => {
+            requests.push(operation.operationName ?? '');
+            if (failing.has(operation.operationName ?? '')) {
+              observer.error(new Error('503 Service Unavailable'));
+              return undefined;
+            }
+            const respond = () => {
+              observer.next({
+                data: { list: 'value', search: 'value', detail: 'value' },
+              });
+              observer.complete();
+            };
+            if (heldResponses) heldResponses.push(respond);
+            else respond();
+          }),
+      ),
+    ]),
     refetchEventManager: createRefetchEventManager(),
   });
   connectResyncSources(client);
@@ -230,6 +264,204 @@ describe('resync', () => {
     idle.resolve();
     await pastTheWindow();
     expect(requests).toEqual(['ListForResync']);
+  });
+
+  it('does not resync for a switch to the language already in use', async () => {
+    void changeLanguage(getResolvedLanguage());
+    await pastTheWindow();
+
+    expect(requests).toEqual([]);
+  });
+
+  describe('the language catch-up', () => {
+    beforeEach(() => {
+      connectResyncSources(client, { onNavigation });
+    });
+
+    it('re-asks a screen paused at the switch once it resumes, and only it', async () => {
+      // A screen beneath the one the switch was made on: paused, so its
+      // query has no observer and no refetch reaches it.
+      const paused = client.watchQuery({ query: DetailQuery });
+      const first = paused.subscribe(() => {});
+      await elapse(0);
+      first.unsubscribe();
+      requests = [];
+
+      triggers.languageChanged();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      // Resuming reads the cache, still in the old language.
+      requests = [];
+      watchers.push(paused.subscribe(() => {}));
+      await elapse(0);
+      expect(requests).toEqual([]);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+      expect(queueManager.whenIdle).toHaveBeenCalled();
+
+      // Asked in this language now, as the list was at the switch, so the
+      // catch-up does not even wait on the queue.
+      jest.mocked(queueManager.whenIdle).mockClear();
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
+    });
+
+    it('re-asks a screen first opened after the switch that reads the cache', async () => {
+      // What the old language left in the cache.
+      await client.query({ query: DetailQuery });
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(
+        client
+          .watchQuery({ query: DetailQuery, fetchPolicy: 'cache-first' })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+      expect(requests).toEqual([]);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    // The app's default: a screen opened after the switch asked the network as
+    // it mounted, so a catch-up would ask every new screen twice.
+    it('leaves a screen first opened after the switch that asked the network itself', async () => {
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            fetchPolicy: 'cache-and-network',
+            nextFetchPolicy: 'cache-first',
+          })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('asks nothing on navigation before a real switch', async () => {
+      void changeLanguage(getResolvedLanguage());
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+      expect(navigationListeners.size).toBe(0);
+    });
+
+    // Per switch, not per language: the names are shared entities, so the
+    // screens open in `es` wrote theirs over what the paused one reads.
+    it('re-asks a screen paused through a switch and back', async () => {
+      const paused = client.watchQuery({ query: DetailQuery });
+      const first = paused.subscribe(() => {});
+      triggers.appForeground();
+      await pastTheWindow();
+      first.unsubscribe();
+
+      triggers.languageChanged();
+      await pastTheWindow();
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(paused.subscribe(() => {}));
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('re-asks on the next navigation a query whose catch-up failed', async () => {
+      failing.add('ListForResync');
+      triggers.languageChanged();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      failing.clear();
+      requests = [];
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      requests = [];
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual([]);
+    });
+
+    it('waits for the API to catch up', async () => {
+      useStore.setState({ apiReachable: false });
+      triggers.languageChanged();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    // Each catch-up first waits on a full drain of the queue, which offline or
+    // signed out only fails, once per navigation.
+    it.each([
+      ['offline', { apiReachable: false }],
+      ['signed out', { user: null }],
+    ] as const)(
+      'makes no catch-up on a navigation while %s',
+      async (_state, change) => {
+        triggers.languageChanged();
+        await pastTheWindow();
+        jest.mocked(queueManager.whenIdle).mockClear();
+        requests = [];
+
+        useStore.setState(change);
+        navigate();
+        await pastTheWindow();
+
+        expect(queueManager.whenIdle).not.toHaveBeenCalled();
+        expect(requests).toEqual([]);
+      },
+    );
+
+    // Rehydration applies the saved language after the sources subscribe.
+    it('ignores a switch made before any query exists', async () => {
+      watchers.splice(0).forEach(watcher => watcher.unsubscribe());
+      triggers.languageChanged();
+      await pastTheWindow();
+
+      watch(ListQuery);
+      await elapse(0);
+      requests = [];
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+      expect(navigationListeners.size).toBe(0);
+    });
+
+    it('never re-asks a query that declined resync', async () => {
+      triggers.languageChanged();
+      await pastTheWindow();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).not.toContain('SearchForResync');
+    });
   });
 
   it('does not refetch a query that declined resync', async () => {
@@ -342,4 +574,8 @@ describe('resync', () => {
       );
     });
   });
+});
+
+afterAll(async () => {
+  await changeLanguage('en');
 });

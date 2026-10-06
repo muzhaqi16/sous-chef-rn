@@ -51,7 +51,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data: recipeData } = useQuery(
+  const { data: recipeData, refetch: refetchRecipe } = useQuery(
     GetRecipeDocument,
     recipeId ? { variables: { id: recipeId } } : skipToken,
   );
@@ -139,9 +139,9 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   };
 
   /**
-   * Both edits queue together offline and replay in FIFO order against the same
-   * recipe id (the queue serializes same-entity ops); the local display catches
-   * up when the replay syncs.
+   * The ingredients follow the fields, never beside them: the fields carry the
+   * version, so a save refused as changed elsewhere writes nothing. Offline
+   * both queue at once and replay in FIFO order against the same recipe id.
    */
   const updateRecipe = async (
     id: string,
@@ -149,34 +149,39 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     ingredients: RecipeIngredientInput[],
   ): Promise<RecipeWriteOutcome> => {
     const fallback = t('recipes.updateRecipeFailed');
-    const [recipeLeg, ingredientsLeg] = await Promise.all([
-      settleMutation(
-        () =>
-          updateRecipeMutation({
-            variables: { input: { ...input, id } },
-          }),
-        { document: UpdateRecipeDocument, fallback, present: 'none' },
-      ),
-      settleMutation(
-        () =>
-          updateRecipeIngredientsMutation({
-            variables: { input: { recipeId: id, ingredients } },
-          }),
-        {
-          document: UpdateRecipeIngredientsDocument,
-          fallback,
-          present: 'none',
-        },
-      ),
-    ]);
+    const recipeLeg = await settleMutation(
+      () =>
+        updateRecipeMutation({
+          variables: { input: { ...input, id } },
+        }),
+      { document: UpdateRecipeDocument, fallback, present: 'none' },
+    );
+    if (recipeLeg.failure) return outcomeOf(recipeLeg.failure);
 
-    // One message, from a leg that was actually refused.
-    return outcomeOf(recipeLeg.failure ?? ingredientsLeg.failure);
+    const ingredientsLeg = await settleMutation(
+      () =>
+        updateRecipeIngredientsMutation({
+          variables: { input: { recipeId: id, ingredients } },
+        }),
+      {
+        document: UpdateRecipeIngredientsDocument,
+        fallback,
+        present: 'none',
+      },
+    );
+    return outcomeOf(ingredientsLeg.failure);
+  };
+
+  /** The recipe as the server now has it, for a form reopening after a conflict. */
+  const reloadRecipe = async (): Promise<RecipeForm_RecipeFragment | null> => {
+    await refetchRecipe();
+    return readRecipe();
   };
 
   return {
     recipeRef,
     readRecipe,
+    reloadRecipe,
     createRecipe,
     updateRecipe,
     saving: creating || updating || updatingIngredients,

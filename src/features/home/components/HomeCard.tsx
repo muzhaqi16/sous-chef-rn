@@ -66,11 +66,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   const animatedTheme = useAnimatedTheme();
 
-  // Animated highlight overlay - opacity animates; the brand color is read in
-  // the worklet (not interpolated) so Reanimated is the sole writer of this
-  // node. If the color lived on the static stylesheet, a Reanimated commit
-  // could land over a freshly-applied theme color and pin the overlay to the
-  // previous brand color until remount.
+  // Opacity animates; the brand colour is read in the worklet because the
+  // animated node takes no themed style.
   const animatedHighlightStyle = useAnimatedStyle(() => ({
     opacity: highlightOpacity.get(),
     backgroundColor: animatedTheme.get().colors.primary + '15',
@@ -169,9 +166,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    // backgroundColor is driven by the worklet in `animatedHighlightStyle` — see
-    // the note there; the brand color must not live on the static stylesheet of
-    // a node Reanimated also commits to.
+    // backgroundColor comes from `animatedHighlightStyle`.
     pointerEvents: 'none',
   },
   homeHeader: {

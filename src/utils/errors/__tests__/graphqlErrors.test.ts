@@ -32,6 +32,7 @@ describe('getTopLevelGraphQLError', () => {
       code: 'UNAUTHENTICATED',
       message: 'Token expired',
       field: null,
+      category: null,
     });
   });
 
@@ -48,6 +49,22 @@ describe('getTopLevelGraphQLError', () => {
     expect(getTopLevelGraphQLError(error)?.field).toBe('input.email');
   });
 
+  it("reads the API's fault category", () => {
+    const error = new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: 'Database unreachable',
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            category: 'infrastructure',
+          },
+        },
+      ],
+    } satisfies FormattedExecutionResult);
+
+    expect(getTopLevelGraphQLError(error)?.category).toBe('infrastructure');
+  });
+
   it('defaults code/message to empty strings when missing', () => {
     const error = new CombinedGraphQLErrors({
       errors: [{ message: '' }],
@@ -56,6 +73,7 @@ describe('getTopLevelGraphQLError', () => {
       code: '',
       message: '',
       field: null,
+      category: null,
     });
   });
 

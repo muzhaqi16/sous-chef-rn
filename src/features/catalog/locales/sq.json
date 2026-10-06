@@ -282,6 +282,7 @@
     "counter": "{{current}} nga {{total}}",
     "setAsMain": "Vendos si foto kryesore",
     "mainPhoto": "Foto kryesore",
+    "credit": "Foto: {{source}}",
     "setPrimary": {
       "notFoundTitle": "Fotoja nuk u gjet",
       "notFoundBody": "Kjo foto nuk gjendet më te artikulli — mund të jetë hequr.",

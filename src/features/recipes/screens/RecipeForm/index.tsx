@@ -33,6 +33,7 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { logValidationErrors } from '#/utils/validation/common';
+import { presentFailure } from '#/utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
@@ -58,8 +59,14 @@ export const RecipeFormScreen: React.FC<
   const form = useRecipeForm();
 
   const user = useUser();
-  const { recipeRef, readRecipe, createRecipe, updateRecipe, saving } =
-    useRecipeFormWrites(recipeId);
+  const {
+    recipeRef,
+    readRecipe,
+    reloadRecipe,
+    createRecipe,
+    updateRecipe,
+    saving,
+  } = useRecipeFormWrites(recipeId);
 
   // Populate the form once the recipe arrives.
   const { populateFromRecipe } = form;
@@ -71,14 +78,21 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
-  // A refusal naming a field the form renders a message for lands on it.
+  // A refusal naming a field the form renders a message for lands on it. An
+  // edit made elsewhere since the form loaded offers to reload the form from it.
   const reportFailure = (failure: RecipeWriteFailure) => {
     const field = FIELDS_WITH_MESSAGES.find(name => name === failure.field);
     if (field) {
       form.setError(field, { type: 'server', message: failure.body });
       return;
     }
-    alertService.alert(failure.title, failure.body);
+    presentFailure(failure, {
+      onConflictRefresh: () => {
+        void reloadRecipe().then(recipe => {
+          if (recipe) populateFromRecipe(recipe);
+        });
+      },
+    });
   };
 
   const onValid = async () => {

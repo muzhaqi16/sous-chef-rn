@@ -96,12 +96,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label != null && <Text style={styles.label}>{label}</Text>}
-      <View
-        style={[
-          styles.inputContainer,
-          multiline && styles.inputContainerMultiline,
-        ]}
-      >
+      <View style={styles.inputContainer}>
         {leftIcon != null && (
           <View style={styles.leftIconWrapper}>{leftIcon}</View>
         )}

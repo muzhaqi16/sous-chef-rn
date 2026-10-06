@@ -6,4 +6,7 @@ export const barcodeTestIDs = {
   /** `ProductResultCard`'s edit action: the press target, and its label. */
   productEditAction: 'product-result-edit-action',
   productEditActionLabel: 'product-result-edit-action-label',
+  /** The pack-size prompt a product without a package size asks before adding. */
+  packSizeInput: 'pack-size-input',
+  packSizeConfirm: 'pack-size-confirm',
 };

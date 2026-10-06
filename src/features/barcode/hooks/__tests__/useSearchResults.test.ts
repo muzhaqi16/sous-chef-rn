@@ -1,20 +1,26 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { createElement, type ReactNode } from 'react';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import {
-  ItemByUpcFilterDocument,
-  ItemBySkuFilterDocument,
-  CreateItemDocument,
-} from '#operations/item/item.generated';
+import { CreateItemDocument } from '#operations/item/item.generated';
+import { ItemByLookupDocument } from '../useSearchResults.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
 import { t } from '#/i18n';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { isRecord } from '#/utils/isRecord';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -28,7 +34,6 @@ jest.mock('#/services/alertService', () => ({
 const mockSetSearchResults = jest.fn();
 const mockSetSearching = jest.fn();
 const mockSetSearchError = jest.fn();
-const mockAddToRecentlyScanned = jest.fn();
 const mockClearSearch = jest.fn();
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
@@ -38,7 +43,6 @@ jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
     searchResults: [],
     setSearchResults: mockSetSearchResults,
     setSearching: mockSetSearching,
-    addToRecentlyScanned: mockAddToRecentlyScanned,
     clearSearch: mockClearSearch,
     setSearchError: mockSetSearchError,
   })),
@@ -83,11 +87,15 @@ beforeEach(() => {
 
 // --- Mock builders ---
 
-function upcMock(
-  items: MockItemNode[],
-  options: { partial?: boolean } = {},
-): MockedResponse {
-  const data: MockDataFor<typeof ItemByUpcFilterDocument> = {
+// One document serves both lookups, told apart by `lookup`.
+const byUpc = { match: (vars: Record<string, unknown>) => isUpcLookup(vars) };
+const bySku = { match: (vars: Record<string, unknown>) => !isUpcLookup(vars) };
+function isUpcLookup(vars: Record<string, unknown>): boolean {
+  return isRecord(vars.lookup) && 'upc' in vars.lookup;
+}
+
+function upcMock(items: MockItemNode[], options: { partial?: boolean } = {}) {
+  const data: MockDataFor<typeof ItemByLookupDocument> = {
     items: {
       __typename: 'ItemConnection',
       edges: items.map((node, i) => ({
@@ -97,14 +105,15 @@ function upcMock(
       })),
     },
   };
-  return recordMock(ItemByUpcFilterDocument, {
+  return recordMock(ItemByLookupDocument, {
+    ...byUpc,
     data,
     partial: options.partial,
-  }).mock;
+  });
 }
 
 function skuMock(items: MockItemNode[]): MockedResponse {
-  const data: MockDataFor<typeof ItemBySkuFilterDocument> = {
+  const data: MockDataFor<typeof ItemByLookupDocument> = {
     items: {
       __typename: 'ItemConnection',
       edges: items.map((node, i) => ({
@@ -114,14 +123,18 @@ function skuMock(items: MockItemNode[]): MockedResponse {
       })),
     },
   };
-  return recordMock(ItemBySkuFilterDocument, { data }).mock;
+  return recordMock(ItemByLookupDocument, {
+    ...bySku,
+    data,
+  }).mock;
 }
 
 function upcErrorMock(
   error: Error,
   options: { maxUsageCount?: number } = {},
 ): MockedResponse {
-  return recordMock(ItemByUpcFilterDocument, {
+  return recordMock(ItemByLookupDocument, {
+    ...byUpc,
     error,
     maxUsageCount: options.maxUsageCount,
   }).mock;
@@ -193,7 +206,7 @@ describe('useSearchResults', () => {
   describe('UPC query results', () => {
     it('sets search results when UPC query finds an item', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM]).mock],
       });
 
       await waitFor(() =>
@@ -203,8 +216,151 @@ describe('useSearchResults', () => {
           ]),
         ),
       );
-      await waitFor(() => expect(mockAddToRecentlyScanned).toHaveBeenCalled());
       expect(mockHideBottomSheet).toHaveBeenCalled();
+    });
+
+    // The API matches every spelling of one code (UPC-A, EAN-13 with a leading
+    // zero, GTIN-14, UPC-E), so the lookup sends exactly what the camera read;
+    // a format it does not name is left for the API to detect.
+    it.each([
+      ['0012345678905', 'ean-13', 'EAN_13'],
+      ['012345678905', 'upc-a', 'UPC_A'],
+      ['012345678905', 'unknown-format', undefined],
+    ])(
+      'looks up %s (%s) as scanned and shows the product',
+      async (code, format, upcFormat) => {
+        const upc = upcMock([
+          { ...SAMPLE_UPC_ITEM, primaryUpc: '012345678905' },
+        ]);
+
+        renderHookWithApollo(() => useSearchResults(code, format), {
+          operationMocks: [upc.mock],
+        });
+
+        await waitFor(() =>
+          expect(upc.fired).toContainEqual(
+            expect.objectContaining({
+              lookup: { upc: { code, format: upcFormat } },
+            }),
+          ),
+        );
+        await waitFor(() =>
+          expect(mockSetSearchResults).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]),
+          ),
+        );
+      },
+    );
+
+    it("carries where the scanned pack's facts came from", async () => {
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([
+            {
+              ...SAMPLE_UPC_ITEM,
+              matchedVariation: {
+                __typename: 'ProductVariation',
+                id: 'off-1',
+                upc: '0012345678905',
+                source: 'OPENFOODFACTS',
+              },
+            },
+          ]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            variationId: 'off-1',
+            source: 'OPENFOODFACTS',
+          }),
+        ]),
+      );
+    });
+
+    // `imageUrl` is the primary photo's thumbnail, which an edit form starts
+    // from; the card's full-width image is the photo's original, with its credit.
+    it('carries the photo the card shows, with its credit', async () => {
+      const credit = {
+        text: 'Open Food Facts',
+        license: 'CC BY-SA 3.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([
+            {
+              ...SAMPLE_UPC_ITEM,
+              photos: [
+                {
+                  __typename: 'ItemPhoto',
+                  id: 'photo-front',
+                  url: 'https://cdn.test/front.jpg',
+                  credit,
+                },
+              ],
+            },
+          ]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            imageUrl: SAMPLE_UPC_ITEM.imageUrl,
+            image: {
+              url: 'https://cdn.test/front.jpg',
+              credit: expect.objectContaining(credit),
+            },
+          }),
+        ]),
+      );
+    });
+
+    it('shows an item with no photos by its only image and credit', async () => {
+      const imageCredit = {
+        __typename: 'ImageCredit',
+        text: 'Open Food Facts',
+        license: 'CC BY-SA 3.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, photos: [], imageCredit }]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            image: { url: SAMPLE_UPC_ITEM.imageUrl, credit: imageCredit },
+          }),
+        ]),
+      );
+    });
+
+    it('carries the notices the item data asks for', async () => {
+      const notice = {
+        __typename: 'DataAttribution',
+        source: 'OPENFOODFACTS',
+        notice: 'Product data from Open Food Facts, available under the ODbL.',
+        licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, dataAttributions: [notice] }]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({ dataAttributions: [notice] }),
+        ]),
+      );
     });
 
     // Both flags carry through to the card, which hides its edit action when
@@ -213,7 +369,8 @@ describe('useSearchResults', () => {
     it('carries the write-path flags through to the scanned item', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
         operationMocks: [
-          upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }]),
+          upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }])
+            .mock,
         ],
       });
 
@@ -232,7 +389,7 @@ describe('useSearchResults', () => {
         // flags this test asserts are absent. Marking THIS mock partial
         // excuses exactly the fields it leaves out — the old whole-test flag
         // switched the missing-field guard off for everything.
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true })],
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true }).mock],
       });
 
       await waitFor(() =>
@@ -262,7 +419,7 @@ describe('useSearchResults', () => {
       };
 
       renderHookWithApollo(() => useSearchResults('SKU123'), {
-        operationMocks: [upcMock([]), skuMock([skuItem])],
+        operationMocks: [upcMock([]).mock, skuMock([skuItem])],
       });
 
       await waitFor(() =>
@@ -306,7 +463,7 @@ describe('useSearchResults', () => {
                 displayAsFraction: false,
               },
             },
-          ]),
+          ]).mock,
         ],
       });
 
@@ -326,7 +483,8 @@ describe('useSearchResults', () => {
     });
 
     it('asks for the unit the destination pantry counts the item in', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
+      const upc = recordMock(ItemByLookupDocument, {
+        ...byUpc,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
@@ -337,8 +495,7 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'EAN_13',
+          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
           pantry: 'pantry-7',
         }),
       );
@@ -346,7 +503,7 @@ describe('useSearchResults', () => {
 
     it('shows bottom sheet when neither UPC nor SKU finds results', async () => {
       renderHookWithApollo(() => useSearchResults('UNKNOWN'), {
-        operationMocks: [upcMock([]), skuMock([])],
+        operationMocks: [upcMock([]).mock, skuMock([])],
       });
 
       await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalledWith(1));
@@ -384,6 +541,96 @@ describe('useSearchResults', () => {
       );
     });
 
+    it('keeps the new-item form closed when the lookup fails', async () => {
+      // The SKU lookup would answer, with nothing: it must not be asked.
+      const sku = recordMock(ItemByLookupDocument, {
+        ...bySku,
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [
+          upcErrorMock(new NetworkRequestError('Network request failed')),
+          sku.mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.networkError'),
+        ),
+      );
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+      // Offline is not "unknown": the product may exist, so nothing offers
+      // to create it.
+      expect(sku.fired).toEqual([]);
+      expect(mockShowBottomSheet).not.toHaveBeenCalled();
+    });
+
+    describe('while offline', () => {
+      const online = useStore.getState();
+      afterEach(() => {
+        useStore.setState({
+          isOnline: online.isOnline,
+          apiReachable: online.apiReachable,
+        });
+      });
+
+      // The real `offlineModeLink` in front of a network that records calls.
+      function renderOffline() {
+        useStore.setState({ isOnline: false, apiReachable: null });
+        const network = jest.fn(
+          () =>
+            new Observable<ApolloLink.Result>(observer => {
+              observer.complete();
+            }),
+        );
+        const client = new ApolloClient({
+          cache: makeCache(),
+          link: ApolloLink.from([
+            createOfflineModeLink(),
+            new ApolloLink(network),
+          ]),
+          defaultOptions: APOLLO_DEFAULT_OPTIONS,
+        });
+        renderHook(() => useSearchResults('1234567890'), {
+          wrapper: ({ children }: { children: ReactNode }) =>
+            createElement(ApolloProvider, { client, children }),
+        });
+        return network;
+      }
+
+      it('shows the connection copy, not a miss, and asks nobody', async () => {
+        const network = renderOffline();
+
+        await waitFor(() =>
+          expect(mockSetSearchError).toHaveBeenCalledWith(
+            t('errors.networkError'),
+          ),
+        );
+        expect(network).not.toHaveBeenCalled();
+        expect(mockShowBottomSheet).not.toHaveBeenCalled();
+      });
+
+      it('keeps the connection copy when the connection comes back', async () => {
+        renderOffline();
+        await waitFor(() =>
+          expect(mockSetSearchError).toHaveBeenCalledWith(
+            t('errors.networkError'),
+          ),
+        );
+
+        act(() => {
+          useStore.setState({ isOnline: true, apiReachable: true });
+        });
+
+        expect(mockSetSearchError).not.toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        );
+      });
+    });
+
     it("shows the app's retry copy for a server failure, never its message", async () => {
       renderHookWithApollo(() => useSearchResults('1234567890'), {
         operationMocks: [upcErrorMock(new Error('Server error'))],
@@ -407,7 +654,7 @@ describe('useSearchResults', () => {
         {
           operationMocks: [
             upcErrorMock(new Error('Server error'), { maxUsageCount: 1 }),
-            upcMock([SAMPLE_UPC_ITEM]),
+            upcMock([SAMPLE_UPC_ITEM]).mock,
           ],
         },
       );
@@ -426,60 +673,6 @@ describe('useSearchResults', () => {
         expect(mockSetSearchResults).toHaveBeenCalledWith([
           expect.objectContaining({ id: 'item-1' }),
         ]),
-      );
-    });
-  });
-
-  describe('format mapping', () => {
-    it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upc.mock],
-      });
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'EAN_13',
-        }),
-      );
-    });
-
-    it('maps upc-a → UPC_A', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(() => useSearchResults('1234567890', 'upc-a'), {
-        operationMocks: [upc.mock],
-      });
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'UPC_A',
-        }),
-      );
-    });
-
-    it('passes undefined upcFormat for unknown formats', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(
-        () => useSearchResults('1234567890', 'unknown-format'),
-        { operationMocks: [upc.mock] },
-      );
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: undefined,
-        }),
       );
     });
   });
@@ -518,6 +711,62 @@ describe('useSearchResults', () => {
         expect.any(String),
       );
       expect(useStore.getState().pendingItemImages).toBeNull();
+    });
+
+    it('hands an invalid barcode back to the form, not an alert', async () => {
+      const refused = recordMock(CreateItemDocument, {
+        data: {
+          createItem: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'invalid GTIN',
+            field: 'productDetails.primaryUpc',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [refused.mock] },
+      );
+
+      let refusal: unknown;
+      await act(async () => {
+        refusal = await result.current.handleAddItem({
+          name: 'New Item',
+          upc: '012345678901',
+        });
+      });
+
+      expect(refusal).toEqual({
+        field: 'upc',
+        message: t('errors.field.primaryUpc'),
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('alerts any other refusal, with nothing for the form to show', async () => {
+      const refused = recordMock(CreateItemDocument, {
+        data: {
+          createItem: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'bad',
+            field: 'name',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [refused.mock] },
+      );
+
+      let refusal: unknown = 'unset';
+      await act(async () => {
+        refusal = await result.current.handleAddItem({ name: 'New Item' });
+      });
+
+      expect(refusal).toBeUndefined();
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
 
     it('takes a singular selectedImage as a one-image batch', async () => {

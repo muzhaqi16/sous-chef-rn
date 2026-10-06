@@ -59,7 +59,7 @@ Your kitchen inventory, tracked accurately enough to be useful.
 - **Shopping / Purchased tabs** with counts, and a one-tap clear.
 - **Drag-and-drop reordering** that survives concurrent edits (fractional
   indexing, so two people reordering at once don't fight).
-- **Add fast** — search, **barcode scan**, manual entry, plus an *Add Again*
+- **Add fast** — search, **barcode scan**, manual entry, plus an _Add Again_
   row of your recents and a favorites shelf.
 - **Purchase history per item** — every purchase with quantity, price, and who
   bought it, rolled up into total spent and average price.
@@ -117,7 +117,7 @@ Your kitchen inventory, tracked accurately enough to be useful.
   real data before the network answers.
 - **Writes work offline.** Mutations apply locally and queue; the queue replays
   automatically on reconnect.
-- A banner tells you what's going on — offline, server unreachable, *N* changes
+- A banner tells you what's going on — offline, server unreachable, _N_ changes
   pending, back online and syncing.
 - An explicit **Offline Mode** toggle for when you want cached data only.
 
@@ -157,15 +157,15 @@ Your kitchen inventory, tracked accurately enough to be useful.
 Sous Chef is a **GraphQL client**. All durable data lives on a backend API; the
 app's job is to make that data feel local.
 
-| Concern | Approach |
-| --- | --- |
-| **Server state** | Apollo Client 4 — normalized cache, data masking, colocated fragments, persisted query manifest |
-| **Device/UI state** | Zustand — selections, preferences, auth session, network status |
-| **Offline** | Apollo cache persisted to MMKV + a mutation queue that replays on reconnect |
-| **Realtime** | GraphQL subscriptions over `graphql-ws` |
-| **Rendering** | React 19 with the React Compiler; Unistyles 3 pushes theme changes through the native ShadowTree instead of re-rendering |
-| **Lists** | FlashList v2 everywhere a list can grow |
-| **Types** | GraphQL Codegen generates `TypedDocumentNode`s next to each operation — no hand-written server types |
+| Concern             | Approach                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Server state**    | Apollo Client 4 — normalized cache, data masking, colocated fragments, persisted query manifest                          |
+| **Device/UI state** | Zustand — selections, preferences, auth session, network status                                                          |
+| **Offline**         | Apollo cache persisted to MMKV + a mutation queue that replays on reconnect                                              |
+| **Realtime**        | GraphQL subscriptions over `graphql-ws`                                                                                  |
+| **Rendering**       | React 19 with the React Compiler; Unistyles 3 pushes theme changes through the native ShadowTree instead of re-rendering |
+| **Lists**           | FlashList v2 everywhere a list can grow                                                                                  |
+| **Types**           | GraphQL Codegen generates `TypedDocumentNode`s next to each operation — no hand-written server types                     |
 
 The code is organized into **self-contained feature modules** under
 `src/features/`, each declaring what it contributes to navigation through a
@@ -223,15 +223,15 @@ files, codegen, testing, and the full command reference.
 
 Start at **[`docs/README.md`](docs/README.md)** for the full index.
 
-| | |
-| --- | --- |
-| [Architecture](docs/architecture.md) | How the app is built and organized |
-| [Development](docs/development.md) | Setup, commands, build variants, testing |
-| [Apollo patterns](docs/apollo-client-patterns.md) | Cache updates, fragments, optimistic responses |
-| [Local-first architecture](docs/local-first-architecture.md) | Offline queue, conflict handling, sync |
-| [Meal planning](docs/meal-planning.md) | Meal plan domain model |
-| [Push notifications](docs/push-notifications.md) | FCM/APNs setup and routing |
-| [CI/CD](docs/CI_CD.md) | Pipelines, environments, release tagging |
+|                                                              |                                                |
+| ------------------------------------------------------------ | ---------------------------------------------- |
+| [Architecture](docs/architecture.md)                         | How the app is built and organized             |
+| [Development](docs/development.md)                           | Setup, commands, build variants, testing       |
+| [Apollo patterns](docs/apollo-client-patterns.md)            | Cache updates, fragments, optimistic responses |
+| [Local-first architecture](docs/local-first-architecture.md) | Offline queue, conflict handling, sync         |
+| [Meal planning](docs/meal-planning.md)                       | Meal plan domain model                         |
+| [Push notifications](docs/push-notifications.md)             | FCM/APNs setup and routing                     |
+| [CI/CD](docs/CI_CD.md)                                       | Pipelines, environments, release tagging       |
 
 `CLAUDE.md` at the repo root holds the day-to-day coding conventions that AI
 assistants and contributors are expected to follow.

@@ -41,6 +41,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Onion',
             quantity: 3,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -66,6 +67,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Onion',
             quantity: 3,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -89,6 +91,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Onion',
             quantity: 2,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -102,6 +105,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-2',
             name: 'Onion',
             quantity: 5,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -128,10 +132,18 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Milk',
             quantity: 2,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'ml',
           },
-          { id: 'ri-2', name: 'Milk', quantity: 1, itemId: 'i-1', unitId: 'l' },
+          {
+            id: 'ri-2',
+            name: 'Milk',
+            quantity: 1,
+            isOptional: false,
+            itemId: 'i-1',
+            unitId: 'l',
+          },
         ],
       }),
     ];
@@ -151,6 +163,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-2',
             name: 'Rice',
             quantity: 1,
+            isOptional: false,
             itemId: 'i-2',
             unitId: 'u-1',
           },
@@ -171,11 +184,18 @@ describe('deriving a shopping list from a cached meal plan', () => {
         id: 'r-1',
         servings: 1,
         ingredients: [
-          { id: 'ri-1', name: 'A pinch of luck', quantity: 1, unitId: 'u-1' },
+          {
+            id: 'ri-1',
+            name: 'A pinch of luck',
+            quantity: 1,
+            isOptional: false,
+            unitId: 'u-1',
+          },
           {
             id: 'ri-2',
             name: 'Rice',
             quantity: 1,
+            isOptional: false,
             itemId: 'i-2',
             unitId: 'u-1',
           },
@@ -191,7 +211,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
     ]);
   });
 
-  it('includes an optional ingredient, as the server does', () => {
+  it('leaves an optional ingredient out, unreported, as the server does', () => {
     const meals = [
       meal('mpi-1', 1, {
         id: 'r-1',
@@ -199,16 +219,27 @@ describe('deriving a shopping list from a cached meal plan', () => {
         ingredients: [
           {
             id: 'ri-1',
+            name: 'Flour',
+            quantity: 1,
+            isOptional: false,
+            itemId: 'i-1',
+            unitId: 'u-1',
+          },
+          {
+            id: 'ri-2',
             name: 'Garnish',
             quantity: 1,
-            itemId: 'i-1',
+            isOptional: true,
+            itemId: 'i-2',
             unitId: 'u-1',
           },
         ],
       }),
     ];
 
-    expect(deriveShoppingListFromMealPlan(meals, base).inputs).toHaveLength(1);
+    const derived = deriveShoppingListFromMealPlan(meals, base);
+    expect(derived.inputs.map(input => input.item.itemId)).toEqual(['i-1']);
+    expect(derived.skipped).toEqual([]);
   });
 
   it('mints an id per line so a queued replay converges on one row', () => {
@@ -221,6 +252,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Onion',
             quantity: 1,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -228,6 +260,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-2',
             name: 'Rice',
             quantity: 1,
+            isOptional: false,
             itemId: 'i-2',
             unitId: 'u-1',
           },
@@ -250,6 +283,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
             id: 'ri-1',
             name: 'Onion',
             quantity: 1,
+            isOptional: false,
             itemId: 'i-1',
             unitId: 'u-1',
           },
@@ -279,6 +313,7 @@ describe('honouring checkPantry from cached rows', () => {
           id: 'ri-1',
           name: 'Onion',
           quantity: 5,
+          isOptional: false,
           itemId: 'i-1',
           unitId: 'u-1',
         },

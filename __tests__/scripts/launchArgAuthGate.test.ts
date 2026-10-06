@@ -35,7 +35,11 @@ function runGate(
     });
     return { code: 0, output };
   } catch (error) {
-    const failure = error as { status?: number; stdout?: string; stderr?: string };
+    const failure = error as {
+      status?: number;
+      stdout?: string;
+      stderr?: string;
+    };
     return {
       code: failure.status ?? 1,
       output: `${failure.stdout ?? ''}${failure.stderr ?? ''}`,
@@ -64,13 +68,23 @@ describe('the launch-argument-auth gate', () => {
       // The old order printed "✓ … is off" for this without ever reading the
       // signing config. It may still pass — a release BUNDLE has no `__DEV__`
       // — but the message has to be about the artifact.
-      const { output } = runGate(['--platform', 'android', '--variant', 'release']);
+      const { output } = runGate([
+        '--platform',
+        'android',
+        '--variant',
+        'release',
+      ]);
 
       expect(output).toContain('signingConfigs.release');
     });
 
     it('names the reason the capability is live on a dev bundle', () => {
-      const { output } = runGate(['--platform', 'android', '--variant', 'debug']);
+      const { output } = runGate([
+        '--platform',
+        'android',
+        '--variant',
+        'debug',
+      ]);
 
       expect(output).toContain('__DEV__ bundle');
     });
@@ -88,9 +102,12 @@ describe('the launch-argument-auth gate', () => {
     });
 
     it('allows the simulator', () => {
-      const { code } = runGate(['--platform', 'ios', '--sdk', 'iphonesimulator'], {
-        ALLOW_LAUNCH_ARG_AUTH: 'true',
-      });
+      const { code } = runGate(
+        ['--platform', 'ios', '--sdk', 'iphonesimulator'],
+        {
+          ALLOW_LAUNCH_ARG_AUTH: 'true',
+        },
+      );
 
       expect(code).toBe(0);
     });
@@ -106,7 +123,10 @@ describe('the launch-argument-auth gate', () => {
   it('run-ios.sh derives the sdk instead of hardcoding it', () => {
     // A literal on the gate's command line, beside a build that read its
     // destination from elsewhere, is what made the check unfalsifiable.
-    const script = fs.readFileSync(path.join(ROOT, 'scripts', 'run-ios.sh'), 'utf8');
+    const script = fs.readFileSync(
+      path.join(ROOT, 'scripts', 'run-ios.sh'),
+      'utf8',
+    );
 
     expect(script).not.toMatch(/--sdk\s+iphonesimulator\b/);
     expect(script).toMatch(/--sdk\s+"\$IOS_SDK"/);

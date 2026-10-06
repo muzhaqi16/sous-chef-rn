@@ -97,9 +97,9 @@ module.exports = {
     schema: [],
     messages: {
       themedStyle:
-        "`{{sheet}}.{{key}}` reads the theme, and this node also takes an animated style. Unistyles links reanimated's React-side copy of the animated values to a themed node and writes that stale copy back over the animation. Read the theme values in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or move them to a non-animated parent or child.",
+        '`{{sheet}}.{{key}}` reads the theme, and this node also takes an animated style. After a theme change, the next React commit can put the old values back on this node. Read the theme values in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or move them to a non-animated parent.',
       importedStyle:
-        '`{{sheet}}.{{key}}` comes from another file, so whether it reads the theme is not visible here, and this node also takes an animated style. Put it on a non-animated parent or child.',
+        '`{{sheet}}.{{key}}` comes from another file, so whether it reads the theme is not visible here, and this node also takes an animated style. Put it on a non-animated parent.',
     },
   },
   create(context) {

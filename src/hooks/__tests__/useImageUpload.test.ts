@@ -13,7 +13,11 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
-import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ImageUploadPurpose,
+  ProfileVisibility,
+} from '#/graphql/generated/schemaTypes';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
 import type { UploadFormField } from '#/graphql/generated/schemaTypes';
@@ -249,6 +253,43 @@ describe('useImageUpload', () => {
       const names = appendSpy.mock.calls.map(([name]) => name);
 
       expect(names).toEqual(['key', 'policy', 'x-amz-signature', 'file']);
+    });
+
+    it('posts a receipt photo for its key, with no confirm step', async () => {
+      const presign = recordMock(CreateImageUploadUrlDocument, {
+        data: {
+          createImageUploadUrl: {
+            __typename: 'CreateImageUploadUrlPayload',
+            url: 'https://storage.test/bucket',
+            key: 'receipt-photos/u1/p1.jpg',
+            fields: PRESIGN_FIELDS,
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [presign.mock],
+      });
+
+      let key: string | null = null;
+      await act(async () => {
+        key = await result.current.uploadUnconfirmed(
+          { ...file, type: 'image/jpeg' },
+          ImageUploadPurpose.ReceiptPhoto,
+        );
+      });
+
+      expect(key).toBe('receipt-photos/u1/p1.jpg');
+      expect(presign.fired).toEqual([
+        {
+          input: expect.objectContaining({
+            purpose: ImageUploadPurpose.ReceiptPhoto,
+          }),
+        },
+      ]);
+      expect(mockXhr.open).toHaveBeenCalledWith(
+        'POST',
+        'https://storage.test/bucket',
+      );
     });
 
     it('returns the confirmed url', async () => {

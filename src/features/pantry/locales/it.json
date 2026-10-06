@@ -250,7 +250,8 @@
     "failedItems_other": "Impossibile spostare {{count}} articoli, tra cui {{names}}",
     "nothingLeftToMove": "Tutto ciò che hai comprato è già in dispensa",
     "packageSizeLabel": "Dimensione della confezione",
-    "packageSizeHint": "Solo se questa confezione è diversa dalla dimensione abituale, come un barattolo da 22 oz. Lascia vuoto per usare la dimensione abituale."
+    "packageSizeHint": "Solo se questa confezione è diversa dalla dimensione abituale, come un barattolo da 22 oz. Lascia vuoto per usare la dimensione abituale.",
+    "packageSizeNeedsCount": "La dimensione della confezione va con un numero intero di confezioni in un'unità contabile, come 2 barattoli. Lasciala vuota per una quantità come 500 g."
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",

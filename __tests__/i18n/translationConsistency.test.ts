@@ -46,7 +46,9 @@ const flatten = (obj: unknown, prefix = ''): Record<string, string> => {
 
 const read = (locale: string) =>
   flatten(
-    JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8')),
+    JSON.parse(
+      fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'),
+    ),
   );
 
 const en = read('en');
@@ -74,29 +76,28 @@ describe('translations of the same English string', () => {
     expect(groups.length).toBeGreaterThan(0);
   });
 
-  it.each(TRANSLATED)(
-    '%s never differs only by capitalisation',
-    locale => {
-      const translations = read(locale);
-      const offenders: string[] = [];
+  it.each(TRANSLATED)('%s never differs only by capitalisation', locale => {
+    const translations = read(locale);
+    const offenders: string[] = [];
 
-      for (const [english, keys] of groups) {
-        const values = [
-          ...new Set(
-            keys.map(k => translations[k]).filter((v): v is string => !!v),
-          ),
-        ];
-        if (values.length < 2) continue;
-        if (new Set(values.map(ignoringCase)).size === 1) {
-          offenders.push(
-            `${JSON.stringify(english)} -> ${values.map(v => JSON.stringify(v)).join(' vs ')}`,
-          );
-        }
+    for (const [english, keys] of groups) {
+      const values = [
+        ...new Set(
+          keys.map(k => translations[k]).filter((v): v is string => !!v),
+        ),
+      ];
+      if (values.length < 2) continue;
+      if (new Set(values.map(ignoringCase)).size === 1) {
+        offenders.push(
+          `${JSON.stringify(english)} -> ${values
+            .map(v => JSON.stringify(v))
+            .join(' vs ')}`,
+        );
       }
+    }
 
-      expect(offenders).toEqual([]);
-    },
-  );
+    expect(offenders).toEqual([]);
+  });
 
   it.each(TRANSLATED)('%s never differs only by punctuation', locale => {
     const translations = read(locale);
@@ -114,7 +115,9 @@ describe('translations of the same English string', () => {
       if (new Set(values.map(ignoringCase)).size === 1) continue;
       if (new Set(values.map(ignoringCaseAndPunctuation)).size === 1) {
         offenders.push(
-          `${JSON.stringify(english)} -> ${values.map(v => JSON.stringify(v)).join(' vs ')}`,
+          `${JSON.stringify(english)} -> ${values
+            .map(v => JSON.stringify(v))
+            .join(' vs ')}`,
         );
       }
     }

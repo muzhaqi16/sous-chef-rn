@@ -227,7 +227,7 @@ describe('resetManager', () => {
           .linkExpirationData('n1', { pantryItemName: 'Milk' });
         useBarcodeScannerStore
           .getState()
-          .addToRecentlyScanned({ id: 's1', name: 'Milk', upc: '01' });
+          .setSearchResults([{ id: 's1', name: 'Milk', upc: '01' }]);
 
         await resetManager.resetStore({
           auth: false,
@@ -243,7 +243,7 @@ describe('resetManager', () => {
         expect(useNotificationStore.getState().pendingExpirationLinks).toEqual(
           {},
         );
-        expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
+        expect(useBarcodeScannerStore.getState().searchResults).toEqual([]);
       });
 
       it('clears the persisted Apollo cache when clearApolloCache is true', async () => {

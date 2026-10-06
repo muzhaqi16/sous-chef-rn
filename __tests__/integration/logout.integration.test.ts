@@ -108,9 +108,7 @@ describe('integration: logout clears Apollo cache and Zustand auth state', () =>
     // Apollo half of the seam: cache is empty.
     const afterLogout = cache.extract();
     expect(afterLogout).toEqual({});
-    expect(
-      cache.readQuery({ query: SEED_QUERY }),
-    ).toBeNull();
+    expect(cache.readQuery({ query: SEED_QUERY })).toBeNull();
 
     // Zustand half of the seam: auth fields are cleared.
     const finalState = store.getState();

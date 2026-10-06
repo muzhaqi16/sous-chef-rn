@@ -28,6 +28,8 @@ import {
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { countFactorOver, inCountedUnit } from '#domain/stockDisplay';
+import { stockAmountOf } from '#domain/stockAmount';
+import { restockVariables } from '#features/pantry/hooks/usePantryRestock';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -359,20 +361,14 @@ export function usePantryItemActions({
     const settled = await settleMutation(
       () =>
         restockPantryItem({
-          variables: {
-            today: todayKey(),
-            input: {
-              id: itemId,
-              quantity,
-              unitId,
-              notes: restockNotes,
-              costPerUnit,
-              totalCost,
-              expiresOn,
-              // idempotencyKey dedups the restock ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
-          },
+          variables: restockVariables({
+            id: itemId,
+            amount: stockAmountOf(quantity, { unitId }),
+            notes: restockNotes,
+            costPerUnit,
+            totalCost,
+            expiresOn,
+          }),
         }),
       {
         document: RestockPantryItemDocument,

@@ -1,6 +1,7 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
 import type { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
+import { sleep } from '#/utils/backoff';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,
@@ -51,9 +52,7 @@ const getEncryptionKeyWithRetry = async (): Promise<DeviceEncryptionKey> => {
     } catch (error) {
       lastError = error;
       if (cycle < KEY_FETCH_CYCLES) {
-        await new Promise(resolve =>
-          setTimeout(resolve, KEY_FETCH_CYCLE_DELAY_MS),
-        );
+        await sleep(KEY_FETCH_CYCLE_DELAY_MS);
       }
     }
   }

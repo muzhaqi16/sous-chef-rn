@@ -12,6 +12,13 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#features/barcode/types';
 import { ScrollView } from 'react-native';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import {
+  ExternalSource,
+  NetWeightKind,
+  type PackageSizeInput,
+} from '#/graphql/generated/schemaTypes';
+import { PackSizeSheet } from './PackSizeSheet';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -39,6 +46,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAskingPackSize, setIsAskingPackSize] = useState(false);
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
@@ -51,15 +59,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     onScanAnother();
   };
 
-  const handleAddItem = () => {
-    if (!source || isAdded) {
-      return;
-    }
+  const fromOpenFoodFacts = item.source === ExternalSource.Openfoodfacts;
+  // A pantry row needs its pack size; an Open Food Facts record may not state
+  // one, and then the user gives it once rather than filling the item form.
+  const needsPackSize =
+    fromOpenFoodFacts &&
+    (item.netWeightKind !== NetWeightKind.Package ||
+      item.netWeight === undefined);
 
+  const addItem = (packSize?: PackageSizeInput) => {
     void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId) {
-          const outcome = await addToPantry(item);
+          const outcome = await addToPantry(item, packSize);
 
           if (outcome.status === 'duplicate') {
             setIsLoading(false);
@@ -117,10 +129,26 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     );
   };
 
+  const handleAddItem = () => {
+    if (!source || isAdded) {
+      return;
+    }
+    if (source === 'pantry' && needsPackSize) {
+      setIsAskingPackSize(true);
+      return;
+    }
+    addItem();
+  };
+
+  const handlePackSize = (packSize: PackageSizeInput) => {
+    setIsAskingPackSize(false);
+    addItem(packSize);
+  };
+
   // Determine button label based on source and state
   const getButtonLabel = () => {
     if (isAdded) {
-      return t('barcode.added');
+      return t('labels.added');
     }
 
     return source === 'pantry'
@@ -139,6 +167,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         onEditItem={onEditItem}
         onCreateVariant={onCreateVariant}
         editActionLabel={editActionLabel}
+      />
+
+      <DataAttributionNotices
+        attributions={item.dataAttributions ?? []}
+        centered
       />
 
       <ActionButtons
@@ -162,6 +195,17 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           onPress: onScanAnother,
         }}
       />
+
+      {/* Mounted only for a product that can ask: its unit field loads the
+          unit list, which a catalog product never needs. */}
+      {!!needsPackSize && (
+        <PackSizeSheet
+          visible={isAskingPackSize}
+          itemName={item.name}
+          onDismiss={() => setIsAskingPackSize(false)}
+          onConfirm={handlePackSize}
+        />
+      )}
     </ScrollView>
   );
 };

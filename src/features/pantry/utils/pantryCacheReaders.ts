@@ -6,7 +6,11 @@
 import type { ApolloCache } from '@apollo/client';
 import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
-import { FindCachedPantryItemDuplicate_PantryFragmentDoc } from './pantryCacheReaders.generated';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  FindCachedPantryItemDuplicate_PantryFragmentDoc,
+  ReadStackUnitType_PantryItemFragmentDoc,
+} from './pantryCacheReaders.generated';
 
 /** The matched row, plus what an optimistic restock needs to bump it locally. */
 export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
@@ -149,4 +153,16 @@ export function findCachedPantryItemDuplicate(
   }
 
   return null;
+}
+
+/** The kind of unit a cached stack is counted in; null when the cache holds none. */
+export function readStackUnitType(
+  cache: ApolloCache,
+  pantryItemId: string,
+): UnitType | null {
+  const stack = cache.readFragment({
+    id: cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
+    fragment: ReadStackUnitType_PantryItemFragmentDoc,
+  });
+  return stack?.unit.type ?? null;
 }

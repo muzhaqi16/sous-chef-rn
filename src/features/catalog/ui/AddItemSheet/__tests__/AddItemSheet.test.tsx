@@ -357,6 +357,21 @@ describe('AddItemSheet', () => {
     expect(defaultProps.onScanPress).toHaveBeenCalled();
   });
 
+  it('offers a receipt scan only on a sheet that takes one', async () => {
+    const user = userEvent.setup();
+    const onReceiptPress = jest.fn();
+    const { rerender } = render(<AddItemSheet {...defaultProps} />);
+    expect(screen.queryByTestId('search-bar-receipt-outline')).toBeNull();
+
+    rerender(
+      <AddItemSheet {...defaultProps} onReceiptPress={onReceiptPress} />,
+    );
+    await user.press(screen.getByTestId('search-bar-receipt-outline'));
+
+    expect(onReceiptPress).toHaveBeenCalled();
+    expect(defaultProps.onScanPress).not.toHaveBeenCalled();
+  });
+
   it('calls onQuickAddSuggestion when suggestion is pressed', async () => {
     const user = userEvent.setup();
     const item: BaseSuggestionItem = {

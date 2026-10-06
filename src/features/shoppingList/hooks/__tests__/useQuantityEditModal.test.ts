@@ -9,7 +9,11 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  DisplayFormat,
+  ErrorCode,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 function updateMock() {
@@ -76,7 +80,13 @@ function createItem(
       movedToPantryAt: null,
       isPurchased: false,
     },
-    unit: { __typename: 'Unit', id: 'unit-1', name: 'gallon', symbol: 'gal' },
+    unit: {
+      __typename: 'Unit',
+      id: 'unit-1',
+      name: 'gallon',
+      symbol: 'gal',
+      type: UnitType.Volume,
+    },
     item: null,
     ...overrides,
   };

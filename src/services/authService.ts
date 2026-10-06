@@ -49,6 +49,7 @@ import {
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { withinMs } from '#/utils/withinMs';
 import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
@@ -865,15 +866,11 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
 
 /** The revoke, bounded. A slow network must not hold the local sign-out. */
 async function revokeWithinBudget(): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const budget = new Promise<boolean>(resolve => {
-    timer = setTimeout(() => resolve(false), REVOKE_BUDGET_MS);
-  });
-  const revoked = await Promise.race([
+  const revoked = await withinMs(
     revokeDeviceCredentialForThisDevice(),
-    budget,
-  ]);
-  if (timer) clearTimeout(timer);
+    REVOKE_BUDGET_MS,
+    false,
+  );
   // The local slot goes either way, so this is a stale server row rather than a
   // sign-in the person loses — but it is a secret still exchangeable.
   if (!revoked) {

@@ -1,4 +1,11 @@
-import { emailRule, passwordRule, nameRule } from '../common';
+import {
+  emailRule,
+  lazyMessage,
+  nameRule,
+  passwordRule,
+  positiveDecimalRule,
+  quantityRule,
+} from '../common';
 
 describe('emailRule', () => {
   it('accepts valid email', async () => {
@@ -76,5 +83,58 @@ describe('nameRule', () => {
 
   it('rejects numbers in name', async () => {
     await expect(nameRule.validate('John123')).rejects.toThrow();
+  });
+});
+
+describe('lazyMessage', () => {
+  it('resolves its key when the rule reports, not when it is built', () => {
+    const message = lazyMessage('errors.invalidQuantity');
+    expect(message()).toBe('Please enter a valid quantity');
+  });
+});
+
+describe('quantityRule', () => {
+  const rule = quantityRule('errors.invalidQuantity');
+
+  it.each(['2', '0.5', '1 1/4'])('accepts %p', async value => {
+    await expect(rule.validate(value)).resolves.toBe(value);
+  });
+
+  it.each(['0', '-1', 'abc', '', '  '])('refuses %p', async value => {
+    await expect(rule.validate(value)).rejects.toThrow(
+      'Please enter a valid quantity',
+    );
+  });
+
+  it('takes zero only where it is allowed', async () => {
+    const withZero = quantityRule('errors.invalidQuantity', {
+      allowZero: true,
+    });
+    await expect(withZero.validate('0')).resolves.toBe('0');
+    await expect(withZero.validate('-1')).rejects.toThrow();
+  });
+});
+
+describe('positiveDecimalRule', () => {
+  const rule = positiveDecimalRule('errors.invalidQuantity');
+
+  it('accepts a decimal above zero', async () => {
+    await expect(rule.validate('1.5')).resolves.toBe('1.5');
+  });
+
+  // A fraction is refused rather than guessed at: `1 1/2` minus its space reads
+  // as 11/2.
+  it.each(['0', '-2', 'abc', '1 1/2', ''])('refuses %p', async value => {
+    await expect(rule.validate(value)).rejects.toThrow(
+      'Please enter a valid quantity',
+    );
+  });
+
+  it('leaves an optional one blank', async () => {
+    const optional = positiveDecimalRule('errors.invalidQuantity', {
+      optional: true,
+    });
+    await expect(optional.validate(' ')).resolves.toBe(' ');
+    await expect(optional.validate('0')).rejects.toThrow();
   });
 });

@@ -486,15 +486,18 @@ describe('usePantryItemActions', () => {
         today: expect.any(String),
         input: {
           id: 'item-1',
-          quantity: 3,
-          unitId: undefined,
+          amount: { measured: { quantity: 3, unitId: undefined } },
           notes: 'Bought more',
           costPerUnit: undefined,
           totalCost: undefined,
           expiresOn: null,
           idempotencyKey: expect.any(String),
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         },
       });
+      // The input's day is the one the stats are read on: the day of the restock.
+      const [fired] = m.fired;
+      expect(fired?.input).toMatchObject({ today: fired?.today });
 
       expect(result.current.restockModal.visible).toBe(false);
     });
@@ -586,7 +589,9 @@ describe('usePantryItemActions', () => {
       });
 
       const input = m.fired[0]!.input as Record<string, unknown>;
-      expect(input.unitId).toBe('unit-kg');
+      expect(input.amount).toEqual({
+        measured: { quantity: 5, unitId: 'unit-kg' },
+      });
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
       expect(input.expiresOn).toBe('2026-12-31');

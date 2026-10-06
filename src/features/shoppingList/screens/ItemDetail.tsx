@@ -4,7 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -21,13 +21,14 @@ import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
   priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice } from '#domain/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -390,6 +391,12 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
         </DetailSection>
+
+        {!!item.item?.dataAttributions.length && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
       {itemPhotos.length > 0 && (
         <ItemPhotoViewer
@@ -397,7 +404,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item?.canEdit}
+          item={item.item}
         />
       )}
     </>

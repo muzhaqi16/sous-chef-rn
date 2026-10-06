@@ -7,7 +7,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import {
   removeItemFromShoppingListForMoveToPantry,
@@ -18,7 +18,11 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { useMoveToPantry } from '../useMoveToPantry';
+import {
+  useMoveToPantry,
+  type MoveToPantryInput,
+  type MoveToPantryOutcome,
+} from '../useMoveToPantry';
 
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
@@ -68,6 +72,12 @@ function createItem(
   } as Partial<ShoppingListItemDisplayFragment> as ShoppingListItemDisplayFragment;
 }
 
+const MOVE_INPUT: MoveToPantryInput = {
+  pantryId: 'pantry-1',
+  amount: { measured: { quantity: 2 } },
+  removeFromList: true,
+};
+
 function moveMock() {
   return recordMock(MoveShoppingItemToPantryDocument, {
     data: {
@@ -95,13 +105,9 @@ describe('useMoveToPantry', () => {
       { operationMocks: [move.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
-      moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      moveResult = await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(move.fired).toContainEqual({
@@ -110,17 +116,16 @@ describe('useMoveToPantry', () => {
       input: expect.objectContaining({
         shoppingListItemId: 'item-1',
         pantryId: 'pantry-1',
-        actualQuantity: 2,
-        actualUnitId: undefined,
+        amount: { measured: { quantity: 2, unitId: undefined } },
         storageState: undefined,
         expiresOn: undefined,
         removeFromList: true,
-        actualPrice: undefined,
+        totalCost: undefined,
         notes: undefined,
       }),
       today: expect.any(String),
     });
-    expect(moveResult).toBe(true);
+    expect(moveResult).toEqual({ status: 'moved' });
   });
 
   it('passes optional fields to mutation', async () => {
@@ -136,28 +141,46 @@ describe('useMoveToPantry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 3,
-        actualUnitId: 'unit-2',
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 3, unitId: 'unit-2' } },
         storageState: StorageState.Frozen,
         expiresOn: '2024-12-31',
         removeFromList: false,
-        actualPrice: 5.99,
+        totalCost: 5.99,
         notes: 'Keep frozen',
       });
     });
 
     expect(move.fired).toContainEqual({
       input: expect.objectContaining({
-        actualUnitId: 'unit-2',
+        amount: { measured: { quantity: 3, unitId: 'unit-2' } },
         storageState: 'FROZEN',
         expiresOn: '2024-12-31',
         removeFromList: false,
-        actualPrice: 5.99,
+        totalCost: 5.99,
         notes: 'Keep frozen',
       }),
       today: expect.any(String),
     });
+  });
+
+  it('sends the day of the move on the input, for its default expiry', async () => {
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
+      });
+    });
+
+    const [fired] = move.fired;
+    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fired?.input).toMatchObject({ today: fired?.today });
   });
 
   // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
@@ -172,16 +195,18 @@ describe('useMoveToPantry', () => {
       { operationMocks: [failing.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 1,
-        removeFromList: true,
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
   });
 
   it('tells the shopper when the server refuses the move', async () => {
@@ -203,16 +228,18 @@ describe('useMoveToPantry', () => {
       { operationMocks: [conflicted.mock] },
     );
 
-    let moveResult: boolean = true;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 1,
-        removeFromList: true,
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
     // `CONFLICT` is a state refusal, not a stale version: one alert, described
     // by its code rather than as "changed somewhere else".
     expect(alertSpy).toHaveBeenCalledTimes(1);
@@ -228,6 +255,38 @@ describe('useMoveToPantry', () => {
       expect.anything(),
       'Pantry item was modified',
     );
+  });
+
+  it('leaves a refusal to the caller when asked to, with the reason it would have shown', async () => {
+    const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ConflictError',
+          message: 'Pantry item was modified',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+    const alertSpy = jest.spyOn(alertService, 'alert');
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1', present: 'none' }),
+      { operationMocks: [conflicted.mock] },
+    );
+
+    let moveResult: MoveToPantryOutcome | undefined;
+    await act(async () => {
+      moveResult = await result.current.moveToPantry(createItem(), {
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
+      });
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.not.stringContaining('Pantry item was modified'),
+    });
   });
 
   it('accepts onSuccess callback', () => {
@@ -250,9 +309,8 @@ describe('useMoveToPantry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 1,
-        removeFromList: true,
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
       });
     });
 
@@ -286,11 +344,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          actualQuantity: 2,
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(move.fired).toHaveLength(1);
@@ -305,11 +359,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          actualQuantity: 2,
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       const input = move.fired[0]?.input as {
@@ -336,11 +386,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          actualQuantity: 2,
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
@@ -362,8 +408,7 @@ describe('useMoveToPantry', () => {
 
       await act(async () => {
         await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          actualQuantity: 2,
+          ...MOVE_INPUT,
           removeFromList: false,
         });
       });
@@ -379,11 +424,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          actualQuantity: 2,
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(move.fired).toHaveLength(1);
@@ -464,11 +505,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(64);
@@ -488,10 +525,9 @@ describe('useMoveToPantry pantry item count', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 5,
-        actualPrice: 0.59,
-        removeFromList: true,
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 5 } },
+        totalCost: 0.59,
       });
     });
 
@@ -514,6 +550,76 @@ describe('useMoveToPantry pantry item count', () => {
     ).toMatchObject({ acquisitionMethod: 'SHOPPING_LIST' });
   });
 
+  describe('a count of packages', () => {
+    const ROW_FRAGMENT = gql`
+      fragment PackagesRowProbe on PantryItem {
+        id
+        quantity
+        unit {
+          id
+        }
+        costPerUnit
+      }
+    `;
+
+    async function moveTwoPackages(unitType: UnitType) {
+      const cache = seededCache();
+      const move = recordMock(MoveShoppingItemToPantryDocument, {
+        data: { moveShoppingItemToPantry: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock], cache },
+      );
+      const line = createItem({
+        quantity: 1,
+        unit: {
+          __typename: 'Unit',
+          id: 'unit-line',
+          name: 'line unit',
+          symbol: 'lu',
+          type: unitType,
+        },
+      });
+
+      await act(async () => {
+        await result.current.moveToPantry(line, {
+          ...MOVE_INPUT,
+          amount: { packages: { count: 2 } },
+          totalCost: 3.98,
+        });
+      });
+
+      const [fired] = move.fired;
+      expect(fired?.input).toMatchObject({
+        amount: { packages: { count: 2 } },
+        totalCost: 3.98,
+      });
+      return cache.readFragment({
+        id: `PantryItem:${
+          (fired?.input as { pantryItemId: string }).pantryItemId
+        }`,
+        fragment: ROW_FRAGMENT,
+      });
+    }
+
+    it('stands as that many of a counted line until the server answers', async () => {
+      expect(await moveTwoPackages(UnitType.Count)).toMatchObject({
+        quantity: 2,
+        unit: { id: 'unit-line' },
+        costPerUnit: null,
+      });
+    });
+
+    it("stands as a weighed line's own amount, which only the server converts", async () => {
+      expect(await moveTwoPackages(UnitType.Weight)).toMatchObject({
+        quantity: 1,
+        unit: { id: 'unit-line' },
+        costPerUnit: null,
+      });
+    });
+  });
+
   it('withdraws the count when the move is refused', async () => {
     const cache = seededCache();
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
@@ -531,11 +637,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(63);
@@ -561,11 +663,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     // The removal is stubbed here, so it records no counter change to pass on.
@@ -592,11 +690,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     const mintedId = (rejected.fired[0]!.input as { pantryItemId: string })
@@ -621,11 +715,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     const mintedId = (move.fired[0]!.input as { pantryItemId: string })
@@ -659,11 +749,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(refetchQueries).toHaveBeenCalled();
@@ -693,11 +779,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(63);
@@ -811,8 +893,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
     );
     await act(async () => {
       await result.current.moveToPantry(row, {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
+        ...MOVE_INPUT,
         removeFromList: false,
       });
     });
@@ -850,8 +931,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
 
     await act(async () => {
       await result.current.moveToPantry(unpurchased, {
-        pantryId: 'pantry-1',
-        actualQuantity: 2,
+        ...MOVE_INPUT,
         removeFromList: false,
       });
     });
@@ -930,5 +1010,52 @@ describe('useMoveToPantry keeping the row on the list', () => {
     });
     expect(open.completedItems).toBe(0);
     expect(read(cache, true).shoppingList.itemsConnection.edges).toEqual([]);
+  });
+});
+
+describe('useMoveToPantry default expiry', () => {
+  const { gql } = require('@apollo/client');
+  const EXPIRY = gql`
+    fragment MovedRowExpiryProbe on PantryItem {
+      id
+      expiresOn
+    }
+  `;
+
+  it("shows the server's default expiry on the moved row once the response lands", async () => {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    const move = recordMock(MoveShoppingItemToPantryDocument, {
+      dataFor: (
+        vars,
+      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
+        moveShoppingItemToPantry: {
+          __typename: 'MoveShoppingItemToPantryPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: (vars.input as { pantryItemId: string }).pantryItemId,
+            expiresOn: '2026-10-12',
+          },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        ...MOVE_INPUT,
+        amount: { measured: { quantity: 1 } },
+      });
+    });
+
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    expect(
+      cache.readFragment({ id: `PantryItem:${mintedId}`, fragment: EXPIRY })
+        ?.expiresOn,
+    ).toBe('2026-10-12');
   });
 });

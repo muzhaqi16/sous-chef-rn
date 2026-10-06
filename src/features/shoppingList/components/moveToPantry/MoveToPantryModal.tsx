@@ -17,6 +17,8 @@ import {
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import { stockAmountOf } from '#domain/stockAmount';
+import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
 import { PantrySelector } from './PantrySelector';
 import { StorageStateControl } from './StorageStateControl';
@@ -26,10 +28,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import {
-  totalFromUnitPrice,
-  unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
 import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -51,17 +50,7 @@ interface MoveToPantryModalProps {
   selectedPantryId: string | null;
   onClose: () => void;
   /** Resolves true once the move is applied or queued; a refusal keeps the sheet open. */
-  onConfirm: (input: {
-    pantryId: string;
-    actualQuantity: number;
-    actualUnitId?: string;
-    storageState?: StorageState;
-    expiresOn?: string;
-    removeFromList: boolean;
-    actualPrice?: number;
-    notes?: string;
-    packageSize?: { netWeight: number; netWeightUnitId: string };
-  }) => Promise<boolean>;
+  onConfirm: (input: MoveToPantryInput) => Promise<boolean>;
   /** Server unreachable (offline / API down) — disables the confirm action. */
   confirmDisabled?: boolean;
 }
@@ -90,6 +79,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     handleSubmit,
     setValue,
     trigger,
+    getFieldState,
     formState: { errors },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
@@ -127,12 +117,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     ? {
         symbol: shoppingListItem.unit.symbol,
         id: shoppingListItem.unit.id,
+        type: shoppingListItem.unit.type,
       }
     : shoppingListItem?.unitName
-    ? { symbol: shoppingListItem.unitName, id: null }
+    ? { symbol: shoppingListItem.unitName, id: null, type: null }
     : purchasedUnit
-    ? { symbol: purchasedUnit.unitSymbol, id: purchasedUnit.unitId }
-    : { symbol: '', id: null };
+    ? {
+        symbol: purchasedUnit.unitSymbol,
+        id: purchasedUnit.unit.id,
+        type: purchasedUnit.unit.type,
+      }
+    : { symbol: '', id: null, type: null };
 
   // Reset form when modal opens with new item (render-time state update).
   // Key on the item id (not the materialized object) so cache updates to the
@@ -165,6 +160,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         quantityInput: formatQuantityForInput(seedQuantity) || '1',
         unitValue: resolvedUnit.symbol,
         unitId: resolvedUnit.id,
+        unitType: resolvedUnit.type,
         pantryId: selectedPantryId,
         storageState: StorageState.Ambient,
         expirationDate: undefined,
@@ -186,7 +182,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // the sheet opens. Seed them then too — but never over something typed.
   const [prevSeed, setPrevSeed] = useState<string | null>(null);
   const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}|${
-    purchasedUnit?.unitId ?? ''
+    purchasedUnit?.unit.id ?? ''
   }`;
   if (visible && seedKey !== prevSeed) {
     setPrevSeed(seedKey);
@@ -196,7 +192,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       seedThisPass = {
         ...seedThisPass,
         unitValue: purchasedUnit.unitSymbol,
-        unitId: purchasedUnit.unitId,
+        unitId: purchasedUnit.unit.id,
+        unitType: purchasedUnit.unit.type,
       };
     }
     if (!amountsTouched && purchasedQuantity != null) {
@@ -225,6 +222,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // the shopper types a total of their own, that total wins instead.
   const handleQuantityChange = (value: string) => {
     setValue('quantityInput', value);
+    // The size's count rule reads the quantity. Re-run only a refusal already
+    // shown, so a fix clears it without a half-typed count raising a new one.
+    if (getFieldState('packageSizeInput').invalid) {
+      void trigger('packageSizeInput');
+    }
     setAmountsTouched(true);
     if (priceTouched || seededUnitPrice == null) return;
     const parsed = parseFractionalInput(value);
@@ -279,39 +281,41 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       packageSizeInput,
       packageSizeUnitId,
     } = values;
-    // The schema passed, so a stated size carries its unit.
+    const quantityValue = parseFractionalInput(confirmedQuantity);
+    if (quantityValue === null) return;
+
+    // The schema passed, so a stated size carries its unit and goes with a
+    // whole count in a counted unit: that many packages, which the server
+    // records. Without one, the amount as typed.
     const packageSize =
       packageSizeInput.trim() && packageSizeUnitId
         ? {
             netWeight: parseDecimalInput(packageSizeInput),
             netWeightUnitId: packageSizeUnitId,
           }
-        : undefined;
+        : null;
+    const amount = stockAmountOf(quantityValue, {
+      asPackages: packageSize !== null,
+      packageSize,
+      unitId: confirmedUnitId,
+    });
 
-    const quantityValue = parseFractionalInput(confirmedQuantity);
-    if (quantityValue === null) return;
-
-    // The field asks for the TOTAL paid, as Mark Purchased does; `actualPrice`
-    // is per unit. Unrounded on purpose — the server rounds the product back.
+    // The field asks for the TOTAL paid, as Mark Purchased does; the server
+    // records it exactly and derives the unit price.
     const totalPaid = confirmedPrice
       ? parseDecimalInput(confirmedPrice)
       : undefined;
-    const actualPrice =
-      totalPaid === undefined || isNaN(totalPaid)
-        ? undefined
-        : unitPriceFromTotal(totalPaid, quantityValue) ?? undefined;
 
     setIsMoving(true);
     const moved = await onConfirm({
       pantryId: confirmedPantryId ?? '',
-      actualQuantity: quantityValue,
-      actualUnitId: confirmedUnitId ?? undefined,
+      amount,
       storageState,
       expiresOn: confirmedExpiry ? toDateKey(confirmedExpiry) : undefined,
       removeFromList,
-      actualPrice,
+      totalCost:
+        totalPaid === undefined || isNaN(totalPaid) ? undefined : totalPaid,
       notes: notes || undefined,
-      packageSize,
     });
     setIsMoving(false);
     if (moved) onClose();
@@ -408,8 +412,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     placeholder={t('moveToPantry.unitPlaceholder')}
                     required
                     error={errors.unitValue?.message}
-                    onUnitSelected={id => {
+                    onUnitSelected={(id, _name, type) => {
                       setValue('unitId', id);
+                      setValue('unitType', type ?? null);
+                      void trigger('packageSizeInput');
                       // The rule reports on the TEXT while reading the id, and
                       // the field clears the id after writing the text — so
                       // without this the emptied field carries no message.

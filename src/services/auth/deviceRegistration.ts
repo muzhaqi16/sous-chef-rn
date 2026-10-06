@@ -30,6 +30,9 @@ import {
 } from '#/storage/deviceId';
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
+import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 // Registering THIS device with the server. Fire-and-forget: a failure here must
@@ -202,9 +205,17 @@ export async function pushRotatedTokenToServer(
   logger.error('Failed to update rotated push token:', outcome);
 }
 
+/**
+ * Bumped by every session end, so a registration started in a session stops
+ * when it ends instead of retrying with no credentials, each retry also trying
+ * a refresh that has no token to present.
+ */
+let sessionGeneration = 0;
+
 // A rotation after the session ended has no credential to send it with; the
 // next sign-in registers the current token.
 registerSessionTeardown('devicePushToken', () => {
+  sessionGeneration += 1;
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
   clearRetiredDeviceRow();
@@ -344,27 +355,35 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
   }
 }
 
-async function registerDeviceWithRetry(maxRetries = 3): Promise<boolean> {
+async function registerDeviceWithRetry(
+  maxRetries = 3,
+): Promise<'ok' | 'failed' | 'sessionEnded'> {
+  const generation = sessionGeneration;
+  // Scheduled on idle, so a session can end before the first attempt runs too.
+  const sessionEnded = () =>
+    generation !== sessionGeneration ||
+    !holdsSessionTokens(useStore.getState());
   let attempts = 0;
   while (attempts < maxRetries) {
+    if (sessionEnded()) return 'sessionEnded';
     attempts++;
     const outcome = await registerDeviceOnce();
-    if (outcome === 'ok') return true;
-    if (outcome === 'unretryable') return false;
+    if (outcome === 'ok') return 'ok';
+    if (outcome === 'unretryable') return 'failed';
     if (attempts < maxRetries) {
-      const delay = Math.pow(2, attempts) * 1000;
+      const delay = backoffDelay(attempts, { baseMs: 1000 });
       logger.info(`Device registration retry in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
     }
   }
   logger.warn(`Device registration failed after ${maxRetries} attempts`);
-  return false;
+  return 'failed';
 }
 
 export function registerDeviceInBackground(): void {
   registerDeviceWithRetry(3)
-    .then(success => {
-      if (!success) {
+    .then(outcome => {
+      if (outcome === 'failed') {
         logger.warn('Background device registration failed');
       }
     })

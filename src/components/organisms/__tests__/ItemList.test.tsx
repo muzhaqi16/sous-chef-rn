@@ -99,6 +99,21 @@ describe('ItemList', () => {
     expect(screen.getByText('Add some items to get started')).toBeTruthy();
   });
 
+  it('heads a section above the row that starts it, and only there', () => {
+    render(
+      <ItemList
+        items={[
+          { ...items[0]!, sectionTitle: 'To add' },
+          items[1]!,
+          { ...items[2]!, sectionTitle: 'Not added' },
+        ]}
+        onItemPress={jest.fn()}
+      />,
+    );
+    expect(screen.getAllByText(/^(To add|Not added)$/)).toHaveLength(2);
+    expect(screen.getByText('Not added')).toBeTruthy();
+  });
+
   it('renders items with testID prefix', () => {
     render(<ItemList {...defaultProps} testIDPrefix="pantry" />);
     expect(screen.getByTestId('pantry-0')).toBeTruthy();

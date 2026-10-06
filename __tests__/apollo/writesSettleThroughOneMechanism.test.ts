@@ -43,7 +43,9 @@ function offendersIn(relative: string): string[] {
   );
   const found: string[] = [];
   const at = (node: ts.Node) =>
-    `${relative}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+    `${relative}:${
+      source.getLineAndCharacterOfPosition(node.getStart()).line + 1
+    }`;
 
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node)) {

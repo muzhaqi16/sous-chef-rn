@@ -4,7 +4,6 @@ import {
   removePantryItemLocally,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   CreatePantryItemDocument,
@@ -451,37 +450,34 @@ describe('reconcileReplaySuccess — a queued pantry create joining a held stack
 
   beforeEach(() => jest.clearAllMocks());
 
-  it.each([CreatePantryItemDocument, BarcodeCreatePantryItemDocument])(
-    'swaps the minted row for the held stack (%#)',
-    document => {
-      const adopt = jest.fn();
-      reconcileReplaySuccess(
-        operationNameOf(document),
-        replayed,
-        answer('held-9'),
-        adopt,
-      );
+  it('swaps the minted row for the held stack', () => {
+    const adopt = jest.fn();
+    reconcileReplaySuccess(
+      operationNameOf(CreatePantryItemDocument),
+      replayed,
+      answer('held-9'),
+      adopt,
+    );
 
-      expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
-        {},
-        'pantry-1',
-        'minted-1',
-        { countsSettled: false },
-      );
-      expect(addPantryItemLocally).toHaveBeenCalledWith(
-        {},
-        'pantry-1',
-        { __typename: 'PantryItem', id: 'held-9' },
-        { countsSettled: false },
-      );
-      // Writes still queued against the minted id move to the held stack.
-      expect(adopt).toHaveBeenCalledWith({
-        mintedId: 'minted-1',
-        survivingId: 'held-9',
-        version: 4,
-      });
-    },
-  );
+    expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
+      {},
+      'pantry-1',
+      'minted-1',
+      { countsSettled: false },
+    );
+    expect(addPantryItemLocally).toHaveBeenCalledWith(
+      {},
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'held-9' },
+      { countsSettled: false },
+    );
+    // Writes still queued against the minted id move to the held stack.
+    expect(adopt).toHaveBeenCalledWith({
+      mintedId: 'minted-1',
+      survivingId: 'held-9',
+      version: 4,
+    });
+  });
 
   it('leaves a row the server created under the minted id', () => {
     reconcileReplaySuccess(

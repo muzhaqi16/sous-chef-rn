@@ -8,6 +8,7 @@ it first, then follow the links into the deep dives.
 - [State: two systems, one rule](#state-two-systems-one-rule)
 - [The data layer](#the-data-layer)
 - [Offline-first](#offline-first)
+- [Data ingestion seams](#data-ingestion-seams)
 - [Navigation](#navigation)
 - [The UI layer](#the-ui-layer)
 - [Code conventions](#code-conventions)
@@ -125,7 +126,7 @@ imports:
 | `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                                                                                                                                                                                                                                                                       |
 | `utils/`                          | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
 | `store/` (recipes only)           | ✅      | The recipe result caches. Two other features read them (pantry's per-item suggestions, mealPlan's recipe picker), so like catalog's `ui/` they belong in neither a domain-free kernel nor one consumer. A feature store MUST call `registerSessionScopedStore` — `SESSION_SCOPED_STATE` only reaches the root store |
-| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                                        |
+| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                             |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
@@ -452,6 +453,39 @@ Deep dive: **[`local-first-architecture.md`](local-first-architecture.md)**.
 
 ---
 
+## Data ingestion seams
+
+Data enters the catalog and the pantry through a handful of shared seams. Each
+seam has one home, and a new source extends it rather than adding a parallel
+path. The API and the admin app own the server side; this client never edits
+those repos.
+
+| Seam                                                                                               | A new source                                                                 |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver | sends `today` from its intake hook; supplies shelf-life data to the resolver |
+| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                 | adds one resolution step                                                     |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue            | adds a mapper and its precedence entries                                     |
+| The barcode miss/result flow; the embedding model                                                  | reaches the scan through a resolution step, never its own lookup             |
+| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`             | implements `ReceiptParser`                                                   |
+| Per-language names and search; the language header; the `languageChanged` resync event             | adds names as synonyms in their language                                     |
+
+Four rules keep parallel work apart:
+
+- **A public hook ships with its first production consumer.**
+  `check:dead-modules` and `hookMembersAreConsumed.test.ts` reject one added
+  "for later", so the work that consumes a hook creates it.
+- **New GraphQL operations live in the owning feature's folder,** not the shared
+  `src/graphql/operations/item/item.graphql`.
+- **Generated files are regenerated after a rebase, never hand-merged:**
+  `schema.graphql`, `schemaTypes.ts` and the persisted-query manifest. One
+  session pulls the schema at a time, and commits it on its own.
+- **Append-only shared files** (`registry.ts`, `registry.static.ts`,
+  `src/i18n/localeTypes.ts`, `useAppNavigation.ts`,
+  `verified-library-behaviour.md`) take one-line or one-block additions in their
+  own sections. A textual conflict there keeps both sides.
+
+---
+
 ## Navigation
 
 React Navigation 8, static API. `RootNavigator.tsx` defines the top-level
@@ -590,7 +624,7 @@ The Unistyles babel plugin must run **before** the React Compiler plugin.
 `SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
 inside a `ScrollView`.
 
-`estimatedItemSize` is **removed** in FlashList v2 — the prop no longer exists. List
+FlashList v2 takes no `estimatedItemSize`. List
 `data` must never come through `useDeferredValue` / `startTransition` —
 [`flashlist-layout-index-race.md`](flashlist-layout-index-race.md). How the two
 big lists are fed and what an append costs:

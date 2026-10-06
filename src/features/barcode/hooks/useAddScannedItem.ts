@@ -1,55 +1,24 @@
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-  BarcodeRestockPantryItemDocument,
   UseAddScannedItem_RestockQuantityFragmentDoc,
 } from '#features/barcode/hooks/useAddScannedItem.generated';
-import {
-  SearchResults_PantryItemFragmentDoc,
-  type SearchResults_PantryItemFragment,
-} from '#features/barcode/components/SearchResults.generated';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import {
   AcquisitionMethod,
-  type CreatePantryItemInput,
+  type PackageSizeInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  createAddToParentConnectionUpdater,
-  adoptServerEntityId,
-} from '#/apollo/utils/cacheUpdaters';
 import {
   addLocalShoppingListItem,
   buildAddItemsReconcileUpdate,
   createLocalShoppingListItem,
   reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
-import {
-  addPantryItemLocally,
-  revertOptimisticPantryItem,
-} from '#features/pantry/cache/items';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
+import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
-import { writeHeldStock } from '#features/pantry/cache/stock';
 import { refByIdOrName } from '#/utils/refInput';
-import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-
-// Only reads `{ id }` from the new item, so the local SearchResults_pantryItem
-// fragment is sufficient.
-const addToPantryItemsConnection =
-  createAddToParentConnectionUpdater<SearchResults_PantryItemFragment>(
-    'Pantry',
-    'itemsConnection',
-    'PantryItem',
-  );
 
 /** A scanned item is always one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;
@@ -70,11 +39,6 @@ const scannedUnitId = (item: ScannedItem) =>
 /** Whether the shopping-list row survived the create. */
 export type ScannedListOutcome = 'kept' | 'reverted';
 
-export type ScannedPantryOutcome =
-  | { status: 'added' }
-  | { status: 'duplicate'; existingPantryItemId: string }
-  | { status: 'rejected' };
-
 interface UseAddScannedItemArgs {
   pantryId: string | undefined;
   shoppingListId: string | undefined;
@@ -89,40 +53,9 @@ export function useAddScannedItem({
   pantryId,
   shoppingListId,
 }: UseAddScannedItemArgs) {
-  const { t } = useTranslation();
   const client = useApolloClient();
-
-  const [addToPantryMutation] = useMutation(BarcodeCreatePantryItemDocument, {
-    context: { localFirst: true },
-    update: (cache, { data }, { variables }) => {
-      const payload = appliedPayload(data);
-      if (!payload || !pantryId) return;
-      const maskedPantryItem = payload.pantryItem;
-      // Materialize the masked fragment ref so the updater can read `id`. Use
-      // the cache-key form — passing the masked ref returns partial or null
-      // data under `dataMasking`.
-      const pantryItem = cache.readFragment<SearchResults_PantryItemFragment>({
-        fragment: SearchResults_PantryItemFragmentDoc,
-        fragmentName: 'SearchResults_pantryItem',
-        from: { __typename: 'PantryItem', id: maskedPantryItem.id },
-      });
-      if (pantryItem) {
-        addToPantryItemsConnection(cache, pantryId, pantryItem);
-      }
-      // The connection add dedupes BY ID, so a server-resolved id divergence
-      // would leave the client cuid as a second, permanently unresolvable edge.
-      adoptServerEntityId(
-        cache,
-        'PantryItem',
-        maskedPantryItem.id,
-        variables?.input.id,
-      );
-    },
-  });
-
-  const [restockPantryItem] = useMutation(BarcodeRestockPantryItemDocument, {
-    context: { localFirst: true },
-  });
+  const { addItem } = usePantryIntake(pantryId);
+  const { restock } = usePantryRestock(pantryId);
 
   const [addToShoppingListMutation] = useMutation(
     BarcodeAddItemToShoppingListDocument,
@@ -132,111 +65,26 @@ export function useAddScannedItem({
     },
   );
 
-  const addToPantry = async (
-    item: ScannedItem,
-  ): Promise<ScannedPantryOutcome> => {
-    if (!pantryId) return { status: 'rejected' };
-
-    // Minted here so a create that gets queued (an API blip after the barcode
-    // lookup) replays idempotently, keyed by this id. Publishing it to
-    // `Pantry.itemsConnection` makes the row tappable into a detail screen that
-    // queries by it — see `unconfirmedCreates`.
-    const id = generateEntityId();
-    unconfirmedCreates.mark(id);
-
-    // No `netWeight` or `unit`: the scan's own figure is the record's to store,
-    // and one sent here would be kept as the user's edit.
-    const input: CreatePantryItemInput = {
-      id,
-      pantryId,
-      item: scannedPantrySource(item),
-      quantity: SCANNED_QUANTITY,
-      today: todayKey(),
-    };
-
-    // Built before the try: `?.`/`??` are value blocks, and one inside a try
-    // body bails the React Compiler out of the whole function.
-    const localRow = {
-      pantryId,
-      itemName: item.name,
-      itemId: item.id,
-      quantity: SCANNED_QUANTITY,
-      unitId: scannedUnitId(item),
-      acquisitionMethod: AcquisitionMethod.BarcodeScan,
-    };
-
-    // Publishing and withdrawing the row are a pair; named so the halves
-    // cannot drift.
-    const apply = () => {
-      try {
-        // Publishes the row AND counts it: the header's "N items" reads
-        // `Pantry.stats.totalItems`, which the mutation's `update` never
-        // touches when the create is queued offline.
-        writeLocalPantryItem(client.cache, id, localRow);
-        addPantryItemLocally(client.cache, pantryId, {
-          __typename: 'PantryItem',
-          id,
-        });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Add Pantry Item (optimistic)',
-        });
-      }
-    };
-    const revert = () => revertOptimisticPantryItem(client.cache, pantryId, id);
-
-    apply();
-
-    // `confirm` must run on every outcome, throws included, or the id stays
-    // unconfirmed and suppresses the detail query for a visible row. The helper
-    // is how a finalizer is written here: a bare `try/finally` bails the
-    // React Compiler out of the whole function.
-    let result: Awaited<ReturnType<typeof addToPantryMutation>> | undefined;
-    let thrown: unknown;
-    await executeAsyncWithCleanup(
-      async () => {
-        result = await addToPantryMutation({
-          variables: { input, today: todayKey() },
-        });
-      },
-      () => unconfirmedCreates.confirm(id),
-      error => {
-        thrown = error;
-      },
-    );
-
-    // A duplicate arrives as a typed member in `data` OR as the legacy
-    // top-level code; the shared helper checks both.
-    const answered = result;
-    const duplicateInfo = answered
-      ? getPantryItemDuplicateFromResult(
-          answered.data?.createPantryItem,
-          answered.error,
-        )
-      : null;
-    if (duplicateInfo) {
-      // The server REFUSES the create and writes nothing, so withdraw the row
-      // we published — count included.
-      revert();
-      return {
-        status: 'duplicate',
-        existingPantryItemId: duplicateInfo.existingPantryItemId,
-      };
-    }
-
-    // Applied or queued keeps the row; a queued create replays later.
-    const settled = await settleMutation(
-      () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
+  // No `unit`, and `netWeight` only when the record states no pack size and the
+  // user entered one: the scan's own figure is the record's to store, and one
+  // sent here is kept as the user's.
+  const addToPantry = (item: ScannedItem, packageSize?: PackageSizeInput) =>
+    addItem(
+      item.name,
       {
-        document: BarcodeCreatePantryItemDocument,
-        fallback: t('errors.addItemFailedRetry'),
-        onFailed: revert,
+        item: scannedPantrySource(item),
+        quantity: SCANNED_QUANTITY,
+        ...(packageSize && { netWeight: packageSize }),
+      },
+      {
+        local: {
+          itemId: item.id,
+          unitId: scannedUnitId(item),
+          acquisitionMethod: AcquisitionMethod.BarcodeScan,
+        },
+        present: 'alert',
       },
     );
-    return settled.status === 'failed'
-      ? { status: 'rejected' }
-      : { status: 'added' };
-  };
 
   /**
    * Bump the row the duplicate check named instead of creating a second one.
@@ -245,51 +93,19 @@ export function useAddScannedItem({
   const restockDuplicate = async (
     existingPantryItemId: string,
   ): Promise<boolean> => {
-    // Offline no payload arrives, so the row keeps its old count until the
-    // replay unless it is bumped here.
-    const row = { __typename: 'PantryItem', id: existingPantryItemId };
     const cached = client.cache.readFragment({
-      id: client.cache.identify(row),
+      id: client.cache.identify({
+        __typename: 'PantryItem',
+        id: existingPantryItemId,
+      }),
       fragment: UseAddScannedItem_RestockQuantityFragmentDoc,
     });
-    const entity = cached ? row : undefined;
-    writeEntityFields(client.cache, entity, {
-      quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY,
+    const outcome = await restock(existingPantryItemId, {
+      quantity: SCANNED_QUANTITY,
+      cachedQuantity: cached?.quantity ?? null,
+      present: 'alert',
     });
-    // The amount the screens show moves with the count.
-    const undoHeld = cached
-      ? writeHeldStock(
-          client.cache,
-          existingPantryItemId,
-          held => held + SCANNED_QUANTITY,
-        )
-      : () => {};
-
-    const settled = await settleMutation(
-      () =>
-        restockPantryItem({
-          variables: {
-            today: todayKey(),
-            input: {
-              id: existingPantryItemId,
-              quantity: SCANNED_QUANTITY,
-              // Dedupes the restock ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
-      {
-        document: BarcodeRestockPantryItemDocument,
-        fallback: t('errors.restockFailedRetry'),
-        onFailed: () => {
-          writeEntityFields(client.cache, entity, {
-            quantity: cached?.quantity,
-          });
-          undoHeld();
-        },
-      },
-    );
-    return settled.status !== 'failed';
+    return outcome.status === 'restocked';
   };
 
   const addToShoppingList = async (
@@ -298,7 +114,8 @@ export function useAddScannedItem({
     if (!shoppingListId) return 'reverted';
     const id = generateEntityId();
 
-    // Built before the try, for the same compiler reason as above.
+    // Built before the try: `?.`/`??` are value blocks, and one inside a try
+    // body bails the React Compiler out of the whole function.
     const optimisticListItem = createLocalShoppingListItem(id, {
       shoppingListId,
       itemName: item.name,

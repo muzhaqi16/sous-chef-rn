@@ -31,7 +31,6 @@ describe('barcodeScannerStore', () => {
       expect(state.isSearching).toBe(false);
       expect(state.searchError).toBeNull();
       expect(state.scannerSheetVisible).toBe(false);
-      expect(state.recentlyScanned).toEqual([]);
     });
   });
 
@@ -93,34 +92,6 @@ describe('barcodeScannerStore', () => {
       store.getState().hideBottomSheet();
       expect(store.getState().scannerSheetVisible).toBe(false);
       expect(store.getState().scannerSheetIndex).toBe(0);
-    });
-  });
-
-  describe('addToRecentlyScanned', () => {
-    it('adds item to beginning', () => {
-      const store = createTestStore();
-      store.getState().addToRecentlyScanned(mockItem);
-      expect(store.getState().recentlyScanned[0]).toEqual(mockItem);
-    });
-
-    it('deduplicates by UPC', () => {
-      const store = createTestStore();
-      store.getState().addToRecentlyScanned(mockItem);
-      store.getState().addToRecentlyScanned({ ...mockItem, name: 'Updated' });
-      expect(store.getState().recentlyScanned).toHaveLength(1);
-      expect(store.getState().recentlyScanned[0]!.name).toBe('Updated');
-    });
-
-    it('keeps only 10 items', () => {
-      const store = createTestStore();
-      for (let i = 0; i < 12; i++) {
-        store.getState().addToRecentlyScanned({
-          ...mockItem,
-          id: `item-${i}`,
-          upc: `upc-${i}`,
-        });
-      }
-      expect(store.getState().recentlyScanned).toHaveLength(10);
     });
   });
 

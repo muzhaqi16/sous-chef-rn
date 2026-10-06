@@ -5,7 +5,7 @@ import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import { openWebUrl } from '#utils/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -31,6 +31,7 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
@@ -145,6 +146,7 @@ const RecipeDetailScreen: React.FC = () => {
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
@@ -491,6 +493,8 @@ const RecipeDetailScreen: React.FC = () => {
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
+          hasPendingRevision={displayData.hasPendingRevision}
+          revisionRejectionNote={displayData.revisionRejectionNote}
         />
 
         {!!isSaved && (
@@ -627,6 +631,15 @@ const RecipeDetailScreen: React.FC = () => {
             )}
           </Pressable>
         )}
+
+        {displayData.dataAttributions.length > 0 && (
+          <View style={styles.dataAttributions}>
+            <DataAttributionNotices
+              attributions={displayData.dataAttributions}
+              centered
+            />
+          </View>
+        )}
       </CollapsingHeroDetail>
 
       <ShoppingListPickerSheet
@@ -657,7 +670,7 @@ const RecipeDetailScreen: React.FC = () => {
         editableMatches={ingredientMatching.editableMatches}
         matchSummary={ingredientMatching.matchSummary}
         onUpdate={ingredientMatching.updateMatch}
-        onConfirm={ingredientMatching.confirmConsumption}
+        onConfirm={handleConfirmReview}
         onSkip={handleSkipReview}
         onClose={ingredientMatching.closeSheet}
         confirmLoading={ingredientMatching.confirmLoading}
@@ -795,6 +808,9 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
+  },
+  dataAttributions: {
+    marginTop: theme.spacing.md,
   },
   attributionText: {
     color: theme.colors.textSecondary,

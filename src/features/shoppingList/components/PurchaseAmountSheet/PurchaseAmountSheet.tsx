@@ -17,10 +17,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import {
-  totalFromUnitPrice,
-  unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 

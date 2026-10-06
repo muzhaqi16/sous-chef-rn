@@ -23,6 +23,7 @@ import {
   writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainEntityWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
@@ -70,6 +71,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
+    refetch: refetchPantry,
   } = useQuery(
     GetPantryDocument,
     hasValidPantryId && pantryId
@@ -102,13 +104,18 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     update: buildDeletePantryUpdater(homeId),
   });
 
-  /** False when the flag did not stick, so the caller can put its switch back. */
+  /**
+   * False when the flag did not stick, so the caller can put its switch back.
+   * In line with the pantry's saves: the server moves its version.
+   */
   const setDefault = async (id: string): Promise<boolean> => {
     const settled = await settleMutation(
       () =>
-        markAsDefault({
-          variables: { input: { id }, today: todayKey() },
-        }),
+        chainEntityWrite(client.cache, { __typename: 'Pantry', id }, () =>
+          markAsDefault({
+            variables: { input: { id }, today: todayKey() },
+          }),
+        ),
       {
         document: MarkPantryAsDefaultDocument,
         fallback: t('errors.saveSettingsFailed'),
@@ -142,15 +149,24 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     const previous = snapshotFields(pantry, updates);
     writeEntityFields(client.cache, entity, updates);
 
+    // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        updatePantry({
-          variables: { input: { id, ...updates }, today: todayKey() },
-        }),
+        chainEntityWrite(client.cache, entity, version =>
+          updatePantry({
+            variables: {
+              input: { id, ...updates, version },
+              today: todayKey(),
+            },
+          }),
+        ),
       {
         document: UpdatePantryDocument,
         fallback: t('errors.saveSettingsFailed'),
         onFailed: () => writeEntityFields(client.cache, entity, previous),
+        onConflictRefresh: () => {
+          void refetchPantry();
+        },
       },
     );
     return settled.status !== 'failed';

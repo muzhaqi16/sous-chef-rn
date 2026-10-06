@@ -204,6 +204,8 @@ query GetShoppingListItemsFiltered(
             id
             name
             symbol
+            # A package size goes with a counted unit (the move sheet's rule).
+            type
           }
           sortOrder
           item {

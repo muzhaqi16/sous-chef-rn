@@ -234,6 +234,7 @@ export function useRecipeForm() {
   // `servings` (NOT NULL), so those stay omitted when blank.
   const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
+      version: state.version ?? undefined,
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
       status: state.status,
@@ -270,29 +271,36 @@ export function useRecipeForm() {
     };
   };
 
-  // Populate from existing recipe (edit mode)
+  // Populate from existing recipe (edit mode). A pending edit reopens from
+  // what it proposes: a save sends the whole form, so live values would set
+  // every pending change back.
   const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
+    const proposed = recipe.pendingRevision?.proposed;
+    const content = proposed ?? recipe;
+    const ingredients = proposed
+      ? proposed.ingredients
+      : extractNodes(recipe.ingredientsConnection);
     const formState: RecipeFormState = {
-      name: recipe.name,
-      description: recipe.description ?? '',
-      imageUrl: recipe.imageUrl ?? '',
-      videoUrl: recipe.videoUrl ?? '',
-      servings: String(recipe.servings),
-      prepTimeMinutes: recipe.prepTimeMinutes
-        ? String(recipe.prepTimeMinutes)
+      name: content.name,
+      description: content.description ?? '',
+      imageUrl: content.imageUrl ?? '',
+      videoUrl: content.videoUrl ?? '',
+      servings: String(content.servings),
+      prepTimeMinutes: content.prepTimeMinutes
+        ? String(content.prepTimeMinutes)
         : '',
-      cookTimeMinutes: recipe.cookTimeMinutes
-        ? String(recipe.cookTimeMinutes)
+      cookTimeMinutes: content.cookTimeMinutes
+        ? String(content.cookTimeMinutes)
         : '',
-      caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
-      difficulty: recipe.difficulty,
-      category: recipe.category,
-      cuisines: [...recipe.cuisines],
+      caloriesPerServing: formatNumberForInput(content.caloriesPerServing),
+      difficulty: content.difficulty,
+      category: content.category,
+      cuisines: [...content.cuisines],
       status: recipe.status,
-      diets: recipe.diets,
-      healthGoals: recipe.healthGoals,
-      intolerances: recipe.intolerances,
-      ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
+      diets: content.diets,
+      healthGoals: content.healthGoals,
+      intolerances: content.intolerances,
+      ingredients: ingredients.map(ing => ({
         id: generateTempId(),
         name: ing.name,
         quantity: ing.quantity,
@@ -304,17 +312,18 @@ export function useRecipeForm() {
         isOptional: ing.isOptional,
         sortOrder: ing.sortOrder,
       })),
-      steps: Array.isArray(recipe.instructions)
-        ? recipe.instructions.map((step: unknown, i: number) => ({
+      steps: Array.isArray(content.instructions)
+        ? content.instructions.map((step: unknown, i: number) => ({
             id: generateTempId(),
             instruction: stepInstruction(step),
             sortOrder: i,
           }))
         : [],
-      notes: recipe.notes ?? '',
-      tips: recipe.tips ?? '',
-      originalAuthor: recipe.originalAuthor ?? '',
-      tags: recipe.tags.join(', '),
+      notes: content.notes ?? '',
+      tips: content.tips ?? '',
+      originalAuthor: content.originalAuthor ?? '',
+      tags: content.tags.join(', '),
+      version: recipe.version,
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.

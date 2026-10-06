@@ -1831,24 +1831,23 @@ describe('QueueManager', () => {
     const calculateRetryDelay = (retryCount: number) =>
       calculateRetryDelayFn(retryCount, 10);
 
-    it('uses exponential backoff', () => {
-      // With retryDelayMs = 10
-      // retryCount 0 -> 10 * 2^0 = 10 + jitter
-      // retryCount 1 -> 10 * 2^1 = 20 + jitter
-      // retryCount 2 -> 10 * 2^2 = 40 + jitter
-      const delay0 = calculateRetryDelay(0);
-      const delay1 = calculateRetryDelay(1);
-      const delay2 = calculateRetryDelay(2);
-
-      expect(delay0).toBeGreaterThanOrEqual(10);
-      expect(delay0).toBeLessThanOrEqual(510); // 10 + 500 jitter max
-      expect(delay1).toBeGreaterThanOrEqual(20);
-      expect(delay2).toBeGreaterThanOrEqual(40);
+    it('doubles per retry, plus up to half again at random', () => {
+      expect(calculateRetryDelay(0)).toBeGreaterThanOrEqual(10);
+      expect(calculateRetryDelay(0)).toBeLessThanOrEqual(15);
+      expect(calculateRetryDelay(1)).toBeGreaterThanOrEqual(20);
+      expect(calculateRetryDelay(1)).toBeLessThanOrEqual(30);
+      expect(calculateRetryDelay(2)).toBeGreaterThanOrEqual(40);
+      expect(calculateRetryDelay(2)).toBeLessThanOrEqual(60);
     });
 
-    it('caps at 30 seconds', () => {
-      const delay = calculateRetryDelay(20); // 10 * 2^20 would be huge
-      expect(delay).toBeLessThanOrEqual(30000);
+    // Capped before the jitter: capping the sum would put every device that
+    // reached the cap back on the same 30s tick.
+    it('caps at 30 seconds and still spreads retries past the cap', () => {
+      const random = jest.spyOn(Math, 'random');
+      random.mockReturnValueOnce(0).mockReturnValueOnce(1);
+      expect(calculateRetryDelay(20)).toBe(30_000);
+      expect(calculateRetryDelay(20)).toBe(45_000);
+      random.mockRestore();
     });
   });
 

@@ -26,6 +26,7 @@ jest.mock('#/services/toastService', () => ({
 const SOURCE = {
   __typename: 'Recipe',
   id: 'recipe-1',
+  version: 1,
   name: 'Lasagna',
   description: 'Layered',
   imageUrl: null,
@@ -46,6 +47,7 @@ const SOURCE = {
   originalAuthor: 'Nonna',
   tags: [],
   instructions: [{ step: 1, text: 'Layer' }],
+  pendingRevision: null,
   ingredientsConnection: {
     __typename: 'RecipeIngredientConnection',
     edges: [

@@ -7,8 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05FBBE763D744A630E2A46C0 /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83BC4A1D5213DA7F57D2D74C /* FoundationModels.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		16A858AB987FF9BCA820269B /* libPods-SousChef.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 014461885C99122C44001B04 /* libPods-SousChef.a */; };
+		213EE21E482E278AF2C34439 /* ReceiptStructuringModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D8A0AE01F8C51634B3548B /* ReceiptStructuringModule.swift */; };
+		36AD646A2F707013CEB1F5AF /* TextRecognitionModule.m in Sources */ = {isa = PBXBuildFile; fileRef = EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */; };
+		59D5B279D72AB3CB089666F6 /* ReceiptStructuringModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 092BB7A9F234BC83A7A40ED0 /* ReceiptStructuringModule.m */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		9058099E05341522253DC8A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -16,17 +20,22 @@
 		A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */; };
 		A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */; };
 		C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = F27910D27828985604CDD2C3 /* StartupMarkModule.mm */; };
+		E9FCC700806CCE313DFF5908 /* TextRecognitionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		014461885C99122C44001B04 /* libPods-SousChef.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SousChef.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		092BB7A9F234BC83A7A40ED0 /* ReceiptStructuringModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = ReceiptStructuringModule.m; path = SousChef/ReceiptStructuringModule.m; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* SousChef.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SousChef.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SousChef/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SousChef/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = SousChef/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TextRecognitionModule.swift; path = SousChef/TextRecognitionModule.swift; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SousChef/AppDelegate.swift; sourceTree = "<group>"; };
 		7D011261455248FCBEC7103F /* Pods-SousChef.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SousChef.release.xcconfig"; path = "Target Support Files/Pods-SousChef/Pods-SousChef.release.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SousChef/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		83BC4A1D5213DA7F57D2D74C /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
+		99D8A0AE01F8C51634B3548B /* ReceiptStructuringModule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReceiptStructuringModule.swift; path = SousChef/ReceiptStructuringModule.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000002 /* WindowBackgroundModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WindowBackgroundModule.swift; path = SousChef/WindowBackgroundModule.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WindowBackgroundModule.m; path = SousChef/WindowBackgroundModule.m; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PushNotificationForwarder.m; path = SousChef/PushNotificationForwarder.m; sourceTree = "<group>"; };
@@ -34,6 +43,7 @@
 		A1B2C3D4E5F6A7B800000008 /* SousChef-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SousChef-Bridging-Header.h"; path = "SousChef/SousChef-Bridging-Header.h"; sourceTree = "<group>"; };
 		AF21E45479A23913AB3C227A /* Pods-SousChef.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SousChef.debug.xcconfig"; path = "Target Support Files/Pods-SousChef/Pods-SousChef.debug.xcconfig"; sourceTree = "<group>"; };
 		B8515327E8B8493A80BF6463 /* Config.xcconfig */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = TextRecognitionModule.m; path = SousChef/TextRecognitionModule.m; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F27910D27828985604CDD2C3 /* StartupMarkModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = StartupMarkModule.mm; path = SousChef/StartupMarkModule.mm; sourceTree = "<group>"; };
 		F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = SousChef.entitlements; path = SousChef/SousChef.entitlements; sourceTree = "<group>"; };
@@ -45,6 +55,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				16A858AB987FF9BCA820269B /* libPods-SousChef.a in Frameworks */,
+				05FBBE763D744A630E2A46C0 /* FoundationModels.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,6 +77,10 @@
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */,
 				F27910D27828985604CDD2C3 /* StartupMarkModule.mm */,
+				2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */,
+				EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */,
+				99D8A0AE01F8C51634B3548B /* ReceiptStructuringModule.swift */,
+				092BB7A9F234BC83A7A40ED0 /* ReceiptStructuringModule.m */,
 			);
 			name = SousChef;
 			sourceTree = "<group>";
@@ -75,6 +90,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				014461885C99122C44001B04 /* libPods-SousChef.a */,
+				83BC4A1D5213DA7F57D2D74C /* FoundationModels.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -272,6 +288,10 @@
 				A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */,
 				A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */,
 				C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */,
+				E9FCC700806CCE313DFF5908 /* TextRecognitionModule.swift in Sources */,
+				36AD646A2F707013CEB1F5AF /* TextRecognitionModule.m in Sources */,
+				213EE21E482E278AF2C34439 /* ReceiptStructuringModule.swift in Sources */,
+				59D5B279D72AB3CB089666F6 /* ReceiptStructuringModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,7 +306,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = SousChef/SousChef.entitlements;
-				CURRENT_PROJECT_VERSION = 112;
+				CURRENT_PROJECT_VERSION = 117;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SousChef/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sous Chef";
@@ -296,7 +316,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.12;
+				MARKETING_VERSION = 4.7.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -319,7 +339,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = SousChef/SousChef.entitlements;
-				CURRENT_PROJECT_VERSION = 112;
+				CURRENT_PROJECT_VERSION = 117;
 				INFOPLIST_FILE = SousChef/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sous Chef";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
@@ -328,7 +348,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.12;
+				MARKETING_VERSION = 4.7.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

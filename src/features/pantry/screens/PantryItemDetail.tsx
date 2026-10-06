@@ -2,6 +2,7 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -22,7 +23,6 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
   formatPackageBreakdownFull,
-  formatNetWeightDisplay,
   formatQuantityBreakdown,
   formatStorageState,
   getExpiryInfo,
@@ -30,6 +30,7 @@ import {
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
+  formatNetWeightDisplay,
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
@@ -390,6 +391,7 @@ export const PantryItemDetail: React.FC<
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritionFacts,
+                  dataAttributions: item.item.dataAttributions,
                 })
               }
             />
@@ -493,6 +495,12 @@ export const PantryItemDetail: React.FC<
             </Text>
           )}
         </DetailSection>
+
+        {item.item.dataAttributions.length > 0 && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (
@@ -518,7 +526,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={item.item.canEdit}
+          item={item.item}
         />
       )}
     </>

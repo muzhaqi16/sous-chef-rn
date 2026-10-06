@@ -9,8 +9,8 @@ import {
 import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
 import { CreateShoppingListForRecipeDocument } from './useRecipeDetail.generated';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
-import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
+import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
+import { useAppStore } from '#store/useAppStore';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
@@ -112,23 +112,12 @@ export function useRecipeShoppingList({
   const { lists: shoppingLists, loading: shoppingListsLoading } =
     useShoppingListsLite();
 
-  const selectedShoppingListId = useSelectedShoppingListId();
+  const targetListId = useActiveShoppingListId(shoppingLists);
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
 
-  // Priority: user's selected list > default list > first list.
-  const getTargetShoppingList = () => {
-    if (shoppingLists.length === 0) return null;
-    if (selectedShoppingListId) {
-      const selected = shoppingLists.find(l => l.id === selectedShoppingListId);
-      if (selected) return selected;
-    }
-    const defaultList = shoppingLists.find(list => list.isDefault);
-    return defaultList ?? shoppingLists[0];
-  };
-
-  const getShoppingListById = (listId: string) =>
+  const getShoppingListById = (listId: string | undefined) =>
     shoppingLists.find(list => list.id === listId) ?? null;
 
   const client = useApolloClient();
@@ -206,7 +195,7 @@ export function useRecipeShoppingList({
 
   // Add a single ingredient to the user's default/selected list (no picker).
   const handleAddSingleIngredient = async (ingredient: DisplayIngredient) => {
-    const targetList = getTargetShoppingList();
+    const targetList = getShoppingListById(targetListId);
     if (!targetList) {
       toastService.error(t('recipes.createListFirst'));
       return;
@@ -337,12 +326,11 @@ export function useRecipeShoppingList({
               added += 1;
             }
           }
-          const allIngredientIds = extractNodes(
-            backendRecipe.ingredientsConnection,
-          ).map(ing => ing.id);
           setAddedIngredients(prev => {
             const next = new Set(prev);
-            allIngredientIds.forEach(id => next.add(id));
+            for (const { success, recipeIngredient } of payload.results) {
+              if (success) next.add(recipeIngredient.id);
+            }
             return next;
           });
           toastService.success(

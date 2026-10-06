@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
-import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import {
+  useRecipeIngredientMatching,
+  type CookEntry,
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -45,6 +48,8 @@ export function useRecipeCookingActions({
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
+  // A confirm or a skip of the review records it.
+  const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
 
@@ -154,6 +159,7 @@ export function useRecipeCookingActions({
 
     // Granular deduction: load ingredient matches and open review sheet
     if (input.useGranularDeduction) {
+      setReviewedCook({ servings: input.servings, notes: input.notes });
       void executeWithLoadingState(async () => {
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
@@ -195,15 +201,16 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
-  // Skip review handler — falls back to simple markRecipeAsCooked with deductFromPantry: true
+  // Skipping the review lets the server pick the stacks (markRecipeAsCooked).
   const handleSkipReview = () => {
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
       const { failure, skipped } = await fireMarkCooked({
         recipeId,
-        servings: undefined,
+        servings: reviewedCook?.servings,
         deductFromPantry: true,
+        notes: reviewedCook?.notes,
       });
       if (failure) {
         toastService.error(failure.body);
@@ -213,12 +220,16 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
+  const handleConfirmReview = () =>
+    ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
+
   return {
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
   };
 }

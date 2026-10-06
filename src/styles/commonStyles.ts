@@ -189,6 +189,10 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.medium,
     borderColor: 'transparent',
     ...theme.shadows.card,
+    // Keeps the row's slots inside this view. A background-only view lends its
+    // children to the nearest ancestor that holds its own, and Fabric can
+    // re-insert them there under this fill: the checkbox and badge vanish.
+    isolation: 'isolate',
   },
   rowContent: {
     flexDirection: 'row',

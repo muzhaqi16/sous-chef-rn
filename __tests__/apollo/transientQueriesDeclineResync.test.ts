@@ -12,7 +12,7 @@ import { SRC, walk } from '#/test-utils/queueableOperations';
 
 /** Searches and analytics by name; the previews and lookups by document. */
 const TRANSIENT =
-  /^(?:Search\w*|Autocomplete\w*|\w*Analytics|ConvertQuantity|CanConvert|CanDeleteAccount|GetHomeByJoinCode|GetUnitBySymbol|ItemByUpcFilter|ItemBySkuFilter)Document$/;
+  /^(?:Search\w*|Autocomplete\w*|\w*Analytics|ConvertQuantity|CanConvert|CanDeleteAccount|GetHomeByJoinCode|GetUnitBySymbol|ItemByLookup)Document$/;
 
 const QUERY_HOOKS = new Set(['useQuery', 'useLazyQuery']);
 

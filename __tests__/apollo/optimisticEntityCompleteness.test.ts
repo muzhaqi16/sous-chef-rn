@@ -611,7 +611,7 @@ describe('optimistic entity completeness', () => {
         input: {
           shoppingListItemId: 'list-item-1',
           pantryId: 'pantry-1',
-          actualQuantity: 1,
+          amount: { measured: { quantity: 1 } },
         },
         today: '2026-09-22',
       });
@@ -776,6 +776,7 @@ describe('optimistic entity completeness', () => {
               perspective: 'FRONT',
               isPrimary: true,
               status: 'READY',
+              credit: null,
               variants: [],
             },
           ],
@@ -834,6 +835,12 @@ describe('optimistic entity completeness', () => {
                 perspective
                 isPrimary
                 status
+                credit {
+                  license
+                  licenseUrl
+                  sourceUrl
+                  text
+                }
                 variants {
                   id
                   url
@@ -1412,12 +1419,8 @@ describe('optimistic entity completeness', () => {
         'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
-      'src/features/shoppingList/hooks/useMoveToPantry.ts':
-        'covered: the MoveShoppingItemToPantry case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification feed fragment comparison above',
-      'src/features/barcode/hooks/useAddScannedItem.ts':
-        'covered indirectly: the row is written in full by writeLocalPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
       'src/features/catalog/hooks/useCreateStorageLocation.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/catalog/hooks/useStorageLocationManagement.ts':

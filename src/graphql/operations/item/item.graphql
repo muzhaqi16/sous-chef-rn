@@ -2,153 +2,6 @@
 # QUERIES
 # ============================================
 
-# A scan reports the scanned barcode's own pack: `netWeight`, `netWeightKind`,
-# `displayUnit` and `variationBrand` are that barcode's, never another pack's.
-# An add names `matchedVariation.id` to store exactly those facts.
-query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat, $pantry: ID) {
-  items(
-    filters: { lookup: { upc: { code: $upc, format: $upcFormat } } }
-    first: 1
-  ) {
-    edges {
-      cursor
-      node {
-        id
-        imageUrl
-        name
-        description
-        netWeight
-        primaryUpc
-        type
-        # Together these decide whether the card offers an edit action at all,
-        # and which wording it uses. canEdit is viewer-scoped (true only for the
-        # item's creator and admins); canSuggest is structural (true for active
-        # PUBLIC catalog items). Neither is inferable from visibility, and both
-        # false means read-only — a scan can surface an item you may not touch.
-        canEdit
-        canSuggest
-        storageState
-        shelfLifeDays
-        shelfLifeOpenedDays
-        tags
-        netWeightKind
-        displayUnit {
-          id
-          name
-          symbol
-        }
-        # The unit an add naming no unit counts in, for the local row.
-        trackingUnit(pantry: $pantry) {
-          id
-          name
-          symbol
-          type
-          displayAsFraction
-        }
-        categories {
-          id
-          isPrimary
-          category {
-            id
-            name
-            type
-          }
-        }
-        units {
-          id
-          isDefault
-          unitId
-        }
-        variationBrand {
-          id
-          name
-        }
-        matchedVariation {
-          id
-          upc
-        }
-      }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
-query ItemBySkuFilter($sku: String!, $skuStoreId: ID, $pantry: ID) {
-  items(
-    filters: { lookup: { sku: { sku: $sku, storeId: $skuStoreId } } }
-    first: 1
-  ) {
-    edges {
-      cursor
-      node {
-        id
-        imageUrl
-        name
-        description
-        netWeight
-        primaryUpc
-        type
-        # Together these decide whether the card offers an edit action at all,
-        # and which wording it uses. canEdit is viewer-scoped (true only for the
-        # item's creator and admins); canSuggest is structural (true for active
-        # PUBLIC catalog items). Neither is inferable from visibility, and both
-        # false means read-only — a scan can surface an item you may not touch.
-        canEdit
-        canSuggest
-        storageState
-        shelfLifeDays
-        shelfLifeOpenedDays
-        tags
-        netWeightKind
-        displayUnit {
-          id
-          name
-          symbol
-        }
-        # The unit an add naming no unit counts in, for the local row.
-        trackingUnit(pantry: $pantry) {
-          id
-          name
-          symbol
-          type
-          displayAsFraction
-        }
-        categories {
-          id
-          isPrimary
-          category {
-            id
-            name
-            type
-          }
-        }
-        units {
-          id
-          isDefault
-          unitId
-        }
-        variationBrand {
-          id
-          name
-        }
-        matchedVariation {
-          id
-          upc
-        }
-      }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query GetOnboardingItems(
   $filters: ItemFilters
   $orderBy: ItemOrderBy
@@ -183,6 +36,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
       id
       name
       type
+      level
       imageUrl
       netWeight
       displayUnit
@@ -226,6 +80,7 @@ query SearchItemsSemantic(
         id
         name
         type
+        level
         imageUrl
         netWeight
         defaultConsumeUnit {

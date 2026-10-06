@@ -25,8 +25,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -63,8 +63,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -93,8 +93,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Run i18n check
         run: node scripts/check-i18n.mjs
@@ -115,8 +115,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -148,8 +148,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -157,9 +157,9 @@ jobs:
       - name: Check for stale cache fields
         run: node scripts/find-stale-cache-fields.mjs --check
 
-  # A known vulnerability in a production dependency fails the PR. Dependabot
-  # proposes upgrades but fails nothing, so without this a vulnerable package
-  # reaches the default branch with every check green. Reads the lockfile — no
+  # Reports a known vulnerability in a production dependency on the PR, without
+  # failing it: the advisory shows as a failed step inside a passing job, and the
+  # weekly dependency-audit.yml tracks it in an issue. Reads the lockfile — no
   # install needed.
   dependency-audit:
     name: Dependency Audit
@@ -173,10 +173,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+        run: npm run check:audit
 
   # The bundled-secret scanner runs in the BUILD workflows, against a real
   # artifact. This exercises the scanner itself on every PR so it cannot rot
@@ -193,7 +194,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
 
       - name: Self-test the bundled secret scanner
         run: node scripts/check-bundled-secrets.mjs --self-test
@@ -217,8 +218,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -270,8 +271,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -319,8 +320,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps

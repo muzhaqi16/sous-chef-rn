@@ -20,12 +20,14 @@ import { sizes } from '#/theme/foundations/sizes';
 import { spacing } from '#/theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import {
   HeaderActionIcon,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useThemeResyncOnReveal } from '#hooks/ui/useThemeEpoch';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.
@@ -116,6 +118,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  useThemeResyncOnReveal();
   const hasHero = !!renderHero;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 
@@ -206,6 +209,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         {hasHero ? (
           <Animated.View style={parallax ? heroParallaxStyle : undefined}>
             {renderHero(heroHeight)}
+            <ThemeEpochSentinel />
           </Animated.View>
         ) : (
           <View style={{ height: insets.top + HEADER_BAND_HEIGHT }} />
@@ -220,6 +224,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         >
           {children}
         </View>
+        <ThemeEpochSentinel />
       </Animated.ScrollView>
 
       <View

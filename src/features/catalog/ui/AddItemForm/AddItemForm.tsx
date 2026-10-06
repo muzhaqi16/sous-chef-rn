@@ -54,8 +54,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
  * writes them straight through (updateItem). They render identically — the
- * caller picks by the item's viewer-scoped `canEdit`, and only the wording
- * differs.
+ * caller picks with `writesItemDirectly`, and only the wording differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 
@@ -89,6 +88,12 @@ export interface AddItemFormInitialData {
 export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
+
+/** A server refusal the user can fix, shown on the form field it names. */
+export interface AddItemFieldRefusal {
+  field: 'upc';
+  message: string;
+}
 
 /**
  * Editor rows → the shape `createItemSchema` validates. An entirely empty row
@@ -159,7 +164,10 @@ interface AddItemFormProps {
   barcode?: string;
   format?: string;
   scannedValue?: string; // The actual scanned value (could be barcode or SKU)
-  onSubmit: (formData: AddItemSubmitPayload) => void;
+  /** Resolves with a refusal to show on its field, or with nothing. */
+  onSubmit: (
+    formData: AddItemSubmitPayload,
+  ) => Promise<AddItemFieldRefusal | void>;
   onClose: () => void;
   loading?: boolean;
   enableAutocomplete?: boolean;
@@ -288,11 +296,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     mode,
     onScanUpc,
   );
+  const fieldsOn = (page: PageName) => {
+    const { primary, advanced } = TAB_FIELDS[page];
+    return [...primary, ...advanced];
+  };
 
   const {
     control,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
     // Only the review path mandates a note — see `requiresEditNote`.
@@ -327,7 +340,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const netWeightsError = firstMessage(errors.netWeights);
   const unitsError = firstMessage(errors.units);
 
-  const handleFormSubmit = (data: CreateItemFormData) => {
+  const handleFormSubmit = async (data: CreateItemFormData) => {
     let tags: string[] = [];
     if (data.tags) {
       if (Array.isArray(data.tags)) {
@@ -393,7 +406,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       selectedImages,
     };
 
-    onSubmit(processedData);
+    const refusal = await onSubmit(processedData);
+    if (!refusal) return;
+    setCurrentPage(
+      PAGES.findIndex(page =>
+        fieldsOn(page).some(f => f.name === refusal.field),
+      ),
+    );
+    setError(refusal.field, { type: 'server', message: refusal.message });
   };
 
   const activePage = PAGES[currentPage] ?? PAGES[0];
@@ -405,10 +425,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // auto-expansion of "More options" when an errored field lives inside it.
   // react-hook-form deletes a field's key when its error clears.
   const fieldHasError = (name: string) => name in errors;
-  const tabHasError = (page: PageName) => {
-    const { primary, advanced } = TAB_FIELDS[page];
-    return [...primary, ...advanced].some(f => fieldHasError(String(f.name)));
-  };
+  const tabHasError = (page: PageName) =>
+    fieldsOn(page).some(f => fieldHasError(String(f.name)));
   const advancedHasError = activeTab.advanced.some(f =>
     fieldHasError(String(f.name)),
   );

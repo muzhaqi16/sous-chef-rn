@@ -510,6 +510,19 @@ export const useImageUpload = () => {
     return results;
   };
 
+  /**
+   * A photo a mutation takes by key (a receipt for `createReceiptParse`):
+   * presigned and posted like any photo but never confirmed, since its
+   * consumer owns it from there. Null offline; a failure throws, unreported.
+   */
+  const uploadUnconfirmed = (
+    file: ImageFile,
+    purpose: ImageUploadPurpose,
+  ): Promise<string | null> =>
+    uploadImage(file, purpose, false, undefined, key => Promise.resolve(key), {
+      suppressAlert: true,
+    });
+
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
     const settled = await settleMutation(
       () => updateProfile({ variables: { input: { avatar: avatarUrl } } }),
@@ -532,6 +545,7 @@ export const useImageUpload = () => {
     uploading,
     uploadProfileImage,
     uploadItemImages,
+    uploadUnconfirmed,
     updateProfileAvatarUrl,
   };
 };

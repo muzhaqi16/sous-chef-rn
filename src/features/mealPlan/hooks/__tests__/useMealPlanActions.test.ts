@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
@@ -221,6 +222,53 @@ describe('useMealPlanActions', () => {
     expect(update.fired).toContainEqual({
       input: { id: 'plan-1', name: 'Updated' },
     });
+  });
+
+  // Online writes are not queued, so nothing rebased the second onto the
+  // version the first moved the row to: it was refused as changed elsewhere.
+  it('updateMealPlan sends a second update inside one round trip at the version the first answer wrote', async () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: gql`
+        fragment SeedPlanVersion on MealPlan {
+          id
+          version
+        }
+      `,
+      data: { __typename: 'MealPlan', id: 'plan-1', version: 3 },
+    });
+    const update = recordMock(UpdateMealPlanDocument, {
+      dataFor: (vars): MockDataFor<typeof UpdateMealPlanDocument> => ({
+        updateMealPlan: {
+          __typename: 'UpdateMealPlanPayload',
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: 'plan-1',
+            version: Number(inputOf(vars).version) + 1,
+          },
+        },
+      }),
+      delay: 20,
+    });
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [update.mock],
+      cache,
+    });
+
+    let updated: boolean[] = [];
+    await act(async () => {
+      updated = await Promise.all([
+        result.current.updateMealPlan('plan-1', { dietaryProfileId: 'p-1' }),
+        result.current.updateMealPlan('plan-1', { dietaryProfileId: null }),
+      ]);
+    });
+
+    expect(updated).toEqual([true, true]);
+    expect(update.fired.map(({ input }) => input)).toEqual([
+      expect.objectContaining({ version: 3, dietaryProfileId: 'p-1' }),
+      expect.objectContaining({ version: 4, dietaryProfileId: null }),
+    ]);
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('deleteMealPlan returns true on success', async () => {

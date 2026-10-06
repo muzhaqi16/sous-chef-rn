@@ -3,11 +3,10 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 
 import {
-  ItemByUpcFilterDocument,
-  ItemBySkuFilterDocument,
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
+import { ItemByLookupDocument } from './useSearchResults.generated';
 import { UpcFormat, type NetWeightKind } from '#/graphql/generated/schemaTypes';
 import {
   useSearchState,
@@ -26,8 +25,14 @@ import {
   type AddItemFormData,
 } from '#/utils/items/createItemMapping';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
+import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
+import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useStore } from '#store';
+import { blocksCacheMissQueries } from '#store/slices/networkSlice';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
 // Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
@@ -52,55 +57,80 @@ const mapVisionCameraFormatToUpcFormat = (
   }
 };
 
+interface LookupItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  dataAttributions?: DataAttributionValue[];
+  imageUrl?: string | null;
+  imageCredit?: PhotoCreditValue | null;
+  photos?: ReadonlyArray<{
+    url: string;
+    credit?: PhotoCreditValue | null;
+  }>;
+  canEdit?: boolean | null;
+  canSuggest?: boolean | null;
+  netWeight?: number | null;
+  netWeightKind?: NetWeightKind | null;
+  type?: string | null;
+  storageState?: string | null;
+  shelfLifeDays?: number | null;
+  shelfLifeOpenedDays?: number | null;
+  tags?: string[] | null;
+  displayUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  } | null;
+  trackingUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  } | null;
+  categories?: Array<{
+    isPrimary?: boolean | null;
+    category: {
+      id: string;
+      name: string;
+    };
+  }> | null;
+  units: Array<{
+    unitId: string;
+    isDefault?: boolean | null;
+  }>;
+  variationBrand?: {
+    id: string;
+    name: string;
+  } | null;
+  matchedVariation?: {
+    id: string;
+    source?: string | null;
+  } | null;
+}
+
+/**
+ * The card's full-width image: the primary photo, first in gallery order, at
+ * its original size; else `imageUrl`, the item's only image. Each carries its
+ * own credit.
+ */
+const cardImageOf = ({
+  photos,
+  imageUrl,
+  imageCredit,
+}: LookupItem): ScannedItem['image'] => {
+  const [photo] = photos ?? [];
+  if (photo) return { url: photo.url, credit: photo.credit ?? undefined };
+  const url = firstNonBlank(imageUrl);
+  return url ? { url, credit: imageCredit ?? undefined } : undefined;
+};
+
 /**
  * A lookup's item as a scan result. On a barcode lookup the size, its kind, its
  * unit and `variationBrand` are the scanned barcode's own (API
  * `barcodePackage`), so nothing here borrows another pack's figure or brand.
  */
 const convertToScannedItem = (
-  item: {
-    id: string;
-    name: string;
-    description?: string | null;
-    imageUrl?: string | null;
-    canEdit?: boolean | null;
-    canSuggest?: boolean | null;
-    netWeight?: number | null;
-    netWeightKind?: NetWeightKind | null;
-    type?: string | null;
-    storageState?: string | null;
-    shelfLifeDays?: number | null;
-    shelfLifeOpenedDays?: number | null;
-    tags?: string[] | null;
-    displayUnit?: {
-      id: string;
-      name: string;
-      symbol: string;
-    } | null;
-    trackingUnit?: {
-      id: string;
-      name: string;
-      symbol: string;
-    } | null;
-    categories?: Array<{
-      isPrimary?: boolean | null;
-      category: {
-        id: string;
-        name: string;
-      };
-    }> | null;
-    units: Array<{
-      unitId: string;
-      isDefault?: boolean | null;
-    }>;
-    variationBrand?: {
-      id: string;
-      name: string;
-    } | null;
-    matchedVariation?: {
-      id: string;
-    } | null;
-  },
+  item: LookupItem,
   scannedCode: string,
   brandNameOverride?: string,
 ): ScannedItem => ({
@@ -108,10 +138,13 @@ const convertToScannedItem = (
   name: item.name,
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
+  image: cardImageOf(item),
+  dataAttributions: item.dataAttributions,
   canEdit: item.canEdit ?? undefined,
   canSuggest: item.canSuggest ?? undefined,
   upc: scannedCode,
   variationId: item.matchedVariation?.id,
+  source: firstNonBlank(item.matchedVariation?.source),
   unitId: item.units.find(u => u.isDefault)?.unitId,
   netWeight: item.netWeight ?? undefined,
   netWeightKind: item.netWeightKind ?? undefined,
@@ -162,7 +195,6 @@ export const useSearchResults = (
   const {
     searchResults,
     setSearching,
-    addToRecentlyScanned,
     clearSearch,
     setSearchError,
     setSearchResults,
@@ -208,7 +240,6 @@ export const useSearchResults = (
           );
           pendingBrandNameRef.current = undefined;
           setSearchResults([newItem]);
-          addToRecentlyScanned(newItem);
           hideBottomSheet();
         }
       },
@@ -220,8 +251,11 @@ export const useSearchResults = (
     loading: upcLoading,
     error: upcError,
     refetch: refetchUpc,
-  } = useQuery(ItemByUpcFilterDocument, {
-    variables: { upc: barcode, upcFormat, pantry: pantryId },
+  } = useQuery(ItemByLookupDocument, {
+    variables: {
+      lookup: { upc: { code: barcode, format: upcFormat } },
+      pantry: pantryId,
+    },
     // `items` is keyed by `filters`, so another code's result never serves this
     // one; network-only is for a code the catalog has gained or changed since.
     fetchPolicy: 'network-only',
@@ -236,11 +270,12 @@ export const useSearchResults = (
     loading: skuLoading,
     error: skuError,
     refetch: refetchSku,
-  } = useQuery(ItemBySkuFilterDocument, {
-    variables: { sku: barcode, skuStoreId: undefined, pantry: pantryId },
+  } = useQuery(ItemByLookupDocument, {
+    variables: { lookup: { sku: { sku: barcode } }, pantry: pantryId },
     // Skip SKU search while UPC is loading OR if UPC found a result
-    // Must include upcLoading to prevent using stale upcItem from previous scan
-    skip: upcLoading || !!upcItem,
+    // Must include upcLoading to prevent using stale upcItem from previous scan.
+    // A failed UPC lookup is not a miss, so an empty SKU answer never follows it.
+    skip: upcLoading || !!upcItem || !!upcError,
     fetchPolicy: 'network-only', // As the UPC lookup above.
     refetchOn: false,
   });
@@ -255,7 +290,6 @@ export const useSearchResults = (
       setSearching(false);
       const item = convertToScannedItem(upcItem, barcode);
       setSearchResults([item]);
-      addToRecentlyScanned(item);
       hideBottomSheet();
     }
   }, [
@@ -264,7 +298,6 @@ export const useSearchResults = (
     barcode,
     setSearching,
     setSearchResults,
-    addToRecentlyScanned,
     hideBottomSheet,
   ]);
 
@@ -293,7 +326,6 @@ export const useSearchResults = (
         // API handles SKU matching - just show the result
         const item = convertToScannedItem(skuItem, barcode);
         setSearchResults([item]);
-        addToRecentlyScanned(item);
         hideBottomSheet();
         return;
       }
@@ -309,37 +341,28 @@ export const useSearchResults = (
     upcItem,
     setSearching,
     setSearchResults,
-    addToRecentlyScanned,
     hideBottomSheet,
     showBottomSheet,
   ]);
 
   // `isNetworkError` covers the request timeout too. The server's own message is
-  // unlocalized English, so the copy is always the app's.
+  // unlocalized English, so the copy is always the app's. A failed lookup is not
+  // a miss: the product may well exist, so the new-item form stays closed and
+  // the screen offers a retry.
   useEffect(() => {
     const error = upcError ?? skuError;
     if (!error) return;
 
+    // Offline, `offlineModeLink` answers the uncached lookup itself. Read when
+    // the error lands, so reconnecting doesn't relabel that answer.
+    const neverAsked = blocksCacheMissQueries(useStore.getState());
     setSearching(false);
     setSearchError(
-      isNetworkError(error)
+      neverAsked || isNetworkError(error)
         ? t('errors.networkError')
         : t('errors.codes.genericRetry'),
     );
-
-    if (!upcData?.items.edges.length && !skuData?.items.edges.length) {
-      showBottomSheet(1);
-    }
-  }, [
-    upcError,
-    skuError,
-    upcData,
-    skuData,
-    setSearching,
-    setSearchError,
-    showBottomSheet,
-    t,
-  ]);
+  }, [upcError, skuError, setSearching, setSearchError, t]);
 
   // Handle loading state from both queries
   useEffect(() => {
@@ -351,7 +374,9 @@ export const useSearchResults = (
     }
   }, [upcLoading, skuLoading, setSearching]);
 
-  const handleAddItem = async (formData: AddItemFormData) => {
+  const handleAddItem = async (
+    formData: AddItemFormData,
+  ): Promise<AddItemFieldRefusal | undefined> => {
     // Store brand name for use in mutation callback
     pendingBrandNameRef.current = formData.brandName;
 
@@ -359,7 +384,7 @@ export const useSearchResults = (
 
     // A refusal leaves the stashed images and brand name behind, so both are
     // dropped with it; `onCompleted` consumes them on success.
-    await settleMutation(
+    const settled = await settleMutation(
       () =>
         addNewItem({
           variables: { input: mapFormToCreateItemInput(formData) },
@@ -371,8 +396,17 @@ export const useSearchResults = (
           cleanupPendingImageStorage();
           pendingBrandNameRef.current = undefined;
         },
+        present: 'none',
       },
     );
+    const { failure } = settled;
+    if (settled.status !== 'failed' || !failure) return undefined;
+    // An invalid barcode is the user's to fix, so it lands on the field.
+    if (failure.field === 'primaryUpc') {
+      return { field: 'upc', message: t('errors.field.primaryUpc') };
+    }
+    alertService.alert(failure.title, failure.body);
+    return undefined;
   };
 
   // Re-runs the query that failed; its outcome reaches the error effect above,

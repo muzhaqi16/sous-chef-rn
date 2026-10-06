@@ -243,7 +243,7 @@ describe('RecipeDetail', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('renders recipe content when displayData exists', () => {
+  it("renders recipe content, with its provider's notice", () => {
     const { useRecipeDetail } = jest.requireMock(
       '../../../hooks/useRecipeDetail',
     );
@@ -254,6 +254,14 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [
+          {
+            source: 'SPOONACULAR',
+            notice: 'Recipe data from Spoonacular.',
+            licenseUrl: null,
+            sourceUrl: 'https://spoonacular.com/recipes/carbonara-1',
+          },
+        ],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -315,6 +323,7 @@ describe('RecipeDetail', () => {
     const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
+    expect(tree.getByText('Recipe data from Spoonacular.')).toBeTruthy();
   });
 
   it('keeps a cached recipe on screen when the refresh fails', () => {
@@ -330,6 +339,7 @@ describe('RecipeDetail', () => {
       // `displayData` blanked the screen and called it "recipe not found".
       error: 'Network request failed',
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -409,6 +419,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Quick Soup',
         servings: 6,
@@ -593,6 +604,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Vegan Bowl',
         image: null,
@@ -669,6 +681,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saved Recipe',
         image: 'https://example.com/img.jpg',
@@ -743,6 +756,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'A Recipe',
         image: null,
@@ -808,6 +822,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Test',
         image: null,
@@ -936,6 +951,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -1002,6 +1018,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1067,6 +1084,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1132,6 +1150,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saving Recipe',
         image: 'https://example.com/img.jpg',
@@ -1198,6 +1217,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'With Instructions',
         image: null,
@@ -1268,6 +1288,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe With Ingredients',
         image: null,
@@ -1336,6 +1357,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Cooking Recipe',
         image: null,
@@ -1401,6 +1423,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'My Pasta Recipe',
         image: null,
@@ -1471,6 +1494,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -1538,6 +1562,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Zero Time Recipe',
         image: null,
@@ -1606,6 +1631,7 @@ describe('RecipeDetail', () => {
         error: null,
         isSaved,
         displayData: {
+          dataAttributions: [],
           details,
           title: 'Spinach Strata',
           image: null,

@@ -472,17 +472,18 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event           | Fires when                                                   |
-| --------------- | ------------------------------------------------------------ |
-| `appForeground` | AppState goes from background/inactive to `active`           |
-| `apiReachable`  | `isApiUnavailable` goes from true to false (link or breaker) |
-| `wsReconnected` | `onWebSocketReconnected`                                     |
+| Event             | Fires when                                                       |
+| ----------------- | ---------------------------------------------------------------- |
+| `appForeground`   | AppState goes from background/inactive to `active`               |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)     |
+| `wsReconnected`   | `onWebSocketReconnected`                                         |
+| `languageChanged` | The resolved language really changes; after one, each navigation |
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is
 passed to the `ApolloClient` constructor with one coalescing default handler;
-`connectResyncSources(client)` attaches the three sources at app start in
-`App.tsx`, because a source subscribes as it is set and importing the client
+`connectResyncSources(client, { onNavigation })` attaches the sources at app
+start in `App.tsx`, because a source subscribes as it is set and importing the client
 must not subscribe to the store, AppState and the socket.
 
 The handler:
@@ -499,6 +500,23 @@ The handler:
 
 `include: 'active'` already leaves out standby watchers (`skipToken` or
 `skip: !isFocused`) and `cache-only` reads.
+
+**A language switch catches up on navigation.** Catalog names come in the
+request's language, but a screen paused at the switch has no active query for
+the refetch to reach, and resumes on `cache-first`
+([probe](verified-library-behaviour.md#apollo-tears-down-a-paused-screens-query-resubscribing-reads-the-current-fetch-policy)).
+So after a real switch `languageChanged` also fires on every navigation
+(`onNavigation`, wired in `App.tsx`; payload `switched: false`), and a batch of
+only that event refetches just the active queries not answered since the
+switch. The set is per switch, not per language: names live on shared entities,
+so a screen paused through `en` → `es` → `en` reads what the `es` screens wrote.
+A query joins it only once its refetch answers, and a catch-up waits while the
+API is unavailable. A switch before any query exists (rehydration applying the
+saved language) is not one. No screen carries code for it, and none is
+remounted.
+
+Evicting the names instead would blank every screen offline, and
+`include: 'all'` does not reach a paused screen's torn-down query.
 
 **A transient query opts out** with `refetchOn: false`: searches,
 autocompletes, analytics, conversion and join-code previews, barcode lookups,

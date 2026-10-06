@@ -41,10 +41,7 @@ import {
   CreateShoppingListItemFromRecipeIngredientDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { reconcileAddRecipeToFavoritesReplay } from '#features/recipes/offline/replayReconcilers';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
@@ -87,7 +84,6 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
-  [BarcodeCreatePantryItemDocument, reconcileCreatePantryItemReplay],
   [DeletePantryItemDocument, settlePantryItemDelete],
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
