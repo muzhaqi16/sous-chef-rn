@@ -621,7 +621,7 @@ describe('MoveToPantryModal', () => {
     });
 
     it('sends a whole count of jars with their size as packages', async () => {
-      // A 22 oz jar moving onto a 32 oz stack keeps its size.
+      // A 22 oz jar moving onto a 32 oz stack keeps its size, counted in jars.
       const onConfirm = openWithPurchase(5, 0.59, undefined, jarLine);
       await waitFor(() =>
         expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
@@ -637,6 +637,7 @@ describe('MoveToPantryModal', () => {
               packages: {
                 count: 5,
                 size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                unitId: 'u-jar',
               },
             },
           }),
@@ -749,6 +750,7 @@ describe('MoveToPantryModal', () => {
                 packages: {
                   count: 5,
                   size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                  unitId: 'u-purchase',
                 },
               },
             }),

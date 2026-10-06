@@ -38,9 +38,21 @@ const statedQuantity = (choice: ReceiptLineChoice) =>
     ? choice.quantity
     : undefined;
 
+// What an add off the list records. A printed count with no unit (2 @) is that
+// many packages, which the server sizes, else counts in a counted stack.
+const intakeOf = (choice: ReceiptLineChoice) => {
+  const quantity = statedQuantity(choice);
+  if (quantity === undefined) return {};
+  if (!choice.unitId && !choice.unitText && Number.isInteger(quantity)) {
+    return { amount: stockAmountOf(quantity, { asPackages: true }) };
+  }
+  return { quantity, unit: refByIdOrName(choice.unitId, choice.unitText) };
+};
+
 // The total is the API's authoritative figure. A rate goes with it only for a
-// stated amount: the receipt's price history is recorded from the rate, and a
-// rate for an amount the API defaults would price the wrong quantity.
+// stated amount, per package for a count: the receipt's price history is
+// recorded from the rate, and a rate for an amount the API defaults would price
+// the wrong quantity.
 const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
   const quantity = statedQuantity(choice);
   return {
@@ -109,8 +121,7 @@ export function useApplyReceipt(listId: string | undefined) {
       item: choice.itemId
         ? { id: choice.itemId }
         : { inline: { name: choice.itemName } },
-      quantity: statedQuantity(choice),
-      unit: refByIdOrName(choice.unitId, choice.unitText),
+      ...intakeOf(choice),
       forceAdd: true,
       purchase: purchaseOf(choice, receipt),
     });

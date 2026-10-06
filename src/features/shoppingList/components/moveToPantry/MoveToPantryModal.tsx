@@ -282,8 +282,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (quantityValue === null) return;
 
     // The schema passed, so a stated size carries its unit and goes with a
-    // whole count in a counted unit: that many packages, which the server
-    // records. Without one, the amount as typed.
+    // whole count in a counted unit: that many packages of the picked unit,
+    // which the server records. Without one, the amount as typed.
     const packageSize =
       packageSizeInput.trim() && packageSizeUnitId
         ? {

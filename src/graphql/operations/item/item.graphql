@@ -176,11 +176,14 @@ mutation CreateItem($input: CreateItemInput!) {
             name
           }
         }
+        # A scan's result reads the created item as it reads a lookup's.
         categories {
           id
+          isPrimary
           category {
             id
             name
+            type
           }
         }
         units {

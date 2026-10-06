@@ -6,8 +6,11 @@ import {
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
-import { ItemByLookupDocument } from './useSearchResults.generated';
-import { UpcFormat, type NetWeightKind } from '#/graphql/generated/schemaTypes';
+import {
+  ItemByLookupDocument,
+  type ItemByLookupQuery,
+} from './useSearchResults.generated';
+import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import {
   useSearchState,
   useBottomSheetState,
@@ -27,8 +30,6 @@ import {
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
-import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
-import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useStore } from '#store';
@@ -57,56 +58,19 @@ const mapVisionCameraFormatToUpcFormat = (
   }
 };
 
-interface LookupItem {
-  id: string;
-  name: string;
-  description?: string | null;
-  dataAttributions?: DataAttributionValue[];
-  imageUrl?: string | null;
-  imageCredit?: PhotoCreditValue | null;
-  photos?: ReadonlyArray<{
-    url: string;
-    credit?: PhotoCreditValue | null;
-  }>;
-  canEdit?: boolean | null;
-  canSuggest?: boolean | null;
-  netWeight?: number | null;
-  netWeightKind?: NetWeightKind | null;
-  type?: string | null;
-  storageState?: string | null;
-  shelfLifeDays?: number | null;
-  shelfLifeOpenedDays?: number | null;
-  tags?: string[] | null;
-  displayUnit?: {
-    id: string;
-    name: string;
-    symbol: string;
-  } | null;
-  trackingUnit?: {
-    id: string;
-    name: string;
-    symbol: string;
-  } | null;
-  categories?: Array<{
-    isPrimary?: boolean | null;
-    category: {
-      id: string;
-      name: string;
-    };
-  }> | null;
-  units: Array<{
-    unitId: string;
-    isDefault?: boolean | null;
-  }>;
-  variationBrand?: {
-    id: string;
-    name: string;
-  } | null;
-  matchedVariation?: {
-    id: string;
-    source?: string | null;
-  } | null;
-}
+type LookupNode = ItemByLookupQuery['items']['edges'][number]['node'];
+
+/** A lookup's item, or a created one, which selects none of these. */
+type ScanOnlyField =
+  | 'dataAttributions'
+  | 'imageCredit'
+  | 'photos'
+  | 'netWeightKind'
+  | 'trackingUnit'
+  | 'variationBrand'
+  | 'matchedVariation';
+type LookupItem = Omit<LookupNode, ScanOnlyField | 'primaryUpc'> &
+  Partial<Pick<LookupNode, ScanOnlyField>>;
 
 /**
  * The card's full-width image: the primary photo, first in gallery order, at
@@ -140,8 +104,8 @@ const convertToScannedItem = (
   imageUrl: firstNonBlank(item.imageUrl),
   image: cardImageOf(item),
   dataAttributions: item.dataAttributions,
-  canEdit: item.canEdit ?? undefined,
-  canSuggest: item.canSuggest ?? undefined,
+  canEdit: item.canEdit,
+  canSuggest: item.canSuggest,
   upc: scannedCode,
   variationId: item.matchedVariation?.id,
   source: firstNonBlank(item.matchedVariation?.source),
@@ -166,15 +130,15 @@ const convertToScannedItem = (
   // barcode's own.
   brandName: brandNameOverride ?? item.variationBrand?.name,
   brandId: brandNameOverride ? undefined : item.variationBrand?.id,
-  type: item.type ?? undefined,
-  storageState: item.storageState ?? undefined,
+  type: item.type,
+  storageState: item.storageState,
   shelfLifeDays: item.shelfLifeDays ?? undefined,
   shelfLifeOpenedDays: item.shelfLifeOpenedDays ?? undefined,
-  tags: item.tags ?? undefined,
-  categories: item.categories?.map(c => ({
+  tags: item.tags,
+  categories: item.categories.map(c => ({
     id: c.category.id,
     name: c.category.name,
-    isPrimary: c.isPrimary ?? undefined,
+    isPrimary: c.isPrimary,
   })),
 });
 

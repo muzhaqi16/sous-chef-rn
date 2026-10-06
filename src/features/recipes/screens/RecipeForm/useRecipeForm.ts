@@ -162,7 +162,7 @@ export function useRecipeForm() {
     setValue('intolerances', intolerances, { shouldDirty: true });
   };
 
-  // Build ingredient input array (shared by create and update-ingredients).
+  // Build ingredient input array (shared by create and update).
   // Names are sanitized at the API boundary: a backend ingredient name loaded
   // into the form may carry a legacy " $X.XX" token, and the API stores names
   // verbatim — strip it so we never re-persist a price baked into the name.
@@ -235,6 +235,7 @@ export function useRecipeForm() {
   const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
       version: state.version ?? undefined,
+      ingredients: buildIngredientsInput(),
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
       status: state.status,
@@ -348,7 +349,6 @@ export function useRecipeForm() {
     setIntolerances,
     buildCreateInput,
     buildUpdateInput,
-    buildIngredientsInput,
     populateFromRecipe,
   };
 }

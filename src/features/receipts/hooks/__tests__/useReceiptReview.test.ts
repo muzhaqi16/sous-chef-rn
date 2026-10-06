@@ -687,6 +687,36 @@ describe('useReceiptReview', () => {
     expect(input).not.toHaveProperty('purchase.costPerUnit');
   });
 
+  it('adds a printed count as that many packages, priced per package', async () => {
+    const { result, create } = await setup();
+    await act(async () => {
+      result.current.review.chooseLine(1, {
+        ...MILK,
+        quantity: 2,
+        price: 5.58,
+      });
+    });
+
+    await act(async () => {
+      await result.current.review.addChosen();
+    });
+
+    // 2 @ 2.79 is two packages the server sizes, never 2 of the milk's
+    // tracking unit (2 mL).
+    const [input] = create.fired.map(vars => vars.input);
+    expect(input).toEqual(
+      expect.objectContaining({
+        amount: { packages: { count: 2 } },
+        purchase: expect.objectContaining({
+          totalCost: 5.58,
+          costPerUnit: 2.79,
+        }),
+      }),
+    );
+    expect(input).not.toHaveProperty('quantity');
+    expect(input).not.toHaveProperty('unit');
+  });
+
   it('adds on the scan day when the receipt printed none, and on the day the user sets', async () => {
     const seeded = useReceiptDraftStore.getState().draft;
     if (!seeded) throw new Error('no draft');
@@ -1200,6 +1230,55 @@ describe('useReceiptReview', () => {
         id: storeId,
         name: 'East End Food Co-Op',
       });
+    });
+
+    it('stays busy from the store add on, so a second tap adds nothing twice', async () => {
+      const draft = useReceiptDraftStore.getState().draft!;
+      useReceiptDraftStore.setState({
+        draft: { ...draft, printedStore: { name: 'Corner Deli' } },
+      });
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: null,
+            proposedStore: {
+              name: 'Corner Deli',
+              address: null,
+              storeNumber: null,
+              chain: null,
+            },
+          },
+        },
+      });
+      const storeCreate = recordMock(CreateStoreDocument, {
+        delay: 50,
+        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
+          createStore: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: String(inputOf(vars).id), name: 'Corner Deli' },
+          },
+        }),
+      });
+      const { result, create } = await setup({ resolve, storeCreate });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+
+      let adding: Promise<unknown> = Promise.resolve();
+      act(() => {
+        adding = result.current.review.addChosen();
+      });
+
+      expect(storeCreate.fired).toHaveLength(1);
+      expect(create.fired).toHaveLength(0);
+      expect(result.current.review.applying).toBe(true);
+      await act(async () => {
+        await adding;
+      });
+      expect(result.current.review.applying).toBe(false);
+      expect(create.fired).toHaveLength(2);
     });
   });
 

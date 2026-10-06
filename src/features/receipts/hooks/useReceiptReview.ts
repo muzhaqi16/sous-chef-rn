@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useToday } from '#hooks/useToday';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
@@ -102,6 +103,8 @@ export function useReceiptReview() {
     draft?.printedStore,
   );
   const { createStore } = useCreateStore();
+  // Adding is busy from the store's create on: a second tap would add every line twice.
+  const [placingStore, setPlacingStore] = useState(false);
   // What the user picked, else the store the receipt's header names.
   const store =
     draft?.store ??
@@ -208,7 +211,9 @@ export function useReceiptReview() {
   };
 
   const addChosen = async () => {
+    setPlacingStore(true);
     const storeId = store?.id ?? (await addProposedStore());
+    setPlacingStore(false);
     const outcome = await apply(
       pending.map(line => ({ ...line, listLine: links.get(line.index) })),
       { purchasedOn, ...(storeId ? { storeId } : {}) },
@@ -247,7 +252,7 @@ export function useReceiptReview() {
     retryMatching,
     pantryName,
     pendingCount: pending.length,
-    applying,
+    applying: applying || placingStore,
     /** Later list pages are still loading: adding now could miss a list line. */
     listLoading: isLoadingRemainingPages,
     chooseLine,

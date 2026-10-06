@@ -102,11 +102,7 @@ export const RecipeFormScreen: React.FC<
     // them. The catch still covers the whole body.
     const runSave = async () => {
       if (isEditMode && recipeId) {
-        const outcome = await updateRecipe(
-          recipeId,
-          form.buildUpdateInput(),
-          form.buildIngredientsInput(),
-        );
+        const outcome = await updateRecipe(recipeId, form.buildUpdateInput());
         if (outcome.status === 'ok') {
           goBack();
           return;

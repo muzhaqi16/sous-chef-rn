@@ -208,6 +208,14 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
         ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
+        ingredientsConnection {
+          edges {
+            node {
+              id
+              ...RecipeIngredientFragment
+            }
+          }
+        }
       }
     }
     ... on Error {
@@ -231,37 +239,6 @@ mutation ForkRecipe($input: ForkRecipeInput!) {
       recipe {
         id
         ...RecipeReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
-  updateRecipeIngredients(input: $input) {
-    __typename
-    ... on UpdateRecipeIngredientsPayload {
-      recipe {
-        id
-        ...RecipeReaders
-        ingredientsConnection {
-          edges {
-            node {
-              id
-              ...RecipeIngredientFragment
-            }
-          }
-        }
       }
     }
     ... on Error {

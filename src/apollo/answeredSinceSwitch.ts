@@ -10,6 +10,10 @@ import { canonicalStringify } from '@apollo/client/utilities';
  */
 let answered: Set<string> | null = null;
 
+// Each search term and page is its own key. Past the cap the stalest go, and a
+// dropped one costs only a catch-up re-asking it.
+const MAX_ANSWERED = 500;
+
 const keyOf = (operationName: string, variables: unknown): string =>
   `${operationName}:${canonicalStringify(variables ?? {})}`;
 
@@ -21,7 +25,14 @@ export const noteAnsweredInLanguage = (
   operationName: string,
   variables: unknown,
 ): void => {
-  answered?.add(keyOf(operationName, variables));
+  if (!answered) return;
+  const key = keyOf(operationName, variables);
+  // Re-added, so the order runs from the longest unanswered.
+  answered.delete(key);
+  answered.add(key);
+  if (answered.size <= MAX_ANSWERED) return;
+  const [oldest] = answered;
+  if (oldest !== undefined) answered.delete(oldest);
 };
 
 export const wasAnsweredSinceSwitch = (

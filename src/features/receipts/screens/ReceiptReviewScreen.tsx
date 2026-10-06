@@ -239,6 +239,8 @@ export const ReceiptReviewScreen: React.FC = () => {
         ? t('receipts.review.addedTo', { count: added, pantry: pantryName })
         : t('receipts.review.addedCount', { count: added }),
     );
+    // Lines still waiting for a match keep the review, to add once matched.
+    if (rows.some(row => row.status === 'pending')) return;
     applied.current = true;
     toPantryMain();
   };

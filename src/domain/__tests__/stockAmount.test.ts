@@ -17,10 +17,10 @@ describe('stockAmountOf', () => {
     expect(stockAmountOf(1)).toStrictEqual({ measured: { quantity: 1 } });
   });
 
-  it('states packages of the size given, never with a unit', () => {
+  it('states packages of the size given, in the counted unit given', () => {
     expect(
-      stockAmountOf(3, { asPackages: true, packageSize: JAR, unitId: 'kg' }),
-    ).toStrictEqual({ packages: { count: 3, size: JAR } });
+      stockAmountOf(3, { asPackages: true, packageSize: JAR, unitId: 'jar' }),
+    ).toStrictEqual({ packages: { count: 3, size: JAR, unitId: 'jar' } });
   });
 
   it("leaves the package size to the API's own when none is given", () => {
@@ -53,6 +53,16 @@ describe('localQuantity', () => {
         { quantity: 1, unit: { type: UnitType.Count } },
       ),
     ).toBe(3);
+  });
+
+  it('shows packages counted in a named unit as that many, whatever the line', () => {
+    // 12 pieces on a dozen line land as 12 pieces, not 12 dozen.
+    expect(
+      localQuantity(
+        { packages: { count: 12, unitId: 'piece' } },
+        { quantity: 1, unit: { type: UnitType.Weight } },
+      ),
+    ).toBe(12);
   });
 
   it("shows a weighed line's own amount until the server converts packages", () => {

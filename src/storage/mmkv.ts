@@ -16,6 +16,12 @@ export const STORAGE_KEY = 'sous-chef-storage';
 // next launch.
 export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
 
+/** Keys a removed store persisted under, still on disk for older installs. */
+export const RETIRED_PERSISTED_KEYS: readonly string[] = [
+  // The barcode scanner's scan history (item names, brands, UPCs), before 4.7.0.
+  'sous-chef-barcode',
+];
+
 // DeviceKeyManager already retries keychain reads internally; run that whole
 // cycle a second time after a pause before quarantining the session.
 const KEY_FETCH_CYCLES = 2;
@@ -95,15 +101,29 @@ const recoveryStorageHasState = (): boolean => {
   }
 };
 
-const scheduleRecoveryPurge = (): void => {
+const removeRetiredKeys = (instance: MMKV): void => {
+  for (const key of RETIRED_PERSISTED_KEYS) {
+    try {
+      instance.remove(key);
+    } catch (error) {
+      logger.warn(`Could not remove retired key "${key}":`, error);
+    }
+  }
+};
+
+const scheduleStartupCleanup = (instance: MMKV): void => {
+  const cleanUp = () => {
+    purgeRecoveryStorage();
+    removeRetiredKeys(instance);
+  };
   const idle = (
     globalThis as { requestIdleCallback?: (cb: () => void) => void }
   ).requestIdleCallback;
   if (typeof idle === 'function') {
-    idle(purgeRecoveryStorage);
+    idle(cleanUp);
     return;
   }
-  setTimeout(purgeRecoveryStorage, 0);
+  setTimeout(cleanUp, 0);
 };
 
 /**
@@ -155,7 +175,7 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
 
     secureStorageInstance = instance;
     if (!usingRecoveryInstance) {
-      scheduleRecoveryPurge();
+      scheduleStartupCleanup(instance);
     }
     return instance;
   })();

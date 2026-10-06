@@ -4,7 +4,7 @@
  * never registers — fine for in-memory state, not for PERSISTED state, whose
  * keys are declared as DATA below and deleted without loading their module.
  */
-import { storage } from '#/storage/mmkv';
+import { RETIRED_PERSISTED_KEYS, storage } from '#/storage/mmkv';
 import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;
@@ -24,12 +24,6 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   // src/features/receipts/store/receiptDraftStore.ts — a scanned receipt's
   // redacted text names the shop and what was bought.
   'sous-chef-receipt-draft',
-];
-
-/** Keys a removed store persisted under, still on disk for older installs. */
-const RETIRED_PERSISTED_KEYS: readonly string[] = [
-  // The barcode scanner's scan history (item names, brands, UPCs), before 4.7.0.
-  'sous-chef-barcode',
 ];
 
 /**

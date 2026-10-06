@@ -203,14 +203,14 @@ export function useMoveToPantry({
 
     // Built before the try: `?.`/`??` are value blocks, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
-    const { measured } = input.amount;
+    const { measured, packages } = input.amount;
     const localRow = {
       pantryId: input.pantryId,
       itemName: item.itemName ?? '',
       quantity: localQuantity(input.amount, item),
       itemId: item.item?.id,
       // The API tracks the stack in the stated unit, else the line's own.
-      unitId: measured?.unitId ?? item.unit?.id,
+      unitId: measured?.unitId ?? packages?.unitId ?? item.unit?.id,
       storageState: input.storageState,
       expiresOn: input.expiresOn,
       acquisitionMethod: AcquisitionMethod.ShoppingList,

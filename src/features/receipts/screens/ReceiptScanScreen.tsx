@@ -239,6 +239,7 @@ export const ReceiptScanScreen: React.FC = () => {
               label: t('receipts.photoSend.send'),
               onPress: startSend,
               icon: 'cloud-upload-outline',
+              disabled: !canSendPhotos,
             }}
             secondaryAction={{
               label: t('receipts.photoSend.dontSend'),

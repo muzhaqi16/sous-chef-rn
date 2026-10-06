@@ -96,8 +96,14 @@ export function usePantryIntake(pantryId: string | undefined) {
       pantryId,
       itemName,
       itemId: input.item.id ?? null,
-      quantity: input.quantity,
-      unitId: input.unit?.id,
+      quantity:
+        input.quantity ??
+        input.amount?.measured?.quantity ??
+        input.amount?.packages?.count,
+      unitId:
+        input.unit?.id ??
+        input.amount?.measured?.unitId ??
+        input.amount?.packages?.unitId,
       storageState: input.storage?.storageState,
       acquisitionMethod: input.purchase?.acquisitionMethod,
       ...local,

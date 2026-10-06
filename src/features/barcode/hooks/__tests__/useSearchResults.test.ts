@@ -389,7 +389,10 @@ describe('useSearchResults', () => {
         // flags this test asserts are absent. Marking THIS mock partial
         // excuses exactly the fields it leaves out — the old whole-test flag
         // switched the missing-field guard off for everything.
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true }).mock],
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, categories: [] }], { partial: true })
+            .mock,
+        ],
       });
 
       await waitFor(() =>
