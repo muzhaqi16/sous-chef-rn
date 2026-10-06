@@ -102,6 +102,10 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'targetBatchId',
   'purchaseId',
   'recipeId',
+  // A store a queued createStore may have minted.
+  'storeId',
+  'targetStoreId',
+  'preferredStoreId',
 ];
 
 /** `value` with every occurrence of the id `from` replaced by `to`. */
@@ -940,26 +944,25 @@ export class QueueManager {
   }
 
   /**
-   * What a write waits on: the parents it attaches to, top-level and one level
-   * down (a batch row, `meal.recipeId`), and the entity it is derived from (a
-   * fork's source recipe).
+   * What a write waits on: the parents it attaches to at any depth (a batch
+   * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
+   * derived from (a fork's source recipe).
    */
   private getDependencyIds(mutation: QueuedMutation): string[] {
     const ids = new Set<string>(queuedSubject(mutation).sourceIds);
-    const collect = (record: unknown) => {
-      if (!isRecord(record)) return;
-      for (const key of PARENT_REFERENCE_KEYS) {
-        const value = record[key];
-        if (typeof value === 'string' && value) ids.add(value);
+    const collect = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(collect);
+        return;
       }
+      if (!isRecord(value)) return;
+      for (const key of PARENT_REFERENCE_KEYS) {
+        const id = value[key];
+        if (typeof id === 'string' && id) ids.add(id);
+      }
+      Object.values(value).forEach(collect);
     };
-    const input: unknown = mutation.variables.input;
-    if (!isRecord(input)) return [...ids];
-    collect(input);
-    for (const nested of Object.values(input)) {
-      if (Array.isArray(nested)) nested.forEach(collect);
-      else collect(nested);
-    }
+    collect(mutation.variables.input);
     return [...ids];
   }
 

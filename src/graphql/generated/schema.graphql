@@ -2529,6 +2529,38 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateStoreInput {
+  address: String
+  """The chain the store belongs to, when known"""
+  chainId: ID
+  """
+  Client-minted CUID2, the replay anchor: sending it again returns the same
+  store and outcome. When the create merges into a store already on file,
+  this id goes on naming that store wherever a store id is taken, so an
+  offline client can reference it before the create is answered.
+  """
+  id: ID
+  name: String!
+  """
+  The store's number in its chain, as its receipts print it; needs chainId
+  """
+  storeNumber: String
+}
+
+type CreateStorePayload {
+  """CREATED for a new store; MERGED when the shop was already on file"""
+  outcome: CreateOutcome!
+  """The store added, or the one already on file it merged into"""
+  store: Store!
+}
+
+"""
+Result of CreateStore. Select on CreateStorePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | NotFoundError | ValidationError
+
 """Input for creating a template from an existing meal plan"""
 input CreateTemplateFromMealPlanInput {
   category: TemplateCategory
@@ -7974,6 +8006,13 @@ type Mutation {
   """
   createStorageLocation(input: CreateStorageLocationInput!): CreateStorageLocationResult!
   """
+  Add a store, which every user sees at once. A store already on file (the
+  same chain and store number, else the same name and address compared by
+  their letters and digits) is returned instead, with outcome MERGED. Each
+  user has a per-minute number of store creations.
+  """
+  createStore(input: CreateStoreInput!): CreateStoreResult!
+  """
   Create a template from an existing meal plan.
   Extracts the meal pattern into a reusable template.
   """
@@ -10803,6 +10842,19 @@ enum ProfileVisibility {
   PUBLIC
 }
 
+"""
+A store the receipt names that is not on file: send it to createStore when the user confirms.
+"""
+type ProposedStore {
+  address: String
+  """The chain the header names"""
+  chain: StoreChain
+  """The merchant's printed name, else the header's chain name"""
+  name: String!
+  """The store number the receipt prints"""
+  storeNumber: String
+}
+
 """Purchase record - contains financial and shopping data"""
 type Purchase {
   createdAt: DateTime!
@@ -12130,6 +12182,15 @@ enum ReceiptMatchMethod {
 }
 
 """
+The merchant a receipt prints, as its parse read it (ParsedReceiptMerchant).
+"""
+input ReceiptMerchantInput {
+  address: String
+  name: String
+  storeNumber: String
+}
+
+"""
 A receipt queued for the server to read, for phones that cannot read one themselves.
 """
 type ReceiptParse {
@@ -13148,13 +13209,15 @@ input RecordReceiptMatchesInput {
   locale: String
   """The receipt's merchant header, when no store is given"""
   merchantHeader: String
-  """The receipt's store; its chain keys the corrections"""
+  """
+  The receipt's store; its chain, else the store itself, keys the corrections
+  """
   storeId: ID
 }
 
 type RecordReceiptMatchesPayload {
   """
-  The chain they were remembered under; null when the receipt's chain is unknown
+  The chain they were remembered under; null for a store with no chain, or no known store
   """
   chain: StoreChain
   """The household the corrections were remembered for"""
@@ -13162,9 +13225,13 @@ type RecordReceiptMatchesPayload {
   """Lines remembered"""
   recorded: Int!
   """
-  Lines not remembered: no chain is known, or no text is left once prices and codes are set aside
+  Lines not remembered: no chain or store is known, or no text is left once prices and codes are set aside
   """
   skipped: Int!
+  """
+  The receipt's store; corrections are remembered under it when it has no chain
+  """
+  store: Store
 }
 
 """
@@ -13547,6 +13614,10 @@ input ResolveReceiptLinesInput {
   """
   locale: String
   """
+  The merchant the parse read; places a store with no chain, or proposes one
+  """
+  merchant: ReceiptMerchantInput
+  """
   The receipt's merchant header, its first lines; resolves the store chain
   """
   merchantHeader: String
@@ -13566,7 +13637,13 @@ type ResolveReceiptLinesPayload {
   """One resolution per input line, in input order"""
   lines: [ReceiptLineResolution!]!
   """
-  The receipt's store: the one given, else the header's chain and store number when that store is on file
+  When no store is placed, the store to create for this receipt; nothing is created until createStore
+  """
+  proposedStore: ProposedStore
+  """
+  The receipt's store: the one given, else the header's chain and store
+  number, else the merchant's name and address, else the merchant's name
+  when one store alone has it
   """
   store: Store
   """The store number the merchant header prints"""

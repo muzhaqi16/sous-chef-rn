@@ -34,6 +34,13 @@ export type ServerReceiptParse =
   /** Over the daily allowance: asked again on a visit after `retryAt`. */
   | { id: string; state: 'limited'; retryAt: string };
 
+/** The shop as the server's parse read it: what places or proposes a store. */
+export interface PrintedStore {
+  name: string;
+  address?: string;
+  storeNumber?: string;
+}
+
 /** What a finished server parse leaves on the draft: a state, or the receipt it read. */
 export type ServerParseOutcome =
   | Exclude<ServerReceiptParse['state'], 'limited'>
@@ -41,6 +48,7 @@ export type ServerParseOutcome =
       parsed: ParsedReceipt;
       purchasedOn?: string;
       totalsGap?: ReceiptTotalsGap;
+      printedStore?: PrintedStore;
     };
 
 export interface ReceiptDraft {
@@ -65,6 +73,7 @@ export interface ReceiptDraft {
   parsedBy?: 'device' | 'server';
   /** The server found its reading does not add up to the receipt. */
   totalsGap?: ReceiptTotalsGap;
+  printedStore?: PrintedStore;
   serverParse?: ServerReceiptParse;
   /**
    * The review's picks by line index. Null keeps a line out even when the API
@@ -170,6 +179,9 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
               parsedBy: 'server',
               ...(purchasedOn ? { purchasedOn } : {}),
               ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
+              ...(outcome.printedStore
+                ? { printedStore: outcome.printedStore }
+                : {}),
             },
           };
         }),

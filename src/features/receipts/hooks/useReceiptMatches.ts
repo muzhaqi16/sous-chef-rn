@@ -16,6 +16,7 @@ import {
   ResolveReceiptLinesDocument,
   type ResolveReceiptLinesQuery,
 } from './useReceiptMatches.generated';
+import type { PrintedStore } from '../store/receiptDraftStore';
 
 /** A catalog item the API proposes for a receipt line. */
 export interface ReceiptCandidate {
@@ -91,14 +92,15 @@ const toCandidate = (
 /**
  * The catalog items the API proposes for a receipt's item lines, and the step
  * that tells it which ones the household confirmed, so the same printed line at
- * the same chain resolves to them next time. A store the user picked wins over
- * the one the header names, for the matches and for what is remembered.
+ * the same store resolves to them next time. A store the user picked wins over
+ * the one the receipt names, for the matches and for what is remembered.
  */
 export function useReceiptMatches(
   lines: readonly ReceiptMatchLine[],
   merchantHeader: string | undefined,
   parsedBy: 'device' | 'server' | undefined,
   pickedStoreId: string | undefined,
+  printedStore: PrintedStore | undefined,
 ) {
   const { t } = useTranslation();
   const { pantry, currentHome } = useCurrentPantry();
@@ -113,6 +115,7 @@ export function useReceiptMatches(
           variables: {
             input: {
               merchantHeader,
+              ...(printedStore ? { merchant: printedStore } : {}),
               ...(pickedStoreId ? { storeId: pickedStoreId } : {}),
               pantryId: pantry?.id,
               parsedBy:
@@ -158,10 +161,13 @@ export function useReceiptMatches(
     context: { localFirst: true },
   });
 
+  /** `placedStoreId` names a store added on confirm, before a pick could. */
   const recordConfirmed = async (
     confirmed: readonly ConfirmedReceiptLine[],
+    placedStoreId?: string,
   ) => {
     if (!currentHome || confirmed.length === 0) return;
+    const recordedStoreId = placedStoreId ?? storeId;
     await settleMutation(
       () =>
         record({
@@ -169,7 +175,9 @@ export function useReceiptMatches(
             input: {
               idempotencyKey: generateEntityId(),
               homeId: currentHome.id,
-              ...(storeId ? { storeId } : { merchantHeader }),
+              ...(recordedStoreId
+                ? { storeId: recordedStoreId }
+                : { merchantHeader }),
               lines: confirmed.slice(0, MAX_LINES).map(line => {
                 const match = matches.get(line.index);
                 const proposed = match?.preselect ?? match?.guess;
@@ -211,6 +219,8 @@ export function useReceiptMatches(
      * Never the picked one, which the API echoes as the receipt's store.
      */
     resolvedStore: pickedStoreId ? null : resolved?.store ?? null,
+    /** The store the receipt names that is not on file, to add on confirm. */
+    proposedStore: pickedStoreId ? null : resolved?.proposedStore ?? null,
     recordConfirmed,
   };
 }

@@ -14,7 +14,9 @@ fragment ReceiptParseReaders on ReceiptParse {
       unitPrice
     }
     merchant {
+      address
       name
+      storeNumber
     }
     purchasedOn
   }

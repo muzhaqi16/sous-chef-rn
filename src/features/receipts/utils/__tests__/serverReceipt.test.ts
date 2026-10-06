@@ -25,6 +25,8 @@ const line = (
 const merchant = (name: string | null): ServerReceipt['merchant'] => ({
   __typename: 'ParsedReceiptMerchant',
   name,
+  address: null,
+  storeNumber: null,
 });
 
 describe('fromServerReceipt', () => {

@@ -7,6 +7,15 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
       id
       name
     }
+    # No store is placed: the one to add, on confirm, for this receipt.
+    proposedStore {
+      name
+      address
+      storeNumber
+      chain {
+        id
+      }
+    }
     lines {
       clientId
       confidence

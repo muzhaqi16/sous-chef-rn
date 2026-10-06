@@ -17,6 +17,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { todayKey } from '#/utils/dateUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { backoffDelay } from '#/utils/backoff';
@@ -28,6 +29,7 @@ import {
 import {
   useReceiptDraft,
   useReceiptDraftActions,
+  type PrintedStore,
   type ServerParseOutcome,
 } from '../store/receiptDraftStore';
 import { fromServerReceipt } from '../utils/serverReceipt';
@@ -98,6 +100,25 @@ function totalsGapOf(
   return { counted: mismatch.counted, printed: mismatch.printed };
 }
 
+/** The shop the parse read, when it read a name. */
+function printedStoreOf({
+  name,
+  address,
+  storeNumber,
+}: NonNullable<
+  NonNullable<ReceiptParseQuery['receiptParse']>['receipt']
+>['merchant']): PrintedStore | undefined {
+  const named = firstNonBlank(name);
+  if (!named) return undefined;
+  const printedAddress = firstNonBlank(address);
+  const printedNumber = firstNonBlank(storeNumber);
+  return {
+    name: named.trim(),
+    ...(printedAddress ? { address: printedAddress } : {}),
+    ...(printedNumber ? { storeNumber: printedNumber } : {}),
+  };
+}
+
 /** What a finished parse leaves on the draft; nothing while it runs. */
 function outcomeOf(
   parse: NonNullable<ReceiptParseQuery['receiptParse']>,
@@ -119,6 +140,7 @@ function outcomeOf(
       if (!receipt || !parsed || lowText) return 'unreadable';
       if (receiptReviewLines(parsed).length === 0) return 'unreadable';
       const totalsGap = totalsGapOf(parse.warnings);
+      const printedStore = printedStoreOf(receipt.merchant);
       // Held to the phone's own window: a misread day would date the prices
       // and the shelf life, and the API refuses one after tomorrow.
       const purchasedOn =
@@ -130,6 +152,7 @@ function outcomeOf(
         parsed,
         ...(purchasedOn ? { purchasedOn } : {}),
         ...(totalsGap ? { totalsGap } : {}),
+        ...(printedStore ? { printedStore } : {}),
       };
     }
   }

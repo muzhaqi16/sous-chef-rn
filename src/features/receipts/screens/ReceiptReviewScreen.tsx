@@ -102,6 +102,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     rows,
     merchant,
     store,
+    proposedStoreName,
     storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
@@ -134,7 +135,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const [changingStore, setChangingStore] = useState(false);
   // What the user types to search; a store is only what they pick.
   const [storeText, setStoreText] = useState<string | null>(null);
-  const storeTitle = store?.name ?? merchant;
+  const storeTitle = store?.name ?? proposedStoreName ?? merchant;
   const showStore = storeUnrecognized || changingStore;
   const [changingDate, setChangingDate] = useState(false);
 

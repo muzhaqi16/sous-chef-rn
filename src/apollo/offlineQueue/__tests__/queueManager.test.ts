@@ -27,6 +27,7 @@ import {
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
@@ -502,6 +503,51 @@ describe('QueueManager', () => {
 
       expect(processed).toEqual(['mut-create-list', 'mut-pantry']);
       expect(processed).not.toContain('mut-add-a');
+    });
+
+    it("holds a pantry add behind the deferred create of its receipt's store", async () => {
+      // The store sits two levels down the add (`purchase.receipt.storeId`), and
+      // a store a receipt names can be minted offline on confirm.
+      const createStore = makeMutation({
+        id: 'mut-create-store',
+        ...queuedMutationFor(CreateStoreDocument),
+        variables: { input: { id: 'store-1', name: 'East End Food Co-Op' } },
+      });
+      const pantryAdd = makeMutation({
+        id: 'mut-pantry',
+        ...queuedMutationFor(CreatePantryItemDocument),
+        variables: {
+          input: {
+            id: 'pantry-item-1',
+            purchase: {
+              receipt: { purchasedOn: '2026-10-05', storeId: 'store-1' },
+            },
+          },
+        },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createStore,
+        pantryAdd,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-create-store') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-create-store']);
     });
 
     it('holds an item behind a list create parked for re-authentication', async () => {

@@ -22,6 +22,7 @@ import {
 import { useStore } from '#store';
 import {
   AcquisitionMethod,
+  CreateOutcome,
   ErrorCode,
   NetWeightKind,
   PriceSource,
@@ -43,6 +44,7 @@ import {
   seedDraft,
 } from '../../__tests__/helpers/receiptFixtures';
 import { useReceiptReview } from '../useReceiptReview';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   RecordReceiptMatchesDocument,
   ResolveReceiptLinesDocument,
@@ -286,6 +288,7 @@ async function setup({
   create = recordMock(CreatePantryItemDocument, { dataFor: createFor }),
   resolve,
   resolveAgain,
+  storeCreate,
   held = PANTRY,
   paged = false,
   listDelay,
@@ -298,6 +301,8 @@ async function setup({
   resolve?: ReturnType<typeof recordMock>;
   /** What the matcher answers when it is asked again. */
   resolveAgain?: ReturnType<typeof recordMock>;
+  /** The store a confirm adds when the receipt's shop is not on file. */
+  storeCreate?: ReturnType<typeof recordMock>;
   /** What the pantry holds before the receipt is added. */
   held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
@@ -334,6 +339,7 @@ async function setup({
         record.mock,
         ...(resolve ? [resolve.mock] : []),
         ...(resolveAgain ? [resolveAgain.mock] : []),
+        ...(storeCreate ? [storeCreate.mock] : []),
       ],
     },
   );
@@ -1099,6 +1105,100 @@ describe('useReceiptReview', () => {
       await waitFor(() => expect(record.fired).toHaveLength(1));
       expect(record.fired[0]).toEqual({
         input: expect.objectContaining({ storeId: 'store-99' }),
+      });
+    });
+    it('adds the shop the receipt names but nobody has, then the lines at it', async () => {
+      const draft = useReceiptDraftStore.getState().draft!;
+      useReceiptDraftStore.setState({
+        draft: {
+          ...draft,
+          parsedBy: 'server',
+          printedStore: {
+            name: 'East End Food Co-Op',
+            address: '7516 Meade Street',
+          },
+        },
+      });
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: null,
+            proposedStore: {
+              name: 'East End Food Co-Op',
+              address: '7516 Meade Street',
+              storeNumber: null,
+              chain: null,
+            },
+          },
+        },
+      });
+      const storeCreate = recordMock(CreateStoreDocument, {
+        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
+          createStore: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: {
+              id: String(inputOf(vars).id),
+              name: 'East End Food Co-Op',
+              address: '7516 Meade Street',
+            },
+          },
+        }),
+      });
+      const { result, create, record } = await setup({ resolve, storeCreate });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(resolve.fired[0]).toEqual({
+        input: expect.objectContaining({
+          merchant: {
+            name: 'East End Food Co-Op',
+            address: '7516 Meade Street',
+          },
+        }),
+      });
+      expect(result.current.review.proposedStoreName).toBe(
+        'East End Food Co-Op',
+      );
+
+      await act(async () => {
+        await result.current.review.addChosen();
+      });
+
+      // Added on confirm, under an id the client minted, before the lines.
+      expect(storeCreate.fired).toEqual([
+        {
+          input: {
+            id: expect.any(String),
+            name: 'East End Food Co-Op',
+            address: '7516 Meade Street',
+          },
+        },
+      ]);
+      const [created] = storeCreate.fired;
+      const storeId = String(inputOf(created ?? {}).id);
+      const atTheStore = expect.objectContaining({
+        receipt: { purchasedOn: '2026-09-28', storeId },
+      });
+      expect(create.fired.map(vars => vars.input)).toEqual([
+        expect.objectContaining({
+          item: { id: 'cat-milk' },
+          purchase: atTheStore,
+        }),
+        expect.objectContaining({
+          item: { id: 'cat-bananas' },
+          purchase: atTheStore,
+        }),
+      ]);
+      await waitFor(() => expect(record.fired).toHaveLength(1));
+      expect(record.fired[0]).toEqual({
+        input: expect.objectContaining({ storeId }),
+      });
+      // Kept as the pick, so a retry adds no second store.
+      expect(useReceiptDraftStore.getState().draft?.store).toEqual({
+        id: storeId,
+        name: 'East End Food Co-Op',
       });
     });
   });

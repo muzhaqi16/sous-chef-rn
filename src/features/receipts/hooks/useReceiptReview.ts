@@ -22,6 +22,7 @@ import {
 } from '../utils/linkReceiptLines';
 import { useApplyReceipt } from './useApplyReceipt';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { toDateKey } from '#/utils/dateUtils';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
@@ -85,6 +86,7 @@ export function useReceiptReview() {
     matchState,
     retryMatching,
     resolvedStore,
+    proposedStore,
     recordConfirmed,
   } = useReceiptMatches(
     lines.map(line => ({
@@ -97,7 +99,9 @@ export function useReceiptReview() {
       draft?.parsed?.merchant,
     draft?.parsedBy,
     draft?.store?.id,
+    draft?.printedStore,
   );
+  const { createStore } = useCreateStore();
   // What the user picked, else the store the receipt's header names.
   const store =
     draft?.store ??
@@ -185,10 +189,29 @@ export function useReceiptReview() {
     return listLineFor(key, open)?.itemName ?? undefined;
   };
 
+  // The shop the receipt names but nobody has added: added now, on confirm,
+  // and kept as the pick so a retry reuses it. A queued create's id names the
+  // store at once, and the shop it merges into when it is already on file.
+  const addProposedStore = async () => {
+    if (!proposedStore) return undefined;
+    const { name, address, storeNumber, chain } = proposedStore;
+    const created = await createStore({
+      name,
+      ...(address ? { address } : {}),
+      // A store number means something only within its chain.
+      ...(chain
+        ? { chainId: chain.id, ...(storeNumber ? { storeNumber } : {}) }
+        : {}),
+    });
+    if (created) chooseStore(created);
+    return created?.id;
+  };
+
   const addChosen = async () => {
+    const storeId = store?.id ?? (await addProposedStore());
     const outcome = await apply(
       pending.map(line => ({ ...line, listLine: links.get(line.index) })),
-      { purchasedOn, ...(store ? { storeId: store.id } : {}) },
+      { purchasedOn, ...(storeId ? { storeId } : {}) },
     );
     // Only catalog items can be remembered: a typed name has no id yet.
     void recordConfirmed(
@@ -197,6 +220,7 @@ export function useReceiptReview() {
           ? [{ index, text: printed, itemId: choice.itemId }]
           : [],
       ),
+      storeId,
     );
     return { added: outcome.addedIndexes.length, failed: outcome.failed };
   };
@@ -206,6 +230,8 @@ export function useReceiptReview() {
     merchant: draft?.parsed?.merchant ?? null,
     /** The receipt's store: the user's pick, else the one its header names. */
     store,
+    /** The shop the receipt names that is not on file; added on confirm. */
+    proposedStoreName: proposedStore?.name ?? null,
     /** Neither the receipt nor the API names the shop, so the user is asked for it. */
     storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */

@@ -69,7 +69,7 @@ const created = (
   );
 
 const MILK_RECEIPT = {
-  merchant: { name: 'WALMART' },
+  merchant: { name: 'WALMART', address: '100 Main St', storeNumber: ' ' },
   purchasedOn: '2026-09-29',
   lines: [
     {
@@ -161,6 +161,11 @@ describe('useServerReceiptParse', () => {
       kind: 'item',
       product: 'GV WHOLE MILK',
       lineTotal: 3.48,
+    });
+    // The shop as printed, to place or propose a store; a blank number is none.
+    expect(draft?.printedStore).toEqual({
+      name: 'WALMART',
+      address: '100 Main St',
     });
     // The day the phone read before redaction stands.
     expect(draft?.purchasedOn).toBe('2026-09-30');

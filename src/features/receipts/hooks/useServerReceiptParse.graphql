@@ -32,6 +32,8 @@ query ReceiptParse($id: ID!) {
     receipt {
       merchant {
         name
+        address
+        storeNumber
       }
       purchasedOn
       lines {

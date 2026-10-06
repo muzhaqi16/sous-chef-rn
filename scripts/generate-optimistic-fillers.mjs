@@ -135,6 +135,27 @@ const TARGETS = [
     },
   },
   {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'hooks',
+      'useCreateStore.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'hooks',
+      'useCreateStoreNeutral.generated.ts',
+    ),
+    typesFrom: './useCreateStore.generated',
+    unmasked: true,
+    fragments: {
+      useCreateStore_row: ['NEUTRAL_LOCAL_STORE', 'UseCreateStore_RowFragment'],
+    },
+  },
+  {
     graphql: fromRoot('src', 'features', 'pantry', 'cache', 'pantry.graphql'),
     out: fromRoot(
       'src',
