@@ -24,15 +24,12 @@ interface RemainingPages {
 /**
  * Pages through the rest of a connection while `enabled`, for a filter the API
  * cannot run. A new `resetKey` (the filter) starts a stopped loop again.
- * `maxRows` is the cache window of a field that evicts its oldest rows past it:
- * the loop stops there rather than push rows out of view of other readers.
  */
 export function useLoadRemainingPages(
   enabled: boolean,
   loading: boolean,
   { items, hasMore, isLoadingMore, loadMoreError, loadMore }: PageState,
   resetKey: string,
-  maxRows = Infinity,
 ): RemainingPages {
   // The cache answering a cursor fetch while offline settles without adding a
   // row, forever; counting those stops the loop.
@@ -69,7 +66,6 @@ export function useLoadRemainingPages(
   const isLoadingRemainingPages =
     enabled &&
     hasMore &&
-    items.length < maxRows &&
     (!loadMoreError || rearmed) &&
     emptyPages < MAX_EMPTY_PAGES;
   const shouldLoadNextPage =

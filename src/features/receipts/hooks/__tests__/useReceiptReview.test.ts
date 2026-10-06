@@ -185,10 +185,9 @@ const GRAM = {
 } as const;
 
 // Milk (counted) and beef (in grams) are open on the active list; nothing has
-// been bought from it yet. `paged` sends the beef on a second page.
+// been bought from it yet. The API answers only the lines naming `itemIds`.
 const listItems = (
   vars: Record<string, unknown>,
-  paged: boolean,
 ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {
   const milk = {
     cursor: 'c1',
@@ -214,18 +213,17 @@ const listItems = (
       purchaseInfo: { isPurchased: false, movedToPantryAt: null },
     },
   };
-  const firstOfTwo = paged && !vars.after;
-  const edges = !paged ? [milk, beef] : vars.after ? [beef] : [milk];
+  const asked = Array.isArray(vars.itemIds) ? vars.itemIds : null;
+  const edges = [milk, beef].filter(
+    edge => !asked || asked.includes(edge.node.item.id),
+  );
   return {
     shoppingList: {
       __typename: 'ShoppingList',
       id: 'list-1',
       itemsConnection: {
-        totalCount: vars.isPurchased ? 0 : 2,
-        pageInfo: {
-          hasNextPage: !vars.isPurchased && firstOfTwo,
-          endCursor: firstOfTwo ? 'c1' : null,
-        },
+        totalCount: vars.isPurchased ? 0 : edges.length,
+        pageInfo: { hasNextPage: false, endCursor: null },
         edges: vars.isPurchased ? [] : edges,
       },
     },
@@ -291,10 +289,9 @@ async function setup({
   resolveAgain,
   storeCreate,
   held = PANTRY,
-  paged = false,
   listDelay,
   move = recordMock(MoveShoppingItemToPantryDocument, { dataFor: movedFor }),
-  listFor = (vars: Record<string, unknown>) => listItems(vars, paged),
+  listFor = listItems,
   cache = makeCache(),
 }: {
   /** The cache to render with, to see what one visit leaves the next. */
@@ -305,8 +302,6 @@ async function setup({
   ) => MockDataFor<typeof GetShoppingListItemsFilteredDocument>;
   /** What the move answers; it echoes the line by default. */
   move?: ReturnType<typeof recordMock>;
-  /** The list's open lines come a page at a time, the beef on the second. */
-  paged?: boolean;
   /** How long each page of the list takes to answer. */
   listDelay?: number;
   create?: ReturnType<typeof recordMock>;
@@ -395,7 +390,15 @@ async function setup({
       await rendered.result.current.review.addChosen();
     });
   };
-  return { ...rendered, cache, create, move, record, chooseOnListAndAdd };
+  return {
+    ...rendered,
+    cache,
+    create,
+    move,
+    record,
+    list,
+    chooseOnListAndAdd,
+  };
 }
 
 beforeEach(() => {
@@ -802,11 +805,16 @@ describe('useReceiptReview', () => {
     });
 
     it('reads its matches from the cache on a return, and drops them once finished', async () => {
+      useStore.getState().setSelectedShoppingListId('list-1');
       const resolve = recordMock(ResolveReceiptLinesDocument, {
         data: RESOLVED,
         maxUsageCount: 2,
       });
       const cache = makeCache();
+      const askedByItem = () =>
+        Object.keys(cache.extract()['ShoppingList:list-1'] ?? {}).some(key =>
+          key.includes('"itemIds"'),
+        );
       const first = await setup({ resolve, cache });
       await waitFor(() =>
         expect(first.result.current.review.matchState).toBe('done'),
@@ -819,6 +827,8 @@ describe('useReceiptReview', () => {
       );
       expect(resolve.fired).toHaveLength(1);
 
+      await waitFor(() => expect(askedByItem()).toBe(true));
+
       act(() => {
         second.result.current.review.finish();
       });
@@ -827,6 +837,9 @@ describe('useReceiptReview', () => {
           key.startsWith('resolveReceiptLines'),
         ),
       ).toBe(false);
+      // The list lines it asked for by item go too.
+      expect(askedByItem()).toBe(false);
+      useStore.getState().setSelectedShoppingListId(null);
     });
 
     it('waits for the pantry to be known rather than asking twice', async () => {
@@ -1340,6 +1353,9 @@ describe('useReceiptReview', () => {
   describe('with the milk open on the shopping list', () => {
     it('offers the list line for a product as it is picked, before it is saved', async () => {
       const { result } = await setup();
+      act(() => {
+        result.current.review.pickItem('cat-milk');
+      });
 
       await waitFor(() =>
         expect(
@@ -1443,8 +1459,8 @@ describe('useReceiptReview', () => {
       expect(move.fired[0]?.input).not.toHaveProperty('actualPrice');
     });
 
-    it('ticks off a list line on a later page of the list', async () => {
-      const { move, chooseOnListAndAdd } = await setup({ paged: true });
+    it('asks the list only for the lines naming the receipt items', async () => {
+      const { move, list, chooseOnListAndAdd } = await setup();
       await chooseOnListAndAdd(
         3,
         lineChoice({
@@ -1457,10 +1473,18 @@ describe('useReceiptReview', () => {
       expect(move.fired.map(vars => vars.input)).toEqual([
         expect.objectContaining({ shoppingListItemId: 'sli-beef' }),
       ]);
+      // Never the whole list: every ask names the items it looks for.
+      const asks = list.fired.filter(vars => !vars.isPurchased);
+      expect(asks.length).toBeGreaterThan(0);
+      expect(asks.every(vars => Array.isArray(vars.itemIds))).toBe(true);
+      expect(asks.at(-1)?.itemIds).toContain('cat-beef');
     });
 
-    it('holds the add until the later list pages have loaded', async () => {
-      const { result } = await setup({ paged: true, listDelay: 300 });
+    it('holds the add until the list lines have loaded', async () => {
+      const { result } = await setup({ listDelay: 300 });
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+      });
 
       await waitFor(
         () => expect(result.current.review.listLoading).toBe(true),
@@ -1524,6 +1548,9 @@ describe('useReceiptReview', () => {
         };
       };
       const { result } = await setup({ listFor: endless });
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+      });
 
       await waitFor(
         () => expect(result.current.review.listIncomplete).toBe(true),

@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useToday } from '#hooks/useToday';
-import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
-import { MAX_WINDOW_EDGES } from '#/apollo/cacheFieldPolicies';
-import { usePaginatedShoppingItems } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
+import { useOpenListLinesFor } from '#features/shoppingList/hooks/useOpenListLinesFor';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import {
@@ -68,19 +66,11 @@ export function useReceiptReview() {
     useReceiptDraftActions();
   const today = useToday();
   const client = useApolloClient();
+  // The product being picked in a line's sheet, asked about before it is saved.
+  const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   // The list the user works in, checked against the lists they still have.
   const { lists, loading: listsLoading } = useShoppingListsLite();
   const listId = useActiveShoppingListId(lists);
-  const { state: list } = usePaginatedShoppingItems({ listId });
-  // A receipt line matches an open list line on any page the cache keeps.
-  const { isLoadingRemainingPages, incomplete: listIncomplete } =
-    useLoadRemainingPages(
-      !!listId,
-      list.loading,
-      list.unpurchased,
-      listId ?? '',
-      MAX_WINDOW_EDGES,
-    );
   const { pantryName, applying, failures, apply } = useApplyReceipt(listId);
 
   const lines = draft?.parsed ? receiptReviewLines(draft.parsed) : [];
@@ -104,6 +94,27 @@ export function useReceiptReview() {
     draft?.parsedBy,
     draft?.store?.id,
     draft?.printedStore,
+  );
+  // A list line links by its catalog item, so the review asks only for the
+  // lines naming an item a receipt line is, or may be.
+  const {
+    lines: openLines,
+    loading: openLinesLoading,
+    incomplete: listIncomplete,
+  } = useOpenListLinesFor(
+    listId,
+    lines
+      .flatMap(line => {
+        const match = matchFor(line.index);
+        const ids = [
+          match?.preselect?.itemId,
+          match?.guess?.itemId,
+          draft?.choices?.[line.index]?.itemId,
+          ...(match?.candidates ?? []).map(candidate => candidate.itemId),
+        ];
+        return ids.filter((itemId): itemId is string => !!itemId);
+      })
+      .concat(pickingItemId ?? []),
   );
   const { createStore } = useCreateStore();
   // Adding is busy from the store's create on: a second tap would add every line twice.
@@ -154,7 +165,6 @@ export function useReceiptReview() {
       ? [{ index: line.index, printed: line.printed, choice }]
       : [],
   );
-  const openLines = list.unpurchased.items;
   const links = linkReceiptLines(pending, openLines);
 
   const statusOf = (
@@ -257,13 +267,14 @@ export function useReceiptReview() {
     pendingCount: pending.length,
     applying: applying || placingStore,
     /** Later list pages are still loading: adding now could miss a list line. */
-    listLoading:
-      isLoadingRemainingPages || (listsLoading && lists.length === 0),
+    listLoading: openLinesLoading || (listsLoading && lists.length === 0),
     /** The list is longer than the review can see, so a line may miss its list line. */
     listIncomplete,
     chooseLine,
     /** The list line a line would tick off with this product and unit, as they are picked. */
     listItemNameFor,
+    /** Names the product a line's sheet has picked, or null once it closes. */
+    pickItem: setPickingItemId,
     addChosen,
     finish: () => {
       const parseId = draft?.serverParse?.id;

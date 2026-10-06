@@ -37,6 +37,7 @@ interface ReceiptLineFormProps {
   candidates: readonly ReceiptCandidate[];
   /** The shopping list line the product and unit being picked would tick off. */
   listItemNameFor: (key: ListMatchKey) => string | undefined;
+  onPickItem: (itemId: string) => void;
   onClose: () => void;
   onSave: (choice: ReceiptLineChoice) => void;
   onRemove: () => void;
@@ -48,6 +49,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   choice,
   candidates,
   listItemNameFor,
+  onPickItem,
   onClose,
   onSave,
   onRemove,
@@ -118,7 +120,10 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                 }}
                 // No unit from the suggestion: its default is the unit a recipe
                 // uses, and a blank one stocks the item in its tracking unit.
-                onSelectItem={item => setValue('itemId', item.id)}
+                onSelectItem={item => {
+                  setValue('itemId', item.id);
+                  onPickItem(item.id);
+                }}
                 placeholder={t('receipts.review.productPlaceholder')}
                 required
                 error={fieldState.error?.message}
@@ -147,6 +152,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                     shouldValidate: true,
                   });
                   setValue('itemId', picked.itemId);
+                  onPickItem(picked.itemId);
                 }}
                 edgeFadeColor="surface"
               />
@@ -241,6 +247,8 @@ interface ReceiptLineSheetProps {
   choice: ReceiptLineChoice | undefined;
   candidates: readonly ReceiptCandidate[];
   listItemNameFor: (key: ListMatchKey) => string | undefined;
+  /** A product picked before it is saved, so its list line is asked for. */
+  onPickItem: (itemId: string) => void;
   /** Changes on every opening, so each one starts from the saved choice. */
   opening: number;
   onClose: () => void;
@@ -255,6 +263,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
   choice,
   candidates,
   listItemNameFor,
+  onPickItem,
   opening,
   onClose,
   onSave,
@@ -274,6 +283,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
         choice={choice}
         candidates={candidates}
         listItemNameFor={listItemNameFor}
+        onPickItem={onPickItem}
         onClose={onClose}
         onSave={onSave}
         onRemove={onRemove}

@@ -34,7 +34,7 @@ export interface CachedConnection {
  * When a merge would exceed this limit, the oldest edges are evicted.
  * 100 = 1 page of 100 (pantry, `PAGE_SIZE.MAX`) or 4 pages of 25 (shopping list).
  */
-export const MAX_WINDOW_EDGES = 100;
+const MAX_WINDOW_EDGES = 100;
 
 /**
  * Version-aware merge: optimistic (`temp-`) items survive until the server

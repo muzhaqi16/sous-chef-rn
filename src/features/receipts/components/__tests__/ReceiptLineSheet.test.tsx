@@ -90,6 +90,7 @@ const renderSheet = () => {
       choice={lineChoice({ price: 2.5 })}
       candidates={[]}
       listItemNameFor={() => undefined}
+      onPickItem={jest.fn()}
       opening={1}
       onClose={onClose}
       onSave={onSave}

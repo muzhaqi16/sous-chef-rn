@@ -114,6 +114,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     listIncomplete,
     chooseLine,
     listItemNameFor,
+    pickItem,
     addChosen,
     finish,
   } = useReceiptReview();
@@ -147,7 +148,10 @@ export const ReceiptReviewScreen: React.FC = () => {
     setOpening(count => count + 1);
     setSheetVisible(true);
   };
-  const closeSheet = () => setSheetVisible(false);
+  const closeSheet = () => {
+    setSheetVisible(false);
+    pickItem(null);
+  };
 
   const subtitleOf = (row: ReceiptReviewRow) => {
     const { choice } = row;
@@ -385,6 +389,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         listItemNameFor={key =>
           editing ? listItemNameFor(editing.index, key) : undefined
         }
+        onPickItem={pickItem}
         opening={opening}
         onClose={closeSheet}
         onSave={choice => {
