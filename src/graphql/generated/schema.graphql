@@ -5901,8 +5901,10 @@ type ItemPhoto {
 }
 
 """
-Where an item is cheaper. Every household's paid prices count, anonymously;
-estimates do not. Rows are cheapest first within each basis.
+Where an item is cheaper. Catalog prices and the viewer's own household's paid
+prices count; other households' paid prices count, anonymously, only once at
+least two households and two people supplied them. Estimates do not. Rows are
+cheapest first within each basis.
 """
 type ItemPriceComparison {
   currency: Currency!
@@ -10985,6 +10987,10 @@ type PurchaseHistorySummary {
 """Reusable sub-input for purchase/acquisition info"""
 input PurchaseInfoInput {
   acquisitionMethod: AcquisitionMethod
+  """
+  Per unit bought: per unit or amount.measured unit, or per package for
+  amount.packages. A totalCost sent with it wins.
+  """
   costPerUnit: Float
   """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
   priceSource: PriceSource
@@ -10995,6 +11001,9 @@ input PurchaseInfoInput {
   """
   receipt: ReceiptRefInput
   storeId: ID
+  """
+  The total paid, recorded exactly; the unit price derives from it, over costPerUnit.
+  """
   totalCost: Float
 }
 
@@ -14472,6 +14481,11 @@ type ShoppingListItemEdge implements Edge {
 input ShoppingListItemFilters {
   """Filter by purchase status"""
   isPurchased: Boolean
+  """
+  Only the lines naming one of these catalog items: a list holds an item on
+  one line at most, so 100 ids fit one page of 100. Empty matches no line.
+  """
+  itemIds: [ID!]
 }
 
 """Order by options for shopping list items"""
