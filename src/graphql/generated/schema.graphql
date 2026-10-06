@@ -2137,6 +2137,13 @@ input CreatePantryInput {
 }
 
 input CreatePantryItemInput {
+  """
+  What was bought, as move and restock take it: a measured amount, or a count
+  of packages the server sizes. Exclusive with quantity and unit. Packages no
+  size can be found for, landing in a unit of weight or volume, are counted
+  in a counted stack of the item instead.
+  """
+  amount: StockAmountInput
   brand: BrandRefInput
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -9453,7 +9460,7 @@ count in its own unit, with the size recorded on the batch. Stock counted by
 weight or volume takes count × size, converted into its unit through recorded
 facts only: directly within a dimension, across one only through a recorded
 density or the item's own conversion. With no size, or one that cannot be
-converted, it is refused on `amount.packages.size`; it never opens a second stack.
+converted, a move or restock is refused on `amount.packages.size`.
 """
 input PackagesInput {
   """Whole packages; greater than zero."""
@@ -9461,9 +9468,19 @@ input PackagesInput {
   """
   One package's net content. Omitted: the list line's stated size, else the
   item's own PACKAGE size when the item is one pack (a product holding one
-  barcode). A size the catalog only infers is never used.
+  barcode), else, on a move, the list line's own amount as one package. A
+  size the catalog only infers is never used. With none, a create counts the
+  packages in a counted stack; a move or restock is refused.
   """
   size: PackageSizeInput
+  """
+  The counted unit the packages are counted in (a COUNT unit; any other is
+  refused on `amount.packages.unitId`). On a create or a move it is the unit
+  they land in, a multiple such as a dozen restated in its base count; on a
+  restock it must restate into the stack's own unit. Omitted: the door's
+  default, the list line's unit or the stack's.
+  """
+  unitId: ID
 }
 
 type PageInfo {
@@ -10851,7 +10868,9 @@ type ProposedStore {
   chain: StoreChain
   """The merchant's printed name, else the header's chain name"""
   name: String!
-  """The store number the receipt prints"""
+  """
+  The store number the receipt prints, without padding; null when no chain is named
+  """
   storeNumber: String
 }
 
@@ -13181,7 +13200,11 @@ union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundEr
 
 """One confirmed line of a receipt."""
 input RecordReceiptMatchLineInput {
-  """The user changed or chose the item rather than accepting the proposal"""
+  """
+  The user changed or chose the item rather than accepting the proposal. A
+  search proposal accepted unchanged (resolvedBy SEARCH) is a guess nobody
+  checked: it is not remembered, and counts as skipped.
+  """
   edited: Boolean!
   """The item the household chose for it"""
   itemId: ID!
@@ -16702,6 +16725,13 @@ input UpdateRecipeInput {
   description: String
   dietary: DietaryTagsInput
   id: ID!
+  """
+  The whole ingredient list, replacing the recipe's: applied with the fields
+  in one write under the version check, so both land or neither does. On a
+  published recipe both are held in its one pending revision. Omitted: the
+  list is unchanged.
+  """
+  ingredients: [RecipeIngredientInput!]
   instructions: JSON
   media: RecipeMediaInput
   metadata: RecipeMetadataInput
