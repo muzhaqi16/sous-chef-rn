@@ -525,6 +525,7 @@ describe('AddToPantrySheet', () => {
 
     it('restocks the row it can see instead of firing a create', async () => {
       const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Count);
       const create = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
@@ -597,15 +598,20 @@ describe('AddToPantrySheet', () => {
       expect(readQuantity(cache)).toBe(4);
     });
 
-    it('restocks a stack held by volume by one package, never by 1 L', async () => {
+    it('adds one package to a stack held by volume as the API counts an add, never 1 L', async () => {
+      // A restock refuses packages nothing sizes; a forced add counts them in
+      // a counted stack of the item (sous-chef-api #405).
       const cache = seedStocked([stockedEdge]);
       typedUnit(cache, 'unit-l', UnitType.Volume);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
       const restock = recordMock(RestockPantryItemDocument, {
         data: restockData,
       });
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
-        operationMocks: [restock.mock],
+        operationMocks: [create.mock, restock.mock],
       });
 
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
@@ -613,11 +619,14 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() => expect(restock.fired).toHaveLength(1));
-      expect(restock.fired[0]?.input).toMatchObject({
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(create.fired[0]?.input).toMatchObject({
+        item: { id: 'item-1' },
         amount: { packages: { count: 1 } },
+        forceAdd: true,
       });
-      // Only the server can size a package, so the row waits for its answer.
+      expect(restock.fired).toHaveLength(0);
+      // The held litres never move by 1 L.
       expect(readQuantity(cache)).toBe(3);
     });
 
@@ -768,7 +777,7 @@ describe('AddToPantrySheet', () => {
         },
       });
 
-    it('restocks the held stack a low-stock row names, even past the loaded window', async () => {
+    it('restocks the item a low-stock row names, even past the loaded window', async () => {
       const create = recordCreate();
       const restock = recordRestock();
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
@@ -781,9 +790,13 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(suggestionRow(PantrySuggestionSource.LowStock, 'pi-held'));
 
-      await waitFor(() => expect(restock.fired).toHaveLength(1));
-      expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-held' } });
-      expect(create.fired).toHaveLength(0);
+      // The stack is past the loaded window, so its unit is unknown: a forced
+      // add joins the item's counted stack, or counts it as the API counts an add.
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(create.fired[0]).toMatchObject({
+        input: { amount: { packages: { count: 1 } }, forceAdd: true },
+      });
+      expect(restock.fired).toHaveLength(0);
       expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
     });
 

@@ -82,7 +82,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           async () => {
             // A refusal RESOLVES; the hook has already said so, and the button
             // must not flip to "Added" over it.
-            if (!(await restockDuplicate(existingPantryItemId, packSize))) {
+            if (
+              !(await restockDuplicate(item, existingPantryItemId, packSize))
+            ) {
               return;
             }
             onPantryAdded();

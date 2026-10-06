@@ -7,6 +7,7 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import {
+  CreatePantryItemDocument,
   GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
@@ -185,6 +186,89 @@ describe('usePantryRestock', () => {
     });
 
     expect(onUnitInvalid).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a count bought with no unit', () => {
+    const OATS = { source: { id: 'item-oats' }, name: 'Oats' };
+
+    it('restocks a counted stack by the count, in its unit', async () => {
+      // The row's unit (bag) is counted.
+      const cache = cacheWithRow(3);
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
+        fragment: gql`
+          fragment _CountedBag on Unit {
+            id
+            type
+          }
+        `,
+        data: { __typename: 'Unit', id: 'unit-bag', type: 'COUNT' },
+      });
+      const restock = queuedRestock();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache,
+        operationMocks: [restock.mock],
+      });
+
+      await act(async () => {
+        await result.current.restock(ROW_ID, {
+          bought: { count: 1, item: OATS },
+          present: 'none',
+        });
+      });
+
+      expect(restock.fired[0]?.input).toMatchObject({
+        amount: { measured: { quantity: 1, unitId: 'unit-bag' } },
+      });
+    });
+
+    it('adds packages nothing sizes as the API counts an add, not as a restock', async () => {
+      // The API refuses them on a restock (sous-chef-api #405).
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const restock = queuedRestock();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache: makeCache(),
+        operationMocks: [create.mock, restock.mock],
+      });
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.restock(ROW_ID, {
+          bought: { count: 2, item: OATS },
+          present: 'none',
+        });
+      });
+
+      expect(outcome).toEqual({ status: 'restocked' });
+      expect(restock.fired).toHaveLength(0);
+      expect(create.fired[0]?.input).toMatchObject({
+        item: { id: 'item-oats' },
+        amount: { packages: { count: 2 } },
+        forceAdd: true,
+      });
+    });
+
+    it('restocks packages of a known size, which the API sizes', async () => {
+      const size = { netWeight: 500, netWeightUnitId: 'unit-ml' };
+      const restock = queuedRestock();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache: makeCache(),
+        operationMocks: [restock.mock],
+      });
+
+      await act(async () => {
+        await result.current.restock(ROW_ID, {
+          bought: { count: 1, packageSize: size, item: OATS },
+          present: 'none',
+        });
+      });
+
+      expect(restock.fired[0]?.input).toMatchObject({
+        amount: { packages: { count: 1, size } },
+      });
+    });
   });
 
   describe('the batches the server builds', () => {

@@ -8,7 +8,11 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
-import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import type { ScannedItem } from '../../types';
 import { useAddScannedItem } from '../useAddScannedItem';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -31,6 +35,14 @@ const QUANTITY = gql`
 
 const ROW_ID = 'pi-oats';
 
+const SCANNED: ScannedItem = {
+  id: 'item-oats',
+  name: 'Oats',
+  upc: '0001',
+  canEdit: false,
+  canSuggest: true,
+};
+
 const EXPIRY = gql`
   fragment _RestockExpiryProbe on PantryItem {
     id
@@ -38,12 +50,33 @@ const EXPIRY = gql`
   }
 `;
 
+/** A row counted in bags, so one scanned container restocks it by one. */
 function cacheWithRow(quantity: number) {
   const cache = makeCache();
   cache.writeFragment({
     id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-    fragment: QUANTITY,
-    data: { __typename: 'PantryItem', id: ROW_ID, quantity },
+    fragment: gql`
+      fragment _RestockCountedRow on PantryItem {
+        id
+        quantity
+        unit {
+          id
+          type
+          symbol
+        }
+      }
+    `,
+    data: {
+      __typename: 'PantryItem',
+      id: ROW_ID,
+      quantity,
+      unit: {
+        __typename: 'Unit',
+        id: 'unit-bag',
+        type: UnitType.Count,
+        symbol: 'bag',
+      },
+    },
   });
   return cache;
 }
@@ -90,7 +123,7 @@ describe('restocking the row a scan duplicated', () => {
     );
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID);
     });
 
     expect(readQuantity(cache)).toBe(4);
@@ -122,7 +155,7 @@ describe('restocking the row a scan duplicated', () => {
     );
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID);
     });
 
     expect(
@@ -151,7 +184,7 @@ describe('restocking the row a scan duplicated', () => {
     );
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID);
     });
 
     const [fired] = restock.fired;
@@ -177,7 +210,7 @@ describe('restocking the row a scan duplicated', () => {
     );
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID);
     });
 
     expect(readQuantity(cache)).toBe(3);
@@ -220,7 +253,7 @@ describe('restocking the row a scan duplicated', () => {
     );
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID);
     });
 
     expect(
@@ -266,7 +299,7 @@ describe('restocking the row a scan duplicated', () => {
         { cache, operationMocks: [restock.mock] },
       );
       await act(async () => {
-        await result.current.restockDuplicate(ROW_ID, packageSize);
+        await result.current.restockDuplicate(SCANNED, ROW_ID, packageSize);
       });
       return (restock.fired[0]?.input as { amount: unknown }).amount;
     };
@@ -284,9 +317,33 @@ describe('restocking the row a scan duplicated', () => {
       ).toEqual({ packages: { count: 1, size } });
     });
 
-    it('is one package for the server to size, never 1 mL', async () => {
-      expect(await firedAmount(heldIn(UnitType.Volume, 'unit-ml'))).toEqual({
-        packages: { count: 1 },
+    it('adds one package nothing sizes as the API counts an add, never 1 mL', async () => {
+      // A restock names one stack and refuses packages nothing sizes; a forced
+      // add counts them in a counted stack (sous-chef-api #405).
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
+        {
+          cache: heldIn(UnitType.Volume, 'unit-ml'),
+          operationMocks: [create.mock, restock.mock],
+        },
+      );
+      let restocked;
+      await act(async () => {
+        restocked = await result.current.restockDuplicate(SCANNED, ROW_ID);
+      });
+
+      expect(restocked).toBe(true);
+      expect(restock.fired).toHaveLength(0);
+      expect(create.fired[0]?.input).toMatchObject({
+        item: { id: 'item-oats' },
+        amount: { packages: { count: 1 } },
+        forceAdd: true,
       });
     });
   });

@@ -19,7 +19,6 @@ import { receiptReviewLines } from './receiptReviewLines';
 import type { ReceiptTotalsGap } from './receiptTotalsGap';
 import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
 import { readReceiptLine, type ReceiptLineReading } from './readReceiptLine';
-import { NOT_BEFORE_PACK_UNIT, RECEIPT_UNIT } from './receiptMeasures';
 import { foldDetail, hasProductWords } from './structureReceipt';
 import type {
   ParsedLineKind,
@@ -52,17 +51,6 @@ const KIND_OF: Record<ReceiptLineKind, ParsedLineKind> = {
   [ReceiptLineKind.Other]: 'other',
 };
 
-// A product code as printed, less a tax flag run into it (`000000040110KF`) but
-// not a pack size (`1500G`). The server has returned a line's price (`4.94`) as
-// its code.
-const PRINTED_CODE = new RegExp(
-  `^(\\d{4,14})${NOT_BEFORE_PACK_UNIT}[A-Z]{0,2}$`,
-  'i',
-);
-
-const codeOf = (line: ServerReceiptLine, printed: string | undefined) =>
-  PRINTED_CODE.exec(line.code?.trim() ?? '')?.[1] ?? printed;
-
 // The figures come from the printed text, as they do for the phone's labels,
 // and the server's only where the text states none: it has priced a line with
 // the next row's amount (`BANANAS ... 1.02 R` as 4.94).
@@ -71,11 +59,10 @@ const toLine = (line: ServerReceiptLine, index: number): Working => {
   const amount = reading.amount ?? line.amount ?? undefined;
   const quantity = reading.quantity ?? line.quantity ?? undefined;
   const unitPrice = reading.unitPrice ?? line.unitPrice ?? undefined;
-  // The server has returned a line's tax flag (`R`) as its unit.
-  const unit =
-    reading.unit ??
-    (line.unit && RECEIPT_UNIT.test(line.unit) ? line.unit : undefined);
-  const code = codeOf(line, reading.code);
+  // The server keeps only printed codes and measures (`normalizeLines`); a code
+  // it was not given is read from the text.
+  const unit = reading.unit ?? line.unit ?? undefined;
+  const code = line.code ?? reading.code;
   return {
     index,
     rawText: line.text,

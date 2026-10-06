@@ -146,8 +146,9 @@ describe('fromServerReceipt', () => {
   });
 
   // As the dev parser answered for a photographed Walmart receipt (corpus:
-  // walmart-food-receipt-8-sep-2021).
-  it("takes the figures the line prints over the server's, and drops a tax flag given as a unit", () => {
+  // walmart-food-receipt-8-sep-2021), with the codes and units the server now
+  // keeps (`normalizeLines` drops the tax flag `R` given as a unit).
+  it("takes the figures the line prints over the server's", () => {
     const parsed = fromServerReceipt({
       merchant: merchant('Walmart'),
       lines: [
@@ -156,7 +157,6 @@ describe('fromServerReceipt', () => {
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
           quantity: 1,
-          unit: 'R',
           amount: 4.94,
         }),
         line({
@@ -170,7 +170,6 @@ describe('fromServerReceipt', () => {
           kind: ReceiptLineKind.Item,
           product: 'DEVILED EGG',
           quantity: 1,
-          unit: 'R',
           amount: 4.96,
         }),
       ],
@@ -197,25 +196,35 @@ describe('fromServerReceipt', () => {
     expect(parsed.lines[1]?.lineTotal).toBeUndefined();
   });
 
-  it('takes no pack size for a code', () => {
+  it('keeps the code the server kept, and reads one it was not given', () => {
     const parsed = fromServerReceipt({
       merchant: merchant(null),
       lines: [
         line({
-          text: 'OATS 1500G  3.99',
+          text: 'MILK 131 2.49',
           kind: ReceiptLineKind.Item,
-          product: 'OATS',
-          code: '1500G',
-          amount: 3.99,
+          product: 'MILK',
+          code: '131',
+          amount: 2.49,
+        }),
+        line({
+          text: 'DEVILED EGG 078742213510 F 4.96',
+          kind: ReceiptLineKind.Item,
+          product: 'DEVILED EGG',
+          amount: 4.96,
         }),
       ],
     });
 
-    expect(parsed.lines[0]?.code).toBeUndefined();
+    expect(parsed.lines.map(parsedLine => parsedLine.code)).toEqual([
+      '131',
+      '078742213510',
+    ]);
   });
 
-  // As the dev parser answered for the same receipt read on the simulator.
-  it('takes no price for a code, and no subtotal for an item price', () => {
+  // As the dev parser answered for the same receipt read on the simulator,
+  // with the codes and units the server now keeps.
+  it('takes no subtotal for an item price', () => {
     const parsed = fromServerReceipt({
       merchant: merchant('Walmart'),
       lines: [
@@ -223,18 +232,16 @@ describe('fromServerReceipt', () => {
           text: 'BANANAS  000000040110KF  1.02 R',
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
-          code: '000000040110KF',
+          code: '000000040110',
           quantity: 1,
-          unit: 'R',
           amount: 1.02,
         }),
         line({
           text: '2.21 lb. @ 1lb.  /0.46  4.94 Y',
           kind: ReceiptLineKind.Item,
           product: '2.21 lb. @ 1lb.',
-          code: '4.94',
           quantity: 2.21,
-          unit: 'lb.',
+          unit: 'lb',
           amount: 4.94,
         }),
         line({

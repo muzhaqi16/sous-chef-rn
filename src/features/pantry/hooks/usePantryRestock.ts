@@ -3,6 +3,7 @@ import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.gener
 import { addToPantryItemsCache } from '#features/pantry/cache/items';
 import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
+import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { boughtAmountOf } from '#domain/stockAmount';
 import {
   settleMutation,
@@ -14,6 +15,7 @@ import { todayKey } from '#/utils/dateUtils';
 import { useTranslation } from '#/i18n';
 import type {
   PackageSizeInput,
+  PantryItemSourceInput,
   RestockPantryItemInput,
   StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
@@ -41,24 +43,25 @@ type RestockDetails = Pick<
   'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
 >;
 
-/**
- * What went in: an amount as stated, or a count of the product bought with no
- * unit, which the stack's own unit decides (`boughtAmountOf`).
- */
-type Stated =
-  | { amount: StockAmountInput; bought?: never }
-  | {
-      bought: { count: number; packageSize?: PackageSizeInput | null };
-      amount?: never;
-    };
+/** A count of the product bought with no unit; the stack's own unit decides it. */
+interface Bought {
+  count: number;
+  packageSize?: PackageSizeInput | null;
+  /** The product, for an add when nothing sizes the packages. */
+  item: { source: PantryItemSourceInput; name: string };
+}
 
-type PantryRestockOptions = RestockDetails &
-  Stated & {
-    /** `'none'` leaves telling the user about a refusal to the caller. */
-    present: 'alert' | 'none';
-    fallback?: string;
-    on?: SettleOptions['on'];
-  };
+/** What went in: an amount as stated, or a count bought (`boughtAmountOf`). */
+type Stated =
+  | (RestockDetails & { amount: StockAmountInput; bought?: never })
+  | { bought: Bought; amount?: never };
+
+type PantryRestockOptions = Stated & {
+  /** `'none'` leaves telling the user about a refusal to the caller. */
+  present: 'alert' | 'none';
+  fallback?: string;
+  on?: SettleOptions['on'];
+};
 
 /**
  * The one restock of a stack the pantry already holds. The row moves at once
@@ -68,6 +71,7 @@ type PantryRestockOptions = RestockDetails &
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const intake = usePantryIntake(pantryId);
 
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     context: { localFirst: true },
@@ -114,6 +118,19 @@ export function usePantryRestock(pantryId: string | undefined) {
         heldUnit: readStackUnit(client.cache, pantryItemId),
         packageSize: bought.packageSize,
       });
+    // A restock names one stack and refuses packages nothing sizes; an add
+    // with `forceAdd` counts them as the API counts any add: in a counted stack
+    // of the item, joined if one is held (sous-chef-api #405).
+    if (bought && amount.packages && !amount.packages.size) {
+      const outcome = await intake.addItem(
+        bought.item.name,
+        { item: bought.item.source, amount, forceAdd: true },
+        { present, fallback: fallback ?? t('errors.restockFailedRetry') },
+      );
+      return outcome.status === 'added'
+        ? { status: 'restocked' }
+        : { status: 'rejected' };
+    }
     const added = amount.measured
       ? inTrackingUnit(
           client.cache,

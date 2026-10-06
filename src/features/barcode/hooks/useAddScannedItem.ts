@@ -90,11 +90,16 @@ export function useAddScannedItem({
    * stands, having told the user when it does not.
    */
   const restockDuplicate = async (
+    item: ScannedItem,
     existingPantryItemId: string,
     packageSize?: PackageSizeInput,
   ): Promise<boolean> => {
     const outcome = await restock(existingPantryItemId, {
-      bought: { count: SCANNED_QUANTITY, packageSize },
+      bought: {
+        count: SCANNED_QUANTITY,
+        packageSize,
+        item: { source: scannedPantrySource(item), name: item.name },
+      },
       present: 'alert',
     });
     return outcome.status === 'restocked';

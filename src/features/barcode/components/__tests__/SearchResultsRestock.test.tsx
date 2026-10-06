@@ -142,6 +142,7 @@ describe('restocking a duplicate the scanner found', () => {
     await pressAddThenRestock();
 
     expect(mockRestockDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item-1' }),
       'pantry-item-9',
       undefined,
     );
@@ -193,6 +194,7 @@ describe('restocking a duplicate the scanner found', () => {
     });
 
     expect(mockRestockDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item-1' }),
       'pantry-item-9',
       PACK_SIZE,
     );

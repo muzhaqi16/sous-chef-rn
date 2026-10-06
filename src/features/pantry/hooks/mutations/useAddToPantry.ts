@@ -88,8 +88,14 @@ export function useAddToPantry({
       : null;
 
   /** Restock the row by one of the product, as its stack counts it. */
-  const restockItem = (pantryItemId: string) =>
-    restock(pantryItemId, { bought: { count: 1 }, present: 'none' });
+  const restockItem = (
+    pantryItemId: string,
+    item: { id: string; name: string },
+  ) =>
+    restock(pantryItemId, {
+      bought: { count: 1, item: { source: { id: item.id }, name: item.name } },
+      present: 'none',
+    });
 
   /** The sheet adds a catalog item as-is: the server fills quantity and unit. */
   const addItem = (itemId: string, itemName: string) =>
