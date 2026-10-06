@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Header } from '../Header';
 
@@ -12,6 +13,30 @@ describe('Header', () => {
     const { toJSON } = render(<Header />);
     expect(toJSON()).toBeTruthy();
     expect(screen.queryByText('My Screen')).toBeNull();
+  });
+
+  it('opens what a pressable title opens, with its accessory beside it', async () => {
+    const user = userEvent.setup();
+    const onTitlePress = jest.fn();
+    render(
+      <Header
+        title="East End Food Co-Op"
+        centerTitle
+        onTitlePress={onTitlePress}
+        titleAccessory={<View testID="title-chevron" />}
+      />,
+    );
+
+    await user.press(screen.getByTestId('header-title-button'));
+
+    expect(onTitlePress).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('East End Food Co-Op')).toBeTruthy();
+    expect(screen.getByTestId('title-chevron')).toBeTruthy();
+  });
+
+  it('keeps a title that opens nothing out of the press order', () => {
+    render(<Header title="Detail" titleAccessory={<View />} />);
+    expect(screen.queryByTestId('header-title-button')).toBeNull();
   });
 
   it('renders back button when onBack is provided', () => {

@@ -5,9 +5,9 @@ import { useTranslation } from '#/i18n';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
+import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -22,7 +22,6 @@ import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPa
 import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
 import { PantrySelector } from './PantrySelector';
 import { StorageStateControl } from './StorageStateControl';
-import { ExpirationDateField } from './ExpirationDateField';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatNumberForInput,
@@ -96,9 +95,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const pantryId = useWatch({ control, name: 'pantryId' });
   const expirationDate = useWatch({ control, name: 'expirationDate' });
 
-  // Interaction state, not fields: the picker's visibility and which of the two
-  // amounts the shopper has typed over.
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  // Interaction state, not fields: which of the two amounts the shopper has
+  // typed over.
   // The per-unit price the total was seeded from, and whether the shopper has
   // since typed over either field. Between them they decide which of the two
   // amounts survives an edit — see `handleQuantityChange`.
@@ -171,7 +169,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         notes: '',
       };
       unitIdThisPass = resolvedUnit.id;
-      setShowDatePicker(false);
       setSeededUnitPrice(purchasedUnitPrice);
       setAmountsTouched(false);
       setPriceTouched(false);
@@ -319,17 +316,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     });
     setIsMoving(false);
     if (moved) onClose();
-  };
-
-  const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setValue('expirationDate', date);
-    }
-  };
-
-  const clearExpirationDate = () => {
-    setValue('expirationDate', undefined);
   };
 
   return (
@@ -487,13 +473,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               )}
             />
 
-            {/* Expiration Date */}
-            <ExpirationDateField
-              expirationDate={expirationDate}
-              showPicker={showDatePicker}
-              onOpenPicker={() => setShowDatePicker(true)}
-              onChange={handleDateChange}
-              onClear={clearExpirationDate}
+            <DatePickerField
+              label={t('labels.expirationDate')}
+              value={expirationDate ?? null}
+              onChange={date => setValue('expirationDate', date ?? undefined)}
+              minimumDate={new Date()}
+              clearable
             />
 
             {/* Total paid (Optional) */}

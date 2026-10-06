@@ -168,7 +168,7 @@ const mockDeferredScreen = jest.fn(
 jest.mock('#features/mealPlan/components/WeekStrip', () => ({
   WeekStrip: () => null,
 }));
-jest.mock('#features/mealPlan/components/MonthCalendar', () => ({
+jest.mock('#components/atoms/MonthCalendar', () => ({
   MonthCalendar: () => null,
 }));
 jest.mock('#features/mealPlan/components/DayMealList', () => ({

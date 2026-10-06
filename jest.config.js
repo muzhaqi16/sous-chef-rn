@@ -94,6 +94,10 @@ module.exports = {
       'react-native-mmkv|' +
       'react-native-device-info|' +
       'react-native-config|' +
+      // Ships TypeScript source as its entry (`main: src/index.ts`), and pulls
+      // in an ESM-only swipe dependency.
+      'react-native-calendars|' +
+      'react-native-swipe-gestures|' +
       '@react-native-clipboard/clipboard|' +
       '@react-native-community|' +
       '@react-navigation|' +

@@ -6,7 +6,7 @@ import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
-import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
+import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
@@ -517,7 +517,7 @@ const MealPlanMainInner: React.FC = () => {
         <MonthCalendar
           selectedDate={calendar.selectedDate}
           onSelectDate={calendar.selectDate}
-          daysWithMeals={daysWithMeals}
+          markedDays={daysWithMeals}
           minDate={calendar.minDate}
           maxDate={calendar.maxDate}
         />

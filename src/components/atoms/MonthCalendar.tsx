@@ -5,7 +5,7 @@ import {
   type CalendarProps,
 } from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
-import { toDateKey } from '#/utils/dateUtils';
+import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 
 const ThemedCalendar = withUnistyles(Calendar, theme => ({
   theme: {
@@ -29,54 +29,60 @@ const ThemedCalendar = withUnistyles(Calendar, theme => ({
 }));
 
 interface MonthCalendarProps {
-  selectedDate: Date;
+  /** The day shown selected, and the month it opens on; today's when none. */
+  selectedDate: Date | null;
   onSelectDate: (date: Date) => void;
-  daysWithMeals?: Set<string>;
+  /** Days carrying a dot (YYYY-MM-DD), such as a meal plan's planned days. */
+  markedDays?: ReadonlySet<string>;
   minDate?: Date;
   maxDate?: Date;
+  testID?: string;
 }
 
+/** The app's one month calendar: the meal plan's, and every date field's. */
 export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   selectedDate,
   onSelectDate,
-  daysWithMeals,
+  markedDays,
   minDate,
   maxDate,
+  testID,
 }) => {
-  const selectedDateStr = toDateKey(selectedDate);
-  const minDateStr = minDate ? toDateKey(minDate) : undefined;
-  const maxDateStr = maxDate ? toDateKey(maxDate) : undefined;
+  const selectedKey = selectedDate ? toDateKey(selectedDate) : undefined;
+  const minKey = minDate ? toDateKey(minDate) : undefined;
+  const maxKey = maxDate ? toDateKey(maxDate) : undefined;
 
   const handleDayPress = (day: DateData) => {
-    onSelectDate(new Date(day.dateString + 'T12:00:00'));
+    onSelectDate(fromDateKey(day.dateString));
   };
 
   return (
     <ThemedCalendar
-      current={selectedDateStr}
+      current={selectedKey}
       onDayPress={handleDayPress}
       uniProps={t => ({
         markedDates: (() => {
           const marks: NonNullable<CalendarProps['markedDates']> = {};
-          if (daysWithMeals) {
-            daysWithMeals.forEach(dateStr => {
-              marks[dateStr] = { marked: true, dotColor: t.colors.primary };
-            });
+          markedDays?.forEach(key => {
+            marks[key] = { marked: true, dotColor: t.colors.primary };
+          });
+          if (selectedKey) {
+            marks[selectedKey] = {
+              ...marks[selectedKey],
+              selected: true,
+              selectedColor: t.colors.primary,
+              selectedTextColor: t.colors.onPrimary,
+            };
           }
-          marks[selectedDateStr] = {
-            ...marks[selectedDateStr],
-            selected: true,
-            selectedColor: t.colors.primary,
-            selectedTextColor: t.colors.onPrimary,
-          };
           return marks;
         })(),
       })}
       markingType="dot"
       firstDay={1}
       enableSwipeMonths={false}
-      minDate={minDateStr}
-      maxDate={maxDateStr}
+      minDate={minKey}
+      maxDate={maxKey}
+      testID={testID}
     />
   );
 };

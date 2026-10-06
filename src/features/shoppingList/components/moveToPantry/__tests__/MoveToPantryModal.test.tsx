@@ -191,15 +191,6 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('@react-native-community/datetimepicker', () => {
-  const RN = require('react-native');
-  return {
-    __esModule: true,
-    default: () =>
-      require('react').createElement(RN.View, { testID: 'date-picker' }),
-  };
-});
-
 const ITEM_ID = 'sli-1';
 
 function makeCache(overrides: Record<string, unknown> = {}) {
