@@ -15,6 +15,8 @@ export const receiptsTestIDs = {
   /** The review's store and purchase-date fields. */
   reviewStore: 'receipt-review-store',
   reviewDate: 'receipt-review-date',
+  /** A date read from the receipt, shown as text; it opens the date field. */
+  reviewDateRow: 'receipt-review-date-row',
   /** The banner that asks the API again after a failed match. */
   reviewMatchRetry: 'receipt-review-match-retry',
   /** Prefix of each line's row: `receipt-review-line-<index>`. */

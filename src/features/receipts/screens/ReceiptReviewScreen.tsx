@@ -5,6 +5,11 @@ import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { Text } from '#components/atoms/Text';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { InfoRow } from '#components/atoms/InfoRow';
+import { Reveal } from '#components/atoms/Reveal';
+import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconTone } from '#utils/iconUtils';
 import { Button } from '#components/molecules/Button';
@@ -17,6 +22,7 @@ import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
@@ -26,13 +32,14 @@ import {
 } from '../hooks/useReceiptReview';
 import { receiptsTestIDs } from '../testIDs';
 
-type ReviewSection = 'toAdd' | 'pending' | 'notAdded' | 'added';
+type ReviewSection = 'toAdd' | 'pending' | 'toCheck' | 'notAdded' | 'added';
 
-// Lines that will be added first, then those waiting for a match, those that
-// won't be added, and those already in.
+// Lines that will be added first, then those waiting for a match, those with
+// no product to add yet, those left out, and those already in.
 const SECTION_ORDER: readonly ReviewSection[] = [
   'toAdd',
   'pending',
+  'toCheck',
   'notAdded',
   'added',
 ];
@@ -63,13 +70,13 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
     tone: 'iconTertiary',
   },
   guess: {
-    section: 'notAdded',
+    section: 'toAdd',
     icon: 'help-circle',
     tone: 'warning',
     badge: { text: 'labels.check', variant: 'warning' },
   },
   unmatched: {
-    section: 'notAdded',
+    section: 'toCheck',
     icon: 'ellipse-outline',
     tone: 'iconTertiary',
   },
@@ -123,6 +130,14 @@ export const ReceiptReviewScreen: React.FC = () => {
     [finish],
   );
 
+  // What was read shows as text that opens its field; what wasn't is a field.
+  const [changingStore, setChangingStore] = useState(false);
+  // What the user types to search; a store is only what they pick.
+  const [storeText, setStoreText] = useState<string | null>(null);
+  const storeTitle = store?.name ?? merchant;
+  const showStore = storeUnrecognized || changingStore;
+  const [changingDate, setChangingDate] = useState(false);
+
   // Kept after closing, so the sheet animates out full.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -146,13 +161,12 @@ export const ReceiptReviewScreen: React.FC = () => {
         return matchState === 'failed'
           ? t('receipts.review.notMatchedYet')
           : t('receipts.review.findingMatch');
-      case 'guess':
-        return t('receipts.review.maybe', { name: row.guess ?? '' });
       case 'unmatched':
         return t('receipts.review.choose');
       case 'skipped':
         return t('receipts.review.leftOut');
       case 'add':
+      case 'guess':
       case 'added': {
         if (!choice) return row.printed;
         return t('receipts.review.chosenDetail', {
@@ -171,6 +185,8 @@ export const ReceiptReviewScreen: React.FC = () => {
         return matchState === 'failed'
           ? t('receipts.review.sectionNotMatchedYet', { count })
           : t('receipts.review.sectionMatching', { count });
+      case 'toCheck':
+        return t('receipts.review.sectionToCheck', { count });
       case 'notAdded':
         return t('receipts.review.sectionNotAdded', { count });
       case 'added':
@@ -245,7 +261,15 @@ export const ReceiptReviewScreen: React.FC = () => {
 
   return (
     <SubScreen
-      title={store?.name ?? merchant ?? t('receipts.review.title')}
+      title={storeTitle ?? t('receipts.review.title')}
+      {...(storeTitle && !storeUnrecognized
+        ? {
+            onTitlePress: () => setChangingStore(open => !open),
+            titleAccessory: (
+              <ExpandChevron expanded={changingStore} tone="textPrimary" />
+            ),
+          }
+        : {})}
       scroll="list"
       footer={footer}
       testID={receiptsTestIDs.reviewScreen}
@@ -257,38 +281,75 @@ export const ReceiptReviewScreen: React.FC = () => {
         ListHeaderComponent={
           rows.length > 0 ? (
             <View style={styles.intro}>
-              <View style={styles.details}>
-                {storeUnrecognized ? (
-                  <StoreAutocompleteField
-                    variant="modal"
-                    label={t('labels.store')}
-                    value={store?.name ?? ''}
-                    // Kept by id, from the pick: typed text alone is no store.
-                    onChangeText={() => undefined}
-                    onStoreSelected={(id, name) => {
-                      if (id && name) chooseStore({ id, name });
-                    }}
-                    placeholder={t('receipts.review.storePlaceholder')}
-                    helperText={t('labels.storeSelectHint')}
-                    testID={receiptsTestIDs.reviewStore}
-                  />
-                ) : null}
-                <View>
-                  <DatePickerField
-                    label={t('receipts.review.dateLabel')}
-                    value={fromDateKey(purchasedOn)}
-                    onChange={date => {
-                      if (date) setPurchasedOn(toDateKey(date));
-                    }}
-                    maximumDate={fromDateKey(today)}
-                    testID={receiptsTestIDs.reviewDate}
-                  />
-                  {dayIsScanDay ? (
+              <View>
+                <Reveal open={showStore}>
+                  <View style={styles.revealedStore}>
+                    <StoreAutocompleteField
+                      variant="modal"
+                      label={t('labels.store')}
+                      value={storeText ?? store?.name ?? ''}
+                      onChangeText={setStoreText}
+                      // Kept by id, from the pick: typed text alone is no store.
+                      onStoreSelected={(id, name) => {
+                        if (id && name) chooseStore({ id, name });
+                      }}
+                      placeholder={t('receipts.review.storePlaceholder')}
+                      helperText={t('labels.storeSelectHint')}
+                      testID={receiptsTestIDs.reviewStore}
+                    />
+                  </View>
+                </Reveal>
+                {dayIsScanDay ? (
+                  <View>
+                    <DatePickerField
+                      label={t('receipts.review.dateLabel')}
+                      value={fromDateKey(purchasedOn)}
+                      onChange={date => {
+                        if (date) setPurchasedOn(toDateKey(date));
+                      }}
+                      maximumDate={fromDateKey(today)}
+                      testID={receiptsTestIDs.reviewDate}
+                    />
                     <Text role="caption" tone="tertiary">
                       {t('receipts.review.dateScanned')}
                     </Text>
-                  ) : null}
-                </View>
+                  </View>
+                ) : (
+                  <>
+                    <AppPressable
+                      onPress={() => setChangingDate(open => !open)}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: changingDate }}
+                      testID={receiptsTestIDs.reviewDateRow}
+                    >
+                      <InfoRow
+                        label={t('receipts.review.dateLabel')}
+                        value={null}
+                        icon="calendar-outline"
+                        showColon={false}
+                        showBorder={false}
+                      >
+                        <View style={styles.dateValue}>
+                          <Text role="bodyStrong">
+                            {formatMonthDayYear(fromDateKey(purchasedOn))}
+                          </Text>
+                          <ExpandChevron expanded={changingDate} />
+                        </View>
+                      </InfoRow>
+                    </AppPressable>
+                    <Reveal open={changingDate}>
+                      <MonthCalendar
+                        selectedDate={fromDateKey(purchasedOn)}
+                        onSelectDate={date => {
+                          setPurchasedOn(toDateKey(date));
+                          setChangingDate(false);
+                        }}
+                        maxDate={fromDateKey(today)}
+                        testID={receiptsTestIDs.reviewDate}
+                      />
+                    </Reveal>
+                  </>
+                )}
               </View>
               <Text role="body" tone="secondary">
                 {matchState === 'matching'
@@ -354,8 +415,14 @@ export const ReceiptReviewScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  details: {
-    gap: theme.spacing.md,
+  dateValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  // In the revealed content, so the gap opens and closes with the field.
+  revealedStore: {
+    paddingBottom: theme.spacing.md,
   },
   intro: {
     gap: theme.spacing.md,

@@ -802,7 +802,7 @@ describe('useReceiptReview', () => {
       ]);
     });
 
-    it('chooses the item it is sure of, and only offers the one it guesses', async () => {
+    it('adds the item it is sure of, and the one it guesses unless the user picks another', async () => {
       const { result } = await setup({ resolve: resolved() });
 
       await waitFor(() =>
@@ -811,14 +811,22 @@ describe('useReceiptReview', () => {
       const [milk, bananas] = result.current.review.rows;
       expect(milk?.choice).toEqual(MILK);
       expect(milk?.status).toBe('add');
-      expect(bananas?.choice).toBeUndefined();
+      // The guess is the line's product, flagged to check, with no input.
+      expect(bananas?.choice).toEqual({ ...BANANAS, itemId: 'cat-bananas' });
       expect(bananas?.status).toBe('guess');
-      expect(bananas?.guess).toBe('Bananas');
       expect(bananas?.candidates.map(candidate => candidate.itemName)).toEqual([
         'Bananas',
         'Plantains',
       ]);
-      expect(result.current.review.pendingCount).toBe(1);
+      expect(result.current.review.pendingCount).toBe(2);
+
+      await act(async () => {
+        result.current.review.chooseLine(
+          3,
+          lineChoice({ itemId: 'cat-plantains', itemName: 'Plantains' }),
+        );
+      });
+      expect(result.current.review.rows[1]?.status).toBe('add');
     });
 
     it('tells candidates of one name apart by their one brand, else their pack size', async () => {
@@ -910,9 +918,18 @@ describe('useReceiptReview', () => {
 
       await act(async () => {
         result.current.review.chooseLine(1, null);
+        result.current.review.chooseLine(3, null);
       });
 
-      expect(result.current.review.rows[0]?.choice).toBeUndefined();
+      // A sure match and an unsure guess alike stay out once left out.
+      expect(result.current.review.rows.map(row => row.choice)).toEqual([
+        undefined,
+        undefined,
+      ]);
+      expect(result.current.review.rows.map(row => row.status)).toEqual([
+        'skipped',
+        'skipped',
+      ]);
       expect(result.current.review.pendingCount).toBe(0);
     });
 
@@ -1064,9 +1081,16 @@ describe('useReceiptReview', () => {
         await result.current.review.addChosen();
       });
 
+      // The bananas go in as the API guessed them: nothing left to choose.
       expect(create.fired.map(vars => vars.input)).toEqual([
         expect.objectContaining({
           item: { id: 'cat-milk' },
+          purchase: expect.objectContaining({
+            receipt: { purchasedOn: '2026-09-28', storeId: 'store-99' },
+          }),
+        }),
+        expect.objectContaining({
+          item: { id: 'cat-bananas' },
           purchase: expect.objectContaining({
             receipt: { purchasedOn: '2026-09-28', storeId: 'store-99' },
           }),

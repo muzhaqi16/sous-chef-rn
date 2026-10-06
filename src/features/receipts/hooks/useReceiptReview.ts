@@ -28,10 +28,10 @@ import { toDateKey } from '#/utils/dateUtils';
 const HEADER_LINES = 6;
 
 /**
- * What adding does with a line: `add` it, or retry it after it `failed`; it is
- * `added` already; it waits for the API's match (`pending`); or it stays out as
- * a `guess` to check, a line with no match (`unmatched`), or one the user left
- * out (`skipped`).
+ * What adding does with a line: `add` it, add the API's unsure `guess` unless
+ * the user picks another, or retry it after it `failed`; it is `added` already;
+ * it waits for the API's match (`pending`); or it stays out as a line with no
+ * match (`unmatched`) or one the user left out (`skipped`).
  */
 export type ReceiptRowStatus =
   | 'add'
@@ -45,8 +45,6 @@ export type ReceiptRowStatus =
 export interface ReceiptReviewRow extends ReceiptReviewLine {
   status: ReceiptRowStatus;
   choice?: ReceiptLineChoice;
-  /** The API's best guess when it is unsure: offered, never chosen for the user. */
-  guess?: string;
   /** Items the API proposes for the line, best first. */
   candidates: ReceiptCandidate[];
   /** Why the last attempt to add it failed. */
@@ -121,12 +119,15 @@ export function useReceiptReview() {
   const chosen = lines.map(line => {
     const explicit = draft?.choices?.[line.index];
     const match = matchFor(line.index);
+    // An unsure guess is added as is unless the user picks another: every
+    // line the API matched needs no input.
+    const proposed = match?.preselect ?? match?.guess;
     const proposal =
-      explicit === undefined && match?.preselect
+      explicit === undefined && proposed
         ? {
             ...seedChoice(line),
-            itemId: match.preselect.itemId,
-            itemName: match.preselect.itemName,
+            itemId: proposed.itemId,
+            itemName: proposed.itemName,
           }
         : undefined;
     return {
@@ -134,6 +135,7 @@ export function useReceiptReview() {
       match,
       // Null is the user leaving the line out, proposal or not.
       choice: explicit === undefined ? proposal : explicit ?? undefined,
+      guessed: explicit === undefined && !match?.preselect && !!proposal,
       skipped: explicit === null,
     };
   });
@@ -146,14 +148,17 @@ export function useReceiptReview() {
   const links = linkReceiptLines(pending, openLines);
 
   const statusOf = (
-    { line, match, choice, skipped }: (typeof chosen)[number],
+    { line, choice, guessed, skipped }: (typeof chosen)[number],
     failure: string | undefined,
   ): ReceiptRowStatus => {
     if (added.has(line.index)) return 'added';
-    if (choice) return failure ? 'failed' : 'add';
+    if (choice) {
+      if (failure) return 'failed';
+      return guessed ? 'guess' : 'add';
+    }
     if (skipped) return 'skipped';
     if (matchState !== 'done') return 'pending';
-    return match?.guess ? 'guess' : 'unmatched';
+    return 'unmatched';
   };
 
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
@@ -165,7 +170,6 @@ export function useReceiptReview() {
       ...line,
       status: statusOf(entry, failure),
       ...(choice ? { choice } : {}),
-      ...(match?.guess && !choice ? { guess: match.guess.itemName } : {}),
       candidates: match?.candidates ?? [],
       failure,
       onList: links.has(line.index),
