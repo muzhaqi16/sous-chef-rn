@@ -10510,6 +10510,14 @@ type PantryUsageStats {
 type ParsedReceipt {
   """ISO 4217, when the receipt shows it"""
   currency: String
+  """
+  The receipt's lines. They add up as: every ITEM, FEE and DEPOSIT amount
+  less every DISCOUNT amount, over the lines before the first PAYMENT line
+  printed after an item.
+  The sum meets a SUBTOTAL, or a TOTAL less the TAX above it, printed after
+  the last line counted; TOTALS_MISMATCH says when it does not. A discount
+  the printed figures show was not taken off is returned as OTHER.
+  """
   lines: [ParsedReceiptLine!]!
   merchant: ParsedReceiptMerchant!
   purchasedOn: LocalDate
@@ -10522,7 +10530,11 @@ type ParsedReceipt {
 type ParsedReceiptLine {
   """The line's printed total; a discount is negative"""
   amount: Float
-  """On a DISCOUNT: the index in lines of the ITEM it reduces"""
+  """
+  On a DISCOUNT: the index in lines of the ITEM it reduces. A discount
+  printed among the items always names one; one printed after the subtotal
+  may name none, and reduces the order.
+  """
   appliesTo: Int
   """The printed article or barcode number"""
   code: String
@@ -12150,7 +12162,14 @@ enum ReceiptParseStatus {
 
 type ReceiptParseWarning {
   code: ReceiptParseWarningCode!
+  """On TOTALS_MISMATCH: what the lines add up to; null otherwise"""
+  counted: Float
+  """Free text for logs; read the figures from counted and printed"""
   detail: String!
+  """
+  On TOTALS_MISMATCH: the printed subtotal, or total less tax, they were checked against; null otherwise
+  """
+  printed: Float
 }
 
 """Something a parse noticed about what it read."""
@@ -12158,7 +12177,7 @@ enum ReceiptParseWarningCode {
   """The pages held little readable text"""
   LOW_TEXT
   """
-  The items, discounts, fees and deposits do not add up to the printed subtotal: a line was likely missed or misread
+  The lines do not add up to the receipt by the rule on ParsedReceipt.lines: a line was likely missed or misread
   """
   TOTALS_MISMATCH
   """The model returned a line the receipt does not print; it was dropped"""

@@ -251,6 +251,39 @@ describe('useServerReceiptParse', () => {
     expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
   });
 
+  it.each([
+    [
+      'keeps the totals the server found do not add up',
+      { counted: 22.97, printed: 27.94 },
+      { counted: 22.97, printed: 27.94 },
+    ],
+    // An API from before its discount rule sends no figures; its check misfired.
+    [
+      'drops a mismatch the server gives no figures for',
+      { counted: null, printed: null },
+      undefined,
+    ],
+  ])('%s', async (_name, figures, kept) => {
+    seedMilkDraft();
+    render([
+      created(ReceiptParseStatus.Pending).mock,
+      ...polledTo({
+        status: ReceiptParseStatus.Parsed,
+        warnings: [
+          { code: ReceiptParseWarningCode.TotalsMismatch, ...figures },
+        ],
+        receipt: MILK_RECEIPT,
+      }).mocks,
+    ]);
+
+    await pollOnce();
+    await pollOnce();
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.parsedBy).toBe('server');
+    expect(draft?.totalsGap).toEqual(kept);
+  });
+
   const overTheLimit = (
     retryAfter?: number,
   ): MockFor<typeof CreateReceiptParseDocument> => ({

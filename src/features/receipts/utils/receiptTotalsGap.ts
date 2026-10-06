@@ -18,7 +18,8 @@ const firstPriced = (
  * The item lines after their discounts, with any fee or deposit printed among
  * them, against the receipt's subtotal (else its total less tax). Null when the
  * receipt prints neither or the two agree to the cent. It only reports: a
- * figure is never changed to make the sum come out.
+ * figure is never changed to make the sum come out. The phone's reading only:
+ * the server reports its own as TOTALS_MISMATCH.
  */
 export function receiptTotalsGap(
   receipt: ParsedReceipt,

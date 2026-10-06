@@ -21,8 +21,8 @@ interface Working extends ParsedReceiptLine {
   reading: ReceiptLineReading;
 }
 
-// A fee or a deposit reads as `other`, which the totals check counts toward the
-// subtotal, as it does for a fee the phone read.
+// OTHER includes a discount the API found was never taken off (a co-op's
+// `Markdown:` under a price that already has it): never subtracted.
 const KIND_OF: Record<ReceiptLineKind, ParsedLineKind> = {
   [ReceiptLineKind.Item]: 'item',
   [ReceiptLineKind.Discount]: 'discount',

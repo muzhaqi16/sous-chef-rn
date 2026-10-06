@@ -21,5 +21,7 @@ fragment ReceiptParseReaders on ReceiptParse {
   status
   warnings {
     code
+    counted
+    printed
   }
 }

@@ -104,6 +104,14 @@ export function useReceiptReview() {
   const store =
     draft?.store ??
     (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
+  // The server judges its own reading by the rule its lines follow, which
+  // knows a discount it found was never taken off.
+  const totalsGap =
+    draft?.parsedBy === 'server'
+      ? draft.totalsGap ?? null
+      : draft?.parsed
+      ? receiptTotalsGap(draft.parsed)
+      : null;
   // A receipt that printed no readable day was bought the day it was scanned.
   const purchasedOn =
     draft?.purchasedOn ??
@@ -203,7 +211,7 @@ export function useReceiptReview() {
     setPurchasedOn,
     chooseStore,
     /** The read lines disagree with the receipt's own total: one may be missing. */
-    totalsGap: draft?.parsed ? receiptTotalsGap(draft.parsed) : null,
+    totalsGap,
     /** Whether the API has matched the lines, is matching them, or could not be asked. */
     matchState,
     retryMatching,

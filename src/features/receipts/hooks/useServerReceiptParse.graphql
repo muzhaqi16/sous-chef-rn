@@ -26,6 +26,8 @@ query ReceiptParse($id: ID!) {
     status
     warnings {
       code
+      counted
+      printed
     }
     receipt {
       merchant {

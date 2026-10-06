@@ -33,6 +33,7 @@ import {
 import { fromServerReceipt } from '../utils/serverReceipt';
 import { isPlausibleReceiptDay } from '../utils/receiptDate';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
+import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
@@ -82,6 +83,21 @@ function isVerdict(error: unknown): boolean {
   });
 }
 
+/**
+ * The server's verdict that its lines do not add up to the receipt. A mismatch
+ * without figures predates the API's discount rule, which counted a receipt's
+ * savings summary as discounts: it is not shown.
+ */
+function totalsGapOf(
+  warnings: NonNullable<ReceiptParseQuery['receiptParse']>['warnings'],
+): ReceiptTotalsGap | undefined {
+  const mismatch = warnings.find(
+    warning => warning.code === ReceiptParseWarningCode.TotalsMismatch,
+  );
+  if (mismatch?.counted == null || mismatch.printed == null) return undefined;
+  return { counted: mismatch.counted, printed: mismatch.printed };
+}
+
 /** What a finished parse leaves on the draft; nothing while it runs. */
 function outcomeOf(
   parse: NonNullable<ReceiptParseQuery['receiptParse']>,
@@ -102,12 +118,19 @@ function outcomeOf(
       // Never an empty review: too little text to read is a retake.
       if (!receipt || !parsed || lowText) return 'unreadable';
       if (receiptReviewLines(parsed).length === 0) return 'unreadable';
+      const totalsGap = totalsGapOf(parse.warnings);
       // Held to the phone's own window: a misread day would date the prices
       // and the shelf life, and the API refuses one after tomorrow.
-      return receipt.purchasedOn &&
+      const purchasedOn =
+        receipt.purchasedOn &&
         isPlausibleReceiptDay(receipt.purchasedOn, todayKey())
-        ? { parsed, purchasedOn: receipt.purchasedOn }
-        : { parsed };
+          ? receipt.purchasedOn
+          : undefined;
+      return {
+        parsed,
+        ...(purchasedOn ? { purchasedOn } : {}),
+        ...(totalsGap ? { totalsGap } : {}),
+      };
     }
   }
 }

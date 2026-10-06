@@ -34,6 +34,7 @@ import { isRecord } from '#/utils/isRecord';
 import { toDateKey } from '#/utils/dateUtils';
 import {
   useReceiptDraftStore,
+  type ReceiptDraft,
   type ReceiptLineChoice,
 } from '../../store/receiptDraftStore';
 import {
@@ -393,6 +394,41 @@ describe('useReceiptReview', () => {
     }
     const unnamed = await setup();
     expect(unnamed.result.current.review.storeUnrecognized).toBe(true);
+  });
+
+  it.each<[string, Partial<ReceiptDraft>, unknown]>([
+    [
+      'shows the mismatch the server found in its reading',
+      { parsedBy: 'server', totalsGap: { counted: 3.55, printed: 4.05 } },
+      { counted: 3.55, printed: 4.05 },
+    ],
+    [
+      'shows none when the server found its reading adds up',
+      { parsedBy: 'server' },
+      null,
+    ],
+    [
+      "checks the phone's own reading on the phone",
+      { parsedBy: 'device' },
+      { counted: 5.75, printed: 4.05 },
+    ],
+  ])('%s', async (_name, readBy, totalsGap) => {
+    const draft = useReceiptDraftStore.getState().draft!;
+    const lines = draft.parsed!.lines.map(({ index: _index, ...line }) => line);
+    // A markdown the API found was never taken off reads as OTHER, which the
+    // phone's check counts as a fee.
+    lines.splice(3, 0, {
+      rawText: 'Markdown: $1.70',
+      kind: 'other',
+      lineTotal: 1.7,
+    });
+    useReceiptDraftStore.setState({
+      draft: { ...draft, parsed: parsedReceipt(lines, 'KROGER'), ...readBy },
+    });
+
+    const { result } = await setup();
+
+    expect(result.current.review.totalsGap).toEqual(totalsGap);
   });
 
   it('adds the chosen lines, keeps what was added, and names why the rest failed', async () => {

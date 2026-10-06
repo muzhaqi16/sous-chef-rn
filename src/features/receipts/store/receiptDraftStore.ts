@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { ParsedReceipt } from '../utils/structureReceipt';
+import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
 
 /** What one receipt line becomes in the pantry. */
 export interface ReceiptLineChoice {
@@ -36,7 +37,11 @@ export type ServerReceiptParse =
 /** What a finished server parse leaves on the draft: a state, or the receipt it read. */
 export type ServerParseOutcome =
   | Exclude<ServerReceiptParse['state'], 'limited'>
-  | { parsed: ParsedReceipt; purchasedOn?: string };
+  | {
+      parsed: ParsedReceipt;
+      purchasedOn?: string;
+      totalsGap?: ReceiptTotalsGap;
+    };
 
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
@@ -58,6 +63,8 @@ export interface ReceiptDraft {
   parsed?: ParsedReceipt;
   /** Which of the two structured `parsed`. */
   parsedBy?: 'device' | 'server';
+  /** The server found its reading does not add up to the receipt. */
+  totalsGap?: ReceiptTotalsGap;
   serverParse?: ServerReceiptParse;
   /**
    * The review's picks by line index. Null keeps a line out even when the API
@@ -162,6 +169,7 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
               parsed: outcome.parsed,
               parsedBy: 'server',
               ...(purchasedOn ? { purchasedOn } : {}),
+              ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
             },
           };
         }),
