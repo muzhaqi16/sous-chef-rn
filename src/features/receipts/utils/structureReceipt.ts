@@ -26,7 +26,7 @@ const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [
 const PRODUCT_WORD = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]{3,}/;
 
 /** Whether a line names a product, not only a count, weight or price. */
-export const hasProductWords = (text: string) => PRODUCT_WORD.test(text);
+const hasProductWords = (text: string) => PRODUCT_WORD.test(text);
 
 // A price alone on its row: ALDI's `6.19` under `2 x` beef, or a skewed photo's
 // price column read apart from its names.
@@ -41,7 +41,7 @@ type DetailFigures = Pick<
  * An item takes the count or weight a detail line under it states, and its
  * total when the item printed none.
  */
-export function foldDetail(item: ParsedReceiptLine, detail: DetailFigures) {
+function foldDetail(item: ParsedReceiptLine, detail: DetailFigures) {
   if (detail.quantity !== undefined) item.quantity = detail.quantity;
   if (detail.unit) item.unit = detail.unit;
   if (detail.unitPrice !== undefined) item.unitPrice = detail.unitPrice;

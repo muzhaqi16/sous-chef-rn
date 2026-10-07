@@ -106,51 +106,7 @@ describe('fromServerReceipt', () => {
     expect(receiptTotalsGap(fromServerReceipt(receipt))).toBeNull();
   });
 
-  it('folds a weight line the server returned as an item into the item above', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant('WALMART'),
-      lines: [
-        line({
-          text: 'BANANAS 000000040110KF 1.02 R',
-          kind: ReceiptLineKind.Item,
-          product: 'BANANAS',
-          code: '000000040110',
-          amount: 1.02,
-        }),
-        line({ text: '2.21 lb @ 1 lb /0.46', kind: ReceiptLineKind.Item }),
-        // An item whose price the server missed stays an item.
-        line({
-          text: 'PRG CHED SC 038000138970',
-          kind: ReceiptLineKind.Item,
-          product: 'PRG CHED SC',
-          code: '038000138970',
-        }),
-      ],
-    });
-
-    expect(parsed.lines[1]).toEqual({
-      index: 1,
-      rawText: '2.21 lb @ 1 lb /0.46',
-      kind: 'other',
-      appliesToIndex: 0,
-    });
-    expect(receiptReviewLines(parsed)).toEqual([
-      {
-        index: 0,
-        printed: 'BANANAS',
-        code: '000000040110',
-        quantity: 2.21,
-        unit: 'lb',
-        price: 1.02,
-      },
-      { index: 2, printed: 'PRG CHED SC', code: '038000138970' },
-    ]);
-  });
-
-  // As the dev parser answered for a photographed Walmart receipt (corpus:
-  // walmart-food-receipt-8-sep-2021), with the codes and units the server now
-  // keeps (`normalizeLines` drops the tax flag `R` given as a unit).
-  it("takes the figures the line prints over the server's", () => {
+  it('copies the figures the server gives, and reads none from the text', () => {
     const parsed = fromServerReceipt({
       merchant: merchant('Walmart'),
       lines: [
@@ -158,270 +114,39 @@ describe('fromServerReceipt', () => {
           text: 'BANANAS  000000040110KF  1.02 R',
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
-          quantity: 1,
-          amount: 4.94,
+          code: '000000040110',
+          quantity: 2.21,
+          unit: 'lb',
+          unitPrice: 0.46,
+          amount: 1.02,
         }),
-        line({
-          text: '2.21 lb. @ 1 1b. /0.46  4.94 Y',
-          kind: ReceiptLineKind.Item,
-          product: '2.21 lb. @ 1 1b. /0.46',
-          amount: 4.94,
-        }),
-        line({
-          text: 'DEVILED EGG 078742213510 F  4.96 R',
-          kind: ReceiptLineKind.Item,
-          product: 'DEVILED EGG',
-          quantity: 1,
-          amount: 4.96,
-        }),
-      ],
-    });
-
-    expect(receiptReviewLines(parsed)).toEqual([
-      {
-        index: 0,
-        printed: 'BANANAS',
-        code: '000000040110',
-        quantity: 2.21,
-        unit: 'lb',
-        price: 1.02,
-      },
-      {
-        index: 2,
-        printed: 'DEVILED EGG',
-        code: '078742213510',
-        quantity: 1,
-        price: 4.96,
-      },
-    ]);
-    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
-    expect(parsed.lines[1]?.lineTotal).toBeUndefined();
-  });
-
-  it('keeps the code the server kept, and reads one it was not given', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant(null),
-      lines: [
-        line({
-          text: 'MILK 131 2.49',
-          kind: ReceiptLineKind.Item,
-          product: 'MILK',
-          code: '131',
-          amount: 2.49,
-        }),
+        // The text prints a code and a price the server did not give.
         line({
           text: 'DEVILED EGG 078742213510 F 4.96',
           kind: ReceiptLineKind.Item,
           product: 'DEVILED EGG',
-          amount: 4.96,
         }),
       ],
     });
 
-    expect(parsed.lines.map(parsedLine => parsedLine.code)).toEqual([
-      '131',
-      '078742213510',
-    ]);
-  });
-
-  // As the dev parser answered for the same receipt read on the simulator,
-  // with the codes and units the server now keeps.
-  it('takes no subtotal for an item price', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant('Walmart'),
-      lines: [
-        line({
-          text: 'BANANAS  000000040110KF  1.02 R',
-          kind: ReceiptLineKind.Item,
-          product: 'BANANAS',
-          code: '000000040110',
-          quantity: 1,
-          amount: 1.02,
-        }),
-        line({
-          text: '2.21 lb. @ 1lb.  /0.46  4.94 Y',
-          kind: ReceiptLineKind.Item,
-          product: '2.21 lb. @ 1lb.',
-          quantity: 2.21,
-          unit: 'lb',
-          amount: 4.94,
-        }),
-        line({
-          text: 'DEVILED EGG  078742213510 F  4.96 R',
-          kind: ReceiptLineKind.Item,
-          product: 'DEVILED EGG',
-          code: '078742213510',
-          amount: 4.96,
-        }),
-        line({
-          text: 'PRG CHED SC  038000138970',
-          kind: ReceiptLineKind.Item,
-          product: 'PRG CHED SC',
-          code: '038000138970',
-          quantity: 1,
-          amount: 27.13,
-        }),
-        line({
-          text: 'SUBTOTAL',
-          kind: ReceiptLineKind.Subtotal,
-          amount: 27.13,
-        }),
-      ],
-    });
-
-    expect(receiptReviewLines(parsed)).toEqual([
+    expect(parsed.lines).toEqual([
       {
         index: 0,
-        printed: 'BANANAS',
+        rawText: 'BANANAS  000000040110KF  1.02 R',
+        kind: 'item',
+        product: 'BANANAS',
         code: '000000040110',
         quantity: 2.21,
         unit: 'lb',
-        price: 1.02,
+        unitPrice: 0.46,
+        lineTotal: 1.02,
       },
       {
-        index: 2,
-        printed: 'DEVILED EGG',
-        code: '078742213510',
-        price: 4.96,
+        index: 1,
+        rawText: 'DEVILED EGG 078742213510 F 4.96',
+        kind: 'item',
+        product: 'DEVILED EGG',
       },
-      {
-        index: 3,
-        printed: 'PRG CHED SC',
-        code: '038000138970',
-        quantity: 1,
-      },
-    ]);
-  });
-
-  it('keeps the price of the only item, which is the subtotal', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant('Walmart'),
-      lines: [
-        line({
-          text: 'GV WHOLE MILK 007874235186 F 3.48 N',
-          kind: ReceiptLineKind.Item,
-          product: 'GV WHOLE MILK',
-          amount: 3.48,
-        }),
-        line({
-          text: 'SUBTOTAL 3.48',
-          kind: ReceiptLineKind.Subtotal,
-          amount: 3.48,
-        }),
-      ],
-    });
-
-    expect(parsed.lines[0]?.lineTotal).toBe(3.48);
-  });
-
-  it('keeps an item price its own line prints, though it is the subtotal', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant(null),
-      lines: [
-        line({
-          text: 'COFFEE  9.99',
-          kind: ReceiptLineKind.Item,
-          product: 'COFFEE',
-          amount: 9.99,
-        }),
-        line({
-          text: 'MUG  0.00',
-          kind: ReceiptLineKind.Item,
-          product: 'MUG',
-          amount: 0,
-        }),
-        line({
-          text: 'SUBTOTAL 9.99',
-          kind: ReceiptLineKind.Subtotal,
-          amount: 9.99,
-        }),
-      ],
-    });
-
-    expect(parsed.lines[0]?.lineTotal).toBe(9.99);
-  });
-
-  it('folds two detail lines into the item, never one into the other', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant(null),
-      lines: [
-        line({
-          text: 'BANANAS',
-          kind: ReceiptLineKind.Item,
-          product: 'BANANAS',
-        }),
-        line({
-          text: '2.21 lb @ 0.46',
-          kind: ReceiptLineKind.Item,
-          quantity: 2.21,
-          unit: 'lb',
-          unitPrice: 0.46,
-        }),
-        line({
-          text: '1 @ 1.02',
-          kind: ReceiptLineKind.Item,
-          quantity: 1,
-          unitPrice: 1.02,
-          amount: 1.02,
-        }),
-      ],
-    });
-
-    expect(receiptReviewLines(parsed)).toEqual([
-      {
-        index: 0,
-        printed: 'BANANAS',
-        quantity: 2.21,
-        unit: 'lb',
-        price: 1.02,
-      },
-    ]);
-    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
-    expect(parsed.lines[2]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
-  });
-
-  // The server gives every item a quantity; only a printed one is a detail's.
-  it('keeps items with short or non-Latin names as items of their own', () => {
-    const parsed = fromServerReceipt({
-      merchant: merchant('MARKET'),
-      lines: [
-        line({
-          text: 'BUKË 1.20',
-          kind: ReceiptLineKind.Item,
-          product: 'BUKË',
-          quantity: 1,
-          amount: 1.2,
-        }),
-        line({
-          text: 'UJË 0.50',
-          kind: ReceiptLineKind.Item,
-          product: 'UJË',
-          quantity: 1,
-          amount: 0.5,
-        }),
-        line({
-          text: 'OJ 2.99',
-          kind: ReceiptLineKind.Item,
-          product: 'OJ',
-          quantity: 1,
-          amount: 2.99,
-        }),
-        line({
-          text: 'МОЛОКО 2 x 1.20 2.40',
-          kind: ReceiptLineKind.Item,
-          product: 'МОЛОКО',
-          quantity: 2,
-          unitPrice: 1.2,
-          amount: 2.4,
-        }),
-      ],
-    });
-
-    expect(receiptReviewLines(parsed)).toEqual([
-      { index: 0, printed: 'BUKË', quantity: 1, price: 1.2 },
-      { index: 1, printed: 'UJË', quantity: 1, price: 0.5 },
-      { index: 2, printed: 'OJ', quantity: 1, price: 2.99 },
-      { index: 3, printed: 'МОЛОКО', quantity: 2, price: 2.4 },
     ]);
   });
 
