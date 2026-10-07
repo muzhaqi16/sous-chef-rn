@@ -9461,8 +9461,10 @@ A count of packages, each holding `size`. Counted stock (pieces, jars) takes the
 count in its own unit, with the size recorded on the batch. Stock counted by
 weight or volume takes count × size, converted into its unit through recorded
 facts only: directly within a dimension, across one only through a recorded
-density or the item's own conversion. With no size, or one that cannot be
-converted, a move or restock is refused on `amount.packages.size`.
+density or the item's own conversion. A size that cannot be converted is
+refused on `amount.packages.size`. With no size, a create or a move counts the
+packages in a counted stack of the item instead; a restock's stack is fixed,
+so it is refused there.
 """
 input PackagesInput {
   """Whole packages; greater than zero."""
@@ -9471,8 +9473,8 @@ input PackagesInput {
   One package's net content. Omitted: the list line's stated size, else the
   item's own PACKAGE size when the item is one pack (a product holding one
   barcode), else, on a move, the list line's own amount as one package. A
-  size the catalog only infers is never used. With none, a create counts the
-  packages in a counted stack; a move or restock is refused.
+  size the catalog only infers is never used. With none, a create or a move
+  counts the packages in a counted stack of the item; a restock is refused.
   """
   size: PackageSizeInput
   """
@@ -10591,7 +10593,8 @@ type ParsedReceiptLine {
   """
   On a DISCOUNT: the index in lines of the ITEM it reduces. A discount
   printed among the items always names one; one printed after the subtotal
-  may name none, and reduces the order.
+  may name none, and reduces the order. On an OTHER detail line folded into
+  its item (a weight or count line such as "2.21 lb @ 0.46"): that ITEM.
   """
   appliesTo: Int
   """The printed article or barcode number"""
