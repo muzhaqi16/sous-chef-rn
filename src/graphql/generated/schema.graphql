@@ -10581,8 +10581,13 @@ type ParsedReceipt {
   lines: [ParsedReceiptLine!]!
   merchant: ParsedReceiptMerchant!
   purchasedOn: LocalDate
+  """
+  The amount of the receipt's last printed SUBTOTAL line; null when it prints none
+  """
   subtotal: Float
+  """Its printed TAX lines added up; null when it prints none"""
   tax: Float
+  """The amount of its last printed TOTAL line; null when it prints none"""
   total: Float
 }
 
