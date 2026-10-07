@@ -92,7 +92,11 @@ class TextRecognitionModule: NSObject {
         reject("receipt_pages_unreadable", "The pages could be neither read nor prepared", nil)
         return
       }
-      resolve(["pages": pages ?? NSNull(), "photos": photos ?? NSNull()])
+      let read: [String: Any] = [
+        "pages": pages.map { $0 as Any } ?? NSNull(),
+        "photos": photos.map { $0 as Any } ?? NSNull(),
+      ]
+      resolve(read)
     }
   }
 
