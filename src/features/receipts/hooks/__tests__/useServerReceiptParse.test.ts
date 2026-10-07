@@ -365,6 +365,7 @@ describe('useServerReceiptParse', () => {
     const asked = useReceiptDraftStore.getState().draft?.serverParse;
     expect(asked).toEqual({
       id: expect.any(String),
+      via: 'text',
       state: 'limited',
       retryAt: new Date(Date.now() + 3_600_000).toISOString(),
     });
@@ -391,6 +392,115 @@ describe('useServerReceiptParse', () => {
     expect(third.result.current.readingStatus).toBe('reading');
   });
 
+  describe('a receipt with its text and its photos', () => {
+    const PHOTOS = ['receipt-photos/u1/p1.jpg', 'receipt-photos/u1/p2.jpg'];
+
+    // The photos fail as `photoStatus`; the text is accepted and read later.
+    const photosThenText = (photoStatus: ReceiptParseStatus) =>
+      recordMock(CreateReceiptParseDocument, {
+        dataFor: (vars): MockDataFor<typeof CreateReceiptParseDocument> => {
+          const input = inputOf(vars);
+          return {
+            createReceiptParse: {
+              __typename: 'CreateReceiptParsePayload',
+              receiptParse: {
+                id: String(input.id),
+                status:
+                  'photos' in input ? photoStatus : ReceiptParseStatus.Pending,
+                warnings: [],
+                receipt: null,
+              },
+            },
+          };
+        },
+      });
+
+    it('sends the photos first', async () => {
+      seedMilkDraft({ photoKeys: PHOTOS });
+      const create = created(ReceiptParseStatus.Pending);
+      render([create.mock]);
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(create.fired[0]).toEqual({
+        input: {
+          id: expect.any(String),
+          photos: PHOTOS,
+          locale: expect.any(String),
+        },
+      });
+      expect(useReceiptDraftStore.getState().draft?.serverParse).toEqual({
+        id: expect.any(String),
+        via: 'photos',
+        state: 'pending',
+      });
+    });
+
+    it('sends the text, as a new parse, once the server fails the photos', async () => {
+      seedMilkDraft({ photoKeys: PHOTOS });
+      const create = photosThenText(ReceiptParseStatus.Failed);
+      const { result } = render([create.mock]);
+
+      await waitFor(() => expect(create.fired).toHaveLength(2));
+      const [photos, text] = create.fired.map(inputOf);
+      expect(photos).toEqual(expect.objectContaining({ photos: PHOTOS }));
+      expect(text).toEqual(
+        expect.objectContaining({ pages: PAGES, id: expect.any(String) }),
+      );
+      expect(text?.id).not.toBe(photos?.id);
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toBeUndefined();
+      expect(result.current.readingStatus).toBe('reading');
+    });
+
+    it('sends the text once the daily limit lets it, never the spent photos', async () => {
+      seedMilkDraft({ photoKeys: PHOTOS });
+      const { result, unmount } = render([overTheLimit(3600)]);
+      await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
+      const photoParse = useReceiptDraftStore.getState().draft?.serverParse;
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toBeUndefined();
+      unmount();
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(3_600_000);
+      });
+      const later = created(ReceiptParseStatus.Pending);
+      render([later.mock]);
+
+      await waitFor(() => expect(later.fired).toHaveLength(1));
+      const [input] = later.fired.map(inputOf);
+      expect(input).toEqual(expect.objectContaining({ pages: PAGES }));
+      expect(input?.id).not.toBe(photoParse?.id);
+    });
+
+    it('keeps waiting on a slow photo parse, and says it can take a minute', async () => {
+      seedMilkDraft({ photoKeys: PHOTOS });
+      const create = created(ReceiptParseStatus.Pending);
+      const stillReading = recordMock(ReceiptParseDocument, {
+        dataFor: vars => ({
+          receiptParse: {
+            id: String(vars.id),
+            status: ReceiptParseStatus.Pending,
+            warnings: [],
+            receipt: null,
+          },
+        }),
+      });
+      const { result } = render([create.mock, stillReading.mock]);
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(result.current.slowPhotoRead).toBe(false);
+
+      await waitFor(() => expect(stillReading.fired).toHaveLength(1));
+      for (let second = 0; second < 45; second += 1) {
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(1000);
+        });
+      }
+
+      expect(result.current.readingStatus).toBe('reading');
+      expect(result.current.slowPhotoRead).toBe(true);
+      expect(create.fired).toHaveLength(1);
+    });
+  });
+
   it('stops at a limit that names no wait, as when no worker runs', async () => {
     seedMilkDraft();
     const { result } = render([overTheLimit()]);
@@ -411,6 +521,7 @@ describe('useServerReceiptParse', () => {
     expect(result.current.readingStatus).toBe('reading');
     expect(useReceiptDraftStore.getState().draft?.serverParse).toEqual({
       id: expect.any(String),
+      via: 'text',
       state: 'pending',
     });
   });
@@ -557,7 +668,9 @@ describe('useServerReceiptParse', () => {
   });
 
   it('sends a parse already asked for again with its own id', async () => {
-    seedMilkDraft({ serverParse: { id: 'parse-1', state: 'pending' } });
+    seedMilkDraft({
+      serverParse: { id: 'parse-1', via: 'text', state: 'pending' },
+    });
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 

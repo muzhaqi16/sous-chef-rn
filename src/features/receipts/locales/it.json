@@ -21,6 +21,7 @@
       "review_one": "Rivedi {{count}} articolo",
       "review_other": "Rivedi {{count}} articoli",
       "reading": "Individuo i prodotti…",
+      "readingPhotosSlow": "La lettura delle foto può richiedere fino a un minuto…",
       "offline": "Sei offline. I prodotti verranno individuati quando tornerai online.",
       "retryLaterTitle": "Non è stato ancora possibile individuare i prodotti",
       "retryLaterBody": "Il testo è conservato. I prodotti verranno individuati la prossima volta che apri questo scontrino.",
@@ -105,6 +106,17 @@
       "dontSend": "Non inviare",
       "offline": "Connettiti a internet per inviare la foto.",
       "sending": "Invio della foto…"
+    },
+    "photoConsent": {
+      "title": "Leggere gli scontrini dalle foto?",
+      "body": "{{appName}} legge uno scontrino in modo più preciso dalla sua foto che dal testo riconosciuto dal telefono. Con il tuo consenso, le foto di ogni scontrino vengono inviate al server di {{appName}} per essere lette e poi eliminate.\n\nMentre una foto viene letta, il server vede l'intero scontrino. I numeri di carta e fedeltà vengono rimossi dal testo che viene conservato.",
+      "hint": "Scegli «Solo testo» per continuare a leggere gli scontrini dal testo del telefono. Puoi cambiarlo nelle Impostazioni dell'app.",
+      "send": "Invia le foto",
+      "textOnly": "Solo testo"
+    },
+    "photoSetting": {
+      "title": "Invia le foto degli scontrini da leggere",
+      "description": "Gli scontrini si leggono in modo più preciso dalle foto. Le foto vengono eliminate dopo la lettura."
     }
   }
 }

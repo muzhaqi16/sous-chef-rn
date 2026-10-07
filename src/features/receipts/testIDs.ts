@@ -9,6 +9,8 @@ export const receiptsTestIDs = {
   savedReading: 'receipt-scan-saved-reading',
   /** The ask to send a receipt the phone could not read as photos. */
   photoSend: 'receipt-photo-send',
+  /** The one-time ask whether receipts may be read from their photos. */
+  photoConsent: 'receipt-photo-consent',
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
   reviewTotalsGap: 'receipt-review-totals-gap',

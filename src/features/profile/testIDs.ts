@@ -17,6 +17,7 @@ export const profileTestIDs = {
   settingsAutoSyncSwitch: 'settings-auto-sync-switch',
   settingsOfflineModeSwitch: 'settings-offline-mode-switch',
   settingsShowTutorialsSwitch: 'settings-show-tutorials-switch',
+  settingsReceiptPhotosSwitch: 'settings-receipt-photos-switch',
   settingsHapticFeedbackSwitch: 'settings-haptic-feedback-switch',
   settingsNavigationLabelsSwitch: 'settings-navigation-labels-switch',
   settingsShowShoppingListImagesSwitch:

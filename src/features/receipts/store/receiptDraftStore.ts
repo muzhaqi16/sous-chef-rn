@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
+import { isRecord } from '#/utils/isRecord';
 import type { ParsedReceipt } from '../utils/parsedReceipt';
 import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
 
@@ -25,14 +26,18 @@ export interface ReceiptLineChoice {
  * The server's reading of a receipt the phone could not structure. `id` is
  * minted before it is asked for, so a resend returns the same parse.
  */
-export type ServerReceiptParse =
+export type ServerReceiptParse = {
+  id: string;
+  /** What was sent: the receipt's photos, or its text. */
+  via: 'photos' | 'text';
+} & (
   | {
-      id: string;
       /** `tooLong`: refused for its size, which a resend would only repeat. */
       state: 'pending' | 'unavailable' | 'failed' | 'unreadable' | 'tooLong';
     }
   /** Over the daily allowance: asked again on a visit after `retryAt`. */
-  | { id: string; state: 'limited'; retryAt: string };
+  | { state: 'limited'; retryAt: string }
+);
 
 /** The shop as the server's parse read it: what places or proposes a store. */
 export interface PrintedStore {
@@ -52,11 +57,15 @@ export type ServerParseOutcome =
     };
 
 export interface ReceiptDraft {
-  /** Each page's redacted text, in scan order; never an image. */
+  /**
+   * Each page's redacted text, in scan order: the fallback when the photos
+   * cannot be read. Empty only when the phone could not read the pages.
+   */
   pages: string[];
   /**
-   * The upload keys of photos sent for the server to read, from a phone that
-   * could not read the text: `pages` is empty. The server deletes the photos.
+   * The upload keys of the receipt's photos, for the server to read. A photo
+   * parse spends them, so one that ends without a reading drops them and the
+   * text is sent instead. The server deletes the photos.
    */
   photoKeys?: string[];
   scannedAt: string;
@@ -95,10 +104,16 @@ interface ReceiptDraftState {
   /** The store, as the user corrected it. */
   chooseStore: (store: { id: string; name: string }) => void;
   /**
-   * Records that server parse `id` was asked for, if nothing read the draft
-   * yet, or asked again after the daily allowance turned it away.
+   * The upload keys of the photos of the draft scanned at `scannedAt`, before
+   * it is asked for. An upload that outlives its draft records nothing.
    */
-  askServerParse: (id: string) => void;
+  recordPhotoKeys: (scannedAt: string, keys: string[]) => void;
+  /**
+   * Records that server parse `id` was asked for, of the photos or the text, if
+   * nothing read the draft yet, or asked again after the daily allowance
+   * turned it away.
+   */
+  askServerParse: (id: string, via: ServerReceiptParse['via']) => void;
   /**
    * Records what became of server parse `id`, or when the daily allowance lets
    * it be asked again. Ignored once the draft has moved on.
@@ -111,6 +126,20 @@ interface ReceiptDraftState {
 }
 
 const PERSIST_KEY = 'sous-chef-receipt-draft';
+
+// v1 parses carry no `via`: a draft with photo keys sent them.
+const migrateDraft = (persisted: unknown, version: number): unknown => {
+  if (version >= 2 || !isRecord(persisted) || !isRecord(persisted.draft)) {
+    return persisted;
+  }
+  const { draft } = persisted;
+  if (!isRecord(draft.serverParse)) return persisted;
+  const via = Array.isArray(draft.photoKeys) ? 'photos' : 'text';
+  return {
+    ...persisted,
+    draft: { ...draft, serverParse: { ...draft.serverParse, via } },
+  };
+};
 
 /** The one receipt waiting to be matched; persisted so a scan made offline survives a restart. */
 export const useReceiptDraftStore = create<ReceiptDraftState>()(
@@ -146,26 +175,47 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
         ),
       chooseStore: store =>
         set(({ draft }) => (draft ? { draft: { ...draft, store } } : {})),
-      askServerParse: id =>
+      recordPhotoKeys: (scannedAt, keys) =>
+        set(({ draft }) =>
+          draft?.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
+            ? { draft: { ...draft, photoKeys: keys } }
+            : {},
+        ),
+      askServerParse: (id, via) =>
         set(({ draft }) =>
           draft &&
           !draft.parsed &&
           (!draft.serverParse || draft.serverParse.state === 'limited')
-            ? { draft: { ...draft, serverParse: { id, state: 'pending' } } }
+            ? {
+                draft: {
+                  ...draft,
+                  serverParse: { id, via, state: 'pending' },
+                },
+              }
             : {},
         ),
       settleServerParse: (id, outcome) =>
         set(({ draft }) => {
           if (draft?.serverParse?.id !== id) return {};
+          const { via } = draft.serverParse;
+          // The photos are spent: a receipt with text is read from it instead.
+          const { photoKeys: _spent, ...withoutPhotos } = draft;
+          const fallsBackToText = via === 'photos' && draft.pages.length > 0;
           if (typeof outcome === 'string') {
-            return { draft: { ...draft, serverParse: { id, state: outcome } } };
+            if (fallsBackToText) {
+              const { serverParse: _photoParse, ...rest } = withoutPhotos;
+              return { draft: rest };
+            }
+            return {
+              draft: { ...draft, serverParse: { id, via, state: outcome } },
+            };
           }
           if ('retryAt' in outcome) {
             const { retryAt } = outcome;
             return {
               draft: {
-                ...draft,
-                serverParse: { id, state: 'limited', retryAt },
+                ...(fallsBackToText ? withoutPhotos : draft),
+                serverParse: { id, via, state: 'limited', retryAt },
               },
             };
           }
@@ -190,8 +240,9 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
+      version: 2,
       partialize: state => ({ draft: state.draft }),
+      migrate: migrateDraft,
     },
   ),
 );

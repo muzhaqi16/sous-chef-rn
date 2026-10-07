@@ -86,6 +86,7 @@ export const ReceiptScanScreen: React.FC = () => {
   const { goBack, toReceiptReview } = useAppNavigation();
   const {
     status,
+    answerConsent,
     draft,
     pickedFromLibrary,
     canSendPhotos,
@@ -97,7 +98,7 @@ export const ReceiptScanScreen: React.FC = () => {
     discard,
   } = useReceiptScan({ onCancel: goBack });
   // Only once the phone has had its go at the receipt.
-  const { readingStatus, retryAt } = useServerReceiptParse({
+  const { readingStatus, retryAt, slowPhotoRead } = useServerReceiptParse({
     enabled: status === 'saved',
   });
 
@@ -173,7 +174,11 @@ export const ReceiptScanScreen: React.FC = () => {
           {readingStatus === 'reading' && (
             <Loading
               size="small"
-              message={t('receipts.saved.reading')}
+              message={
+                slowPhotoRead
+                  ? t('receipts.saved.readingPhotosSlow')
+                  : t('receipts.saved.reading')
+              }
               testID={receiptsTestIDs.savedReading}
             />
           )}
@@ -224,6 +229,29 @@ export const ReceiptScanScreen: React.FC = () => {
               onPress: startPick,
               icon: 'images-outline',
             }}
+          />
+        );
+      case 'consent':
+        return (
+          <EmptyState
+            icon="cloud-upload-outline"
+            title={t('receipts.photoConsent.title')}
+            description={t('receipts.photoConsent.body')}
+            hint={t('receipts.photoConsent.hint')}
+            action={{
+              label: t('receipts.photoConsent.send'),
+              onPress: () => {
+                void answerConsent('granted');
+              },
+              icon: 'cloud-upload-outline',
+            }}
+            secondaryAction={{
+              label: t('receipts.photoConsent.textOnly'),
+              onPress: () => {
+                void answerConsent('declined');
+              },
+            }}
+            testID={receiptsTestIDs.photoConsent}
           />
         );
       case 'readFailed':

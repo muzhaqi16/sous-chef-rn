@@ -24,6 +24,9 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   // src/features/receipts/store/receiptDraftStore.ts — a scanned receipt's
   // redacted text names the shop and what was bought.
   'sous-chef-receipt-draft',
+  // src/features/receipts/store/receiptPhotoConsentStore.ts — whether this
+  // user lets receipt photos be sent; the next user answers for themselves.
+  'sous-chef-receipt-photo-consent',
 ];
 
 /**

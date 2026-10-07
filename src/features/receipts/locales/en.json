@@ -21,6 +21,7 @@
       "review_one": "Review {{count}} item",
       "review_other": "Review {{count}} items",
       "reading": "Picking out the items…",
+      "readingPhotosSlow": "Reading the photos can take up to a minute…",
       "offline": "You're offline. The items will be picked out when you're back online.",
       "retryLaterTitle": "Couldn't pick out the items yet",
       "retryLaterBody": "The text is kept. The items will be picked out the next time you open this receipt.",
@@ -105,6 +106,17 @@
       "dontSend": "Don't send",
       "offline": "Connect to the internet to send the photo.",
       "sending": "Sending the photo…"
+    },
+    "photoConsent": {
+      "title": "Read receipts from their photos?",
+      "body": "{{appName}} reads a receipt more accurately from its photo than from the text your phone picks out. With your OK, each receipt's photos go to {{appName}}'s server to be read, then are deleted.\n\nWhile a photo is read, the server sees the whole receipt. Card and loyalty numbers are removed from the text that's kept.",
+      "hint": "Choose “Use text only” to keep reading receipts from your phone's text. You can change this in App Settings.",
+      "send": "Send photos",
+      "textOnly": "Use text only"
+    },
+    "photoSetting": {
+      "title": "Send receipt photos to be read",
+      "description": "Receipts are read more accurately from their photos. Photos are deleted once read."
     }
   }
 }

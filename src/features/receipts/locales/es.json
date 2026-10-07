@@ -21,6 +21,7 @@
       "review_one": "Revisar {{count}} artículo",
       "review_other": "Revisar {{count}} artículos",
       "reading": "Identificando los productos…",
+      "readingPhotosSlow": "Leer las fotos puede tardar hasta un minuto…",
       "offline": "Estás sin conexión. Los productos se identificarán cuando vuelvas a estar en línea.",
       "retryLaterTitle": "Aún no se pudieron identificar los productos",
       "retryLaterBody": "El texto se guarda. Los productos se identificarán la próxima vez que abras este recibo.",
@@ -105,6 +106,17 @@
       "dontSend": "No enviar",
       "offline": "Conéctate a internet para enviar la foto.",
       "sending": "Enviando la foto…"
+    },
+    "photoConsent": {
+      "title": "¿Leer los recibos a partir de sus fotos?",
+      "body": "{{appName}} lee un recibo con más precisión a partir de su foto que del texto que reconoce tu teléfono. Con tu permiso, las fotos de cada recibo se envían al servidor de {{appName}} para leerlas y después se eliminan.\n\nMientras se lee una foto, el servidor ve el recibo completo. Los números de tarjeta y de fidelización se eliminan del texto que se guarda.",
+      "hint": "Elige «Solo texto» para seguir leyendo los recibos a partir del texto de tu teléfono. Puedes cambiarlo en Ajustes de la app.",
+      "send": "Enviar fotos",
+      "textOnly": "Solo texto"
+    },
+    "photoSetting": {
+      "title": "Enviar fotos de los recibos para leerlas",
+      "description": "Los recibos se leen con más precisión a partir de sus fotos. Las fotos se eliminan una vez leídas."
     }
   }
 }

@@ -32,6 +32,7 @@ const POLL_MS = 2500;
 // An ask that got no verdict is resent after a poll, then two, then four;
 // after the last, it is sent again on the next visit.
 const RESENDS_PER_VISIT = 3;
+const SLOW_PHOTO_READ_MS = 15_000;
 
 /** What the saved screen says about the server's reading. */
 export type ServerReadingStatus =
@@ -95,12 +96,17 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     if (asked?.state === 'limited' && Date.now() < Date.parse(asked.retryAt)) {
       return;
     }
-    const id = draft.serverParse?.id ?? generateEntityId();
+    // The photos while they are unspent, else the text.
+    const via = draft.photoKeys ? 'photos' : 'text';
+    // A parse id names what it read: the text after the photos is a new parse.
+    const id =
+      draft.serverParse?.via === via
+        ? draft.serverParse.id
+        : generateEntityId();
     if (sent.current === id) return;
     sent.current = id;
-    askServerParse(id);
+    askServerParse(id, via);
     const locale = getDeviceLocale();
-    // The text, or the photos of a receipt the phone could not read.
     const content = draft.photoKeys
       ? { photos: draft.photoKeys }
       : { pages: draft.pages };
@@ -168,6 +174,14 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   ]);
 
   const polled = polling && asked?.id === polling && asked.state === 'pending';
+  // A photo parse makes two model calls: a long receipt's can take a minute.
+  const readingPhotos = !!polled && asked.via === 'photos';
+  const [slowFor, setSlowFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!readingPhotos) return;
+    const timer = setTimeout(() => setSlowFor(polling), SLOW_PHOTO_READ_MS);
+    return () => clearTimeout(timer);
+  }, [readingPhotos, polling]);
   const { data } = useQuery(
     ReceiptParseDocument,
     polled
@@ -213,6 +227,8 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
 
   return {
     readingStatus: readingStatus(),
+    /** A photo parse has run long enough to say it can take a minute. */
+    slowPhotoRead: readingPhotos && slowFor === polling,
     /** When a receipt over the daily allowance is read on the next visit. */
     retryAt: asked?.state === 'limited' ? new Date(asked.retryAt) : undefined,
   };

@@ -21,6 +21,7 @@
       "review_one": "Shqyrto {{count}} artikull",
       "review_other": "Shqyrto {{count}} artikuj",
       "reading": "Po dallohen produktet…",
+      "readingPhotosSlow": "Leximi i fotove mund të zgjasë deri në një minutë…",
       "offline": "Je jashtë linje. Produktet do të dallohen kur të jesh sërish në linjë.",
       "retryLaterTitle": "Produktet nuk u dalluan ende",
       "retryLaterBody": "Teksti ruhet. Produktet do të dallohen herën tjetër që e hap këtë faturë.",
@@ -105,6 +106,17 @@
       "dontSend": "Mos e dërgo",
       "offline": "Lidhu me internetin për të dërguar foton.",
       "sending": "Po dërgohet fotoja…"
+    },
+    "photoConsent": {
+      "title": "Të lexohen faturat nga fotot e tyre?",
+      "body": "{{appName}} e lexon një faturë më saktë nga fotoja e saj sesa nga teksti që nxjerr telefoni yt. Me pëlqimin tënd, fotot e çdo fature dërgohen në serverin e {{appName}} për t’u lexuar dhe pastaj fshihen.\n\nNdërsa lexohet një foto, serveri e sheh të gjithë faturën. Numrat e kartës dhe të besnikërisë hiqen nga teksti që ruhet.",
+      "hint": "Zgjidh “Vetëm tekst” për të vazhduar leximin e faturave nga teksti i telefonit. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "send": "Dërgo fotot",
+      "textOnly": "Vetëm tekst"
+    },
+    "photoSetting": {
+      "title": "Dërgo fotot e faturave për t’u lexuar",
+      "description": "Faturat lexohen më saktë nga fotot e tyre. Fotot fshihen pasi lexohen."
     }
   }
 }

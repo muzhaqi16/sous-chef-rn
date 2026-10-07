@@ -16,12 +16,14 @@ import { toDateKey } from '#/utils/dateUtils';
 import * as deviceLocale from '#/utils/deviceLocale';
 import { useStore } from '#store';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
+import { useReceiptPhotoConsentStore } from '../../store/receiptPhotoConsentStore';
 import { useReceiptScan } from '../useReceiptScan';
 
 jest.mock('#/storage/mmkv');
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: {
     recognizeAndDelete: jest.fn(),
+    recognizeAndPrepare: jest.fn(),
     preparePhotos: jest.fn(),
     deletePhotos: jest.fn(),
   },
@@ -44,6 +46,7 @@ jest.mock('#/native/ReceiptStructuring', () => ({
 
 const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
+const recognizeAndPrepare = jest.mocked(TextRecognition.recognizeAndPrepare);
 const preparePhotos = jest.mocked(TextRecognition.preparePhotos);
 const deletePhotos = jest.mocked(TextRecognition.deletePhotos);
 const availability = jest.mocked(ReceiptStructuring.availability);
@@ -83,6 +86,8 @@ beforeEach(() => {
   dateOrder.mockReturnValue('monthFirst');
   deletePhotos.mockResolvedValue(undefined);
   useStore.setState({ isOnline: true });
+  // Today's text path, unless a test says otherwise.
+  useReceiptPhotoConsentStore.setState({ consent: 'declined' });
 });
 
 const scannedOnePage = () => {
@@ -390,6 +395,169 @@ describe('useReceiptScan', () => {
       unmount();
 
       expect(deletePhotos).toHaveBeenCalledWith(PAGES);
+    });
+  });
+
+  describe('photos first', () => {
+    const PREPARED = (count: number) =>
+      Array.from({ length: count }, (_, at) => ({
+        uri: `file:///prepared-${at}.jpg`,
+        fileSize: 900,
+      }));
+    const uploadsAll = () =>
+      mockUploadUnconfirmed.mockImplementation(async (file: { uri: string }) =>
+        file.uri.replace('file:///prepared', 'receipt-photos/u1/p'),
+      );
+    const scannedPages = (count: number) =>
+      scanDocument.mockResolvedValue({
+        status: ScanDocumentResponseStatus.Success,
+        scannedImages: Array.from(
+          { length: count },
+          (_, at) => `file:///page-${at}.jpg`,
+        ),
+      });
+
+    beforeEach(() => {
+      useReceiptPhotoConsentStore.setState({ consent: 'granted' });
+    });
+
+    it('asks once, online, before the first scan, then scans', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+      expect(result.current.status).toBe('consent');
+      expect(scanDocument).not.toHaveBeenCalled();
+
+      await act(() => result.current.answerConsent('declined'));
+      expect(useReceiptPhotoConsentStore.getState().consent).toBe('declined');
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe('saved');
+
+      await act(() => result.current.scan());
+      expect(scanDocument).toHaveBeenCalledTimes(2);
+    });
+
+    it('scans without asking while offline, from the text', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      useStore.setState({ isOnline: false });
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+      expect(recognizeAndDelete).toHaveBeenCalled();
+      expect(recognizeAndPrepare).not.toHaveBeenCalled();
+      expect(useReceiptPhotoConsentStore.getState().consent).toBeNull();
+    });
+
+    it('sends the photos and keeps the text, with no on-device parse', async () => {
+      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+      scannedPages(2);
+      recognizeAndPrepare.mockResolvedValue({
+        pages: RECEIPT,
+        photos: PREPARED(2),
+      });
+      uploadsAll();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(recognizeAndPrepare).toHaveBeenCalledWith([
+        'file:///page-0.jpg',
+        'file:///page-1.jpg',
+      ]);
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(2);
+      expect(deletePhotos).toHaveBeenCalledWith([
+        'file:///prepared-0.jpg',
+        'file:///prepared-1.jpg',
+      ]);
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.photoKeys).toEqual([
+        'receipt-photos/u1/p-0.jpg',
+        'receipt-photos/u1/p-1.jpg',
+      ]);
+      expect(draft?.pages[0]).toContain('GV WHOLE MILK');
+      expect(draft?.pages[0]).not.toContain('4242');
+      expect(availability).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      turnedOn.restore();
+    });
+
+    it('reads more pages than the server takes as photos from their text', async () => {
+      scannedPages(5);
+      recognizeAndDelete.mockResolvedValue(RECEIPT);
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(recognizeAndPrepare).not.toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toBeUndefined();
+      expect(result.current.status).toBe('saved');
+    });
+
+    it('falls back to the text, parsed on the phone, when a photo does not go up', async () => {
+      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+      scannedPages(1);
+      recognizeAndPrepare.mockResolvedValue({
+        pages: RECEIPT,
+        photos: PREPARED(1),
+      });
+      mockUploadUnconfirmed.mockRejectedValueOnce(new Error('Upload failed'));
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(deletePhotos).toHaveBeenCalledWith(['file:///prepared-0.jpg']);
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.photoKeys).toBeUndefined();
+      expect(draft?.pages[0]).toContain('GV WHOLE MILK');
+      expect(availability).toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      turnedOn.restore();
+    });
+
+    it('sends the photos of pages the phone could not read, without asking', async () => {
+      scannedPages(1);
+      recognizeAndPrepare.mockResolvedValue({
+        pages: null,
+        photos: PREPARED(1),
+      });
+      uploadsAll();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(useReceiptDraftStore.getState().draft).toEqual(
+        expect.objectContaining({
+          pages: [],
+          photoKeys: ['receipt-photos/u1/p-0.jpg'],
+        }),
+      );
+      expect(result.current.status).toBe('saved');
+    });
+
+    it('sends at once the pages of a long receipt the phone could not read', async () => {
+      scannedPages(5);
+      recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
+      preparePhotos.mockResolvedValue(PREPARED(4));
+      uploadsAll();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(preparePhotos).toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toHaveLength(4);
+      expect(result.current.status).toBe('saved');
+    });
+
+    it('forgets the answer at sign-out', () => {
+      resetSessionScopedStores();
+
+      expect(useReceiptPhotoConsentStore.getState().consent).toBeNull();
     });
   });
 
