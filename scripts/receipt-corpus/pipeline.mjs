@@ -9,7 +9,7 @@
  *     node --experimental-transform-types scripts/receipt-corpus/pipeline.mjs \
  *     [corpus-dir] [api-url]
  *
- * The transform flag is for the generated schema enums `serverReceipt.ts`
+ * The transform flag is for the generated schema enums `fromServerReceipt.ts`
  * imports, which Node's type stripping alone rejects.
  *
  * Each account parses at most RECEIPT_PARSE_DAILY_LIMIT (30) receipts a day, so
@@ -44,7 +44,7 @@ const labelsDir = options.labels;
 const outDir = join(labelsDir ?? corpus, 'pipeline');
 mkdirSync(outDir, { recursive: true });
 
-const { fromServerReceipt } = await import(`${UTILS}/serverReceipt.ts`);
+const { fromServerReceipt } = await import(`${UTILS}/fromServerReceipt.ts`);
 const { receiptReviewLines } = await import(`${UTILS}/receiptReviewLines.ts`);
 const { receiptTotalsGap } = await import(`${UTILS}/receiptTotalsGap.ts`);
 const { isUsableReceipt, linesThroughTotal, structureReceipt } = await import(

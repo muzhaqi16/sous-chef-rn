@@ -3,10 +3,12 @@ import {
   ErrorCode,
   ReceiptLineKind,
   ReceiptParseStatus,
+  ReceiptParseWarningCode,
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
-import { classifyCreateResult, fromServerReceipt } from '../serverReceipt';
+import { classifyCreateResult, outcomeOf } from '../serverReceipt';
+import { fromServerReceipt } from '../fromServerReceipt';
 import { receiptReviewLines } from '../receiptReviewLines';
 import { receiptTotalsGap } from '../receiptTotalsGap';
 
@@ -421,6 +423,98 @@ describe('fromServerReceipt', () => {
       { index: 2, printed: 'OJ', quantity: 1, price: 2.99 },
       { index: 3, printed: 'МОЛОКО', quantity: 2, price: 2.4 },
     ]);
+  });
+
+  it('keeps a folded detail line out of the review and never subtracts it', () => {
+    const parsed = fromServerReceipt({
+      merchant: merchant(null),
+      lines: [
+        line({
+          text: 'BANANAS 1.02',
+          kind: ReceiptLineKind.Item,
+          product: 'BANANAS',
+          quantity: 2.21,
+          unit: 'lb',
+          amount: 1.02,
+        }),
+        // As the server folds it: its figures moved onto the item.
+        line({
+          text: '2.21 lb @ 0.46',
+          kind: ReceiptLineKind.Other,
+          appliesTo: 0,
+        }),
+      ],
+    });
+
+    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
+    expect(receiptReviewLines(parsed)).toEqual([
+      { index: 0, printed: 'BANANAS', quantity: 2.21, unit: 'lb', price: 1.02 },
+    ]);
+  });
+
+  it("prices the review's rows to the sum the server counted", () => {
+    const parse: ReceiptParseReadersFragment = {
+      __typename: 'ReceiptParse',
+      id: 'rp-totals',
+      status: ReceiptParseStatus.Parsed,
+      warnings: [
+        {
+          __typename: 'ReceiptParseWarning',
+          code: ReceiptParseWarningCode.TotalsMismatch,
+          counted: 4.05,
+          printed: 4.55,
+        },
+      ],
+      receipt: {
+        __typename: 'ParsedReceipt',
+        purchasedOn: null,
+        merchant: merchant('KROGER'),
+        lines: [
+          line({
+            text: 'KRO WHL MILK 3.29 F',
+            kind: ReceiptLineKind.Item,
+            product: 'KRO WHL MILK',
+            amount: 3.29,
+          }),
+          line({
+            text: 'SC KROGER SAVINGS 0.50-',
+            kind: ReceiptLineKind.Discount,
+            amount: -0.5,
+            appliesTo: 0,
+          }),
+          line({
+            text: 'BANANAS 1.26',
+            kind: ReceiptLineKind.Item,
+            product: 'BANANAS',
+            quantity: 2.14,
+            unit: 'lb',
+            amount: 1.26,
+          }),
+          line({
+            text: '2.14 lb @ 0.59 /lb',
+            kind: ReceiptLineKind.Other,
+            appliesTo: 2,
+          }),
+          line({
+            text: 'SUBTOTAL 4.55',
+            kind: ReceiptLineKind.Subtotal,
+            amount: 4.55,
+          }),
+        ],
+      },
+    };
+
+    const outcome = outcomeOf(parse);
+    const parsed = typeof outcome === 'object' ? outcome.parsed : null;
+    const shownCents = receiptReviewLines(parsed ?? { lines: [] }).reduce(
+      (sum, row) => sum + Math.round((row.price ?? 0) * 100),
+      0,
+    );
+
+    expect(outcome).toMatchObject({
+      totalsGap: { counted: 4.05, printed: 4.55 },
+    });
+    expect(shownCents).toBe(405);
   });
 
   it('leaves out a merchant the server could not name', () => {
