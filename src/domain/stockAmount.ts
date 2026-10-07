@@ -63,8 +63,9 @@ export function boughtAmountOf(
 
 /**
  * The row's amount until the server answers. Packages counted in a named unit,
- * or on a counted line, are that many of it; on a weighed line only the server
- * can turn packages into grams, so the row shows the line's own amount meanwhile.
+ * on a counted line or on a line with no unit are that many of it; on a weighed
+ * line only the server can turn packages into grams, so the row shows the
+ * line's own amount meanwhile.
  */
 export function localQuantity(
   amount: StockAmountInput,
@@ -72,7 +73,7 @@ export function localQuantity(
 ): number {
   if (amount.measured) return amount.measured.quantity;
   const { count, unitId } = amount.packages;
-  return unitId || line.unit?.type === UnitType.Count
+  return unitId || !line.unit || line.unit.type === UnitType.Count
     ? count
     : line.quantity ?? count;
 }

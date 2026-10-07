@@ -124,4 +124,11 @@ describe('localQuantity', () => {
       localQuantity({ packages: { count: 2 } }, { quantity: null, unit: null }),
     ).toBe(2);
   });
+
+  it('shows the count on a line with no unit, as the server counts it', () => {
+    // A receipt's one milk on "Milk 2" lands as 1 in a counted stack.
+    expect(
+      localQuantity({ packages: { count: 1 } }, { quantity: 2, unit: null }),
+    ).toBe(1);
+  });
 });
