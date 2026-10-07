@@ -470,6 +470,13 @@ those repos.
 | Stock writes: `stockAmountOf` / `boughtAmountOf` (`src/domain/stockAmount.ts`), the one create `usePantryIntake` and the one restock `usePantryRestock` | states what was bought through `stockAmount.ts` and writes through those two hooks, never its own mutation; a count naming no unit goes through `boughtAmountOf` |
 | Per-language names and search; the language header; the `languageChanged` resync event                                                                  | adds names as synonyms in their language                                                                                                                         |
 
+**Receipt reading.** The server's reading of a receipt is the one reading: `fromServerReceipt` copies its lines and adds none of its own.
+
+- With the user's one-time consent (`receiptPhotoConsentStore`, session-scoped) and a connection, a scan of up to four pages sends photos (`createReceiptParse { photos }`).
+- `TextRecognition.recognizeAndPrepare` reads the text and prepares those photos from the same full-size pages.
+- The redacted text stays beside the photos as the fallback: offline, a failed upload, or a photo parse that reads nothing. The draft records which one a parse read (`serverParse.via`).
+- The phone's text is scored stage by stage against the corpus answer key by `scripts/receipt-corpus/text-fidelity.mjs`. A recognition or assembly change ships only if no item is lost there.
+
 Four rules keep parallel work apart:
 
 - **A public hook ships with its first production consumer.**
