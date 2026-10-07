@@ -52,14 +52,47 @@ class TextRecognitionModule: NSObject {
         for url in urls {
           let photo = try Self.prepare(url)
           written.append(photo)
-          let size = (try? photo.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-          photos.append(["uri": photo.absoluteString, "fileSize": size])
+          photos.append(Self.describe(photo))
         }
         resolve(photos)
       } catch {
         Self.delete(written)
         reject("photo_preparation_failed", error.localizedDescription, error)
       }
+    }
+  }
+
+  /// Reads every page and prepares each as a photo (`preparePhotos`' rules) from
+  /// the same full-size page, then deletes the pages once. A half that fails
+  /// comes back null; the call fails only when both do.
+  @objc func recognizeAndPrepare(
+    _ imageUris: [String],
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      let urls = imageUris.compactMap(Self.fileURL)
+      let pages = try? urls.map(Self.recognize)
+      var written: [URL] = []
+      var photos: [[String: Any]]? = []
+      do {
+        for url in urls {
+          let photo = try Self.prepare(url)
+          written.append(photo)
+          photos?.append(Self.describe(photo))
+        }
+      } catch {
+        Self.delete(written)
+        written = []
+        photos = nil
+      }
+      Self.delete(urls)
+      Self.sweep(keeping: written)
+      guard pages != nil || photos != nil else {
+        reject("receipt_pages_unreadable", "The pages could be neither read nor prepared", nil)
+        return
+      }
+      resolve(["pages": pages ?? NSNull(), "photos": photos ?? NSNull()])
     }
   }
 
@@ -97,6 +130,11 @@ class TextRecognitionModule: NSObject {
     let photo = caches.appendingPathComponent("\(photoPrefix)\(UUID().uuidString).jpg")
     try data.write(to: photo, options: .atomic)
     return photo
+  }
+
+  private static func describe(_ photo: URL) -> [String: Any] {
+    let size = (try? photo.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+    return ["uri": photo.absoluteString, "fileSize": size]
   }
 
   private static func fileURL(_ uri: String) -> URL? {

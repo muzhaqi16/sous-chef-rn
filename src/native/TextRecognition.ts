@@ -22,7 +22,17 @@ export interface PreparedPhoto {
   fileSize: number;
 }
 
-type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';
+/** A receipt's pages read and prepared in one pass: null for a half that failed. */
+export interface ReadAndPrepared {
+  pages: RecognizedPage[] | null;
+  photos: PreparedPhoto[] | null;
+}
+
+type NativeMethod =
+  | 'recognizeAndDelete'
+  | 'recognizeAndPrepare'
+  | 'preparePhotos'
+  | 'deletePhotos';
 
 // A build older than a method lacks it.
 const call = async (
@@ -78,6 +88,22 @@ export const TextRecognition = {
     imageUris: readonly string[],
   ): Promise<RecognizedPage[]> {
     return parseList(await call('recognizeAndDelete', imageUris), toPage);
+  },
+
+  /**
+   * Recognizes each image and rewrites it for the server to read, from the same
+   * full-size image, then deletes the originals. Rejects only when both fail.
+   */
+  async recognizeAndPrepare(
+    imageUris: readonly string[],
+  ): Promise<ReadAndPrepared> {
+    const result = await call('recognizeAndPrepare', imageUris);
+    const pages = isRecord(result) ? result.pages : null;
+    const photos = isRecord(result) ? result.photos : null;
+    return {
+      pages: Array.isArray(pages) ? parseList(pages, toPage) : null,
+      photos: Array.isArray(photos) ? parseList(photos, toPhoto) : null,
+    };
   },
 
   /** Rewrites each image for the server to read and deletes the originals, whatever the outcome. */

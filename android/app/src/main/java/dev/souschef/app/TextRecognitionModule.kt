@@ -86,12 +86,7 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
         for (uri in uris) {
           val photo = prepare(uri)
           written += photo
-          photos.pushMap(
-            Arguments.createMap().apply {
-              putString("uri", Uri.fromFile(photo).toString())
-              putDouble("fileSize", photo.length().toDouble())
-            },
-          )
+          photos.pushMap(describe(photo))
         }
         promise.resolve(photos)
       } catch (error: Exception) {
@@ -103,11 +98,70 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  /**
+   * Reads every page and prepares each as a photo ([preparePhotos]' rules) from
+   * the same full-size page, then deletes the pages once. A half that fails
+   * comes back null; the call fails only when both do.
+   */
+  @ReactMethod
+  fun recognizeAndPrepare(imageUris: ReadableArray, promise: Promise) {
+    val uris = uriList(imageUris)
+    val canRead = !ocrCrashesHere()
+    executor.execute {
+      val pages =
+        if (!canRead) {
+          null
+        } else {
+          val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+          try {
+            Arguments.createArray().also { read -> for (uri in uris) read.pushMap(recognize(recognizer, uri)) }
+          } catch (error: Exception) {
+            null
+          } finally {
+            recognizer.close()
+          }
+        }
+      val written = mutableListOf<File>()
+      val photos =
+        try {
+          Arguments.createArray().also { prepared ->
+            for (uri in uris) {
+              val photo = prepare(uri)
+              written += photo
+              prepared.pushMap(describe(photo))
+            }
+          }
+        } catch (error: Exception) {
+          written.forEach { it.delete() }
+          written.clear()
+          null
+        }
+      deleteFiles(uris)
+      sweepLeftovers(keeping = written)
+      if (pages == null && photos == null) {
+        promise.reject("receipt_pages_unreadable", "The pages could be neither read nor prepared")
+        return@execute
+      }
+      promise.resolve(
+        Arguments.createMap().apply {
+          if (pages == null) putNull("pages") else putArray("pages", pages)
+          if (photos == null) putNull("photos") else putArray("photos", photos)
+        },
+      )
+    }
+  }
+
   @ReactMethod
   fun deletePhotos(imageUris: ReadableArray, promise: Promise) {
     deleteFiles(uriList(imageUris))
     promise.resolve(null)
   }
+
+  private fun describe(photo: File): WritableMap =
+    Arguments.createMap().apply {
+      putString("uri", Uri.fromFile(photo).toString())
+      putDouble("fileSize", photo.length().toDouble())
+    }
 
   private fun uriList(imageUris: ReadableArray): List<Uri> =
     (0 until imageUris.size()).mapNotNull { imageUris.getString(it) }.map(Uri::parse)
@@ -166,10 +220,12 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
   // A scan the app was killed during leaves its pages in the ML Kit scanner's
   // cache folder, and a photo left unsent stays in the cache; they go with the
   // next read.
-  private fun sweepLeftovers() {
+  private fun sweepLeftovers(keeping: List<File> = emptyList()) {
     val cache = reactApplicationContext.cacheDir
     File(cache, "mlkit_docscan_ui_client").listFiles()?.forEach { it.delete() }
-    cache.listFiles { file -> file.name.startsWith(PHOTO_PREFIX) }?.forEach { it.delete() }
+    cache
+      .listFiles { file -> file.name.startsWith(PHOTO_PREFIX) && file !in keeping }
+      ?.forEach { it.delete() }
   }
 
   private fun recognize(
