@@ -119,6 +119,36 @@ describe('assembleReceiptLines', () => {
     ]);
   });
 
+  // Alexander's and 99 Cents Only, as Vision read them.
+  it('joins a figure split after its decimal mark, never two printed figures', () => {
+    const rows = (texts: string[]): Row[] =>
+      texts.map((text, index) => [text, 0.05, 0.1 + index * 0.05, 0.6, 0.03]);
+
+    expect(
+      assembleReceiptLines([
+        page(
+          rows([
+            'CARROTS . 73',
+            'PEANUTS  1  . 9999',
+            'GARLIC  1 @  , 9999',
+            'TOMATO  4. 94',
+            '04  13.100  $1.999',
+            'LIMES  2 @ 1.99',
+          ]),
+        ),
+      ]),
+    ).toEqual([
+      [
+        'CARROTS .73',
+        'PEANUTS  1  .9999',
+        'GARLIC  1 @  ,9999',
+        'TOMATO  4.94',
+        '04  13.100  $1.999',
+        'LIMES  2 @ 1.99',
+      ],
+    ]);
+  });
+
   it('keeps pages apart and in scan order, and drops blank lines', () => {
     const first = page([['MILK', 0.1, 0.1, 0.3, 0.03]]);
     const second = page([

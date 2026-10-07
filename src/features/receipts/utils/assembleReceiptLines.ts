@@ -128,6 +128,13 @@ const cleanLatin = (text: string) =>
     )
     .replace(NOISE_AFTER_FIGURE, '$1');
 
+// Recognition can split a figure after its decimal mark (`. 73`, `, 9999`). A
+// space before the mark parts two printed figures (`1  . 9999` is a count and
+// a price), so only the space after it goes.
+const SPLIT_FIGURE = /(^|[\s$\d])([.,])\s+(\d{2,4})(?![\d.,])/g;
+
+const joinSplitFigures = (text: string) => text.replace(SPLIT_FIGURE, '$1$2$3');
+
 // A receipt that prints its prices as `$3.49` can read one `$` as an 8
 // (Shop 'n Save's `$1.50` as `81.50`). Only a trailing price is read back.
 const DOLLAR_AMOUNT = /\$\d+[.,]\d{2}/g;
@@ -207,7 +214,7 @@ export function assembleReceiptLines(
     const texts = rows.map(row =>
       row
         .sort((a, b) => a.x - b.x)
-        .map(line => clean(line.text.trim()))
+        .map(line => clean(joinSplitFigures(line.text.trim())))
         .join('  '),
     );
     return printsDollars(texts)

@@ -320,7 +320,7 @@ const sum = (list, key) => list.reduce((total, r) => total + r[key], 0);
 const pct = (a, b) => `${a}/${b} (${b ? Math.round((100 * a) / b) : 0}%)`;
 const results = {};
 for (const variant of variants) {
-  const ocrDir = join(root, variant === 'raw' ? 'ocr' : 'ocr-squared');
+  const ocrDir = join(root, variant === 'raw' ? 'ocr' : `ocr-${variant}`);
   const receipts = [];
   for (const file of readdirSync(join(root, 'gold/gold'))
     .filter(f => f.endsWith('.json'))
