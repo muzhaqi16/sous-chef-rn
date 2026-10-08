@@ -8481,15 +8481,15 @@ type Mutation {
   """Update an existing purchase record."""
   updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
   """
-  Update a recipe the caller owns. Ingredients are managed separately by
-  updateRecipeIngredients. Changing a PUBLISHED recipe's content sends it
-  back to PENDING_REVIEW, hidden from everyone else until an admin approves.
+  Update a recipe the caller owns, its ingredient list (`ingredients`) in
+  the same write. A PUBLISHED recipe stays live: the edit is held as its
+  pending revision until an admin approves it.
   """
   updateRecipe(input: UpdateRecipeInput!): UpdateRecipeResult!
   """
-  Replace a recipe's ingredient list. Separate from updateRecipe because the
-  ingredients are a collection edited as a whole rather than field by field.
-  On a PUBLISHED recipe it sends the recipe back to PENDING_REVIEW.
+  Replace a recipe's ingredient list; updateRecipe takes the list in the same
+  write as the fields. On a PUBLISHED recipe the list is held as its pending
+  revision, and the recipe stays live.
   """
   updateRecipeIngredients(input: UpdateRecipeIngredientsInput!): UpdateRecipeIngredientsResult!
   """Update an existing recipe review (author only)."""
@@ -14490,8 +14490,9 @@ input ShoppingListItemFilters {
   """Filter by purchase status"""
   isPurchased: Boolean
   """
-  Only the lines naming one of these catalog items: a list holds an item on
-  one line at most, so 100 ids fit one page of 100. Empty matches no line.
+  Only the lines naming one of these catalog items, at most 100: a list
+  holds an item on one line at most, so 100 ids fill one page of 100. Empty
+  matches no line.
   """
   itemIds: [ID!]
 }
