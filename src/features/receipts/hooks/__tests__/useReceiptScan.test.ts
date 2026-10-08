@@ -86,7 +86,7 @@ beforeEach(() => {
   dateOrder.mockReturnValue('monthFirst');
   deletePhotos.mockResolvedValue(undefined);
   useStore.setState({ isOnline: true });
-  // Today's text path, unless a test says otherwise.
+  // The text path, unless a test says otherwise.
   useReceiptPhotoConsentStore.setState({ consent: 'declined' });
 });
 
@@ -399,7 +399,7 @@ describe('useReceiptScan', () => {
   });
 
   describe('photos first', () => {
-    const PREPARED = (count: number) =>
+    const prepared = (count: number) =>
       Array.from({ length: count }, (_, at) => ({
         uri: `file:///prepared-${at}.jpg`,
         fileSize: 900,
@@ -484,7 +484,7 @@ describe('useReceiptScan', () => {
       scannedPages(2);
       recognizeAndPrepare.mockResolvedValue({
         pages: RECEIPT,
-        photos: PREPARED(2),
+        photos: prepared(2),
       });
       uploadsAll();
       const { result } = renderScan();
@@ -530,7 +530,7 @@ describe('useReceiptScan', () => {
       scannedPages(1);
       recognizeAndPrepare.mockResolvedValue({
         pages: RECEIPT,
-        photos: PREPARED(1),
+        photos: prepared(1),
       });
       mockUploadUnconfirmed.mockRejectedValueOnce(new Error('Upload failed'));
       const { result } = renderScan();
@@ -550,7 +550,7 @@ describe('useReceiptScan', () => {
       scannedPages(1);
       recognizeAndPrepare.mockResolvedValue({
         pages: null,
-        photos: PREPARED(1),
+        photos: prepared(1),
       });
       uploadsAll();
       const { result } = renderScan();
@@ -569,7 +569,7 @@ describe('useReceiptScan', () => {
     it('sends at once the pages of a long receipt the phone could not read', async () => {
       scannedPages(5);
       recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
-      preparePhotos.mockResolvedValue(PREPARED(4));
+      preparePhotos.mockResolvedValue(prepared(4));
       uploadsAll();
       const { result } = renderScan();
 
@@ -578,6 +578,68 @@ describe('useReceiptScan', () => {
       expect(preparePhotos).toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft?.photoKeys).toHaveLength(4);
       expect(result.current.status).toBe('saved');
+    });
+
+    it('keeps the text and records no photos when the screen goes mid-upload', async () => {
+      scannedPages(2);
+      recognizeAndPrepare.mockResolvedValue({
+        pages: RECEIPT,
+        photos: prepared(2),
+      });
+      let upload: (key: string) => void = () => {};
+      mockUploadUnconfirmed.mockImplementationOnce(
+        () =>
+          new Promise<string>(resolve => {
+            upload = resolve;
+          }),
+      );
+      const { result, unmount } = renderScan();
+
+      let scanning: Promise<void> = Promise.resolve();
+      await act(async () => {
+        scanning = result.current.scan();
+      });
+      unmount();
+      upload('receipt-photos/u1/p-0.jpg');
+      await act(() => scanning);
+
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
+      expect(deletePhotos).toHaveBeenCalledWith([
+        'file:///prepared-0.jpg',
+        'file:///prepared-1.jpg',
+      ]);
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.pages[0]).toContain('GV WHOLE MILK');
+      expect(draft?.photoKeys).toBeUndefined();
+    });
+
+    it('fails when the pages can be neither read nor prepared', async () => {
+      scannedPages(1);
+      recognizeAndPrepare.mockRejectedValueOnce(new Error('unreadable'));
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(result.current.status).toBe('failed');
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft).toBeNull();
+    });
+
+    it('reads the text, parsed on the phone, when the photos cannot be prepared', async () => {
+      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+      scannedPages(1);
+      recognizeAndPrepare.mockResolvedValue({ pages: RECEIPT, photos: null });
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.pages[0]).toContain('GV WHOLE MILK');
+      expect(draft?.photoKeys).toBeUndefined();
+      expect(availability).toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      turnedOn.restore();
     });
 
     it('forgets the answer at sign-out', () => {

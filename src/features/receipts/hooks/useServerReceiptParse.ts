@@ -46,8 +46,8 @@ export type ServerReadingStatus =
   | 'limited';
 
 /**
- * Asks the server to read a saved receipt the phone could not structure, and
- * waits for it while the screen is open: never part of the scan itself, which
+ * Asks the server to read a saved receipt the phone did not structure (its
+ * photos first, else its text), and waits for it while the screen is open: never part of the scan itself, which
  * `enabled` marks as finished. An ask that got no verdict is sent again while
  * the screen is open, a few times, then on the next visit; the API answers a
  * resend with the same parse. Offline, nothing is asked until the phone is back

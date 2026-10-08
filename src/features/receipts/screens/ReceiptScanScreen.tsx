@@ -137,7 +137,8 @@ export const ReceiptScanScreen: React.FC = () => {
     const itemCount = draft.parsed
       ? receiptReviewLines(draft.parsed).length
       : 0;
-    // A receipt sent as photos keeps no text until the server reads it.
+    // Photos the server failed to read give way to the receipt's text, so a
+    // photo banner shows only for a receipt with none.
     const sentPhotos = !!draft.photoKeys;
     const readingBanner = (banner: ReadingBanner) => {
       const { title, body } =

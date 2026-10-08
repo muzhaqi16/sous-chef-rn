@@ -17,16 +17,14 @@ import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useIsOnline } from '#store/useAppStore';
 import type { ImageFile } from '#/types/media';
-import { assembleReceiptLines } from '../utils/assembleReceiptLines';
 import { hasItemLines } from '../utils/hasItemLines';
-import { redactReceiptText } from '../utils/redactReceiptText';
+import { MAX_PAGES, MAX_PHOTOS, receiptText } from '../utils/receiptText';
 import { readReceiptDate } from '../utils/receiptDate';
 import { todayKey } from '#/utils/dateUtils';
 import { getDeviceDateOrder } from '#/utils/deviceLocale';
 import type { ParsedReceipt } from '../utils/parsedReceipt';
 import { parseReceiptOnDevice } from '../utils/onDeviceReceiptParser';
 import { forgetReceipt } from '../utils/forgetReceipt';
-import { capPages, MAX_PAGES } from '../utils/capPages';
 import {
   storedReceiptPhotoConsent,
   useReceiptPhotoConsentStore,
@@ -36,9 +34,6 @@ import {
   useReceiptDraftActions,
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
-
-// The most photos the API reads of one receipt.
-const MAX_PHOTOS = 4;
 
 const dropPhotos = (uris: readonly string[]) => {
   if (uris.length === 0) return;
@@ -67,6 +62,9 @@ export type ReceiptScanStatus =
   | 'failed'
   | 'saved';
 
+/** What the one-time consent question was asked for, run once it is answered. */
+type ScanStart = 'scan' | 'photo' | 'pick';
+
 interface UseReceiptScanOptions {
   /** The user closed the scanner without a page, with no receipt saved. */
   onCancel: () => void;
@@ -74,10 +72,10 @@ interface UseReceiptScanOptions {
 
 /**
  * Scan (or, where the phone has no document scanner, photograph) → recognise
- * on device → redact → keep as the draft → structure it with the phone's model
- * where there is one. Only redacted text, and what was read from it, is kept.
- * A phone that cannot read the pages sends them as photos, with consent; they
- * are deleted on the phone either way.
+ * and redact on the phone → keep as the draft. With the user's consent and a
+ * connection the photos go to the server to be read, the text kept beside them
+ * as the fallback; otherwise the phone's model structures the text where there
+ * is one, then the server reads it. No photo stays on the phone.
  */
 export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const draft = useReceiptDraft();
@@ -115,28 +113,30 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   }, []);
 
   // The text of recognised pages as a draft; null when it holds no item lines.
-  const textDraft = (pages: RecognizedPage[]): ReceiptDraft | null => {
-    const lines = assembleReceiptLines(pages);
+  const textDraft = (recognized: RecognizedPage[]): ReceiptDraft | null => {
+    const { assembled, redacted, pages } = receiptText(recognized);
     // Read before redaction: receipts print the day below the payment block,
     // which redaction cuts. Only the day is kept from it.
     const purchasedOn = readReceiptDate(
-      lines.map(page => page.join('\n')),
+      assembled.map(page => page.join('\n')),
       todayKey(),
       getDeviceDateOrder(),
     );
-    const redacted = redactReceiptText(lines);
     if (!hasItemLines(redacted)) return null;
     return {
-      pages: capPages(redacted.map(page => page.join('\n'))),
+      pages,
       scannedAt: new Date().toISOString(),
       ...(purchasedOn ? { purchasedOn } : {}),
     };
   };
 
-  // Saved, then structured with the phone's model where there is one.
-  const keepText = async (next: ReceiptDraft, library: boolean) => {
+  const saveText = (next: ReceiptDraft) => {
     endSaved();
     saveDraft(next);
+  };
+
+  // Structured with the phone's model where there is one.
+  const structureOnDevice = async (next: ReceiptDraft, library: boolean) => {
     let parsed: ParsedReceipt | null = null;
     try {
       parsed = await parseReceiptOnDevice(next.pages);
@@ -150,31 +150,72 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     setStatus('saved');
   };
 
+  // A receipt the server reads from its photos alone.
+  const keepPhotos = (keys: string[], library: boolean) => {
+    endSaved();
+    saveDraft({
+      pages: [],
+      photoKeys: keys,
+      scannedAt: new Date().toISOString(),
+    });
+    setFromLibrary(library);
+    setStatus('saved');
+  };
+
+  // Every photo's key, or null when one did not go up: a receipt is read whole.
+  const uploadAll = async (photos: readonly PreparedPhoto[]) => {
+    const keys: string[] = [];
+    for (const photo of photos) {
+      if (!open.current) return null;
+      let key: string | null = null;
+      try {
+        key = await uploadUnconfirmed(
+          toUpload(photo),
+          ImageUploadPurpose.ReceiptPhoto,
+        );
+      } catch (error) {
+        errorService.reportError(error, { operation: 'Upload receipt photo' });
+      }
+      if (!key) return null;
+      keys.push(key);
+    }
+    return keys;
+  };
+
+  // The prepared files go whatever the outcome.
+  const upload = async (photos: readonly PreparedPhoto[]) => {
+    setStatus('sending');
+    const keys = await uploadAll(photos);
+    dropPhotos(photos.map(photo => photo.uri));
+    return keys;
+  };
+
   // A user who agreed, online: the scan's photos go to the server to be read.
-  const sendsPhotos = async () =>
+  const readsPhotosFirst = async () =>
     isOnline && (await storedReceiptPhotoConsent()) === 'granted';
 
   const readText = async (imageUris: string[], library: boolean) => {
-    let pages: RecognizedPage[];
+    let recognized: RecognizedPage[];
     try {
-      pages = await TextRecognition.recognizeAndDelete(imageUris);
+      recognized = await TextRecognition.recognizeAndDelete(imageUris);
     } catch (error) {
       errorService.reportError(error, { operation: 'Recognise receipt text' });
       unread.current = imageUris;
       // One who agreed to send photos is not asked again.
-      if (await sendsPhotos()) {
+      if (await readsPhotosFirst()) {
         await sendPhotos();
         return;
       }
       setStatus('readFailed');
       return;
     }
-    const next = textDraft(pages);
+    const next = textDraft(recognized);
     if (!next) {
       setStatus('unreadable');
       return;
     }
-    await keepText(next, library);
+    saveText(next);
+    await structureOnDevice(next, library);
   };
 
   // The photos go first; the text, read from the same pages, stands in when
@@ -189,58 +230,31 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       return;
     }
     const next = read.pages ? textDraft(read.pages) : null;
-    const { photos } = read;
-    if (!photos) {
-      if (next) await keepText(next, library);
-      else setStatus(read.pages ? 'unreadable' : 'failed');
-      return;
-    }
     // Kept before the upload, so the text survives one that fails.
-    if (next) {
-      endSaved();
-      saveDraft(next);
-    }
-    setStatus('sending');
-    const keys = await uploadAll(photos);
-    dropPhotos(photos.map(photo => photo.uri));
-    if (!open.current) return;
-    if (keys) {
-      if (next) {
-        recordPhotoKeys(next.scannedAt, keys);
-      } else {
-        endSaved();
-        saveDraft({
-          pages: [],
-          photoKeys: keys,
-          scannedAt: new Date().toISOString(),
-        });
-      }
+    if (next) saveText(next);
+    const keys = read.photos ? await upload(read.photos) : null;
+    if (read.photos && !open.current) return;
+    if (keys && next) {
+      recordPhotoKeys(next.scannedAt, keys);
       setFromLibrary(library);
       setStatus('saved');
-      return;
+    } else if (keys) {
+      keepPhotos(keys, library);
+    } else if (next) {
+      await structureOnDevice(next, library);
+    } else {
+      setStatus(read.pages ? 'unreadable' : 'failed');
     }
-    if (next) await keepText(next, library);
-    else setStatus(read.pages ? 'unreadable' : 'failed');
   };
 
   const readPages = async (imageUris: string[], library = false) => {
     setStatus('reading');
     // More pages than the server reads as photos are read from their text.
-    if (imageUris.length <= MAX_PHOTOS && (await sendsPhotos())) {
+    if (imageUris.length <= MAX_PHOTOS && (await readsPhotosFirst())) {
       await readPhotosFirst(imageUris, library);
       return;
     }
     await readText(imageUris, library);
-  };
-
-  // Asked once, online, before the first scan: what it was asked for runs after.
-  const [asking, setAsking] = useState<'scan' | 'photo' | 'pick' | null>(null);
-  const asksFirst = async (start: 'scan' | 'photo' | 'pick') => {
-    if (!isOnline || (await storedReceiptPhotoConsent()) !== null) {
-      return false;
-    }
-    setAsking(start);
-    return true;
   };
 
   const openScanner = async () => {
@@ -285,16 +299,19 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     await readPhoto(await choosePhoto(), true);
   };
 
-  const scan = async () => {
-    if (!(await asksFirst('scan'))) await openScanner();
+  // Asked once, online, before the first scan: what it was asked for runs after.
+  const [asking, setAsking] = useState<ScanStart | null>(null);
+  const startOf: Record<ScanStart, () => Promise<void>> = {
+    scan: openScanner,
+    photo: capture,
+    pick: choose,
   };
-
-  const takePhoto = async () => {
-    if (!(await asksFirst('photo'))) await capture();
-  };
-
-  const pickPhoto = async () => {
-    if (!(await asksFirst('pick'))) await choose();
+  const begin = async (start: ScanStart) => {
+    if (isOnline && (await storedReceiptPhotoConsent()) === null) {
+      setAsking(start);
+      return;
+    }
+    await startOf[start]();
   };
 
   /** Keeps the answer for later scans, then starts what it was asked for. */
@@ -302,39 +319,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     useReceiptPhotoConsentStore.getState().setConsent(answer);
     const start = asking;
     setAsking(null);
-    switch (start) {
-      case 'scan':
-        await openScanner();
-        return;
-      case 'photo':
-        await capture();
-        return;
-      case 'pick':
-        await choose();
-        return;
-      case null:
-        return;
-    }
-  };
-
-  // Every photo's key, or null when one did not go up: a receipt is read whole.
-  const uploadAll = async (photos: readonly PreparedPhoto[]) => {
-    const keys: string[] = [];
-    for (const photo of photos) {
-      if (!open.current) return null;
-      let key: string | null = null;
-      try {
-        key = await uploadUnconfirmed(
-          toUpload(photo),
-          ImageUploadPurpose.ReceiptPhoto,
-        );
-      } catch (error) {
-        errorService.reportError(error, { operation: 'Upload receipt photo' });
-      }
-      if (!key) return null;
-      keys.push(key);
-    }
-    return keys;
+    if (start) await startOf[start]();
   };
 
   /** Sends the pages the phone could not read for the server to read them. */
@@ -352,21 +337,10 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       setStatus('failed');
       return;
     }
-    const keys = await uploadAll(photos);
-    dropPhotos(photos.map(photo => photo.uri));
+    const keys = await upload(photos);
     if (!open.current) return;
-    if (!keys) {
-      setStatus('failed');
-      return;
-    }
-    endSaved();
-    saveDraft({
-      pages: [],
-      photoKeys: keys,
-      scannedAt: new Date().toISOString(),
-    });
-    setFromLibrary(false);
-    setStatus('saved');
+    if (keys) keepPhotos(keys, false);
+    else setStatus('failed');
   };
 
   /** Deletes the pages the phone could not read, sending nothing. */
@@ -391,9 +365,9 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     pickedFromLibrary: fromLibrary,
     /** Sending the photo needs a connection. */
     canSendPhotos: isOnline,
-    scan,
-    takePhoto,
-    pickPhoto,
+    scan: () => begin('scan'),
+    takePhoto: () => begin('photo'),
+    pickPhoto: () => begin('pick'),
     sendPhotos,
     declinePhotos,
     discard,

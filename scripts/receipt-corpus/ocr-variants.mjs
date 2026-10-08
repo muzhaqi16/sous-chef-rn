@@ -1,10 +1,10 @@
 /**
  * Recognises the corpus photos twice, as taken and squared to the receipt (the
  * document scanner's crop), and builds each receipt's pages from both the way
- * the app does: `assembleReceiptLines` → `redactReceiptText` → the page cap.
+ * the app does (`receiptText`: assembled, redacted, capped).
  * `text-fidelity.mjs` scores both against the answer key.
  *
- *   node --experimental-transform-types scripts/receipt-corpus/ocr-variants.mjs [corpus-root]
+ *   node --experimental-transform-types scripts/receipt-corpus/ocr-variants.mjs <corpus-root>
  *
  * Writes <root>/ocr/, <root>/ocr-squared/, <root>/pages-raw/ and
  * <root>/pages-squared/. The root holds images/<id>.jpg, as build.mjs caches
@@ -13,7 +13,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { register } from 'node:module';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,14 +21,15 @@ register('./resolveAppAliases.mjs', import.meta.url);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UTILS = join(HERE, '../../src/features/receipts/utils');
-const root =
-  process.argv[2] ?? join(homedir(), 'Desktop/muzhaqi16/receipt-corpus');
+const root = process.argv[2];
+if (!root) {
+  console.error(
+    'Usage: node scripts/receipt-corpus/ocr-variants.mjs <corpus-root>',
+  );
+  process.exit(1);
+}
 
-const { assembleReceiptLines } = await import(
-  `${UTILS}/assembleReceiptLines.ts`
-);
-const { redactReceiptText } = await import(`${UTILS}/redactReceiptText.ts`);
-const { capPages } = await import(`${UTILS}/capPages.ts`);
+const { receiptText } = await import(`${UTILS}/receiptText.ts`);
 
 const bin = join(tmpdir(), 'sous-chef-receipt-ocr-bin');
 execFileSync('swiftc', ['-O', join(HERE, 'ocr.swift'), '-o', bin], {
@@ -56,11 +57,7 @@ for (const [variant, flags] of [
   }
   for (const name of readdirSync(ocrDir).filter(n => n.endsWith('.json'))) {
     const page = JSON.parse(readFileSync(join(ocrDir, name), 'utf8'));
-    const pages = capPages(
-      redactReceiptText(assembleReceiptLines([page])).map(lines =>
-        lines.join('\n'),
-      ),
-    );
+    const { pages } = receiptText([page]);
     writeFileSync(
       join(pagesDir, name),
       `${JSON.stringify({ pages, squared: page.squared ?? null }, null, 2)}\n`,

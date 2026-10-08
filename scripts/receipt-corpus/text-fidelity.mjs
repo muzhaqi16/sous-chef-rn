@@ -14,7 +14,7 @@
  * are counted, along with whether joining them would make the item whole.
  *
  *   node --experimental-transform-types scripts/receipt-corpus/text-fidelity.mjs \
- *     [corpus-root] [raw|squared|both] [--verbose]
+ *     <corpus-root> [raw|squared|<variant>|both] [--verbose]
  *
  * Reads <root>/gold/gold/*.json (the API's answer key) and <root>/ocr/ or
  * <root>/ocr-squared/ (ocr-variants.mjs). Writes <root>/text-fidelity/.
@@ -27,7 +27,6 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { register } from 'node:module';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,17 +37,19 @@ const UTILS = join(HERE, '../../src/features/receipts/utils');
 const args = process.argv.slice(2);
 const VERBOSE = args.includes('--verbose');
 const [rootArg, variantArg] = args.filter(arg => !arg.startsWith('--'));
-const root = rootArg ?? join(homedir(), 'Desktop/muzhaqi16/receipt-corpus');
+const root = rootArg;
+if (!root) {
+  console.error(
+    'Usage: node --experimental-transform-types scripts/receipt-corpus/text-fidelity.mjs <corpus-root> [raw|squared|<variant>|both] [--verbose]',
+  );
+  process.exit(1);
+}
 const variants =
   !variantArg || variantArg === 'both' ? ['raw', 'squared'] : [variantArg];
 const outDir = join(root, 'text-fidelity');
 mkdirSync(outDir, { recursive: true });
 
-const { assembleReceiptLines } = await import(
-  `${UTILS}/assembleReceiptLines.ts`
-);
-const { redactReceiptText } = await import(`${UTILS}/redactReceiptText.ts`);
-const { capPages } = await import(`${UTILS}/capPages.ts`);
+const { receiptText } = await import(`${UTILS}/receiptText.ts`);
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 
 // Letters OCR confuses, folded alike on both sides: digits read for letters,
@@ -221,15 +222,12 @@ function defectsIn(lines) {
 
 function scoreReceipt(gold, ocr) {
   const raw = ocr.lines.map(line => line.text);
-  const assembled = assembleReceiptLines([ocr]);
-  const redacted = redactReceiptText(assembled);
+  const { assembled, redacted, pages } = receiptText([ocr]);
   const stages = {
     raw,
     assembled: assembled.flat(),
     redacted: redacted.flat(),
-    pages: capPages(redacted.map(page => page.join('\n'))).flatMap(page =>
-      page.split('\n'),
-    ),
+    pages: pages.flatMap(page => page.split('\n')),
   };
   const items = gold.lines.filter(line => line.kind === 'ITEM' && line.product);
   const usedBy = {

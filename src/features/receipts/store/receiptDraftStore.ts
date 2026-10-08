@@ -23,8 +23,9 @@ export interface ReceiptLineChoice {
 }
 
 /**
- * The server's reading of a receipt the phone could not structure. `id` is
- * minted before it is asked for, so a resend returns the same parse.
+ * The server's reading of a receipt the phone did not structure, from its
+ * photos while they are unspent, else its text. `id` is minted before it is
+ * asked for, so a resend returns the same parse.
  */
 export type ServerReceiptParse = {
   id: string;
