@@ -6,6 +6,8 @@ import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 
 // A list holds an item on one line at most, so a receipt's items fit one page.
 const PAGE = 100;
+// The API refuses more items than this in one lookup (`itemIds`).
+const MAX_ITEMS = 100;
 
 /**
  * The list's open lines naming one of `itemIds`, asked for those items alone,
@@ -17,10 +19,11 @@ export function useOpenListLinesFor(
 ): {
   lines: ShoppingListItemNode[];
   loading: boolean;
-  /** More lines name these items than one page holds: some went unread. */
+  /** Some lines naming these items went unread: past a page, or past the API's item limit. */
   incomplete: boolean;
 } {
-  const ids = [...new Set(itemIds)].sort();
+  const distinct = [...new Set(itemIds)].sort();
+  const ids = distinct.slice(0, MAX_ITEMS);
   const { data, loading } = useQuery(
     GetShoppingListItemsFilteredDocument,
     listId && ids.length > 0
@@ -43,6 +46,7 @@ export function useOpenListLinesFor(
   return {
     lines: extractNodes(connection),
     loading: loading && !shown,
-    incomplete: !!connection?.pageInfo.hasNextPage,
+    incomplete:
+      distinct.length > ids.length || !!connection?.pageInfo.hasNextPage,
   };
 }
