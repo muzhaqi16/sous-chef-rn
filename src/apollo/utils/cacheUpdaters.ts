@@ -201,6 +201,20 @@ export function skipUnmatchedFilterVariants(
 }
 
 /**
+ * The entity as the cache holds it. Merging a response object over it would
+ * store its nested entities inline, cut off from their own records, so an edit
+ * to a row's `item` would not reach the row; only an entity the cache lacks is
+ * written from the object.
+ */
+function entityRef(
+  newItem: { id: string },
+  { toReference, canRead }: ModifierDetails,
+) {
+  const ref = toReference(newItem);
+  return ref && canRead(ref) ? ref : toReference(newItem, true);
+}
+
+/**
  * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong
  * silently. `totalCount` moves only where the record already holds one, so an
  * add never introduces a count a query then reads as a cache hit.
@@ -210,14 +224,12 @@ function addEdgeModifier<T extends { id: string }>(
   itemTypename: string,
   { position = 'start', skipStoreField }: AddToConnectionOptions,
 ) {
-  return (
-    existing: StoredConnection,
-    { toReference, readField, storeFieldName }: ModifierDetails,
-  ) => {
+  return (existing: StoredConnection, details: ModifierDetails) => {
+    const { readField, storeFieldName } = details;
     // Every "leave alone" path returns `existing` as is: Apollo reads an
     // `undefined` over a stored `null` as a delete.
     if (skipStoreField?.(storeFieldName)) return existing;
-    const newItemRef = toReference(newItem, true);
+    const newItemRef = entityRef(newItem, details);
     if (!newItemRef) return existing;
 
     const edges = existing?.edges ?? [];
@@ -260,11 +272,9 @@ function addRefModifier<T extends { id: string }>(
   newItem: T,
   position: InsertPosition,
 ) {
-  return (
-    existing: StoredRefs,
-    { toReference, readField }: ModifierDetails,
-  ) => {
-    const newItemRef = toReference(newItem, true);
+  return (existing: StoredRefs, details: ModifierDetails) => {
+    const { readField } = details;
+    const newItemRef = entityRef(newItem, details);
     if (!newItemRef) return existing;
     const refs = existing ?? [];
     if (refs.some(ref => readField('id', ref) === newItem.id)) return existing;
