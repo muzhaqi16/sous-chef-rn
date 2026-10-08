@@ -26,6 +26,17 @@ export const useReceiptPhotoConsentStore = create<ReceiptPhotoConsentState>()(
   ),
 );
 
+/**
+ * The stored answer once it has loaded. The store hydrates asynchronously, and
+ * a first read in a handler (Metro's inline requires create it there) would
+ * otherwise see null and ask again.
+ */
+export async function storedReceiptPhotoConsent(): Promise<ReceiptPhotoConsent> {
+  const stored = useReceiptPhotoConsentStore.persist;
+  if (!stored.hasHydrated()) await stored.rehydrate();
+  return useReceiptPhotoConsentStore.getState().consent;
+}
+
 // The next person on the phone answers for themselves.
 registerSessionScopedStore('receiptPhotoConsent', () =>
   useReceiptPhotoConsentStore.setState({ consent: null }),

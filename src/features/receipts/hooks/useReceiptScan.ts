@@ -27,7 +27,10 @@ import type { ParsedReceipt } from '../utils/parsedReceipt';
 import { parseReceiptOnDevice } from '../utils/onDeviceReceiptParser';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import { capPages, MAX_PAGES } from '../utils/capPages';
-import { useReceiptPhotoConsentStore } from '../store/receiptPhotoConsentStore';
+import {
+  storedReceiptPhotoConsent,
+  useReceiptPhotoConsentStore,
+} from '../store/receiptPhotoConsentStore';
 import {
   useReceiptDraft,
   useReceiptDraftActions,
@@ -148,8 +151,8 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   };
 
   // A user who agreed, online: the scan's photos go to the server to be read.
-  const sendsPhotos = () =>
-    isOnline && useReceiptPhotoConsentStore.getState().consent === 'granted';
+  const sendsPhotos = async () =>
+    isOnline && (await storedReceiptPhotoConsent()) === 'granted';
 
   const readText = async (imageUris: string[], library: boolean) => {
     let pages: RecognizedPage[];
@@ -159,7 +162,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       errorService.reportError(error, { operation: 'Recognise receipt text' });
       unread.current = imageUris;
       // One who agreed to send photos is not asked again.
-      if (sendsPhotos()) {
+      if (await sendsPhotos()) {
         await sendPhotos();
         return;
       }
@@ -223,7 +226,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const readPages = async (imageUris: string[], library = false) => {
     setStatus('reading');
     // More pages than the server reads as photos are read from their text.
-    if (sendsPhotos() && imageUris.length <= MAX_PHOTOS) {
+    if (imageUris.length <= MAX_PHOTOS && (await sendsPhotos())) {
       await readPhotosFirst(imageUris, library);
       return;
     }
@@ -232,8 +235,8 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
 
   // Asked once, online, before the first scan: what it was asked for runs after.
   const [asking, setAsking] = useState<'scan' | 'photo' | 'pick' | null>(null);
-  const asksFirst = (start: 'scan' | 'photo' | 'pick') => {
-    if (!isOnline || useReceiptPhotoConsentStore.getState().consent !== null) {
+  const asksFirst = async (start: 'scan' | 'photo' | 'pick') => {
+    if (!isOnline || (await storedReceiptPhotoConsent()) !== null) {
       return false;
     }
     setAsking(start);
@@ -283,15 +286,15 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   };
 
   const scan = async () => {
-    if (!asksFirst('scan')) await openScanner();
+    if (!(await asksFirst('scan'))) await openScanner();
   };
 
   const takePhoto = async () => {
-    if (!asksFirst('photo')) await capture();
+    if (!(await asksFirst('photo'))) await capture();
   };
 
   const pickPhoto = async () => {
-    if (!asksFirst('pick')) await choose();
+    if (!(await asksFirst('pick'))) await choose();
   };
 
   /** Keeps the answer for later scans, then starts what it was asked for. */

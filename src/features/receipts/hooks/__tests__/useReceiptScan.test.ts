@@ -439,6 +439,32 @@ describe('useReceiptScan', () => {
       expect(scanDocument).toHaveBeenCalledTimes(2);
     });
 
+    // Metro's inline requires create the store in the tap's handler, before it
+    // has loaded what was stored.
+    it('waits for the stored answer before asking', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      const { persist } = useReceiptPhotoConsentStore;
+      const hydrated = jest
+        .spyOn(persist, 'hasHydrated')
+        .mockReturnValue(false);
+      const rehydrate = jest
+        .spyOn(persist, 'rehydrate')
+        .mockImplementation(async () => {
+          useReceiptPhotoConsentStore.setState({ consent: 'declined' });
+        });
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(rehydrate).toHaveBeenCalled();
+      expect(result.current.status).not.toBe('consent');
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+      expect(recognizeAndDelete).toHaveBeenCalled();
+      hydrated.mockRestore();
+      rehydrate.mockRestore();
+    });
+
     it('scans without asking while offline, from the text', async () => {
       useReceiptPhotoConsentStore.setState({ consent: null });
       useStore.setState({ isOnline: false });
