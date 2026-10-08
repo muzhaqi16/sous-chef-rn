@@ -18,6 +18,7 @@ import {
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '../documentOperation';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import { settleMutation, settledStatus } from '../settleMutation';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { Telemetry } from '#/services/telemetry';
@@ -174,6 +175,24 @@ describe('settleMutation', () => {
       ]);
     });
 
+    // A nested input's field (`amount.packages.size`) has copy of its own that
+    // its last segment alone could never name.
+    it("shows a nested field's own copy, by its whole path", async () => {
+      const settled = await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'amount.packages.size',
+        }),
+        { ...options, present: 'none' },
+      );
+
+      expect(settled.failure).toMatchObject({
+        field: 'size',
+        body: t('errors.field.amountPackagesSize'),
+      });
+    });
+
     it("shows the code's own copy when it says more than the field does", async () => {
       // Over-consuming reports INSUFFICIENT_QUANTITY on the quantity field. The
       // number the user typed is a valid one, so the field's "that quantity
@@ -294,7 +313,7 @@ describe('settleMutation', () => {
       ]);
     });
 
-    it("offers the caller's refresh", async () => {
+    it("offers the caller's refresh, under the same heading whatever changed", async () => {
       const onConflictRefresh = jest.fn();
       await settleMutation(
         create({
@@ -304,7 +323,62 @@ describe('settleMutation', () => {
         { ...options, onConflictRefresh },
       );
 
+      expect(alerts()[0]?.slice(0, 2)).toEqual([
+        t('errors.changedElsewhereTitle'),
+        getVersionConflictMessage(),
+      ]);
       const buttons = alerts()[0]?.[2] as AlertButton[];
+      buttons.find(button => button.style !== 'cancel')?.onPress?.();
+      expect(onConflictRefresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('the error a failure arrived as', () => {
+    it('is handed back, thrown or resolved', async () => {
+      const refused = graphQLError(TopLevelErrorCode.InternalServerError);
+
+      const thrown = await settleMutation(throwing(refused), options);
+      const resolved = await settleMutation(
+        () => Promise.resolve({ error: refused }),
+        options,
+      );
+
+      expect(thrown.error).toBe(refused);
+      expect(resolved.error).toBe(refused);
+    });
+
+    it('is absent for a refusal the payload returned', async () => {
+      const settled = await settleMutation(
+        create({ __typename: 'ConflictError', code: ErrorCode.Conflict }),
+        options,
+      );
+
+      expect(settled.status).toBe('failed');
+      expect(settled).not.toHaveProperty('error');
+    });
+  });
+
+  describe('presentFailure', () => {
+    // A caller that settles with `present: 'none'` shows the failure later
+    // exactly as settling would have.
+    it('shows a failure handed back unshown as settling shows it', async () => {
+      const onConflictRefresh = jest.fn();
+      const conflict = create({
+        __typename: 'ConflictError',
+        code: ErrorCode.VersionConflict,
+      });
+      const settled = await settleMutation(conflict, {
+        ...options,
+        present: 'none',
+      });
+      expect(alerts()).toEqual([]);
+
+      presentFailure(settled.failure!, { onConflictRefresh });
+      await settleMutation(conflict, { ...options, onConflictRefresh });
+
+      const [presented, settledAlert] = alerts();
+      expect(presented).toEqual(settledAlert);
+      const buttons = presented?.[2] as AlertButton[];
       buttons.find(button => button.style !== 'cancel')?.onPress?.();
       expect(onConflictRefresh).toHaveBeenCalledTimes(1);
     });

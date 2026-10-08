@@ -20,6 +20,9 @@ export interface GenericAutocompleteFieldProps<T> {
   keyExtractor: (item: T) => string;
   onSelect: (item: T) => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  showAddNew?: boolean;
+  addNewLabel?: string;
+  onAddNew?: () => void;
   // Inline-variant tuning.
   inlineMinSearchLength?: number;
   maxResults?: number;
@@ -54,6 +57,9 @@ export function GenericAutocompleteField<T>({
   keyExtractor,
   onSelect,
   autoCapitalize,
+  showAddNew,
+  addNewLabel,
+  onAddNew,
   inlineMinSearchLength,
   maxResults,
   reserveDropdownSpace,
@@ -83,6 +89,9 @@ export function GenericAutocompleteField<T>({
         keyExtractor={keyExtractor}
         onSelect={onSelect}
         autoCapitalize={autoCapitalize}
+        showAddNew={showAddNew}
+        addNewLabel={addNewLabel}
+        onAddNew={onAddNew}
         reserveDropdownSpace={reserveDropdownSpace}
       />
     );
@@ -110,6 +119,9 @@ export function GenericAutocompleteField<T>({
       onSearchChange={onSearchChange}
       minSearchLength={modalMinSearchLength}
       autoCapitalize={autoCapitalize}
+      showAddNew={showAddNew}
+      addNewLabel={addNewLabel}
+      onAddNew={onAddNew}
     />
   );
 }

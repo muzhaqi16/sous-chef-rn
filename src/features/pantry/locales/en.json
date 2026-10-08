@@ -249,8 +249,8 @@
     "failedItems_one": "Couldn't move {{names}}",
     "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
     "nothingLeftToMove": "Everything purchased is already in your pantry",
-    "packageSizeLabel": "Package size",
-    "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size."
+    "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size.",
+    "packageSizeNeedsCount": "A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g."
   },
   "pantryAction": {
     "useByDefault": "Use by",
@@ -270,6 +270,7 @@
   },
   "addToPantry": {
     "restocked": "Restocked {{name}}",
+    "fromReceipt": "Add from a receipt",
     "amountLeft_one": "{{amount}} left",
     "amountLeft_other": "{{amount}} left",
     "lowStockSettings": "Low Stock Settings",

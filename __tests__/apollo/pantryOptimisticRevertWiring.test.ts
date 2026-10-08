@@ -18,17 +18,14 @@ import { join, relative } from 'path';
  * such adds on a 70-item pantry read as 72.
  *
  * `revertOptimisticPantryItem` is the enforced mirror. Derived from the tree
- * rather than a hand-kept list, so a fourth pantry create path cannot ship
+ * rather than a hand-kept list, so another pantry create path cannot ship
  * withdrawing a row without uncounting it.
  */
 
 const SRC = join(process.cwd(), 'src');
 
 /** Mutations that create a PantryItem with a client-minted `input.id`. */
-const CREATE_DOCUMENTS = [
-  'CreatePantryItemDocument',
-  'BarcodeCreatePantryItemDocument',
-];
+const CREATE_DOCUMENTS = ['CreatePantryItemDocument'];
 
 /** Writers that publish the client-minted row into a cached connection. */
 const OPTIMISTIC_PUBLISHERS = [
@@ -85,13 +82,8 @@ const BARE_EVICT = /safeEvict\(\s*[^,]+,\s*'PantryItem'/;
 
 describe('optimistic pantry-item revert wiring', () => {
   it('finds the create paths at all, so the checks below are not vacuous', () => {
-    expect(creators.length).toBeGreaterThanOrEqual(3);
     expect(creators).toEqual(
-      expect.arrayContaining([
-        'src/features/barcode/hooks/useAddScannedItem.ts',
-        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
-        'src/features/pantry/hooks/usePantryItemSubmission.ts',
-      ]),
+      expect.arrayContaining(['src/features/pantry/hooks/usePantryIntake.ts']),
     );
   });
 

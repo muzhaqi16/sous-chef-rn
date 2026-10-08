@@ -7,6 +7,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { MoveToPantryModal_ShoppingListItemFragmentDoc } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -159,11 +160,13 @@ jest.mock('#components/atoms/FormInput', () => {
       value,
       onChangeText,
       placeholder,
+      error,
     }: {
       label: string;
       value?: string;
       onChangeText?: (text: string) => void;
       placeholder?: string;
+      error?: string;
     }) =>
       R.createElement(
         RN.View,
@@ -175,6 +178,7 @@ jest.mock('#components/atoms/FormInput', () => {
           onChangeText,
           placeholder,
         }),
+        error ? R.createElement(RN.Text, null, error) : null,
       ),
   };
 });
@@ -186,15 +190,6 @@ jest.mock('#/services/alertService', () => ({
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
-
-jest.mock('@react-native-community/datetimepicker', () => {
-  const RN = require('react-native');
-  return {
-    __esModule: true,
-    default: () =>
-      require('react').createElement(RN.View, { testID: 'date-picker' }),
-  };
-});
 
 const ITEM_ID = 'sli-1';
 
@@ -215,6 +210,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
           id: 'u1',
           symbol: 'gal',
           name: 'Gallons',
+          type: UnitType.Volume,
         },
         ...overrides,
       },
@@ -388,7 +384,7 @@ describe('MoveToPantryModal', () => {
     renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
       cache: makeCache(),
     });
-    expect(screen.getByText('Total price')).toBeTruthy();
+    expect(screen.getByText('Total paid')).toBeTruthy();
   });
 
   describe('seeding from the recorded purchase', () => {
@@ -396,6 +392,10 @@ describe('MoveToPantryModal', () => {
     const purchaseMock = (
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
+      unit: { symbol: string; type: UnitType } = {
+        symbol: 'lb',
+        type: UnitType.Weight,
+      },
     ): MockFor<typeof MoveToPantryPurchaseInfoDocument> => ({
       request: {
         query: MoveToPantryPurchaseInfoDocument,
@@ -419,8 +419,12 @@ describe('MoveToPantryModal', () => {
                   node: {
                     __typename: 'Purchase',
                     id: 'pu1',
-                    unitId: 'u-purchase',
-                    unitSymbol: 'lb',
+                    unitSymbol: unit.symbol,
+                    unit: {
+                      __typename: 'Unit',
+                      id: 'u-purchase',
+                      type: unit.type,
+                    },
                   },
                 },
               ],
@@ -439,12 +443,37 @@ describe('MoveToPantryModal', () => {
       },
     });
 
+    const NEEDS_COUNT =
+      'A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.';
+    const jarLine = {
+      unitName: 'jar',
+      unit: {
+        __typename: 'Unit',
+        id: 'u-jar',
+        symbol: 'jar',
+        name: 'Jars',
+        type: UnitType.Count,
+      },
+    };
+    const enterPackageSize = () => {
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '22',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
+        ),
+      );
+    };
+
     // Mounted closed, then opened: the seed runs on the closed -> open
     // transition, which is the lifecycle the sheet actually sees.
     const openWithPurchase = (
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
       onConfirm = jest.fn().mockResolvedValue(true),
+      line: Record<string, unknown> = {},
     ) => {
       const { rerender } = renderWithApollo(
         <MoveToPantryModal
@@ -453,7 +482,7 @@ describe('MoveToPantryModal', () => {
           onConfirm={onConfirm}
         />,
         {
-          cache: makeCache(),
+          cache: makeCache(line),
           operationMocks: [purchaseMock(purchasedQuantity, purchasedPrice)],
         },
       );
@@ -478,7 +507,7 @@ describe('MoveToPantryModal', () => {
       );
       // The field shows the TOTAL; the API stores the $0.59 per unit.
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('2.95');
     });
 
@@ -504,7 +533,7 @@ describe('MoveToPantryModal', () => {
       );
     });
 
-    it('sends the per-unit price the API expects', async () => {
+    it('sends the total paid, which the server records exactly', async () => {
       const onConfirm = openWithPurchase(5, 0.59);
       await waitFor(() =>
         expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
@@ -513,10 +542,59 @@ describe('MoveToPantryModal', () => {
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       const sent = onConfirm.mock.calls[0][0];
-      expect(sent.actualQuantity).toBe(5);
-      // Unrounded on purpose (`unitPriceFromTotal`): the server rounds the
-      // PRODUCT, so a total that does not divide evenly still comes back whole.
-      expect(sent.actualPrice).toBeCloseTo(0.59, 10);
+      expect(sent.amount).toEqual({ measured: { quantity: 5, unitId: 'u1' } });
+      // The total as shown; the server derives the unit price, never the client.
+      expect(sent.totalCost).toBeCloseTo(2.95, 10);
+      expect(sent).not.toHaveProperty('actualPrice');
+    });
+
+    describe('a total paid that is no amount', () => {
+      const INVALID_PAID =
+        'Enter the amount paid, like 3.49, or leave it empty.';
+      const typeTotal = (text: string) =>
+        fireEvent.changeText(
+          screen.getByTestId('move-to-pantry-field-Total paid'),
+          text,
+        );
+
+      // It was dropped without a word, or sent below zero.
+      it.each(['-3', '4,99x'])(
+        'refuses %p on the field and does not move',
+        async typed => {
+          const onConfirm = openWithPurchase(5, 0.59);
+          await waitFor(() =>
+            expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+          );
+
+          typeTotal(typed);
+          fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+          expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+          expect(onConfirm).not.toHaveBeenCalled();
+        },
+      );
+
+      it('clears the refusal once fixed, and sends the total', async () => {
+        const onConfirm = openWithPurchase(5, 0.59);
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        );
+        typeTotal('4,99x');
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+        expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+
+        typeTotal('3.49');
+        await waitFor(() =>
+          expect(screen.queryByText(INVALID_PAID)).toBeNull(),
+        );
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        await waitFor(() =>
+          expect(onConfirm).toHaveBeenCalledWith(
+            expect.objectContaining({ totalCost: 3.49 }),
+          ),
+        );
+      });
     });
 
     it('holds the per-unit price when fewer units are stocked', async () => {
@@ -529,13 +607,16 @@ describe('MoveToPantryModal', () => {
 
       // The total follows the quantity; the unit price is what was paid.
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('1.77');
 
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       expect(onConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ actualQuantity: 3, actualPrice: 0.59 }),
+        expect.objectContaining({
+          amount: { measured: { quantity: 3, unitId: 'u1' } },
+          totalCost: 1.77,
+        }),
       );
     });
 
@@ -588,32 +669,145 @@ describe('MoveToPantryModal', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it("sends this package's own size when one is given", async () => {
-      // A 22 oz jar moving onto a 32 oz stack keeps its size.
-      const onConfirm = openWithPurchase(5, 0.59);
+    it('sends a whole count of jars with their size as packages', async () => {
+      // A 22 oz jar moving onto a 32 oz stack keeps its size, counted in jars.
+      const onConfirm = openWithPurchase(5, 0.59, undefined, jarLine);
       await waitFor(() =>
-        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
       );
 
-      fireEvent.changeText(
-        screen.getByTestId('move-to-pantry-field-Package size'),
-        '22',
-      );
-      fireEvent.press(
-        screen.getByTestId(
-          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
-        ),
-      );
+      enterPackageSize();
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
 
       await waitFor(() =>
         expect(onConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
-            packageSize: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+            amount: {
+              packages: {
+                count: 5,
+                size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                unitId: 'u-jar',
+              },
+            },
           }),
         ),
       );
     });
+
+    // A size is one package's: beside an amount (5 gallons) it would read as
+    // five packages of it, so the sheet asks instead of sending it.
+    it('refuses a package size beside an amount, on the size', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      enterPackageSize();
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    // The rule reads the quantity but reports on the size, so fixing the count
+    // has to re-run it.
+    it('clears the size refusal once the count is fixed', async () => {
+      openWithPurchase(5, 0.59, undefined, jarLine);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-quantity'),
+        '2.5',
+      );
+      enterPackageSize();
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+
+      fireEvent.changeText(screen.getByTestId('move-to-pantry-quantity'), '2');
+
+      await waitFor(() => expect(screen.queryByText(NEEDS_COUNT)).toBeNull());
+    });
+
+    it('raises no size refusal while the count is still being typed', async () => {
+      openWithPurchase(5, 1, undefined, jarLine);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+      );
+      enterPackageSize();
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-quantity'),
+        '2.5',
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByTestId('move-to-pantry-field-Total paid').props.value,
+        ).toBe('2.5'),
+      );
+
+      expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
+    });
+
+    // A line with no unit of its own counts in the purchase's, so the
+    // purchase's kind decides whether a size can go with it — on a cold cache
+    // (seeded a beat after opening) and a warm one (seeded on open) alike.
+    it.each(['cold', 'warm'])(
+      'takes a size beside a count the purchase was recorded in (%s cache)',
+      async warmth => {
+        const onConfirm = jest.fn().mockResolvedValue(true);
+        const mock = purchaseMock(5, 0.59, {
+          symbol: 'jar',
+          type: UnitType.Count,
+        });
+        const cache = makeCache({ unit: null, unitName: null });
+        if (warmth === 'warm') {
+          cache.writeQuery({
+            query: MoveToPantryPurchaseInfoDocument,
+            variables: { id: ITEM_ID },
+            data: (mock as { result: { data: Record<string, unknown> } }).result
+              .data,
+          });
+        }
+        const { rerender } = renderWithApollo(
+          <MoveToPantryModal
+            {...defaultProps}
+            visible={false}
+            onConfirm={onConfirm}
+          />,
+          { cache, operationMocks: [mock] },
+        );
+        rerender(
+          <MoveToPantryModal
+            {...defaultProps}
+            visible={true}
+            onConfirm={onConfirm}
+          />,
+        );
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+        );
+
+        enterPackageSize();
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        await waitFor(() =>
+          expect(onConfirm).toHaveBeenCalledWith(
+            expect.objectContaining({
+              amount: {
+                packages: {
+                  count: 5,
+                  size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                  unitId: 'u-purchase',
+                },
+              },
+            }),
+          ),
+        );
+        expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
+      },
+    );
 
     it('asks for the unit of a size given without one', async () => {
       const onConfirm = openWithPurchase(5, 0.59);
@@ -637,7 +831,7 @@ describe('MoveToPantryModal', () => {
 
     it('takes the unit from the purchase when the line carries none', async () => {
       // `purchaseInfo` has the amounts but no unit, and a line's own unit is
-      // nullable — `Purchase.unitId` is not.
+      // nullable — `Purchase.unit` is not.
       const onConfirm = jest.fn().mockResolvedValue(true);
       const { rerender } = renderWithApollo(
         <MoveToPantryModal
@@ -667,7 +861,9 @@ describe('MoveToPantryModal', () => {
       );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
-      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u-purchase');
+      expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe(
+        'u-purchase',
+      );
     });
 
     it("keeps the line's own unit when a purchase names a different one", async () => {
@@ -712,7 +908,7 @@ describe('MoveToPantryModal', () => {
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
 
       // The line's unit, not `u-purchase`.
-      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u1');
+      expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe('u1');
     });
 
     it('falls back to the requested quantity when nothing was recorded', async () => {
@@ -725,7 +921,7 @@ describe('MoveToPantryModal', () => {
         '2',
       );
       expect(
-        screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value,
       ).toBe('');
     });
   });

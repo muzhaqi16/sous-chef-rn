@@ -37,13 +37,13 @@ notes; where the implementation diverged from the plan, the divergence is called
 - A first-page background refetch that lands **before** the queue replays an offline create keeps that
   item. The `itemsConnection.merge` first-page branch preserves existing edges whose id still
   has a PENDING or PROCESSING mutation in the queue (`queueStore.getUnconfirmedCreateIds()`: a replay in
-flight still protects its edge), then falls straight through to
+  flight still protects its edge), then falls straight through to
   the authoritative page once the queue drains. A genuinely **server-deleted** item (no pending op) is
   still dropped, so the page stays authoritative.
 
 ## 2. Write path — the implemented pattern
 
-Local-first mutations **write the change to the cache permanently *before* firing the mutation, and
+Local-first mutations **write the change to the cache permanently _before_ firing the mutation, and
 leave it there.** They do **not** use Apollo's `optimisticResponse`.
 
 Why not `optimisticResponse`: Apollo applies the optimistic response at the cache layer but does not put
@@ -95,12 +95,12 @@ replay paths apply one rule. What stays per-site — input construction and succ
 restock) — is irreducibly site-specific, so a single primitive would be the wrong abstraction over it.
 
 **One shape did earn a primitive: settings.** `updateEntityFieldsLocalFirst`
-(`apollo/utils/localFirstFields.ts`) runs the whole lifecycle for a *settings-shaped* mutation — a
+(`apollo/utils/localFirstFields.ts`) runs the whole lifecycle for a _settings-shaped_ mutation — a
 normalized entity whose GraphQL field names are the flat setting names (`UserSettings`,
 `NotificationPreferences`), updated a field or two at a time. It writes the fields with `cache.modify`,
 fires local-first, and reverts from the caller's `previous` snapshot only when
 `settledStatus` says `'failed'`. It qualifies where the create sites don't because there is no
-per-site input construction (the change *is* the fields) and no success UX (the control already moved).
+per-site input construction (the change _is_ the fields) and no success UX (the control already moved).
 It returns the outcome rather than reporting it — the two call sites surface a refusal differently, and
 deciding that centrally is what produces double alerts. See §10 for what uses it.
 
@@ -114,6 +114,7 @@ The server's id validator (`sous-chef-api/packages/core/src/utils/common/validat
 (`c` + 24 chars), so ids minted by a previous app version stay valid; only new ids use cuid2.
 
 Consequences (this dissolves the entire temp-id problem class):
+
 - **Idempotency via the primary key.** A re-sent create (lost-after-commit) carries the same id; the
   server resolves it find-by-id → update → no duplicate. No temp→real remap, no `idMapping`, no ghost
   rows, no edge re-keying.
@@ -158,6 +159,7 @@ selecting **every** field the query needs — it returns null on a partially
 cached entity exactly as on a missing one.
 
 The shopping add path is shared rather than copied:
+
 - **`createShoppingListRow(cache, { listId, row, line, send, document, fallback })`**
   (`features/shoppingList/cache/createShoppingListRow.ts`) — the whole lifecycle of one row: mint the id,
   write the row, send `AddItemToShoppingList` local-first, settle with `settleMutation`, withdraw the row
@@ -184,7 +186,7 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 
 - **`queueLink`** (in the link chain, after `errorLink`/`authLink`, before transport) queues a mutation
   when: (a) `isOnline === false` **and** the mutation is on the replay allowlist — `context:
-  { localFirst: true }` opt-ins or the operations registered for replay (`REPLAY_PREPARATIONS`,
+{ localFirst: true }` opt-ins or the operations registered for replay (`REPLAY_PREPARATIONS`,
   `hasReplayPreparation`); or (b) online but the
   request fails with a network error **and** the mutation opted in via `context: { localFirst: true }`.
   Offline mutations NOT on the allowlist fail fast with a network-shaped error — an honest immediate
@@ -192,7 +194,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
   errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
 - **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
-  user-scoped. Survives restart. The persisted `context` is an **allowlisted subset** (`localFirst`
+  user-scoped. Survives restart. Each distinct document is stored once and named by the entries that
+  send it (blob v2), so a burst of one operation does not re-serialize its AST per entry per save; the
+  reader still takes the v1 array an older build wrote. The persisted `context` is an **allowlisted subset** (`localFirst`
   only) — the live Apollo operation context carries client internals that don't survive JSON
   serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
   enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not
@@ -265,13 +269,13 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 A queued write replays as the canonical mutation it was queued as — the API's contract (sous-chef-api
 `docs/api/offline-sync.md` § Replaying through the canonical mutations) makes each one safe to send again:
 
-| Queued write | Why a re-send is safe |
-|---|---|
-| Create with a client-minted id (`CreatePantryItem`, the batch adds, …) | the id is the row's PK: a re-sent `createPantryItem` answers `IDEMPOTENT_REPLAY`, a batch add converges and returns the row |
-| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | version-checked: a stale version applies nothing (`VERSION_CONFLICT`, § 5) |
-| Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`) | converges: `converged: true`, the entity `null` |
-| Reorder (`MoveShoppingListItem`) | repeats to the same order; a line removed since is `NotFoundError` |
-| Cumulative change (the pantry deltas) | at-most-once by `input.idempotencyKey` (`IDEMPOTENT_REPLAY`) |
+| Queued write                                                            | Why a re-send is safe                                                                                                       |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Create with a client-minted id (`CreatePantryItem`, the batch adds, …)  | the id is the row's PK: a re-sent `createPantryItem` answers `IDEMPOTENT_REPLAY`, a batch add converges and returns the row |
+| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | version-checked: a stale version applies nothing (`VERSION_CONFLICT`, § 5)                                                  |
+| Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`)               | converges: `converged: true`, the entity `null`                                                                             |
+| Reorder (`MoveShoppingListItem`)                                        | repeats to the same order; a line removed since is `NotFoundError`                                                          |
+| Cumulative change (the pantry deltas)                                   | at-most-once by `input.idempotencyKey` (`IDEMPOTENT_REPLAY`)                                                                |
 
 What a replay restates is only what the device knows better by then. `prepareReplay`
 (`src/apollo/offlineQueue/prepareReplay.ts`) looks the operation up in `REPLAY_PREPARATIONS`
@@ -299,7 +303,7 @@ quantity is a plain `Float`.
    **background** via `flushCachePersistence()` so a write inside the debounce window isn't lost to a fast
    kill — §1). This is what paints the optimistic add/remove from disk on cold start.
    **The durable backstop is the queue, not the cache:** even if a cache write were lost to a kill before
-   the flush, `queueStore` persisted the *mutation* synchronously on enqueue, so the queue replays it on
+   the flush, `queueStore` persisted the _mutation_ synchronously on enqueue, so the queue replays it on
    next launch. The replay's response normalizes into the cache, and a replay reconciler
    (`REPLAY_RECONCILERS`, § 7) redoes the connection work the foreground `update` would have done. The cache flush optimizes cold-start UX (item visible
    immediately); the queue guarantees the change isn't lost.
@@ -366,7 +370,7 @@ quantity is a plain `Float`.
 
 ## 8. Connectivity — two failure modes, one signal
 
-`NetInfo → networkSlice.isOnline` detects *device internet*, not "our API is reachable." The two
+`NetInfo → networkSlice.isOnline` detects _device internet_, not "our API is reachable." The two
 "can't reach the server" cases are unified behind one predicate
 `isApiUnavailable(state) = !isOnline || apiReachable === false`:
 
@@ -380,6 +384,7 @@ quantity is a plain `Float`.
   failure re-opens. `useOnlineQueueSync` resets it on every connectivity transition.
 
 Both cases behave identically because `isApiUnavailable` is read by everything:
+
 - **`offlineModeLink`** (first in chain) short-circuits queries → serves the cache Apollo already read; no
   spinner, no error, and blocked queries never reach `retryLink`/`errorLink` (no doomed requests, no retry
   storm).
@@ -438,6 +443,7 @@ query-blocking, orthogonal to connectivity.
 
 **Local-first today (opted in by `context: { localFirst: true }` on the `useMutation` options, with a
 permanent cache write):**
+
 - **Pantry:** create (every add surface — `usePantryItemSubmission`, `AddToPantrySheet`,
   `SelectPantryItems` onboarding, barcode), delete.
 - **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
@@ -585,30 +591,30 @@ drain reads the parent reference off the input, so no per-feature special-casing
 
 ## 14. Key files
 
-| Area | File |
-|---|---|
-| Client id generator | `src/utils/generateEntityId.ts` |
-| Queue intercept | `src/apollo/offlineQueue/queueLink.ts` |
-| Queue store (MMKV) | `src/apollo/offlineQueue/queueStore.ts` |
-| Replay | `src/apollo/offlineQueue/queueManager.ts` |
-| Replay preparation + registry | `src/apollo/offlineQueue/prepareReplay.ts`, `replayPreparation.ts`, `preparationRegistry.ts` |
-| Feature replay preparers | `src/features/pantry/offline/replayPreparers.ts` |
-| Replay payload classification + retry error policy | `src/apollo/offlineQueue/queueErrorPolicy.ts` |
-| Pending-changes count (banner) | `src/hooks/offline/usePendingMutationCount.ts` |
-| Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |
-| Field-level persistence | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` |
-| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue) |
-| Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
-| Pending-aware connection merge | `src/apollo/cacheFieldPolicies.ts` (`itemsConnectionFieldPolicy`, `mergeAuthoritativeFirstPage`) + `queueStore.getUnconfirmedCreateIds()` |
-| Shared shopping writers/reconcilers | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`), `createShoppingListRow.ts`, `withdraw.ts` (`withdrawShoppingListItems`) |
-| Replay reconcilers | `src/apollo/offlineQueue/queueReplayReconcilers.ts` (`REPLAY_RECONCILERS`), each feature's `offline/replayReconcilers.ts`; coverage: `__tests__/apollo/replayReconcilerCoverage.test.ts` |
-| Resync after foreground / reconnect | `src/apollo/refetchEvents.ts` |
-| Local row writers (`writeLocalEntity`) | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` and `writeLocalMealPlanItem` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
-| Settings-shaped field writer | `src/apollo/utils/localFirstFields.ts` (`updateEntityFieldsLocalFirst`, `writeEntityFields`) |
-| Write-outcome settling and classification | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`) |
-| Optimistic-entity completeness guard | `__tests__/apollo/optimisticEntityCompleteness.test.ts` |
-| Offline indicator | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionToaster.tsx` (mounted in `App.tsx`), both reading `src/hooks/app/useOfflineStatus.ts` |
-| Query short-circuit when offline | `src/apollo/links/offlineModeLink.ts` |
-| API-reachability circuit breaker | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts` |
-| Unified `isApiUnavailable` predicate | `src/store/slices/networkSlice.ts` |
-| Primary add hooks | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx` |
+| Area                                               | File                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client id generator                                | `src/utils/generateEntityId.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Queue intercept                                    | `src/apollo/offlineQueue/queueLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Queue store (MMKV)                                 | `src/apollo/offlineQueue/queueStore.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Replay                                             | `src/apollo/offlineQueue/queueManager.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Replay preparation + registry                      | `src/apollo/offlineQueue/prepareReplay.ts`, `replayPreparation.ts`, `preparationRegistry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Feature replay preparers                           | `src/features/pantry/offline/replayPreparers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Replay payload classification + retry error policy | `src/apollo/offlineQueue/queueErrorPolicy.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Pending-changes count (banner)                     | `src/hooks/offline/usePendingMutationCount.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Queue triggers / failure toast                     | `src/hooks/app/useOnlineQueueSync.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Field-level persistence                            | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Cache persistence (debounce + `flushPending`)      | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Pending-aware connection merge                     | `src/apollo/cacheFieldPolicies.ts` (`itemsConnectionFieldPolicy`, `mergeAuthoritativeFirstPage`) + `queueStore.getUnconfirmedCreateIds()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Shared shopping writers/reconcilers                | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`), `createShoppingListRow.ts`, `withdraw.ts` (`withdrawShoppingListItems`)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Replay reconcilers                                 | `src/apollo/offlineQueue/queueReplayReconcilers.ts` (`REPLAY_RECONCILERS`), each feature's `offline/replayReconcilers.ts`; coverage: `__tests__/apollo/replayReconcilerCoverage.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` and `writeLocalMealPlanItem` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
+| Settings-shaped field writer                       | `src/apollo/utils/localFirstFields.ts` (`updateEntityFieldsLocalFirst`, `writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Write-outcome settling and classification          | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Optimistic-entity completeness guard               | `__tests__/apollo/optimisticEntityCompleteness.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Offline indicator                                  | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionToaster.tsx` (mounted in `App.tsx`), both reading `src/hooks/app/useOfflineStatus.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Query short-circuit when offline                   | `src/apollo/links/offlineModeLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| API-reachability circuit breaker                   | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Unified `isApiUnavailable` predicate               | `src/store/slices/networkSlice.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |

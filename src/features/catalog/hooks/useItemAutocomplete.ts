@@ -24,6 +24,7 @@ function semanticItemToSuggestion(node: SemanticItem): ItemSuggestion {
     id: node.id,
     name: node.name,
     type: node.type,
+    level: node.level,
     imageUrl: node.imageUrl,
     netWeight: node.netWeight,
     displayUnit: null,

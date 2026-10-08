@@ -249,8 +249,8 @@
     "failedItems_one": "Nuk u zhvendos dot {{names}}",
     "failedItems_other": "Nuk u zhvendosën dot {{count}} artikuj, përfshirë {{names}}",
     "nothingLeftToMove": "Gjithçka e blerë është tashmë te qilari yt",
-    "packageSizeLabel": "Madhësia e paketimit",
-    "packageSizeHint": "Vetëm nëse ky paketim ndryshon nga madhësia e zakonshme, si një kavanoz 22 oz. Lëreni bosh për të përdorur madhësinë e zakonshme."
+    "packageSizeHint": "Vetëm nëse ky paketim ndryshon nga madhësia e zakonshme, si një kavanoz 22 oz. Lëreni bosh për të përdorur madhësinë e zakonshme.",
+    "packageSizeNeedsCount": "Madhësia e paketës shkon me një numër të plotë paketash në një njësi numërimi, si 2 kavanoza. Lëre bosh për një sasi si 500 g."
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
@@ -270,6 +270,7 @@
   },
   "addToPantry": {
     "restocked": "U rimbush {{name}}",
+    "fromReceipt": "Shto nga një faturë",
     "amountLeft_one": "Mbetet {{amount}}",
     "amountLeft_other": "Mbeten {{amount}}",
     "lowStockSettings": "Cilësimet e stokut të ulët",

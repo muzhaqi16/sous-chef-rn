@@ -25,7 +25,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
@@ -33,14 +32,12 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { photoDisplayUrl, getPerspectiveLabel } from '#utils/imageUtils';
 import {
-  ItemPhotoCarousel_ItemPhotoFragmentDoc,
-  type ItemPhotoCarousel_ItemPhotoFragment,
-} from '#features/catalog/ui/ItemPhotoCarousel.generated';
-import {
-  materializedPhoto,
+  useItemPhoto,
   type ItemPhotoRef,
 } from '#features/catalog/ui/ItemPhotoCarousel';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 const MIN_SCALE = 1;
@@ -73,11 +70,11 @@ interface ItemPhotoViewerProps {
   initialIndex: number;
   onClose: () => void;
   /**
-   * The item's viewer-scoped `Item.canEdit`. Gates the "set as main photo"
-   * action, which the server refuses for anyone but the item's creator or an
-   * admin. Omitted means read-only — no affordance.
+   * The photos' item. Only the viewer's own private one (`writesItemDirectly`)
+   * offers "set as main photo", which the app never takes on a public item, even
+   * for an admin. Omitted means read-only — no affordance.
    */
-  canEdit?: boolean;
+  item?: Parameters<typeof writesItemDirectly>[0] | null;
 }
 
 /**
@@ -90,7 +87,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   photos,
   initialIndex,
   onClose,
-  canEdit = false,
+  item,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -116,6 +113,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   };
 
   const total = photos.length;
+  const canEdit = !!item && writesItemDirectly(item);
 
   return (
     <Modal
@@ -180,6 +178,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
               </Text>
             )}
           </View>
+          {!!photos[index] && <CurrentPhotoCredit photoRef={photos[index]} />}
         </View>
       </GestureHandlerRootView>
     </Modal>
@@ -196,14 +195,7 @@ const ZoomablePhoto: React.FC<{
   onClose: () => void;
 }> = ({ photoRef, width, height, isActive, onZoomChange, onClose }) => {
   const { t } = useTranslation();
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: photoRef,
-  });
-  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
-    ? result.data
-    : materializedPhoto(photoRef);
+  const photo = useItemPhoto(photoRef);
 
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -392,7 +384,7 @@ const ZoomablePhoto: React.FC<{
 
 /**
  * "Set as main photo", or a static badge once it is the hero. Rendered only for
- * `canEdit` items and APPROVED photos — the server refuses to promote a PENDING
+ * the viewer's own private item and APPROVED photos — the server refuses to promote a PENDING
  * one, so the affordance could only produce a ValidationError.
  */
 const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
@@ -400,15 +392,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
 }) => {
   const { t } = useTranslation();
   const { markPrimary, loading } = useMarkPrimaryItemImage();
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: photoRef,
-  });
-
-  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
-    ? result.data
-    : materializedPhoto(photoRef);
+  const photo = useItemPhoto(photoRef);
   if (!photo || photo.status !== ItemImageStatus.Approved) return null;
 
   if (photo.isPrimary) {
@@ -446,15 +430,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
 /** Perspective label + pending state for the photo currently on screen. */
 const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
   const { t } = useTranslation();
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: photoRef,
-  });
-
-  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
-    ? result.data
-    : materializedPhoto(photoRef);
+  const photo = useItemPhoto(photoRef);
   if (!photo) return null;
   const label = photo.perspective
     ? getPerspectiveLabel(photo.perspective, t)
@@ -479,6 +455,15 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
     </View>
   );
+};
+
+/** The licence credit of the photo on screen; its links take taps. */
+const CurrentPhotoCredit: React.FC<{ photoRef: ItemPhotoRef }> = ({
+  photoRef,
+}) => {
+  const photo = useItemPhoto(photoRef);
+  if (!photo?.credit) return null;
+  return <PhotoCredit credit={photo.credit} overPhoto />;
 };
 
 const styles = StyleSheet.create(theme => ({

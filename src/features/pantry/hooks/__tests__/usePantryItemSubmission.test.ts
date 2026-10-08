@@ -16,7 +16,9 @@ import {
   ErrorCode,
   ItemCondition,
   StorageState,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
@@ -491,15 +493,20 @@ describe('usePantryItemSubmission', () => {
     await waitFor(() =>
       expect(restock.fired).toContainEqual({
         today: expect.any(String),
-        input: expect.objectContaining({ id: 'existing-1', quantity: 2 }),
+        input: expect.objectContaining({
+          id: 'existing-1',
+          amount: { measured: { quantity: 2 } },
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
       }),
     );
+    const [fired] = restock.fired;
+    expect(fired?.input).toMatchObject({ today: fired?.today });
     await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
     expect(refused.fired).toHaveLength(1);
   });
 
-  it('restocks with the package size entered, not the stack default', async () => {
-    // A 22 oz jar restocking a 32 oz stack keeps its own size.
+  const restockWithSize = async (stackUnitType: UnitType) => {
     const refused = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
@@ -515,6 +522,15 @@ describe('usePantryItemSubmission', () => {
         restockPantryItem: { __typename: 'RestockPantryItemPayload' },
       },
     });
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: ReadStackUnit_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: 'existing-1',
+        unit: { __typename: 'Unit', id: 'unit-1', type: stackUnitType },
+      },
+    });
     const { result } = renderHookWithApollo(
       () =>
         usePantryItemSubmission({
@@ -522,7 +538,7 @@ describe('usePantryItemSubmission', () => {
           pantryNetWeight: '22',
           pantryNetWeightUnitId: 'u-oz',
         }),
-      { operationMocks: [refused.mock, restock.mock] },
+      { operationMocks: [refused.mock, restock.mock], cache },
     );
 
     await act(async () => {
@@ -535,15 +551,28 @@ describe('usePantryItemSubmission', () => {
     await act(async () => {
       buttons[1]?.onPress?.();
     });
+    await waitFor(() => expect(restock.fired).toHaveLength(1));
+    const [fired] = restock.fired;
+    return fired?.input;
+  };
 
-    await waitFor(() =>
-      expect(restock.fired).toContainEqual({
-        today: expect.any(String),
-        input: expect.objectContaining({
-          packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
-        }),
-      }),
-    );
+  it('restocks counted packages with the size entered, not the stack default', async () => {
+    // Two 22 oz jars restocking a stack of 32 oz jars keep their own size.
+    expect(await restockWithSize(UnitType.Count)).toMatchObject({
+      amount: {
+        packages: {
+          count: 2,
+          size: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        },
+      },
+    });
+  });
+
+  it('restocks an amount, never packages, on a stack held by weight or volume', async () => {
+    // 2 cups beside a 22 oz size would otherwise read as two 22 oz packages.
+    expect(await restockWithSize(UnitType.Volume)).toMatchObject({
+      amount: { measured: { quantity: 2 } },
+    });
   });
 
   it('shows error when result has error but is not duplicate', async () => {
@@ -813,6 +842,60 @@ describe('usePantryItemSubmission', () => {
       );
       expect(m.fired).toHaveLength(0);
       expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it('moves the held row at once when the restock is queued offline', async () => {
+      const cache = seedStocked('Milk');
+      // What the pantry list caches beside the row: the amount held and its unit.
+      cache.writeFragment({
+        id: 'PantryItem:pi-1',
+        fragment: gql`
+          fragment _HeldStockSeed on PantryItem {
+            heldQuantity
+            unit {
+              id
+              symbol
+            }
+          }
+        `,
+        data: {
+          __typename: 'PantryItem',
+          heldQuantity: 3,
+          unit: { __typename: 'Unit', id: 'unit-1', symbol: 'cups' },
+        },
+      });
+      // A queued local-first write: `queueLink` resolves with a null payload.
+      const queued = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSubmission(defaultParams),
+        { cache, operationMocks: [queued.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+      const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+        text: string;
+        onPress?: () => void;
+      }[];
+      await act(async () => {
+        buttons[1]?.onPress?.();
+      });
+
+      await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
+      expect(
+        cache.readFragment({
+          id: 'PantryItem:pi-1',
+          fragment: gql`
+            fragment _QueuedRestockProbe on PantryItem {
+              quantity
+              heldQuantity
+            }
+          `,
+        }),
+      ).toMatchObject({ quantity: 5, heldQuantity: 5 });
     });
 
     it('leaves a free-text unit to the server', async () => {

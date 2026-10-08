@@ -45,7 +45,11 @@ describe('cache.ts', () => {
   // ─── suggestions merge ─────────────────────────────────────────
 
   interface ShoppingListResult {
-    shoppingList: { __typename: 'ShoppingList'; id: string; suggestions: string[] | null };
+    shoppingList: {
+      __typename: 'ShoppingList';
+      id: string;
+      suggestions: string[] | null;
+    };
   }
 
   describe('ShoppingList.suggestions merge', () => {
@@ -68,11 +72,23 @@ describe('cache.ts', () => {
     it('preserves existing suggestions when incoming is null', () => {
       cache.writeQuery({
         query: QUERY,
-        data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: ['a', 'b'] } },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: ['a', 'b'],
+          },
+        },
       });
       cache.writeQuery({
         query: QUERY,
-        data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: null } },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: null,
+          },
+        },
       });
       const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
       expect(result?.shoppingList.suggestions).toEqual(['a', 'b']);
@@ -81,11 +97,23 @@ describe('cache.ts', () => {
     it('replaces suggestions with new incoming data', () => {
       cache.writeQuery({
         query: QUERY,
-        data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: ['a'] } },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: ['a'],
+          },
+        },
       });
       cache.writeQuery({
         query: QUERY,
-        data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: ['x', 'y'] } },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: ['x', 'y'],
+          },
+        },
       });
       const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
       expect(result?.shoppingList.suggestions).toEqual(['x', 'y']);
@@ -106,18 +134,32 @@ describe('cache.ts', () => {
     it('preserves existing imageUrl when incoming is undefined', () => {
       cache.writeFragment({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemImg on Item { id imageUrl }`,
+        fragment: gql`
+          fragment ItemImg on Item {
+            id
+            imageUrl
+          }
+        `,
         data: { __typename: 'Item', id: 'item-1', imageUrl: 'http://img.png' },
       });
       // Write without imageUrl field (undefined)
       cache.writeFragment({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemName on Item { id }`,
+        fragment: gql`
+          fragment ItemName on Item {
+            id
+          }
+        `,
         data: { __typename: 'Item', id: 'item-1' },
       });
       const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
+        fragment: gql`
+          fragment ItemImgRead on Item {
+            id
+            imageUrl
+          }
+        `,
       });
       expect(result?.imageUrl).toBe('http://img.png');
     });
@@ -125,17 +167,32 @@ describe('cache.ts', () => {
     it('allows explicit null through for imageUrl (user removes image)', () => {
       cache.writeFragment({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemImg on Item { id imageUrl }`,
+        fragment: gql`
+          fragment ItemImg on Item {
+            id
+            imageUrl
+          }
+        `,
         data: { __typename: 'Item', id: 'item-1', imageUrl: 'http://img.png' },
       });
       cache.writeFragment({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemImgNull on Item { id imageUrl }`,
+        fragment: gql`
+          fragment ItemImgNull on Item {
+            id
+            imageUrl
+          }
+        `,
         data: { __typename: 'Item', id: 'item-1', imageUrl: null },
       });
       const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
-        fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
+        fragment: gql`
+          fragment ItemImgRead on Item {
+            id
+            imageUrl
+          }
+        `,
       });
       expect(result?.imageUrl).toBeNull();
     });
@@ -180,13 +237,21 @@ describe('cache.ts', () => {
             id: 'home-1',
             membersConnection: {
               __typename: 'MembershipConnection',
-              edges: [{ __typename: 'MembershipEdge', node: { __typename: 'Membership', id: 'm-1', name: 'Alice' } }],
+              edges: [
+                {
+                  __typename: 'MembershipEdge',
+                  node: { __typename: 'Membership', id: 'm-1', name: 'Alice' },
+                },
+              ],
               pageInfo: { __typename: 'PageInfo', hasNextPage: true },
             },
           },
         },
       });
-      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: {} });
+      const result = cache.readQuery<HomeMembersResult>({
+        query: QUERY,
+        variables: {},
+      });
       expect(result?.home.membersConnection.edges).toHaveLength(1);
     });
 
@@ -201,7 +266,12 @@ describe('cache.ts', () => {
             id: 'home-1',
             membersConnection: {
               __typename: 'MembershipConnection',
-              edges: [{ __typename: 'MembershipEdge', node: { __typename: 'Membership', id: 'm-1', name: 'Alice' } }],
+              edges: [
+                {
+                  __typename: 'MembershipEdge',
+                  node: { __typename: 'Membership', id: 'm-1', name: 'Alice' },
+                },
+              ],
               pageInfo: { __typename: 'PageInfo', hasNextPage: true },
             },
           },
@@ -218,15 +288,28 @@ describe('cache.ts', () => {
             membersConnection: {
               __typename: 'MembershipConnection',
               edges: [
-                { __typename: 'MembershipEdge', node: { __typename: 'Membership', id: 'm-1', name: 'Alice Updated' } },
-                { __typename: 'MembershipEdge', node: { __typename: 'Membership', id: 'm-2', name: 'Bob' } },
+                {
+                  __typename: 'MembershipEdge',
+                  node: {
+                    __typename: 'Membership',
+                    id: 'm-1',
+                    name: 'Alice Updated',
+                  },
+                },
+                {
+                  __typename: 'MembershipEdge',
+                  node: { __typename: 'Membership', id: 'm-2', name: 'Bob' },
+                },
               ],
               pageInfo: { __typename: 'PageInfo', hasNextPage: false },
             },
           },
         },
       });
-      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: { membersCursor: 'cursor-1' } });
+      const result = cache.readQuery<HomeMembersResult>({
+        query: QUERY,
+        variables: { membersCursor: 'cursor-1' },
+      });
       // m-1 should be deduplicated (incoming wins)
       expect(result?.home.membersConnection.edges).toHaveLength(2);
     });
@@ -241,7 +324,12 @@ describe('cache.ts', () => {
             id: 'home-1',
             membersConnection: {
               __typename: 'MembershipConnection',
-              edges: [{ __typename: 'MembershipEdge', node: { __typename: 'Membership', id: 'm-1', name: 'Alice' } }],
+              edges: [
+                {
+                  __typename: 'MembershipEdge',
+                  node: { __typename: 'Membership', id: 'm-1', name: 'Alice' },
+                },
+              ],
               pageInfo: { __typename: 'PageInfo', hasNextPage: false },
             },
           },
@@ -250,7 +338,10 @@ describe('cache.ts', () => {
       // The merge function returns existing if !incoming
       // We can't easily write null via writeQuery since the cache policy kicks in,
       // but the unit behavior is covered by the code logic
-      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: {} });
+      const result = cache.readQuery<HomeMembersResult>({
+        query: QUERY,
+        variables: {},
+      });
       expect(result?.home.membersConnection.edges).toHaveLength(1);
     });
   });
@@ -336,18 +427,29 @@ describe('cache.ts', () => {
     });
 
     it('Query.storageLocations preserves existing on null incoming', () => {
-      const QUERY = gql`query GetStorageLocations($homeId: ID!) { storageLocations(homeId: $homeId) { id } }`;
+      const QUERY = gql`
+        query GetStorageLocations($homeId: ID!) {
+          storageLocations(homeId: $homeId) {
+            id
+          }
+        }
+      `;
       cache.writeQuery({
         query: QUERY,
         variables: { homeId: 'h-1' },
-        data: { storageLocations: [{ __typename: 'StorageLocation', id: 'sl-1' }] },
+        data: {
+          storageLocations: [{ __typename: 'StorageLocation', id: 'sl-1' }],
+        },
       });
       cache.writeQuery({
         query: QUERY,
         variables: { homeId: 'h-1' },
         data: { storageLocations: null },
       });
-      const result = cache.readQuery<ListResult<'storageLocations'>>({ query: QUERY, variables: { homeId: 'h-1' } });
+      const result = cache.readQuery<ListResult<'storageLocations'>>({
+        query: QUERY,
+        variables: { homeId: 'h-1' },
+      });
       expect(result?.storageLocations).toHaveLength(1);
     });
   });
@@ -367,17 +469,61 @@ describe('cache.ts', () => {
       // UserProfile has keyFields: ['id'], so it requires an id field
       cache.writeFragment({
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
-        fragment: gql`fragment UserProfileFrag on User { id profile { id firstName lastName } }`,
-        data: { __typename: 'User', id: 'u-1', profile: { __typename: 'UserProfile', id: 'up-1', firstName: 'John', lastName: 'Doe' } },
+        fragment: gql`
+          fragment UserProfileFrag on User {
+            id
+            profile {
+              id
+              firstName
+              lastName
+            }
+          }
+        `,
+        data: {
+          __typename: 'User',
+          id: 'u-1',
+          profile: {
+            __typename: 'UserProfile',
+            id: 'up-1',
+            firstName: 'John',
+            lastName: 'Doe',
+          },
+        },
       });
       cache.writeFragment({
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
-        fragment: gql`fragment UserAvatar on User { id profile { id avatar } }`,
-        data: { __typename: 'User', id: 'u-1', profile: { __typename: 'UserProfile', id: 'up-1', avatar: 'avatar.png' } },
+        fragment: gql`
+          fragment UserAvatar on User {
+            id
+            profile {
+              id
+              avatar
+            }
+          }
+        `,
+        data: {
+          __typename: 'User',
+          id: 'u-1',
+          profile: {
+            __typename: 'UserProfile',
+            id: 'up-1',
+            avatar: 'avatar.png',
+          },
+        },
       });
       const result = cache.readFragment<UserProfileResult>({
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
-        fragment: gql`fragment UserFull on User { id profile { id firstName lastName avatar } }`,
+        fragment: gql`
+          fragment UserFull on User {
+            id
+            profile {
+              id
+              firstName
+              lastName
+              avatar
+            }
+          }
+        `,
       });
       expect(result?.profile.firstName).toBe('John');
       expect(result?.profile.avatar).toBe('avatar.png');

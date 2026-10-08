@@ -5,10 +5,10 @@
 Every `android:*` script is a thin wrapper around `scripts/run-android.sh`,
 which takes two environment variables:
 
-| Variable | Values | Default |
-|---|---|---|
-| `MODE` | `debug`, `staging`, `production`, `release`, `localRelease` | `debug` |
-| `TARGET` | `default`, `all`, `emulator`, `phone`, or a device id | `default` |
+| Variable | Values                                                      | Default   |
+| -------- | ----------------------------------------------------------- | --------- |
+| `MODE`   | `debug`, `staging`, `production`, `release`, `localRelease` | `debug`   |
+| `TARGET` | `default`, `all`, `emulator`, `phone`, or a device id       | `default` |
 
 `DEVICE_ID=<id>` is shorthand for `TARGET=<id>`. The named scripts cover the
 common combinations; anything else you set directly:
@@ -26,11 +26,13 @@ forwarding step is needed when running through it.
 ## Quick Commands
 
 ### List Connected Devices
+
 ```bash
 npm run adb:devices           # List all devices with details
 ```
 
 ### Run by Build Variant
+
 ```bash
 npm run android               # debug (.env)
 npm run android:stg           # staging build (.env.staging)
@@ -40,6 +42,7 @@ npm run android:local-release # release build signed with the debug key
 ```
 
 ### Run by Device
+
 ```bash
 npm run android:all        # Every attached device, sequentially
 npm run android:emulator   # First attached emulator
@@ -57,6 +60,7 @@ MODE=release TARGET=phone npm run android
 ```
 
 ### Port Forwarding for GraphQL
+
 Only needed on its own if you want the tunnel without reinstalling the app —
 `npm run android` already does this for whatever it installs to.
 
@@ -70,6 +74,7 @@ npm run adb:gql:clear                # Remove all reverse mappings
 ## Common Device Scenarios
 
 ### 1. Single Emulator + Single Physical Device
+
 ```bash
 npm run android:all        # Both
 npm run android:emulator   # Emulator only
@@ -77,6 +82,7 @@ npm run android:phone      # Phone only
 ```
 
 ### 2. Multiple Emulators
+
 ```bash
 npm run adb:devices        # Get the device ids
 
@@ -87,6 +93,7 @@ npm run android:all        # Or all of them
 ```
 
 ### 3. Wireless Debugging
+
 ```bash
 # Connect device over WiFi first
 adb tcpip 5555
@@ -111,7 +118,9 @@ export DEVICE_ID="192.168.1.100:5555"
 ## Troubleshooting
 
 ### "More than one device/emulator" Error
+
 This happens when a command doesn't specify which device to use:
+
 ```bash
 npm run adb:devices        # See all connected devices
 export DEVICE_ID="YOUR_DEVICE_ID"
@@ -119,6 +128,7 @@ npm run android
 ```
 
 ### Port Already in Use / Connection Issues
+
 ```bash
 npm run adb:kill           # Kill and restart ADB server
 npm run adb:gql:clear      # Clear all reverse port mappings
@@ -126,6 +136,7 @@ npm run adb:gql            # Re-setup port forwarding
 ```
 
 ### Build Cache Issues
+
 ```bash
 npm run android:clean      # Clean Android build cache
 npm run reset:cache        # Reset Metro bundler cache
@@ -133,6 +144,7 @@ npm run watchman          # Reset Watchman
 ```
 
 ### View Device Logs
+
 ```bash
 npm run adb:log            # View logs from default device
 export DEVICE_ID="emulator-5554"

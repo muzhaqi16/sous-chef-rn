@@ -35,12 +35,16 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
         {icon}
       </Text>
     ) : null}
-    {image !== undefined &&
-      (image ? (
-        <CachedImage uri={image} style={styles.image} displaySize={44} />
-      ) : (
-        <View style={styles.imagePlaceholder} />
-      ))}
+    {/* No photo still takes the tile, as a placeholder, so every row's text
+        starts at the same edge. */}
+    {image !== undefined && (
+      <CachedImage
+        uri={image}
+        style={styles.image}
+        displaySize={44}
+        accessible={false}
+      />
+    )}
     {symbolText != null && (
       <Text role="bodyStrong" tone="accent" style={styles.symbolText}>
         {symbolText}
@@ -48,7 +52,9 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     )}
     <View style={styles.content}>
       <View style={styles.titleRow}>
-        <Text role="bodyStrong">{title}</Text>
+        <Text role="bodyStrong" numberOfLines={1} style={styles.title}>
+          {title}
+        </Text>
         {!!badge && (
           <View style={styles.badge}>
             <Text role="label" tone="accent">
@@ -58,7 +64,12 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
         )}
       </View>
       {subtitle ? (
-        <Text role="caption" tone="secondary" style={styles.subtitle}>
+        <Text
+          role="caption"
+          tone="secondary"
+          numberOfLines={1}
+          style={styles.subtitle}
+        >
           {subtitle}
         </Text>
       ) : null}
@@ -98,10 +109,6 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,
   },
-  imagePlaceholder: {
-    width: 44,
-    height: 44,
-  },
   symbolText: {
     minWidth: 40,
   },
@@ -112,6 +119,10 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  // Gives way to the badge, so a long name ends in an ellipsis on one line.
+  title: {
+    flexShrink: 1,
   },
   subtitle: {
     fontStyle: 'italic',

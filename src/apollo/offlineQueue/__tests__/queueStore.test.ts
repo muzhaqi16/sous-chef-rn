@@ -6,6 +6,11 @@ import { storage } from '#storage/mmkv';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
@@ -930,6 +935,26 @@ describe('QueueStore', () => {
       expect(m).not.toBeNull();
       expect(m?.id).toBe('persist-1');
     });
+
+    // The registries key on the name: under the old one a scanned create
+    // would replay unprepared and leave its count behind when refused.
+    it.each([
+      ['BarcodeCreatePantryItem', CreatePantryItemDocument],
+      ['BarcodeRestockPantryItem', RestockPantryItemDocument],
+    ])(
+      'reloads a write an earlier build queued as %s under the canonical name',
+      (legacyName, document) => {
+        store.addMutation(
+          makeMutation({ id: 'legacy-1', operationName: legacyName }),
+        );
+
+        store.invalidateCache();
+
+        expect(store.getMutation('legacy-1')?.operationName).toBe(
+          operationNameOf(document),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------------

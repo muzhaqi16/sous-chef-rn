@@ -7,7 +7,7 @@ import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import type { HookReturn } from '#hooks/types';
-import { useLoadRemainingPages } from '#features/recipes/hooks/useLoadRemainingPages';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 
 /** `useRecipeTags` watches the same page, so the first request is shared. */
 export const SAVED_RECIPES_PAGE_SIZE = 20;

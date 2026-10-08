@@ -3,6 +3,7 @@ import { useStore } from '#store';
 import { queueManager } from '../offlineQueue/queueManager';
 import { probeApiHealth } from './apiHealthProbe';
 import { logger } from '#/utils/environment';
+import { backoffDelay } from '#/utils/backoff';
 
 /**
  * The single source of truth for "is the API reachable", distinct from device
@@ -13,10 +14,12 @@ import { logger } from '#/utils/environment';
 
 /** Consecutive per-operation failures (in the closed state) before opening. */
 const FAILURE_THRESHOLD = 3;
-/** Delay before the first /health probe after the circuit opens. */
-const INITIAL_PROBE_DELAY_MS = 20_000;
-/** Probe backoff cap — keeps probing a long-dead API cheap on battery. */
-const MAX_PROBE_DELAY_MS = 120_000;
+/**
+ * The first /health probe comes 20s after the circuit opens; the cap keeps
+ * probing a long-dead API cheap on battery. Jitter, or every device the outage
+ * tripped together probes the recovering API together.
+ */
+const PROBE_BACKOFF = { baseMs: 20_000, maxMs: 120_000, jitter: 0.25 };
 
 type CircuitState = 'closed' | 'open';
 
@@ -164,10 +167,7 @@ class ApiReachabilityBreaker {
 
   private scheduleProbe(): void {
     this.clearProbeTimer();
-    const delay = Math.min(
-      INITIAL_PROBE_DELAY_MS * 2 ** this.probeAttempt,
-      MAX_PROBE_DELAY_MS,
-    );
+    const delay = backoffDelay(this.probeAttempt, PROBE_BACKOFF);
     logger.info(`🔌 next /health probe in ${Math.round(delay / 1000)}s`);
     this.probeTimer = setTimeout(() => {
       this.probeTimer = null;

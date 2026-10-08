@@ -60,6 +60,31 @@ const config = {
   },
 };
 
-module.exports = wrapWithReanimatedMetroConfig(
-  mergeConfig(defaultConfig, config),
+// Unistyles' exports list `import` before `react-native`, so an ESM import of
+// the package lands in lib/module while the Babel plugin's component imports
+// land in src: two copies, each with its own ShadowRegistry. Resolving every
+// Unistyles request as `require` keeps the one copy the plugin uses.
+const withOneUnistylesCopy = metroConfig => {
+  const resolveRequest = metroConfig.resolver.resolveRequest;
+  return {
+    ...metroConfig,
+    resolver: {
+      ...metroConfig.resolver,
+      resolveRequest: (context, moduleName, platform) => {
+        const isUnistyles =
+          moduleName === 'react-native-unistyles' ||
+          moduleName.startsWith('react-native-unistyles/');
+        const resolved = isUnistyles
+          ? { ...context, isESMImport: false }
+          : context;
+        return resolveRequest
+          ? resolveRequest(resolved, moduleName, platform)
+          : resolved.resolveRequest(resolved, moduleName, platform);
+      },
+    },
+  };
+};
+
+module.exports = withOneUnistylesCopy(
+  wrapWithReanimatedMetroConfig(mergeConfig(defaultConfig, config)),
 );

@@ -1,10 +1,17 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  RecipeIngredientMatchKind,
+} from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  ConfirmRecipeConsumptionDocument,
+  MarkRecipeAsCookedDocument,
+  MatchRecipeIngredientsToPantryDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import type { RootState } from '#store';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
 
@@ -383,6 +390,117 @@ describe('useRecipeCookingActions', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Recipe marked as cooked! Ingredients deducted from pantry.',
       ),
+    );
+  });
+
+  // The review opens with the servings and notes the cook entered; skipping it
+  // must cook those, not the whole recipe without the notes.
+  it('skip review cooks the servings and notes entered before the review', async () => {
+    const matches = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            __typename: 'RecipeIngredientMatch',
+            matchKind: RecipeIngredientMatchKind.Item,
+            matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+          },
+        ],
+      },
+    });
+    const cooked = cookedMock({ kind: 'success' });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [matches.mock, cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 2,
+        deductFromPantry: true,
+        useGranularDeduction: true,
+        notes: 'Halved it',
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.ingredientMatching.isSheetVisible).toBe(true),
+    );
+
+    await act(async () => {
+      result.current.handleSkipReview();
+    });
+
+    await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
+    expect(cooked.fired).toContainEqual(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          servings: 2,
+          notes: 'Halved it',
+          deductFromPantry: true,
+        }),
+      }),
+    );
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+  });
+
+  it('a confirmed review records the servings and notes entered before it', async () => {
+    const matches = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            __typename: 'RecipeIngredientMatch',
+            matchKind: RecipeIngredientMatchKind.Item,
+            availableQuantity: 5,
+            suggestedQuantity: 1,
+            matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            ingredient: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              isOptional: false,
+            },
+          },
+        ],
+      },
+    });
+    const confirm = recordMock(ConfirmRecipeConsumptionDocument, {
+      data: {
+        confirmRecipeConsumption: {
+          __typename: 'ConfirmRecipeConsumptionPayload',
+          converged: false,
+          totalConsumed: 1,
+          totalFailed: 0,
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [matches.mock, confirm.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 2,
+        deductFromPantry: true,
+        useGranularDeduction: true,
+        notes: 'Halved it',
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.ingredientMatching.editableMatches).toHaveLength(1),
+    );
+
+    await act(async () => {
+      await result.current.handleConfirmReview();
+    });
+
+    expect(confirm.fired).toContainEqual(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          recipeId: 'recipe-1',
+          servings: 2,
+          notes: 'Halved it',
+          consumptions: [expect.objectContaining({ pantryItemId: 'pi-1' })],
+        }),
+      }),
     );
   });
 });

@@ -80,7 +80,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   UpdateDietaryProfile: 'absolute-update',
   UpdateFavoriteRecipe: 'absolute-update',
   UpdateNotificationPreferences: 'absolute-update',
-  UpdateRecipeIngredients: 'absolute-update',
   UpdateUserPreferences: 'absolute-update',
   UpdateUserProfile: 'absolute-update',
 };

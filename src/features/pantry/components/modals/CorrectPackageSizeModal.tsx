@@ -8,7 +8,6 @@ import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import {
   CorrectPackageSizeModal_BatchFragmentDoc,
@@ -18,7 +17,10 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import { getUnitDisplayText } from '#/utils/formatQuantity';
+import {
+  formatNetWeightDisplay,
+  getUnitDisplayText,
+} from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   correctWeightSchema,
@@ -203,7 +205,7 @@ export const CorrectPackageSizeModal: React.FC<
               render={({ field }) => (
                 <UnitAutocompleteField
                   variant="modal"
-                  label={t('storageLocationForm.unit')}
+                  label={t('labels.unit')}
                   value={field.value}
                   onChangeText={field.onChange}
                   onUnitSelected={handleUnitSelected}

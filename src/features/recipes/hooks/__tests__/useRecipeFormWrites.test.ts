@@ -1,21 +1,18 @@
 import { waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
+  recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
-import {
-  UpdateRecipeDocument,
-  UpdateRecipeIngredientsDocument,
-} from '#features/recipes/graphql/recipe.generated';
+import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 
 /**
- * An edit is two writes in parallel. Reporting the pair as saved when either
- * leg was refused leaves the screen closing on a change the server discarded —
- * and the message has to come from the leg that was actually refused.
+ * An edit is one write: the fields and the ingredient list under the version,
+ * so both land or neither does, and a refusal is reported as the server gave it.
  */
 const RECIPE_ID = 'recipe-1';
 
@@ -24,13 +21,6 @@ const updateMock = (
 ): MockFor<typeof UpdateRecipeDocument> => ({
   request: { query: UpdateRecipeDocument, variables: () => true },
   result: { data: { updateRecipe: payload } },
-});
-
-const ingredientsMock = (
-  payload: Record<string, unknown>,
-): MockFor<typeof UpdateRecipeIngredientsDocument> => ({
-  request: { query: UpdateRecipeIngredientsDocument, variables: () => true },
-  result: { data: { updateRecipeIngredients: payload } },
 });
 
 const renderWrites = (mocks: MockedResponse[]) =>
@@ -54,46 +44,70 @@ const REFUSED_FAILURE = {
 };
 
 describe('useRecipeFormWrites.updateRecipe', () => {
-  it('reports rejected when only the INGREDIENTS leg is refused', async () => {
-    const { result } = renderWrites([
-      updateMock({ __typename: 'UpdateRecipePayload' }),
-      ingredientsMock(REFUSAL),
+  it('sends the fields and the ingredient list in one write', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: {
+        updateRecipe: {
+          __typename: 'UpdateRecipePayload',
+          recipe: { __typename: 'Recipe', id: RECIPE_ID },
+        },
+      },
+    });
+    const { result } = renderWrites([update.mock]);
+    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    const ingredients = [{ name: 'Flour', quantity: 2, sortOrder: 0 }];
+
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {
+      version: 3,
+      name: 'Bread',
+      ingredients,
+    });
+
+    expect(outcome).toEqual({ status: 'ok' });
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: RECIPE_ID,
+          version: 3,
+          name: 'Bread',
+          ingredients,
+        },
+      },
     ]);
+  });
+
+  it('reports the refusal the server gave', async () => {
+    const { result } = renderWrites([updateMock(REFUSAL)]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {}, []);
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {});
 
-    // The REFUSED leg's failure — the recipe leg succeeded and has none.
     expect(outcome).toEqual({
       status: 'rejected',
       failure: expect.objectContaining(REFUSED_FAILURE),
     });
   });
 
-  it('reports rejected when only the RECIPE leg is refused', async () => {
+  it('reports an edit made elsewhere since the form loaded', async () => {
     const { result } = renderWrites([
-      updateMock(REFUSAL),
-      ingredientsMock({ __typename: 'UpdateRecipeIngredientsPayload' }),
+      updateMock({
+        __typename: 'ConflictError',
+        code: ErrorCode.VersionConflict,
+        message: 'stale',
+      }),
     ]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {}, []);
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {
+      version: 3,
+    });
 
     expect(outcome).toEqual({
       status: 'rejected',
-      failure: expect.objectContaining(REFUSED_FAILURE),
+      failure: expect.objectContaining({
+        code: ErrorCode.VersionConflict,
+        title: t('errors.changedElsewhereTitle'),
+      }),
     });
-  });
-
-  it('reports ok only when both legs land', async () => {
-    const { result } = renderWrites([
-      updateMock({ __typename: 'UpdateRecipePayload' }),
-      ingredientsMock({ __typename: 'UpdateRecipeIngredientsPayload' }),
-    ]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
-
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {}, []);
-
-    expect(outcome.status).toBe('ok');
   });
 });

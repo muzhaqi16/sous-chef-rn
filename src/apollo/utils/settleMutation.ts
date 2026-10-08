@@ -5,23 +5,20 @@ import {
   TopLevelErrorCode,
   UnitDenial,
 } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
 import { errorService, isTransportFailure } from '#/services/errorService';
 import { isTranslationKey, t, type TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import {
-  alertVersionConflict,
-  reportMutationFailure,
-} from '#/utils/errorHandlers';
+import { reportMutationFailure } from '#/utils/errorHandlers';
 import {
   extractMutationPayload,
   isErrorTypename,
 } from '#/utils/errors/mutationPayload';
 import {
   getVersionConflictMessage,
-  VERSION_CONFLICT_CODES,
+  isVersionConflictCode,
 } from '#/utils/errors/versionConflict';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
@@ -50,6 +47,8 @@ export interface Settled<TData> {
   status: SettleStatus;
   data: TData | null | undefined;
   failure?: SettledFailure;
+  /** What a failure was thrown or resolved as; absent for a refusal member. */
+  error?: unknown;
 }
 
 type Code = `${ErrorCode}` | `${TopLevelErrorCode}`;
@@ -78,6 +77,8 @@ export interface SettleOptions {
 interface Failure {
   code: string | null;
   field: string | null;
+  /** The whole path as one copy key: `amount.packages.size` is `amountPackagesSize`. */
+  fieldPath: string | null;
   resource: string | null;
   /** `UnitEligibilityError`: the units the operation would take, best first. */
   validUnits: readonly string[];
@@ -94,11 +95,24 @@ const stringOrNull = (value: unknown): string | null =>
 
 // A dotted path's last named segment: `input.media.imageUrl` is `imageUrl`, and
 // a list index names no field, so `input.emails.1` is `emails`.
+const namedSegments = (path: string | null | undefined): string[] =>
+  path?.split('.').filter(segment => !/^\d+$/.test(segment)) ?? [];
+
 const fieldName = (path: string | null | undefined): string | null =>
-  path
-    ?.split('.')
-    .filter(segment => !/^\d+$/.test(segment))
-    .pop() ?? null;
+  namedSegments(path).pop() ?? null;
+
+// A nested input's field gets its own copy, which the last segment alone
+// (`size`) cannot name; `input.` is the argument, not part of the field.
+const fieldPathKey = (path: string | null | undefined): string | null => {
+  const segments = namedSegments(path);
+  if (segments[0] === 'input') segments.shift();
+  if (segments.length < 2) return null;
+  return segments
+    .map((part, index) =>
+      index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
+    )
+    .join('');
+};
 
 function failureFromError(error: unknown): Failure {
   // A failure the server gave no verdict on carries no code worth naming.
@@ -109,6 +123,7 @@ function failureFromError(error: unknown): Failure {
     code: code ?? null,
     // A scalar refused before any resolver ran names its path here.
     field: fieldName(getTopLevelGraphQLError(error)?.field),
+    fieldPath: fieldPathKey(getTopLevelGraphQLError(error)?.field),
     resource: null,
     validUnits: [],
     denial: null,
@@ -129,6 +144,7 @@ function failureFromPayload(payload: object): Failure {
   return {
     code: stringOrNull(code),
     field: fieldName(stringOrNull(field)),
+    fieldPath: fieldPathKey(stringOrNull(field)),
     resource: stringOrNull(resource),
     validUnits: Array.isArray(validUnits)
       ? validUnits.filter(unit => typeof unit === 'string')
@@ -225,7 +241,8 @@ function describe(
   error: unknown,
   options: SettleOptions,
 ): SettledFailure {
-  const { code, field, resource, available, availableUnitSymbol } = failure;
+  const { code, field, fieldPath, resource, available, availableUnitSymbol } =
+    failure;
   const title = options.title ?? t('labels.error');
   const copy: Partial<Record<string, { title: string; body: string }>> =
     options.copy ?? {};
@@ -237,7 +254,7 @@ function describe(
   }
   // Only the version codes mean the row changed since it was read; `CONFLICT`
   // is a state refusal and takes its code's own copy below.
-  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+  if (isVersionConflictCode(code)) {
     return {
       code,
       field,
@@ -290,13 +307,16 @@ function describe(
     };
   }
   if (field) {
-    // The server names the field, so only the loaded copy can say it has one.
-    const fieldKey = `errors.field.${field}`;
+    // The server names the field, so only the loaded copy can say it has one:
+    // the whole path's first, then its last segment's.
+    const fieldKey = [fieldPath, field]
+      .map(name => (name ? `errors.field.${name}` : null))
+      .find(key => key !== null && isTranslationKey(key));
     return {
       code,
       field,
       title,
-      body: isTranslationKey(fieldKey) ? t(fieldKey) : options.fallback,
+      body: fieldKey ? t(fieldKey) : options.fallback,
     };
   }
   return {
@@ -319,18 +339,7 @@ function fail(
   if (failure.code) handlers[failure.code]?.();
 
   const described = describe(failure, error, options);
-  if (options.present === 'none') return described;
-
-  const isConflict =
-    !!failure.code && VERSION_CONFLICT_CODES.includes(failure.code);
-  if (isConflict && options.onConflictRefresh) {
-    alertVersionConflict({
-      onRefresh: options.onConflictRefresh,
-      customMessage: described.body,
-    });
-  } else {
-    alertService.alert(described.title, described.body);
-  }
+  if (options.present !== 'none') presentFailure(described, options);
   return described;
 }
 
@@ -355,12 +364,13 @@ export async function settleMutation<TData>(
   const operation = operationNameOf(options.document);
   if ('error' in classified) {
     reportMutationFailure(classified.error, operation);
-  } else {
-    // A refusal the server returned is a business outcome, not an app error.
-    Telemetry.increment('mutation_refused_total', 1, {
-      operation,
-      code: classified.failure.code ?? 'none',
-    });
+    const { error } = classified;
+    return { status: 'failed', data: result?.data, failure, error };
   }
+  // A refusal the server returned is a business outcome, not an app error.
+  Telemetry.increment('mutation_refused_total', 1, {
+    operation,
+    code: classified.failure.code ?? 'none',
+  });
   return { status: 'failed', data: result?.data, failure };
 }

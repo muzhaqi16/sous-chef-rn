@@ -12,6 +12,8 @@ declare module '@apollo/client' {
     appForeground: void;
     apiReachable: void;
     wsReconnected: void;
+    /** At the switch itself, and on each navigation after one. */
+    languageChanged: void;
   }
 
   namespace ApolloClient {

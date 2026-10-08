@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { DisplayFormat, UnitType } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePurchaseAmountModal } from '../usePurchaseAmountModal';
 
@@ -25,7 +25,13 @@ const makeItem = (
     movedToPantryAt: null,
     isPurchased: false,
   },
-  unit: { __typename: 'Unit', id: 'u1', name: 'Liter', symbol: 'L' },
+  unit: {
+    __typename: 'Unit',
+    id: 'u1',
+    name: 'Liter',
+    symbol: 'L',
+    type: UnitType.Volume,
+  },
   item: null,
   ...overrides,
 });

@@ -79,6 +79,8 @@ interface RecipeEnrichmentProps {
   tags?: string[];
   status?: RecipeStatus;
   reviewNote?: string;
+  hasPendingRevision?: boolean;
+  revisionRejectionNote?: string;
 }
 
 export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
@@ -91,6 +93,8 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   tags,
   status,
   reviewNote,
+  hasPendingRevision,
+  revisionRejectionNote,
 }) => {
   const { t } = useTranslation();
   const nutrients = parseNutrition(nutritionData);
@@ -202,6 +206,20 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
       {status === RecipeStatus.Draft && !!reviewNote && (
         <Text role="caption" tone="secondary" style={styles.reviewNote}>
           {t('recipes.reviewNote', { note: reviewNote })}
+        </Text>
+      )}
+      {/* An edit to a published recipe waits for review while the recipe stays live. */}
+      {status === RecipeStatus.Published && !!hasPendingRevision && (
+        <View style={styles.draftBadge}>
+          <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+          <Text role="caption" tone="secondary" style={styles.metaText}>
+            {t('recipes.pendingChangesBadge')}
+          </Text>
+        </View>
+      )}
+      {status === RecipeStatus.Published && !!revisionRejectionNote && (
+        <Text role="caption" tone="secondary" style={styles.reviewNote}>
+          {t('recipes.revisionRejectedNote', { note: revisionRejectionNote })}
         </Text>
       )}
     </>

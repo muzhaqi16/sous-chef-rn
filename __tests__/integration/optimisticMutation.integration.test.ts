@@ -161,10 +161,10 @@ function buildClient(opts: {
 
 function wrap(client: ApolloClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return React.createElement(
-      ApolloProvider,
-      { client, children: children as React.ReactElement },
-    );
+    return React.createElement(ApolloProvider, {
+      client,
+      children: children as React.ReactElement,
+    });
   };
 }
 

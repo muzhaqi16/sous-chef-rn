@@ -8,12 +8,18 @@ import type { SelectorConfig } from '../../../../src/components/organisms/Animat
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../src/components/organisms/AnimatedItemSelector/SelectorItemContainer', () => ({
-  SelectorItemContainer: () => null,
-}));
-jest.mock('../../../../src/components/organisms/AnimatedItemSelector/ActionButtons', () => ({
-  ActionButtons: () => null,
-}));
+jest.mock(
+  '../../../../src/components/organisms/AnimatedItemSelector/SelectorItemContainer',
+  () => ({
+    SelectorItemContainer: () => null,
+  }),
+);
+jest.mock(
+  '../../../../src/components/organisms/AnimatedItemSelector/ActionButtons',
+  () => ({
+    ActionButtons: () => null,
+  }),
+);
 
 describe('SelectorContent', () => {
   type Item = { id: string; name: string };
@@ -33,9 +39,7 @@ describe('SelectorContent', () => {
   });
 
   it('renders empty state with default message', () => {
-    const { getByText } = render(
-      <SelectorContent config={baseConfig} />,
-    );
+    const { getByText } = render(<SelectorContent config={baseConfig} />);
     expect(getByText('No items yet')).toBeTruthy();
   });
 

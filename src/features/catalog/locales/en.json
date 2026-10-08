@@ -31,7 +31,6 @@
     "climateControlled": "Climate Controlled",
     "capacity": "Capacity",
     "capacityPlaceholder": "e.g., 100",
-    "unit": "Unit",
     "unitPlaceholder": "Select unit",
     "setAsDefault": "Set as Default Location",
     "typeRefrigerator": "Refrigerator",
@@ -282,6 +281,7 @@
     "counter": "{{current}} of {{total}}",
     "setAsMain": "Set as main photo",
     "mainPhoto": "Main photo",
+    "credit": "Photo: {{source}}",
     "setPrimary": {
       "notFoundTitle": "Photo not found",
       "notFoundBody": "This photo isn't on the item any more — it may have been removed.",
@@ -382,7 +382,6 @@
     "noUnits": "No units found",
     "typeMoreToAdd": "Continue typing to add \"{{term}}\"",
     "typeMoreToAddBrand": "Continue typing to add \"{{term}}\" as a custom brand",
-    "typeMoreToAddStore": "Continue typing to add \"{{term}}\" as a custom store",
     "typeAtLeastTwo": "Type at least 2 characters to search",
     "tryDifferentTerm": "Try a different search term",
     "typeMoreToAddCategory": "Continue typing to use \"{{term}}\" as a custom category"

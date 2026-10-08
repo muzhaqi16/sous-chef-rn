@@ -1,5 +1,5 @@
 import { object, string } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage } from '#/utils/validation/common';
 // Pages, order and label keys are the ADD form's, declared once in the catalog's
 // public `ui/`. `PageName` is an IDENTIFIER, never a tab label — resolve it
 // through `PAGE_LABEL_KEYS`. Only `TAB_FIELDS` below is this form's own.
@@ -7,11 +7,6 @@ import type { PageName } from '#features/catalog/ui/AddItemForm/fields';
 import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import type { PantryItemFormData } from './PantryItemForm';
-
-// Messages resolve LAZILY: the schemas are built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-// Uses the SAME keys as `addPantryItemFormConfig.ts` so the two cannot drift.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 type FieldName = keyof PantryItemFormData;
 
@@ -31,14 +26,15 @@ export const TAB_FIELDS: Record<PageName, readonly FieldName[]> = {
 
 export const INVENTORY_ADVANCED_FIELDS: readonly FieldName[] = ['tags'];
 
+// The SAME message keys as `addPantryItemFormConfig.ts`, so the two cannot drift.
 export const editItemSchema = object({
   itemName: string(),
   // The submit parses it with the same reader, so text it cannot read never gets there.
   quantityInput: string()
-    .required(msg('errors.invalidQuantity'))
+    .required(lazyMessage('errors.invalidQuantity'))
     .test(
       'parseable',
-      msg('errors.invalidQuantity'),
+      lazyMessage('errors.invalidQuantity'),
       value => !value || parseFractionalInput(value) !== null,
     ),
   unit: string(), // Tracking unit
@@ -49,7 +45,7 @@ export const editItemSchema = object({
   // pair discards what the user typed with nothing reported.
   netWeight: string().test(
     'net-weight-needs-value',
-    msg('errors.field.netWeight'),
+    lazyMessage('errors.field.netWeight'),
     (value, context: { parent: NetWeightSiblings }) => {
       if ((value ?? '').trim()) return true;
       return !context.parent.netWeightUnitId;
@@ -59,7 +55,7 @@ export const editItemSchema = object({
   // field when it can't.
   netWeightUnit: string().test(
     'net-weight-needs-unit',
-    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
     (value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;

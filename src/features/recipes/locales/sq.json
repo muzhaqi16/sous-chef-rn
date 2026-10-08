@@ -94,6 +94,8 @@
     "draftBadge": "Draft — e papublikuar",
     "inReviewBadge": "Në shqyrtim — vetëm ti mund ta shohësh derisa të miratohet",
     "reviewNote": "Shënim nga moderimi: {{note}}",
+    "pendingChangesBadge": "Ndryshimet në shqyrtim — të gjithë shohin versionin e publikuar derisa të miratohen",
+    "revisionRejectedNote": "Ndryshimet e tua të fundit nuk u miratuan. Shënim nga moderimi: {{note}}",
     "forkFailed": "Receta nuk u degëzua",
     "forkSourceNotLoaded": "Hape këtë recetë një herë me lidhje, që të jetë në pajisje dhe të mund të kopjohet.",
     "forkCopyName": "{{name}} (versioni im)",
@@ -377,6 +379,8 @@
     "summaryPartial_other": "{{count}} të pjesshëm",
     "summaryMissing_one": "{{count}} mungon",
     "summaryMissing_other": "{{count}} mungojnë",
+    "summaryUnsure_one": "{{count}} për t’u kontrolluar",
+    "summaryUnsure_other": "{{count}} për t’u kontrolluar",
     "skipReview": "Anashkalo shqyrtimin"
   },
   "markCookedModal": {
@@ -462,6 +466,7 @@
   "ingredientMatch": {
     "optional": "Opsional",
     "matchedPantryItem": "U përputh: {{name}} ({{amount}} në dispozicion)",
-    "qtyLabel": "Sasia:"
+    "qtyLabel": "Sasia:",
+    "unsureHint": "Përputhet vetëm emri. Aktivizoje nëse është artikulli i duhur."
   }
 }

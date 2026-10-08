@@ -31,7 +31,6 @@
     "climateControlled": "Climatizado",
     "capacity": "Capacidad",
     "capacityPlaceholder": "p. ej., 100",
-    "unit": "Unidad",
     "unitPlaceholder": "Seleccionar unidad",
     "setAsDefault": "Establecer como ubicación predeterminada",
     "typeRefrigerator": "Refrigerador",
@@ -282,6 +281,7 @@
     "counter": "{{current}} de {{total}}",
     "setAsMain": "Establecer como foto principal",
     "mainPhoto": "Foto principal",
+    "credit": "Foto: {{source}}",
     "setPrimary": {
       "notFoundTitle": "Foto no encontrada",
       "notFoundBody": "Esta foto ya no está en el artículo; puede que se haya eliminado.",
@@ -382,7 +382,6 @@
     "noUnits": "No se encontraron unidades",
     "typeMoreToAdd": "Sigue escribiendo para añadir «{{term}}»",
     "typeMoreToAddBrand": "Sigue escribiendo para añadir «{{term}}» como marca personalizada",
-    "typeMoreToAddStore": "Sigue escribiendo para añadir «{{term}}» como tienda personalizada",
     "typeAtLeastTwo": "Escribe al menos 2 caracteres para buscar",
     "tryDifferentTerm": "Prueba con otro término de búsqueda",
     "typeMoreToAddCategory": "Sigue escribiendo para usar «{{term}}» como categoría personalizada"

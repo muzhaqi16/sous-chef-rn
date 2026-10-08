@@ -1,0 +1,28 @@
+# A store the user adds, local-first under a client-minted id. When the shop is
+# already on file the create merges, and the id goes on naming that store.
+mutation CreateStore($input: CreateStoreInput!) {
+  createStore(input: $input) {
+    __typename
+    ... on CreateStorePayload {
+      outcome
+      store {
+        id
+        name
+        ...StoreReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+# A local-first create's store: everything a query reads on one.
+fragment useCreateStore_row on Store {
+  id
+  ...StoreReaders
+}

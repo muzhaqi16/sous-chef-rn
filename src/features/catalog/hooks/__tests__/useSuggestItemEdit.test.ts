@@ -51,6 +51,7 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
+  version: 1,
   // The default target: a public catalog item this user may propose edits to
   // but not write through — the suggestion path.
   canEdit: false,
@@ -128,12 +129,11 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
-  // A size corrected from a scan is that barcode's, not the item's: the item
-  // can carry other packs. The rest of the edit still goes to the item.
-  it("aims a scanned barcode's size at its record and the rest at the item", async () => {
+  // A scan returns the product holding the barcode, so a pack correction is an
+  // edit to that item like any other, in one suggestion.
+  it('sends a scanned pack size and the rest of the edit as one suggestion', async () => {
     const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
-      maxUsageCount: 2,
     });
     const { result } = renderHook([mock]);
 
@@ -142,7 +142,6 @@ describe('useSuggestItemEdit', () => {
       form({
         netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
       }),
-      'esm-1',
     );
 
     expect(outcome).toEqual({ status: 'suggested' });
@@ -151,18 +150,11 @@ describe('useSuggestItemEdit', () => {
         {
           input: {
             itemId: 'item-1',
-            variation: 'esm-1',
             note: NOTE,
             changes: {
+              name: 'Skim Milk',
               packageInfo: { netWeight: 500, netWeightKind: 'PACKAGE' },
             },
-          },
-        },
-        {
-          input: {
-            itemId: 'item-1',
-            note: NOTE,
-            changes: { name: 'Skim Milk' },
           },
         },
       ]),
@@ -310,7 +302,7 @@ describe('useSuggestItemEdit', () => {
     const { result } = renderHook([mock]);
 
     const outcome = await result.current.submitEdit(
-      snapshot({ canEdit: true }),
+      snapshot({ canEdit: true, canSuggest: false }),
       form(),
     );
 
@@ -349,7 +341,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   describe('routing', () => {
-    it('writes straight through when the user may edit the item', async () => {
+    it('writes the user’s own private item straight through', async () => {
       const { mock, fired } = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
@@ -369,7 +361,7 @@ describe('useSuggestItemEdit', () => {
               baseDimension: null,
               imageUrl: null,
               canEdit: true,
-              canSuggest: true,
+              canSuggest: false,
               displayUnit: null,
               brands: [],
             },
@@ -379,42 +371,41 @@ describe('useSuggestItemEdit', () => {
       const { result } = renderHook([mock]);
 
       const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true }),
+        snapshot({ canEdit: true, canSuggest: false }),
         form(),
       );
 
       expect(outcome).toEqual({ status: 'updated' });
+      // With the version the form opened on, so an edit made since is refused.
       await waitFor(() =>
         expect(fired).toContainEqual({
-          input: { id: 'item-1', name: 'Skim Milk' },
+          input: { id: 'item-1', version: 1, name: 'Skim Milk' },
         }),
       );
     });
 
-    // A stale cached canEdit is absorbed: updateItem's Forbidden explicitly
-    // tells the client to use createItemSuggestion, so do that.
-    it('falls back to a suggestion when a direct write is forbidden', async () => {
-      const update = recordMock(UpdateItemDocument, {
+    it('hands a write refused as changed elsewhere back to the form, unalerted', async () => {
+      const { mock } = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
-            __typename: 'ForbiddenError',
-            code: ErrorCode.Forbidden,
-            message: 'Use createItemSuggestion',
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'stale',
           },
         },
       });
-      const suggest = recordMock(CreateItemSuggestionDocument, {
-        data: suggestionPayload(NOTE),
-      });
-      const { result } = renderHook([update.mock, suggest.mock]);
+      const { result } = renderHook([mock]);
 
       const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true }),
+        snapshot({ canEdit: true, canSuggest: false }),
         form(),
       );
 
-      expect(outcome).toEqual({ status: 'suggested' });
-      await waitFor(() => expect(suggest.fired).toHaveLength(1));
+      expect(outcome).toMatchObject({
+        status: 'conflict',
+        failure: { code: ErrorCode.VersionConflict },
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
 
     // canEdit=false does not imply "suggest": a PRIVATE item the user doesn't
@@ -470,7 +461,9 @@ describe('useSuggestItemEdit', () => {
 
     // The flags are not mutually exclusive — an admin on a public item has both.
     // The direct write wins: there is nothing to review when you can just write.
-    it('writes through rather than suggesting when both paths are open', async () => {
+    // An admin on a public item holds both rights. The app uses no admin
+    // rights, so the edit goes for review like anyone else's.
+    it('suggests on a public item even when the viewer may edit it', async () => {
       const update = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
@@ -507,9 +500,9 @@ describe('useSuggestItemEdit', () => {
         form(),
       );
 
-      expect(outcome).toEqual({ status: 'updated' });
-      await waitFor(() => expect(update.fired).toHaveLength(1));
-      expect(suggest.fired).toHaveLength(0);
+      expect(outcome).toEqual({ status: 'suggested' });
+      await waitFor(() => expect(suggest.fired).toHaveLength(1));
+      expect(update.fired).toHaveLength(0);
     });
   });
 });

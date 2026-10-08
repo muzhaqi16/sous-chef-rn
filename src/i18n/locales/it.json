@@ -132,6 +132,7 @@
     "queuedRemovalKept": "Una rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
     "invalidQuantity": "Inserisci una quantità valida",
+    "invalidAmountPaid": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",
     "itemNotFound": "Articolo non trovato",
     "parentContextRequired": "È richiesto il contesto principale",
     "createStorageLocationFailed": "Impossibile creare la posizione di archiviazione",
@@ -147,7 +148,6 @@
     "openBatchFailed": "Impossibile aprire questo lotto.",
     "wasteBatchFailed": "Impossibile contrassegnare come sprecato.",
     "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
-    "entityUpdatedTitle": "{{entity}}: aggiornamento",
     "changedElsewhereTitle": "Modificato altrove",
     "entityHome": "Casa",
     "entityMember": "Membro",
@@ -185,7 +185,10 @@
       "packageSize": "Inserisci la dimensione della confezione in un'unità dello stesso tipo di quella dell'articolo (peso con peso, volume con volume).",
       "resolution": "Scegli se usare la stima o inserire tu la quantità.",
       "amount": "È più di quanto resta di questo articolo.",
-      "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco."
+      "amountMeasuredQuantity": "Inserisci una quantità maggiore di zero.",
+      "amountPackagesSize": "Non sappiamo quanto contiene una confezione. Indica la dimensione della confezione o la quantità con la sua unità (ad esempio 1 kg).",
+      "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco.",
+      "primaryUpc": "Quel codice a barre non è valido. Controlla le cifre e riprova."
     },
     "unitDenied": {
       "noRoute": "Quell'unità non può essere convertita nel modo in cui questo articolo viene registrato.",
@@ -262,6 +265,7 @@
     "addNamed": "Aggiungi {{name}}",
     "addToShoppingList": "Aggiungi alla lista della spesa",
     "adding": "Aggiunta in corso...",
+    "added": "Aggiunto",
     "admin": "Amministratore",
     "alertWhenBelow": "Avvisa quando sotto",
     "allergiesIntolerances": "Allergie e intolleranze",
@@ -293,6 +297,7 @@
     "changePassword": "Cambia password",
     "clear": "Cancella",
     "clearAll": "Cancella tutto",
+    "check": "Verifica",
     "clearInput": "Cancella campo",
     "clearRead": "Cancella lette",
     "close": "Chiudi",
@@ -305,6 +310,8 @@
     "copied": "Copiato",
     "copy": "Copia",
     "copyOfName": "{{name}} (Copia)",
+    "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "Licenza",
     "couldnTSendThat": "Impossibile inviare",
     "couldnTSetThatPhoto": "Impossibile impostare la foto",
     "create": "Crea",
@@ -483,7 +490,6 @@
     "thisFieldIsRequired": "Questo campo è obbligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
     "tips": "Consigli",
-    "totalCost": "Costo totale",
     "stockValue": "Valore delle scorte",
     "avgCostPerUnit": "Costo medio/unità",
     "totalPaid": "Totale pagato",
@@ -508,7 +514,9 @@
     "durationDays_one": "{{count}} giorno",
     "durationDays_other": "{{count}} giorni",
     "currency": "Valuta",
-    "today": "Oggi"
+    "today": "Oggi",
+    "packageSize": "Dimensione della confezione",
+    "unit": "Unità"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",

@@ -132,6 +132,7 @@
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
     "invalidQuantity": "Please enter a valid quantity",
+    "invalidAmountPaid": "Enter the amount paid, like 3.49, or leave it empty.",
     "itemNotFound": "Item not found",
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
@@ -147,7 +148,6 @@
     "openBatchFailed": "Could not open this batch.",
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
-    "entityUpdatedTitle": "{{entity}} Updated",
     "changedElsewhereTitle": "Changed Elsewhere",
     "entityHome": "Home",
     "entityMember": "Member",
@@ -185,7 +185,10 @@
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",
       "amount": "That's more than this item has left.",
-      "unitId": "That unit can't be used here. Pick one from the list."
+      "amountMeasuredQuantity": "Enter an amount greater than zero.",
+      "amountPackagesSize": "We don't know how much one package of this holds. Enter the package size, or the amount with its unit (like 1 kg).",
+      "unitId": "That unit can't be used here. Pick one from the list.",
+      "primaryUpc": "That barcode isn’t valid. Check its digits and try again."
     },
     "unitDenied": {
       "noRoute": "That unit can't be converted to how this item is tracked.",
@@ -262,6 +265,7 @@
     "addNamed": "Add {{name}}",
     "addToShoppingList": "Add to Shopping List",
     "adding": "Adding...",
+    "added": "Added",
     "admin": "Admin",
     "alertWhenBelow": "Alert When Below",
     "allergiesIntolerances": "Allergies & Intolerances",
@@ -293,6 +297,7 @@
     "changePassword": "Change Password",
     "clear": "Clear",
     "clearAll": "Clear all",
+    "check": "Check",
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",
@@ -305,6 +310,8 @@
     "copied": "Copied",
     "copy": "Copy",
     "copyOfName": "{{name}} (Copy)",
+    "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "License",
     "couldnTSendThat": "Couldn't send that",
     "couldnTSetThatPhoto": "Couldn't set that photo",
     "create": "Create",
@@ -483,7 +490,6 @@
     "thisFieldIsRequired": "This field is required",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "This item isn't in the catalog any more — it may have been removed.",
     "tips": "Tips",
-    "totalCost": "Total Cost",
     "stockValue": "Stock value",
     "avgCostPerUnit": "Avg Cost/Unit",
     "totalPaid": "Total paid",
@@ -508,7 +514,9 @@
     "durationDays_one": "{{count}} day",
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
-    "today": "Today"
+    "today": "Today",
+    "packageSize": "Package size",
+    "unit": "Unit"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

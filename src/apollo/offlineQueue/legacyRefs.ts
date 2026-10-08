@@ -166,6 +166,29 @@ const purchasedMoveHints = (input: Input): Input => {
   return { ...rest, pantryItemHints: pantryItemIds };
 };
 
+/**
+ * A quantity and unit, as the shared `amount` (measured). The package size
+ * went beside them, and the build that queued it never knew whether the
+ * quantity counted packages, so it is dropped: the batch takes its default.
+ */
+const stockAmount =
+  (quantityKey: string, unitKey: string) =>
+  (input: Input): Input => {
+    if ('amount' in input || !(quantityKey in input)) return input;
+    const {
+      [quantityKey]: quantity,
+      [unitKey]: unitId,
+      packageSize: _dropped,
+      ...rest
+    } = input;
+    if (typeof quantity !== 'number') return input;
+    const unit = text(unitId);
+    return {
+      ...rest,
+      amount: { measured: { quantity, ...(unit && { unitId: unit }) } },
+    };
+  };
+
 /** `{ diet | intolerance | healthGoal }` beside the severity, as its `kind`. */
 const restrictionKind = (input: Input): Input => {
   if ('kind' in input) return input;
@@ -207,6 +230,8 @@ type RewrittenInput =
   | 'AddItemsToShoppingListInput'
   | 'UpdateShoppingListItemInput'
   | 'MovePurchasedItemsToPantryInput'
+  | 'MoveShoppingItemToPantryInput'
+  | 'RestockPantryItemInput'
   | 'UpdateDietaryProfileInput'
   | 'AddRestrictionInput'
   | 'UpdateProfileInput';
@@ -220,6 +245,8 @@ const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
   // A blank unit on an edit was the user emptying it.
   UpdateShoppingListItemInput: input => withBrand(withUnit(input, true)),
   MovePurchasedItemsToPantryInput: purchasedMoveHints,
+  MoveShoppingItemToPantryInput: stockAmount('actualQuantity', 'actualUnitId'),
+  RestockPantryItemInput: stockAmount('quantity', 'unitId'),
   UpdateDietaryProfileInput: dietarySkillLevel,
   AddRestrictionInput: restrictionKind,
   UpdateProfileInput: dateOfBirthDay,

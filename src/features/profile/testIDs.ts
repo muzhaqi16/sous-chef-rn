@@ -10,11 +10,14 @@ export const profileTestIDs = {
   logoutButton: 'profile-logout-button',
 
   settingsScreen: 'settings-screen',
+  dataSourcesScreen: 'data-sources-screen',
+  dataSourceLink: (id: string) => `data-source-link-${id}`,
   settingsState: 'settings-state',
   settingsUnitSystemPicker: 'settings-unit-system-picker',
   settingsAutoSyncSwitch: 'settings-auto-sync-switch',
   settingsOfflineModeSwitch: 'settings-offline-mode-switch',
   settingsShowTutorialsSwitch: 'settings-show-tutorials-switch',
+  settingsReceiptPhotosSwitch: 'settings-receipt-photos-switch',
   settingsHapticFeedbackSwitch: 'settings-haptic-feedback-switch',
   settingsNavigationLabelsSwitch: 'settings-navigation-labels-switch',
   settingsShowShoppingListImagesSwitch:

@@ -27,6 +27,7 @@ type MockedCache = ApolloCache & {
 interface FieldHelpers {
   toReference: jest.Mock;
   readField: jest.Mock;
+  canRead: jest.Mock;
   storeFieldName: string;
 }
 
@@ -78,6 +79,7 @@ function createFieldHelpers(
       }
       return ref[fieldName];
     }),
+    canRead: jest.fn(() => false),
     storeFieldName: overrides.storeFieldName ?? 'fieldName',
     ...overrides,
   };
@@ -424,6 +426,7 @@ describe('createAddToParentConnectionUpdater', () => {
         const after = fields.notificationsConnection(before, {
           readField: () => undefined,
           toReference: () => ({ __ref: 'Notification:n1' }),
+          canRead: () => false,
           storeFieldName,
         });
         if (after !== before) seen.push(storeFieldName);
@@ -608,6 +611,111 @@ describe('createAddToParentConnectionUpdater', () => {
 // ---------------------------------------------------------------------------
 // createAddToParentArrayUpdater
 // ---------------------------------------------------------------------------
+
+describe('adding an entity the cache already holds', () => {
+  const ROW = gql`
+    fragment _AddedRowProbe on PantryItem {
+      id
+      quantity
+      item {
+        id
+        name
+      }
+    }
+  `;
+  const LIST = gql`
+    fragment _AddedListProbe on Pantry {
+      id
+      itemsConnection {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  `;
+  interface CreatedRow {
+    __typename: 'PantryItem';
+    id: string;
+    quantity: number;
+    item: { __typename: 'Item'; id: string; name: string };
+  }
+  const addToPantryItems = createAddToParentConnectionUpdater<CreatedRow>(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
+  const created: CreatedRow = {
+    __typename: 'PantryItem',
+    id: 'pi-1',
+    quantity: 2,
+    item: { __typename: 'Item', id: 'item-milk', name: 'Milk' },
+  };
+  const cacheWithPantry = () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'Pantry:p-1',
+      fragment: LIST,
+      data: {
+        __typename: 'Pantry',
+        id: 'p-1',
+        itemsConnection: { __typename: 'PantryItemConnection', edges: [] },
+      },
+    });
+    return cache;
+  };
+
+  // A mutation's result is normalized before its update runs; merging the raw
+  // response again stored the row's item inline, so an edit to the item no
+  // longer reached the row.
+  it('links the row it holds, leaving its nested entities as references', () => {
+    const cache = cacheWithPantry();
+    cache.writeFragment({
+      id: 'PantryItem:pi-1',
+      fragment: ROW,
+      data: created,
+    });
+
+    addToPantryItems(cache, 'p-1', created);
+
+    const row = cache.extract()['PantryItem:pi-1'];
+    expect(row?.item).toEqual({ __ref: 'Item:item-milk' });
+    cache.writeFragment({
+      id: 'Item:item-milk',
+      fragment: gql`
+        fragment _RenamedItemProbe on Item {
+          id
+          name
+        }
+      `,
+      data: { __typename: 'Item', id: 'item-milk', name: 'Whole milk' },
+    });
+    expect(
+      cache.readFragment<{ item: { name: string } }>({
+        id: 'PantryItem:pi-1',
+        fragment: ROW,
+      })?.item.name,
+    ).toBe('Whole milk');
+  });
+
+  it('writes a row the cache lacks from the object', () => {
+    const cache = cacheWithPantry();
+
+    addToPantryItems(cache, 'p-1', created);
+
+    expect(cache.extract()['PantryItem:pi-1']).toMatchObject({ quantity: 2 });
+    expect(
+      cache.readFragment<{
+        itemsConnection: { edges: { node: { id: string } }[] };
+      }>({ id: 'Pantry:p-1', fragment: LIST })?.itemsConnection.edges,
+    ).toEqual([
+      expect.objectContaining({
+        node: expect.objectContaining({ id: 'pi-1' }),
+      }),
+    ]);
+  });
+});
 
 describe('createAddToParentArrayUpdater', () => {
   beforeEach(() => {

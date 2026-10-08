@@ -5,7 +5,6 @@ import {
   getExpirationStatus,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
-  formatNetWeightDisplay,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
@@ -118,21 +117,6 @@ describe('formatPackageBreakdownFull', () => {
       totalNetWeight: 144,
     });
     expect(result).toBe('12 x 12 oz cans (144 oz total)');
-  });
-});
-
-describe('formatNetWeightDisplay', () => {
-  it('returns null for no weight', () => {
-    expect(formatNetWeightDisplay(null)).toBeNull();
-  });
-  it('upscales g to kg when >= 1000', () => {
-    expect(formatNetWeightDisplay(1500, { symbol: 'g' })).toBe('1.5 kg');
-  });
-  it('upscales ml to L when >= 1000', () => {
-    expect(formatNetWeightDisplay(2000, { symbol: 'ml' })).toBe('2.0 L');
-  });
-  it('formats integer values', () => {
-    expect(formatNetWeightDisplay(500, { symbol: 'g' })).toBe('500 g');
   });
 });
 

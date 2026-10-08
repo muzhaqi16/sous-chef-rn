@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -26,15 +27,12 @@ import { todayKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import {
+  InTrackingUnit_EnteredUnitFragmentDoc,
+  InTrackingUnit_PantryItemFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
   WriteHeldStock_ShownInFragmentDoc,
 } from '#features/pantry/cache/stock.generated';
-import {
-  UsePantryItemActions_EnteredUnitFragmentDoc,
-  UsePantryItemActions_IdFragmentDoc,
-  UsePantryItemActions_QuantityFragmentDoc,
-  UsePantryItemActions_TrackingUnitFragmentDoc,
-} from '../usePantryItemActions.generated';
+import { UsePantryItemActions_IdFragmentDoc } from '../usePantryItemActions.generated';
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
@@ -47,6 +45,22 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 jest.mock('#/services/errorService');
+
+/** What a stock write moves and a refusal restores. */
+const STOCK = gql`
+  fragment _ItemActionsStockProbe on PantryItem {
+    id
+    quantity
+    heldQuantity
+    displayAmount {
+      quantity
+      unit {
+        id
+        symbol
+      }
+    }
+  }
+`;
 
 const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
   seedCache(
@@ -64,8 +78,8 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
       };
       return [
         { fragment: UsePantryItemActions_IdFragmentDoc, data },
-        { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
-        { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
+        { fragment: STOCK, data },
+        { fragment: InTrackingUnit_PantryItemFragmentDoc, data },
         { fragment: WriteHeldStock_PantryItemFragmentDoc, data },
       ];
     }),
@@ -74,7 +88,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
 const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
   cache.readFragment<{ quantity: number }>({
     id: cache.identify({ __typename: 'PantryItem', id }),
-    fragment: UsePantryItemActions_QuantityFragmentDoc,
+    fragment: STOCK,
   });
 
 const PIECE = { __typename: 'Unit', id: 'pc', symbol: 'pc' };
@@ -106,15 +120,16 @@ const seedEggs = (held: number) => {
   };
   return seedCache([
     { fragment: UsePantryItemActions_IdFragmentDoc, data },
-    { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
-    { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
+    { fragment: STOCK, data },
+    { fragment: InTrackingUnit_PantryItemFragmentDoc, data },
     { fragment: WriteHeldStock_PantryItemFragmentDoc, data },
     { fragment: WriteHeldStock_ShownInFragmentDoc, data },
-    { fragment: UsePantryItemActions_EnteredUnitFragmentDoc, data: DOZEN },
+    { fragment: InTrackingUnit_EnteredUnitFragmentDoc, data: DOZEN },
   ]);
 };
 
 const createOptions = () => ({
+  pantryId: 'p-1',
   removeItem: jest.fn().mockResolvedValue(undefined),
   navigateTo: {
     pantryItem: jest.fn(),
@@ -486,15 +501,18 @@ describe('usePantryItemActions', () => {
         today: expect.any(String),
         input: {
           id: 'item-1',
-          quantity: 3,
-          unitId: undefined,
+          amount: { measured: { quantity: 3, unitId: undefined } },
           notes: 'Bought more',
           costPerUnit: undefined,
           totalCost: undefined,
           expiresOn: null,
           idempotencyKey: expect.any(String),
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         },
       });
+      // The input's day is the one the stats are read on: the day of the restock.
+      const [fired] = m.fired;
+      expect(fired?.input).toMatchObject({ today: fired?.today });
 
       expect(result.current.restockModal.visible).toBe(false);
     });
@@ -586,7 +604,9 @@ describe('usePantryItemActions', () => {
       });
 
       const input = m.fired[0]!.input as Record<string, unknown>;
-      expect(input.unitId).toBe('unit-kg');
+      expect(input.amount).toEqual({
+        measured: { quantity: 5, unitId: 'unit-kg' },
+      });
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
       expect(input.expiresOn).toBe('2026-12-31');

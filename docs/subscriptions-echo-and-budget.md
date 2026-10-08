@@ -12,7 +12,7 @@ landed on exactly one device. So the question "should I skip this event" is
 `originatorClientId` — the server echoes back the `x-device-id` the mutation
 carried.
 
-`actorUserId` answers a different question, "did this *account* cause it", and
+`actorUserId` answers a different question, "did this _account_ cause it", and
 using it costs you the multi-device case: a user signed in on a phone and a
 tablet gets no updates between them. That was this client's behaviour until
 2026-08; all four domain hooks skipped on `actorUserId === userId` while the
@@ -43,7 +43,7 @@ is per user and **cluster-wide across every device**, so the number that matters
 is 6 × devices, plus up to one un-reaped generation per device mid-reconnect:
 3 devices ≈ 36 against 40.
 
-**The three scoped streams follow the *selected* home / pantry, not every home
+**The three scoped streams follow the _selected_ home / pantry, not every home
 the user belongs to** — `pantryEvents(selectedPantryId)`,
 `homeEvents(selectedHomeId)`, `mealPlanEvents(selectedHomeId)`. Switching homes
 swaps a subscription rather than adding one, which is what keeps the count flat
@@ -64,12 +64,12 @@ the `x-device-id` header, the socket's `connectionParams.deviceId`,
 `registerDevice(input.deviceId)`, and the issue, exchange and revoke of a device
 credential. No other module mints or persists one.
 
-| | |
-| --- | --- |
-| Value | `device_` + uuid v4, minted once |
-| Owner | `src/storage/deviceId.ts` |
+|              |                                                                           |
+| ------------ | ------------------------------------------------------------------------- |
+| Value        | `device_` + uuid v4, minted once                                          |
+| Owner        | `src/storage/deviceId.ts`                                                 |
 | Durable copy | the keychain (`DEVICE_ID_SERVICE`), `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` |
-| Fast copy | the MMKV `device_id` key, read synchronously |
+| Fast copy    | the MMKV `device_id` key, read synchronously                              |
 
 **Two accessors, picked by whether the caller can wait.** `getDeviceId()` is
 synchronous and read-only — it answers from the memo or the MMKV mirror and

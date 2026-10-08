@@ -162,18 +162,21 @@ query GetShoppingListTemplates(
 # them directly without a `cache.readFragment` materialize round-trip.
 # The masked `...SortableItem_item` ref flows to the row component, which
 # calls `useFragment` to get a per-entity cache subscription.
+# `itemIds` narrows to the lines naming those catalog items (a receipt's); left
+# out, the field keys exactly as the list tab's own.
 query GetShoppingListItemsFiltered(
   $id: ID!
   $first: Int!
   $after: String
   $isPurchased: Boolean!
+  $itemIds: [ID!]
 ) {
   shoppingList(id: $id) {
     id
     itemsConnection(
       first: $first
       after: $after
-      filters: { isPurchased: $isPurchased }
+      filters: { isPurchased: $isPurchased, itemIds: $itemIds }
       orderBy: { sortOrder: ASC }
     ) {
       totalCount
@@ -204,6 +207,8 @@ query GetShoppingListItemsFiltered(
             id
             name
             symbol
+            # A package size goes with a counted unit (the move sheet's rule).
+            type
           }
           sortOrder
           item {

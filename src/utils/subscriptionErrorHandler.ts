@@ -1,3 +1,4 @@
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
 import { getTopLevelGraphQLError } from './errors/graphqlErrors';
@@ -12,17 +13,6 @@ import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
 interface SubscriptionError {
   message?: string;
 }
-
-interface RetryState {
-  count: number;
-  lastAttempt: number;
-  backoffMs: number;
-}
-
-const retryStates = new Map<string, RetryState>();
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 1000;
-const MAX_BACKOFF_MS = 30000;
 
 /**
  * True for a transport failure that auto-recovers (app backgrounding, network
@@ -47,6 +37,21 @@ export const classifyTransportTermination = (
   return isRetryableWebSocketClose({ code: close.code, reason: '' })
     ? close
     : null;
+};
+
+/**
+ * The SERVER ended the subscription with a fault a later attempt can get past:
+ * `SUBSCRIPTION_ERROR`, which the schema documents as retryable, or an internal
+ * error the API tags `category: "infrastructure"` (a database or pool it could
+ * not reach, as while it restarts). Any other server error repeats as it is.
+ */
+export const isRetryableServerEnd = (error: unknown): boolean => {
+  const top = getTopLevelGraphQLError(error);
+  return (
+    top?.code === TopLevelErrorCode.SubscriptionError ||
+    (top?.code === TopLevelErrorCode.InternalServerError &&
+      top.category === 'infrastructure')
+  );
 };
 
 /**
@@ -79,74 +84,29 @@ export const isPermanentSubscriptionRejection = (
   return isArmorRejection(top) || PERMANENT_REJECTION_CODES.has(top.code);
 };
 
-export const handleSubscriptionError = (
+/**
+ * Reports a subscription failure neither transport churn, which recovers on its
+ * own, nor a resolver that returned no stream explains. Re-subscribing is
+ * `useSubscriptionTransportRecovery`'s.
+ */
+export const reportSubscriptionError = (
   operationName: string,
   error: SubscriptionError,
-  onRetry?: () => void,
-): boolean => {
-  // Transport churn recovers on its own.
-  if (isExpectedTransportError(error)) {
-    return false;
+): void => {
+  if (
+    isExpectedTransportError(error) ||
+    isNonIterableSubscriptionResolver(error)
+  ) {
+    return;
   }
-
-  if (!isNonIterableSubscriptionResolver(error)) {
-    // For non-resolver errors, don't retry. Socket/network errors already
-    // returned above, so anything reaching here is an unexpected failure worth
-    // reporting to telemetry.
-    errorService.reportError(
-      new Error(`Subscription ${operationName} failed with non-resolver error`),
-      {
-        operation: 'subscriptionError',
-        subscription: operationName,
-        error: serializeError(error),
-      },
-    );
-    return false;
-  }
-
-  // Get or create retry state
-  const state = retryStates.get(operationName) ?? {
-    count: 0,
-    lastAttempt: 0,
-    backoffMs: INITIAL_BACKOFF_MS,
-  };
-
-  // Check if we've exceeded max retries
-  if (state.count >= MAX_RETRIES) {
-    retryStates.delete(operationName);
-    return false;
-  }
-
-  // Check if we're still in backoff period
-  const now = Date.now();
-  if (now - state.lastAttempt < state.backoffMs) {
-    return false;
-  }
-
-  // Increment retry count and update backoff
-  state.count += 1;
-  state.lastAttempt = now;
-  state.backoffMs = Math.min(state.backoffMs * 2, MAX_BACKOFF_MS);
-
-  retryStates.set(operationName, state);
-
-  // Schedule retry if callback provided
-  if (onRetry) {
-    setTimeout(() => {
-      onRetry();
-    }, state.backoffMs);
-  }
-
-  return true;
-};
-
-/** @internal Test seam. */
-export const clearRetryState = (operationName: string): void => {
-  retryStates.delete(operationName);
-};
-
-export const clearAllRetryStates = (): void => {
-  retryStates.clear();
+  errorService.reportError(
+    new Error(`Subscription ${operationName} failed with non-resolver error`),
+    {
+      operation: 'subscriptionError',
+      subscription: operationName,
+      error: serializeError(error),
+    },
+  );
 };
 
 /** A subscription resolver that returned no event stream. */

@@ -27,6 +27,7 @@ import {
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
@@ -502,6 +503,51 @@ describe('QueueManager', () => {
 
       expect(processed).toEqual(['mut-create-list', 'mut-pantry']);
       expect(processed).not.toContain('mut-add-a');
+    });
+
+    it("holds a pantry add behind the deferred create of its receipt's store", async () => {
+      // The store sits two levels down the add (`purchase.receipt.storeId`), and
+      // a store a receipt names can be minted offline on confirm.
+      const createStore = makeMutation({
+        id: 'mut-create-store',
+        ...queuedMutationFor(CreateStoreDocument),
+        variables: { input: { id: 'store-1', name: 'East End Food Co-Op' } },
+      });
+      const pantryAdd = makeMutation({
+        id: 'mut-pantry',
+        ...queuedMutationFor(CreatePantryItemDocument),
+        variables: {
+          input: {
+            id: 'pantry-item-1',
+            purchase: {
+              receipt: { purchasedOn: '2026-10-05', storeId: 'store-1' },
+            },
+          },
+        },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createStore,
+        pantryAdd,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-create-store') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-create-store']);
     });
 
     it('holds an item behind a list create parked for re-authentication', async () => {
@@ -1831,24 +1877,23 @@ describe('QueueManager', () => {
     const calculateRetryDelay = (retryCount: number) =>
       calculateRetryDelayFn(retryCount, 10);
 
-    it('uses exponential backoff', () => {
-      // With retryDelayMs = 10
-      // retryCount 0 -> 10 * 2^0 = 10 + jitter
-      // retryCount 1 -> 10 * 2^1 = 20 + jitter
-      // retryCount 2 -> 10 * 2^2 = 40 + jitter
-      const delay0 = calculateRetryDelay(0);
-      const delay1 = calculateRetryDelay(1);
-      const delay2 = calculateRetryDelay(2);
-
-      expect(delay0).toBeGreaterThanOrEqual(10);
-      expect(delay0).toBeLessThanOrEqual(510); // 10 + 500 jitter max
-      expect(delay1).toBeGreaterThanOrEqual(20);
-      expect(delay2).toBeGreaterThanOrEqual(40);
+    it('doubles per retry, plus up to half again at random', () => {
+      expect(calculateRetryDelay(0)).toBeGreaterThanOrEqual(10);
+      expect(calculateRetryDelay(0)).toBeLessThanOrEqual(15);
+      expect(calculateRetryDelay(1)).toBeGreaterThanOrEqual(20);
+      expect(calculateRetryDelay(1)).toBeLessThanOrEqual(30);
+      expect(calculateRetryDelay(2)).toBeGreaterThanOrEqual(40);
+      expect(calculateRetryDelay(2)).toBeLessThanOrEqual(60);
     });
 
-    it('caps at 30 seconds', () => {
-      const delay = calculateRetryDelay(20); // 10 * 2^20 would be huge
-      expect(delay).toBeLessThanOrEqual(30000);
+    // Capped before the jitter: capping the sum would put every device that
+    // reached the cap back on the same 30s tick.
+    it('caps at 30 seconds and still spreads retries past the cap', () => {
+      const random = jest.spyOn(Math, 'random');
+      random.mockReturnValueOnce(0).mockReturnValueOnce(1);
+      expect(calculateRetryDelay(20)).toBe(30_000);
+      expect(calculateRetryDelay(20)).toBe(45_000);
+      random.mockRestore();
     });
   });
 

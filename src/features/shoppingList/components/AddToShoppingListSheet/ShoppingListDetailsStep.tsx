@@ -227,7 +227,7 @@ export const ShoppingListDetailsStep: React.FC<
           />
           <UnitAutocompleteField
             variant="modal"
-            label={t('storageLocationForm.unit')}
+            label={t('labels.unit')}
             value={unit}
             onChangeText={text => setFieldValue('unit', text)}
             onUnitSelected={handleUnitSelect}

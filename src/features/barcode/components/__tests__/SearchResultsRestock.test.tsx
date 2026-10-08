@@ -68,9 +68,44 @@ jest.mock('../ActionButtons', () => ({
   },
 }));
 
+// Hands back a 500 mL size and closes as the real sheet does: only on `done`.
+const PACK_SIZE = { netWeight: 500, netWeightUnitId: 'unit-ml' };
+jest.mock('../PackSizeSheet', () => ({
+  PackSizeSheet: ({
+    visible,
+    onConfirm,
+    onDismiss,
+  }: {
+    visible: boolean;
+    onConfirm: (size: typeof PACK_SIZE) => Promise<{ status: string }>;
+    onDismiss: () => void;
+  }) => {
+    if (!visible) return null;
+    const RN = require('react-native');
+    const R = require('react');
+    return R.createElement(RN.Pressable, {
+      testID: 'pack-size-stub',
+      onPress: async () => {
+        const outcome = await onConfirm({
+          netWeight: 500,
+          netWeightUnitId: 'unit-ml',
+        });
+        if (outcome.status === 'done') onDismiss();
+      },
+    });
+  },
+}));
+
 const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
-  item: { id: 'item-1', name: 'Organic Milk', upc: '123456', netWeight: 1 },
+  item: {
+    id: 'item-1',
+    name: 'Organic Milk',
+    upc: '123456',
+    netWeight: 1,
+    canEdit: false,
+    canSuggest: true,
+  },
   onScanAnother,
   source: 'pantry',
   pantryId: 'pantry-1',
@@ -106,7 +141,11 @@ describe('restocking a duplicate the scanner found', () => {
 
     await pressAddThenRestock();
 
-    expect(mockRestockDuplicate).toHaveBeenCalledWith('pantry-item-9');
+    expect(mockRestockDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item-1' }),
+      'pantry-item-9',
+      undefined,
+    );
     // The hook presents the refusal; the screen adds no second message.
     expect(alertService.alert).not.toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
@@ -120,5 +159,45 @@ describe('restocking a duplicate the scanner found', () => {
 
     expect(onScanAnother).toHaveBeenCalledTimes(1);
     expect(mockSetPendingPantryScrollToTop).toHaveBeenCalledWith(true);
+  });
+
+  // The size the user gave is what the pantry's stock of it grows by.
+  it('restocks by the pack size the user entered, the prompt having closed', async () => {
+    mockRestockDuplicate.mockResolvedValue(true);
+    const user = userEvent.setup();
+    renderWithApollo(
+      <SearchResults
+        {...props}
+        item={{
+          ...props.item,
+          source: 'OPENFOODFACTS',
+          netWeight: undefined,
+          variationId: 'off-1',
+        }}
+      />,
+    );
+
+    await user.press(screen.getByTestId('primary-btn'));
+    await user.press(screen.getByTestId('pack-size-stub'));
+
+    expect(mockAddToPantry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item-1' }),
+      PACK_SIZE,
+    );
+    // The duplicate prompt takes over from the size prompt.
+    expect(screen.queryByTestId('pack-size-stub')).toBeNull();
+    const opts = (promptPantryDuplicate as jest.Mock).mock.lastCall?.[0] as {
+      onRestock: () => void;
+    };
+    await act(async () => {
+      opts.onRestock();
+    });
+
+    expect(mockRestockDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item-1' }),
+      'pantry-item-9',
+      PACK_SIZE,
+    );
+    expect(onScanAnother).toHaveBeenCalledTimes(1);
   });
 });

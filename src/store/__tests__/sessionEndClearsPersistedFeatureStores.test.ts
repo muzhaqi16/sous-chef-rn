@@ -79,7 +79,7 @@ describe('session end clears persisted feature stores that were never loaded', (
     expect(__mockStore.get('sous-chef-theme')).toBe('dark');
   });
 
-  it("clears the scanner's history, which carries item names, brands and UPCs", () => {
+  it('clears the retired scanner history, which carries item names, brands and UPCs', () => {
     __mockStore.set(
       'sous-chef-barcode',
       JSON.stringify({

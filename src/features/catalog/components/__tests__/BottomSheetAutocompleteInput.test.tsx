@@ -4,6 +4,7 @@ import React from 'react';
 import type { ScrollViewProps, ViewProps } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { BottomSheetAutocompleteInput } from '#features/catalog/components/BottomSheetAutocompleteInput';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 // Override BottomSheetFlatList to use real FlatList (so ListEmptyComponent renders)
 jest.mock('@gorhom/bottom-sheet', () => {
@@ -358,16 +359,60 @@ describe('BottomSheetAutocompleteInput', () => {
     expect(screen.getByPlaceholderText('Type ingredient name...')).toBeTruthy();
   });
 
-  it('renders list footer component', () => {
-    const Footer = React.createElement('Text', { testID: 'footer' }, 'Footer');
-    render(
-      <BottomSheetAutocompleteInput
-        {...defaultProps}
-        listFooterComponent={Footer}
-      />,
-    );
-    // Footer is passed to FlatList - just verify render
-    expect(screen.getByTestId('form-field-wrapper')).toBeTruthy();
+  describe('footer', () => {
+    const pickerVisible = () =>
+      jest.mocked(useStandardBottomSheet).mock.calls.at(-1)?.[0].visible;
+    const footer = (onPress = jest.fn()) => ({
+      content: React.createElement('Text', null, 'Add kiwi'),
+      onPress,
+    });
+
+    it('opens on a footer alone when no row matches', () => {
+      render(
+        <BottomSheetAutocompleteInput {...defaultProps} footer={footer()} />,
+      );
+
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Type ingredient name...'),
+        'kiwi',
+      );
+
+      expect(pickerVisible()).toBe(true);
+      expect(screen.getByText('Add kiwi')).toBeTruthy();
+    });
+
+    it('stays shut with no row and no footer', () => {
+      render(<BottomSheetAutocompleteInput {...defaultProps} />);
+
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Type ingredient name...'),
+        'kiwi',
+      );
+
+      expect(pickerVisible()).toBe(false);
+    });
+
+    it('runs its action, then closes the picker as a pick does', () => {
+      const onPress = jest.fn();
+      const onModalClose = jest.fn();
+      render(
+        <BottomSheetAutocompleteInput
+          {...defaultProps}
+          footer={footer(onPress)}
+          onModalClose={onModalClose}
+        />,
+      );
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Type ingredient name...'),
+        'kiwi',
+      );
+
+      fireEvent.press(screen.getByText('Add kiwi'));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(onModalClose).toHaveBeenCalledTimes(1);
+      expect(pickerVisible()).toBe(false);
+    });
   });
 
   it('calls onModalClose and onSearchChange callbacks', () => {

@@ -11,9 +11,6 @@ import {
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
 import { RefreshControl } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import DateTimePicker, {
-  type IOSNativeProps,
-} from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
@@ -97,28 +94,6 @@ export const ThemedBottomSheetTextInput = ({
   ...rest
 }: React.ComponentProps<typeof UniBottomSheetTextInput>) => (
   <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
-);
-
-/**
- * iOS renders the date picker in the OS appearance, which diverges from the app
- * theme whenever a preference is set (`setAdaptiveThemes(false)`). Android's is
- * an Activity-themed dialog and takes neither prop.
- */
-const pickerProps = (
-  theme: Theme,
-  themeName?: string,
-): Pick<IOSNativeProps, 'themeVariant' | 'accentColor'> => ({
-  themeVariant: themeName === 'dark' ? 'dark' : 'light',
-  accentColor: theme.colors.primary,
-});
-
-// The component's props are a platform union, and these two live only on the
-// iOS member, so the wrapper is typed to it.
-const IOSDateTimePicker = DateTimePicker as React.ComponentType<IOSNativeProps>;
-
-export const ThemedDateTimePicker = withUnistyles(
-  IOSDateTimePicker,
-  (theme, rt) => pickerProps(theme, rt.themeName),
 );
 
 /** Keyboard-aware scroller for full-screen forms; `bottomOffset` defaults to

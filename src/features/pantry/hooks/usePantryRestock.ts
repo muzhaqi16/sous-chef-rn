@@ -1,0 +1,193 @@
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { addToPantryItemsCache } from '#features/pantry/cache/items';
+import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
+import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
+import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
+import { boughtAmountOf } from '#domain/stockAmount';
+import {
+  settleMutation,
+  type SettleOptions,
+} from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { generateEntityId } from '#/utils/generateEntityId';
+import { todayKey } from '#/utils/dateUtils';
+import { useTranslation } from '#/i18n';
+import type {
+  PackageSizeInput,
+  PantryItemSourceInput,
+  RestockPantryItemInput,
+  StockAmountInput,
+} from '#/graphql/generated/schemaTypes';
+
+/**
+ * A restock's variables. `input.today` dates its default expiry; the key
+ * dedupes the restock ledger row on replay.
+ */
+function restockVariables(
+  input: Omit<RestockPantryItemInput, 'today' | 'idempotencyKey'>,
+) {
+  const today = todayKey();
+  return {
+    today,
+    input: { ...input, today, idempotencyKey: generateEntityId() },
+  };
+}
+
+export type PantryRestockOutcome =
+  | { status: 'restocked' }
+  | { status: 'rejected' };
+
+type RestockDetails = Pick<
+  RestockPantryItemInput,
+  'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
+>;
+
+/** A count of the product bought with no unit; the stack's own unit decides it. */
+interface Bought {
+  count: number;
+  packageSize?: PackageSizeInput | null;
+  /**
+   * The product, for an add when nothing sizes the packages. `itemId` is the
+   * catalog item's, for the row shown meanwhile when `source` names a variation.
+   */
+  item: { source: PantryItemSourceInput; name: string; itemId?: string };
+}
+
+/** What went in: an amount as stated, or a count bought (`boughtAmountOf`). */
+type Stated =
+  | (RestockDetails & { amount: StockAmountInput; bought?: never })
+  | { bought: Bought; amount?: never };
+
+type PantryRestockOptions = Stated & {
+  /** `'none'` leaves telling the user about a refusal to the caller. */
+  present: 'alert' | 'none';
+  fallback?: string;
+  on?: SettleOptions['on'];
+};
+
+/**
+ * The one restock of a stack the pantry already holds. The row moves at once
+ * for an amount it can count in its own unit, offline included; packages wait
+ * for the server to size them. A bought count nothing sizes goes as an add with
+ * `forceAdd` instead, which the API counts in a counted stack of the item.
+ */
+export function usePantryRestock(pantryId: string | undefined) {
+  const { t } = useTranslation();
+  const client = useApolloClient();
+  const intake = usePantryIntake(pantryId);
+
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
+    context: { localFirst: true },
+    update: (cache, { data }) => {
+      const payload = appliedPayload(data);
+      if (!payload || !pantryId) return;
+      const pantryItem = payload.pantryItemUsage.pantryItem;
+      if (!pantryItem) return;
+      // Forces the connection to broadcast: the row already exists, so the
+      // re-add returns the connection unchanged, but `cache.modify` still makes
+      // query watchers re-emit.
+      addToPantryItemsCache(cache, pantryId, pantryItem);
+    },
+  });
+
+  const moveBatchCount = (pantryItemId: string, by: 1 | -1) => {
+    const id = client.cache.identify({
+      __typename: 'PantryItem',
+      id: pantryItemId,
+    });
+    if (!id) return;
+    client.cache.modify({
+      id,
+      fields: {
+        activeBatchCount: (existing: number = 0) => Math.max(0, existing + by),
+      },
+    });
+  };
+
+  const restock = async (
+    pantryItemId: string,
+    {
+      amount: stated,
+      bought,
+      present,
+      fallback,
+      on,
+      ...details
+    }: PantryRestockOptions,
+  ): Promise<PantryRestockOutcome> => {
+    const amount =
+      stated ??
+      boughtAmountOf(bought.count, {
+        heldUnit: readStackUnit(client.cache, pantryItemId),
+        packageSize: bought.packageSize,
+      });
+    const refusal = fallback ?? t('errors.restockFailedRetry');
+    // A restock names one stack and refuses packages nothing sizes; an add
+    // with `forceAdd` counts them as the API counts any add: in a counted stack
+    // of the item, joined if one is held.
+    if (bought && amount.packages && !amount.packages.size) {
+      const { itemId } = bought.item;
+      const outcome = await intake.addItem(
+        bought.item.name,
+        { item: bought.item.source, amount, forceAdd: true },
+        {
+          present,
+          fallback: refusal,
+          ...(itemId ? { local: { itemId } } : {}),
+        },
+      );
+      return outcome.status === 'added'
+        ? { status: 'restocked' }
+        : { status: 'rejected' };
+    }
+    const added = amount.measured
+      ? inTrackingUnit(
+          client.cache,
+          pantryItemId,
+          amount.measured.quantity,
+          amount.measured.unitId,
+        )
+      : null;
+    const undoStock =
+      added === null ? () => {} : bumpStock(client.cache, pantryItemId, added);
+    // Every restock is a batch of its own.
+    moveBatchCount(pantryItemId, 1);
+
+    const settled = await settleMutation(
+      () =>
+        restockPantryItem({
+          variables: restockVariables({
+            id: pantryItemId,
+            amount,
+            ...details,
+          }),
+        }),
+      {
+        document: RestockPantryItemDocument,
+        fallback: refusal,
+        onFailed: () => {
+          undoStock();
+          moveBatchCount(pantryItemId, -1);
+        },
+        on,
+        present,
+      },
+    );
+    if (settled.status === 'failed') return { status: 'rejected' };
+
+    // The new batch row is the server's to build, so drop the connection and
+    // let the screen refetch it — but only once the server answered. A queued
+    // write has no response, and nothing would refill it.
+    if (settled.status === 'applied') {
+      client.cache.evict({
+        id: 'ROOT_QUERY',
+        fieldName: 'pantryItemBatchesConnection',
+        args: { pantryItemId },
+      });
+    }
+    return { status: 'restocked' };
+  };
+
+  return { restock };
+}

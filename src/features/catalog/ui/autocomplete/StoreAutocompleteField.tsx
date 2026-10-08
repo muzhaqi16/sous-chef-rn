@@ -9,6 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 
 interface StoreAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -42,6 +43,22 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
 }) => {
   const { t } = useTranslation();
   const store = useStoreAutocomplete();
+  const { createStore } = useCreateStore();
+
+  // Any name can be a store: the typed one is offered once the search for it
+  // has answered, unless a store of that name is listed.
+  const term = store.searchTerm.trim();
+  const offersNew =
+    term.length >= 2 &&
+    !store.searchPending &&
+    !store.displayItems.some(
+      item => item.name.trim().toLowerCase() === term.toLowerCase(),
+    );
+
+  const choose = (id: string, name: string) => {
+    onChangeText(name);
+    onStoreSelected?.(id, name);
+  };
 
   return (
     <>
@@ -68,9 +85,16 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         )}
         keyExtractor={item => item.id}
         onSelect={item => {
-          onChangeText(item.name);
-          onStoreSelected?.(item.id, item.name);
           store.setSearchTerm('');
+          choose(item.id, item.name);
+        }}
+        showAddNew={offersNew}
+        addNewLabel={t('labels.addNamed', { name: term })}
+        onAddNew={() => {
+          store.setSearchTerm('');
+          void createStore({ name: term }).then(created => {
+            if (created) choose(created.id, created.name);
+          });
         }}
         autoCapitalize="words"
         inlineMinSearchLength={2}
@@ -78,11 +102,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         modalTitle={t('autocomplete.selectStore')}
         modalSearchPlaceholder={t('autocomplete.storeSearch')}
         modalEmptyText={t('autocomplete.noStores')}
-        modalEmptySubtext={
-          store.shouldSearch
-            ? t('autocomplete.typeMoreToAddStore', { term: store.searchTerm })
-            : t('autocomplete.typeAtLeastTwo')
-        }
+        modalEmptySubtext={t('autocomplete.typeAtLeastTwo')}
         modalMinSearchLength={2}
         onSearchChange={store.handleSearchTermChange}
       />

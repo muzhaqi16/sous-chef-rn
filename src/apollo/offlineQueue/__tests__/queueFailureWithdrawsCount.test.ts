@@ -23,10 +23,7 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
@@ -141,16 +138,6 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
 
   it('uncounts a create the server permanently refused', () => {
     handleQueueFailure(failure());
-
-    expect(totalItems()).toBe(1);
-  });
-
-  it('uncounts a scanned create the server permanently refused', () => {
-    handleQueueFailure(
-      failure({
-        operationName: operationNameOf(BarcodeCreatePantryItemDocument),
-      }),
-    );
 
     expect(totalItems()).toBe(1);
   });

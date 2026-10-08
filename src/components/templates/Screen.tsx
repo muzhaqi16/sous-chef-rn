@@ -23,6 +23,7 @@ import {
   KEYBOARD_DISMISS_MODE,
   KEYBOARD_PERSIST_TAPS,
 } from '#components/templates/keyboardTaps';
+import { useThemeResyncOnReveal } from '#hooks/ui/useThemeEpoch';
 
 const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
   'never';
@@ -37,7 +38,7 @@ export interface ScreenHeaderConfig {
   title?: string;
   /** `tab` only: the small label above the title. */
   label?: string;
-  /** `tab` only: the title's own affordances. */
+  /** The title's own affordances: what pressing it opens, and its sign. */
   onTitlePress?: () => void;
   titleAccessory?: React.ReactNode;
   /** The trailing actions on either variant, icon or text — never a bare node. */
@@ -116,6 +117,7 @@ export const Screen: React.FC<ScreenProps> = props => {
       ? props.scrollTestID
       : undefined;
   const insets = useSafeAreaInsets();
+  useThemeResyncOnReveal();
   // With a footer the footer clears the home indicator, so the content only
   // needs its own trailing space.
   const contentBottom = footer ? 0 : insets.bottom;
@@ -129,6 +131,8 @@ export const Screen: React.FC<ScreenProps> = props => {
         onBack={header?.back}
         onClose={header?.close}
         rightActions={header?.actions}
+        onTitlePress={header?.onTitlePress}
+        titleAccessory={header?.titleAccessory}
         centerTitle
       />
     ) : variant === 'tab' ? (

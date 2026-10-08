@@ -343,12 +343,28 @@ async function addAllTo(result: {
 }
 
 describe('useRecipeShoppingList — Add All', () => {
-  it('adds the whole recipe and marks every ingredient added', async () => {
+  it('adds the whole recipe and marks the lines it added, not an optional one it skipped', async () => {
+    // The server leaves an optional line ("salt to taste") off the list, and a
+    // line it could not add stays unmarked so it can be added on its own.
     const addAll = recordMock(CreateShoppingListItemsFromRecipeDocument, {
       data: {
         createShoppingListItemsFromRecipe: {
           __typename: 'CreateShoppingListItemsFromRecipePayload',
-          results: [],
+          results: [
+            {
+              __typename: 'RecipeIngredientAddResult',
+              success: true,
+              recipeIngredient: { __typename: 'RecipeIngredient', id: 'ing-1' },
+              item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+            },
+            {
+              __typename: 'RecipeIngredientAddResult',
+              success: false,
+              outcome: null,
+              recipeIngredient: { __typename: 'RecipeIngredient', id: 'ing-3' },
+              item: null,
+            },
+          ],
         },
       },
     });
@@ -356,20 +372,19 @@ describe('useRecipeShoppingList — Add All', () => {
       operationMocks: [addAll.mock],
       backendRecipe: recipeWith([
         ingredient({ id: 'ing-1' }),
-        ingredient({ id: 'ing-2' }),
+        ingredient({ id: 'ing-2', isOptional: true }),
+        ingredient({ id: 'ing-3' }),
       ]),
     });
 
     await addAllTo(result);
 
-    await waitFor(() =>
-      expect([...result.current.addedIngredients]).toEqual(['ing-1', 'ing-2']),
-    );
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    expect([...result.current.addedIngredients]).toEqual(['ing-1']);
     // No `servings`: the whole recipe is the default.
     expect(addAll.fired).toEqual([
       { input: { recipeId: 'recipe-1', shoppingListId: 'sl-1' } },
     ]);
-    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastError).not.toHaveBeenCalled();
   });
 

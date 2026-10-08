@@ -32,6 +32,25 @@ export const removeFromPantryItemsCache =
   );
 
 /**
+ * Reconcile a local-first create with its answer: the server's row takes the
+ * edge the eager write counted. A create the server resolved onto a held row (a
+ * restock) answers with that row's id, so the row written under the client's id
+ * goes with its edge and local seeds, but not the count, which the payload states.
+ */
+export function reconcileCreatedPantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  pantryItem: PantryItemRef,
+  clientId: string | null | undefined,
+): void {
+  // NOT the counting helper: the eager write already counted this row.
+  addToPantryItemsCache(cache, pantryId, pantryItem);
+  if (!clientId || clientId === pantryItem.id) return;
+  removeFromPantryItemsCache(cache, pantryId, clientId, { evictItem: true });
+  evictLocalPantryItemSeeds(cache, clientId);
+}
+
+/**
  * Adjust `Pantry.stats.totalItems` by `delta`: the responses carry no parent
  * aggregate and `Pantry.stats` merges rather than recomputes, so the header
  * otherwise contradicts the list. Only `totalItems` — the rest need item state;

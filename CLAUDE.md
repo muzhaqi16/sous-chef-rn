@@ -279,10 +279,15 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a
   function-style `style`. Verified: `#unistyles-withunistyles-drops-function-styles`.
 - **A node reanimated animates takes no themed Unistyles style**
-  (`sous-chef/animated-node-takes-no-themed-style`): Unistyles writes
-  reanimated's stale React-side value back over the animation. Themed values go
-  in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or on a
-  non-animated parent or child. Verified: `#unistyles-re-applies-reanimateds-react-side-value-over-an-animation`.
+  (`sous-chef/animated-node-takes-no-themed-style`): the React commit after a
+  theme change puts the old values back at and under a Reanimated view. Themed
+  values go in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or on
+  a non-animated parent. A Reanimated container with a scroll-driven style and
+  themed descendants renders `<ThemeEpochSentinel />` (`CollapsingHeroDetail`).
+  Verified: `#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view`.
+- **Every screen scaffold calls `useThemeResyncOnReveal()`** (`Screen`,
+  `CollapsingHeroDetail`): `withUnistyles` / `useUnistyles` miss a theme change
+  made while their screen is paused. Verified: `#withunistyles-and-useunistyles-miss-a-theme-change-made-while-their-screen-is-paused`.
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.

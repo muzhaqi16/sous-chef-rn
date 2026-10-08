@@ -30,3 +30,21 @@ fragment writeHeldStock_shownIn on PantryItem {
     commonFractions
   }
 }
+
+# The unit a stack counts in, and the unit an amount was entered in: a dozen of
+# the stack's own unit moves the cached stock before the server answers, as the
+# unit itself does.
+fragment inTrackingUnit_pantryItem on PantryItem {
+  id
+  unit {
+    id
+  }
+}
+
+fragment inTrackingUnit_enteredUnit on Unit {
+  id
+  type
+  hasStandardCountFactor
+  baseUnitId
+  conversionFactor
+}

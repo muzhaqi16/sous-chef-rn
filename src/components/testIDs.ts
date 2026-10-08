@@ -6,6 +6,8 @@
 export const kitTestIDs = {
   headerBackButton: 'header-back-button',
   headerCloseButton: 'header-close-button',
+  /** A standard header's title when it opens something. */
+  headerTitleButton: 'header-title-button',
   offlineBanner: 'offline-banner',
   spotlightTarget: 'spotlight-target',
   spotlightSkipButton: 'spotlight-skip-button',
@@ -24,6 +26,8 @@ export const kitTestIDs = {
   tab: (routeName: string) =>
     `tab-${routeName.toLowerCase().replace(/\s+/g, '-')}`,
   toast: (type: string) => `toast-${type}`,
+  /** The calendar a `DatePickerField` opens, by the field's own testID. */
+  datePickerCalendar: (fieldTestID: string) => `${fieldTestID}-calendar`,
   pageIndicator: (index: number) => `page-indicator-${index}`,
   alertButton: (index: number) => `alert-button-${index}`,
   /** `SettingRow`'s default ids, by the setting's key. */
@@ -43,4 +47,9 @@ export const kitTestIDs = {
   /** `BiometricSetupView`'s two buttons, under the caller's id. */
   biometricEnable: (prefix: string) => `${prefix}-enable`,
   biometricSkip: (prefix: string) => `${prefix}-skip`,
+  /** `DataAttributionNotices`: a notice's link and its licence link, by source. */
+  dataAttributionSource: (source: string) =>
+    `data-attribution-${source.toLowerCase()}`,
+  dataAttributionLicense: (source: string) =>
+    `data-attribution-${source.toLowerCase()}-license`,
 };

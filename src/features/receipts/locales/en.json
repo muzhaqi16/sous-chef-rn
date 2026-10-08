@@ -1,0 +1,122 @@
+{
+  "receipts": {
+    "title": "Scan receipt",
+    "intro": {
+      "title": "Scan a receipt",
+      "body": "Lay the receipt flat in good light. A long receipt can take several shots, top to bottom."
+    },
+    "reading": "Reading the receipt…",
+    "unreadable": {
+      "title": "Couldn't read this receipt",
+      "body": "Retake it flat and in good light, with its whole width in the frame."
+    },
+    "failed": {
+      "title": "Couldn't scan the receipt",
+      "body": "Something went wrong while scanning. Try again."
+    },
+    "saved": {
+      "title": "Receipt saved",
+      "body": "Only the receipt's text is kept, with card and loyalty numbers removed.",
+      "scanAnother": "Scan another receipt",
+      "review_one": "Review {{count}} item",
+      "review_other": "Review {{count}} items",
+      "reading": "Picking out the items…",
+      "readingPhotosSlow": "Reading the photos can take up to a minute…",
+      "offline": "You're offline. The items will be picked out when you're back online.",
+      "retryLaterTitle": "Couldn't pick out the items yet",
+      "retryLaterBody": "The text is kept. The items will be picked out the next time you open this receipt.",
+      "libraryPhoto": "The photo you chose is still in your photo library.",
+      "notReadTitle": "Couldn't pick out the items",
+      "notReadBody": "Only the text was kept. Scan the receipt again to try once more.",
+      "tooLongTitle": "This receipt is too long to read at once",
+      "tooLongBody": "Only the text was kept. Scan it in two parts to pick out the items.",
+      "limitedTitle": "Today's receipt limit is reached",
+      "limitedBody": "The text is kept. Open this receipt again after {{time}} to pick out its items.",
+      "bodyPhoto": "The photo was sent to be read and is deleted once it's read. Card and loyalty numbers are removed from what's kept.",
+      "photoNotReadTitle": "The photo wasn't read",
+      "photoNotReadBody": "Nothing was kept. Scan the receipt again to try once more.",
+      "photoLimitedTitle": "Today's photo limit is reached",
+      "photoLimitedBody": "Nothing was kept. Scan the receipt again after {{time}}."
+    },
+    "replace": {
+      "title": "Replace the saved receipt?",
+      "body": "Only one receipt is kept at a time.",
+      "confirm": "Replace"
+    },
+    "photo": {
+      "title": "Take a photo instead",
+      "body": "This phone can't scan documents. Photograph the receipt flat and in good light, or choose a photo you've taken."
+    },
+    "review": {
+      "title": "Receipt",
+      "dateLabel": "Purchase date",
+      "dateScanned": "Not printed on the receipt, so it's the day you scanned it.",
+      "storePlaceholder": "Choose the store",
+      "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
+      "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
+      "choose": "No match. Tap to choose the product.",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "Not added",
+      "add_one": "Add {{count}} item to the pantry",
+      "add_other": "Add {{count}} items to the pantry",
+      "addNone": "Choose the items to add",
+      "someFailed_one": "{{count}} item couldn't be added. Try again.",
+      "someFailed_other": "{{count}} items couldn't be added. Try again.",
+      "addedTo_one": "Added {{count}} item to {{pantry}}",
+      "addedTo_other": "Added {{count}} items to {{pantry}}",
+      "addedCount_one": "Added {{count}} item to the pantry",
+      "addedCount_other": "Added {{count}} items to the pantry",
+      "emptyTitle": "No items to review",
+      "emptyBody": "No item lines were read from this receipt. Scan it again, or add the items by hand.",
+      "editTitle": "Receipt line",
+      "printedLabel": "On the receipt",
+      "productPlaceholder": "Search for a product",
+      "dontAdd": "Don't add this line",
+      "needsUnit": "Give it a unit to add it, like 2 L or 500 g.",
+      "totalsTitle": "The lines don't add up to the receipt",
+      "totalsBody": "The items read add up to {{counted}}, but the receipt says {{printed}}. A line may have been missed, so check the list against the receipt before adding.",
+      "listIncompleteTitle": "Your list is too long to check in full",
+      "listIncompleteBody": "Only part of it was checked. A receipt line that matches an item further down is added on its own.",
+      "onList": "On your list",
+      "tickOffTitle": "Tick it off the shopping list",
+      "tickOffBody": "“{{name}}” is on your list. It's marked bought and moved to the pantry rather than added twice.",
+      "matching": "Finding the products…",
+      "leftOut": "Left out. Tap to add it.",
+      "sectionToAdd_one": "{{count}} item will be added",
+      "sectionToAdd_other": "{{count}} items will be added",
+      "sectionToCheck_one": "Choose a product for {{count}} line",
+      "sectionToCheck_other": "Choose a product for {{count}} lines",
+      "sectionNotAdded_one": "{{count}} line won't be added",
+      "sectionNotAdded_other": "{{count}} lines won't be added",
+      "sectionAdded_one": "{{count}} item already added",
+      "sectionAdded_other": "{{count}} items already added",
+      "findingMatch": "Finding a match…",
+      "notMatchedYet": "Not matched yet. Tap to choose the product.",
+      "sectionMatching_one": "Finding a product for {{count}} line",
+      "sectionMatching_other": "Finding products for {{count}} lines",
+      "sectionNotMatchedYet_one": "{{count}} line not matched yet",
+      "sectionNotMatchedYet_other": "{{count}} lines not matched yet",
+      "matchFailedTitle": "Couldn't look up the products",
+      "matchFailedBody": "Tap to try again once you are online. You can also choose each product yourself."
+    },
+    "photoSend": {
+      "title": "Send the photo to be read?",
+      "body": "This phone couldn't read the receipt. With your OK, the photo is sent to {{appName}} to be read, then deleted. Card and loyalty numbers are removed from what's kept.",
+      "send": "Send the photo",
+      "dontSend": "Don't send",
+      "offline": "Connect to the internet to send the photo.",
+      "sending": "Sending the photo…"
+    },
+    "photoConsent": {
+      "title": "Read receipts from their photos?",
+      "body": "{{appName}} reads a receipt more accurately from its photo than from the text your phone picks out. With your OK, each receipt's photos go to {{appName}}'s server to be read, then are deleted.\n\nWhile a photo is read, the server sees the whole receipt. Card and loyalty numbers are removed from the text that's kept.",
+      "hint": "Choose “Use text only” to keep reading receipts from your phone's text. You can change this in App Settings.",
+      "send": "Send photos",
+      "textOnly": "Use text only"
+    },
+    "photoSetting": {
+      "title": "Send receipt photos to be read",
+      "description": "Receipts are read more accurately from their photos. Photos are deleted once read."
+    }
+  }
+}

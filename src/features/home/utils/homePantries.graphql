@@ -1,7 +1,8 @@
 # Read-only (`readDefaultPantryId`): the home's pantries, to pick its default.
+# The arguments match the queries' (`home_row`): a bare field reads another key.
 fragment homePantries_home on Home {
   id
-  pantriesConnection {
+  pantriesConnection(first: 20) {
     edges {
       node {
         id

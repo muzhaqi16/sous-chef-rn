@@ -5,30 +5,33 @@
 A single GitHub Actions workflow (`build-android.yml`) handles every Android build
 environment, selected by the tag prefix that triggered it:
 
-| Command | Tag Pattern | Workflow | Environment | Keystore | Output |
-|---------|-------------|----------|-------------|----------|--------|
-| `npm run tag:dev` | `dev-v*` | build-android.yml | dev | Dev keystore | APK (dev) |
-| `npm run tag:stg` | `stg-v*` | build-android.yml | stg | Dev keystore | APK (staging) |
-| `npm run tag:prod` | `prod-v*` | build-android.yml | prod | Prod keystore | APK (prod) |
-| `npm run tag:playstore` | `playstore-v*` | build-android.yml | prod | Play Store keystore | AAB (prod) |
+| Command                 | Tag Pattern    | Workflow          | Environment | Keystore            | Output        |
+| ----------------------- | -------------- | ----------------- | ----------- | ------------------- | ------------- |
+| `npm run tag:dev`       | `dev-v*`       | build-android.yml | dev         | Dev keystore        | APK (dev)     |
+| `npm run tag:stg`       | `stg-v*`       | build-android.yml | stg         | Dev keystore        | APK (staging) |
+| `npm run tag:prod`      | `prod-v*`      | build-android.yml | prod        | Prod keystore       | APK (prod)    |
+| `npm run tag:playstore` | `playstore-v*` | build-android.yml | prod        | Play Store keystore | AAB (prod)    |
 
 ---
 
 ## Keystore Architecture
 
 ### 1. Development Keystore (`releases.keystore`)
+
 - **Used by:** Dev builds, Staging builds
 - **GitHub Secret:** `BUILD_CERTIFICATE_BASE64`
 - **Alias:** `github`
 - **Purpose:** Internal testing, QA, staging environments
 
 ### 2. Production Keystore (`prod-release.keystore`)
+
 - **Used by:** Production APK builds (direct distribution)
 - **GitHub Secret:** `PROD_KEYSTORE_BASE64`
 - **Alias:** `prod-release`
 - **Purpose:** Production APK distribution outside Play Store
 
 ### 3. Play Store Upload Key (`upload-key.keystore`)
+
 - **Used by:** Play Store AAB builds
 - **GitHub Secret:** `PLAYSTORE_KEYSTORE_BASE64`
 - **Alias:** `upload`
@@ -41,6 +44,7 @@ environment, selected by the tag prefix that triggered it:
 ### Existing Secrets (Dev & Staging)
 
 Already configured in your repository:
+
 - `BUILD_CERTIFICATE_BASE64` - Dev keystore file (Base64 encoded)
 - `KEYSTORE_PASSWORD` - Dev keystore password
 - `KEY_PASSWORD` - Dev key password
@@ -84,9 +88,11 @@ Go to: **Settings** → **Secrets and variables** → **Actions** → **New repo
 Add these three secrets:
 
 1. **Name:** `PROD_KEYSTORE_BASE64`
+
    - **Value:** Contents of `prod-release.keystore.base64` file
 
 2. **Name:** `PROD_KEYSTORE_PASSWORD`
+
    - **Value:** The store password you used (YOUR_STORE_PASSWORD)
 
 3. **Name:** `PROD_KEY_PASSWORD`
@@ -101,6 +107,7 @@ Add these three secrets:
 Create three environments in **Settings** → **Environments**:
 
 #### 1. dev
+
 ```
 Environment variables:
 - API_URL: http://localhost:4000/graphql (or your dev API)
@@ -118,6 +125,7 @@ Secrets:
 ```
 
 #### 2. stg
+
 ```
 Environment variables:
 - API_URL: https://stg-api.souschef.dev/graphql
@@ -135,6 +143,7 @@ Secrets:
 ```
 
 #### 3. prod
+
 ```
 Environment variables:
 - API_URL: https://api.souschef.dev/graphql
@@ -245,6 +254,7 @@ app-release.aab  # Android App Bundle for Play Store
 **Problem:** Gradle warning about missing signing config
 
 **Solution:** Ensure GitHub secrets are set correctly:
+
 - For dev/staging: `BUILD_CERTIFICATE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`
 - For prod APK: `PROD_KEYSTORE_BASE64`, `PROD_KEYSTORE_PASSWORD`, `PROD_KEY_PASSWORD`
 - For Play Store: `PLAYSTORE_KEYSTORE_BASE64`, etc.
@@ -254,6 +264,7 @@ app-release.aab  # Android App Bundle for Play Store
 **Problem:** GitHub Actions can't find environment variables
 
 **Solution:**
+
 1. Go to GitHub → Settings → Environments
 2. Ensure environment exists (dev, stg, or prod)
 3. Add required variables to that environment
@@ -264,6 +275,7 @@ app-release.aab  # Android App Bundle for Play Store
 **Problem:** Pushing tag doesn't start build
 
 **Solution:** Check the tag prefix — all four are handled by `build-android.yml`:
+
 - `dev-v1.7.1` → dev
 - `stg-v1.7.1` → stg
 - `prod-v1.7.1` → prod APK
@@ -274,6 +286,7 @@ app-release.aab  # Android App Bundle for Play Store
 **Problem:** APK installation fails on device
 
 **Solution:**
+
 1. Ensure keystore file is valid and Base64-encoded correctly
 2. Check keystore passwords match in GitHub secrets
 3. For production builds, ensure using correct keystore (prod-release, not dev)
@@ -285,6 +298,7 @@ app-release.aab  # Android App Bundle for Play Store
 ### Keystore Files
 
 ✅ **DO:**
+
 - Store keystore files securely (encrypted backup)
 - Use strong, unique passwords for each keystore
 - Keep production and Play Store keystores separate from dev
@@ -292,6 +306,7 @@ app-release.aab  # Android App Bundle for Play Store
 - Document keystore details (alias, location) in secure password manager
 
 ❌ **DON'T:**
+
 - Commit keystore files to git repository
 - Share keystore files via unsecure channels (email, Slack, etc.)
 - Reuse passwords across keystores
@@ -301,12 +316,14 @@ app-release.aab  # Android App Bundle for Play Store
 ### GitHub Secrets
 
 ✅ **DO:**
+
 - Use GitHub Environments for environment-specific secrets
 - Rotate secrets periodically
 - Use separate secrets for prod vs dev/staging
 - Document what each secret is for
 
 ❌ **DON'T:**
+
 - Log secret values in workflow output
 - Share GitHub secrets with untrusted team members
 - Use same secret values across environments (if avoidable)
@@ -360,6 +377,7 @@ ls -hal android/app/build/outputs/apk/
 ## Support
 
 For issues or questions:
+
 1. Check GitHub Actions logs for detailed error messages
 2. Review this document for common issues
 3. Verify GitHub secrets and environment variables are set correctly

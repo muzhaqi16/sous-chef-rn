@@ -7,9 +7,12 @@ import { NutritionSummaryCard } from '../../../src/features/mealPlan/components/
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/features/mealPlan/components/NutritionGoalProgress', () => ({
-  NutritionGoalProgress: () => null,
-}));
+jest.mock(
+  '../../../src/features/mealPlan/components/NutritionGoalProgress',
+  () => ({
+    NutritionGoalProgress: () => null,
+  }),
+);
 
 type NutritionSummary = React.ComponentProps<
   typeof NutritionSummaryCard

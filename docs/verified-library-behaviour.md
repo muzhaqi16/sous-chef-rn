@@ -218,9 +218,8 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 them together is accepted and discarded, silently.
 
 **Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.3.0`** (re-run 2026-10-02 against Unistyles 3.4.0 and
-`@shopify/flash-list@2.3.3`: the probe passes and the FlashList excerpt is
-unchanged). The chain:
+`react-native-unistyles@3.5.0` + `@shopify/flash-list@2.3.3`** (2026-10-05).
+The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
    `refreshControl` as
@@ -348,7 +347,7 @@ npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.4.0` (2026-10-02).**
+**Verified against `react-native-unistyles@3.5.0` (2026-10-05).**
 `node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
 by reducing its style entries with `Object.assign(acc, secret.uni__getStyles())`
 from `{}`. For a function-valued `style` prop, `uni__getStyles()` returns the
@@ -365,72 +364,113 @@ RN's `Pressable` needs no wrapper: the Unistyles babel plugin auto-binds it to
 the C++ ShadowTree, so function-style callbacks with `StyleSheet.create`
 proxies work natively.
 
-### Unistyles re-applies reanimated's React-side value over an animation
+### A React commit reverts Unistyles' theme values at and under a Reanimated view
 
-**Claim:** an element reanimated animates must not also carry a theme-reading
-Unistyles style. Unistyles captures reanimated's React-side value of the
-animated prop and writes it back over the animation, so the element shows a
-stale value until its next React re-render. It is invisible when the animation
-comes to rest at the value React already holds, and visible when it does not:
-the global dim rests at 0.5 while React holds 0.
+**Claim:** after a theme change, Unistyles commits the new values outside
+React, and the next React commit can put the old values back on a view that a
+Reanimated animated style has registered, and on everything under it.
+Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.3.0` +
-`react-native-reanimated@4.6.0` (default static flags) + `react-native@0.86.3`,
-2026-09-23.** The source chain was re-checked on 2026-10-02 against Unistyles
-3.4.0 and Reanimated 4.7.1. Step 4 changed: the update map is now drained. The
-`nativeProps_DEPRECATED` leg is unchanged, so the rule stays. The symptom was
-not re-observed on device. The chain:
+**Verified against `react-native-unistyles@3.5.0` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-05, iOS
+simulator, debug build),** by running `UnistylesShadowRegistry.verify()` after
+every commit:
 
-1. Reanimated's `AnimatedComponent` renders the host with
-   `style: [...yourStyles, <animated style's initial value>, state.settledStyle]`:
-   plain objects that hold the animated prop's React-side value.
-2. The Unistyles babel plugin binds that host. Its ref callback calls
-   `UnistylesShadowRegistry.add(ref, props.style)` on every commit
-   (`src/core/createUnistylesElement.native.tsx`).
-3. `HybridShadowRegistry::link` → `unistyleFromValue` wraps every plain object
-   in the array as a static "exotic" unistyle and links it to the node beside
-   the real one (`cxx/core/UnistyleWrapper.h`). A node with no themed style has
-   nothing that ever triggers an update.
-4. A theme rebuild of the node (`useAppearance` calls `updateTheme` on every
-   cold start) parses each exotic entry from its raw value
-   (`cxx/parser/Parser.cpp`, "compute styles only once"). The node's props,
-   the captured opacity included, go into the update map. On 3.3.0
-   `ShadowTrafficController` never drained it. On 3.4.0
-   `ShadowTreeManager::updateShadowTree` takes the map and commits it once.
-   Each commit also merges the props into `family->nativeProps_DEPRECATED`,
-   which `ShadowNode::clone` re-applies to any props-less clone.
-5. These are non-React commits. With `USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
-   on, reanimated's commit hook skips them. A settled animation has no next
-   frame to correct the value, so the stale value holds until a React
-   re-render. Reanimated's settled-props sync is usually that re-render, 0.5 s
-   to 1.5 s later.
+- Right after the Unistyles theme commit, there were 0 mismatches (18 of 18).
+  The next React commit, the navigator re-render that `Navigation`'s
+  `useUnistyles()` triggers, put `CollapsingHeroDetail`'s hero carousel
+  container and inactive dots back on the old theme (3 of 3).
+- Without the hero's parallax animated style: 0, 0, 0 mismatches against
+  4, 4, 4.
+- After a paused screen was revealed, the first theme change reverted 50
+  content-card views under the same template's `Animated.ScrollView`.
+- With the alert card's surface in `styles.card` on its animated node, the card
+  stayed white after a switch to dark (2 of 2). With the surface in a
+  theme-only worklet, it followed the change.
+- With a `ThemeEpochSentinel` in both of the template's Reanimated containers:
+  0, 0, 0 mismatches, also after navigating away and back, and 0, 0 after a
+  reveal.
 
-Observed 2026-09-23 on the iOS simulator by measuring the dimmed header's
-luminance per recorded frame (Meal Plan → Add a meal, open/close ×4). With
-`[styles.backdrop, animatedStyle]`, every open dimmed in, then snapped to
-undimmed as the sheet settled, and closes sometimes flashed the dim back on.
-The SharedValue was correct throughout. With the settled-props sync stubbed
-out, the view stayed wrong. With `[StyleSheet.absoluteFill, animatedStyle]`
-and the colour on a child, 16 of 16 transitions were clean. Removing the
-sheets' `CurrentThemeScope` did not help. Every animated node in `src` was
-then converted, and `sous-chef/animated-node-takes-no-themed-style` holds it. Upstream: reanimated
-[#10444](https://github.com/software-mansion/react-native-reanimated/issues/10444)
-has the same symptom and is open. Reanimated
-[#8513](https://github.com/software-mansion/react-native-reanimated/issues/8513)
-says mixing the two libraries on one node is unsupported. Unistyles
-[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
-is open and covers the per-node commits on unfreeze. Unistyles 3.4.0 drains the
-update map but still writes the captured props into `nativeProps_DEPRECATED`.
-Neither package fixes the symptom as of Unistyles 3.4.0 and Reanimated 4.7.1.
+The mechanism: on every React commit `ReanimatedCommitHook` clones each
+registered view and its ancestors (`cloneShadowTreeWithNewProps`) without a
+runtime shadow node reference, so React's own instance of those views is never
+mounted. Unistyles' `refreshReactNodes` re-points React's node references after
+its commit, but skips any node never mounted (`getHasBeenPromoted()` is
+`hasBeenMounted_`). React keeps the pre-theme instance and re-attaches its
+subtree on its next commit. RN's `updateRuntimeShadowNodeReferencesOnCommit`
+flag cannot help, because Reanimated's clones carry no reference.
+
+Upstream:
+[reanimated#7728](https://github.com/software-mansion/react-native-reanimated/issues/7728)
+has the same symptom. The closed
+[reanimated#8776](https://github.com/software-mansion/react-native-reanimated/pull/8776)
+discusses turning reference updates on: it is blocked on CSS animation
+fill-mode, and RN's Animation Backend is named as the long-term fix.
+[unistyles#1170](https://github.com/jpudysz/react-native-unistyles/issues/1170)
+and [unistyles#1007](https://github.com/jpudysz/react-native-unistyles/issues/1007)
+are open. The maintainer's workaround in #1007 re-keys the animated view on the
+theme name.
+
+The fixes: themed values on the animated view itself go in a theme-only
+`useAnimatedStyle` over `useAnimatedTheme()` (enforced by
+`sous-chef/animated-node-takes-no-themed-style`). A Reanimated container whose
+descendants carry themed styles renders a `ThemeEpochSentinel`, a child
+re-keyed on each theme commit, so React rebuilds that view from the current
+shadow nodes without remounting the container.
+
+Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
+fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
+`UnistylesShadowRegistry.verify()` (module
+`react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
+then reports `dot` / `heroInner` mismatches.
+
+### withUnistyles and useUnistyles miss a theme change made while their screen is paused
+
+**Claim:** a `withUnistyles` or `useUnistyles` consumer in a screen paused by
+`inactiveBehavior: 'pause'` keeps the previous theme after the screen is
+revealed, if the theme changed while it was hidden. Every `<Text>` and `<Icon>`
+is such a consumer.
+
+**Verified against `react-native-unistyles@3.5.0` (2026-10-05; the same on
+3.4.0, checked on screen).** `useProxifiedUnistyles` keeps the theme in
+`useState` and disposes its listener in an effect cleanup, and a hidden
+`Activity` runs that cleanup. On reveal, `reinitListener` subscribes again but
+never compares the theme. After a switch to dark while `PantryItemDetail` was
+paused, 73 of 73 of its hook instances still held the light theme.
+
+The fix: `Screen` and `CollapsingHeroDetail` call `useThemeResyncOnReveal()`.
+When a reveal follows a theme change, it re-registers the current theme
+(`UnistylesRuntime.updateTheme(name, theme => theme)`), which replays the change
+to every listener. The same pass re-commits any linked view the hidden period
+missed. One was found: a `PantrySettings` header border.
 
 Re-check:
 
 ```
-grep -n "unistylesFromNonExistentNativeState" -A 6 node_modules/react-native-unistyles/cxx/core/UnistyleWrapper.h
-grep -n "compute styles only once" -A 5 node_modules/react-native-unistyles/cxx/parser/Parser.cpp
-grep -n "takeUpdates\|mergeNativeProps" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTreeManager.cpp
-grep -n "propsOverride.emplace" -B 4 node_modules/react-native/ReactCommon/react/renderer/core/ShadowNode.cpp
-grep -n "USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS" -A 6 node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp
+grep -n "reinitListener\|disposeRef" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
+```
+
+### Metro bundles two copies of Unistyles unless it resolves them with `require`
+
+**Claim:** Unistyles' exports list `import` before `react-native`, and this app's
+Metro (`experimentalImportSupport`) resolves an ESM `import` with the `import`
+condition. So `react-native-unistyles` itself lands in `lib/module`, while the
+Babel plugin's `react-native-unistyles/components/native/*` imports fall back to
+the `react-native` field and land in `src`. The bundle then holds both copies:
+one shared `StyleSheet`, but two `ShadowRegistry` JS objects, each with its own
+`add`/`remove`, tracked handles and refresh listener.
+
+**Verified against `react-native-unistyles@3.5.0` (also 3.4.0's layout) +
+`metro@0.84.5` (2026-10-05).** Before the fix, 40 `lib/module` and 37 `src`
+Unistyles modules were initialized. With `metro.config.js` resolving every
+Unistyles request as `require`, there were 53 `src` modules and none from
+`lib`. The duplicate copy is not the cause of the theme reverts above: both
+reproduce with one copy.
+
+Re-check, through `debugger-evaluate`:
+
+```
+[...__r.getModules().values()].filter(m => m?.isInitialized && m.verboseName?.includes('react-native-unistyles/lib/')).length   // 0
 ```
 
 ### react-compiler try shapes
@@ -841,10 +881,9 @@ the two plugins fixes it, which is what `scripts/babel/unistyles-scope-crawl.js`
 does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
 has already analysed the file and the crawl is a silent no-op.
 
-**Verified against `react-native-unistyles@3.3.0` +
-`babel-plugin-react-compiler@1.0.0`** (probe re-run 2026-10-02 against Unistyles
-3.4.0, whose Babel plugin is unchanged: all three legs hold). Three orders,
-three outcomes:
+**Verified against `react-native-unistyles@3.5.0` +
+`babel-plugin-react-compiler@1.0.0`** (2026-10-05). Three orders, three
+outcomes:
 
 | plugin order                             | compiler                                                                                                                                             | variant read                                                |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -1541,3 +1580,171 @@ a hook that exposes `refetch` guards it. Resync is unaffected: a never-run
 is skipped). `useSubscription` has no `skipToken` overload in 4.2.12, so the
 subscription hooks stay on `skip`, which also gates
 `useSubscriptionTransportRecovery`.
+
+### Apollo tears down a paused screen's query; resubscribing reads the current fetch policy
+
+Verified 2026-10-02 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/apollo/__tests__/refetchEvents.test.ts -t "paused at the switch"`.
+
+**Claim:** native-stack's `inactiveBehavior: 'pause'` hides a screen in a React
+`Activity`, whose effects are cleaned up, so the screen's `useQuery` loses its
+last observer. An `ObservableQuery` with no observer is torn down and removed
+from the client's set (`tearDownQuery` → `obsQueries.delete`). Neither
+`refetchQueries({ include: 'active' })` nor `include: 'all'` reaches it. On
+resume the first subscriber calls `reobserve()` with no options, which runs the
+current `fetchPolicy`. That is `cache-first` once the global `nextFetchPolicy`
+has applied, so the screen serves what the cache holds and sends nothing.
+Query objects carry no id or creation order to tell a resumed query from one
+first mounted since.
+
+**What depends on it:** the language catch-up in `src/apollo/refetchEvents.ts`.
+After a switch, every navigation refetches only the active queries not answered
+since it, because a refetch at the switch cannot reach a paused screen, and nor
+can a remount for a query that sets `cache-first` itself.
+
+### Google ML Kit's iOS pods have no arm64-simulator slice
+
+Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
+`GoogleMLKit/TextRecognition` 8.0.0, which `@react-native-ml-kit/text-recognition`
+2.0.0 pins).
+
+**Claim:** ML Kit's iOS frameworks ship an arm64 slice built for devices and an
+x86_64 slice built for the simulator, and nothing else. On Apple silicon with
+an arm64-only iOS 26+ simulator runtime, any ML Kit pod fails to link. That's
+why `react-native.config.js` keeps the barcode scanner's pod off iOS, and why
+receipt text recognition uses Apple Vision on iOS (`TextRecognitionModule.swift`).
+
+Re-check (the pod's source URL is in its podspec on the CocoaPods CDN):
+
+```
+curl -sL -o t.tgz https://dl.google.com/dl/cpdc/d19e9c059f422b0c/MLKitTextRecognition-7.0.0.tar.gz
+tar xzf t.tgz && F=Frameworks/MLKitTextRecognition.framework/MLKitTextRecognition
+lipo -info $F                               # x86_64 arm64
+for a in arm64 x86_64; do lipo -thin $a $F -output /tmp/s && otool -l /tmp/s | grep -m1 ' platform '; done
+# arm64 → platform 2 (iOS device); x86_64 → platform 7 (iOS simulator)
+```
+
+### Apple Vision reads a two-column receipt as separate columns
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator (iOS 27, arm64) through
+`TextRecognitionModule.recognizeAndDelete` (`VNRecognizeTextRequest`,
+`.accurate`, language correction off).
+
+**Claim:** Vision returns a receipt's left column top to bottom, and then its
+price column as separate observations. A row's name and price are never one
+observation. `receipts/utils/assembleReceiptLines.ts` rebuilds rows by vertical
+overlap before redaction and parsing. The same call deletes the pages it read,
+plus any `DOCUMENT_SCAN_*.jpg` that `react-native-document-scanner-plugin`
+2.0.4 left in Documents: the plugin writes every page there, and iCloud backs
+that folder up.
+
+Measured on a rendered 18-row receipt (1800×2032 JPEG):
+
+- 24 observations in 1.3 s, every text exact;
+- the 16 left-column rows first, then 8 prices;
+- each price's `y` within 0.005 of its row's `y`;
+- both files gone from Documents afterwards.
+
+Re-check: put a JPEG in the app's Documents directory, connect the debugger
+(`argent-metro-debugger`), then evaluate:
+
+```js
+globalThis.nativeModuleProxy.TextRecognitionModule.recognizeAndDelete([
+  'file://<Documents>/probe.jpg',
+]).then(pages => (globalThis.__probe = pages));
+```
+
+The document scanner itself needs a device: on the simulator, `scanDocument`
+rejects with `Document scanning is not supported on this device` (the plugin's
+`VNDocumentCameraViewController.isSupported` check), and the screen shows its
+failure state. The plugin's open iOS crash on
+a zero-page Done (websitebeaver/react-native-document-scanner-plugin#184) is
+accepted: a patch is out of bounds, and JS can't catch it.
+
+### Apple Foundation Models labels receipt lines, but can't be trusted with their figures
+
+Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 Pro simulator (iOS 27), through `ReceiptStructuringModule`. The simulator uses the host's model, so `SystemLanguageModel.default.availability` reads `available` there.
+
+**Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
+
+- **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
+- **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
+- **On a longer, skewed receipt it numbers lines itself** (2026-10-01, a 23-line Walmart photo, in the app on the iPhone 18 Pro simulator, 9.4–10.4 s). It gave 19 labels, skipping lines with no words (a lone `F`, a price on its own row), so its line 7 was the receipt's line 9. A detail line's `product` was its item's (`BANANAS` on the weight line). So `structureReceipt` places each label by the words it copied, and `isUsableReceipt` asks for 75% of lines placed, not 90%.
+
+So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
+
+Timings for 10 lines:
+
+- host: 3.5–5 s;
+- in the app on the simulator: 8.0 s cold (model load), then 4.0–5.4 s;
+- the full `parseReceiptOnDevice` on Kroger: 9.2 s.
+
+Time grows with length: over the 32-receipt corpus in the app on the simulator (2026-10-02), labelling took a median 0.55 s per labelled line (0.3–0.95 s). 5 receipts of 48–79 lines ran past the 20 s timeout, the longest taking 74 s. The module's labels there matched `label.swift`'s on the host for all 681 lines, so the corpus's labels stand for the simulator's; only the timing differs.
+
+Phones will differ, so the timeout is set from device runs (`on-device-receipt-recognition` task 5.1).
+
+Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
+`globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
+The deployment target is iOS 16, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
+
+### Apple Foundation Models can refuse a whole receipt over its footer
+
+Verified 2026-09-30 on macOS 27.0.1 (26A434), with `scripts/receipt-corpus/label.swift`, which uses `ReceiptStructuringModule`'s schema, prompt and greedy sampling.
+
+**Claim:** the model's guardrail can refuse a whole labelling request because of a receipt's promotional footer. It throws `GenerationError.guardrailViolation` ("May contain unsafe content"), and which text trips it can't be predicted.
+
+- A photographed ALDI US receipt was refused. Its footer has a sweepstakes ("Enter the drawing for a chance / to win a $100 ALDI gift card.") and an age line ("Must be 18 years old to enter."). Removing either one let it through. So did labelling only the lines up to the printed total.
+- The same three lines inside a short Walmart-format receipt passed. So did alcohol, tobacco, sexual-health, ammunition and pharmacy item names.
+
+So `parseReceiptOnDevice` sends only `linesThroughTotal`: no item follows the printed total, so the footer is never needed. A refusal still resolves to no parse, and the draft's text stands.
+
+Re-check with a made-up receipt in the same shape. Write this as `entry.json`:
+
+```json
+{
+  "id": "sweepstakes",
+  "pages": [
+    "ALDI\nStore #101\n100 Main St\nSpringfield\n800-555-0100\nwww.ALDI.us\nOrg Grnd Beef  12.38  FA\nCelery  1.65  FA\nKidney Beans  0.81  FA\nPinto Beans  0.99 FA\nSUBTOTAL  15.83\nA-Taxable @0.00%  0.36\nAMOUNT DUE  16.19\n5 ITEMS\nDebit Card  16.19\n****************************************\nLike ALDI? Tell ALDI!\nTell us how we did at\nwww.tellaldi.us\nEnter the drawing for a chance\nto win a $100 ALDI gift card.\nMust be 18 years old to enter.\nNo purchase necessary.\nSign up for ALDI emails and save!\nwww.aldi.us/signup\nVISA  16.19"
+  ]
+}
+```
+
+Then run:
+
+```
+swiftc -O -parse-as-library scripts/receipt-corpus/label.swift -o /tmp/label
+/tmp/label /tmp entry.json
+```
+
+The labeller prints `FAILED May contain unsafe content` and writes the error to `/tmp/sweepstakes.json`. The first 13 lines alone label in about 6 s.
+
+### ML Kit GenAI Prompt API needs Kotlin 2.2 and a minSdk override
+
+Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `genai-common` beta4). It is Gemini Nano's on-device Prompt API, with typed structured output. Adding the dependency fails twice:
+
+1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it, and Gemini Nano only runs on Android 14 devices anyway.
+2. `compileDebugKotlin`: "Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0". The app pins `kotlinVersion = "2.1.20"`, and the failure hits `MainApplication.kt`, so the whole app stops compiling, not just the code that uses the library.
+
+Resolved 2026-09-30 with `kotlinVersion = "2.2.0"` (React Native 0.87's default), with the Kotlin Gradle plugin's classpath entry versioned by it. Unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. The error message then still says "expected version is 2.1.0". Under 2.2, one library also needed a newer version: `@react-navigation/native` alpha.44's `MaterialSymbolModule.kt` reads `currentActivity` in a way 2.2 rejects (fixed in alpha.49). With `tools:overrideLibrary` for the three `com.google.mlkit.genai.*` libraries, `:app:assembleDebug` succeeds and `ReceiptStructuringModule.kt` calls the API.
+
+Gemini Nano runs only on AICore devices (Pixel 9 and 10, Galaxy S25, Xiaomi 15 and others). The emulator has none, so its labelling is still unverified on a device. `availability()` maps `DOWNLOADABLE` to `downloading`, so a scan never starts a model download.
+
+Re-check: add `implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")` to `android/app/build.gradle`, then run `./gradlew :app:compileDebugKotlin`.
+
+### ML Kit text recognition kills the app on the arm64 Android emulator
+
+Verified 2026-09-30 on `Medium_Phone_API_36.1` (Android 16, arm64, Apple-silicon host) with `play-services-mlkit-text-recognition` 19.0.1.
+
+**Claim:** the first `TextRecognizer.process` loads Play services' TensorFlow Lite module into the app process. It dies there with `signal 4 (SIGILL), code 1 (ILL_ILLOPC)`, with frames in `dl-TfliteDynamiteDynamite` called from `dl-MlkitOcrCommon`. It is a native crash, so neither Kotlin nor JS can catch it. `TextRecognitionModule` therefore rejects with `text_recognition_unsupported` when `Build.HARDWARE == "ranchu"` on arm64, and the screen shows its failure state instead of the app vanishing.
+
+The document scanner works on the same emulator, because it runs in Play services' own process:
+
+- On first use it downloads its module ("Downloading updates to Google Play services…"), so a phone's first scan needs a connection.
+- It detects the page in the virtual camera scene.
+- It writes pages to `cache/mlkit_docscan_ui_client/<id>.jpg`. A crash between scan and recognition left the page there, so recognition now empties that folder on every call, as iOS does for `DOCUMENT_SCAN_*`.
+
+Re-check: `adb logcat | grep -E "SIGILL|TfliteDynamite"` while scanning on the emulator with the guard removed.
+
+### The image picker's copy is deleted with the scanned pages
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator: the photo fallback (`usePhotoCapture().pickPhoto`) hands `recognizeAndDelete` the picker's temporary copy. After the read, no image newer than the scan remains under the app container's `tmp/`, `Library/Caches/` or `Documents/`. The photo in the user's library is untouched, since the picker only copies it.

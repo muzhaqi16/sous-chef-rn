@@ -165,13 +165,25 @@ export function formatQuantityForInput(
  */
 const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
 
-/** Primary display, with g→kg / mL→L upscaling: 1500g → "1.5kg". */
+/** Primary display, with g→kg / mL→L upscaling: 1500 g → "1.5 kg". */
 export function formatQuantityDisplay(quantity: number, unit?: string): string {
   const unitStr = unit ?? '';
   if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
-    return `${formatQuantity(quantity / 1000)}${unitStr === 'g' ? 'kg' : 'L'}`;
+    return `${formatQuantity(quantity / 1000)} ${unitStr === 'g' ? 'kg' : 'L'}`;
   }
   return `${formatQuantityForDisplay(quantity)} ${unitStr}`.trim();
+}
+
+/** A package size, as `formatQuantityDisplay` shows it; null when none is stated. */
+export function formatNetWeightDisplay(
+  netWeight?: number | null,
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+): string | null {
+  if (!netWeight) return null;
+  return formatQuantityDisplay(
+    netWeight,
+    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name),
+  );
 }
 
 /** Prefers the unit's symbol over its name. */

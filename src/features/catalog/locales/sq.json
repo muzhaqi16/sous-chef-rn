@@ -31,7 +31,6 @@
     "climateControlled": "Me kontroll klime",
     "capacity": "Kapaciteti",
     "capacityPlaceholder": "p.sh., 100",
-    "unit": "Njësia",
     "unitPlaceholder": "Zgjidh njësinë",
     "setAsDefault": "Cakto si vendndodhje të parazgjedhur",
     "typeRefrigerator": "Frigorifer",
@@ -282,6 +281,7 @@
     "counter": "{{current}} nga {{total}}",
     "setAsMain": "Vendos si foto kryesore",
     "mainPhoto": "Foto kryesore",
+    "credit": "Foto: {{source}}",
     "setPrimary": {
       "notFoundTitle": "Fotoja nuk u gjet",
       "notFoundBody": "Kjo foto nuk gjendet më te artikulli — mund të jetë hequr.",
@@ -382,7 +382,6 @@
     "noUnits": "Nuk u gjet asnjë njësi",
     "typeMoreToAdd": "Vazhdo të shkruash për të shtuar «{{term}}»",
     "typeMoreToAddBrand": "Vazhdo të shkruash për të shtuar «{{term}}» si markë të personalizuar",
-    "typeMoreToAddStore": "Vazhdo të shkruash për të shtuar «{{term}}» si dyqan të personalizuar",
     "typeAtLeastTwo": "Shkruaj të paktën 2 karaktere për të kërkuar",
     "tryDifferentTerm": "Provo një term tjetër kërkimi",
     "typeMoreToAddCategory": "Vazhdo të shkruash për të përdorur «{{term}}» si kategori të personalizuar"

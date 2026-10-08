@@ -36,6 +36,7 @@ jest.mock('react-native-unistyles', () => {
         return result;
       },
       configure: jest.fn(),
+      addChangeListener: jest.fn(() => () => {}),
       // Unistyles' StyleSheet is a superset of RN's — delegate the
       // original utilities so tests can flatten style arrays.
       flatten: style => require('react-native').StyleSheet.flatten(style),
@@ -55,9 +56,28 @@ jest.mock('react-native-unistyles', () => {
     useInitialTheme: jest.fn(),
     withUnistyles: jest.fn(component => component),
     ScopedTheme: ({ children }) => children,
+    UnistyleDependency: {
+      Theme: 0,
+      ThemeName: 1,
+      AdaptiveThemes: 2,
+      Breakpoints: 3,
+      Variants: 4,
+      ColorScheme: 5,
+      Dimensions: 6,
+      Orientation: 7,
+      ContentSizeCategory: 8,
+      Insets: 9,
+      PixelRatio: 10,
+      FontScale: 11,
+      StatusBar: 12,
+      NavigationBar: 13,
+      Ime: 14,
+      Rtl: 15,
+    },
     UnistylesRuntime: {
       setTheme: jest.fn(),
       setAdaptiveThemes: jest.fn(),
+      updateTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),
       ...runtime,
     },

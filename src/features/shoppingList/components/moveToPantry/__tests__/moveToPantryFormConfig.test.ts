@@ -27,6 +27,8 @@ describe('the move-to-pantry schema', () => {
     ['quantityInput', { quantityInput: '0' }],
     ['quantityInput', { quantityInput: 'abc' }],
     ['unitValue', { unitValue: '  ', unitId: null }],
+    ['actualPriceInput', { actualPriceInput: '-3' }],
+    ['actualPriceInput', { actualPriceInput: '4,99x' }],
   ])('reports a bad %s on that field', async (path, override) => {
     const error = await moveToPantrySchema
       .validate({ ...filled, ...override })

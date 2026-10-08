@@ -208,6 +208,14 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
         ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
+        ingredientsConnection {
+          edges {
+            node {
+              id
+              ...RecipeIngredientFragment
+            }
+          }
+        }
       }
     }
     ... on Error {
@@ -231,37 +239,6 @@ mutation ForkRecipe($input: ForkRecipeInput!) {
       recipe {
         id
         ...RecipeReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
-  updateRecipeIngredients(input: $input) {
-    __typename
-    ... on UpdateRecipeIngredientsPayload {
-      recipe {
-        id
-        ...RecipeReaders
-        ingredientsConnection {
-          edges {
-            node {
-              id
-              ...RecipeIngredientFragment
-            }
-          }
-        }
       }
     }
     ... on Error {
@@ -418,6 +395,11 @@ mutation CreateShoppingListItemsFromRecipe(
       results {
         success
         outcome
+        # Which lines were added: the server skips optional ones ("salt to taste").
+        recipeIngredient {
+          id
+          ...RecipeIngredientReaders
+        }
         item {
           id
           ...ShoppingListItemReaders
@@ -468,6 +450,8 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   }
 }
 
+# The pick and up to three `alternativeMatches` come in the order a cook draws
+# them, so an empty stack is last.
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
@@ -483,7 +467,7 @@ query MatchRecipeIngredientsToPantry(
       ...RecipeIngredientFragment
     }
     isAvailable
-    matchConfidence
+    matchKind
     availableQuantity
     suggestedQuantity
     shortfall
@@ -493,6 +477,22 @@ query MatchRecipeIngredientsToPantry(
       symbol
     }
     matchedPantryItem {
+      id
+      itemName
+      unit {
+        id
+        name
+        symbol
+      }
+      displayAmount {
+        quantity
+        unit {
+          id
+          symbol
+        }
+      }
+    }
+    alternativeMatches {
       id
       itemName
       unit {

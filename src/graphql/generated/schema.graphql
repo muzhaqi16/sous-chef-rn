@@ -70,36 +70,13 @@ Example:
 directive @optionalAuth on FIELD_DEFINITION
 
 """
-Require that the current user is the owner of the parent resource
-Returns null for the field if user is not the owner (soft denial)
-This is useful for sensitive fields that should only be visible to the owner
-
-The owner check uses:
-1. parent.userId (if exists) - compared to context.userId
-2. parent.authorId (if exists) - for author-owned resources like recipes
-3. parent.ownerId (if exists) - for explicitly owned resources
-
-Example:
-type User {
-  email: EmailAddress! @auth
-  settings: UserSettings @ownerOnly
-  notificationsConnection: NotificationConnection! @ownerOnly
-}
-
-type Recipe {
-  privateNotes: String @ownerOnly
-}
-"""
-directive @ownerOnly on FIELD_DEFINITION
-
-"""
 Mark a Query/Mutation field as INTENTIONALLY PUBLIC — reachable without
 authentication. Use this only for the auth-bootstrap surface (login,
 register, password reset, etc.) where there is no token yet.
 
 Why this exists: schema startup performs a default-deny audit and refuses
 to boot if any root-level field is missing one of @auth, @optionalAuth,
-@requireMembershipRole, @requireAccess, @requireSystemRole, @ownerOnly, or @public.
+@requireMembershipRole, @requireAccess, @requireSystemRole, or @public.
 Marking a field @public is the explicit way to say "yes, this is meant to
 be unauthenticated" — so a forgotten directive on a new mutation is a
 loud failure instead of a silent security hole.
@@ -287,6 +264,9 @@ enum AcquisitionMethod {
 """Input for categorizing an item"""
 input AddItemToCategoryInput {
   categoryId: ID!
+  """
+  Make this the item's primary category; its other categories stop being primary.
+  """
   isPrimary: Boolean
   itemId: ID!
 }
@@ -618,11 +598,14 @@ enum AllergenSeverity {
 
 """Input for filtering analytics queries by time period"""
 input AnalyticsFilters {
-  """Custom date range - overrides dateRange if both provided"""
+  """
+  Custom date range - overrides dateRange if both provided. Runs forward and
+  spans at most 366 days.
+  """
   customRange: DateRangeInput
   """Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.)"""
   dateRange: DateRange
-  """Limit for top items lists (default: 10)"""
+  """Limit for top items lists (default: 10, at most 50)"""
   topItemsLimit: Int
 }
 
@@ -1106,10 +1089,7 @@ input BulkUpdateItemFieldsInput {
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
-  popularity: Int
   productDetails: ProductDetailsInput
-  showInOnboarding: Boolean
-  status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
   tagOps: TagOpsInput
   type: ItemType
@@ -1120,6 +1100,11 @@ input BulkUpdateItemFieldsInput {
 
 input BulkUpdateItemsInput {
   ids: [ID!]!
+  """
+  Why the change: required when an admin changes a catalog fact, which is
+  then kept over every source as an override. One reason for the batch.
+  """
+  reason: String
   update: BulkUpdateItemFieldsInput!
 }
 
@@ -1497,8 +1482,16 @@ input ConfirmRecipeConsumptionInput {
   items. When omitted, the server generates one. Must match the CUID2 format.
   """
   id: ID
+  """The cook's note, recorded on the cooking log."""
+  notes: String
   pantryId: ID!
   recipeId: ID!
+  """
+  Servings made, counted as `markRecipeAsCooked` counts them, recorded on the
+  cooking log (rounded to whole servings). Omit for the recipe's own servings.
+  The consumptions carry their own amounts; this does not scale them.
+  """
+  servings: Float
 }
 
 type ConfirmRecipeConsumptionPayload {
@@ -1965,14 +1958,6 @@ input CreateItemSuggestionInput {
   changes: SuggestibleItemChangesInput!
   itemId: ID!
   note: String!
-  """
-  One barcode of the item to correct instead of the item itself: a product
-  record, as Item.matchedVariation returned it. It may change only
-  packageInfo.netWeight, packageInfo.netWeightKind, packageInfo.displayUnit
-  and brand; approving it changes that barcode only. A record that is not one
-  of the item's barcodes is refused.
-  """
-  variation: ID
 }
 
 type CreateItemSuggestionPayload {
@@ -2152,6 +2137,13 @@ input CreatePantryInput {
 }
 
 input CreatePantryItemInput {
+  """
+  What was bought, as move and restock take it: a measured amount, or a count
+  of packages the server sizes. Exclusive with quantity and unit. Packages no
+  size can be found for, landing in a unit of weight or volume, are counted
+  in a counted stack of the item instead.
+  """
+  amount: StockAmountInput
   brand: BrandRefInput
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -2299,6 +2291,41 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateReceiptParseInput {
+  """
+  Client-minted CUID2. Creating the same id again returns the parse it
+  created, so a retried request queues the receipt once.
+  """
+  id: ID!
+  """The receipt's locale, e.g. en-GB, which decides how its dates read"""
+  locale: String
+  """
+  The receipt's recognized text, one string per photographed page: 1 to 10
+  pages, with a deployment limit on their characters in all. A receipt over
+  either limit is refused with a ValidationError on `pages`. Payment, card
+  and contact details are removed on the server before anything is stored or
+  read. Send pages or photos, not both.
+  """
+  pages: [String!]
+  """
+  The receipt's photos, 1 to 4, for a phone that cannot read the text: keys
+  from createImageUploadUrl with purpose RECEIPT_PHOTO. The server reads them
+  and deletes them, whatever the outcome. Send pages or photos, not both.
+  """
+  photos: [String!]
+}
+
+type CreateReceiptParsePayload {
+  receiptParse: ReceiptParse!
+}
+
+"""
+Result of CreateReceiptParse. Select on CreateReceiptParsePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateReceiptParseResult = ConflictError | CreateReceiptParsePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
@@ -2509,6 +2536,38 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateStoreInput {
+  address: String
+  """The chain the store belongs to, when known"""
+  chainId: ID
+  """
+  Client-minted CUID2, the replay anchor: sending it again returns the same
+  store and outcome. When the create merges into a store already on file,
+  this id goes on naming that store wherever a store id is taken, so an
+  offline client can reference it before the create is answered.
+  """
+  id: ID
+  name: String!
+  """
+  The store's number in its chain, as its receipts print it; needs chainId
+  """
+  storeNumber: String
+}
+
+type CreateStorePayload {
+  """CREATED for a new store; MERGED when the shop was already on file"""
+  outcome: CreateOutcome!
+  """The store added, or the one already on file it merged into"""
+  store: Store!
+}
+
+"""
+Result of CreateStore. Select on CreateStorePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | NotFoundError | ValidationError
+
 """Input for creating a template from an existing meal plan"""
 input CreateTemplateFromMealPlanInput {
   category: TemplateCategory
@@ -2615,6 +2674,12 @@ type Currency {
   updatedAt: DateTime!
 }
 
+"""An amount of money in one currency, rounded to its minor unit."""
+type CurrencyAmount {
+  amount: Float!
+  currencyCode: CurrencyCode!
+}
+
 """An ISO 4217 currency code, e.g. "EUR" or "ALL"."""
 scalar CurrencyCode @specifiedBy(url: "https://www.iso.org/iso-4217-currency-codes.html")
 
@@ -2645,6 +2710,17 @@ type CurrencySpend {
   purchaseCount: Int!
   """Sum of the prices that were recorded."""
   totalSpent: Float!
+}
+
+"""A notice an external catalog's licence or terms ask a reader to see."""
+type DataAttribution {
+  """The licence the source's data is under, or null when it names none."""
+  licenseUrl: String
+  """The notice to show, as written."""
+  notice: String!
+  source: ExternalSource!
+  """The source's page for this item, or its home page."""
+  sourceUrl: String
 }
 
 enum DataSource {
@@ -4796,6 +4872,22 @@ type IPStat {
   ipAddress: String!
 }
 
+"""
+The attribution a licensed photo needs, shown beside it: the credit text and
+the licence, each linking to its page (for example "Photo: Open Food Facts,
+CC BY-SA 3.0").
+"""
+type ImageCredit {
+  """The licence the photo is under, such as CC BY-SA 3.0."""
+  license: String!
+  """The licence's text."""
+  licenseUrl: String!
+  """The page the photo came from."""
+  sourceUrl: String!
+  """Who the photo is credited to."""
+  text: String!
+}
+
 input ImageInput {
   featured: Boolean
   format: String
@@ -4851,12 +4943,23 @@ enum ImageUploadPurpose {
   PANTRY_ITEM_PHOTO
   PROFILE_AVATAR
   PROFILE_COVER
+  """
+  A receipt photo for createReceiptParse: at most 4 MB and 4000 px on its longest edge, never served, deleted once parsed
+  """
+  RECEIPT_PHOTO
 }
 
 """Input for ingredient usage when marking recipe as cooked"""
 input IngredientUsageInput {
   actualQuantity: Float!
   actualUnitId: ID!
+  """
+  A pantry stack to draw on first for this ingredient: one of the
+  ingredient's own item or an item under its concept, else a ValidationError.
+  The rest of the stacks under the concept follow: opened first, then the
+  soonest expiry.
+  """
+  pantryItemId: ID
   recipeIngredientId: ID!
 }
 
@@ -5086,6 +5189,11 @@ type Item {
   """
   alternateUpcs: [String!]!
   """
+  The concepts above this item, nearest first: a product's concept and that
+  concept's ancestors, or a concept's ancestors.
+  """
+  ancestors: [Item!]!
+  """
   When this item was approved into the public catalog, or null if it was never approved.
   """
   approvedAt: DateTime
@@ -5153,6 +5261,24 @@ type Item {
   """
   categories: [ItemCategory!]!
   """
+  The concepts directly under this concept, by name. Empty for a product.
+  """
+  childConcepts(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ItemConnection!
+  """
+  A product's root concept, which recipes match it through. Null for a
+  concept, and for a product not yet placed.
+  """
+  concept: Item
+  """
   A PACKAGE netWeight converted to the caller's unit system (see UnitSystem),
   so two callers reading the same item can get different answers. Null for a
   serving or reference figure.
@@ -5160,6 +5286,12 @@ type Item {
   convertedNetWeight: ConvertedValue
   """When the item was created."""
   createdAt: DateTime!
+  """
+  The notices this item's catalog data carries, one per external catalog its
+  records come from: Open Food Facts (ODbL), USDA FoodData Central and
+  Spoonacular. A client shows them wherever it shows the item's facts.
+  """
+  dataAttributions: [DataAttribution!]!
   """
   Where this catalog entry came from: manual entry, a barcode scan, an import or an external source.
   """
@@ -5202,6 +5334,12 @@ type Item {
   Number of distinct photos, NOT of image rows — size renditions are excluded.
   """
   imageCount: Int!
+  """
+  The credit the image at "imageUrl" needs, such as an Open Food Facts photo's
+  licence. Show it wherever that image is shown full-size. Null when the image
+  needs none, or there is no image.
+  """
+  imageCredit: ImageCredit
   """URL of the primary photo, or its thumbnail rendition when one exists."""
   imageUrl: String
   """
@@ -5226,6 +5364,11 @@ type Item {
   Whether a user created this item in the app, as opposed to a catalog import.
   """
   isUserCreated: Boolean!
+  """
+  CONCEPT for what users and recipes name ("Olive oil"); PRODUCT for one brand
+  and pack size, found by its barcode. Recipes match a product through its concept.
+  """
+  level: ItemLevel!
   """
   The product record (package size, brand, images) of the barcode a lookup
   returned this item for, whether that barcode is the item's primary, an
@@ -5287,6 +5430,10 @@ type Item {
   has no field for.
   """
   nutritions: JSON
+  """
+  A concept's parent concept, used for matching only. Null for a product or a top-level concept.
+  """
+  parentConcept: Item
   """Number of PENDING community edit suggestions for this item."""
   pendingSuggestionCount: Int!
   """
@@ -5336,6 +5483,17 @@ type Item {
   ): ItemPriceHistoryConnection!
   """The item's main UPC barcode, or null when it has none."""
   primaryUpc: String
+  """A concept's products, most popular first. Empty for a product."""
+  products(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ItemConnection!
   """
   Size of one labelled serving in servingSizeUnit (for example 240 for 240 mL), or null when unknown.
   """
@@ -5462,6 +5620,11 @@ type ItemCategorySuggestion {
 
 input ItemClassificationInput {
   categoryIds: [ID!]
+  """
+  A product's root concept: a live CONCEPT item. Null leaves the product
+  unplaced. Refused on a concept.
+  """
+  conceptId: ID
   storageState: StorageState
   tags: [String!]
 }
@@ -5526,10 +5689,6 @@ type ItemEditSuggestion {
   """The contributor who proposed the change."""
   suggestedBy: User
   updatedAt: DateTime!
-  """
-  The barcode's product record the suggestion corrects; null when it targets the item.
-  """
-  variation: ProductVariation
 }
 
 """
@@ -5568,7 +5727,16 @@ input ItemFilters {
   dietary: DietaryFilterInput
   """Filter items that have a default unit assigned"""
   hasDefaultUnit: Boolean
+  """
+  Concepts with a parent (true), or without one (false). A product never has
+  a parent, so pair false with level CONCEPT for the top of the tree.
+  """
+  hasParent: Boolean
+  """CONCEPT or PRODUCT only"""
+  level: ItemLevel
   lookup: ItemLookupInput
+  """The concepts directly under this concept"""
+  parentConceptId: ID
   priceRange: PriceRangeInput
   status: ItemStatus
   statuses: [ItemStatus!]
@@ -5589,6 +5757,10 @@ Select Item.photos to get that structure.
 """
 type ItemImage {
   createdAt: DateTime
+  """
+  The credit this image needs; a rendition carries its photo's. Null when none is needed.
+  """
+  credit: ImageCredit
   featured: Boolean
   hash: String
   id: ID!
@@ -5625,6 +5797,16 @@ enum ItemImageStatus {
 }
 
 """
+The two levels of catalog item. A CONCEPT ("Olive oil") is what users and
+recipes name; a PRODUCT is one brand and pack size, found by its barcode, and
+sits under one concept. A product is tracked as its own pantry stack.
+"""
+enum ItemLevel {
+  CONCEPT
+  PRODUCT
+}
+
+"""
 Find one item by a single identifier: exactly one of a barcode or a store SKU.
 The result is a single page.
 """
@@ -5639,7 +5821,6 @@ enum ItemMatchType {
   CREATED
   EXISTING_NAME
   EXISTING_UPC
-  VARIATION
 }
 
 """
@@ -5689,6 +5870,10 @@ processing pipeline derived from them.
 """
 type ItemPhoto {
   createdAt: DateTime!
+  """
+  The credit this photo needs when shown, such as its source's licence. Null when none is needed.
+  """
+  credit: ImageCredit
   featured: Boolean!
   id: ID!
   """Whether this is the item's hero photo. At most one photo per item is."""
@@ -5715,14 +5900,61 @@ type ItemPhoto {
   variants: [ItemImage!]!
 }
 
-"""Price history for items - may contain user-specific pricing data"""
+"""
+Where an item is cheaper. Catalog prices and the viewer's own household's paid
+prices count; other households' paid prices count, anonymously, only once at
+least two households and two people supplied them. Estimates do not. Rows are
+cheapest first within each basis.
+"""
+type ItemPriceComparison {
+  currency: Currency!
+  item: Item!
+  rows: [PriceComparisonRow!]!
+  windowDays: Int!
+}
+
+input ItemPriceComparisonInput {
+  """The currency compared; the caller's own when omitted"""
+  currency: CurrencyCode
+  """One barcode of the item; all of them when omitted"""
+  gtin: String
+  itemId: ID!
+  """How far back observations count: default 90 days, at most 365"""
+  windowDays: Int
+}
+
+"""
+One price observation. Individual observations are visible to the household
+that made them, plus those no user made (store catalogs, imports).
+"""
 type ItemPriceHistory {
+  """0 to 1: how far the price is trusted"""
+  confidence: Float
   createdAt: DateTime!
+  currency: Currency!
+  """The day the price was observed"""
+  effectiveDate: DateTime!
+  """The barcode bought, as a GTIN-14"""
+  gtin: String
   id: ID!
   item: Item!
+  normalizedBasis: PriceBasis
+  """
+  The price per one kg, L or piece; null when the facts did not allow it without an assumption
+  """
+  normalizedPrice: Float
+  """The net weight (or volume) of one unit, when known"""
+  packageNetWeight: Float
+  packageNetWeightUnit: Unit
+  """The price per one unit"""
   price: Float!
+  """How many units were bought at this price"""
+  quantity: Float
   """Where this price came from."""
   source: PriceSource!
+  store: Store
+  """The unit the price is per"""
+  unit: Unit!
 }
 
 """
@@ -5753,7 +5985,31 @@ type ItemPriceHistoryEdge implements Edge {
 
 input ItemPriceHistoryOrderBy {
   createdAt: SortOrder
+  """The day observed; the default, newest first"""
+  effectiveDate: SortOrder
   price: SortOrder
+}
+
+"""
+An item's median price per month. Months with no observations are absent.
+"""
+type ItemPriceTrend {
+  currency: Currency!
+  item: Item!
+  months: Int!
+  points: [PriceTrendPoint!]!
+}
+
+input ItemPriceTrendInput {
+  """One chain; every store when omitted"""
+  chainId: ID
+  """The currency; the caller's own when omitted"""
+  currency: CurrencyCode
+  """One barcode of the item; all of them when omitted"""
+  gtin: String
+  itemId: ID!
+  """How many months back: default 12, at most 24"""
+  months: Int
 }
 
 """
@@ -5833,6 +6089,8 @@ type ItemSuggestion {
   displayUnit: String
   id: ID!
   imageUrl: String
+  """CONCEPT for what recipes name; PRODUCT for one brand and pack size"""
+  level: ItemLevel!
   name: String!
   netWeight: Float
   type: ItemType!
@@ -6645,6 +6903,11 @@ input MarkRecipeAsCookedInput {
   match the CUID2 format; invalid formats are rejected by ID validation.
   """
   id: ID
+  """
+  What was actually used, per ingredient; an entry of 0 means none. An
+  ingredient with no entry deducts its scaled recipe amount, except an
+  optional one ("salt to taste"), which is deducted only when an entry names it.
+  """
   ingredientsUsed: [IngredientUsageInput!]
   notes: String
   recipeId: ID!
@@ -7136,6 +7399,16 @@ type MealTypeNutrition {
   totalProtein: Float!
 }
 
+"""An amount in a unit."""
+input MeasuredAmountInput {
+  """Greater than zero."""
+  quantity: Float!
+  """
+  Omitted, the unit the door defaults to: the list line's, or the stack's.
+  """
+  unitId: ID
+}
+
 """
 How THIS stack is measured, beyond its net weight: one tracking unit holds
 portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves), and
@@ -7353,6 +7626,11 @@ input MovePurchasedItemsToPantryInput {
   """
   pantryItemHints: [MoveToPantryIdHintInput!]
   shoppingListId: ID!
+  """
+  The viewer's calendar date, for every line. Each new batch expires on this date
+  plus its item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
 }
 
 type MovePurchasedItemsToPantryPayload {
@@ -7400,15 +7678,15 @@ Creates a PantryItem from a ShoppingListItem after purchase.
 """
 input MoveShoppingItemToPantryInput {
   """
-  Actual per-unit price paid (optional).
-  If not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.
-  Server calculates totalCost = actualPrice × actualQuantity for analytics.
+  Price paid per unit bought: per amount.measured unit, or per package for
+  amount.packages. Omitted, the line's purchasedPrice is the price paid,
+  recorded as PURCHASE whatever priceSource says; with neither, the purchase
+  records no price. An estimate is never a price paid, though it still values
+  the stock. A totalCost sent with it wins.
   """
   actualPrice: Float
-  """Actual quantity purchased (may differ from planned)"""
-  actualQuantity: Float!
-  """Unit ID for the quantity (defaults to shopping item's unit)"""
-  actualUnitId: ID
+  """What was bought: an amount in a unit, or a count of packages."""
+  amount: StockAmountInput!
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
   where the field may be cleared.
@@ -7417,11 +7695,6 @@ input MoveShoppingItemToPantryInput {
   idempotencyKey: ID
   """Additional notes"""
   notes: String
-  """
-  The purchased packages' own size (1 jar of 22 oz), recorded on the new batch. Omitted,
-  the line's own package size applies, else the pantry item's default.
-  """
-  packageSize: PackageSizeInput
   """ID of the target pantry"""
   pantryId: ID!
   """
@@ -7437,6 +7710,14 @@ input MoveShoppingItemToPantryInput {
   that already exists returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
+  """Where actualPrice came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
+  """
+  The receipt this line was bought on: its store (over the line's preferred
+  store), day and number are recorded on the purchase and its price. Send it
+  with or without a price read from it.
+  """
+  receipt: ReceiptRefInput
   """
   Whether to remove the item from the shopping list after moving. Default false:
   the line stays on the list, stamped as moved.
@@ -7448,6 +7729,16 @@ input MoveShoppingItemToPantryInput {
   storageLocationId: ID
   """Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)"""
   storageState: StorageState
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
+  """
+  The total paid for the line, as the receipt states it. Recorded exactly; the
+  unit price is derived from it, and it wins over actualPrice.
+  """
+  totalCost: Float
 }
 
 type MoveShoppingItemToPantryPayload {
@@ -7683,6 +7974,13 @@ type Mutation {
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
+  Queue a receipt's text, or its photos, for the server to read into lines,
+  for a phone without on-device parsing. Returns at once with the parse
+  PENDING; poll receiptParse until it is not. Each user has a daily number of
+  parses, and a smaller one of photo parses.
+  """
+  createReceiptParse(input: CreateReceiptParseInput!): CreateReceiptParseResult!
+  """
   Create a recipe the caller writes. It follows its input status (see
   CreateRecipeInput.status); a catalog recipe comes in through
   upsertExternalRecipe instead.
@@ -7717,6 +8015,13 @@ type Mutation {
   """
   createStorageLocation(input: CreateStorageLocationInput!): CreateStorageLocationResult!
   """
+  Add a store, which every user sees at once. A store already on file (the
+  same chain and store number, else the same name and address compared by
+  their letters and digits) is returned instead, with outcome MERGED. Each
+  user has a per-minute number of store creations.
+  """
+  createStore(input: CreateStoreInput!): CreateStoreResult!
+  """
   Create a template from an existing meal plan.
   Extracts the meal pattern into a reusable template.
   """
@@ -7739,7 +8044,10 @@ type Mutation {
   deleteHome(input: DeleteHomeInput!): DeleteHomeResult!
   """Delete a pending home invitation."""
   deleteHomeInvite(input: DeleteHomeInviteInput!): DeleteHomeInviteResult!
-  """Delete an item (soft delete by default, permanent if specified)"""
+  """
+  Soft-delete an item; restoreItem brings it back. Permanent removal is the
+  admin purge's alone.
+  """
   deleteItem(input: DeleteItemInput!): DeleteItemResult!
   """Delete a meal plan."""
   deleteMealPlan(input: DeleteMealPlanInput!): DeleteMealPlanResult!
@@ -7994,6 +8302,13 @@ type Mutation {
   recordItemPopularity(input: RecordItemPopularityInput!): RecordItemPopularityResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
+  """
+  Remember the household's confirmed items for a receipt's lines, so the same
+  line at the same chain resolves by ALIAS next time. A household's later
+  choice for a line replaces its earlier one; a line becomes a shared alias
+  once enough households agree.
+  """
+  recordReceiptMatches(input: RecordReceiptMatchesInput!): RecordReceiptMatchesResult!
   """Record that a saved recipe was cooked (increments the cooked count)."""
   recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
@@ -8166,15 +8481,15 @@ type Mutation {
   """Update an existing purchase record."""
   updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
   """
-  Update a recipe the caller owns. Ingredients are managed separately by
-  updateRecipeIngredients. Changing a PUBLISHED recipe's content sends it
-  back to PENDING_REVIEW, hidden from everyone else until an admin approves.
+  Update a recipe the caller owns, its ingredient list (`ingredients`) in
+  the same write. A PUBLISHED recipe stays live: the edit is held as its
+  pending revision until an admin approves it.
   """
   updateRecipe(input: UpdateRecipeInput!): UpdateRecipeResult!
   """
-  Replace a recipe's ingredient list. Separate from updateRecipe because the
-  ingredients are a collection edited as a whole rather than field by field.
-  On a PUBLISHED recipe it sends the recipe back to PENDING_REVIEW.
+  Replace a recipe's ingredient list; updateRecipe takes the list in the same
+  write as the fields. On a PUBLISHED recipe the list is held as its pending
+  revision, and the recipe stays live.
   """
   updateRecipeIngredients(input: UpdateRecipeIngredientsInput!): UpdateRecipeIngredientsResult!
   """Update an existing recipe review (author only)."""
@@ -9139,6 +9454,37 @@ it, the batch takes the item's default package size.
 input PackageSizeInput {
   netWeight: Float!
   netWeightUnitId: ID!
+}
+
+"""
+A count of packages, each holding `size`. Counted stock (pieces, jars) takes the
+count in its own unit, with the size recorded on the batch. Stock counted by
+weight or volume takes count × size, converted into its unit through recorded
+facts only: directly within a dimension, across one only through a recorded
+density or the item's own conversion. A size that cannot be converted is
+refused on `amount.packages.size`. With no size, a create or a move counts the
+packages in a counted stack of the item instead; a restock's stack is fixed,
+so it is refused there.
+"""
+input PackagesInput {
+  """Whole packages; greater than zero."""
+  count: Int!
+  """
+  One package's net content. Omitted: the list line's stated size, else the
+  item's own PACKAGE size when the item is one pack (a product holding one
+  barcode), else, on a move, the list line's own amount as one package. A
+  size the catalog only infers is never used. With none, a create or a move
+  counts the packages in a counted stack of the item; a restock is refused.
+  """
+  size: PackageSizeInput
+  """
+  The counted unit the packages are counted in (a COUNT unit; any other is
+  refused on `amount.packages.unitId`). On a create or a move it is the unit
+  they land in, a multiple such as a dozen restated in its base count; on a
+  restock it must restate into the stack's own unit. Omitted: the door's
+  default, the list line's unit or the stack's.
+  """
+  unitId: ID
 }
 
 type PageInfo {
@@ -10221,6 +10567,60 @@ type PantryUsageStats {
   lowStockItemCount: Int!
 }
 
+type ParsedReceipt {
+  """ISO 4217, when the receipt shows it"""
+  currency: String
+  """
+  The receipt's lines. They add up as: every ITEM, FEE and DEPOSIT amount
+  less every DISCOUNT amount, over the lines before the first PAYMENT line
+  printed after an item.
+  The sum meets a SUBTOTAL, or a TOTAL less the TAX above it, printed after
+  the last line counted; TOTALS_MISMATCH says when it does not. A discount
+  the printed figures show was not taken off is returned as OTHER.
+  """
+  lines: [ParsedReceiptLine!]!
+  merchant: ParsedReceiptMerchant!
+  purchasedOn: LocalDate
+  """
+  The amount of the receipt's last printed SUBTOTAL line; null when it prints none
+  """
+  subtotal: Float
+  """Its printed TAX lines added up; null when it prints none"""
+  tax: Float
+  """The amount of its last printed TOTAL line; null when it prints none"""
+  total: Float
+}
+
+"""One printed line, every amount as printed and never corrected."""
+type ParsedReceiptLine {
+  """The line's printed total; a discount is negative"""
+  amount: Float
+  """
+  On a DISCOUNT: the index in lines of the ITEM it reduces. A discount
+  printed among the items always names one; one printed after the subtotal
+  may name none, and reduces the order. On an OTHER detail line folded into
+  its item (a weight or count line such as "2.21 lb @ 0.46"): that ITEM.
+  """
+  appliesTo: Int
+  """The printed article or barcode number"""
+  code: String
+  kind: ReceiptLineKind!
+  """The product name as printed, on an ITEM"""
+  product: String
+  quantity: Float
+  """The line as the receipt prints it"""
+  text: String!
+  """The quantity's unit as printed: lb, kg, ea"""
+  unit: String
+  unitPrice: Float
+}
+
+type ParsedReceiptMerchant {
+  address: String
+  name: String
+  storeNumber: String
+}
+
 """
 One partly used package: its batch, its size, and the fraction of it that remains.
 """
@@ -10300,6 +10700,38 @@ input PreviewPantryItemUnitChangeInput {
   unitId: ID!
 }
 
+"""What a normalized price is per."""
+enum PriceBasis {
+  """Per piece"""
+  EACH
+  """Per kilogram"""
+  PER_KG
+  """Per litre"""
+  PER_L
+}
+
+"""One store's or chain's prices for an item, in one currency and basis."""
+type PriceComparisonRow {
+  basis: PriceBasis!
+  """Set when scope is CHAIN"""
+  chain: StoreChain
+  lastObservedAt: DateTime!
+  """The most recent observation's price per basis"""
+  latestPrice: Float!
+  """The median price per basis over the window"""
+  medianPrice: Float!
+  observations: Int!
+  scope: PriceComparisonScope!
+  """Set when scope is STORE"""
+  store: Store
+}
+
+"""Whether a comparison row is one store or a whole chain."""
+enum PriceComparisonScope {
+  CHAIN
+  STORE
+}
+
 """Price estimate information for a shopping list item"""
 type PriceEstimate {
   """User-provided budget limit"""
@@ -10335,6 +10767,37 @@ enum PriceSource {
   STORE_API
   """From web scraping"""
   WEB_SCRAPING
+}
+
+"""A price suggested for a shopping line from recorded observations."""
+type PriceSuggestion {
+  """Per one of the line's unit"""
+  amount: Float!
+  """The basis the observations were compared on"""
+  basis: PriceBasis!
+  currency: Currency!
+  observations: Int!
+  """The latest observation behind it"""
+  observedAt: DateTime!
+  scope: PriceSuggestionScope!
+}
+
+"""Where a suggested price came from."""
+enum PriceSuggestionScope {
+  """Any store"""
+  ANY
+  """Other stores of the line's store's chain"""
+  CHAIN
+  """The line's own store"""
+  STORE
+}
+
+type PriceTrendPoint {
+  basis: PriceBasis!
+  medianPrice: Float!
+  """The first day of the month"""
+  month: DateTime!
+  observations: Int!
 }
 
 """Sub-input for pricing estimates"""
@@ -10404,6 +10867,21 @@ enum ProfileVisibility {
   FRIENDS
   PRIVATE
   PUBLIC
+}
+
+"""
+A store the receipt names that is not on file: send it to createStore when the user confirms.
+"""
+type ProposedStore {
+  address: String
+  """The chain the header names"""
+  chain: StoreChain
+  """The merchant's printed name, else the header's chain name"""
+  name: String!
+  """
+  The store number the receipt prints, without padding; null when no chain is named
+  """
+  storeNumber: String
 }
 
 """Purchase record - contains financial and shopping data"""
@@ -10517,9 +10995,23 @@ type PurchaseHistorySummary {
 """Reusable sub-input for purchase/acquisition info"""
 input PurchaseInfoInput {
   acquisitionMethod: AcquisitionMethod
+  """
+  Per unit bought: per unit or amount.measured unit, or per package for
+  amount.packages. A totalCost sent with it wins.
+  """
   costPerUnit: Float
+  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
   purchaseId: ID
+  """
+  The receipt this stock was bought on. With it, the cost is recorded in the
+  item's price history as a price observed at that store on that day.
+  """
+  receipt: ReceiptRefInput
   storeId: ID
+  """
+  The total paid, recorded exactly; the unit price derives from it, over costPerUnit.
+  """
   totalCost: Float
 }
 
@@ -10739,13 +11231,6 @@ type Query {
     """Only these stores; every store when omitted"""
     storeIds: [ID!]
   ): [ItemAvailability!]!
-  """Compare prices for an item across multiple stores."""
-  compareItemPrices(
-    """The catalog item's id"""
-    itemId: ID!
-    """Only these stores; every store when omitted"""
-    storeIds: [ID!]
-  ): [StorePriceComparison!]!
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(
     """
@@ -10939,7 +11424,10 @@ type Query {
     """Sort order; newest first when omitted"""
     orderBy: HomeOrderBy
   ): HomeConnection!
-  """Fetch a single item by its ID."""
+  """
+  Fetch a single item by its ID. An id a merge removed returns the item it
+  was merged into.
+  """
   item(
     """The id of the Item to read"""
     id: ID!
@@ -10952,6 +11440,10 @@ type Query {
     """The catalog item's id"""
     itemId: ID!
   ): [ItemUnitConversion!]!
+  """Where an item is cheaper, by store and by chain."""
+  itemPriceComparison(input: ItemPriceComparisonInput!): ItemPriceComparison!
+  """How an item's price has moved, month by month."""
+  itemPriceTrend(input: ItemPriceTrendInput!): ItemPriceTrend!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC or SKU lookups:
@@ -10964,7 +11456,8 @@ type Query {
   request's mode does not apply is refused with a validation error naming
   it, never ignored. The orderBy applies in every mode: isPopular and
   isTrending still select the most popular items, and isRecent the newest,
-  then return them in the requested order.
+  then return them in the requested order. totalCount stops at 10,000: that
+  figure means at least that many.
   """
   items(
     """Resume after this cursor: a previous page's endCursor"""
@@ -11231,6 +11724,10 @@ type Query {
     shoppingListId: ID
   ): PurchaseConnection!
   """
+  A receipt parse the caller created; null for any other. Deleted after 7 days.
+  """
+  receiptParse(id: ID!): ReceiptParse
+  """
   A single recipe by id. Anonymous callers see published recipes only;
   authenticated callers also see their own private recipes when they own them.
   Returns null when no readable recipe has that id.
@@ -11291,6 +11788,13 @@ type Query {
     """How many to return: default 10, at most 100; a larger value is refused"""
     limit: Int = 10
   ): [ItemSuggestion!]!
+  """
+  Catalog candidates for each line of a receipt, whichever parser read it:
+  the printed code first, then a receipt alias at the receipt's chain, then
+  the store's own item number, then scored search. Reads only; send the items
+  the user confirmed to recordReceiptMatches.
+  """
+  resolveReceiptLines(input: ResolveReceiptLinesInput!): ResolveReceiptLinesPayload!
   """
   Resolve an anyone-with-link code (home join code or list share code)
   without knowing its type. Returns null when the code matches nothing.
@@ -11358,7 +11862,8 @@ type Query {
   description, tag or UPC match. Within each tier come the caller's own private
   items, then their frequent items, then name similarity and popularity. A ranked list has
   no cursor, so only its first page is served: after, before and last are
-  refused with a validation error until an orderBy is named.
+  refused with a validation error until an orderBy is named. totalCount stops
+  at 10,000: that figure means at least that many.
   """
   searchItems(
     """Resume after this cursor: a previous page's endCursor"""
@@ -11634,6 +12139,172 @@ type RapidAttempt {
   hour: String!
 }
 
+"""A catalog item proposed for a receipt line."""
+type ReceiptLineCandidate {
+  """The pantry given has a stack of this item"""
+  inPantry: Boolean!
+  item: Item!
+  method: ReceiptMatchMethod!
+  """
+  How well the item fits the line, 0 to 1; comparable within one line only
+  """
+  score: Float!
+}
+
+"""One line of a receipt, as the client's parser read it."""
+input ReceiptLineInput {
+  """The client's id for the line, echoed back on its resolution"""
+  clientId: String!
+  """
+  The code printed on the line: a barcode (often without its check digit) or the store's item number
+  """
+  code: String
+  """The line's product text as printed, e.g. GV WHL MLK 1G"""
+  text: String!
+}
+
+"""What a receipt line is."""
+enum ReceiptLineKind {
+  DEPOSIT
+  DISCOUNT
+  FEE
+  ITEM
+  OTHER
+  PAYMENT
+  SUBTOTAL
+  TAX
+  TOTAL
+}
+
+type ReceiptLineResolution {
+  """The candidate to preselect; null when confidence is NONE"""
+  best: ReceiptLineCandidate
+  """Candidates, best first; may hold weak ones when confidence is NONE"""
+  candidates: [ReceiptLineCandidate!]!
+  clientId: String!
+  confidence: ReceiptMatchConfidence!
+}
+
+"""How sure a receipt line's best candidate is."""
+enum ReceiptMatchConfidence {
+  """
+  A printed code, the store's own item number, this household's alias, or an alias many households share named the item
+  """
+  HIGH
+  """Search found candidates, but none clearly ahead: ask the user"""
+  LOW
+  """
+  An alias a few households share, or search with one candidate clearly ahead of the rest
+  """
+  MEDIUM
+  """Nothing close enough to propose"""
+  NONE
+}
+
+"""Which step found a receipt line's candidate."""
+enum ReceiptMatchMethod {
+  """
+  A correction this household, or enough households, made before at this chain
+  """
+  ALIAS
+  """
+  The line's printed barcode, its check digit computed when the receipt leaves it off
+  """
+  CODE
+  """Scored text and semantic search over the line's text"""
+  SEARCH
+  """The store's own item number, for a known store"""
+  STORE_SKU
+}
+
+"""
+The merchant a receipt prints, as its parse read it (ParsedReceiptMerchant).
+"""
+input ReceiptMerchantInput {
+  address: String
+  name: String
+  storeNumber: String
+}
+
+"""
+A receipt queued for the server to read, for phones that cannot read one themselves.
+"""
+type ReceiptParse {
+  completedAt: DateTime
+  createdAt: DateTime!
+  """
+  What FAILED or UNAVAILABLE means for the user, in a sentence; null otherwise
+  """
+  failureReason: String
+  id: ID!
+  """The receipt once PARSED"""
+  receipt: ParsedReceipt
+  status: ReceiptParseStatus!
+  warnings: [ReceiptParseWarning!]!
+}
+
+"""Where a server receipt parse stands."""
+enum ReceiptParseStatus {
+  """The model answered, but never with valid lines"""
+  FAILED
+  """Read: the receipt is returned"""
+  PARSED
+  """Queued or running; poll again"""
+  PENDING
+  """
+  No receipt service or worker could take it; parse on the device or enter the lines
+  """
+  UNAVAILABLE
+}
+
+type ReceiptParseWarning {
+  code: ReceiptParseWarningCode!
+  """On TOTALS_MISMATCH: what the lines add up to; null otherwise"""
+  counted: Float
+  """Free text for logs; read the figures from counted and printed"""
+  detail: String!
+  """
+  On TOTALS_MISMATCH: the printed subtotal, or total less tax, they were checked against; null otherwise
+  """
+  printed: Float
+}
+
+"""Something a parse noticed about what it read."""
+enum ReceiptParseWarningCode {
+  """The pages held little readable text"""
+  LOW_TEXT
+  """
+  The lines do not add up to the receipt by the rule on ParsedReceipt.lines: a line was likely missed or misread
+  """
+  TOTALS_MISMATCH
+  """The model returned a line the receipt does not print; it was dropped"""
+  UNGROUNDED_LINE
+  """
+  The printed date did not read as a calendar day; purchasedOn is null and the lines are kept
+  """
+  UNREADABLE_DATE
+}
+
+"""What turned the receipt's text into lines."""
+enum ReceiptParser {
+  """The phone's on-device model"""
+  DEVICE
+  """The server"""
+  SERVER
+}
+
+"""The receipt a purchase was made on."""
+input ReceiptRefInput {
+  """The day on the receipt, as YYYY-MM-DD; not later than today."""
+  purchasedOn: LocalDate!
+  """The receipt's own number, as printed."""
+  receiptNumber: String
+  """
+  The store the receipt is from; when the purchase also names one, they must agree.
+  """
+  storeId: ID
+}
+
 """
 Recipe type for meal instructions and ingredients
 Cache: 30 minutes - published recipes are static content
@@ -11681,6 +12352,12 @@ type Recipe {
   The recipe's cuisines, such as ITALIAN and MEDITERRANEAN; empty when none is stated.
   """
   cuisines: [Cuisine!]!
+  """
+  The notices the recipe's provider asks a reader to see, such as
+  Spoonacular's backlink; empty for a recipe created in the app. The original
+  source's own credit is source, sourceUrl and originalAuthor.
+  """
+  dataAttributions: [DataAttribution!]!
   """Short summary of the recipe, or null when none."""
   description: String
   """
@@ -11781,6 +12458,11 @@ type Recipe {
   """
   isSaved: Boolean!
   """
+  The newest revision whatever its status, so the author can read a
+  rejection's note. Null for anyone but the author and admins.
+  """
+  latestRevision: RecipeRevision
+  """
   How much of this recipe you can already make from your pantry, 0-100.
   Null when unauthenticated.
   """
@@ -11815,6 +12497,11 @@ type Recipe {
   stated.
   """
   originalAuthor: String
+  """
+  The author's edit waiting for review; the recipe as served is the published
+  one. Null when there is none, and for anyone but the author and admins.
+  """
+  pendingRevision: RecipeRevision
   """Preparation time in minutes, or null when not stated."""
   prepTimeMinutes: Int
   """
@@ -11941,6 +12628,67 @@ type RecipeConnection implements Connection {
   totalCount: Int
 }
 
+"""
+A recipe's content as a revision proposes it: the published recipe with the
+changes applied. The fields are Recipe's, by name and type, so a client maps it
+as it maps a recipe; it has no id, since it is not a Recipe.
+"""
+type RecipeContent {
+  caloriesPerServing: Float
+  category: RecipeCategory!
+  cookTimeMinutes: Int
+  cuisines: [Cuisine!]!
+  description: String
+  diets: [Diet!]!
+  difficulty: Difficulty!
+  healthGoals: [HealthGoal!]!
+  imageUrl: String
+  """
+  The whole ingredient list, in order: the proposed one, or the published one when the revision leaves it alone.
+  """
+  ingredients: [RecipeIngredientLine!]!
+  instructions: JSON!
+  intolerances: [Intolerance!]!
+  name: String!
+  notes: String
+  nutritionData: JSON
+  originalAuthor: String
+  prepTimeMinutes: Int
+  servings: Int!
+  source: String
+  sourceUrl: URL
+  tags: [String!]!
+  tips: String
+  totalTimeMinutes: Int
+  videoUrl: URL
+}
+
+"""A recipe field an author edits."""
+enum RecipeContentField {
+  CALORIES_PER_SERVING
+  CATEGORY
+  COOK_TIME_MINUTES
+  CUISINES
+  DESCRIPTION
+  DIETS
+  DIFFICULTY
+  HEALTH_GOALS
+  IMAGE_URL
+  INSTRUCTIONS
+  INTOLERANCES
+  NAME
+  NOTES
+  NUTRITION_DATA
+  ORIGINAL_AUTHOR
+  PREP_TIME_MINUTES
+  SERVINGS
+  SOURCE
+  SOURCE_URL
+  TAGS
+  TIPS
+  VIDEO_URL
+}
+
 """Sub-input for recipe context"""
 input RecipeContextInput {
   """How the item came to be on the list."""
@@ -11969,6 +12717,17 @@ type RecipeEdge implements Edge {
   cursor: String!
   """The Recipe this edge wraps."""
   node: Recipe!
+}
+
+"""
+One recipe field a revision changes: the live value, and the one proposed.
+"""
+type RecipeFieldChange {
+  field: RecipeContentField!
+  """The published value, as the Recipe field holds it; null when unset."""
+  from: JSON
+  """The proposed value; null clears the field."""
+  to: JSON
 }
 
 """
@@ -12033,7 +12792,9 @@ type RecipeIngredient {
   availablePantryItemIds: [ID!]!
   """
   quantity auto-converted to the caller's unit system (see UnitSystem):
-  metric when no system is known.
+  metric when no system is known. A recipe source's own figure in that system
+  is used while its measure still states quantity; a unit both systems use (a
+  spoon, a pinch) reads as itself.
   
   Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
   SYSTEM, their device's locale, so two callers reading the same recipe get
@@ -12070,6 +12831,22 @@ type RecipeIngredientAddResult {
   outcome: CreateOutcome
   recipeIngredient: RecipeIngredient!
   success: Boolean!
+}
+
+"""One ingredient line a revision adds, removes or changes."""
+type RecipeIngredientChange {
+  """The proposed line; null for a removed one."""
+  after: RecipeIngredientLine
+  """The live line; null for an added one."""
+  before: RecipeIngredientLine
+  kind: RecipeIngredientChangeKind!
+}
+
+"""Whether a revision adds, removes or changes an ingredient line."""
+enum RecipeIngredientChangeKind {
+  ADDED
+  CHANGED
+  REMOVED
 }
 
 """
@@ -12124,16 +12901,66 @@ input RecipeIngredientInput {
   usUnit: String
 }
 
+"""One ingredient line, live or proposed."""
+type RecipeIngredientLine {
+  isOptional: Boolean!
+  item: Item
+  name: String!
+  notes: String
+  preparation: String
+  quantity: Float!
+  section: String
+  sortOrder: Int!
+  unit: Unit
+}
+
 type RecipeIngredientMatch {
   alternativeMatches: [PantryItem!]!
-  availableQuantity: Float!
+  """
+  What the matched stack holds, in the ingredient's unit; 0 with no match or
+  an empty stack. Null when the stack holds stock that unit cannot express
+  (a loaf against a pound): unknown, not none.
+  """
+  availableQuantity: Float
   ingredient: RecipeIngredient!
   isAvailable: Boolean!
+  """
+  The match kind as a number: ITEM 1, CONCEPT 0.9, NAME 0.7, NONE 0.
+  Superseded by matchKind; read that instead.
+  """
   matchConfidence: Float!
+  """
+  How matchedPantryItem was found. An ingredient with a catalog item is
+  matched only by ITEM or CONCEPT, its alternativeMatches included; one
+  without is matched only by NAME.
+  """
+  matchKind: RecipeIngredientMatchKind!
   matchedPantryItem: PantryItem
+  """
+  How much more the ingredient needs, in its unit. Null when it is available,
+  or when `availableQuantity` is unknown.
+  """
   shortfall: Float
   suggestedQuantity: Float!
   suggestedUnit: Unit
+}
+
+"""How a recipe ingredient's pantry stack was found."""
+enum RecipeIngredientMatchKind {
+  """
+  A stack of another item under the ingredient's concept: a brand of it, or a narrower concept.
+  """
+  CONCEPT
+  """A stack of the ingredient's own catalog item."""
+  ITEM
+  """
+  A stack whose name shares every word of the ingredient's name, for an
+  ingredient with no catalog item. Unsure: offer it, but use it only when the
+  user turns it on.
+  """
+  NAME
+  """No stack serves the ingredient."""
+  NONE
 }
 
 input RecipeIngredientSourceInput {
@@ -12250,6 +13077,60 @@ input RecipeReviewOrderBy {
   rating: SortOrder
 }
 
+"""
+An author's edit to a PUBLISHED recipe, held for review while the recipe stays
+live. A recipe has at most one PENDING revision, and further author edits
+update it. Seen only by the author and admins.
+"""
+type RecipeRevision {
+  """The author who submitted it; null once their account is gone."""
+  author: User
+  """
+  The fields it changes, against the recipe as published now. Empty when it
+  changes only ingredients.
+  """
+  changes: [RecipeFieldChange!]!
+  id: ID!
+  """
+  The ingredient lines it adds, removes or changes, against the recipe as
+  published now. Empty when it leaves the ingredients alone.
+  """
+  ingredientChanges: [RecipeIngredientChange!]!
+  """
+  The recipe as approving would leave it, for an editor to reopen the pending
+  edit from. Null once the recipe is gone.
+  """
+  proposed: RecipeContent
+  recipe: Recipe!
+  """The admin's note; a rejection always carries one."""
+  reviewNote: String
+  """When an admin decided it."""
+  reviewedAt: DateTime
+  status: RecipeRevisionStatus!
+  submittedAt: DateTime!
+  updatedAt: DateTime!
+  """
+  Bumped by every author edit; approveRecipeRevision names the version reviewed.
+  """
+  version: Int!
+}
+
+"""Where an author's edit to a published recipe stands."""
+enum RecipeRevisionStatus {
+  """Applied to the recipe."""
+  APPROVED
+  """Waiting for an admin; the published recipe is unchanged."""
+  PENDING
+  """
+  Discarded with a note to the author; the published recipe is unchanged.
+  """
+  REJECTED
+  """
+  The recipe left PUBLISHED (unpublished or deleted); an unpublish put the edit into the recipe.
+  """
+  WITHDRAWN
+}
+
 type RecipeSourceMapping {
   createdAt: DateTime!
   data: JSON
@@ -12306,10 +13187,19 @@ union RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundErro
 
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
+  """The price's currency; the user's own when omitted"""
+  currency: CurrencyCode
   itemId: ID!
   observedAt: DateTime
+  """
+  The net weight of one unitId (a can, a jar), so the price compares per kg or L
+  """
+  packageSize: PackageSizeInput
+  """The price per one unitId"""
   price: Float!
   storeId: ID!
+  """The unit the price is per; the item's default unit when omitted"""
+  unitId: ID
 }
 
 type RecordPriceObservationPayload {
@@ -12324,6 +13214,72 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
+
+"""One confirmed line of a receipt."""
+input RecordReceiptMatchLineInput {
+  """
+  The user changed or chose the item rather than accepting the proposal. A
+  search proposal accepted unchanged (resolvedBy SEARCH) is a guess nobody
+  checked: it is not remembered, and counts as skipped.
+  """
+  edited: Boolean!
+  """The item the household chose for it"""
+  itemId: ID!
+  """The line's product text as printed"""
+  rawText: String!
+  """
+  The step that proposed the item the user saw; null when nothing was proposed
+  """
+  resolvedBy: ReceiptMatchMethod
+}
+
+input RecordReceiptMatchesInput {
+  """The household the corrections are remembered for"""
+  homeId: ID!
+  """
+  Client-minted CUID2 for this receipt's confirmation. A replay is refused
+  with IDEMPOTENT_REPLAY and changes nothing.
+  """
+  idempotencyKey: ID!
+  """The confirmed lines, at most 100"""
+  lines: [RecordReceiptMatchLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """The receipt's merchant header, when no store is given"""
+  merchantHeader: String
+  """
+  The receipt's store; its chain, else the store itself, keys the corrections
+  """
+  storeId: ID
+}
+
+type RecordReceiptMatchesPayload {
+  """
+  The chain they were remembered under; null for a store with no chain, or no known store
+  """
+  chain: StoreChain
+  """The household the corrections were remembered for"""
+  home: Home!
+  """Lines remembered"""
+  recorded: Int!
+  """
+  Lines not remembered: no chain or store is known, or no text is left once prices and codes are set aside
+  """
+  skipped: Int!
+  """
+  The receipt's store; corrections are remembered under it when it has no chain
+  """
+  store: Store
+}
+
+"""
+Result of RecordReceiptMatches. Select on RecordReceiptMatchesPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordReceiptMatchesResult = ConflictError | ForbiddenError | NotFoundError | RecordReceiptMatchesPayload | ValidationError
 
 input RecordRecipeCookedInput {
   idempotencyKey: ID
@@ -12684,6 +13640,56 @@ Always include a __typename so the variant can be discriminated.
 """
 union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
 
+input ResolveReceiptLinesInput {
+  """Candidates per line: default 5, at most 10"""
+  candidatesPerLine: Int
+  """
+  The household whose past corrections apply; the pantry's home when a pantry is given
+  """
+  homeId: ID
+  """The receipt's lines, at most 100"""
+  lines: [ReceiptLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """
+  The merchant the parse read; places a store with no chain, or proposes one
+  """
+  merchant: ReceiptMerchantInput
+  """
+  The receipt's merchant header, its first lines; resolves the store chain
+  """
+  merchantHeader: String
+  """
+  The pantry the stock is going to: an item it has a stack of ranks ahead of a close rival
+  """
+  pantryId: ID
+  """What read the lines, for resolution metrics"""
+  parsedBy: ReceiptParser
+  """The store, when the client already knows it; wins over the header"""
+  storeId: ID
+}
+
+type ResolveReceiptLinesPayload {
+  """The chain the merchant header names"""
+  chain: StoreChain
+  """One resolution per input line, in input order"""
+  lines: [ReceiptLineResolution!]!
+  """
+  When no store is placed, the store to create for this receipt; nothing is created until createStore
+  """
+  proposedStore: ProposedStore
+  """
+  The receipt's store: the one given, else the header's chain and store
+  number, else the merchant's name and address, else the merchant's name
+  when one store alone has it
+  """
+  store: Store
+  """The store number the merchant header prints"""
+  storeNumber: String
+}
+
 """
 Resolution of a shareable code (home join code or list share code) into a
 preview plus the deep link to follow. Lets the app and the web fallback
@@ -12713,6 +13719,13 @@ type ResolveShareLinkResult {
 Input for restocking a pantry item - adds quantity and creates ledger record
 """
 input RestockPantryItemInput {
+  """
+  What was restocked: an amount in a unit (the stack's, when omitted), or a count of packages.
+  """
+  amount: StockAmountInput!
+  """
+  Per unit restocked: per amount.measured unit, or per package for amount.packages.
+  """
   costPerUnit: Float
   """
   The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -12728,17 +13741,15 @@ input RestockPantryItemInput {
   Omitted, the item's default applies.
   """
   packagePortions: Float
-  """
-  The restocked packages' own size, when counted in the item's unit (1 jar of 22 oz).
-  Omitted, the new batch takes the item's default package size. A size the item's
-  weight cannot be expressed in is refused on packageSize.
-  """
-  packageSize: PackageSizeInput
-  quantity: Float!
   restockedAt: DateTime
   storeId: ID
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
+  """The total paid, recorded exactly; it wins over costPerUnit."""
   totalCost: Float
-  unitId: ID
 }
 
 type RestockPantryItemPayload {
@@ -13156,6 +14167,15 @@ type ShoppingList {
   updateShoppingList sets ARCHIVED, PAUSED and CANCELLED.
   """
   status: ListStatus!
+  """How many lines suggestedTotal prices by suggestion"""
+  suggestedLines: Int!
+  """
+  The estimated cost with a suggestion standing in for each catalog line that
+  has no estimated price: each line's estimate, else its suggested price,
+  times its quantity, summed and rounded to two places. estimatedTotal is
+  unchanged by suggestions.
+  """
+  suggestedTotal: Float!
   """
   Items worth adding to this shopping list, one list per section. An item
   appears at most once, in the first section that offers it: recentlyDeleted,
@@ -13426,6 +14446,13 @@ type ShoppingListItem {
   sortOrder: String!
   source: ShoppingListItemSource!
   storeInfo: ShoppingListItemStoreInfo!
+  """
+  A price from recorded observations, per one of this line's unit, in the
+  list's currency: the line's store first, then its chain, then any store.
+  Null with no usable observation, or when the unit cannot be converted
+  without an assumption. Never written onto the line.
+  """
+  suggestedPrice: PriceSuggestion
   unit: Unit
   unitName: String
   updatedAt: DateTime!
@@ -13462,6 +14489,12 @@ type ShoppingListItemEdge implements Edge {
 input ShoppingListItemFilters {
   """Filter by purchase status"""
   isPurchased: Boolean
+  """
+  Only the lines naming one of these catalog items, at most 100: a list
+  holds an item on one line at most, so 100 ids fill one page of 100. Empty
+  matches no line.
+  """
+  itemIds: [ID!]
 }
 
 """Order by options for shopping list items"""
@@ -13726,7 +14759,10 @@ type SkippedRecipeIngredient {
   error, so support can look it up.
   """
   errorId: String
-  fromUnitId: ID!
+  """
+  The ingredient's unit, or null when neither the recipe nor the cook names one.
+  """
+  fromUnitId: ID
   itemName: String!
   reason: String!
   toUnitId: ID!
@@ -13937,6 +14973,18 @@ input SpoonacularWeightPerServingInput {
 }
 
 """
+How much stock enters a pantry: exactly one of an amount in a unit, or a count
+of packages. The server owns the package arithmetic: a client states what was
+bought, as the receipt or the shopper says it, and never multiplies or converts.
+"""
+input StockAmountInput @oneOf {
+  """An amount in a unit (500 g, 2 pieces)."""
+  measured: MeasuredAmountInput
+  """A count of packages (2 packs of 500 g)."""
+  packages: PackagesInput
+}
+
+"""
 What a stack holds, package by package: whole packages and the partly used ones. Each
 batch is measured by its own package size, so a 22 oz jar and a 32 oz jar are each one
 jar.
@@ -14128,6 +15176,10 @@ Cache: 30 minutes - store information changes rarely
 type Store {
   address: String
   averageShelfLife: JSON
+  """
+  The chain this store belongs to; null for an independent or unmatched store.
+  """
+  chain: StoreChain
   createdAt: DateTime!
   id: ID!
   lastPriceUpdate: DateTime
@@ -14171,6 +15223,8 @@ type Store {
   qualityRating: Float
   stats: StoreStats
   storeInfo: StoreInfo
+  """The store's number within its chain, as its receipts print it."""
+  storeNumber: String
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -14184,6 +15238,15 @@ type Store {
   ): ItemStoreSkuConnection!
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
+}
+
+"""
+A retail chain, as receipt headers name it.
+Cache: 30 minutes - chains change rarely
+"""
+type StoreChain {
+  id: ID!
+  name: String!
 }
 
 """
@@ -14319,14 +15382,6 @@ input StorePreferencesInput {
   aisle: String
   preferredStoreId: ID
   storeSection: String
-}
-
-type StorePriceComparison {
-  lastUpdated: DateTime
-  price: Float
-  storeId: ID!
-  storeName: String!
-  unitPrice: Float
 }
 
 input StoreSkuInput {
@@ -15333,15 +16388,21 @@ input UpdateItemInput {
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
-  popularity: Int
   productDetails: ProductDetailsInput
-  showInOnboarding: Boolean
-  status: ItemStatus
+  """
+  Why an admin changes a sourced catalog fact (name, description, brand, pack
+  size, storage, shelf life, nutrition, allergens, ingredients, barcodes,
+  tags, or a product's concept: classification.conceptId). Required then:
+  the change is kept over every source as an override.
+  """
+  reason: String
   storeSkuOps: StoreSkuOpsInput
   tagOps: TagOpsInput
   type: ItemType
   unitConfig: ItemUnitConfigInput
   unitOps: UnitOpsInput
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
   visibility: Visibility
 }
 
@@ -15368,6 +16429,8 @@ input UpdateMealPlanInput {
   planType: MealPlanType
   servings: Int
   startDate: DateTime
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
 }
 
 input UpdateMealPlanItemInput {
@@ -15458,6 +16521,8 @@ input UpdateMembershipInput {
   displayName: String
   id: ID!
   role: MembershipRole
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
 }
 
 type UpdateMembershipPayload {
@@ -15498,6 +16563,8 @@ input UpdatePantryInput {
   name: String
   tags: [String!]
   temperature: String
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
 }
 
 input UpdatePantryItemInput {
@@ -15644,6 +16711,8 @@ input UpdatePurchaseInput {
   totalPrice: Float
   transactionId: String
   unitPrice: Float
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
 }
 
 type UpdatePurchasePayload {
@@ -15679,6 +16748,13 @@ input UpdateRecipeInput {
   description: String
   dietary: DietaryTagsInput
   id: ID!
+  """
+  The whole ingredient list, replacing the recipe's: applied with the fields
+  in one write under the version check, so both land or neither does. On a
+  published recipe both are held in its one pending revision. Omitted: the
+  list is unchanged.
+  """
+  ingredients: [RecipeIngredientInput!]
   instructions: JSON
   media: RecipeMediaInput
   metadata: RecipeMetadataInput
@@ -15693,6 +16769,8 @@ input UpdateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
+  version: Int
 }
 
 type UpdateRecipePayload {
@@ -16156,6 +17234,12 @@ input UsageAmountInput @oneOf {
 """Comprehensive usage analytics for a pantry"""
 type UsageAnalytics {
   averageUsagePerDay: Float!
+  """
+  What was consumed (cooked, eaten, given, moved out) was worth, per
+  currency, at the cost of the batches it came from. Stock with no known
+  cost adds nothing; currencies are never summed together.
+  """
+  consumedValueByCurrency: [CurrencyAmount!]!
   periodEnd: DateTime!
   periodStart: DateTime!
   topUsedItems: [UsageByItem!]!
@@ -16995,7 +18079,11 @@ type WasteAnalytics {
   topWastedItems: [WasteByItem!]!
   totalWasteCount: Int!
   totalWasteQuantity: Float!
-  totalWasteValue: Float!
+  """
+  What the waste was worth, per currency, at the cost of the batches it
+  came from; currencies are never summed together.
+  """
+  valueByCurrency: [CurrencyAmount!]!
   wasteByReason: [WasteByReason!]!
   wasteRate: Float!
   wasteTrend: [TimeSeriesDataPoint!]!
@@ -17004,21 +18092,23 @@ type WasteAnalytics {
 """Waste breakdown by item - most wasted items"""
 type WasteByItem {
   count: Int!
-  estimatedValue: Float
   imageUrl: String
   itemId: ID!
   itemName: String!
   totalQuantity: Float!
   unitName: String
+  """What this item's waste was worth, per currency"""
+  valueByCurrency: [CurrencyAmount!]!
 }
 
 """Waste breakdown by reason (expired, spoiled, etc.)"""
 type WasteByReason {
   count: Int!
-  estimatedValue: Float
   percentage: Float!
   reason: WasteReason!
   totalQuantity: Float!
+  """What this reason's waste was worth, per currency"""
+  valueByCurrency: [CurrencyAmount!]!
 }
 
 """Input for wasting a specific batch"""

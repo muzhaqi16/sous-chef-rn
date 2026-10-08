@@ -13,6 +13,7 @@ import {
 } from '../tokenRefreshBridge';
 import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { retryCooldownMs } from '#/utils/backoff';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 import type { UserRole } from '#/graphql/generated/schemaTypes';
@@ -149,16 +150,10 @@ export interface AuthState {
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
-/**
- * Seconds between device-credential exchanges after a refusal. Index 0 is the
- * never-refused state, so counting from 1 always lands on a real delay.
- */
-const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
-
-const backoffForAttempt = (attempt: number): number =>
-  (BIOMETRIC_BACKOFF_SECONDS[
-    Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
-  ] ?? 0) * 1000;
+/** A session's tokens are held: signed in, or signing back in from either one. */
+export const holdsSessionTokens = (
+  state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
+): boolean => !!state.accessToken || !!state.refreshToken;
 
 const initialAuthState = {
   user: null,
@@ -340,7 +335,7 @@ export const createAuthSlice: StateCreator<
       set(state => {
         state.biometricAttempts += 1;
         // The server's own deadline wins: it knows what budget is left.
-        const wait = retryAfterMs ?? backoffForAttempt(state.biometricAttempts);
+        const wait = retryAfterMs ?? retryCooldownMs(state.biometricAttempts);
         state.biometricRetryAt = Date.now() + wait;
       });
     },

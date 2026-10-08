@@ -1,0 +1,122 @@
+{
+  "receipts": {
+    "title": "Skano faturën",
+    "intro": {
+      "title": "Skano një faturë",
+      "body": "Vendose faturën të shtrirë dhe në dritë të mirë. Një faturë e gjatë mund të kërkojë disa fotografime, nga lart poshtë."
+    },
+    "reading": "Po lexohet fatura…",
+    "unreadable": {
+      "title": "Kjo faturë nuk u lexua",
+      "body": "Fotografoje sërish të shtrirë dhe në dritë të mirë, me gjithë gjerësinë brenda kuadrit."
+    },
+    "failed": {
+      "title": "Fatura nuk u skanua",
+      "body": "Diçka shkoi keq gjatë skanimit. Provo sërish."
+    },
+    "saved": {
+      "title": "Fatura u ruajt",
+      "body": "Ruhet vetëm teksti i faturës, pa numrat e kartës e të besnikërisë.",
+      "scanAnother": "Skano një faturë tjetër",
+      "review_one": "Shqyrto {{count}} artikull",
+      "review_other": "Shqyrto {{count}} artikuj",
+      "reading": "Po dallohen produktet…",
+      "readingPhotosSlow": "Leximi i fotove mund të zgjasë deri në një minutë…",
+      "offline": "Je jashtë linje. Produktet do të dallohen kur të jesh sërish në linjë.",
+      "retryLaterTitle": "Produktet nuk u dalluan ende",
+      "retryLaterBody": "Teksti ruhet. Produktet do të dallohen herën tjetër që e hap këtë faturë.",
+      "libraryPhoto": "Fotoja që zgjodhe është ende në galerinë tënde të fotove.",
+      "notReadTitle": "Produktet nuk u dalluan",
+      "notReadBody": "U ruajt vetëm teksti. Skano sërish faturën për të provuar përsëri.",
+      "tooLongTitle": "Kjo faturë është shumë e gjatë për t'u lexuar njëherësh",
+      "tooLongBody": "U ruajt vetëm teksti. Skanoje në dy pjesë që të dallohen produktet.",
+      "limitedTitle": "U arrit kufiri i faturave për sot",
+      "limitedBody": "Teksti u ruajt. Hape sërish këtë faturë pas {{time}} për të dalluar produktet.",
+      "bodyPhoto": "Fotoja u dërgua për t’u lexuar dhe fshihet sapo të lexohet. Numrat e kartës dhe të besnikërisë hiqen nga ajo që ruhet.",
+      "photoNotReadTitle": "Fotoja nuk u lexua",
+      "photoNotReadBody": "Nuk u ruajt asgjë. Skano sërish faturën për të provuar përsëri.",
+      "photoLimitedTitle": "U arrit kufiri i fotove për sot",
+      "photoLimitedBody": "Nuk u ruajt asgjë. Skano sërish faturën pas {{time}}."
+    },
+    "replace": {
+      "title": "Të zëvendësohet fatura e ruajtur?",
+      "body": "Ruhet vetëm një faturë në një kohë.",
+      "confirm": "Zëvendëso"
+    },
+    "photo": {
+      "title": "Bëj një foto në vend të kësaj",
+      "body": "Ky telefon nuk mund të skanojë dokumente. Fotografoje faturën të shtrirë dhe në dritë të mirë, ose zgjidh një foto që ke bërë."
+    },
+    "review": {
+      "title": "Fatura",
+      "dateLabel": "Data e blerjes",
+      "dateScanned": "Nuk është shtypur në faturë, ndaj është dita kur e skanove.",
+      "storePlaceholder": "Zgjidh dyqanin",
+      "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
+      "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
+      "choose": "Pa përputhje. Prek për të zgjedhur produktin.",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "Nuk u shtua",
+      "add_one": "Shto {{count}} artikull në qilar",
+      "add_other": "Shto {{count}} artikuj në qilar",
+      "addNone": "Zgjidh artikujt që do të shtosh",
+      "someFailed_one": "{{count}} artikull nuk u shtua dot. Provo përsëri.",
+      "someFailed_other": "{{count}} artikuj nuk u shtuan dot. Provo përsëri.",
+      "addedTo_one": "U shtua {{count}} artikull në {{pantry}}",
+      "addedTo_other": "U shtuan {{count}} artikuj në {{pantry}}",
+      "addedCount_one": "U shtua {{count}} artikull në qilar",
+      "addedCount_other": "U shtuan {{count}} artikuj në qilar",
+      "emptyTitle": "Nuk ka artikuj për të shqyrtuar",
+      "emptyBody": "Nga kjo faturë nuk u lexua asnjë rresht artikulli. Skanoje përsëri ose shtoji artikujt me dorë.",
+      "editTitle": "Rresht i faturës",
+      "printedLabel": "Në faturë",
+      "productPlaceholder": "Kërko një produkt",
+      "dontAdd": "Mos e shto këtë rresht",
+      "needsUnit": "Jepi një njësi për ta shtuar, si 2 L ose 500 g.",
+      "totalsTitle": "Rreshtat nuk përputhen me faturën",
+      "totalsBody": "Artikujt e lexuar bëjnë {{counted}}, por fatura thotë {{printed}}. Mund të ketë mbetur jashtë një rresht, ndaj krahasoje listën me faturën para se të shtosh.",
+      "listIncompleteTitle": "Lista jote është shumë e gjatë për t'u kontrolluar e tëra",
+      "listIncompleteBody": "U kontrollua vetëm një pjesë e saj. Një rresht i faturës që përputhet me një artikull më poshtë shtohet më vete.",
+      "onList": "Në listën tënde",
+      "tickOffTitle": "Shënoje si të blerë në listën e blerjeve",
+      "tickOffBody": "“{{name}}” është në listën tënde. Shënohet si i blerë dhe kalon në qilar, në vend që të shtohet dy herë.",
+      "matching": "Po kërkohen produktet…",
+      "leftOut": "E lënë jashtë. Prek për ta shtuar.",
+      "sectionToAdd_one": "Do të shtohet {{count}} artikull",
+      "sectionToAdd_other": "Do të shtohen {{count}} artikuj",
+      "sectionToCheck_one": "Zgjidh një produkt për {{count}} rresht",
+      "sectionToCheck_other": "Zgjidh një produkt për {{count}} rreshta",
+      "sectionNotAdded_one": "Nuk do të shtohet {{count}} rresht",
+      "sectionNotAdded_other": "Nuk do të shtohen {{count}} rreshta",
+      "sectionAdded_one": "{{count}} artikull i shtuar tashmë",
+      "sectionAdded_other": "{{count}} artikuj të shtuar tashmë",
+      "findingMatch": "Po kërkohet një përputhje…",
+      "notMatchedYet": "Ende pa përputhje. Prek për të zgjedhur produktin.",
+      "sectionMatching_one": "Po kërkohet produkti për {{count}} rresht",
+      "sectionMatching_other": "Po kërkohen produktet për {{count}} rreshta",
+      "sectionNotMatchedYet_one": "{{count}} rresht ende pa përputhje",
+      "sectionNotMatchedYet_other": "{{count}} rreshta ende pa përputhje",
+      "matchFailedTitle": "Produktet nuk u kërkuan dot",
+      "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt."
+    },
+    "photoSend": {
+      "title": "Ta dërgojmë foton për ta lexuar?",
+      "body": "Ky telefon nuk e lexoi dot faturën. Me miratimin tënd, fotoja i dërgohet {{appName}} për t’u lexuar, pastaj fshihet. Numrat e kartës dhe të besnikërisë hiqen nga ajo që ruhet.",
+      "send": "Dërgo foton",
+      "dontSend": "Mos e dërgo",
+      "offline": "Lidhu me internetin për të dërguar foton.",
+      "sending": "Po dërgohet fotoja…"
+    },
+    "photoConsent": {
+      "title": "Të lexohen faturat nga fotot e tyre?",
+      "body": "{{appName}} e lexon një faturë më saktë nga fotoja e saj sesa nga teksti që nxjerr telefoni yt. Me pëlqimin tënd, fotot e çdo fature dërgohen në serverin e {{appName}} për t’u lexuar dhe pastaj fshihen.\n\nNdërsa lexohet një foto, serveri e sheh të gjithë faturën. Numrat e kartës dhe të besnikërisë hiqen nga teksti që ruhet.",
+      "hint": "Zgjidh “Vetëm tekst” për të vazhduar leximin e faturave nga teksti i telefonit. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "send": "Dërgo fotot",
+      "textOnly": "Vetëm tekst"
+    },
+    "photoSetting": {
+      "title": "Dërgo fotot e faturave për t’u lexuar",
+      "description": "Faturat lexohen më saktë nga fotot e tyre. Fotot fshihen pasi lexohen."
+    }
+  }
+}

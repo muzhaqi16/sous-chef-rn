@@ -1,17 +1,18 @@
 import { string } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '#/utils/environment';
-import { t, type KeyUnder } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 /**
- * These rules are built once at module scope, so a message resolved eagerly
- * would freeze whichever language was active at import time. Yup calls the
- * function when the rule fails, so the lookup lands after any language change.
+ * A rule's message. Schemas are built once at module scope, so a message
+ * resolved eagerly would freeze whichever language was active at import time;
+ * yup calls this when the rule fails, after any language change.
  */
-const msg =
-  (key: KeyUnder<'commonValidation'>, options?: Record<string, unknown>) =>
-  (): string =>
-    t(`commonValidation.${key}`, options);
+export const lazyMessage =
+  (key: TranslationKey, options?: Record<string, unknown>) => (): string =>
+    t(key, options);
 
 // --- shared helpers ----------------------------------------------------------
 
@@ -48,8 +49,8 @@ export const isEmailAddress = (value: string | undefined): boolean =>
   !value || (value.length <= 254 && EMAIL_ADDRESS.test(value));
 
 export const emailRule = string()
-  .test('email', msg('emailInvalid'), isEmailAddress)
-  .required(msg('emailRequired'));
+  .test('email', lazyMessage('commonValidation.emailInvalid'), isEmailAddress)
+  .required(lazyMessage('commonValidation.emailRequired'));
 
 // Sign-in reads back a password the user ALREADY has, so a policy rule here
 // refuses a password the account really has, with no way in — the reset flow
@@ -57,24 +58,71 @@ export const emailRule = string()
 // non-empty plus the 72 cap, and nothing else. The cap is bcrypt's limit rather
 // than a policy, so it holds on every path and no stored password can exceed it.
 export const passwordRule = string()
-  .required(msg('passwordRequired'))
-  .max(72, msg('passwordMax'));
+  .required(lazyMessage('commonValidation.passwordRequired'))
+  .max(72, lazyMessage('commonValidation.passwordMax'));
 
 // The server's own policy, for a password being SET: 8-72 characters with a
 // lowercase letter, an uppercase letter and a digit. Checked here so a password
 // that cannot succeed never costs a round trip — and so the user is told which
 // rule they missed instead of reading a generic refusal.
 export const newPasswordRule = string()
-  .required(msg('passwordRequired'))
-  .min(8, msg('passwordMin'))
-  .max(72, msg('passwordMax'))
-  .matches(/[a-z]/, msg('passwordLowercase'))
-  .matches(/[A-Z]/, msg('passwordUppercase'))
-  .matches(/[0-9]/, msg('passwordNumber'));
+  .required(lazyMessage('commonValidation.passwordRequired'))
+  .min(8, lazyMessage('commonValidation.passwordMin'))
+  .max(72, lazyMessage('commonValidation.passwordMax'))
+  .matches(/[a-z]/, lazyMessage('commonValidation.passwordLowercase'))
+  .matches(/[A-Z]/, lazyMessage('commonValidation.passwordUppercase'))
+  .matches(/[0-9]/, lazyMessage('commonValidation.passwordNumber'));
 
 // name rules (for firstName, lastName)
 export const nameRule = string()
   .transform(normalizeSmartPunctuation)
-  .min(2, msg('nameMin'))
-  .max(50, msg('nameMax'))
-  .matches(/^[a-zA-Z\s'-]+$/, msg('nameChars'));
+  .min(2, lazyMessage('commonValidation.nameMin'))
+  .max(50, lazyMessage('commonValidation.nameMax'))
+  .matches(/^[a-zA-Z\s'-]+$/, lazyMessage('commonValidation.nameChars'));
+
+// A quantity takes a fraction ("1 1/4") as readily as a decimal, so the rule
+// runs on what `parseFractionalInput` reads — a regex restating its grammar
+// drifts from it (one took only `.`, and `2,5` became unreachable).
+export const quantityRule = (
+  key: TranslationKey,
+  { allowZero = false }: { allowZero?: boolean } = {},
+) =>
+  string()
+    .defined()
+    .test('quantity', lazyMessage(key), value => {
+      const parsed = parseFractionalInput(value);
+      if (parsed === null || Number.isNaN(parsed)) return false;
+      return allowZero ? parsed >= 0 : parsed > 0;
+    });
+
+// An amount paid: null when blank (unstated), undefined when unusable. Only
+// digits and separators pass: `parseFloat` reads `4,99x` as 4.99, and a sign
+// makes it no price.
+export const parseMoneyInput = (value: string): number | null | undefined => {
+  if (!value.trim()) return null;
+  if (!/^[\d.,\s]+$/.test(value)) return undefined;
+  const parsed = parseDecimalInput(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+export const optionalMoneyRule = (key: TranslationKey) =>
+  string()
+    .defined()
+    .test(
+      'money',
+      lazyMessage(key),
+      value => parseMoneyInput(value) !== undefined,
+    );
+
+// A measure such as a package size: a decimal above zero, never a fraction.
+export const positiveDecimalRule = (
+  key: TranslationKey,
+  { optional = false }: { optional?: boolean } = {},
+) =>
+  string()
+    .defined()
+    .test('positive-decimal', lazyMessage(key), value => {
+      if (optional && !value.trim()) return true;
+      const parsed = parseDecimalInput(value);
+      return !Number.isNaN(parsed) && parsed > 0;
+    });

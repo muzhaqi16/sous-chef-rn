@@ -1,42 +1,13 @@
-import { alertService, type AlertButton } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
-import { t } from '#/i18n';
 import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import { alertVersionConflict, reportMutationFailure } from '../errorHandlers';
+import { reportMutationFailure } from '../errorHandlers';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
-});
-
-describe('alertVersionConflict', () => {
-  it("offers the caller's refresh", () => {
-    const onRefresh = jest.fn();
-    alertVersionConflict({ onRefresh });
-
-    const buttons = (alertService.alert as jest.Mock).mock
-      .calls[0][2] as AlertButton[];
-    buttons.find(button => button.text === t('labels.refresh'))?.onPress?.();
-
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses customMessage when provided', () => {
-    alertVersionConflict({ customMessage: 'Custom message' });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
-      'Custom message',
-      expect.any(Array),
-    );
-  });
 });
 
 /**

@@ -42,6 +42,7 @@ export const useConfigurableSettings = () => {
     toNotificationSettings,
     toDietaryProfile,
     toAppSettings,
+    toDataSources,
     toAppearance,
     toDebugInfo,
     toPerformanceDashboard,
@@ -278,6 +279,8 @@ export const useConfigurableSettings = () => {
         return { ...baseItem, onPress: toDietaryProfile };
       case 'appSettings':
         return { ...baseItem, onPress: toAppSettings };
+      case 'dataSources':
+        return { ...baseItem, onPress: toDataSources };
       case 'appearance':
         return { ...baseItem, onPress: toAppearance };
       case 'debugInfo':

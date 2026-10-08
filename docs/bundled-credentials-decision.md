@@ -7,8 +7,8 @@ problem is.
 ## The premise that was wrong
 
 The review found two third-party credentials inlined into the release bundle
-and concluded they must be removed. That framing treats *presence in the
-binary* as the defect.
+and concluded they must be removed. That framing treats _presence in the
+binary_ as the defect.
 
 It isn't, because presence is unavoidable. Every mobile app ships strings anyone
 can extract — an APK and an IPA are both zip files. An unattended client cannot
@@ -59,8 +59,8 @@ APK can burn quota. Watch for anomalous consumption; that's the signal that this
 needs revisiting.
 
 If it is ever revisited, the proxy also buys server-side caching by
-`externalId`, which collapses one quota unit *per user per recipe view* into one
-*per recipe* across the whole install base. That's a cost argument independent
+`externalId`, which collapses one quota unit _per user per recipe view_ into one
+_per recipe_ across the whole install base. That's a cost argument independent
 of security, and probably the stronger one.
 
 ### `OTLP_METRICS_AUTH_PASSWORD` / `OTLP_LOGS_AUTH_PASSWORD` — out of scope
@@ -68,12 +68,12 @@ of security, and probably the stronger one.
 **Decision: ship as-is, plan properly later.**
 
 These are the genuine anomaly. Not because they're extractable, but because
-they're the wrong *kind* of credential for a client: basic auth to the metrics
+they're the wrong _kind_ of credential for a client: basic auth to the metrics
 and logs stores is an infrastructure credential, not a client token. They grant
 direct, unmediated, unthrottled write into the observability backend, and can't
 be revoked without an app release. No observability vendor hands you their
 ingestion cluster's password — Datadog gives you a client token that hits
-*their* chokepoint.
+_their_ chokepoint.
 
 Blast radius is bounded: write access to metrics and logs. No user data, no read
 access. Someone could poison dashboards, inject misleading log lines, or inflate
@@ -104,10 +104,11 @@ the replacement identically.
    most worth measuring. Watch the global `1mb` JSON body limit against log
    bursts, and give these routes their own rate limit, since every install
    writes on a timer.
+
 4. **Play Integrity / App Attest on the ingest route** — only if abuse actually
    happens. Raises the cost from "unzip the APK" to "run a device farm."
 
-Note that (3) does not *eliminate* the abuse, because `API_KEY` is extractable
+Note that (3) does not _eliminate_ the abuse, because `API_KEY` is extractable
 too. It changes what the extracted credential is worth: throttled, revocable,
 validated, and reaching one chokepoint we control instead of three systems
 directly. That's blast-radius reduction, not elimination — worth being precise

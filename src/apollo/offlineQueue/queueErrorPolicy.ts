@@ -7,13 +7,14 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import {
   isErrorTypename,
   type MutationErrorTypename,
 } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import { backoffDelay } from '#/utils/backoff';
 import type { QueueError } from './types';
 
 /**
@@ -241,7 +242,7 @@ export function classifyError(error: unknown): QueueError {
     // QueueManager withdraws and reports it rather than re-sending.
     if (
       error.payloadCode !== null &&
-      VERSION_CONFLICT_CODES.includes(error.payloadCode)
+      isVersionConflictCode(error.payloadCode)
     ) {
       return {
         type: 'conflict',
@@ -284,7 +285,7 @@ export function classifyError(error: unknown): QueueError {
   const code = readErrorCode(error);
 
   // The thrown spelling of the same condition as the union member above.
-  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+  if (isVersionConflictCode(code)) {
     return {
       type: 'conflict',
       message,
@@ -395,14 +396,16 @@ export function classifyError(error: unknown): QueueError {
 }
 
 /**
- * Exponential backoff with jitter, capped at 30s. `baseDelayMs` is the queue's
- * configured retry delay; delay = min(baseDelayMs * 2^retryCount + jitter, 30s).
+ * `baseDelayMs` (the queue's configured retry delay) doubling per retry, capped
+ * at 30s, then up to half again at random so devices don't retry in step.
  */
 export function calculateRetryDelay(
   retryCount: number,
   baseDelayMs: number,
 ): number {
-  const exponentialDelay = baseDelayMs * Math.pow(2, retryCount);
-  const jitter = Math.random() * 500; // Prevents a thundering herd.
-  return Math.min(exponentialDelay + jitter, 30000);
+  return backoffDelay(retryCount, {
+    baseMs: baseDelayMs,
+    maxMs: 30_000,
+    jitter: 0.5,
+  });
 }

@@ -9,9 +9,15 @@ import { useAddScannedItem } from '#features/barcode/hooks/useAddScannedItem';
 import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
-import type { BarcodeSource } from '#features/barcode/types';
+import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
 import { ScrollView } from 'react-native';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import {
+  ExternalSource,
+  NetWeightKind,
+  type PackageSizeInput,
+} from '#/graphql/generated/schemaTypes';
+import { PackSizeSheet, type PackSizeOutcome } from './PackSizeSheet';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -39,6 +45,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAskingPackSize, setIsAskingPackSize] = useState(false);
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
@@ -51,11 +58,50 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     onScanAnother();
   };
 
-  const handleAddItem = () => {
-    if (!source || isAdded) {
-      return;
-    }
+  const fromOpenFoodFacts = item.source === ExternalSource.Openfoodfacts;
+  // A pantry row needs its pack size; an Open Food Facts record may not state
+  // one, and then the user gives it once rather than filling the item form.
+  const needsPackSize =
+    fromOpenFoodFacts &&
+    (item.netWeightKind !== NetWeightKind.Package ||
+      item.netWeight === undefined);
 
+  const reportAddFailure = (error: unknown) => {
+    errorService.reportError(error, { operation: 'addItemFromSearch' });
+    alertService.alert(t('labels.error'), t('errors.addItemFailed'));
+  };
+
+  /** Offers to restock the row the pantry already holds, by the size entered. */
+  const offerRestock = (
+    existingPantryItemId: string,
+    packSize?: PackageSizeInput,
+  ) => {
+    promptPantryDuplicate({
+      onRestock: () => {
+        void executeWithLoadingState(
+          async () => {
+            // A refusal RESOLVES; the hook has already said so, and the button
+            // must not flip to "Added" over it.
+            if (
+              !(await restockDuplicate(item, existingPantryItemId, packSize))
+            ) {
+              return;
+            }
+            onPantryAdded();
+          },
+          setIsLoading,
+          () => {
+            alertService.alert(
+              t('labels.error'),
+              t('errors.restockFailedRetry'),
+            );
+          },
+        );
+      },
+    });
+  };
+
+  const addItem = () => {
     void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId) {
@@ -63,29 +109,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
           if (outcome.status === 'duplicate') {
             setIsLoading(false);
-            promptPantryDuplicate({
-              onRestock: () => {
-                void executeWithLoadingState(
-                  async () => {
-                    // A refusal RESOLVES; the hook has already said so, and
-                    // the button must not flip to "Added" over it.
-                    if (
-                      !(await restockDuplicate(outcome.existingPantryItemId))
-                    ) {
-                      return;
-                    }
-                    onPantryAdded();
-                  },
-                  setIsLoading,
-                  () => {
-                    alertService.alert(
-                      t('labels.error'),
-                      t('errors.restockFailedRetry'),
-                    );
-                  },
-                );
-              },
-            });
+            offerRestock(outcome.existingPantryItemId);
             return;
           }
 
@@ -110,17 +134,53 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         }
       },
       setIsLoading,
-      error => {
-        errorService.reportError(error, { operation: 'addItemFromSearch' });
-        alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      },
+      reportAddFailure,
     );
+  };
+
+  const handleAddItem = () => {
+    if (!source || isAdded) {
+      return;
+    }
+    if (source === 'pantry' && needsPackSize) {
+      setIsAskingPackSize(true);
+      return;
+    }
+    addItem();
+  };
+
+  // The sheet stays open until the add lands, is queued, or the duplicate
+  // prompt takes over; a refused size is shown on its field.
+  const handlePackSize = async (
+    packSize: PackageSizeInput,
+  ): Promise<PackSizeOutcome> => {
+    let outcome;
+    try {
+      outcome = await addToPantry(item, packSize);
+    } catch (error) {
+      reportAddFailure(error);
+      return { status: 'refused' };
+    }
+
+    if (outcome.status === 'duplicate') {
+      offerRestock(outcome.existingPantryItemId, packSize);
+      return { status: 'done' };
+    }
+    if (outcome.status === 'rejected') {
+      if (outcome.field === 'netWeight') {
+        return { status: 'refused', sizeError: outcome.reason };
+      }
+      alertService.alert(t('labels.error'), outcome.reason);
+      return { status: 'refused' };
+    }
+    onPantryAdded();
+    return { status: 'done' };
   };
 
   // Determine button label based on source and state
   const getButtonLabel = () => {
     if (isAdded) {
-      return t('barcode.added');
+      return t('labels.added');
     }
 
     return source === 'pantry'
@@ -139,6 +199,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         onEditItem={onEditItem}
         onCreateVariant={onCreateVariant}
         editActionLabel={editActionLabel}
+      />
+
+      <DataAttributionNotices
+        attributions={item.dataAttributions ?? []}
+        centered
       />
 
       <ActionButtons
@@ -162,6 +227,17 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           onPress: onScanAnother,
         }}
       />
+
+      {/* Mounted only for a product that can ask: its unit field loads the
+          unit list, which a catalog product never needs. */}
+      {!!needsPackSize && (
+        <PackSizeSheet
+          visible={isAskingPackSize}
+          itemName={item.name}
+          onDismiss={() => setIsAskingPackSize(false)}
+          onConfirm={handlePackSize}
+        />
+      )}
     </ScrollView>
   );
 };

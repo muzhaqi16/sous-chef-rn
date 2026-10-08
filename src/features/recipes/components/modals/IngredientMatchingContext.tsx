@@ -5,13 +5,10 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
-import type { EditableMatch } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import type { MatchUpdate } from '#features/recipes/hooks/useRecipeIngredientMatching';
 
 interface IngredientMatchingContextValue {
-  onUpdate: (
-    index: number,
-    updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded'>>,
-  ) => void;
+  onUpdate: (index: number, updates: MatchUpdate) => void;
 }
 
 const IngredientMatchingContext =

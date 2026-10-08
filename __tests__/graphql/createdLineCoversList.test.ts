@@ -165,7 +165,9 @@ describe('the coverage check sees through a fragment spread', () => {
     // creating side carries it only inside a spread. Skipping spreads made both
     // sides read as missing it, so the comparison passed.
     const needed = new Set(
-      fieldPaths(parseSet('fragment Probe on ShoppingListItem { id itemName }')),
+      fieldPaths(
+        parseSet('fragment Probe on ShoppingListItem { id itemName }'),
+      ),
     );
     const carriedWithoutSpread = new Set(
       fieldPaths(parseSet('fragment Probe on ShoppingListItem { id }')),
@@ -194,7 +196,9 @@ describe('a created shopping-list line covers what the list reads', () => {
     expect(
       fieldPaths(
         findFragment(
-          read('src/features/shoppingList/graphql/shoppingListFragments.graphql'),
+          read(
+            'src/features/shoppingList/graphql/shoppingListFragments.graphql',
+          ),
           CREATED_FRAGMENT,
         ),
       ).length,
@@ -206,7 +210,9 @@ describe('a created shopping-list line covers what the list reads', () => {
     const carried = new Set(
       fieldPaths(
         findFragment(
-          read('src/features/shoppingList/graphql/shoppingListFragments.graphql'),
+          read(
+            'src/features/shoppingList/graphql/shoppingListFragments.graphql',
+          ),
           CREATED_FRAGMENT,
         ),
       ),

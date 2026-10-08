@@ -108,8 +108,6 @@ export function writeLocalHome(
       },
     },
   });
-  // Only the identity: the updater's `toReference(_, true)` WRITES what it is
-  // given, and plain field keys would write a second copy of each connection.
   return addToHomesCache(
     cache,
     { __typename: 'Home', id },
