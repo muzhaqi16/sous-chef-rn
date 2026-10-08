@@ -600,7 +600,7 @@ describe('AddToPantrySheet', () => {
 
     it('adds one package to a stack held by volume as the API counts an add, never 1 L', async () => {
       // A restock refuses packages nothing sizes; a forced add counts them in
-      // a counted stack of the item (sous-chef-api #405).
+      // a counted stack of the item.
       const cache = seedStocked([stockedEdge]);
       typedUnit(cache, 'unit-l', UnitType.Volume);
       const create = recordMock(CreatePantryItemDocument, {

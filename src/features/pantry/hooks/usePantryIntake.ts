@@ -44,7 +44,7 @@ interface AddItemOptions {
  * The pantry's one local-first create: the row is written before the mutation
  * fires, withdrawn on a refusal or a duplicate, and kept when the create is
  * queued. The add sheet and its details form, onboarding's picker, a barcode
- * scan and a receipt's apply all use it.
+ * scan, a restock of packages nothing sizes and a receipt's apply all use it.
  */
 export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();

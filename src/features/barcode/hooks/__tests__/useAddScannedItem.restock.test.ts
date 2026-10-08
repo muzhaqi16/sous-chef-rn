@@ -43,6 +43,15 @@ const SCANNED: ScannedItem = {
   canSuggest: true,
 };
 
+const ADDED_ITEM = gql`
+  fragment _RestockAddedItemProbe on PantryItem {
+    id
+    item {
+      id
+    }
+  }
+`;
+
 const EXPIRY = gql`
   fragment _RestockExpiryProbe on PantryItem {
     id
@@ -319,7 +328,7 @@ describe('restocking the row a scan duplicated', () => {
 
     it('adds one package nothing sizes as the API counts an add, never 1 mL', async () => {
       // A restock names one stack and refuses packages nothing sizes; a forced
-      // add counts them in a counted stack (sous-chef-api #405).
+      // add counts them in a counted stack.
       const create = recordMock(CreatePantryItemDocument, {
         data: { createPantryItem: null },
       });
@@ -345,6 +354,38 @@ describe('restocking the row a scan duplicated', () => {
         amount: { packages: { count: 1 } },
         forceAdd: true,
       });
+    });
+
+    it("shows the forced add's row with the catalog item a variation belongs to", async () => {
+      const cache = heldIn(UnitType.Volume, 'unit-ml');
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
+        { cache, operationMocks: [create.mock] },
+      );
+      const held = new Set(Object.keys(cache.extract()));
+      let row;
+      await act(async () => {
+        const restocked = result.current.restockDuplicate(
+          { ...SCANNED, variationId: 'esm-oats' },
+          ROW_ID,
+        );
+        // Read before the answer lands: the row is written before the create fires.
+        const [minted] = Object.keys(cache.extract()).filter(
+          key => key.startsWith('PantryItem:') && !held.has(key),
+        );
+        row = minted
+          ? cache.readFragment({ id: minted, fragment: ADDED_ITEM })
+          : undefined;
+        await restocked;
+      });
+
+      expect(create.fired[0]?.input).toMatchObject({
+        item: { variation: 'esm-oats' },
+      });
+      expect(row).toMatchObject({ item: { id: 'item-oats' } });
     });
   });
 });

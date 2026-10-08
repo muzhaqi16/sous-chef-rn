@@ -47,8 +47,11 @@ type RestockDetails = Pick<
 interface Bought {
   count: number;
   packageSize?: PackageSizeInput | null;
-  /** The product, for an add when nothing sizes the packages. */
-  item: { source: PantryItemSourceInput; name: string };
+  /**
+   * The product, for an add when nothing sizes the packages. `itemId` is the
+   * catalog item's, for the row shown meanwhile when `source` names a variation.
+   */
+  item: { source: PantryItemSourceInput; name: string; itemId?: string };
 }
 
 /** What went in: an amount as stated, or a count bought (`boughtAmountOf`). */
@@ -66,7 +69,8 @@ type PantryRestockOptions = Stated & {
 /**
  * The one restock of a stack the pantry already holds. The row moves at once
  * for an amount it can count in its own unit, offline included; packages wait
- * for the server to size them.
+ * for the server to size them. A bought count nothing sizes goes as an add with
+ * `forceAdd` instead, which the API counts in a counted stack of the item.
  */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -118,14 +122,20 @@ export function usePantryRestock(pantryId: string | undefined) {
         heldUnit: readStackUnit(client.cache, pantryItemId),
         packageSize: bought.packageSize,
       });
+    const refusal = fallback ?? t('errors.restockFailedRetry');
     // A restock names one stack and refuses packages nothing sizes; an add
     // with `forceAdd` counts them as the API counts any add: in a counted stack
-    // of the item, joined if one is held (sous-chef-api #405).
+    // of the item, joined if one is held.
     if (bought && amount.packages && !amount.packages.size) {
+      const { itemId } = bought.item;
       const outcome = await intake.addItem(
         bought.item.name,
         { item: bought.item.source, amount, forceAdd: true },
-        { present, fallback: fallback ?? t('errors.restockFailedRetry') },
+        {
+          present,
+          fallback: refusal,
+          ...(itemId ? { local: { itemId } } : {}),
+        },
       );
       return outcome.status === 'added'
         ? { status: 'restocked' }
@@ -155,7 +165,7 @@ export function usePantryRestock(pantryId: string | undefined) {
         }),
       {
         document: RestockPantryItemDocument,
-        fallback: fallback ?? t('errors.restockFailedRetry'),
+        fallback: refusal,
         onFailed: () => {
           undoStock();
           moveBatchCount(pantryItemId, -1);

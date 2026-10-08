@@ -223,7 +223,7 @@ describe('usePantryRestock', () => {
     });
 
     it('adds packages nothing sizes as the API counts an add, not as a restock', async () => {
-      // The API refuses them on a restock (sous-chef-api #405).
+      // The API refuses them on a restock.
       const create = recordMock(CreatePantryItemDocument, {
         data: { createPantryItem: null },
       });
