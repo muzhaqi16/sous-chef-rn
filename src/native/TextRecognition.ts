@@ -22,28 +22,19 @@ export interface PreparedPhoto {
   fileSize: number;
 }
 
-/** A receipt's pages read and prepared in one pass: null for a half that failed. */
-export interface ReadAndPrepared {
-  pages: RecognizedPage[] | null;
-  photos: PreparedPhoto[] | null;
-}
-
-type NativeMethod =
-  | 'recognizeAndDelete'
-  | 'recognizeAndPrepare'
-  | 'preparePhotos'
-  | 'deletePhotos';
+type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';
 
 // A build older than a method lacks it.
 const call = async (
   name: NativeMethod,
   imageUris: readonly string[],
+  ...rest: unknown[]
 ): Promise<unknown> => {
   const method = nativeMethod('TextRecognitionModule', name);
   if (!method) {
     throw new Error(`TextRecognitionModule is not linked or has no ${name}`);
   }
-  return method([...imageUris]);
+  return method([...imageUris], ...rest);
 };
 
 const toLine = (value: unknown): RecognizedLine | null => {
@@ -91,24 +82,19 @@ export const TextRecognition = {
   },
 
   /**
-   * Recognizes each image and rewrites it for the server to read, from the same
-   * full-size image, then deletes the originals. Rejects only when both fail.
+   * Rewrites each image for the server to read, then deletes the originals
+   * whatever the outcome, unless `keepPages` leaves them to be read. Calls run
+   * in order, so pages prepared and then read are never deleted under the
+   * preparation.
    */
-  async recognizeAndPrepare(
+  async preparePhotos(
     imageUris: readonly string[],
-  ): Promise<ReadAndPrepared> {
-    const result = await call('recognizeAndPrepare', imageUris);
-    const pages = isRecord(result) ? result.pages : null;
-    const photos = isRecord(result) ? result.photos : null;
-    return {
-      pages: Array.isArray(pages) ? parseList(pages, toPage) : null,
-      photos: Array.isArray(photos) ? parseList(photos, toPhoto) : null,
-    };
-  },
-
-  /** Rewrites each image for the server to read and deletes the originals, whatever the outcome. */
-  async preparePhotos(imageUris: readonly string[]): Promise<PreparedPhoto[]> {
-    return parseList(await call('preparePhotos', imageUris), toPhoto);
+    { keepPages = false }: { keepPages?: boolean } = {},
+  ): Promise<PreparedPhoto[]> {
+    return parseList(
+      await call('preparePhotos', imageUris, keepPages),
+      toPhoto,
+    );
   },
 
   async deletePhotos(imageUris: readonly string[]): Promise<void> {

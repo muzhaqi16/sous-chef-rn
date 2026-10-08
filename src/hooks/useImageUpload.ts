@@ -129,6 +129,8 @@ export interface ImageUploadOptions {
    * alerts before any item-specific code runs.
    */
   suppressAlert?: boolean;
+  /** Stops the upload where it is: before the presign, or mid-transfer. */
+  signal?: AbortSignal;
 }
 
 export interface ItemImageUploadOptions extends ImageUploadOptions {
@@ -150,15 +152,18 @@ export const useImageUpload = () => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
 
-  const activeXhrRef = useRef<XMLHttpRequest | null>(null);
+  // Every transfer in flight: a receipt's photos go up together.
+  const activeXhrs = useRef(new Set<XMLHttpRequest>());
+  // A presign that answers after unmount must not start a transfer.
+  const mounted = useRef(false);
 
-  // Abort any pending upload on unmount.
   useEffect(() => {
+    const active = activeXhrs.current;
+    mounted.current = true;
     return () => {
-      if (activeXhrRef.current) {
-        activeXhrRef.current.abort();
-        activeXhrRef.current = null;
-      }
+      mounted.current = false;
+      for (const xhr of active) xhr.abort();
+      active.clear();
     };
   }, []);
 
@@ -181,6 +186,7 @@ export const useImageUpload = () => {
     // back as a mismatch.
     mimeType: string,
     onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
   ): Promise<void> => {
     const form = new FormData();
     for (const field of uploadData.fields) {
@@ -195,12 +201,12 @@ export const useImageUpload = () => {
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-
-      // Store reference for cleanup on unmount
-      activeXhrRef.current = xhr;
+      const active = activeXhrs.current;
+      active.add(xhr);
+      signal?.addEventListener('abort', () => xhr.abort());
 
       xhr.onload = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -215,17 +221,17 @@ export const useImageUpload = () => {
       };
 
       xhr.onerror = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new NetworkRequestError('Network request failed during upload'));
       };
 
       xhr.ontimeout = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new TimeoutError('Upload request timed out', xhr.timeout));
       };
 
       xhr.onabort = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new Error('Upload was cancelled'));
       };
 
@@ -252,7 +258,7 @@ export const useImageUpload = () => {
     confirmUploadFn: (key: string) => Promise<string | null>,
     options: ImageUploadOptions = {},
   ): Promise<string | null> => {
-    const { onProgress, onSuccess, onError, suppressAlert } = options;
+    const { onProgress, onSuccess, onError, suppressAlert, signal } = options;
 
     // Check if online before attempting upload
     const state = useStore.getState();
@@ -289,6 +295,7 @@ export const useImageUpload = () => {
 
       // Validate the image file
       validateImageFile(fileToUpload, isProfileImage);
+      if (signal?.aborted) throw new Error('Upload was cancelled');
 
       onProgress?.(10);
 
@@ -339,6 +346,9 @@ export const useImageUpload = () => {
         throw new Error('Failed to get upload URL');
       }
       const uploadResult = uploadPayload;
+      if (!mounted.current || signal?.aborted) {
+        throw new Error('Upload was cancelled');
+      }
 
       onProgress?.(30);
 
@@ -350,6 +360,7 @@ export const useImageUpload = () => {
         uploadProgress => {
           onProgress?.(30 + uploadProgress * 0.5);
         },
+        signal,
       );
 
       onProgress?.(80);
@@ -518,9 +529,11 @@ export const useImageUpload = () => {
   const uploadUnconfirmed = (
     file: ImageFile,
     purpose: ImageUploadPurpose,
+    { signal }: Pick<ImageUploadOptions, 'signal'> = {},
   ): Promise<string | null> =>
     uploadImage(file, purpose, false, undefined, key => Promise.resolve(key), {
       suppressAlert: true,
+      signal,
     });
 
   const updateProfileAvatarUrl = async (avatarUrl: string) => {

@@ -85,7 +85,7 @@ describe('TextRecognition', () => {
     ).resolves.toEqual([
       { uri: 'file:///RECEIPT_PHOTO_1.jpg', fileSize: 41_000 },
     ]);
-    expect(preparePhotos).toHaveBeenCalledWith(['file:///page.jpg']);
+    expect(preparePhotos).toHaveBeenCalledWith(['file:///page.jpg'], false);
   });
 
   it('rejects a method an older build lacks', async () => {
@@ -96,40 +96,15 @@ describe('TextRecognition', () => {
     ).rejects.toThrow('has no preparePhotos');
   });
 
-  it('reads and prepares the pages in one pass', async () => {
-    const recognizeAndPrepare = jest.fn().mockResolvedValue({
-      pages: [
-        { lines: [{ text: 'MILK 3.29', x: 0, y: 0, width: 1, height: 0.1 }] },
-      ],
-      photos: [{ uri: 'file:///p.jpg', fileSize: 1200 }, { uri: 42 }],
-    });
-    nativeModules.TextRecognitionModule = { recognizeAndPrepare };
+  it('keeps the pages for reading only when asked to', async () => {
+    const preparePhotos = jest.fn().mockResolvedValue([]);
+    nativeModules.TextRecognitionModule = { preparePhotos };
 
-    await expect(
-      TextRecognition.recognizeAndPrepare(['file:///page.jpg']),
-    ).resolves.toEqual({
-      pages: [
-        { lines: [{ text: 'MILK 3.29', x: 0, y: 0, width: 1, height: 0.1 }] },
-      ],
-      photos: [{ uri: 'file:///p.jpg', fileSize: 1200 }],
+    await TextRecognition.preparePhotos(['file:///page.jpg'], {
+      keepPages: true,
     });
-    expect(recognizeAndPrepare).toHaveBeenCalledWith(['file:///page.jpg']);
-  });
 
-  it('reports a half that failed as null', async () => {
-    nativeModules.TextRecognitionModule = {
-      recognizeAndPrepare: jest.fn().mockResolvedValue({
-        pages: null,
-        photos: [{ uri: 'file:///p.jpg', fileSize: 9 }],
-      }),
-    };
-
-    await expect(
-      TextRecognition.recognizeAndPrepare(['file:///page.jpg']),
-    ).resolves.toEqual({
-      pages: null,
-      photos: [{ uri: 'file:///p.jpg', fileSize: 9 }],
-    });
+    expect(preparePhotos).toHaveBeenCalledWith(['file:///page.jpg'], true);
   });
 
   it('deletes photos through the module', async () => {

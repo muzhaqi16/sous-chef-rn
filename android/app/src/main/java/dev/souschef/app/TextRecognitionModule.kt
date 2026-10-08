@@ -22,6 +22,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 /**
@@ -73,81 +74,26 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
 
   /**
    * Each page as an upright JPEG of at most [PHOTO_EDGE] px with no metadata,
-   * for the server to read: it refuses one over 4000 px and reads at 2048. The
-   * pages are deleted whatever the outcome, and so is anything written on a failure.
+   * for the server to read: it refuses one over 4000 px and reads at 2048.
+   * Anything written is deleted on a failure; the pages are deleted too unless
+   * [keepPages], which leaves them for [recognizeAndDelete]. The executor runs
+   * calls in order, so a scan's photos are prepared before its pages are read.
    */
   @ReactMethod
-  fun preparePhotos(imageUris: ReadableArray, promise: Promise) {
+  fun preparePhotos(imageUris: ReadableArray, keepPages: Boolean, promise: Promise) {
     val uris = uriList(imageUris)
     executor.execute {
       val written = mutableListOf<File>()
       try {
-        val photos = Arguments.createArray()
-        for (uri in uris) {
-          val photo = prepare(uri)
-          written += photo
-          photos.pushMap(describe(photo))
-        }
-        promise.resolve(photos)
+        for (uri in uris) written += prepare(uri)
+        handedOut += written.map { it.absolutePath }
+        promise.resolve(Arguments.createArray().apply { written.forEach { pushMap(describe(it)) } })
       } catch (error: Exception) {
         written.forEach { it.delete() }
         promise.reject("photo_preparation_failed", error.message, error)
       } finally {
-        deleteFiles(uris)
+        if (!keepPages) deleteFiles(uris)
       }
-    }
-  }
-
-  /**
-   * Reads every page and prepares each as a photo ([preparePhotos]' rules) from
-   * the same full-size page, then deletes the pages once. A half that fails
-   * comes back null; the call fails only when both do.
-   */
-  @ReactMethod
-  fun recognizeAndPrepare(imageUris: ReadableArray, promise: Promise) {
-    val uris = uriList(imageUris)
-    val canRead = !ocrCrashesHere()
-    executor.execute {
-      val pages =
-        if (!canRead) {
-          null
-        } else {
-          val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-          try {
-            Arguments.createArray().also { read -> for (uri in uris) read.pushMap(recognize(recognizer, uri)) }
-          } catch (error: Exception) {
-            null
-          } finally {
-            recognizer.close()
-          }
-        }
-      val written = mutableListOf<File>()
-      val photos =
-        try {
-          Arguments.createArray().also { prepared ->
-            for (uri in uris) {
-              val photo = prepare(uri)
-              written += photo
-              prepared.pushMap(describe(photo))
-            }
-          }
-        } catch (error: Exception) {
-          written.forEach { it.delete() }
-          written.clear()
-          null
-        }
-      deleteFiles(uris)
-      sweepLeftovers(keeping = written)
-      if (pages == null && photos == null) {
-        promise.reject("receipt_pages_unreadable", "The pages could be neither read nor prepared")
-        return@execute
-      }
-      promise.resolve(
-        Arguments.createMap().apply {
-          if (pages == null) putNull("pages") else putArray("pages", pages)
-          if (photos == null) putNull("photos") else putArray("photos", photos)
-        },
-      )
     }
   }
 
@@ -167,20 +113,34 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     (0 until imageUris.size()).mapNotNull { imageUris.getString(it) }.map(Uri::parse)
 
   private fun prepare(uri: Uri): File {
+    val upright = decodeUpright(uri, PHOTO_EDGE)
+    val photo = File(reactApplicationContext.cacheDir, "$PHOTO_PREFIX${UUID.randomUUID()}.jpg")
+    try {
+      FileOutputStream(photo).use { upright.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+    } finally {
+      upright.recycle()
+    }
+    return photo
+  }
+
+  /**
+   * The page turned upright by its EXIF orientation (a camera photo can lie on
+   * its side), at most [maxEdge] px along its longest side when given. The
+   * caller recycles it: a full page is tens of MB of native memory.
+   */
+  private fun decodeUpright(uri: Uri, maxEdge: Int?): Bitmap {
     val resolver = reactApplicationContext.contentResolver
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     resolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, bounds) }
     val longest = maxOf(bounds.outWidth, bounds.outHeight)
     require(longest > 0) { "Not an image" }
-    // Decode at the coarsest power-of-two step that still covers PHOTO_EDGE, then scale exactly.
+    // Decode at the coarsest power-of-two step that still covers maxEdge, then scale exactly.
     var sample = 1
-    while (longest / (sample * 2) >= PHOTO_EDGE) sample *= 2
+    if (maxEdge != null) while (longest / (sample * 2) >= maxEdge) sample *= 2
     val decoded =
       resolver.openInputStream(uri).use {
         BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
       } ?: throw IllegalArgumentException("Not an image")
-    // A camera photo can lie on its side with an EXIF orientation; the copy
-    // keeps no metadata, so it is turned upright here.
     val orientation =
       resolver.openInputStream(uri)?.use {
         ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
@@ -192,20 +152,15 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
         ExifInterface.ORIENTATION_ROTATE_270 -> 270f
         else -> 0f
       }
-    val scale = minOf(1f, PHOTO_EDGE.toFloat() / maxOf(decoded.width, decoded.height))
+    val scale = if (maxEdge == null) 1f else minOf(1f, maxEdge.toFloat() / maxOf(decoded.width, decoded.height))
+    if (scale == 1f && degrees == 0f) return decoded
     val matrix = Matrix().apply {
       postScale(scale, scale)
       postRotate(degrees)
     }
     val upright = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-    val photo = File(reactApplicationContext.cacheDir, "$PHOTO_PREFIX${UUID.randomUUID()}.jpg")
-    try {
-      FileOutputStream(photo).use { upright.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-    } finally {
-      if (upright !== decoded) upright.recycle()
-      decoded.recycle()
-    }
-    return photo
+    if (upright !== decoded) decoded.recycle()
+    return upright
   }
 
   // Play services' text model dies with SIGILL on the arm64 emulator, killing
@@ -214,17 +169,21 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     Build.HARDWARE == "ranchu" && Build.SUPPORTED_ABIS.firstOrNull() == "arm64-v8a"
 
   private fun deleteFiles(uris: List<Uri>) {
-    for (uri in uris) uri.path?.takeIf { uri.scheme == "file" }?.let { File(it).delete() }
+    for (uri in uris) {
+      val path = uri.path?.takeIf { uri.scheme == "file" } ?: continue
+      File(path).delete()
+      handedOut -= File(path).absolutePath
+    }
   }
 
   // A scan the app was killed during leaves its pages in the ML Kit scanner's
   // cache folder, and a photo left unsent stays in the cache; they go with the
-  // next read.
-  private fun sweepLeftovers(keeping: List<File> = emptyList()) {
+  // next read. Photos still going up are not leftovers.
+  private fun sweepLeftovers() {
     val cache = reactApplicationContext.cacheDir
     File(cache, "mlkit_docscan_ui_client").listFiles()?.forEach { it.delete() }
     cache
-      .listFiles { file -> file.name.startsWith(PHOTO_PREFIX) && file !in keeping }
+      .listFiles { file -> file.name.startsWith(PHOTO_PREFIX) && file.absolutePath !in handedOut }
       ?.forEach { it.delete() }
   }
 
@@ -232,29 +191,32 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     recognizer: TextRecognizer,
     uri: Uri,
   ): WritableMap {
-    val image = InputImage.fromFilePath(reactApplicationContext, uri)
-    val text = Tasks.await(recognizer.process(image))
-    // The document scanner writes upright JPEGs, so the boxes normalize by the
-    // image's own size.
-    val width = image.width.toDouble()
-    val height = image.height.toDouble()
-    val lines = Arguments.createArray()
-    for (block in text.textBlocks) {
-      for (line in block.lines) {
-        val box = line.boundingBox ?: continue
-        lines.pushMap(
-          Arguments.createMap().apply {
-            putString("text", line.text)
-            putDouble("x", box.left / width)
-            putDouble("y", box.top / height)
-            putDouble("width", box.width() / width)
-            putDouble("height", box.height() / height)
-            slopeOf(line.cornerPoints, width, height)?.let { putDouble("slope", it) }
-          },
-        )
+    val page = decodeUpright(uri, null)
+    try {
+      val text = Tasks.await(recognizer.process(InputImage.fromBitmap(page, 0)))
+      // The boxes normalize by the upright page's own size.
+      val width = page.width.toDouble()
+      val height = page.height.toDouble()
+      val lines = Arguments.createArray()
+      for (block in text.textBlocks) {
+        for (line in block.lines) {
+          val box = line.boundingBox ?: continue
+          lines.pushMap(
+            Arguments.createMap().apply {
+              putString("text", line.text)
+              putDouble("x", box.left / width)
+              putDouble("y", box.top / height)
+              putDouble("width", box.width() / width)
+              putDouble("height", box.height() / height)
+              slopeOf(line.cornerPoints, width, height)?.let { putDouble("slope", it) }
+            },
+          )
+        }
       }
+      return Arguments.createMap().apply { putArray("lines", lines) }
+    } finally {
+      page.recycle()
     }
-    return Arguments.createMap().apply { putArray("lines", lines) }
   }
 
   // The rise of the line's top edge per unit across, in page fractions, down
@@ -271,5 +233,8 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     const val NAME = "TextRecognitionModule"
     private const val PHOTO_EDGE = 2048
     private const val PHOTO_PREFIX = "RECEIPT_PHOTO_"
+
+    // Photos still with JS (going up) are not leftovers, until [deletePhotos].
+    private val handedOut: MutableSet<String> = ConcurrentHashMap.newKeySet()
   }
 }

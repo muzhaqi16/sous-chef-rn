@@ -473,7 +473,7 @@ those repos.
 **Receipt reading.** The server's reading of a receipt is the one reading: `fromServerReceipt` copies its lines and adds none of its own.
 
 - With the user's one-time consent (`receiptPhotoConsentStore`, session-scoped) and a connection, a scan of up to four pages sends photos (`createReceiptParse { photos }`).
-- `TextRecognition.recognizeAndPrepare` reads the text and prepares those photos from the same full-size pages.
+- `TextRecognition.preparePhotos({ keepPages })` prepares the photos first, and they go up together, within one time limit, while `recognizeAndDelete` reads the text from the same pages. The native side runs calls in order, so the pages are never deleted under the preparation.
 - The redacted text stays beside the photos as the fallback: offline, a failed upload, or a photo parse that reads nothing. The draft records which one a parse read (`serverParse.via`).
 - The phone's text is scored stage by stage against the corpus answer key by `scripts/receipt-corpus/text-fidelity.mjs`. A recognition or assembly change ships only if no item is lost there.
 

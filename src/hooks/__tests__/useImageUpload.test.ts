@@ -1,6 +1,6 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
@@ -290,6 +290,97 @@ describe('useImageUpload', () => {
         'POST',
         'https://storage.test/bucket',
       );
+    });
+
+    describe('a receipt photo the scan stops', () => {
+      const receiptPresign = () =>
+        recordMock(CreateImageUploadUrlDocument, {
+          data: {
+            createImageUploadUrl: {
+              __typename: 'CreateImageUploadUrlPayload',
+              url: 'https://storage.test/bucket',
+              key: 'receipt-photos/u1/p1.jpg',
+              fields: PRESIGN_FIELDS,
+            },
+          },
+        });
+      const photo = { ...file, type: 'image/jpeg' };
+
+      it('is never presigned once stopped', async () => {
+        const presign = receiptPresign();
+        const { result } = renderHookWithApollo(() => useImageUpload(), {
+          operationMocks: [presign.mock],
+        });
+        const stopped = new AbortController();
+        stopped.abort();
+
+        await act(async () => {
+          await expect(
+            result.current.uploadUnconfirmed(
+              photo,
+              ImageUploadPurpose.ReceiptPhoto,
+              { signal: stopped.signal },
+            ),
+          ).rejects.toThrow('Upload was cancelled');
+        });
+
+        expect(presign.fired).toEqual([]);
+        expect(mockXhr.open).not.toHaveBeenCalled();
+      });
+
+      it('aborts its transfer', async () => {
+        mockXhr.send.mockImplementation(() => {});
+        mockXhr.abort.mockImplementation(() =>
+          mockXhr.onabort?.({} as ProgressEvent),
+        );
+        const { result } = renderHookWithApollo(() => useImageUpload(), {
+          operationMocks: [receiptPresign().mock],
+        });
+        const sending = new AbortController();
+
+        let uploading: Promise<string | null> = Promise.resolve(null);
+        act(() => {
+          uploading = result.current.uploadUnconfirmed(
+            photo,
+            ImageUploadPurpose.ReceiptPhoto,
+            { signal: sending.signal },
+          );
+        });
+        await waitFor(() => expect(mockXhr.send).toHaveBeenCalled());
+        sending.abort();
+
+        await expect(uploading).rejects.toThrow('Upload was cancelled');
+        expect(mockXhr.abort).toHaveBeenCalled();
+        mockXhr.abort.mockReset();
+      });
+    });
+
+    it('starts no transfer when the screen goes during the presign', async () => {
+      const presign = recordMock(CreateImageUploadUrlDocument, {
+        data: {
+          createImageUploadUrl: {
+            __typename: 'CreateImageUploadUrlPayload',
+            url: 'https://storage.test/bucket',
+            key: 'receipt-photos/u1/p1.jpg',
+            fields: PRESIGN_FIELDS,
+          },
+        },
+      });
+      const { result, unmount } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [{ ...presign.mock, delay: 20 }],
+      });
+
+      let uploading: Promise<string | null> = Promise.resolve(null);
+      act(() => {
+        uploading = result.current.uploadUnconfirmed(
+          { ...file, type: 'image/jpeg' },
+          ImageUploadPurpose.ReceiptPhoto,
+        );
+      });
+      unmount();
+
+      await expect(uploading).rejects.toThrow('Upload was cancelled');
+      expect(mockXhr.open).not.toHaveBeenCalled();
     });
 
     it('returns the confirmed url', async () => {

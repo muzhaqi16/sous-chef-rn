@@ -1,7 +1,8 @@
 import Foundation
-import UIKit
-import Vision
+import ImageIO
 import React
+import UniformTypeIdentifiers
+import Vision
 
 /// On-device text recognition with Apple Vision; the iOS half of
 /// `src/native/TextRecognition.ts`. Google ML Kit is not used on iOS: its pods
@@ -19,11 +20,11 @@ class TextRecognitionModule: NSObject {
     resolver resolve: @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
-    DispatchQueue.global(qos: .userInitiated).async {
+    Self.queue.async {
       let urls = imageUris.compactMap(Self.fileURL)
       let pages: [[String: Any]]
       do {
-        pages = try urls.map(Self.recognize)
+        pages = try urls.map { url in try autoreleasepool { try Self.recognize(url) } }
       } catch {
         Self.sweep(keeping: urls)
         reject("text_recognition_failed", error.localizedDescription, error)
@@ -36,67 +37,30 @@ class TextRecognitionModule: NSObject {
   }
 
   /// Each page as an upright JPEG of at most `photoEdge` px with no metadata,
-  /// for the server to read: it refuses one over 4000 px and reads at 2048. The
-  /// pages are deleted whatever the outcome, and so is anything written on a failure.
+  /// for the server to read: it refuses one over 4000 px and reads at 2048.
+  /// Anything written is deleted on a failure; the pages are deleted too unless
+  /// `keepPages`, which leaves them for `recognizeAndDelete`.
   @objc func preparePhotos(
     _ imageUris: [String],
+    keepPages: Bool,
     resolver resolve: @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
-    DispatchQueue.global(qos: .userInitiated).async {
+    Self.queue.async {
       let urls = imageUris.compactMap(Self.fileURL)
-      defer { Self.delete(urls) }
+      defer { if !keepPages { Self.delete(urls) } }
       var written: [URL] = []
       do {
-        var photos: [[String: Any]] = []
         for url in urls {
-          let photo = try Self.prepare(url)
-          written.append(photo)
-          photos.append(Self.describe(photo))
+          written.append(try autoreleasepool { try Self.prepare(url) })
         }
-        resolve(photos)
       } catch {
         Self.delete(written)
         reject("photo_preparation_failed", error.localizedDescription, error)
-      }
-    }
-  }
-
-  /// Reads every page and prepares each as a photo (`preparePhotos`' rules) from
-  /// the same full-size page, then deletes the pages once. A half that fails
-  /// comes back null; the call fails only when both do.
-  @objc func recognizeAndPrepare(
-    _ imageUris: [String],
-    resolver resolve: @escaping RCTPromiseResolveBlock,
-    rejecter reject: @escaping RCTPromiseRejectBlock
-  ) {
-    DispatchQueue.global(qos: .userInitiated).async {
-      let urls = imageUris.compactMap(Self.fileURL)
-      let pages = try? urls.map(Self.recognize)
-      var written: [URL] = []
-      var photos: [[String: Any]]? = []
-      do {
-        for url in urls {
-          let photo = try Self.prepare(url)
-          written.append(photo)
-          photos?.append(Self.describe(photo))
-        }
-      } catch {
-        Self.delete(written)
-        written = []
-        photos = nil
-      }
-      Self.delete(urls)
-      Self.sweep(keeping: written)
-      guard pages != nil || photos != nil else {
-        reject("receipt_pages_unreadable", "The pages could be neither read nor prepared", nil)
         return
       }
-      let read: [String: Any] = [
-        "pages": pages.map { $0 as Any } ?? NSNull(),
-        "photos": photos.map { $0 as Any } ?? NSNull(),
-      ]
-      resolve(read)
+      Self.handedOut.add(written)
+      resolve(written.map(Self.describe))
     }
   }
 
@@ -109,30 +73,60 @@ class TextRecognitionModule: NSObject {
     resolve(nil)
   }
 
-  private static let photoEdge: CGFloat = 2048
+  // Serial, so the photos of a scan are prepared before its pages are read and
+  // deleted, and only one full-size page is decoded at a time.
+  private static let queue = DispatchQueue(label: "dev.souschef.TextRecognition", qos: .userInitiated)
+  private static let photoEdge = 2048
   private static let photoPrefix = "RECEIPT_PHOTO_"
+  // Photos still with JS (going up) are not leftovers, until `deletePhotos`.
+  private static let handedOut = PhotoPaths()
 
   private struct UnreadableImage: Error {}
 
-  private static func prepare(_ url: URL) throws -> URL {
-    guard
-      let image = UIImage(contentsOfFile: url.path),
-      let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-    else { throw UnreadableImage() }
-    // `size` is already in the photo's display orientation, and drawing applies
-    // it, so the copy is upright; a drawn image carries no metadata.
-    let scale = min(1, photoEdge / max(image.size.width, image.size.height))
-    let size = CGSize(
-      width: (image.size.width * scale).rounded(),
-      height: (image.size.height * scale).rounded())
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 1
-    let drawn = UIGraphicsImageRenderer(size: size, format: format).image { _ in
-      image.draw(in: CGRect(origin: .zero, size: size))
+  private final class PhotoPaths: @unchecked Sendable {
+    private let lock = NSLock()
+    private var paths = Set<String>()
+
+    func add(_ urls: [URL]) { update { $0.formUnion(urls.map(\.standardizedFileURL.path)) } }
+    func remove(_ urls: [URL]) { update { $0.subtract(urls.map(\.standardizedFileURL.path)) } }
+    func contains(_ url: URL) -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+      return paths.contains(url.standardizedFileURL.path)
     }
-    guard let data = drawn.jpegData(compressionQuality: 0.8) else { throw UnreadableImage() }
+
+    private func update(_ change: (inout Set<String>) -> Void) {
+      lock.lock()
+      defer { lock.unlock() }
+      change(&paths)
+    }
+  }
+
+  /// Decoded at the photo's size, never the page's, with its orientation
+  /// applied; written without the page's metadata (location, camera, time).
+  private static func prepare(_ url: URL) throws -> URL {
+    let thumbnail: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceThumbnailMaxPixelSize: photoEdge,
+    ]
+    guard
+      let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
+      let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+      let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnail as CFDictionary)
+    else { throw UnreadableImage() }
     let photo = caches.appendingPathComponent("\(photoPrefix)\(UUID().uuidString).jpg")
-    try data.write(to: photo, options: .atomic)
+    guard
+      let destination = CGImageDestinationCreateWithURL(
+        photo as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+    else { throw UnreadableImage() }
+    let quality: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.8]
+    CGImageDestinationAddImage(destination, image, quality as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else {
+      try? FileManager.default.removeItem(at: photo)
+      throw UnreadableImage()
+    }
     return photo
   }
 
@@ -176,10 +170,11 @@ class TextRecognitionModule: NSObject {
 
   private static func delete(_ urls: [URL]) {
     for url in urls { try? FileManager.default.removeItem(at: url) }
+    handedOut.remove(urls)
   }
 
   /// Pages and photos an earlier scan left behind (the app was killed before
-  /// they were read, sent or refused), except `keeping`.
+  /// they were read, sent or refused), except `keeping` and photos going up.
   private static func sweep(keeping: [URL]) {
     let files = FileManager.default
     let kept = Set(keeping.map { $0.standardizedFileURL.path })
@@ -193,7 +188,8 @@ class TextRecognitionModule: NSObject {
         let leftovers = try? files.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
       else { continue }
       for url in leftovers
-      where url.lastPathComponent.hasPrefix(prefix) && !kept.contains(url.standardizedFileURL.path) {
+      where url.lastPathComponent.hasPrefix(prefix) && !kept.contains(url.standardizedFileURL.path)
+        && !handedOut.contains(url) {
         try? files.removeItem(at: url)
       }
     }

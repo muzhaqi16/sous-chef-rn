@@ -8,7 +8,6 @@ import DocumentScanner, {
 import {
   TextRecognition,
   type PreparedPhoto,
-  type ReadAndPrepared,
   type RecognizedPage,
 } from '#/native/TextRecognition';
 import { errorService } from '#/services/errorService';
@@ -62,6 +61,9 @@ export type ReceiptScanStatus =
   | 'sending'
   | 'failed'
   | 'saved';
+
+// Past this the photos give way to the text, read and sent in seconds.
+const PHOTO_SEND_LIMIT_MS = 45_000;
 
 /** When a scan's pages came in, and how many, for `receipt_scan_ready_ms`. */
 const scanStart = (pages: number) => ({ at: Date.now(), pages });
@@ -178,24 +180,37 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     setStatus('saved');
   };
 
-  // Every photo's key, or null when one did not go up: a receipt is read whole.
+  // Every photo's key, or null when one did not go up: a receipt is read whole,
+  // so the first failure, or the time limit, stops the rest.
   const uploadAll = async (photos: readonly PreparedPhoto[]) => {
-    const keys: string[] = [];
-    for (const photo of photos) {
-      if (!open.current) return null;
-      let key: string | null = null;
-      try {
-        key = await uploadUnconfirmed(
-          toUpload(photo),
-          ImageUploadPurpose.ReceiptPhoto,
-        );
-      } catch (error) {
-        errorService.reportError(error, { operation: 'Upload receipt photo' });
-      }
-      if (!key) return null;
-      keys.push(key);
-    }
-    return keys;
+    if (!open.current) return null;
+    const sending = new AbortController();
+    const limit = setTimeout(() => {
+      Telemetry.increment('receipt_photo_send_timeouts_total');
+      sending.abort();
+    }, PHOTO_SEND_LIMIT_MS);
+    const keys = await Promise.all(
+      photos.map(async photo => {
+        let key: string | null = null;
+        try {
+          key = await uploadUnconfirmed(
+            toUpload(photo),
+            ImageUploadPurpose.ReceiptPhoto,
+            { signal: sending.signal },
+          );
+        } catch (error) {
+          if (!sending.signal.aborted) {
+            errorService.reportError(error, {
+              operation: 'Upload receipt photo',
+            });
+          }
+        }
+        if (!key) sending.abort();
+        return key;
+      }),
+    );
+    clearTimeout(limit);
+    return keys.every(key => key !== null) ? keys : null;
   };
 
   // The prepared files go whatever the outcome.
@@ -234,22 +249,44 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     await structureOnDevice(next, library);
   };
 
-  // The photos go first; the text, read from the same pages, stands in when
-  // they cannot go up.
-  const readPhotosFirst = async (imageUris: string[], library: boolean) => {
-    let read: ReadAndPrepared;
+  // The pages are kept for the text; nothing is deleted under the preparation.
+  const preparedPhotos = async (imageUris: string[]) => {
     try {
-      read = await TextRecognition.recognizeAndPrepare(imageUris);
+      return await TextRecognition.preparePhotos(imageUris, {
+        keepPages: true,
+      });
     } catch (error) {
-      errorService.reportError(error, { operation: 'Read receipt pages' });
-      setStatus('failed');
-      return;
+      errorService.reportError(error, { operation: 'Prepare receipt photos' });
+      return null;
     }
-    const next = read.pages ? textDraft(read.pages) : null;
-    // Kept before the upload, so the text survives one that fails.
-    if (next) saveText(next);
-    const keys = read.photos ? await upload(read.photos) : null;
-    if (read.photos && !open.current) return;
+  };
+
+  // The pages go whatever the outcome: their photos are already prepared.
+  const readPreparedPages = async (imageUris: string[]) => {
+    try {
+      return await TextRecognition.recognizeAndDelete(imageUris);
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Recognise receipt text' });
+      dropPhotos(imageUris);
+      return null;
+    }
+  };
+
+  // The photos go up as soon as they are prepared, while the phone reads the
+  // text from the same pages: the text stands in when they cannot go up.
+  const readPhotosFirst = async (imageUris: string[], library: boolean) => {
+    // Asked for first: the native side prepares a scan's photos before it reads them.
+    const preparing = preparedPhotos(imageUris);
+    const reading = readPreparedPages(imageUris).then(pages => {
+      const next = pages ? textDraft(pages) : null;
+      // Kept once read, so the text survives an upload that fails.
+      if (next) saveText(next);
+      return { pages, next };
+    });
+    const photos = await preparing;
+    const keys = photos ? await upload(photos) : null;
+    const { pages, next } = await reading;
+    if (photos && !open.current) return;
     if (keys && next) {
       recordPhotoKeys(next.scannedAt, keys);
       setFromLibrary(library);
@@ -261,7 +298,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     } else if (next) {
       await structureOnDevice(next, library);
     } else {
-      setStatus(read.pages ? 'unreadable' : 'failed');
+      setStatus(pages ? 'unreadable' : 'failed');
     }
   };
 
