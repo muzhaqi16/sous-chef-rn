@@ -502,6 +502,38 @@ describe('useServerReceiptParse', () => {
     });
   });
 
+  it('stops polling a parse that never finishes, until the next visit', async () => {
+    seedMilkDraft();
+    const stuck = recordMock(ReceiptParseDocument, {
+      dataFor: vars => ({
+        receiptParse: {
+          id: String(vars.id),
+          status: ReceiptParseStatus.Pending,
+          warnings: [],
+          receipt: null,
+        },
+      }),
+    });
+    const { result } = render([
+      created(ReceiptParseStatus.Pending).mock,
+      stuck.mock,
+    ]);
+
+    await waitFor(() => expect(stuck.fired.length).toBeGreaterThan(0));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(180_000);
+    });
+    expect(result.current.readingStatus).toBe('retryLater');
+    const polls = stuck.fired.length;
+    await pollOnce();
+    await pollOnce();
+
+    expect(stuck.fired).toHaveLength(polls);
+    expect(useReceiptDraftStore.getState().draft?.serverParse?.state).toBe(
+      'pending',
+    );
+  });
+
   it('stops at a limit that names no wait, as when no worker runs', async () => {
     seedMilkDraft();
     const { result } = render([overTheLimit()]);

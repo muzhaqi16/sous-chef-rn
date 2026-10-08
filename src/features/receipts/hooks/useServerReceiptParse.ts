@@ -30,6 +30,9 @@ import {
 
 // The API asks for a poll every 2–3 s and allows 120 a minute.
 const POLL_MS = 2500;
+// About 2.5 times a photo parse's slowest; past it the parse is asked for
+// again on the next visit, which the API answers with the same parse.
+const POLL_LIMIT_MS = 180_000;
 
 // An ask that got no verdict is resent after a poll, then two, then four;
 // after the last, it is sent again on the next visit.
@@ -105,6 +108,14 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     setGaveUp(false);
   }
   useEffect(() => () => clearTimeout(resendTimer.current), [receiptKey]);
+  // An ask answered after the screen went schedules no resend.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const asked = draft?.serverParse;
   // A refused photo parse loses its photos with it, so one over the daily
@@ -183,6 +194,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
             setGaveUp(true);
             return;
           }
+          if (!mounted.current) return;
           resendTimer.current = setTimeout(() => {
             if (sent.current !== id) return;
             sent.current = null;
@@ -204,7 +216,8 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     t,
   ]);
 
-  const polled = polling && asked?.id === polling && asked.state === 'pending';
+  const polled =
+    !gaveUp && polling && asked?.id === polling && asked.state === 'pending';
   // A photo parse makes two model calls: a long receipt's can take a minute.
   const readingPhotos = !!polled && asked.via === 'photos';
   const [slowFor, setSlowFor] = useState<string | null>(null);
@@ -213,6 +226,11 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     const timer = setTimeout(() => setSlowFor(polling), SLOW_PHOTO_READ_MS);
     return () => clearTimeout(timer);
   }, [readingPhotos, polling]);
+  useEffect(() => {
+    if (!polled) return;
+    const limit = setTimeout(() => setGaveUp(true), POLL_LIMIT_MS);
+    return () => clearTimeout(limit);
+  }, [polled, polling]);
   const { data } = useQuery(
     ReceiptParseDocument,
     polled
@@ -220,6 +238,8 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           variables: { id: polling },
           pollInterval: POLL_MS,
           fetchPolicy: 'network-only',
+          // The hook reads no loading state: a poll re-renders only on data.
+          notifyOnNetworkStatusChange: false,
           // Polled while open; nothing for the resync to refresh.
           refetchOn: false,
         }
