@@ -12,6 +12,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { backoffDelay } from '#/utils/backoff';
 import { useIsOnline } from '#store/useAppStore';
+import { Telemetry } from '#/services/telemetry';
 import {
   ReceiptParseReadersFragmentDoc,
   type ReceiptParseReadersFragment,
@@ -19,6 +20,7 @@ import {
 import {
   useReceiptDraft,
   useReceiptDraftActions,
+  type ServerParseOutcome,
 } from '../store/receiptDraftStore';
 import { classifyCreateResult, outcomeOf } from '../utils/serverReceipt';
 import {
@@ -33,6 +35,29 @@ const POLL_MS = 2500;
 // after the last, it is sent again on the next visit.
 const RESENDS_PER_VISIT = 3;
 const SLOW_PHOTO_READ_MS = 15_000;
+
+type AskedAt = Map<string, { at: number; via: string }>;
+
+/** Times a parse this visit asked for, as `receipt_parse_wait_ms`. */
+const markSettled = (
+  askedAt: AskedAt,
+  id: string,
+  outcome: ServerParseOutcome | { retryAt: string },
+) => {
+  const asking = askedAt.get(id);
+  if (!asking) return;
+  askedAt.delete(id);
+  const settled =
+    typeof outcome === 'string'
+      ? outcome
+      : 'parsed' in outcome
+      ? 'parsed'
+      : 'limited';
+  Telemetry.histogram('receipt_parse_wait_ms', Date.now() - asking.at, {
+    via: asking.via,
+    outcome: settled,
+  });
+};
 
 /** What the saved screen says about the server's reading. */
 export type ServerReadingStatus =
@@ -58,6 +83,8 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const isOnline = useIsOnline();
   const draft = useReceiptDraft();
   const { askServerParse, settleServerParse } = useReceiptDraftActions();
+  // When this visit first asked for each parse.
+  const askedAt = useRef<AskedAt>(new Map());
   const client = useApolloClient();
   const [create] = useMutation(CreateReceiptParseDocument);
   // The parse this visit sent, so it is sent once per visit, never in a loop.
@@ -106,6 +133,9 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     if (sent.current === id) return;
     sent.current = id;
     askServerParse(id, via);
+    if (!askedAt.current.has(id)) {
+      askedAt.current.set(id, { at: Date.now(), via });
+    }
     const locale = getDeviceLocale();
     const content = draft.photoKeys
       ? { photos: draft.photoKeys }
@@ -142,6 +172,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           setPolling(id);
           return;
         case 'settle':
+          markSettled(askedAt.current, id, result.outcome);
           settleServerParse(id, result.outcome);
           return;
         case 'later':
@@ -200,12 +231,15 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     const parse = data.receiptParse;
     // Gone (seven days on) or never this user's: the text stands.
     if (!parse) {
+      markSettled(askedAt.current, polling, 'unavailable');
       settleServerParse(polling, 'unavailable');
       return;
     }
     if (parse.id !== polling) return;
     const outcome = outcomeOf(parse);
-    if (outcome !== undefined) settleServerParse(polling, outcome);
+    if (outcome === undefined) return;
+    markSettled(askedAt.current, polling, outcome);
+    settleServerParse(polling, outcome);
   }, [polled, polling, data, settleServerParse]);
 
   const readingStatus = (): ServerReadingStatus => {

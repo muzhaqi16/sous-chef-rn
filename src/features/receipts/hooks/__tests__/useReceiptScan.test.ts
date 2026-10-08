@@ -10,6 +10,7 @@ import {
   onDeviceStructuring,
 } from '../../utils/onDeviceStructuring';
 import { errorService } from '#/services/errorService';
+import { Telemetry } from '#/services/telemetry';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { toDateKey } from '#/utils/dateUtils';
@@ -509,6 +510,11 @@ describe('useReceiptScan', () => {
       expect(draft?.pages[0]).not.toContain('4242');
       expect(availability).not.toHaveBeenCalled();
       expect(result.current.status).toBe('saved');
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'receipt_scan_ready_ms',
+        expect.any(Number),
+        { route: 'photos', pages: '2' },
+      );
       turnedOn.restore();
     });
 
@@ -543,6 +549,11 @@ describe('useReceiptScan', () => {
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
       expect(availability).toHaveBeenCalled();
       expect(result.current.status).toBe('saved');
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'receipt_scan_ready_ms',
+        expect.any(Number),
+        { route: 'text', pages: '1' },
+      );
       turnedOn.restore();
     });
 

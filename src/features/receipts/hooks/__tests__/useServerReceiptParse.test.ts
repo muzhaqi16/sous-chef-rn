@@ -19,6 +19,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
+import { Telemetry } from '#/services/telemetry';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import {
@@ -171,6 +172,11 @@ describe('useServerReceiptParse', () => {
     expect(draft?.purchasedOn).toBe('2026-09-30');
     expect(draft?.serverParse).toBeUndefined();
     expect(result.current.readingStatus).toBe('none');
+    expect(Telemetry.histogram).toHaveBeenCalledWith(
+      'receipt_parse_wait_ms',
+      expect.any(Number),
+      { via: 'text', outcome: 'parsed' },
+    );
   });
 
   it.each([

@@ -12,6 +12,7 @@ import {
   type RecognizedPage,
 } from '#/native/TextRecognition';
 import { errorService } from '#/services/errorService';
+import { Telemetry } from '#/services/telemetry';
 import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
@@ -62,6 +63,9 @@ export type ReceiptScanStatus =
   | 'failed'
   | 'saved';
 
+/** When a scan's pages came in, and how many, for `receipt_scan_ready_ms`. */
+const scanStart = (pages: number) => ({ at: Date.now(), pages });
+
 /** What the one-time consent question was asked for, run once it is answered. */
 type ScanStart = 'scan' | 'photo' | 'pick';
 
@@ -92,6 +96,17 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   // The saved receipt was read from a photo that stays in the library: the
   // recognizer deletes only the picker's copy.
   const [fromLibrary, setFromLibrary] = useState(false);
+
+  const scanStarted = useRef<ReturnType<typeof scanStart> | null>(null);
+  const markSaved = (route: 'photos' | 'text') => {
+    const started = scanStarted.current;
+    scanStarted.current = null;
+    if (!started) return;
+    Telemetry.histogram('receipt_scan_ready_ms', Date.now() - started.at, {
+      route,
+      pages: String(started.pages),
+    });
+  };
 
   const { takePhoto: capturePhoto, pickPhoto: choosePhoto } = usePhotoCapture();
   const { uploadUnconfirmed } = useImageUpload();
@@ -148,6 +163,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     if (parsed) saveDraft({ ...next, parsed, parsedBy: 'device' });
     setFromLibrary(library);
     setStatus('saved');
+    markSaved('text');
   };
 
   // A receipt the server reads from its photos alone.
@@ -238,8 +254,10 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       recordPhotoKeys(next.scannedAt, keys);
       setFromLibrary(library);
       setStatus('saved');
+      markSaved('photos');
     } else if (keys) {
       keepPhotos(keys, library);
+      markSaved('photos');
     } else if (next) {
       await structureOnDevice(next, library);
     } else {
@@ -249,6 +267,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
 
   const readPages = async (imageUris: string[], library = false) => {
     setStatus('reading');
+    scanStarted.current = scanStart(imageUris.length);
     // More pages than the server reads as photos are read from their text.
     if (imageUris.length <= MAX_PHOTOS && (await readsPhotosFirst())) {
       await readPhotosFirst(imageUris, library);
