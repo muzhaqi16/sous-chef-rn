@@ -60,7 +60,7 @@ describe('receiptDraftStore', () => {
       });
     });
 
-    it('waits out the daily limit with the text, the photos spent', () => {
+    it('reads the text at once when a limit refuses the photos', () => {
       seedDraft({ photoKeys: PHOTOS });
       actions().askServerParse('p1', 'photos');
       actions().settleServerParse('p1', {
@@ -68,9 +68,19 @@ describe('receiptDraftStore', () => {
       });
 
       expect(draft()?.photoKeys).toBeUndefined();
+      expect(draft()?.serverParse).toBeUndefined();
+    });
+
+    it('waits out a limit on a text parse', () => {
+      seedDraft();
+      actions().askServerParse('p1', 'text');
+      actions().settleServerParse('p1', {
+        retryAt: '2026-10-08T00:00:00.000Z',
+      });
+
       expect(draft()?.serverParse).toEqual({
         id: 'p1',
-        via: 'photos',
+        via: 'text',
         state: 'limited',
         retryAt: '2026-10-08T00:00:00.000Z',
       });

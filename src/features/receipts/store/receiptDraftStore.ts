@@ -198,42 +198,39 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
         set(({ draft }) => {
           if (draft?.serverParse?.id !== id) return {};
           const { via } = draft.serverParse;
-          // The photos are spent: a receipt with text is read from it instead.
-          const { photoKeys: _spent, ...withoutPhotos } = draft;
-          const fallsBackToText = via === 'photos' && draft.pages.length > 0;
-          if (typeof outcome === 'string') {
-            if (fallsBackToText) {
-              const { serverParse: _photoParse, ...rest } = withoutPhotos;
-              return { draft: rest };
-            }
-            return {
-              draft: { ...draft, serverParse: { id, via, state: outcome } },
-            };
-          }
-          if ('retryAt' in outcome) {
-            const { retryAt } = outcome;
+          if (typeof outcome === 'object' && 'parsed' in outcome) {
+            const { serverParse: _asked, ...rest } = draft;
+            // The day read on the phone, before redaction, stands.
+            const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
             return {
               draft: {
-                ...(fallsBackToText ? withoutPhotos : draft),
-                serverParse: { id, via, state: 'limited', retryAt },
+                ...rest,
+                parsed: outcome.parsed,
+                parsedBy: 'server',
+                ...(purchasedOn ? { purchasedOn } : {}),
+                ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
+                ...(outcome.printedStore
+                  ? { printedStore: outcome.printedStore }
+                  : {}),
               },
             };
           }
-          const { serverParse: _asked, ...rest } = draft;
-          // The day read on the phone, before redaction, stands.
-          const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
-          return {
-            draft: {
-              ...rest,
-              parsed: outcome.parsed,
-              parsedBy: 'server',
-              ...(purchasedOn ? { purchasedOn } : {}),
-              ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
-              ...(outcome.printedStore
-                ? { printedStore: outcome.printedStore }
-                : {}),
-            },
-          };
+          // A photo parse that read nothing spent its photos, a limit's refusal
+          // too (the API counts photo parses against a smaller allowance of
+          // their own): a receipt with text is read from it at once.
+          if (via === 'photos' && draft.pages.length > 0) {
+            const {
+              photoKeys: _spent,
+              serverParse: _photoParse,
+              ...text
+            } = draft;
+            return { draft: text };
+          }
+          const serverParse: ServerReceiptParse =
+            typeof outcome === 'string'
+              ? { id, via, state: outcome }
+              : { id, via, state: 'limited', retryAt: outcome.retryAt };
+          return { draft: { ...draft, serverParse } };
         }),
       clearDraft: () => set({ draft: null }),
     }),

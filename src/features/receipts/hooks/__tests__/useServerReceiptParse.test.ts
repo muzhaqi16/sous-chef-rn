@@ -451,24 +451,19 @@ describe('useServerReceiptParse', () => {
       expect(result.current.readingStatus).toBe('reading');
     });
 
-    it('sends the text once the daily limit lets it, never the spent photos', async () => {
+    // The API limits photo parses apart from text ones, so a refused photo
+    // parse says nothing of the text.
+    it('sends the text at once when a limit refuses the photos', async () => {
       seedMilkDraft({ photoKeys: PHOTOS });
-      const { result, unmount } = render([overTheLimit(3600)]);
-      await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
-      const photoParse = useReceiptDraftStore.getState().draft?.serverParse;
-      expect(useReceiptDraftStore.getState().draft?.photoKeys).toBeUndefined();
-      unmount();
+      const text = created(ReceiptParseStatus.Pending);
+      const { result } = render([overTheLimit(3600), text.mock]);
 
-      await act(async () => {
-        await jest.advanceTimersByTimeAsync(3_600_000);
-      });
-      const later = created(ReceiptParseStatus.Pending);
-      render([later.mock]);
-
-      await waitFor(() => expect(later.fired).toHaveLength(1));
-      const [input] = later.fired.map(inputOf);
+      await waitFor(() => expect(text.fired).toHaveLength(1));
+      const [input] = text.fired.map(inputOf);
       expect(input).toEqual(expect.objectContaining({ pages: PAGES }));
-      expect(input?.id).not.toBe(photoParse?.id);
+      expect(input).not.toHaveProperty('photos');
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toBeUndefined();
+      expect(result.current.readingStatus).toBe('reading');
     });
 
     it('keeps waiting on a slow photo parse, and says it can take a minute', async () => {
