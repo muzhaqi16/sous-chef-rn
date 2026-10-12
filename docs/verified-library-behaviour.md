@@ -218,7 +218,7 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 them together is accepted and discarded, silently.
 
 **Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.5.0` + `@shopify/flash-list@2.3.3`** (2026-10-05).
+`react-native-unistyles@3.5.2` + `@shopify/flash-list@2.3.3`** (2026-10-12).
 The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
@@ -347,7 +347,7 @@ npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.5.0` (2026-10-05).**
+**Verified against `react-native-unistyles@3.5.2` (2026-10-12).**
 `node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
 by reducing its style entries with `Object.assign(acc, secret.uni__getStyles())`
 from `{}`. For a function-valued `style` prop, `uni__getStyles()` returns the
@@ -371,10 +371,11 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.5.0` +
-`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-05, iOS
-simulator, debug build),** by running `UnistylesShadowRegistry.verify()` after
-every commit:
+**Verified against `react-native-unistyles@3.5.2` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-12, Android
+emulator, debug build: the last count below; the others are from 3.5.0 on an
+iOS simulator),** by running `UnistylesShadowRegistry.verify()` after every
+commit:
 
 - Right after the Unistyles theme commit, there were 0 mismatches (18 of 18).
   The next React commit, the navigator re-render that `Navigation`'s
@@ -390,6 +391,9 @@ every commit:
 - With a `ThemeEpochSentinel` in both of the template's Reanimated containers:
   0, 0, 0 mismatches, also after navigating away and back, and 0, 0 after a
   reveal.
+- On Android, without the hero's sentinel, `heroInner` kept the light
+  `backgroundColor` after a switch to dark, and still did after navigating away
+  and back (1 of 563). With both sentinels: 0 of 564, also after a reveal.
 
 The mechanism: on every React commit `ReanimatedCommitHook` clones each
 registered view and its ancestors (`cloneShadowTreeWithNewProps`) without a
@@ -431,8 +435,8 @@ then reports `dot` / `heroInner` mismatches.
 revealed, if the theme changed while it was hidden. Every `<Text>` and `<Icon>`
 is such a consumer.
 
-**Verified against `react-native-unistyles@3.5.0` (2026-10-05; the same on
-3.4.0, checked on screen).** `useProxifiedUnistyles` keeps the theme in
+**Verified against `react-native-unistyles@3.5.2` (2026-10-12, in source; on
+screen on 3.5.0 and 3.4.0).** `useProxifiedUnistyles` keeps the theme in
 `useState` and disposes its listener in an effect cleanup, and a hidden
 `Activity` runs that cleanup. On reveal, `reinitListener` subscribes again but
 never compares the theme. After a switch to dark while `PantryItemDetail` was
@@ -460,12 +464,12 @@ the `react-native` field and land in `src`. The bundle then holds both copies:
 one shared `StyleSheet`, but two `ShadowRegistry` JS objects, each with its own
 `add`/`remove`, tracked handles and refresh listener.
 
-**Verified against `react-native-unistyles@3.5.0` (also 3.4.0's layout) +
-`metro@0.84.5` (2026-10-05).** Before the fix, 40 `lib/module` and 37 `src`
-Unistyles modules were initialized. With `metro.config.js` resolving every
-Unistyles request as `require`, there were 53 `src` modules and none from
-`lib`. The duplicate copy is not the cause of the theme reverts above: both
-reproduce with one copy.
+**Verified against `react-native-unistyles@3.5.2` (also 3.4.0's layout) +
+`metro@0.84.5` (2026-10-12; the unfixed counts are from 3.5.0).** Before the
+fix, 40 `lib/module` and 37 `src` Unistyles modules were initialized. With
+`metro.config.js` resolving every Unistyles request as `require`, there are 54
+`src` modules and none from `lib`. The duplicate copy is not the cause of the
+theme reverts above: both reproduce with one copy.
 
 Re-check, through `debugger-evaluate`:
 
@@ -881,8 +885,8 @@ the two plugins fixes it, which is what `scripts/babel/unistyles-scope-crawl.js`
 does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
 has already analysed the file and the crawl is a silent no-op.
 
-**Verified against `react-native-unistyles@3.5.0` +
-`babel-plugin-react-compiler@1.0.0`** (2026-10-05). Three orders, three
+**Verified against `react-native-unistyles@3.5.2` +
+`babel-plugin-react-compiler@1.0.0`** (2026-10-12). Three orders, three
 outcomes:
 
 | plugin order                             | compiler                                                                                                                                             | variant read                                                |
