@@ -199,7 +199,11 @@ they read it.
   which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
   (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
   `children` on its own open state adds it. A component rendering its own JSX
-  needs nothing: the condition it mounts on is a dependency of that JSX.
+  needs nothing: the condition it mounts on is a dependency of that JSX. A
+  `withUnistyles` or `useUnistyles` reader inside a scoped theme
+  [ignores theme events](verified-library-behaviour.md#a-unistyles-reader-inside-a-scopedtheme-ignores-theme-events),
+  so the scope is keyed on the theme epoch and every theme commit remounts its
+  children.
 
 ## Typography roles
 

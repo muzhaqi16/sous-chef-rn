@@ -454,6 +454,35 @@ Re-check:
 grep -n "reinitListener\|disposeRef" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
 ```
 
+### A Unistyles reader inside a ScopedTheme ignores theme events
+
+**Claim:** a `withUnistyles` or `useUnistyles` reader mounted inside a
+`ScopedTheme` never follows a theme event: not a switch to another theme, and
+not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
+A view styled by `StyleSheet.create` is updated natively and does follow.
+
+**Verified against `react-native-unistyles@3.5.2` (2026-10-12, Android
+emulator, debug build).** `useProxifiedUnistyles` builds its listener with
+`updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
+`scopedTheme` is the scope's name. With the pantry's sort sheet open, setting a
+brand colour turned the selected row and its label blue and left every `<Icon>`
+in the sheet orange (2,265 orange pixels in the icon column, none blue).
+
+The fix: `CurrentThemeScope` keys its `ScopedTheme` on the theme name and the
+theme epoch, so every theme commit remounts the children (2,292 blue pixels,
+none orange). That remount's commit leaves the tab bar's add button, a
+Reanimated node carrying a themed style, on the old `backgroundColor` while the
+sheet covers it (1 mismatch of 452); it is right once the sheet closes (0 of
+439).
+
+Re-check:
+
+```
+grep -n -A 6 "updateTheme: () =>" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
+```
+
+Guarded by `src/components/atoms/__tests__/CurrentThemeScope.test.tsx`.
+
 ### Metro bundles two copies of Unistyles unless it resolves them with `require`
 
 **Claim:** Unistyles' exports list `import` before `react-native`, and this app's
@@ -1752,3 +1781,39 @@ Re-check: `adb logcat | grep -E "SIGILL|TfliteDynamite"` while scanning on the e
 ### The image picker's copy is deleted with the scanned pages
 
 Verified 2026-09-30 on the iPhone 18 Pro simulator: the photo fallback (`usePhotoCapture().pickPhoto`) hands `recognizeAndDelete` the picker's temporary copy. After the read, no image newer than the scan remains under the app container's `tmp/`, `Library/Caches/` or `Documents/`. The photo in the user's library is untouched, since the picker only copies it.
+
+### Android breaks a TextView's lines by glyph bounds, and React Native measures by advances
+
+**Claim:** on Android 15+ an app that targets API 35 or later gets bounds-based
+line breaking in every `TextView` (`TextView#USE_BOUNDS_FOR_WIDTH`). React
+Native measures `<Text>` with a `StaticLayout` that breaks on glyph advances,
+and with `enablePreparedTextLayout` off the pixels come from `ReactTextView`'s
+own `TextView` layout. A line that fits when measured can wrap when the view
+lays its text out again, and the extra line falls outside the measured height.
+
+**Verified against `react-native@0.86.3` (2026-10-12, API 36 emulator at
+420 dpi, `targetSdkVersion` 36).** Profile's email is a shrink-wrapped
+`<Text>`: its line measures 120.369 dp in a 120.381 dp frame, 0.03 px to spare.
+After any theme change it drew as `test@souschef` (315 px of ink before, 249 px
+after) in the same frame, with no new `onTextLayout`: the view laid its text
+out again, the shadow node did not. `TextLayoutManager.kt` declares a
+`setUseBoundsForWidth` handle and never calls it, and `ReactTextView.java` does
+not mention it.
+
+The fix: `AppTheme` sets `android:useBoundsForWidth` to `false`, which every
+`TextView` takes from its theme in place of the platform default. With it the
+line is 315 px wide before and after a theme change.
+[react-native#58280](https://github.com/react/react-native/pull/58280) makes
+the same choice inside `ReactTextView`; it is on `main` and in no release
+through 0.87.1.
+[#56402](https://github.com/react/react-native/issues/56402) and
+[#53286](https://github.com/react/react-native/issues/53286) report the
+symptom.
+
+Re-check (a hit means React Native opts out itself and the theme item can go):
+
+```
+grep -c "UseBoundsForWidth" node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/ReactTextView.java   # 0
+```
+
+Guarded by `__tests__/androidTextLineBreaking.test.ts`.
