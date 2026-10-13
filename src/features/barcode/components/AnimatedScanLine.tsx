@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

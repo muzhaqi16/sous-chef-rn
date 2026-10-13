@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
   FadeIn,

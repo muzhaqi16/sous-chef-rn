@@ -14,7 +14,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { commonStyles } from '#/styles/commonStyles';
 import { sizes } from '#/theme/foundations/sizes';
 import { spacing } from '#/theme/foundations/spacing';
@@ -27,7 +27,6 @@ import {
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { useThemeResyncOnReveal } from '#hooks/ui/useThemeEpoch';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.
@@ -118,7 +117,6 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  useThemeResyncOnReveal();
   const hasHero = !!renderHero;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 

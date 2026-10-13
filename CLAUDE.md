@@ -285,9 +285,6 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   a non-animated parent. A Reanimated container with a scroll-driven style and
   themed descendants renders `<ThemeEpochSentinel />` (`CollapsingHeroDetail`).
   Verified: `#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view`.
-- **Every screen scaffold calls `useThemeResyncOnReveal()`** (`Screen`,
-  `CollapsingHeroDetail`): `withUnistyles` / `useUnistyles` miss a theme change
-  made while their screen is paused. Verified: `#withunistyles-and-useunistyles-miss-a-theme-change-made-while-their-screen-is-paused`.
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.

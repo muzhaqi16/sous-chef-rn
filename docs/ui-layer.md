@@ -155,11 +155,6 @@ they read it.
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
   `FloatingTabBar`). Or they sit on a non-animated parent (the list rows'
   `rowWrapper`).
-- **A paused screen replays a theme change on reveal.** `Screen` and
-  `CollapsingHeroDetail` call `useThemeResyncOnReveal()`: `withUnistyles` and
-  `useUnistyles` drop their listener while an `Activity` hides the screen and
-  never catch up
-  ([withUnistyles and useUnistyles miss a theme change made while their screen is paused](verified-library-behaviour.md#withunistyles-and-useunistyles-miss-a-theme-change-made-while-their-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
   `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to

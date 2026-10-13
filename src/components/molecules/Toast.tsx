@@ -13,7 +13,7 @@ import { usePanGesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';

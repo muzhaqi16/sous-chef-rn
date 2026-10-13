@@ -133,7 +133,7 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 it as an unknown prop. Nothing throws, warns, or type-errors.
 
 **Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.5.2` + `@shopify/flash-list@2.3.3`** (2026-10-12).
+`react-native-unistyles@3.5.3` + `@shopify/flash-list@2.3.3`** (2026-10-13).
 
 - **RN's control arrives unnamed.** A list that passes only
   `onRefresh`/`refreshing` gets the control FlashList builds, which is React
@@ -189,7 +189,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.5.2` (2026-10-12).**
+**Verified against `react-native-unistyles@3.5.3` (2026-10-13).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -209,8 +209,8 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.5.2` +
-`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-12, Android
+**Verified against `react-native-unistyles@3.5.3` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
 emulator; first measured on 3.5.0 on an iOS simulator),** by running
 `UnistylesShadowRegistry.verify()` after every commit. Right after the
 Unistyles theme commit there were 0 mismatches; the next React commit put
@@ -238,30 +238,6 @@ fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
 `react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
 then reports `dot` / `heroInner` mismatches.
 
-### withUnistyles and useUnistyles miss a theme change made while their screen is paused
-
-**Claim:** a `withUnistyles` or `useUnistyles` consumer in a screen paused by
-`inactiveBehavior: 'pause'` keeps the previous theme after the screen is
-revealed, if the theme changed while it was hidden. Every `<Text>` and `<Icon>`
-is such a consumer.
-
-**Verified against `react-native-unistyles@3.5.2` (2026-10-12, in source; on
-screen on 3.5.0 and 3.4.0).** `useProxifiedUnistyles` keeps the theme in
-`useState` and disposes its listener in an effect cleanup, which a hidden
-`Activity` runs. On reveal, `reinitListener` subscribes again but never
-compares the theme.
-
-The fix: `Screen` and `CollapsingHeroDetail` call `useThemeResyncOnReveal()`.
-When a reveal follows a theme change, it re-registers the current theme
-(`UnistylesRuntime.updateTheme(name, theme => theme)`), which replays the change
-to every listener.
-
-Re-check:
-
-```
-grep -n "reinitListener\|disposeRef" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
-```
-
 ### A Unistyles reader inside a ScopedTheme ignores theme events
 
 **Claim:** a `withUnistyles` or `useUnistyles` reader mounted inside a
@@ -269,9 +245,9 @@ grep -n "reinitListener\|disposeRef" node_modules/react-native-unistyles/src/cor
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.5.2` (2026-10-12, Android
-emulator, debug build).** `useProxifiedUnistyles` builds its listener with
-`updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
+**Verified against `react-native-unistyles@3.5.3` (2026-10-13, in source; on
+an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
+with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
 
 The fix: `CurrentThemeScope` keys its `ScopedTheme` on the theme name and the
@@ -394,8 +370,8 @@ Babel's scope table holds no binding for the shadowing `styles` it declares and
 `scripts/babel/unistyles-scope-crawl.js` crawls between the two plugins, at
 `Program.enter` (at `Program.exit` it is a silent no-op).
 
-**Verified against `react-native-unistyles@3.5.2` +
-`babel-plugin-react-compiler@1.0.0`** (2026-10-12). Three orders, three
+**Verified against `react-native-unistyles@3.5.3` +
+`babel-plugin-react-compiler@1.0.0`** (2026-10-13). Three orders, three
 outcomes:
 
 | plugin order                             | compiler                  | variant read        |
