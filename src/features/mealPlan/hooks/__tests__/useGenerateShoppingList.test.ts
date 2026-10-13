@@ -49,6 +49,7 @@ import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/
 import { useStore } from '#store';
 import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
@@ -75,19 +76,38 @@ const ingredient = (id: string, itemId: string, quantity: number) => ({
   },
 });
 
+const RECIPE_NAME = 'Sunday Stew';
+
+/** A recipe's ingredient lines as one cached list; read to the end unless stated. */
+const ingredientsOf = (
+  ingredients: unknown[],
+  hasNextPage: boolean = false,
+) => ({
+  __typename: 'RecipeIngredientConnection',
+  pageInfo: {
+    __typename: 'PageInfo',
+    hasNextPage,
+    endCursor: hasNextPage ? 'cursor-next' : null,
+  },
+  totalCount: ingredients.length,
+  edges: ingredients,
+});
+
 /** A meal cooking `recipe-1`, which serves two, with these ingredient lines. */
-const recipeMeal = (ingredients: unknown[], servings: number = 4) => ({
+const recipeMeal = (
+  ingredients: unknown[],
+  servings: number = 4,
+  { ingredientsUnread = false }: { ingredientsUnread?: boolean } = {},
+) => ({
   __typename: 'MealPlanItem',
   id: 'mpi-1',
   servings,
   recipe: {
     __typename: 'Recipe',
     id: 'recipe-1',
+    name: RECIPE_NAME,
     servings: 2,
-    ingredientsConnection: {
-      __typename: 'RecipeIngredientConnection',
-      edges: ingredients,
-    },
+    ingredientsConnection: ingredientsOf(ingredients, ingredientsUnread),
   },
 });
 
@@ -265,6 +285,47 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(toastService.success).not.toHaveBeenCalled();
   });
 
+  // The plan reads one page of each recipe's ingredients and cannot page
+  // inside a recipe, so a longer one is whole only once it has been opened.
+  it('refuses a plan with a recipe whose later ingredients are unread, without firing anything', async () => {
+    const create = createMock();
+    const add = addMock();
+    const link = linkMock();
+    const { result } = renderHookWithApollo(
+      () => useGenerateShoppingList(PLAN_ID),
+      {
+        operationMocks: [create.mock, add.mock, link.mock],
+        cache: seedPlan(
+          planOf([
+            recipeMeal(
+              [
+                ingredient('ri-1', 'item-1', 3),
+                ingredient('ri-2', 'item-2', 1),
+              ],
+              4,
+              { ingredientsUnread: true },
+            ),
+          ]),
+        ),
+      },
+    );
+
+    const response = await result.current.generateShoppingList({
+      checkPantry: false,
+    });
+
+    expect(response).toBeNull();
+    expect(create.fired).toHaveLength(0);
+    expect(add.fired).toHaveLength(0);
+    expect(link.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    // Names the recipe, which is the one the user has to open.
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('generateShoppingList.recipeNotLoaded', { name: RECIPE_NAME }),
+    );
+    expect(toastService.success).not.toHaveBeenCalled();
+  });
+
   it('derives the cached meals and skips the one with no recipe', async () => {
     useStore.setState({ apiReachable: false });
     const create = createMock();
@@ -336,7 +397,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         planOf([recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked])]),
       );
     // The server's answer, now linked, in the shape GetMealPlan selects.
-    const planMock = () =>
+    const planMock = ({ ingredientsUnread = false } = {}) =>
       recordMock(GetMealPlanDocument, {
         data: {
           mealPlan: {
@@ -356,9 +417,15 @@ describe('generating a shopping list from a cached meal plan', () => {
                     recipe: {
                       __typename: 'Recipe',
                       id: 'recipe-1',
+                      name: RECIPE_NAME,
                       servings: 2,
                       ingredientsConnection: {
                         __typename: 'RecipeIngredientConnection',
+                        pageInfo: {
+                          hasNextPage: ingredientsUnread,
+                          endCursor: ingredientsUnread ? 'cursor-next' : null,
+                        },
+                        totalCount: 2,
                         edges: [
                           {
                             __typename: 'RecipeIngredientEdge',
@@ -425,9 +492,43 @@ describe('generating a shopping list from a cached meal plan', () => {
       });
 
       expect(refetch.fired).toEqual([
-        { id: PLAN_ID, mealsFirst: MEALS_PAGE_SIZE },
+        {
+          id: PLAN_ID,
+          mealsFirst: MEALS_PAGE_SIZE,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
       ]);
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
+    });
+
+    // The re-read restates a recipe's first page.
+    it('refuses when the re-read finds the recipe has outgrown its page', async () => {
+      const create = createMock();
+      const add = addMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [
+            planMock({ ingredientsUnread: true }).mock,
+            create.mock,
+            add.mock,
+            linkMock().mock,
+          ],
+          cache: seedUnlinked(),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      expect(response).toBeNull();
+      expect(create.fired).toHaveLength(0);
+      expect(add.fired).toHaveLength(0);
+      expect(toastService.error).toHaveBeenCalledWith(
+        t('generateShoppingList.recipeNotLoaded', { name: RECIPE_NAME }),
+      );
     });
 
     it('builds from the cache offline and leaves it out', async () => {

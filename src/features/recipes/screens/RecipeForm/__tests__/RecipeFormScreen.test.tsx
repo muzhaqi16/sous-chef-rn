@@ -1,11 +1,21 @@
 'use no memo';
 
 import React from 'react';
-import { userEvent } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { CreateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreateRecipeDocument,
+  GetRecipeDocument,
+  UpdateRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { t } from '#/i18n';
 import { RecipeFormScreen } from '../index';
 
 type RecipeFormScreenProps = StaticScreenProps<
@@ -40,9 +50,20 @@ jest.mock(
 jest.mock(
   '#features/recipes/components/recipeForm/RecipeIngredientList',
   () => ({
-    RecipeIngredientList: ({ error }: { error?: string }) => {
+    RecipeIngredientList: ({
+      error,
+      ingredients,
+    }: {
+      error?: string;
+      ingredients: unknown[];
+    }) => {
       const { Text } = require('react-native');
-      return error ? <Text>{error}</Text> : null;
+      return (
+        <>
+          <Text testID="ingredient-count">{ingredients.length}</Text>
+          {error ? <Text>{error}</Text> : null}
+        </>
+      );
     },
   }),
 );
@@ -161,5 +182,101 @@ describe('RecipeFormScreen', () => {
     await user.press(getByTestId('save-button'));
 
     expect(create.fired).toEqual([]);
+  });
+
+  // A save replaces the recipe's whole ingredient list with the form's.
+  describe('saving an edit', () => {
+    const editProps: RecipeFormScreenProps = {
+      route: { params: { recipeId: 'recipe-1' } },
+    };
+
+    /** A recipe that passes the form's validation as it loads. */
+    const loadedRecipe = (
+      hasNextPage: boolean,
+    ): MockDataFor<typeof GetRecipeDocument> => ({
+      recipe: {
+        __typename: 'Recipe',
+        id: 'recipe-1',
+        version: 3,
+        name: 'Feast',
+        // Unstated, the mocked schema fills these with text that is no URL.
+        imageUrl: null,
+        videoUrl: null,
+        instructions: [{ step: 1, text: 'Cook' }],
+        pendingRevision: null,
+        ingredientsConnection: {
+          edges: [
+            {
+              node: {
+                __typename: 'RecipeIngredient',
+                id: 'ri-1',
+                name: 'Salt',
+                quantity: 1,
+              },
+            },
+          ],
+          pageInfo: {
+            hasNextPage,
+            endCursor: hasNextPage ? 'cursor-100' : null,
+          },
+          totalCount: hasNextPage ? 150 : 1,
+        },
+      },
+    });
+
+    const renderEdit = async (hasNextPage: boolean) => {
+      const update = recordMock(UpdateRecipeDocument, {
+        data: {
+          updateRecipe: {
+            __typename: 'UpdateRecipePayload',
+            recipe: { __typename: 'Recipe', id: 'recipe-1' },
+          },
+        },
+      });
+      const rendered = renderWithApollo(<RecipeFormScreen {...editProps} />, {
+        operationMocks: [
+          recordMock(GetRecipeDocument, { data: loadedRecipe(hasNextPage) })
+            .mock,
+          update.mock,
+        ],
+      });
+      // The form is filled once the recipe has arrived.
+      await waitFor(() =>
+        expect(rendered.getByTestId('ingredient-count')).toHaveTextContent('1'),
+      );
+      return { ...rendered, sent: update.fired };
+    };
+
+    it('sends the form of a recipe read whole', async () => {
+      const user = userEvent.setup();
+      const { sent, getByTestId } = await renderEdit(false);
+
+      await user.press(getByTestId('save-button'));
+
+      await waitFor(() => expect(sent).toHaveLength(1));
+      expect(sent[0]).toEqual({
+        input: expect.objectContaining({
+          id: 'recipe-1',
+          version: 3,
+          ingredients: [expect.objectContaining({ name: 'Salt', quantity: 1 })],
+        }),
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing for a recipe whose later ingredients are unread, and says why', async () => {
+      const user = userEvent.setup();
+      const { sent, getByTestId } = await renderEdit(true);
+
+      await user.press(getByTestId('save-button'));
+
+      await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+      expect(alertService.alert).toHaveBeenCalledWith(
+        t('labels.error'),
+        t('recipes.editIngredientsNotLoaded'),
+      );
+      expect(sent).toEqual([]);
+    });
   });
 });

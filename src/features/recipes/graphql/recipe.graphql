@@ -86,7 +86,10 @@ query MyRecipes($cursor: String, $first: Int = 25) {
   }
 }
 
-query GetRecipe($id: ID!) {
+# `$ingredientsFirst` is the server's largest page, so a recipe of up to 100
+# ingredients is one request; `$ingredientsAfter` follows `endCursor` for a
+# longer one.
+query GetRecipe($id: ID!, $ingredientsFirst: Int!, $ingredientsAfter: String) {
   recipe(id: $id) {
     id
     ...useRecipeData_recipe
@@ -177,7 +180,14 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
 # Names a catalog recipe by provider id; the API fetches its content itself.
 # The recipe selects everything GetRecipe reads, so the detail screen answers
 # from the cache the moment this settles.
-mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
+#
+# `$ingredientsAfter` is declared because the fragments GetRecipe pages through
+# name it; a write never sends one, so its answer is the first page.
+mutation OpenCatalogRecipe(
+  $input: UpsertExternalRecipeInput!
+  $ingredientsFirst: Int!
+  $ingredientsAfter: String
+) {
   upsertExternalRecipe(input: $input) {
     __typename
     ... on UpsertExternalRecipePayload {
@@ -199,7 +209,12 @@ mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
   }
 }
 
-mutation UpdateRecipe($input: UpdateRecipeInput!) {
+# `$ingredientsAfter` is declared for the same reason as on OpenCatalogRecipe.
+mutation UpdateRecipe(
+  $input: UpdateRecipeInput!
+  $ingredientsFirst: Int!
+  $ingredientsAfter: String
+) {
   updateRecipe(input: $input) {
     __typename
     ... on UpdateRecipePayload {
@@ -208,13 +223,21 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
         ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
-        ingredientsConnection {
+        ingredientsConnection(
+          first: $ingredientsFirst
+          after: $ingredientsAfter
+        ) {
           edges {
             node {
               id
               ...RecipeIngredientFragment
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
         }
       }
     }

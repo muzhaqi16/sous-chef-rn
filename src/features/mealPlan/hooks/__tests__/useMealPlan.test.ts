@@ -12,7 +12,14 @@ import {
 } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useMealPlan } from '../useMealPlan';
+
+/** The page sizes a read of a plan states: its meals, each recipe's ingredients. */
+const PLAN_PAGES = {
+  mealsFirst: MEALS_PAGE_SIZE,
+  ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+};
 
 jest.mock('#/apollo/links/tokenScheduler');
 
@@ -38,10 +45,7 @@ describe('useMealPlan', () => {
     });
 
     await waitFor(() =>
-      expect(get.fired).toContainEqual({
-        id: 'plan-1',
-        mealsFirst: MEALS_PAGE_SIZE,
-      }),
+      expect(get.fired).toContainEqual({ id: 'plan-1', ...PLAN_PAGES }),
     );
   });
 
@@ -54,9 +58,14 @@ describe('useMealPlan', () => {
       operationMocks: [get.mock],
     });
 
-    // The server's largest page: a plan of up to a hundred meals is one request.
+    // The server's largest page: a plan of up to a hundred meals is one
+    // request, and so are a hundred ingredients of each recipe in it.
     await waitFor(() =>
-      expect(get.fired).toContainEqual({ id: 'plan-2', mealsFirst: 100 }),
+      expect(get.fired).toContainEqual({
+        id: 'plan-2',
+        mealsFirst: 100,
+        ingredientsFirst: 100,
+      }),
     );
   });
 
@@ -114,9 +123,7 @@ describe('useMealPlan', () => {
 
       expect(result.current.items.map(item => item.id)).toEqual(['item-1']);
       expect(result.current.mealsIncomplete).toBe(false);
-      expect(get.fired).toEqual([
-        { id: 'plan-3', mealsFirst: MEALS_PAGE_SIZE },
-      ]);
+      expect(get.fired).toEqual([{ id: 'plan-3', ...PLAN_PAGES }]);
     });
 
     it("follows an item's own edit, which leaves the query result as it was", async () => {
@@ -214,7 +221,7 @@ describe('useMealPlan', () => {
         ]),
       );
       expect(second.fired).toEqual([
-        { id: 'plan-4', mealsFirst: MEALS_PAGE_SIZE, mealsAfter: 'cursor-2' },
+        { id: 'plan-4', ...PLAN_PAGES, mealsAfter: 'cursor-2' },
       ]);
       expect(result.current.itemDetails).toHaveLength(3);
       await waitFor(() => expect(result.current.mealsIncomplete).toBe(false));
@@ -285,7 +292,7 @@ describe('useMealPlan', () => {
       );
       await waitFor(() => expect(result.current.mealsIncomplete).toBe(false));
       expect(landing.fired).toEqual([
-        { id: 'plan-4', mealsFirst: MEALS_PAGE_SIZE, mealsAfter: 'cursor-2' },
+        { id: 'plan-4', ...PLAN_PAGES, mealsAfter: 'cursor-2' },
       ]);
     });
   });

@@ -56,6 +56,7 @@ describe('RecipeCategoryFields', () => {
     originalAuthor: '',
     tags: '',
     version: null,
+    ingredientsUnread: false,
   };
 
   const updateField = jest.fn();

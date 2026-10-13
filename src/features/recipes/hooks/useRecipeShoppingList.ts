@@ -260,6 +260,15 @@ export function useRecipeShoppingList({
     );
   };
 
+  // A recipe whose later pages of ingredients are unread would add a short list.
+  const refusesUnreadIngredients = (): boolean => {
+    if (!backendRecipe?.ingredientsConnection.pageInfo.hasNextPage) {
+      return false;
+    }
+    toastService.error(t('recipes.ingredientsNotLoaded'));
+    return true;
+  };
+
   // Adds all ingredients to the picked list. Called after the list picker
   // resolves. `listName` may be passed for newly-created lists not yet in
   // the local array.
@@ -269,6 +278,8 @@ export function useRecipeShoppingList({
       toastService.error(t('recipes.shoppingListNotFound'));
       return;
     }
+    // Asked again: a refresh can restate a first page while the picker is open.
+    if (refusesUnreadIngredients()) return;
     void executeWithLoadingState(
       async () => {
         const rows =
@@ -326,8 +337,10 @@ export function useRecipeShoppingList({
     );
   };
 
-  // Entry point from the recipe ingredient list "Add All" button.
+  // Entry point from the recipe ingredient list "Add All" button. Refused
+  // before the picker opens, so no list is picked or created for nothing.
   const handleAddAll = () => {
+    if (refusesUnreadIngredients()) return;
     openListPicker({ type: 'all' });
   };
 

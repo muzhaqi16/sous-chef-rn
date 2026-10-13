@@ -32,14 +32,17 @@ import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 
 /**
- * An edit's fields with the version the FORM read: an edit is judged against
- * what the editor was looking at, not against whatever the cache holds by the
- * time they save. Null until the recipe has loaded into the form.
+ * An edit's fields with what the FORM read: an edit is judged against what the
+ * editor was looking at, not against whatever the cache holds by the time they
+ * save. `version` is null until the recipe has loaded into the form;
+ * `ingredientsUnread` says the form holds only a first page of the ingredients.
  */
 export type RecipeUpdateFields = Omit<UpdateRecipeInput, 'id' | 'version'> & {
   version: number | null;
+  ingredientsUnread: boolean;
 };
 
 /** A refused save, as the form shows it: on its field, or as an alert. */
@@ -61,7 +64,14 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
 
   const { data: recipeData, refetch: refetchRecipe } = useQuery(
     GetRecipeDocument,
-    recipeId ? { variables: { id: recipeId } } : skipToken,
+    recipeId
+      ? {
+          variables: {
+            id: recipeId,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        }
+      : skipToken,
   );
   const recipeRef = recipeData?.recipe ?? null;
 
@@ -144,18 +154,30 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
 
   /**
    * The fields and the ingredient list in one write under the version: both
-   * land or neither does.
+   * land or neither does. The list REPLACES the recipe's, so a form holding a
+   * first page of it sends nothing.
    */
   const updateRecipe = async (
     id: string,
-    { version, ...fields }: RecipeUpdateFields,
+    { version, ingredientsUnread, ...fields }: RecipeUpdateFields,
   ): Promise<RecipeWriteOutcome> => {
+    if (ingredientsUnread) {
+      return outcomeOf({
+        code: null,
+        field: null,
+        title: t('labels.error'),
+        body: t('recipes.editIngredientsNotLoaded'),
+      });
+    }
     const settled = await settleMutation(
       () =>
         version === null
           ? Promise.reject(new UnreadVersionError('Recipe'))
           : updateRecipeMutation({
-              variables: { input: { ...fields, id, version } },
+              variables: {
+                input: { ...fields, id, version },
+                ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+              },
             }),
       {
         document: UpdateRecipeDocument,

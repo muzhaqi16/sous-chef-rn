@@ -47,6 +47,9 @@ type MealPlanResult = {
     mealPlanItemsConnection: Connection;
   };
 };
+type RecipeResult = {
+  recipe: { __typename: string; id: string; ingredientsConnection: Connection };
+};
 type UserProfileFragmentResult = {
   __typename: string;
   id: string;
@@ -2113,6 +2116,203 @@ describe('cache', () => {
 
       expect(readItemIds(cache)).toEqual(['mpi-server']);
       spy.mockRestore();
+    });
+  });
+
+  describe('Recipe.ingredientsConnection merge', () => {
+    const RECIPE_QUERY = gql`
+      query GetRecipe(
+        $id: ID!
+        $ingredientsFirst: Int!
+        $ingredientsAfter: String
+      ) {
+        recipe(id: $id) {
+          id
+          ingredientsConnection(
+            first: $ingredientsFirst
+            after: $ingredientsAfter
+          ) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+    // A local create writes the list, and a copy reads it, with no arguments.
+    const BARE_INGREDIENTS_FRAGMENT = gql`
+      fragment BareIngredients on Recipe {
+        id
+        ingredientsConnection {
+          edges {
+            node {
+              id
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+    // A meal plan reads each recipe's list at a page size, with no cursor.
+    const PLAN_INGREDIENTS_FRAGMENT = gql`
+      fragment PlanIngredients on Recipe {
+        id
+        ingredientsConnection(first: $ingredientsFirst) {
+          edges {
+            node {
+              id
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    const ingredients = (
+      ids: string[],
+      page: { hasNextPage?: boolean; endCursor?: string; total?: number },
+    ) => ({
+      __typename: 'RecipeIngredientConnection',
+      edges: ids.map(id => ({
+        __typename: 'RecipeIngredientEdge',
+        node: { __typename: 'RecipeIngredient', id, name: `Name ${id}` },
+      })),
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: page.hasNextPage ?? false,
+        endCursor: page.endCursor ?? '',
+      },
+      totalCount: page.total ?? ids.length,
+    });
+
+    const writePage = (
+      cache: InMemoryCache,
+      ids: string[],
+      page: {
+        after?: string;
+        hasNextPage?: boolean;
+        endCursor?: string;
+        total?: number;
+      } = {},
+    ) =>
+      cache.writeQuery({
+        query: RECIPE_QUERY,
+        variables: {
+          id: 'r1',
+          ingredientsFirst: 2,
+          ingredientsAfter: page.after,
+        },
+        data: {
+          recipe: {
+            __typename: 'Recipe',
+            id: 'r1',
+            ingredientsConnection: ingredients(ids, page),
+          },
+        },
+      });
+
+    const readWith = (
+      cache: InMemoryCache,
+      fragment: typeof BARE_INGREDIENTS_FRAGMENT,
+    ) =>
+      cache.readFragment<RecipeResult['recipe']>({
+        id: 'Recipe:r1',
+        fragment,
+        variables: { ingredientsFirst: 2 },
+      })?.ingredientsConnection;
+
+    it('holds one list per recipe whatever arguments read it', () => {
+      const cache = makeCache();
+
+      writePage(cache, ['ri-1', 'ri-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+        total: 3,
+      });
+      writePage(cache, ['ri-3'], {
+        after: 'cursor-2',
+        endCursor: 'cursor-3',
+        total: 3,
+      });
+
+      for (const fragment of [
+        BARE_INGREDIENTS_FRAGMENT,
+        PLAN_INGREDIENTS_FRAGMENT,
+      ]) {
+        const read = readWith(cache, fragment);
+        expect(read?.edges.map(edge => edge.node.id)).toEqual([
+          'ri-1',
+          'ri-2',
+          'ri-3',
+        ]);
+        // The last page's cursor state is the list's: nothing is left to read.
+        expect(read?.pageInfo.hasNextPage).toBe(false);
+      }
+    });
+
+    it('reads a list written with no arguments through a selection that carries them', () => {
+      const cache = makeCache();
+
+      cache.writeFragment({
+        id: 'Recipe:r1',
+        fragment: BARE_INGREDIENTS_FRAGMENT,
+        data: {
+          __typename: 'Recipe',
+          id: 'r1',
+          ingredientsConnection: ingredients(['ri-local'], {}),
+        },
+      });
+
+      expect(
+        readWith(cache, PLAN_INGREDIENTS_FRAGMENT)?.edges.map(
+          edge => edge.node.id,
+        ),
+      ).toEqual(['ri-local']);
+    });
+
+    it('keeps the pages read past the first when a longer recipe restates its first page', () => {
+      const cache = makeCache();
+
+      writePage(cache, ['ri-1', 'ri-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+        total: 3,
+      });
+      writePage(cache, ['ri-3'], {
+        after: 'cursor-2',
+        endCursor: 'cursor-3',
+        total: 3,
+      });
+      // A write's answer and a meal plan's read both carry the first page only.
+      writePage(cache, ['ri-1', 'ri-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+        total: 3,
+      });
+
+      const read = readWith(cache, BARE_INGREDIENTS_FRAGMENT);
+      expect(read?.edges.map(edge => edge.node.id)).toEqual([
+        'ri-1',
+        'ri-2',
+        'ri-3',
+      ]);
+      expect(read?.pageInfo.hasNextPage).toBe(false);
     });
   });
 

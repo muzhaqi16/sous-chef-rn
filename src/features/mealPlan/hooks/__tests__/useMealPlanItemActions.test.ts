@@ -26,6 +26,7 @@ import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   UseDuplicateMealPlan_MealPlanFragmentDoc,
   type UseDuplicateMealPlan_MealPlanFragment,
@@ -688,7 +689,11 @@ describe('useMealPlanItemActions', () => {
         expect(mockToastSuccess).not.toHaveBeenCalled();
         await waitFor(() =>
           expect(reRead.fired).toEqual([
-            { id: PLAN_ID, mealsFirst: MEALS_PAGE_SIZE },
+            {
+              id: PLAN_ID,
+              mealsFirst: MEALS_PAGE_SIZE,
+              ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+            },
           ]),
         );
         await waitFor(() =>

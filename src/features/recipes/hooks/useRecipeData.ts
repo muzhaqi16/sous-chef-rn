@@ -7,6 +7,9 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useConnectionData } from '#hooks/utils/useConnectionData';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { knownEntry } from '#/utils/closedEnum';
 import {
   ExternalSyncStatus,
@@ -142,9 +145,16 @@ export function useRecipeData({
   openFailure,
 }: UseRecipeDataParams): UseRecipeDataResult {
   const { t } = useTranslation();
-  const { data, loading, error, refetch, variables } = useQuery(
+  const { data, loading, error, refetch, fetchMore, variables } = useQuery(
     GetRecipeDocument,
-    recipeId ? { variables: { id: recipeId } } : skipToken,
+    recipeId
+      ? {
+          variables: {
+            id: recipeId,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        }
+      : skipToken,
   );
   // `skipToken` keeps the last run's variables, data and error: a result for
   // another recipe is not this one's.
@@ -158,6 +168,25 @@ export function useRecipeData({
     from: current ? data?.recipe ?? null : null,
   });
   const backendRecipe = recipe.complete ? recipe.data : undefined;
+
+  // One cached list however many pages filled it; a recipe past the first
+  // page reads the rest. Adding all, copying and editing refuse unread pages,
+  // so a page that fails only shortens the list shown.
+  const ingredients = useConnectionData({
+    data: backendRecipe,
+    selector: held => held.ingredientsConnection,
+    key: recipeId ?? '',
+    loading,
+    fetchMore,
+    cursorVariableName: 'ingredientsAfter',
+    refetch,
+  });
+  const remainingIngredients = useLoadRemainingPages(
+    !!backendRecipe,
+    loading,
+    ingredients,
+    recipeId ?? '',
+  );
 
   const opening = !recipeId && !!hint && !openFailure;
 
@@ -188,6 +217,11 @@ export function useRecipeData({
     loading: opening || loading,
     error: resolveError(),
     backendRecipe,
-    refetch: () => (recipeId ? refetch() : Promise.resolve()),
+    refetch: () => {
+      if (!recipeId) return Promise.resolve();
+      // A page that failed stopped the read short; a pull starts it again.
+      remainingIngredients.retry();
+      return refetch();
+    },
   };
 }

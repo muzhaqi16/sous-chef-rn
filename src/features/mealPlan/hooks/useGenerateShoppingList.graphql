@@ -22,8 +22,18 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
         servings
         recipe {
           id
+          # Names the recipe whose ingredients are only partly read.
+          name
           servings
-          ingredientsConnection {
+          # No cursor: a plan cannot page inside one of its recipes, so a recipe
+          # past this page is read to the end where it is opened.
+          ingredientsConnection(first: $ingredientsFirst) {
+            # The same count and cursor every reader of the recipe selects.
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
             edges {
               node {
                 id

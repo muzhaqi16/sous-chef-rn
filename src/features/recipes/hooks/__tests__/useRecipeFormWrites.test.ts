@@ -8,6 +8,7 @@ import {
 import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 
 /**
@@ -59,11 +60,13 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {
       version: 3,
+      ingredientsUnread: false,
       name: 'Bread',
       ingredients,
     });
 
     expect(outcome).toEqual({ status: 'ok' });
+    // The answer restates the recipe's ingredients at the largest page.
     expect(update.fired).toEqual([
       {
         input: {
@@ -72,8 +75,42 @@ describe('useRecipeFormWrites.updateRecipe', () => {
           name: 'Bread',
           ingredients,
         },
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       },
     ]);
+  });
+
+  // The list REPLACES the recipe's: a form holding one page of it would remove
+  // every ingredient past that page.
+  it('sends nothing for a form that loaded a first page of the ingredients, and says why', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: {
+        updateRecipe: {
+          __typename: 'UpdateRecipePayload',
+          recipe: { __typename: 'Recipe', id: RECIPE_ID },
+        },
+      },
+    });
+    const { result } = renderWrites([update.mock]);
+    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {
+      version: 3,
+      ingredientsUnread: true,
+      name: 'Bread',
+      ingredients: [{ name: 'Flour', quantity: 2, sortOrder: 0 }],
+    });
+
+    expect(outcome).toEqual({
+      status: 'rejected',
+      failure: {
+        code: null,
+        field: null,
+        title: t('labels.error'),
+        body: t('recipes.editIngredientsNotLoaded'),
+      },
+    });
+    expect(update.fired).toEqual([]);
   });
 
   it('reports the refusal the server gave', async () => {
@@ -82,6 +119,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {
       version: 3,
+      ingredientsUnread: false,
     });
 
     expect(outcome).toEqual({
@@ -106,6 +144,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {
       version: null,
+      ingredientsUnread: false,
       name: 'Bread',
     });
 
@@ -131,6 +170,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {
       version: 3,
+      ingredientsUnread: false,
     });
 
     expect(outcome).toEqual({

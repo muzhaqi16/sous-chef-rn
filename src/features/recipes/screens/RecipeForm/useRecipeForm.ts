@@ -235,6 +235,7 @@ export function useRecipeForm() {
   const buildUpdateInput = (): RecipeUpdateFields => {
     return {
       version: state.version,
+      ingredientsUnread: state.ingredientsUnread,
       ingredients: buildIngredientsInput(),
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
@@ -325,6 +326,9 @@ export function useRecipeForm() {
       originalAuthor: content.originalAuthor ?? '',
       tags: content.tags.join(', '),
       version: recipe.version,
+      // A proposed edit carries its whole list; the live one arrives in pages.
+      ingredientsUnread:
+        !proposed && recipe.ingredientsConnection.pageInfo.hasNextPage,
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.

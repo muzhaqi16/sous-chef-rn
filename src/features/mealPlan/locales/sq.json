@@ -112,6 +112,7 @@
     "sharedSuffix": " (e ndarë me {{homeName}})",
     "generateFailed": "Krijimi i listës së blerjeve dështoi",
     "planNotLoaded": "Hap fillimisht planin e vakteve, që recetat e tij të jenë të disponueshme.",
+    "recipeNotLoaded": "\"{{name}}\" ka më shumë përbërës sesa janë ngarkuar. Hap atë recetë, pastaj provo përsëri.",
     "nothingToAdd": "Asgjë për të shtuar — ky plan ende nuk ka përbërës recetash.",
     "defaultName": "Listë blerjesh për {{name}}",
     "someSkipped_one": "{{count}} zë u la jashtë sepse receta e tij nuk është shkarkuar.",

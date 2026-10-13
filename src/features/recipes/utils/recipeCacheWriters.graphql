@@ -3,6 +3,8 @@
 fragment recipeCacheWriters_row on Recipe {
   id
   ...RecipeReaders
+  # No arguments: the cache holds one list per recipe whatever arguments read
+  # it, and a create writes all of it.
   ingredientsConnection {
     edges {
       node {
@@ -10,6 +12,11 @@ fragment recipeCacheWriters_row on Recipe {
         ...RecipeIngredientReaders
       }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
   reviewsConnection {
     totalCount

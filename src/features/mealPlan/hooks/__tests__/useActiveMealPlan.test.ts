@@ -11,6 +11,7 @@ import { useStore } from '#store';
 import { useActiveMealPlan } from '../useActiveMealPlan';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 /**
  * A plan complete for `MealPlanDisplay` — the selection every consumer reads.
  * These tests only need the entity to EXIST, but seeding it against the real
@@ -138,6 +139,7 @@ describe('useActiveMealPlan', () => {
     expect(fallback.fired).toContainEqual({
       id: 'plan-current',
       mealsFirst: MEALS_PAGE_SIZE,
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
     });
   });
 
@@ -224,6 +226,7 @@ describe('useActiveMealPlan', () => {
       expect(get.fired).toContainEqual({
         id: 'plan-picked',
         mealsFirst: MEALS_PAGE_SIZE,
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       }),
     );
     expect(result.current.activePlanId).toBe('plan-picked');

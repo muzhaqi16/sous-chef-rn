@@ -142,6 +142,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
     ),
   version: number().nullable().defined(),
+  ingredientsUnread: mixed<boolean>().defined(),
 });
 
 export const recipeFormDefaults = (): RecipeFormState => ({
@@ -167,4 +168,5 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   originalAuthor: '',
   tags: '',
   version: null,
+  ingredientsUnread: false,
 });

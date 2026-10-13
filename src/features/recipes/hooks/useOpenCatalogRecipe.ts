@@ -7,6 +7,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 
 /** A Spoonacular recipe as a search row shows it, before the API has it. */
 export interface CatalogRecipeHint {
@@ -49,6 +50,7 @@ export function useOpenCatalogRecipe() {
               name: hint.name?.slice(0, MAX_NAME_LENGTH),
               imageUrl,
             },
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
           },
         }),
       {

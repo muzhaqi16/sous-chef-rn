@@ -15,6 +15,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -28,6 +29,27 @@ const HINT: CatalogRecipeHint = {
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
 };
 
+type IngredientsFixture = NonNullable<RecipeFixture['ingredientsConnection']>;
+type PageInfoFixture = NonNullable<IngredientsFixture['pageInfo']>;
+
+/** One page of a recipe's ingredients; read to the end unless stated. */
+const ingredientsPage = (
+  ids: string[],
+  pageInfo: PageInfoFixture = { hasNextPage: false, endCursor: null },
+  totalCount: number = ids.length,
+): IngredientsFixture => ({
+  edges: ids.map((id, sortOrder) => ({
+    node: {
+      __typename: 'RecipeIngredient',
+      id,
+      name: `Ingredient ${id}`,
+      sortOrder,
+    },
+  })),
+  pageInfo,
+  totalCount,
+});
+
 /** A recipe the user wrote: no provider behind it. */
 const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
   __typename: 'Recipe',
@@ -36,6 +58,7 @@ const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
   isExternal: false,
   sourceMapping: null,
   externalDetails: null,
+  ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
 
@@ -50,6 +73,7 @@ const catalogRecipe = (
   isExternal: true,
   createdBy: null,
   sourceMapping: { __typename: 'RecipeSourceMapping', id: 'sm-1', syncStatus },
+  ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
 
@@ -220,6 +244,130 @@ describe('useRecipeData', () => {
     });
   });
 
+  describe('a recipe and its ingredients', () => {
+    const shownIds = (result: { current: ReturnType<typeof useRecipeData> }) =>
+      result.current.displayData?.ingredients.map(row => row.id);
+
+    it('reads a recipe that fits one page with one request, at the largest page', async () => {
+      const get = recordMock(GetRecipeDocument, {
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(['i1', 'i2']),
+          }),
+        },
+      });
+      const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
+
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      expect(get.fired).toEqual([
+        { id: 'r1', ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE },
+      ]);
+    });
+
+    // "Add all", a copy and an edit all derive from this list.
+    it('follows the cursor, so a recipe past the first page is one whole list', async () => {
+      const first = recordMock(GetRecipeDocument, {
+        match: vars => vars.ingredientsAfter == null,
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(
+              ['i1', 'i2'],
+              { hasNextPage: true, endCursor: 'cursor-2' },
+              3,
+            ),
+          }),
+        },
+      });
+      const second = recordMock(GetRecipeDocument, {
+        match: vars => vars.ingredientsAfter === 'cursor-2',
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(
+              ['i3'],
+              { hasNextPage: false, endCursor: 'cursor-3' },
+              3,
+            ),
+          }),
+        },
+      });
+
+      const { result } = renderData({ recipeId: 'r1' }, [
+        first.mock,
+        second.mock,
+      ]);
+
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2', 'i3']));
+      expect(second.fired).toEqual([
+        {
+          id: 'r1',
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          ingredientsAfter: 'cursor-2',
+        },
+      ]);
+      // Nothing is left to read: a derived write may run on this recipe.
+      expect(
+        result.current.backendRecipe?.ingredientsConnection.pageInfo,
+      ).toMatchObject({ hasNextPage: false });
+    });
+
+    it('keeps the page it read when a later one fails, and reads the rest on a pull', async () => {
+      const first = recordMock(GetRecipeDocument, {
+        match: vars => vars.ingredientsAfter == null,
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(
+              ['i1', 'i2'],
+              { hasNextPage: true, endCursor: 'cursor-2' },
+              3,
+            ),
+          }),
+        },
+      });
+      const failing = recordMock(GetRecipeDocument, {
+        match: vars => vars.ingredientsAfter === 'cursor-2',
+        error: new Error('network unavailable'),
+        maxUsageCount: 1,
+      });
+      const landing = recordMock(GetRecipeDocument, {
+        match: vars => vars.ingredientsAfter === 'cursor-2',
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(
+              ['i3'],
+              { hasNextPage: false, endCursor: 'cursor-3' },
+              3,
+            ),
+          }),
+        },
+      });
+
+      const { result } = renderData({ recipeId: 'r1' }, [
+        first.mock,
+        failing.mock,
+        landing.mock,
+      ]);
+      await waitFor(() => expect(failing.fired).toHaveLength(1));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      // Still marked partly read, which is what the derived writes refuse on.
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
+      expect(
+        result.current.backendRecipe?.ingredientsConnection.pageInfo
+          .hasNextPage,
+      ).toBe(true);
+      expect(landing.fired).toHaveLength(0);
+
+      await act(async () => {
+        await result.current.refetch();
+      });
+
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2', 'i3']));
+      expect(
+        result.current.backendRecipe?.ingredientsConnection.pageInfo
+          .hasNextPage,
+      ).toBe(false);
+    });
+  });
+
   describe('what a catalog recipe has to show', () => {
     it.each([
       [ExternalSyncStatus.Synced, 'complete'],
@@ -254,6 +402,7 @@ describe('useRecipeData', () => {
                   id: 'sm-1',
                   syncStatus: newerStatus as ExternalSyncStatus,
                 },
+                ingredientsConnection: ingredientsPage([]),
               },
             },
           },

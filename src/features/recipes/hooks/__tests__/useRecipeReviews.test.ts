@@ -219,6 +219,8 @@ const makeBackendRecipe = (
   ingredientsConnection: {
     __typename: 'RecipeIngredientConnection',
     edges: [],
+    pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
+    totalCount: 0,
   },
   totalReviews: 3,
   averageRating: 4.2,

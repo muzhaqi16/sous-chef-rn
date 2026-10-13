@@ -81,6 +81,7 @@ import { MealPlanSettingsSheet_MealPlanFragmentDoc } from '#features/mealPlan/co
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
@@ -122,6 +123,7 @@ import {
   MyRecipesDocument,
   MySavedRecipesDocument,
   GetRecipeDocument,
+  type GetRecipeQuery,
   type MyRecipesQuery,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
@@ -1102,7 +1104,11 @@ describe('optimistic entity completeness', () => {
       endDate: '2026-10-11',
       homeId: 'home-uncached',
     };
-    const PLAN_VARS = { id: 'plan-1', mealsFirst: MEALS_PAGE_SIZE };
+    const PLAN_VARS = {
+      id: 'plan-1',
+      mealsFirst: MEALS_PAGE_SIZE,
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    };
     const TEMPLATE_VARS = { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE };
 
     /** The ids of a plan's meals as the detail screen reads them, or null. */
@@ -1429,14 +1435,23 @@ describe('optimistic entity completeness', () => {
       const cache = makeCache();
       writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
-      const diff = cache.diff({
+      const diff = cache.diff<Unmasked<GetRecipeQuery>>({
         query: GetRecipeDocument,
-        variables: { id: 'client-recipe-1' },
+        variables: {
+          id: 'client-recipe-1',
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
         optimistic: true,
         returnPartialData: true,
       });
       expect(describeMissing(diff.missing)).toBe('none');
       expect(diff.complete).toBe(true);
+      // A create states every ingredient, so the list is counted and whole:
+      // adding all, copying and editing refuse one with pages left to read.
+      expect(diff.result?.recipe?.ingredientsConnection).toMatchObject({
+        totalCount: 1,
+        pageInfo: { hasNextPage: false, endCursor: null },
+      });
     });
   });
 

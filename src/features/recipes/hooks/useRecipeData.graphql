@@ -83,7 +83,10 @@ fragment useRecipeData_recipe on Recipe {
     email
     displayName
   }
-  ingredientsConnection {
+  # The page size is a VARIABLE: the server's cost rule multiplies a literal
+  # `first` into everything beneath it. Every selection of this field in one
+  # operation carries the same two arguments, or the document does not validate.
+  ingredientsConnection(first: $ingredientsFirst, after: $ingredientsAfter) {
     edges {
       node {
         id
@@ -118,5 +121,11 @@ fragment useRecipeData_recipe on Recipe {
         section
       }
     }
+    # A derived write reads every ingredient: it does not run on a first page.
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }

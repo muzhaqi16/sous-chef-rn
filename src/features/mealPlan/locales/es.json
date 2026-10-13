@@ -112,6 +112,7 @@
     "sharedSuffix": " (compartida con {{homeName}})",
     "generateFailed": "No se pudo generar la lista de la compra",
     "planNotLoaded": "Abre primero el plan de comidas para tener sus recetas.",
+    "recipeNotLoaded": "\"{{name}}\" tiene más ingredientes de los que se han cargado. Abre esa receta e inténtalo de nuevo.",
     "nothingToAdd": "Nada que añadir: este plan aún no tiene ingredientes de recetas.",
     "defaultName": "Lista de la compra para {{name}}",
     "someSkipped_one": "Se omitió {{count}} entrada porque su receta no está descargada.",

@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  type SeedWithFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   ForkRecipeDocument,
@@ -13,7 +14,10 @@ import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { t } from '#/i18n';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -79,13 +83,15 @@ const SOURCE = {
         },
       },
     ],
+    pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
+    totalCount: 1,
   },
 };
 
-const seedSource = () =>
+const seedSource = (source: SeedWithFragment['data'] = SOURCE) =>
   seedCache([
     {
-      data: SOURCE,
+      data: source,
       fragment: RecipeForm_RecipeFragmentDoc,
       fragmentName: 'RecipeForm_recipe',
     },
@@ -146,6 +152,46 @@ describe('useForkRecipe', () => {
 
     expect(id).toBeNull();
     expect(fork.fired).toHaveLength(0);
+  });
+
+  // The device writes the copy as a whole recipe, so one made from a first
+  // page would show, and later save, a short ingredient list.
+  it('refuses a source whose later ingredients are unread, without firing', async () => {
+    const fork = recordMock(ForkRecipeDocument, { data: { forkRecipe: null } });
+    const cache = seedSource({
+      ...SOURCE,
+      ingredientsConnection: {
+        ...SOURCE.ingredientsConnection,
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+        totalCount: 150,
+      },
+    });
+    const { result } = renderHookWithApollo(() => useForkRecipe(), {
+      cache,
+      operationMocks: [fork.mock],
+    });
+
+    let id: string | null = 'unset';
+    await act(async () => {
+      id = await result.current.forkRecipe('recipe-1');
+    });
+
+    expect(id).toBeNull();
+    expect(fork.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('recipes.ingredientsNotLoaded'),
+    );
+    // No copy was written either.
+    expect(
+      Object.keys(cache.extract()).filter(
+        key => key.startsWith('Recipe:') && key !== 'Recipe:recipe-1',
+      ),
+    ).toEqual([]);
   });
 
   it('returns null and drops the copy when the fork is rejected', async () => {
@@ -267,6 +313,7 @@ describe('usePublishRecipe', () => {
           status: RecipeStatus.Published,
           version: SOURCE.version,
         },
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       },
     ]);
   });

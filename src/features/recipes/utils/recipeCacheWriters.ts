@@ -110,6 +110,13 @@ function writeRecipeRow(
             section: ing.section ?? null,
           },
         })),
+        // A create states every ingredient: no page is left to read.
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
+        totalCount: input.ingredients.length,
       },
       reviewsConnection: {
         __typename: 'RecipeReviewConnection',

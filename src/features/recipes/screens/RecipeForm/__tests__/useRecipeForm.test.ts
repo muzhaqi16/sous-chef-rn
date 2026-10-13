@@ -17,6 +17,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+/** The cursor state of an ingredient list read to its end. */
+const READ_TO_THE_END: RecipeForm_RecipeFragment['ingredientsConnection']['pageInfo'] =
+  { __typename: 'PageInfo', hasNextPage: false, endCursor: null };
+
 describe('useRecipeForm', () => {
   it('initializes with default state', () => {
     const { result } = renderHook(() => useRecipeForm());
@@ -400,6 +404,8 @@ describe('useRecipeForm', () => {
             },
           },
         ],
+        pageInfo: READ_TO_THE_END,
+        totalCount: 1,
       },
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
@@ -422,6 +428,7 @@ describe('useRecipeForm', () => {
     expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);
     // A save sends the version it loaded, so an edit made since is refused.
     expect(result.current.buildUpdateInput().version).toBe(4);
+    expect(result.current.buildUpdateInput().ingredientsUnread).toBe(false);
   });
 
   it('populateFromRecipe handles { number, step } instruction format', () => {
@@ -452,6 +459,8 @@ describe('useRecipeForm', () => {
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [],
+        pageInfo: READ_TO_THE_END,
+        totalCount: 0,
       },
       instructions: [
         { number: 1, step: 'Boil the water' },
@@ -497,9 +506,16 @@ describe('useRecipeForm', () => {
       tips: null,
       originalAuthor: null,
       tags: ['live'],
+      // The live list is only partly read; the proposed one below is whole.
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [],
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+        totalCount: 150,
       },
       instructions: [{ text: 'Live step' }],
       notes: null,
@@ -574,6 +590,58 @@ describe('useRecipeForm', () => {
     ]);
     // The status is the recipe's own: a pending edit leaves it PUBLISHED.
     expect(result.current.state.status).toBe(RecipeStatus.Published);
+    // The form holds the proposed list, all of it, so its save may replace.
+    expect(result.current.buildUpdateInput().ingredientsUnread).toBe(false);
+  });
+
+  // A save replaces the whole list with the form's.
+  it('populateFromRecipe marks a recipe whose later pages of ingredients are unread', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-4',
+      version: 7,
+      name: 'Feast',
+      description: null,
+      imageUrl: null,
+      videoUrl: null,
+      servings: 12,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: Difficulty.Hard,
+      category: RecipeCategory.MainCourse,
+      cuisines: [],
+      status: RecipeStatus.Draft,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+        totalCount: 150,
+      },
+      instructions: [],
+      notes: null,
+      pendingRevision: null,
+    };
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+
+    expect(result.current.buildUpdateInput()).toEqual(
+      expect.objectContaining({ version: 7, ingredientsUnread: true }),
+    );
   });
 
   it('setDiets, setHealthGoals, setIntolerances update tags', () => {

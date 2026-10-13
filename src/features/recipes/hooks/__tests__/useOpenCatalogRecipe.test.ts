@@ -11,6 +11,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   useOpenCatalogRecipe,
   type CatalogRecipeHint,
@@ -62,6 +63,8 @@ describe('useOpenCatalogRecipe', () => {
           name: 'Pasta with Garlic',
           imageUrl: HINT.imageUrl,
         },
+        // The answer is what the detail screen reads, at the largest page.
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       },
     ]);
     expect(opened).toEqual({ opened: true, recipeId: 'recipe-1' });
@@ -78,9 +81,7 @@ describe('useOpenCatalogRecipe', () => {
 
     await open({ ...HINT, imageUrl }, [m.mock]);
 
-    expect(m.fired[0]).toEqual({
-      input: expect.objectContaining({ externalId: '716429' }),
-    });
+    expect(m.fired[0]).toMatchObject({ input: { externalId: '716429' } });
     expect(
       (m.fired[0]?.input as { imageUrl?: string } | undefined)?.imageUrl,
     ).toBeUndefined();
@@ -94,10 +95,8 @@ describe('useOpenCatalogRecipe', () => {
       [m.mock],
     );
 
-    expect(m.fired[0]).toEqual({
-      input: expect.objectContaining({
-        imageUrl: 'https://spoonacular.com/recipeImages/716429.jpg',
-      }),
+    expect(m.fired[0]).toMatchObject({
+      input: { imageUrl: 'https://spoonacular.com/recipeImages/716429.jpg' },
     });
   });
 
@@ -107,9 +106,7 @@ describe('useOpenCatalogRecipe', () => {
 
     await open({ ...HINT, name: 'a'.repeat(250) }, [m.mock]);
 
-    expect(m.fired[0]).toEqual({
-      input: expect.objectContaining({ name: 'a'.repeat(200) }),
-    });
+    expect(m.fired[0]).toMatchObject({ input: { name: 'a'.repeat(200) } });
   });
 
   it('reads a removed recipe as not found', async () => {

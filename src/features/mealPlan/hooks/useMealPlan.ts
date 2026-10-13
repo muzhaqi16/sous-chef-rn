@@ -6,6 +6,7 @@ import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
@@ -23,7 +24,13 @@ export function useMealPlan(id: string | null) {
     GetMealPlanDocument,
     !id || isUnconfirmed
       ? skipToken
-      : { variables: { id, mealsFirst: MEALS_PAGE_SIZE } },
+      : {
+          variables: {
+            id,
+            mealsFirst: MEALS_PAGE_SIZE,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        },
   );
 
   useApolloErrorLogger(GetMealPlanDocument, error);

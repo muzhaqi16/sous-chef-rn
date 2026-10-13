@@ -32,6 +32,7 @@ import {
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
@@ -453,7 +454,11 @@ describe('a meal removed elsewhere', () => {
     await settle();
     await waitFor(() =>
       expect(reRead.fired).toEqual([
-        { id: 'plan-1', mealsFirst: MEALS_PAGE_SIZE },
+        {
+          id: 'plan-1',
+          mealsFirst: MEALS_PAGE_SIZE,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
       ]),
     );
     await waitFor(() => expect(result.current.ids).toEqual(['meal-2']));

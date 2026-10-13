@@ -10,6 +10,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import {
@@ -52,7 +53,10 @@ export function usePublishRecipe() {
       () =>
         chainVersionedWrite(client.cache, entity, version =>
           mutate({
-            variables: { input: { id: recipeId, status, version } },
+            variables: {
+              input: { id: recipeId, status, version },
+              ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+            },
           }),
         ),
       {

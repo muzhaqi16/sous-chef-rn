@@ -247,6 +247,14 @@ The cart icon (or the settings sheet) opens `GenerateShoppingListSheet`: check p
 - pantry coverage uses the cache-only pantry read; with no cached pantry it is not
   checked and a toast says so.
 
+The derive runs on a WHOLE source only. A plan with unread pages of meals, or a recipe
+with unread pages of ingredients, is refused with a toast and nothing is sent.
+`GetMealPlan` reads each recipe's ingredients at the server's largest page
+(`RECIPE_INGREDIENTS_PAGE_SIZE`, `$ingredientsFirst`) and cannot page inside a recipe, so
+one holding more is whole once its detail screen has followed the cursor to the end:
+`Recipe.ingredientsConnection` is one cached list per recipe
+(`features/recipes/cache/typePolicies.ts`), whichever screen filled it.
+
 It then creates the list, writes optimistic rows, sends `AddDerivedItemsToShoppingList`,
 and for a new list `LinkDerivedListToMealPlan` — all local-first.
 

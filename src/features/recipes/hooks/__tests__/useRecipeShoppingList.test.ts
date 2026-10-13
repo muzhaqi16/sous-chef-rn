@@ -114,8 +114,11 @@ const ingredient = (
   ...overrides,
 });
 
-// Add-all reads only the recipe's ingredients.
-const recipeWith = (ingredients: DisplayIngredient[]): MaterializedRecipe =>
+// Add-all reads only the recipe's ingredients, and whether more are unread.
+const recipeWith = (
+  ingredients: DisplayIngredient[],
+  { hasNextPage = false }: { hasNextPage?: boolean } = {},
+): MaterializedRecipe =>
   ({
     id: 'recipe-1',
     ingredientsConnection: {
@@ -124,6 +127,12 @@ const recipeWith = (ingredients: DisplayIngredient[]): MaterializedRecipe =>
         __typename: 'RecipeIngredientEdge',
         node,
       })),
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage,
+        endCursor: hasNextPage ? 'cursor-next' : null,
+      },
+      totalCount: ingredients.length,
     },
   } as Partial<MaterializedRecipe> as MaterializedRecipe);
 
@@ -143,9 +152,15 @@ async function renderShopping({
   listIds?: string[];
 }) {
   const recipeId = withoutRecipeId ? undefined : 'recipe-1';
+  // The recipe is a prop, so a test can hand the hook a later read of it.
   const rendered = renderHookWithApollo(
-    () => useRecipeShoppingList({ recipeId, backendRecipe }),
-    { operationMocks: [shoppingListsMock(listIds), ...operationMocks], cache },
+    (recipe: MaterializedRecipe | null) =>
+      useRecipeShoppingList({ recipeId, backendRecipe: recipe }),
+    {
+      operationMocks: [shoppingListsMock(listIds), ...operationMocks],
+      cache,
+      initialProps: backendRecipe,
+    },
   );
   // Read off the cache, not the hook: no lists yet and no lists at all both
   // read as an empty array.
@@ -785,7 +800,7 @@ describe('useRecipeShoppingList — Add All', () => {
     ]);
   });
 
-  it('sends a recipe of 51 ingredients as two requests, 50 and 1', async () => {
+  it('sends a recipe of 51 ingredients read whole as two requests, 50 and 1', async () => {
     const itemsOf = (vars: Record<string, unknown>) =>
       inputOf(vars).items as { id: string }[];
     // Each request is answered for the rows IT carried, so the toast's count
@@ -826,6 +841,87 @@ describe('useRecipeShoppingList — Add All', () => {
     );
     expect(cachedTotal(cache)).toBe(51);
     expect(result.current.addedIngredients.size).toBe(51);
+  });
+
+  // Past the largest page a recipe arrives in two reads; the rows are derived
+  // on the device, so a first page alone would add a short list.
+  it('sends nothing for a recipe whose later ingredients are unread, and says why', async () => {
+    const addAll = queuedAdd();
+    const cache = makeCache();
+    const { result } = await renderShopping({
+      operationMocks: [addAll.mock],
+      cache,
+      backendRecipe: recipeWith(
+        [ingredient({ id: 'ing-1' }), ingredient({ id: 'ing-2' })],
+        { hasNextPage: true },
+      ),
+    });
+
+    await addAllTo(result);
+
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Not all of this recipe's ingredients have loaded yet. Pull down to refresh, then try again.",
+    );
+    // Refused before the picker: no list is picked or created for nothing.
+    expect(result.current.listPickerVisible).toBe(false);
+    expect(addAll.fired).toHaveLength(0);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(result.current.addedIngredients.size).toBe(0);
+    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedTotal(cache)).toBe(0);
+  });
+
+  it('sends nothing when a refresh leaves pages unread while the picker is open', async () => {
+    const addAll = queuedAdd();
+    const ingredients = [
+      ingredient({ id: 'ing-1' }),
+      ingredient({ id: 'ing-2' }),
+    ];
+    const { result, rerender } = await renderShopping({
+      operationMocks: [addAll.mock],
+      backendRecipe: recipeWith(ingredients),
+    });
+
+    act(() => {
+      result.current.handleAddAll();
+    });
+    expect(result.current.listPickerVisible).toBe(true);
+    // The recipe grew elsewhere and a refresh restated only its first page.
+    rerender(recipeWith(ingredients, { hasNextPage: true }));
+    await act(async () => {
+      result.current.handleListSelected('sl-1');
+    });
+
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(addAll.fired).toHaveLength(0);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('adds one ingredient of a recipe whose later ingredients are unread', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping({
+      operationMocks: [add.mock],
+      backendRecipe: recipeWith([ingredient({ id: 'ing-1' })], {
+        hasNextPage: true,
+      }),
+    });
+
+    await act(async () => {
+      await result.current.handleAddSingleIngredient(
+        ingredient({ id: 'ing-1' }),
+      );
+    });
+
+    expect(add.fired).toEqual([
+      {
+        input: {
+          shoppingListId: 'sl-1',
+          items: [sentRow('gen-id-1', 'ing-1')],
+        },
+      },
+    ]);
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('marks the rows of the request that landed when the next one is refused', async () => {

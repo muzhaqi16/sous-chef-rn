@@ -51,6 +51,12 @@ export function useForkRecipe() {
       toastService.error(t('recipes.forkSourceNotLoaded'));
       return null;
     }
+    // The device's copy is written as a whole recipe: one made from a first
+    // page would show, and later save, a short ingredient list.
+    if (source.ingredientsConnection.pageInfo.hasNextPage) {
+      toastService.error(t('recipes.ingredientsNotLoaded'));
+      return null;
+    }
 
     const id = generateEntityId();
     // Built before the try: a value block inside one bails the whole function

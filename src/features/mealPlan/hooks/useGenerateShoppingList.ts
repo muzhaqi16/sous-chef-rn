@@ -35,12 +35,32 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
   checkPantry?: boolean;
   name?: string;
   shoppingListId?: string;
+}
+
+/**
+ * Why a plan cannot be derived from, in the user's words: later pages of its
+ * meals, or of one recipe's ingredients, are unread, and the list would come
+ * out short. Null for a plan read to the end.
+ */
+function unreadSource(
+  plan: UseGenerateShoppingList_MealPlanFragment,
+): string | null {
+  if (plan.mealPlanItemsConnection.pageInfo.hasNextPage) {
+    return t('generateShoppingList.planNotLoaded');
+  }
+  const partlyRead = plan.mealPlanItemsConnection.edges
+    .map(meal => meal.node.recipe)
+    .find(recipe => recipe?.ingredientsConnection.pageInfo.hasNextPage);
+  return partlyRead
+    ? t('generateShoppingList.recipeNotLoaded', { name: partlyRead.name })
+    : null;
 }
 
 /**
@@ -107,7 +127,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const fetched = await client
       .query({
         query: GetMealPlanDocument,
-        variables: { id, mealsFirst: MEALS_PAGE_SIZE },
+        variables: {
+          id,
+          mealsFirst: MEALS_PAGE_SIZE,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
         fetchPolicy: 'network-only',
       })
       .catch(() => null);
@@ -127,21 +151,22 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   const generateShoppingList = async (
     options: GenerateShoppingListOptions = {},
   ) => {
-    // A plan whose later pages of meals are unread would derive a short list.
-    if (
-      !mealPlanId ||
-      !complete ||
-      plan.mealPlanItemsConnection.pageInfo.hasNextPage
-    ) {
+    if (!mealPlanId || !complete) {
       toastService.error(t('generateShoppingList.planNotLoaded'));
+      return null;
+    }
+    const unread = unreadSource(plan);
+    if (unread) {
+      toastService.error(unread);
       return null;
     }
 
     const source = await withLinkedIngredients(mealPlanId, plan);
-    // The re-read restates the first page; a plan that outgrew it meanwhile
-    // has unread meals again.
-    if (source.mealPlanItemsConnection.pageInfo.hasNextPage) {
-      toastService.error(t('generateShoppingList.planNotLoaded'));
+    // The re-read restates each first page; a plan or a recipe that outgrew
+    // its own meanwhile has unread rows again.
+    const unreadSince = unreadSource(source);
+    if (unreadSince) {
+      toastService.error(unreadSince);
       return null;
     }
 

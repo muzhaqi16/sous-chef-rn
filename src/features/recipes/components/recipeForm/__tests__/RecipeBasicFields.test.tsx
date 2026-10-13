@@ -101,6 +101,7 @@ const defaultState = {
   originalAuthor: '',
   tags: '',
   version: null,
+  ingredientsUnread: false,
 };
 
 beforeEach(() => {

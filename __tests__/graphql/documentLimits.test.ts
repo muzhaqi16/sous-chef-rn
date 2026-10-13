@@ -24,6 +24,11 @@
  * (400), and the request guard one over 20 000 characters. Both are measured on
  * the operation together with every fragment sent with it.
  *
+ * One cap reads the REQUEST, not the document: the page sizes along one nested
+ * path, variables resolved, multiply to at most 100 000
+ * (`utils/graphql/paginationLimits.ts`). A page inside a page is the product of
+ * both sizes, so a third level at the largest page does not fit.
+ *
  * ---
  * The rules and their defaults are the API's:
  * `packages/core/src/config/armorConfig.ts` (the rules, `MAX_DOCUMENT_TOKENS`),
@@ -32,6 +37,7 @@
  *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
  *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
+ *     MAX_NESTED_PAGINATION_PRODUCT=100000
  *
  * `countDepth` / `computeCost` below are ports of
  * `@escape.tech/graphql-armor-max-depth` and `-cost-limit`. To re-derive them,
@@ -57,6 +63,8 @@ import {
   type FragmentDefinitionNode,
   type OperationDefinitionNode,
 } from 'graphql';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 
 const SRC = resolve(__dirname, '..', '..', 'src');
 
@@ -73,6 +81,7 @@ const MAX_DOCUMENT_LENGTH = 20000;
 const OBJECT_COST = 1;
 const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
+const MAX_NESTED_PAGINATION_PRODUCT = 100000;
 
 function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -209,6 +218,60 @@ function computeCost(
   return cost;
 }
 
+const PAGE_ARGUMENTS = new Set(['limit', 'take', 'first', 'last']);
+
+/**
+ * Port of the path product in the API's `analyzeQueryStructure`
+ * (`utils/graphql/queryAnalysis.ts`): the largest product of page sizes along
+ * one nested path, with each variable at the value the app sends.
+ */
+function maxPageProduct(
+  node: ASTNode,
+  pageSizes: ReadonlyMap<string, number>,
+  product = 1,
+  open = new Set<string>(),
+): number {
+  let largest = product;
+  const selectionSet = 'selectionSet' in node ? node.selectionSet : undefined;
+  for (const child of selectionSet?.selections ?? []) {
+    if (child.kind === Kind.FRAGMENT_SPREAD) {
+      const name = child.name.value;
+      const fragment = fragments.get(name);
+      if (!fragment || open.has(name)) continue;
+      open.add(name);
+      largest = Math.max(
+        largest,
+        maxPageProduct(fragment, pageSizes, product, open),
+      );
+      open.delete(name);
+      continue;
+    }
+    let pageSize = 1;
+    if (child.kind === Kind.FIELD) {
+      for (const arg of child.arguments ?? []) {
+        if (!PAGE_ARGUMENTS.has(arg.name.value)) continue;
+        const stated =
+          arg.value.kind === Kind.INT
+            ? parseInt(arg.value.value)
+            : arg.value.kind === Kind.VARIABLE
+            ? pageSizes.get(arg.value.name.value)
+            : undefined;
+        if (stated === undefined) {
+          throw new Error(
+            `${arg.name.value} on ${child.name.value} has no page size stated here`,
+          );
+        }
+        pageSize = Math.max(pageSize, stated);
+      }
+    }
+    largest = Math.max(
+      largest,
+      maxPageProduct(child, pageSizes, product * pageSize, open),
+    );
+  }
+  return largest;
+}
+
 /** The operation as it is sent: itself and every fragment it reaches. */
 function sentDocument(def: OperationDefinitionNode): string {
   const reached = new Map<string, FragmentDefinitionNode>();
@@ -284,8 +347,9 @@ describe('HTTP document limits', () => {
 
   // GetMealPlan carries a fragment purely so a DERIVE can read it offline:
   // `useGenerateShoppingList_mealPlan` reaches an ingredient's item through the
-  // plan's meals connection, which puts the document AT the depth limit. Its
-  // page size is a variable; a literal `first: 100` would cost ~100× this.
+  // plan's meals connection, which puts the document AT the depth limit. Both
+  // page sizes, the plan's meals and each recipe's ingredients, are variables;
+  // a literal `first: 100` on either would cost ~100× this.
   // Pinned so a widening of either is deliberate.
   it('GetMealPlan stays at the depth and cost the derive fragment was placed for', () => {
     const plan = httpOperations.find(o => o.name === 'GetMealPlan');
@@ -294,7 +358,25 @@ describe('HTTP document limits', () => {
     expect({
       depth: countDepth(plan!.def),
       cost: Math.round(computeCost(plan!.def)),
-    }).toEqual({ depth: 10, cost: 221 });
+    }).toEqual({ depth: 10, cost: 232 });
+  });
+
+  // GetMealPlan pages each recipe's ingredients inside the page of meals: two
+  // levels at the largest page. Pinned so a third paged level is deliberate.
+  it('GetMealPlan nests its pages within the product the server allows', () => {
+    const plan = httpOperations.find(o => o.name === 'GetMealPlan');
+    expect(plan).toBeDefined();
+
+    const product = maxPageProduct(
+      plan!.def,
+      new Map([
+        ['mealsFirst', MEALS_PAGE_SIZE],
+        ['ingredientsFirst', RECIPE_INGREDIENTS_PAGE_SIZE],
+      ]),
+    );
+
+    expect(product).toBe(10000);
+    expect(product).toBeLessThanOrEqual(MAX_NESTED_PAGINATION_PRODUCT);
   });
 
   it.each(httpOperations.map(o => [o.name, o]))(
