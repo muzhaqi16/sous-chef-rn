@@ -77,6 +77,19 @@ describe('classifyReplayResult', () => {
     ).toEqual({ status: 'rejected', typename: 'ConflictError' });
   });
 
+  it('rejects a create whose minted id names a row the caller does not own', () => {
+    // The server answers a foreign client id as a plain CONFLICT. That is not
+    // the already-applied replay: the write is withdrawn and reported, and the
+    // id is not re-minted, since writes queued behind it already name it.
+    expect(
+      classifyReplayResult({
+        __typename: 'ConflictError',
+        code: 'CONFLICT',
+        message: 'A row with this id already exists',
+      }),
+    ).toEqual({ status: 'rejected', typename: 'ConflictError' });
+  });
+
   it('returns rejected for other error payloads', () => {
     for (const typename of [
       'ValidationError',
