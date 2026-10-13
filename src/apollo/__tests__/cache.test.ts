@@ -18,6 +18,7 @@ type Connection = {
   __typename: string;
   edges: Edge[];
   pageInfo: { __typename: string; hasNextPage: boolean; endCursor: string };
+  totalCount?: number | null;
 };
 type HomeConnectionResult = {
   home: { __typename: string; id: string; shoppingListsConnection: Connection };
@@ -2120,18 +2121,12 @@ describe('cache', () => {
   });
 
   describe('Recipe.ingredientsConnection merge', () => {
+    // One page is the whole list: a recipe holds no more than the page.
     const RECIPE_QUERY = gql`
-      query GetRecipe(
-        $id: ID!
-        $ingredientsFirst: Int!
-        $ingredientsAfter: String
-      ) {
+      query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
         recipe(id: $id) {
           id
-          ingredientsConnection(
-            first: $ingredientsFirst
-            after: $ingredientsAfter
-          ) {
+          ingredientsConnection(first: $ingredientsFirst) {
             edges {
               node {
                 id
@@ -2165,7 +2160,7 @@ describe('cache', () => {
         }
       }
     `;
-    // A meal plan reads each recipe's list at a page size, with no cursor.
+    // A meal plan reads each recipe's list through its own selection.
     const PLAN_INGREDIENTS_FRAGMENT = gql`
       fragment PlanIngredients on Recipe {
         id
@@ -2204,20 +2199,11 @@ describe('cache', () => {
     const writePage = (
       cache: InMemoryCache,
       ids: string[],
-      page: {
-        after?: string;
-        hasNextPage?: boolean;
-        endCursor?: string;
-        total?: number;
-      } = {},
+      page: { hasNextPage?: boolean; endCursor?: string; total?: number } = {},
     ) =>
       cache.writeQuery({
         query: RECIPE_QUERY,
-        variables: {
-          id: 'r1',
-          ingredientsFirst: 2,
-          ingredientsAfter: page.after,
-        },
+        variables: { id: 'r1', ingredientsFirst: 2 },
         data: {
           recipe: {
             __typename: 'Recipe',
@@ -2240,28 +2226,14 @@ describe('cache', () => {
     it('holds one list per recipe whatever arguments read it', () => {
       const cache = makeCache();
 
-      writePage(cache, ['ri-1', 'ri-2'], {
-        hasNextPage: true,
-        endCursor: 'cursor-2',
-        total: 3,
-      });
-      writePage(cache, ['ri-3'], {
-        after: 'cursor-2',
-        endCursor: 'cursor-3',
-        total: 3,
-      });
+      writePage(cache, ['ri-1', 'ri-2']);
 
       for (const fragment of [
         BARE_INGREDIENTS_FRAGMENT,
         PLAN_INGREDIENTS_FRAGMENT,
       ]) {
         const read = readWith(cache, fragment);
-        expect(read?.edges.map(edge => edge.node.id)).toEqual([
-          'ri-1',
-          'ri-2',
-          'ri-3',
-        ]);
-        // The last page's cursor state is the list's: nothing is left to read.
+        expect(read?.edges.map(edge => edge.node.id)).toEqual(['ri-1', 'ri-2']);
         expect(read?.pageInfo.hasNextPage).toBe(false);
       }
     });
@@ -2286,33 +2258,26 @@ describe('cache', () => {
       ).toEqual(['ri-local']);
     });
 
-    it('keeps the pages read past the first when a longer recipe restates its first page', () => {
+    // `hasNextPage` on the one page is what every derived write refuses on.
+    it('marks a cached recipe that a restated page finds over the limit', () => {
       const cache = makeCache();
 
-      writePage(cache, ['ri-1', 'ri-2'], {
-        hasNextPage: true,
-        endCursor: 'cursor-2',
-        total: 3,
-      });
-      writePage(cache, ['ri-3'], {
-        after: 'cursor-2',
-        endCursor: 'cursor-3',
-        total: 3,
-      });
-      // A write's answer and a meal plan's read both carry the first page only.
+      writePage(cache, ['ri-1', 'ri-2']);
+      // The recipe grew elsewhere; any read of it restates its one page.
       writePage(cache, ['ri-1', 'ri-2'], {
         hasNextPage: true,
         endCursor: 'cursor-2',
         total: 3,
       });
 
-      const read = readWith(cache, BARE_INGREDIENTS_FRAGMENT);
-      expect(read?.edges.map(edge => edge.node.id)).toEqual([
-        'ri-1',
-        'ri-2',
-        'ri-3',
-      ]);
-      expect(read?.pageInfo.hasNextPage).toBe(false);
+      for (const fragment of [
+        BARE_INGREDIENTS_FRAGMENT,
+        PLAN_INGREDIENTS_FRAGMENT,
+      ]) {
+        const read = readWith(cache, fragment);
+        expect(read?.edges.map(edge => edge.node.id)).toEqual(['ri-1', 'ri-2']);
+        expect(read?.pageInfo.hasNextPage).toBe(true);
+      }
     });
   });
 

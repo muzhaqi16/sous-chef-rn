@@ -22,11 +22,11 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
         servings
         recipe {
           id
-          # Names the recipe whose ingredients are only partly read.
+          # Names the recipe that is over the ingredient limit.
           name
           servings
-          # No cursor: a plan cannot page inside one of its recipes, so a recipe
-          # past this page is read to the end where it is opened.
+          # One page is the whole list: a recipe holds no more than it, and one
+          # that does is marked `hasNextPage` and refused.
           ingredientsConnection(first: $ingredientsFirst) {
             # The same count and cursor every reader of the recipe selects.
             pageInfo {

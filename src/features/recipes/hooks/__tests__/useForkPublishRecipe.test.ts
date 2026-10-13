@@ -16,7 +16,10 @@ import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
-import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 
 jest.mock('#/services/alertService', () => ({
@@ -154,9 +157,10 @@ describe('useForkRecipe', () => {
     expect(fork.fired).toHaveLength(0);
   });
 
-  // The device writes the copy as a whole recipe, so one made from a first
-  // page would show, and later save, a short ingredient list.
-  it('refuses a source whose later ingredients are unread, without firing', async () => {
+  // The device writes the copy as a whole recipe, and holds only the first
+  // page of one over the limit: its copy would show, and later save, a short
+  // ingredient list.
+  it('refuses a source over the ingredient limit, without firing', async () => {
     const fork = recordMock(ForkRecipeDocument, { data: { forkRecipe: null } });
     const cache = seedSource({
       ...SOURCE,
@@ -184,7 +188,7 @@ describe('useForkRecipe', () => {
     expect(fork.fired).toHaveLength(0);
     expect(toastService.error).toHaveBeenCalledTimes(1);
     expect(toastService.error).toHaveBeenCalledWith(
-      t('recipes.ingredientsNotLoaded'),
+      t('recipes.ingredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
     );
     // No copy was written either.
     expect(

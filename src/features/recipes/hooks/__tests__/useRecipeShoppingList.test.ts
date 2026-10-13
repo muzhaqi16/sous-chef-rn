@@ -114,7 +114,8 @@ const ingredient = (
   ...overrides,
 });
 
-// Add-all reads only the recipe's ingredients, and whether more are unread.
+// Add-all reads only the recipe's ingredients, and `hasNextPage`, which marks
+// a recipe over the ingredient limit.
 const recipeWith = (
   ingredients: DisplayIngredient[],
   { hasNextPage = false }: { hasNextPage?: boolean } = {},
@@ -843,9 +844,9 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(result.current.addedIngredients.size).toBe(51);
   });
 
-  // Past the largest page a recipe arrives in two reads; the rows are derived
-  // on the device, so a first page alone would add a short list.
-  it('sends nothing for a recipe whose later ingredients are unread, and says why', async () => {
+  // The device holds one page of a recipe over the limit, and the rows are
+  // derived on the device: that page alone would add a short list.
+  it('sends nothing for a recipe over the ingredient limit, and says why', async () => {
     const addAll = queuedAdd();
     const cache = makeCache();
     const { result } = await renderShopping({
@@ -861,7 +862,7 @@ describe('useRecipeShoppingList — Add All', () => {
 
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
-      "Not all of this recipe's ingredients have loaded yet. Pull down to refresh, then try again.",
+      "This recipe has more than 100 ingredients, so it can't be added or copied in full.",
     );
     // Refused before the picker: no list is picked or created for nothing.
     expect(result.current.listPickerVisible).toBe(false);
@@ -872,7 +873,7 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(cachedTotal(cache)).toBe(0);
   });
 
-  it('sends nothing when a refresh leaves pages unread while the picker is open', async () => {
+  it('sends nothing when a refresh finds the recipe over the limit while the picker is open', async () => {
     const addAll = queuedAdd();
     const ingredients = [
       ingredient({ id: 'ing-1' }),
@@ -887,7 +888,8 @@ describe('useRecipeShoppingList — Add All', () => {
       result.current.handleAddAll();
     });
     expect(result.current.listPickerVisible).toBe(true);
-    // The recipe grew elsewhere and a refresh restated only its first page.
+    // The recipe grew past the limit elsewhere, and a refresh restated its
+    // one page.
     rerender(recipeWith(ingredients, { hasNextPage: true }));
     await act(async () => {
       result.current.handleListSelected('sl-1');
@@ -898,7 +900,7 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
-  it('adds one ingredient of a recipe whose later ingredients are unread', async () => {
+  it('adds one ingredient of a recipe over the ingredient limit', async () => {
     const add = queuedAdd();
     const { result } = await renderShopping({
       operationMocks: [add.mock],

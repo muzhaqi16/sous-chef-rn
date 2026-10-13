@@ -14,7 +14,10 @@ import {
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
-import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 import { RecipeFormScreen } from '../index';
 
@@ -265,7 +268,9 @@ describe('RecipeFormScreen', () => {
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
-    it('sends nothing for a recipe whose later ingredients are unread, and says why', async () => {
+    // `hasNextPage` on the one page the form reads: the form holds part of
+    // the list, and no field of it can be fixed to make the save whole.
+    it('sends nothing for a recipe over the ingredient limit, and says why', async () => {
       const user = userEvent.setup();
       const { sent, getByTestId } = await renderEdit(true);
 
@@ -274,9 +279,71 @@ describe('RecipeFormScreen', () => {
       await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
       expect(alertService.alert).toHaveBeenCalledWith(
         t('labels.error'),
-        t('recipes.editIngredientsNotLoaded'),
+        t('recipes.editIngredientsOverLimit', {
+          count: MAX_RECIPE_INGREDIENTS,
+        }),
       );
       expect(sent).toEqual([]);
+    });
+
+    // A pending edit made elsewhere can propose more than the form allows.
+    it('reports a list over the ingredient limit on the ingredients section, not through an alert', async () => {
+      const user = userEvent.setup();
+      const update = recordMock(UpdateRecipeDocument, {
+        data: {
+          updateRecipe: {
+            __typename: 'UpdateRecipePayload',
+            recipe: { __typename: 'Recipe', id: 'recipe-1' },
+          },
+        },
+      });
+      const proposedCount = MAX_RECIPE_INGREDIENTS + 1;
+      const { getByTestId, findByText } = renderWithApollo(
+        <RecipeFormScreen {...editProps} />,
+        {
+          operationMocks: [
+            recordMock(GetRecipeDocument, {
+              data: {
+                recipe: {
+                  ...loadedRecipe(false).recipe,
+                  pendingRevision: {
+                    __typename: 'RecipeRevision',
+                    id: 'rev-1',
+                    proposed: {
+                      name: 'Feast',
+                      imageUrl: null,
+                      videoUrl: null,
+                      instructions: [{ step: 1, text: 'Cook' }],
+                      ingredients: Array.from(
+                        { length: proposedCount },
+                        (_, sortOrder) => ({
+                          name: `Ingredient ${sortOrder}`,
+                          quantity: 1,
+                          sortOrder,
+                        }),
+                      ),
+                    },
+                  },
+                },
+              },
+            }).mock,
+            update.mock,
+          ],
+        },
+      );
+      await waitFor(() =>
+        expect(getByTestId('ingredient-count')).toHaveTextContent(
+          String(proposedCount),
+        ),
+      );
+
+      await user.press(getByTestId('save-button'));
+
+      expect(
+        await findByText('A recipe can have at most 100 ingredients'),
+      ).toBeTruthy();
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(update.fired).toEqual([]);
     });
   });
 });

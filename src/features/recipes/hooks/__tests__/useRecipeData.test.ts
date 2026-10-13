@@ -32,7 +32,7 @@ const HINT: CatalogRecipeHint = {
 type IngredientsFixture = NonNullable<RecipeFixture['ingredientsConnection']>;
 type PageInfoFixture = NonNullable<IngredientsFixture['pageInfo']>;
 
-/** One page of a recipe's ingredients; read to the end unless stated. */
+/** A recipe's one page of ingredients; the whole list unless stated. */
 const ingredientsPage = (
   ids: string[],
   pageInfo: PageInfoFixture = { hasNextPage: false, endCursor: null },
@@ -248,7 +248,7 @@ describe('useRecipeData', () => {
     const shownIds = (result: { current: ReturnType<typeof useRecipeData> }) =>
       result.current.displayData?.ingredients.map(row => row.id);
 
-    it('reads a recipe that fits one page with one request, at the largest page', async () => {
+    it('reads a recipe with one request, at the largest page', async () => {
       const get = recordMock(GetRecipeDocument, {
         data: {
           recipe: authoredRecipe({
@@ -264,10 +264,10 @@ describe('useRecipeData', () => {
       ]);
     });
 
-    // "Add all", a copy and an edit all derive from this list.
-    it('follows the cursor, so a recipe past the first page is one whole list', async () => {
-      const first = recordMock(GetRecipeDocument, {
-        match: vars => vars.ingredientsAfter == null,
+    // "Add all", a copy and an edit all derive from this list, and refuse a
+    // recipe marked this way.
+    it('reads one page of a recipe over the ingredient limit and leaves it marked', async () => {
+      const get = recordMock(GetRecipeDocument, {
         data: {
           recipe: authoredRecipe({
             ingredientsConnection: ingredientsPage(
@@ -278,93 +278,29 @@ describe('useRecipeData', () => {
           }),
         },
       });
-      const second = recordMock(GetRecipeDocument, {
-        match: vars => vars.ingredientsAfter === 'cursor-2',
-        data: {
-          recipe: authoredRecipe({
-            ingredientsConnection: ingredientsPage(
-              ['i3'],
-              { hasNextPage: false, endCursor: 'cursor-3' },
-              3,
-            ),
-          }),
-        },
-      });
+      const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
 
-      const { result } = renderData({ recipeId: 'r1' }, [
-        first.mock,
-        second.mock,
-      ]);
-
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2', 'i3']));
-      expect(second.fired).toEqual([
-        {
-          id: 'r1',
-          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-          ingredientsAfter: 'cursor-2',
-        },
-      ]);
-      // Nothing is left to read: a derived write may run on this recipe.
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
       expect(
-        result.current.backendRecipe?.ingredientsConnection.pageInfo,
-      ).toMatchObject({ hasNextPage: false });
-    });
+        result.current.backendRecipe?.ingredientsConnection.pageInfo
+          .hasNextPage,
+      ).toBe(true);
 
-    it('keeps the page it read when a later one fails, and reads the rest on a pull', async () => {
-      const first = recordMock(GetRecipeDocument, {
-        match: vars => vars.ingredientsAfter == null,
-        data: {
-          recipe: authoredRecipe({
-            ingredientsConnection: ingredientsPage(
-              ['i1', 'i2'],
-              { hasNextPage: true, endCursor: 'cursor-2' },
-              3,
-            ),
-          }),
-        },
-      });
-      const failing = recordMock(GetRecipeDocument, {
-        match: vars => vars.ingredientsAfter === 'cursor-2',
-        error: new Error('network unavailable'),
-        maxUsageCount: 1,
-      });
-      const landing = recordMock(GetRecipeDocument, {
-        match: vars => vars.ingredientsAfter === 'cursor-2',
-        data: {
-          recipe: authoredRecipe({
-            ingredientsConnection: ingredientsPage(
-              ['i3'],
-              { hasNextPage: false, endCursor: 'cursor-3' },
-              3,
-            ),
-          }),
-        },
+      // A pull reads the same one page again: nothing follows the cursor.
+      await act(async () => {
+        await result.current.refetch();
       });
 
-      const { result } = renderData({ recipeId: 'r1' }, [
-        first.mock,
-        failing.mock,
-        landing.mock,
-      ]);
-      await waitFor(() => expect(failing.fired).toHaveLength(1));
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      // Still marked partly read, which is what the derived writes refuse on.
+      const onePage = {
+        id: 'r1',
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      };
+      expect(get.fired).toEqual([onePage, onePage]);
       expect(shownIds(result)).toEqual(['i1', 'i2']);
       expect(
         result.current.backendRecipe?.ingredientsConnection.pageInfo
           .hasNextPage,
       ).toBe(true);
-      expect(landing.fired).toHaveLength(0);
-
-      await act(async () => {
-        await result.current.refetch();
-      });
-
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2', 'i3']));
-      expect(
-        result.current.backendRecipe?.ingredientsConnection.pageInfo
-          .hasNextPage,
-      ).toBe(false);
     });
   });
 

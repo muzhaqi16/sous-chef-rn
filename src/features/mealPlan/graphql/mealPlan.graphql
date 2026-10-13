@@ -31,7 +31,8 @@ query GetMealPlans(
 
 # `$mealsFirst` is the server's largest page, so a plan of up to 100 meals is
 # one request; `$mealsAfter` follows `endCursor` for a longer one.
-# `$ingredientsFirst` is the same page for each meal's recipe.
+# `$ingredientsFirst` is the same page for each meal's recipe, which is the
+# most a recipe holds.
 query GetMealPlan(
   $id: ID!
   $mealsFirst: Int!

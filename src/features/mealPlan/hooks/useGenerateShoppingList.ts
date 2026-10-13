@@ -35,7 +35,10 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
-import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
@@ -46,8 +49,9 @@ export interface GenerateShoppingListOptions {
 
 /**
  * Why a plan cannot be derived from, in the user's words: later pages of its
- * meals, or of one recipe's ingredients, are unread, and the list would come
- * out short. Null for a plan read to the end.
+ * meals are unread, or one of its recipes is over the ingredient limit and
+ * holds only its first page, and the list would come out short. Null for a
+ * plan read to the end.
  */
 function unreadSource(
   plan: UseGenerateShoppingList_MealPlanFragment,
@@ -55,11 +59,14 @@ function unreadSource(
   if (plan.mealPlanItemsConnection.pageInfo.hasNextPage) {
     return t('generateShoppingList.planNotLoaded');
   }
-  const partlyRead = plan.mealPlanItemsConnection.edges
+  const overLimit = plan.mealPlanItemsConnection.edges
     .map(meal => meal.node.recipe)
     .find(recipe => recipe?.ingredientsConnection.pageInfo.hasNextPage);
-  return partlyRead
-    ? t('generateShoppingList.recipeNotLoaded', { name: partlyRead.name })
+  return overLimit
+    ? t('generateShoppingList.recipeOverLimit', {
+        name: overLimit.name,
+        count: MAX_RECIPE_INGREDIENTS,
+      })
     : null;
 }
 
@@ -162,8 +169,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     }
 
     const source = await withLinkedIngredients(mealPlanId, plan);
-    // The re-read restates each first page; a plan or a recipe that outgrew
-    // its own meanwhile has unread rows again.
+    // The re-read restates each first page: a plan that outgrew its own has
+    // unread meals again, and a recipe that did is over the ingredient limit.
     const unreadSince = unreadSource(source);
     if (unreadSince) {
       toastService.error(unreadSince);

@@ -326,7 +326,8 @@ export function useRecipeForm() {
       originalAuthor: content.originalAuthor ?? '',
       tags: content.tags.join(', '),
       version: recipe.version,
-      // A proposed edit carries its whole list; the live one arrives in pages.
+      // A proposed edit carries its whole list; the live one is one page, and
+      // `hasNextPage` marks a recipe over the ingredient limit.
       ingredientsUnread:
         !proposed && recipe.ingredientsConnection.pageInfo.hasNextPage,
     };

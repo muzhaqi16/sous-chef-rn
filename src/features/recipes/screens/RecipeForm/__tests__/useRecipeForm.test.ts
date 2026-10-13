@@ -1,6 +1,6 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import {
   Cuisine,
   Difficulty,
@@ -10,6 +10,7 @@ import {
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import { useRecipeForm } from '../useRecipeForm';
 import type { RecipeForm_RecipeFragment } from '../RecipeForm.generated';
 
@@ -17,7 +18,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-/** The cursor state of an ingredient list read to its end. */
+/** The cursor state of a whole ingredient list: a recipe within the limit. */
 const READ_TO_THE_END: RecipeForm_RecipeFragment['ingredientsConnection']['pageInfo'] =
   { __typename: 'PageInfo', hasNextPage: false, endCursor: null };
 
@@ -183,6 +184,71 @@ describe('useRecipeForm', () => {
       'At least one ingredient is required',
     );
     expect(result.current.errors.name).toBeUndefined();
+  });
+
+  // A recipe holds at most 100 ingredients.
+  describe('the ingredient limit', () => {
+    const fill = (
+      result: { current: ReturnType<typeof useRecipeForm> },
+      count: number,
+    ) => {
+      act(() => {
+        result.current.updateField('name', 'Test Recipe');
+        result.current.addStep('Cook');
+        for (let index = 0; index < count; index += 1) {
+          result.current.addIngredient({ name: `Ingredient ${index}` });
+        }
+      });
+    };
+
+    it('attaches the refusal of a 101st ingredient to `ingredients`', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS + 1);
+
+      await submit(result);
+
+      expect(result.current.state.ingredients).toHaveLength(101);
+      expect(result.current.errors.ingredients?.message).toBe(
+        'A recipe can have at most 100 ingredients',
+      );
+    });
+
+    it('raises nothing for exactly 100', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS);
+
+      await submit(result);
+
+      expect(result.current.state.ingredients).toHaveLength(100);
+      expect(result.current.errors).toEqual({});
+    });
+
+    // An ingredient change validates the list, so the message does not wait
+    // for a save, and goes once the list is back within the limit.
+    it('reports the 101st ingredient as it is added, and clears on a removal', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS);
+      await waitFor(() =>
+        expect(result.current.errors.ingredients).toBeUndefined(),
+      );
+
+      act(() => {
+        result.current.addIngredient({ name: 'One too many' });
+      });
+      await waitFor(() =>
+        expect(result.current.errors.ingredients?.message).toBe(
+          'A recipe can have at most 100 ingredients',
+        ),
+      );
+
+      const [first] = result.current.state.ingredients;
+      act(() => {
+        result.current.removeIngredient(first!.id);
+      });
+      await waitFor(() =>
+        expect(result.current.errors.ingredients).toBeUndefined(),
+      );
+    });
   });
 
   it('attaches the empty-list refusal to `steps`', async () => {
@@ -506,7 +572,8 @@ describe('useRecipeForm', () => {
       tips: null,
       originalAuthor: null,
       tags: ['live'],
-      // The live list is only partly read; the proposed one below is whole.
+      // The live recipe is over the ingredient limit, so the device holds part
+      // of its list; the proposed one below is whole.
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [],
@@ -594,8 +661,9 @@ describe('useRecipeForm', () => {
     expect(result.current.buildUpdateInput().ingredientsUnread).toBe(false);
   });
 
-  // A save replaces the whole list with the form's.
-  it('populateFromRecipe marks a recipe whose later pages of ingredients are unread', () => {
+  // A save replaces the whole list with the form's, which holds one page of a
+  // recipe over the limit.
+  it('populateFromRecipe marks a recipe over the ingredient limit', () => {
     const { result } = renderHook(() => useRecipeForm());
 
     const recipe: RecipeForm_RecipeFragment = {

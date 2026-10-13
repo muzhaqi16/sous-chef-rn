@@ -57,7 +57,8 @@ export interface RecipeFormState {
   tags: string;
   // The version the form loaded; null for a new recipe.
   version: number | null;
-  // The form loaded a first page of the ingredients, which a save would
-  // replace the whole list with; false for a new recipe.
+  // The recipe is over the ingredient limit, so the form loaded only the first
+  // page of its ingredients, which a save would replace the whole list with;
+  // false for a new recipe.
   ingredientsUnread: boolean;
 }

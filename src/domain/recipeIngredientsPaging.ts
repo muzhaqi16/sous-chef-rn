@@ -1,7 +1,11 @@
 /**
- * The server's largest page. A recipe's ingredients are read at it, so anything
- * up to a hundred is one request; a recipe may hold two hundred, and its detail
- * follows the cursor. Sent as a variable: the server's cost rule multiplies a
- * literal `first` into the selection beneath it.
+ * A recipe holds at most this many ingredients. It is also the server's largest
+ * page, so one read is the whole list.
  */
-export const RECIPE_INGREDIENTS_PAGE_SIZE = 100;
+export const MAX_RECIPE_INGREDIENTS = 100;
+
+/**
+ * Sent as a variable: the server's cost rule multiplies a literal `first` into
+ * the selection beneath it.
+ */
+export const RECIPE_INGREDIENTS_PAGE_SIZE = MAX_RECIPE_INGREDIENTS;

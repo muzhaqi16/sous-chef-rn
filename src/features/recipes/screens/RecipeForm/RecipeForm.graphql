@@ -24,9 +24,9 @@ fragment RecipeForm_recipe on Recipe {
   originalAuthor
   tags
   instructions
-  # The same two arguments as every other selection of this field in the
-  # operations that spread this fragment.
-  ingredientsConnection(first: $ingredientsFirst, after: $ingredientsAfter) {
+  # The same argument as every other selection of this field in the operations
+  # that spread this fragment.
+  ingredientsConnection(first: $ingredientsFirst) {
     edges {
       node {
         id
@@ -51,7 +51,7 @@ fragment RecipeForm_recipe on Recipe {
       }
     }
     # A save replaces the whole list, and a copy takes all of it: neither runs
-    # on a first page alone.
+    # on a recipe over the ingredient limit, which `hasNextPage` marks.
     pageInfo {
       hasNextPage
       endCursor

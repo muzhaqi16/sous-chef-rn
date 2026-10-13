@@ -112,7 +112,7 @@
     "sharedSuffix": " (shared with {{homeName}})",
     "generateFailed": "Failed to generate shopping list",
     "planNotLoaded": "Open the meal plan first so its recipes are available.",
-    "recipeNotLoaded": "\"{{name}}\" has more ingredients than have loaded. Open that recipe, then try again.",
+    "recipeOverLimit": "\"{{name}}\" has more than {{count}} ingredients, so it can't be added to a shopping list in full.",
     "nothingToAdd": "Nothing to add — this plan has no recipe ingredients yet.",
     "defaultName": "Shopping list for {{name}}",
     "someSkipped_one": "{{count}} entry was left out because its recipe is not downloaded.",

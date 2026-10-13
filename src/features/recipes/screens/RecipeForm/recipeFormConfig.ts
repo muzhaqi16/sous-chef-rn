@@ -1,6 +1,7 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
 import type { TranslationKey } from '#/i18n';
 import { lazyMessage } from '#/utils/validation/common';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeStatus,
   type Cuisine,
@@ -105,6 +106,12 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
   ingredients: array()
     .of(ingredientSchema)
     .min(1, lazyMessage('recipes.ingredientRequired'))
+    .max(
+      MAX_RECIPE_INGREDIENTS,
+      lazyMessage('recipes.ingredientsTooMany', {
+        count: MAX_RECIPE_INGREDIENTS,
+      }),
+    )
     .defined(),
   // The API bounds every JSON-scalar input at 64 KiB serialized, 8 levels deep
   // and 1,000 items at any depth, and `instructions` is the one this app sends.

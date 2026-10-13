@@ -49,7 +49,10 @@ import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/
 import { useStore } from '#store';
 import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
-import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
@@ -78,7 +81,10 @@ const ingredient = (id: string, itemId: string, quantity: number) => ({
 
 const RECIPE_NAME = 'Sunday Stew';
 
-/** A recipe's ingredient lines as one cached list; read to the end unless stated. */
+/**
+ * A recipe's ingredient lines as one cached list: whole unless the recipe is
+ * over the ingredient limit, which `hasNextPage` marks.
+ */
 const ingredientsOf = (
   ingredients: unknown[],
   hasNextPage: boolean = false,
@@ -97,7 +103,7 @@ const ingredientsOf = (
 const recipeMeal = (
   ingredients: unknown[],
   servings: number = 4,
-  { ingredientsUnread = false }: { ingredientsUnread?: boolean } = {},
+  { overLimit = false }: { overLimit?: boolean } = {},
 ) => ({
   __typename: 'MealPlanItem',
   id: 'mpi-1',
@@ -107,7 +113,7 @@ const recipeMeal = (
     id: 'recipe-1',
     name: RECIPE_NAME,
     servings: 2,
-    ingredientsConnection: ingredientsOf(ingredients, ingredientsUnread),
+    ingredientsConnection: ingredientsOf(ingredients, overLimit),
   },
 });
 
@@ -285,9 +291,9 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(toastService.success).not.toHaveBeenCalled();
   });
 
-  // The plan reads one page of each recipe's ingredients and cannot page
-  // inside a recipe, so a longer one is whole only once it has been opened.
-  it('refuses a plan with a recipe whose later ingredients are unread, without firing anything', async () => {
+  // One page is all a recipe holds, so one that answers `hasNextPage` is over
+  // the ingredient limit and the device has only part of it.
+  it('refuses a plan with a recipe over the ingredient limit, without firing anything', async () => {
     const create = createMock();
     const add = addMock();
     const link = linkMock();
@@ -303,7 +309,7 @@ describe('generating a shopping list from a cached meal plan', () => {
                 ingredient('ri-2', 'item-2', 1),
               ],
               4,
-              { ingredientsUnread: true },
+              { overLimit: true },
             ),
           ]),
         ),
@@ -319,9 +325,9 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(add.fired).toHaveLength(0);
     expect(link.fired).toHaveLength(0);
     expect(toastService.error).toHaveBeenCalledTimes(1);
-    // Names the recipe, which is the one the user has to open.
+    // Names the recipe and the limit: no refresh brings the rest in.
     expect(toastService.error).toHaveBeenCalledWith(
-      t('generateShoppingList.recipeNotLoaded', { name: RECIPE_NAME }),
+      `"${RECIPE_NAME}" has more than 100 ingredients, so it can't be added to a shopping list in full.`,
     );
     expect(toastService.success).not.toHaveBeenCalled();
   });
@@ -397,7 +403,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         planOf([recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked])]),
       );
     // The server's answer, now linked, in the shape GetMealPlan selects.
-    const planMock = ({ ingredientsUnread = false } = {}) =>
+    const planMock = ({ overLimit = false } = {}) =>
       recordMock(GetMealPlanDocument, {
         data: {
           mealPlan: {
@@ -422,8 +428,8 @@ describe('generating a shopping list from a cached meal plan', () => {
                       ingredientsConnection: {
                         __typename: 'RecipeIngredientConnection',
                         pageInfo: {
-                          hasNextPage: ingredientsUnread,
-                          endCursor: ingredientsUnread ? 'cursor-next' : null,
+                          hasNextPage: overLimit,
+                          endCursor: overLimit ? 'cursor-next' : null,
                         },
                         totalCount: 2,
                         edges: [
@@ -501,8 +507,8 @@ describe('generating a shopping list from a cached meal plan', () => {
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
     });
 
-    // The re-read restates a recipe's first page.
-    it('refuses when the re-read finds the recipe has outgrown its page', async () => {
+    // The re-read restates a recipe's one page.
+    it('refuses when the re-read finds the recipe grown past the ingredient limit', async () => {
       const create = createMock();
       const add = addMock();
 
@@ -510,7 +516,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         () => useGenerateShoppingList(PLAN_ID),
         {
           operationMocks: [
-            planMock({ ingredientsUnread: true }).mock,
+            planMock({ overLimit: true }).mock,
             create.mock,
             add.mock,
             linkMock().mock,
@@ -527,7 +533,10 @@ describe('generating a shopping list from a cached meal plan', () => {
       expect(create.fired).toHaveLength(0);
       expect(add.fired).toHaveLength(0);
       expect(toastService.error).toHaveBeenCalledWith(
-        t('generateShoppingList.recipeNotLoaded', { name: RECIPE_NAME }),
+        t('generateShoppingList.recipeOverLimit', {
+          name: RECIPE_NAME,
+          count: MAX_RECIPE_INGREDIENTS,
+        }),
       );
     });
 

@@ -29,6 +29,7 @@ import {
   recipeShoppingRows,
   type RecipeShoppingRow,
 } from '#features/recipes/utils/recipeShoppingRows';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
@@ -260,12 +261,15 @@ export function useRecipeShoppingList({
     );
   };
 
-  // A recipe whose later pages of ingredients are unread would add a short list.
-  const refusesUnreadIngredients = (): boolean => {
+  // `hasNextPage` marks a recipe over the ingredient limit: the device holds
+  // only its first page, which would add a short list.
+  const refusesRecipeOverLimit = (): boolean => {
     if (!backendRecipe?.ingredientsConnection.pageInfo.hasNextPage) {
       return false;
     }
-    toastService.error(t('recipes.ingredientsNotLoaded'));
+    toastService.error(
+      t('recipes.ingredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
+    );
     return true;
   };
 
@@ -278,8 +282,9 @@ export function useRecipeShoppingList({
       toastService.error(t('recipes.shoppingListNotFound'));
       return;
     }
-    // Asked again: a refresh can restate a first page while the picker is open.
-    if (refusesUnreadIngredients()) return;
+    // Asked again: a refresh while the picker is open can find the recipe grown
+    // past the limit.
+    if (refusesRecipeOverLimit()) return;
     void executeWithLoadingState(
       async () => {
         const rows =
@@ -340,7 +345,7 @@ export function useRecipeShoppingList({
   // Entry point from the recipe ingredient list "Add All" button. Refused
   // before the picker opens, so no list is picked or created for nothing.
   const handleAddAll = () => {
-    if (refusesUnreadIngredients()) return;
+    if (refusesRecipeOverLimit()) return;
     openListPicker({ type: 'all' });
   };
 

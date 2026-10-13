@@ -4,8 +4,8 @@ import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
 
 /**
  * A recipe merges field-wise; `recipes` keys on the whole `filters` input, so each filter set keeps its own entry.
- * A recipe's ingredients are ONE list whatever page was asked for, merged by
- * node id: a second page appends, and every local writer sees the whole list.
+ * A recipe's ingredients are ONE list whatever arguments read it: a selection
+ * that names a page size and a local writer that names none hold the same rows.
  *
  * Merged into the cache by `makeCache()`, which throws rather than let two
  * features silently overwrite each other on the same field.

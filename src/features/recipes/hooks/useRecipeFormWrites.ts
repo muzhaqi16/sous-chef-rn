@@ -32,13 +32,17 @@ import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 
 /**
  * An edit's fields with what the FORM read: an edit is judged against what the
  * editor was looking at, not against whatever the cache holds by the time they
  * save. `version` is null until the recipe has loaded into the form;
- * `ingredientsUnread` says the form holds only a first page of the ingredients.
+ * `ingredientsUnread` says the recipe is over the ingredient limit, so the form
+ * holds only the first page of its ingredients.
  */
 export type RecipeUpdateFields = Omit<UpdateRecipeInput, 'id' | 'version'> & {
   version: number | null;
@@ -154,8 +158,8 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
 
   /**
    * The fields and the ingredient list in one write under the version: both
-   * land or neither does. The list REPLACES the recipe's, so a form holding a
-   * first page of it sends nothing.
+   * land or neither does. The list REPLACES the recipe's, so the form of a
+   * recipe over the ingredient limit, which holds part of it, sends nothing.
    */
   const updateRecipe = async (
     id: string,
@@ -166,7 +170,9 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         code: null,
         field: null,
         title: t('labels.error'),
-        body: t('recipes.editIngredientsNotLoaded'),
+        body: t('recipes.editIngredientsOverLimit', {
+          count: MAX_RECIPE_INGREDIENTS,
+        }),
       });
     }
     const settled = await settleMutation(

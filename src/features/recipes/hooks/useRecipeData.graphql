@@ -85,8 +85,8 @@ fragment useRecipeData_recipe on Recipe {
   }
   # The page size is a VARIABLE: the server's cost rule multiplies a literal
   # `first` into everything beneath it. Every selection of this field in one
-  # operation carries the same two arguments, or the document does not validate.
-  ingredientsConnection(first: $ingredientsFirst, after: $ingredientsAfter) {
+  # operation carries the same argument, or the document does not validate.
+  ingredientsConnection(first: $ingredientsFirst) {
     edges {
       node {
         id
@@ -121,7 +121,8 @@ fragment useRecipeData_recipe on Recipe {
         section
       }
     }
-    # A derived write reads every ingredient: it does not run on a first page.
+    # `hasNextPage` marks a recipe over the ingredient limit: a derived write
+    # reads every ingredient, so it does not run on one.
     pageInfo {
       hasNextPage
       endCursor

@@ -247,13 +247,17 @@ The cart icon (or the settings sheet) opens `GenerateShoppingListSheet`: check p
 - pantry coverage uses the cache-only pantry read; with no cached pantry it is not
   checked and a toast says so.
 
-The derive runs on a WHOLE source only. A plan with unread pages of meals, or a recipe
-with unread pages of ingredients, is refused with a toast and nothing is sent.
-`GetMealPlan` reads each recipe's ingredients at the server's largest page
-(`RECIPE_INGREDIENTS_PAGE_SIZE`, `$ingredientsFirst`) and cannot page inside a recipe, so
-one holding more is whole once its detail screen has followed the cursor to the end:
+The derive runs on a WHOLE source only. A plan with unread pages of meals is refused with
+a toast and nothing is sent, and so is a plan holding a recipe over the ingredient limit.
+A recipe has at most 100 ingredients (`MAX_RECIPE_INGREDIENTS`,
+`domain/recipeIngredientsPaging.ts`), which is also the server's largest page, so
+`GetMealPlan` reads each recipe's list whole in one page (`$ingredientsFirst`) and nothing
+pages inside a recipe. The recipe form refuses a 101st ingredient on the field. A recipe
+that is over the limit all the same (an imported one, or one saved by another client)
+answers `pageInfo.hasNextPage: true`; the generator, "Add all", a copy and the edit form's
+save each refuse it and say so, the generator naming the recipe.
 `Recipe.ingredientsConnection` is one cached list per recipe
-(`features/recipes/cache/typePolicies.ts`), whichever screen filled it.
+(`features/recipes/cache/typePolicies.ts`), whichever selection filled it.
 
 It then creates the list, writes optimistic rows, sends `AddDerivedItemsToShoppingList`,
 and for a new list `LinkDerivedListToMealPlan` — all local-first.

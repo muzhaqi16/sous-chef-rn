@@ -80,9 +80,9 @@ describe('useRecipeFormWrites.updateRecipe', () => {
     ]);
   });
 
-  // The list REPLACES the recipe's: a form holding one page of it would remove
-  // every ingredient past that page.
-  it('sends nothing for a form that loaded a first page of the ingredients, and says why', async () => {
+  // The list REPLACES the recipe's: the form of a recipe over the limit holds
+  // one page of it, and would remove every ingredient past that page.
+  it('sends nothing for the form of a recipe over the ingredient limit, and says why', async () => {
     const update = recordMock(UpdateRecipeDocument, {
       data: {
         updateRecipe: {
@@ -107,7 +107,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
         code: null,
         field: null,
         title: t('labels.error'),
-        body: t('recipes.editIngredientsNotLoaded'),
+        body: "This recipe has more than 100 ingredients, so it can't be saved in full. Nothing was changed.",
       },
     });
     expect(update.fired).toEqual([]);
