@@ -637,6 +637,18 @@ const overrides = [
     },
   },
   {
+    // The wrapper that re-reads the animated theme on reveal, and its test.
+    files: [
+      'src/hooks/ui/useAnimatedTheme.ts',
+      'src/hooks/ui/__tests__/useAnimatedTheme.test.tsx',
+    ],
+    rules: {
+      'no-restricted-imports': restrictedImports({
+        allow: { 'react-native-unistyles/reanimated': ['useAnimatedTheme'] },
+      }),
+    },
+  },
+  {
     // An inline style in a fixture describes the input rather than shipping a
     // literal.
     files: ['**/__tests__/**/*.tsx', '**/*.test.tsx', '**/__perf__/**/*.tsx'],
