@@ -54,8 +54,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     }
   }
   source {
-    isAutoAdded
-    autoAddReason
+    addedContext
     isFromMealPlan
   }
   addedBy {

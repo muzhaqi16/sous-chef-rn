@@ -16,7 +16,7 @@ import {
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
+import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
@@ -381,23 +381,33 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
     );
   });
 
-  it('folds a merged single ingredient line into the row the server kept', () => {
-    reconcileReplaySuccess(
-      operationNameOf(CreateShoppingListItemFromRecipeIngredientDocument),
-      {
-        input: {
+  // A single ingredient is a batch of one, so it replays through the same door.
+  const oneIngredient = {
+    input: {
+      shoppingListId: 'list-1',
+      items: [
+        {
           id: 'minted-1',
-          shoppingListId: 'list-1',
-          recipeIngredientId: 'ri-1',
+          item: { itemName: 'Flour' },
+          recipeContext: { recipeId: 'recipe-1', recipeIngredientId: 'ri-1' },
         },
-      },
-      {
-        createShoppingListItemFromRecipeIngredient: {
-          __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
-          wasUpdated: true,
-          shoppingListItem: { id: 'existing-row' },
-        },
-      },
+      ],
+    },
+  };
+  const answeredWith = (outcome: CreateOutcome, item: object) => ({
+    addItemsToShoppingList: {
+      __typename: 'AddItemsToShoppingListPayload',
+      results: [{ index: 0, success: true, outcome, item }],
+    },
+  });
+
+  it('folds a merged single ingredient line into the row the server kept', () => {
+    const adopt = jest.fn();
+    reconcileReplaySuccess(
+      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
+      oneIngredient,
+      answeredWith(CreateOutcome.Merged, { id: 'existing-row', version: 4 }),
+      adopt,
     );
 
     expect(withdrawShoppingListItems).toHaveBeenCalledWith(
@@ -412,22 +422,30 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
       expect.objectContaining({ id: 'existing-row' }),
       false,
     );
+    // Writes still queued against the minted id move to the row it merged into.
+    expect(adopt).toHaveBeenCalledWith({
+      mintedId: 'minted-1',
+      survivingId: 'existing-row',
+      version: 4,
+    });
   });
 
   it('leaves a single ingredient line the server created under its id', () => {
+    const adopt = jest.fn();
     reconcileReplaySuccess(
-      operationNameOf(CreateShoppingListItemFromRecipeIngredientDocument),
-      { input: { id: 'minted-1', shoppingListId: 'list-1' } },
-      {
-        createShoppingListItemFromRecipeIngredient: {
-          __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
-          shoppingListItem: { id: 'minted-1' },
-        },
-      },
+      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
+      oneIngredient,
+      answeredWith(CreateOutcome.Created, { id: 'minted-1' }),
+      adopt,
     );
 
-    expect(withdrawShoppingListItems).not.toHaveBeenCalled();
+    // Whatever the reconciler was handed to withdraw, it names no row.
+    const withdrawnIds = jest
+      .mocked(withdrawShoppingListItems)
+      .mock.calls.flatMap(([, , ids]) => ids);
+    expect(withdrawnIds).toEqual([]);
     expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
+    expect(adopt).not.toHaveBeenCalled();
   });
 });
 

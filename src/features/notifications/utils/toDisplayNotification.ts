@@ -53,6 +53,12 @@ export interface DisplayNotification {
   expiresAt?: string | null;
   sourceId?: string | null;
   sourceType?: string | null;
+  /**
+   * The pantry stack the server names for this notification NOW: it follows a
+   * merge, and null says there is none. Absent only on a notification built
+   * before the field existed.
+   */
+  pantryItemId?: string | null;
   actionUrl?: string | null;
   readAt?: string | null;
   isRead: boolean;
@@ -99,6 +105,7 @@ export function toDisplayNotification(
     expiresAt: n.expiresAt,
     sourceId: n.sourceId,
     sourceType: n.sourceType,
+    pantryItemId: n.pantryItemId,
     actionUrl: n.actionUrl,
     readAt: n.readAt,
     isRead: !UNREAD_STATUSES.includes(n.status),

@@ -24,20 +24,35 @@ const PLAN_ID = 'plan-1';
 const MINTED_ID = 'minted-meal-1';
 const SERVER_ID = 'server-meal-1';
 
+// Selected with its paging arguments, as every reader of a loaded plan does.
 const PLAN_MEALS = gql`
   fragment TestPlanMeals on MealPlan {
     id
-    mealPlanItems {
-      id
-      date
+    mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+      edges {
+        node {
+          id
+          date
+          version
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 `;
 
-const meal = (id: string) => ({
+type PlanMeals = {
+  mealPlanItemsConnection: { edges: Array<{ node: { id: string } }> };
+};
+
+const meal = (id: string, version: number = 1) => ({
   __typename: 'MealPlanItem',
   id,
   date: '2026-09-29',
+  version,
 });
 
 const seedPlan = (mealIds: string[]): InMemoryCache => {
@@ -48,7 +63,18 @@ const seedPlan = (mealIds: string[]): InMemoryCache => {
     data: {
       __typename: 'MealPlan',
       id: PLAN_ID,
-      mealPlanItems: mealIds.map(meal),
+      mealPlanItemsConnection: {
+        __typename: 'MealPlanItemConnection',
+        edges: mealIds.map(id => ({
+          __typename: 'MealPlanItemEdge',
+          node: meal(id),
+        })),
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
+      },
     },
   });
   return cache;
@@ -56,11 +82,14 @@ const seedPlan = (mealIds: string[]): InMemoryCache => {
 
 const planMealIds = (cache: InMemoryCache) =>
   cache
-    .readFragment<{ mealPlanItems: Array<{ id: string }> }>({
+    .readFragment<PlanMeals>({
       id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
       fragment: PLAN_MEALS,
     })
-    ?.mealPlanItems.map(({ id }) => id);
+    ?.mealPlanItemsConnection.edges.map(({ node }) => node.id);
+
+/** The version the server's own row is at: another device made and edited it. */
+const SERVER_VERSION = 4;
 
 /** What a replay's normalization writes before the reconciler runs. */
 const writeServerMeal = (cache: InMemoryCache) =>
@@ -70,18 +99,19 @@ const writeServerMeal = (cache: InMemoryCache) =>
       fragment TestServerMeal on MealPlanItem {
         id
         date
+        version
       }
     `,
-    data: meal(SERVER_ID),
+    data: meal(SERVER_ID, SERVER_VERSION),
   });
 
 const createVariables = {
   input: { id: MINTED_ID, mealPlanId: PLAN_ID, date: '2026-09-29' },
 };
-const createdAs = (id: string) => ({
+const createdAs = (id: string, version: number = SERVER_VERSION) => ({
   createMealPlanItem: {
     __typename: 'CreateMealPlanItemPayload',
-    mealPlanItem: { __typename: 'MealPlanItem', id },
+    mealPlanItem: { __typename: 'MealPlanItem', id, version },
   },
 });
 
@@ -133,7 +163,7 @@ describe('a replayed meal create the server converged onto a held meal', () => {
     reconcileCreateMealPlanItemReplay(
       cache,
       createVariables,
-      createdAs(MINTED_ID),
+      createdAs(MINTED_ID, 1),
       adopt,
     );
 
@@ -141,7 +171,9 @@ describe('a replayed meal create the server converged onto a held meal', () => {
     expect(adopt).not.toHaveBeenCalled();
   });
 
-  it('moves the writes queued against the minted meal onto the kept one', () => {
+  // An edit queued behind the create states the minted row's version; the row
+  // it now lands on is at its own, and `updateMealPlanItem` refuses a stale one.
+  it('moves the writes queued against the minted meal onto the kept one, at its version', () => {
     const cache = seedPlan([MINTED_ID]);
     writeServerMeal(cache);
     const adopt = jest.fn();
@@ -156,7 +188,7 @@ describe('a replayed meal create the server converged onto a held meal', () => {
     expect(adopt).toHaveBeenCalledWith({
       mintedId: MINTED_ID,
       survivingId: SERVER_ID,
-      version: undefined,
+      version: SERVER_VERSION,
     });
   });
 });
@@ -242,6 +274,7 @@ describe.each([
           __typename: 'Mutation',
           deleteMealPlan: {
             __typename: 'DeleteMealPlanPayload',
+            converged: false,
             mealPlan: { __typename: 'MealPlan', id },
           },
         } satisfies DeleteMealPlanMutation,
@@ -263,6 +296,7 @@ describe.each([
           __typename: 'Mutation',
           deleteMealTemplate: {
             __typename: 'DeleteMealTemplatePayload',
+            converged: false,
             mealTemplate: { __typename: 'MealTemplate', id },
           },
         } satisfies DeleteMealTemplateMutation,

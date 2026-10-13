@@ -1,8 +1,13 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { t } from '#/i18n';
 import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
+  type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import {
@@ -113,6 +118,7 @@ const DEFAULT_HOME_DATA = {
           node: {
             __typename: 'Membership',
             id: 'm-1',
+            version: 3,
             homeId: 'home-1',
             userId: 'user-1',
             role: 'OWNER',
@@ -421,9 +427,45 @@ describe('useHomeDetailManagement', () => {
     });
   });
 
-  describe('updateMemberPermission', () => {
-    it('fires updateMembership with the single permission override', async () => {
-      const perm = recordMock(UpdateMembershipDocument, {
+  // `updateMembership` requires the version read: the server refuses a stale
+  // one, so each write states what the cache holds for that membership.
+  describe('a membership write', () => {
+    const READ_MEMBERSHIP = gql`
+      fragment _readMembership on Membership {
+        id
+        version
+        role
+        canAddItems
+      }
+    `;
+    const readMembership = (cache: ReturnType<typeof makeCache>, id: string) =>
+      cache.readFragment<{
+        version: number;
+        role: MembershipRole;
+        canAddItems: boolean;
+      }>({ id: `Membership:${id}`, fragment: READ_MEMBERSHIP });
+
+    /** Answers with the membership as written, one version on. */
+    const appliedMock = () =>
+      recordMock(UpdateMembershipDocument, {
+        dataFor: (vars): MockDataFor<typeof UpdateMembershipDocument> => {
+          const { id, version, ...written } = inputOf(vars);
+          return {
+            updateMembership: {
+              __typename: 'UpdateMembershipPayload',
+              membership: {
+                __typename: 'Membership',
+                id: String(id),
+                version: Number(version) + 1,
+                ...written,
+              },
+            },
+          };
+        },
+      });
+
+    const refusedMock = () =>
+      recordMock(UpdateMembershipDocument, {
         data: {
           updateMembership: {
             __typename: 'ForbiddenError',
@@ -432,19 +474,171 @@ describe('useHomeDetailManagement', () => {
           },
         },
       });
-      const { result } = renderHookWithApollo(
+
+    const renderLoaded = async (
+      update: ReturnType<typeof recordMock>,
+      cache = makeCache(),
+    ) => {
+      const rendered = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
-        { operationMocks: [getHomeMock(), perm.mock] },
+        { operationMocks: [getHomeMock(), update.mock], cache },
       );
+      await waitFor(() => expect(rendered.result.current.home).toBeTruthy());
+      return { ...rendered, cache };
+    };
 
-      await waitFor(() => expect(result.current.home).toBeTruthy());
+    describe('updateMemberPermission', () => {
+      it('sends the single permission override at the cached version', async () => {
+        const update = appliedMock();
+        const { result, cache } = await renderLoaded(update);
+        expect(readMembership(cache, 'm-1')).toMatchObject({
+          version: 3,
+          canAddItems: true,
+        });
 
-      await act(async () => {
-        await result.current.updateMemberPermission('m-1', 'canAddItems', true);
+        let updated: unknown = 'unset';
+        await act(async () => {
+          updated = await result.current.updateMemberPermission(
+            'm-1',
+            'canAddItems',
+            false,
+          );
+        });
+
+        expect(updated).toBe(true);
+        expect(update.fired).toEqual([
+          { input: { id: 'm-1', canAddItems: false, version: 3 } },
+        ]);
+        // The answer normalizes: the toggle and the next write's version.
+        expect(readMembership(cache, 'm-1')).toMatchObject({
+          version: 4,
+          canAddItems: false,
+        });
+        expect(alertService.alert).not.toHaveBeenCalled();
       });
 
-      expect(perm.fired).toContainEqual({
-        input: { id: 'm-1', canAddItems: true },
+      it('sends a second override at the version the first answered with', async () => {
+        const update = appliedMock();
+        const { result } = await renderLoaded(update);
+
+        await act(async () => {
+          await Promise.all([
+            result.current.updateMemberPermission('m-1', 'canAddItems', false),
+            result.current.updateMemberPermission(
+              'm-1',
+              'canRemoveItems',
+              false,
+            ),
+          ]);
+        });
+
+        expect(update.fired).toEqual([
+          { input: { id: 'm-1', canAddItems: false, version: 3 } },
+          { input: { id: 'm-1', canRemoveItems: false, version: 4 } },
+        ]);
+      });
+
+      it('reports a refusal as failed and leaves the membership as it was', async () => {
+        const update = refusedMock();
+        const { result, cache } = await renderLoaded(update);
+
+        let updated: unknown = 'unset';
+        await act(async () => {
+          updated = await result.current.updateMemberPermission(
+            'm-1',
+            'canAddItems',
+            false,
+          );
+        });
+
+        expect(updated).toBe(false);
+        expect(update.fired).toEqual([
+          { input: { id: 'm-1', canAddItems: false, version: 3 } },
+        ]);
+        expect(readMembership(cache, 'm-1')).toMatchObject({
+          version: 3,
+          canAddItems: true,
+        });
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+      });
+
+      it('sends nothing and settles as failed for a membership with no cached version', async () => {
+        const update = appliedMock();
+        const { result } = await renderLoaded(update);
+
+        let updated: unknown = 'unset';
+        await act(async () => {
+          updated = await result.current.updateMemberPermission(
+            'm-unread',
+            'canAddItems',
+            false,
+          );
+        });
+
+        // The API refuses an edit that states no version, so none is sent.
+        expect(updated).toBe(false);
+        expect(update.fired).toEqual([]);
+        expect(alertService.alert).toHaveBeenCalledWith(
+          t('labels.error'),
+          t('errors.updateMemberRoleFailed'),
+        );
+      });
+    });
+
+    describe('handleRoleSelect', () => {
+      it('sends the picked role at the cached version', async () => {
+        const update = appliedMock();
+        const { result, cache } = await renderLoaded(update);
+
+        act(() => {
+          result.current.changeRole('m-1', MembershipRole.Owner, 'Alice');
+        });
+        await act(async () => {
+          await result.current.handleRoleSelect(MembershipRole.Admin);
+        });
+
+        expect(update.fired).toEqual([
+          { input: { id: 'm-1', role: MembershipRole.Admin, version: 3 } },
+        ]);
+        expect(readMembership(cache, 'm-1')).toMatchObject({
+          version: 4,
+          role: MembershipRole.Admin,
+        });
+        expect(result.current.rolePickerState.visible).toBe(false);
+        expect(alertService.alert).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing when the role picked is the one already held', async () => {
+        const update = appliedMock();
+        const { result } = await renderLoaded(update);
+
+        act(() => {
+          result.current.changeRole('m-1', MembershipRole.Owner, 'Alice');
+        });
+        await act(async () => {
+          await result.current.handleRoleSelect(MembershipRole.Owner);
+        });
+
+        expect(update.fired).toEqual([]);
+        expect(result.current.rolePickerState.visible).toBe(false);
+      });
+
+      it('sends nothing and reports the failure for a membership with no cached version', async () => {
+        const update = appliedMock();
+        const { result } = await renderLoaded(update);
+
+        act(() => {
+          result.current.changeRole('m-unread', MembershipRole.Member, 'Bo');
+        });
+        await act(async () => {
+          await result.current.handleRoleSelect(MembershipRole.Admin);
+        });
+
+        expect(update.fired).toEqual([]);
+        expect(alertService.alert).toHaveBeenCalledWith(
+          t('labels.error'),
+          t('errors.updateMemberRoleFailed'),
+        );
       });
     });
   });

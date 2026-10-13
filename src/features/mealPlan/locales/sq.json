@@ -66,6 +66,7 @@
     "hideNutrition": "Fshih ushqyerjen",
     "viewNutritionDesc": "Kalori, makro dhe përparimi i objektivave",
     "budgetSpent": "Shpenzuar {{spent}} nga {{budget}}",
+    "budgetOnly": "Buxheti {{budget}}",
     "spentAmount": "Shpenzuar {{spent}}",
     "nutritionTrackingOn": "Ndjekja ushqimore aktive",
     "trackNutritionDesc": "Krahaso këtë plan me profilin tënd dietik",
@@ -160,7 +161,9 @@
     "saveAsTemplateLabel": "Ruaj si model",
     "planSettingsLabel": "Cilësimet e planit",
     "deleteMealPlanFailed": "Fshirja e planit të vakteve dështoi",
-    "mealPlanDeleted": "Plani i vakteve u fshi"
+    "mealPlanDeleted": "Plani i vakteve u fshi",
+    "mealsIncompleteTitle": "Disa vakte nuk u ngarkuan",
+    "mealsIncompleteBody": "Ky plan po shfaq vetëm një pjesë të vakteve. Prek për të provuar sërish."
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "p.sh. Darka të javës",

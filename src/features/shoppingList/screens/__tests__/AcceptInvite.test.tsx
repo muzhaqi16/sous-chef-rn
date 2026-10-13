@@ -3,7 +3,8 @@
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#/services/alertService';
 import {
@@ -571,6 +572,109 @@ describe('AcceptInvite', () => {
     it('names the account mismatch only for a permission refusal', async () => {
       const calls = await refusalCase('ForbiddenError');
       expect(calls.flat()).toContain('Signed in as a different account');
+    });
+  });
+
+  // The gate lives in the hook, so it holds for both kinds of invite.
+  describe('when the signed-in account has not verified its email', () => {
+    beforeEach(() => {
+      useStore.setState({
+        user: {
+          id: 'user-1',
+          email: 'invitee@example.com',
+          emailVerified: false,
+          onBoarded: true,
+        },
+      });
+    });
+
+    afterEach(() => {
+      useStore.setState({ user: null });
+    });
+
+    const expectGate = () =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Verify your email first',
+        expect.any(String),
+        expect.arrayContaining([
+          expect.objectContaining({ text: 'Verify Now' }),
+        ]),
+      );
+
+    it('offers verification instead of accepting a list invite', async () => {
+      const user = userEvent.setup();
+      const accept = recordMock(AcceptShoppingListInviteDocument, {
+        data: {
+          acceptShoppingListInvite: {
+            __typename: 'AcceptShoppingListInvitePayload',
+          },
+        },
+      });
+      const tree = renderWithApollo(<AcceptInvite />, {
+        operationMocks: [
+          shoppingTokenMock(
+            buildShoppingListInvite({ shoppingListName: 'My List' }),
+          ),
+          homeTokenMock(null),
+          accept.mock,
+        ],
+      });
+      await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
+      await user.press(tree.getByText('Accept'));
+
+      await waitFor(expectGate);
+      expect(accept.fired).toHaveLength(0);
+      expect(jest.mocked(alertService.alert).mock.calls.flat()).not.toContain(
+        'Shopping list invitation accepted!',
+      );
+      expect(mockGoBack).not.toHaveBeenCalled();
+    });
+
+    it('offers verification instead of accepting a home invite', async () => {
+      const user = userEvent.setup();
+      const accept = recordMock(AcceptHomeInviteDocument, {
+        data: {
+          acceptHomeInvite: { __typename: 'AcceptHomeInvitePayload' },
+        },
+      });
+      const tree = renderWithApollo(<AcceptInvite />, {
+        operationMocks: [
+          shoppingTokenMock(null),
+          homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
+          accept.mock,
+        ],
+      });
+      await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
+      await user.press(tree.getByText('Accept'));
+
+      await waitFor(expectGate);
+      expect(accept.fired).toHaveLength(0);
+      expect(jest.mocked(alertService.alert).mock.calls.flat()).not.toContain(
+        'Home invitation accepted!',
+      );
+    });
+
+    // Declining shares nothing, and the API takes it from an unverified account.
+    it('still declines', async () => {
+      const user = userEvent.setup();
+      const tree = renderWithApollo(<AcceptInvite />, {
+        operationMocks: [
+          shoppingTokenMock(
+            buildShoppingListInvite({ shoppingListName: 'My List' }),
+          ),
+          homeTokenMock(null),
+          buildDeclineShoppingListInviteMock(TOKEN),
+        ],
+      });
+      await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
+      await user.press(tree.getByText('Decline'));
+      const buttons = jest.mocked(alertService.alert).mock.calls[0]?.[2];
+      buttons?.find(b => b.text === 'Decline')?.onPress?.();
+
+      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      expect(jest.mocked(alertService.alert).mock.calls.flat()).not.toContain(
+        'Verify your email first',
+      );
     });
   });
 

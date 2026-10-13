@@ -9,6 +9,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import { refusalEnvelopeOf } from '#/utils/errors/graphqlErrors';
 import {
   isErrorTypename,
   type MutationErrorTypename,
@@ -148,6 +149,10 @@ function readErrorCode(error: unknown): string | undefined {
     return undefined;
   }
 
+  // A refusal before execution: the code is in the body of a non-2xx response.
+  const envelope = refusalEnvelopeOf(error);
+  if (envelope) return envelope.code;
+
   const flat = error as
     | { code?: string; extensions?: { code?: string } }
     | null
@@ -182,7 +187,7 @@ const RATE_LIMIT_CODES: readonly string[] = [
   TopLevelErrorCode.OperationRateLimited,
 ];
 
-/** The per-operation window. RATE_LIMIT_EXCEEDED names `resetAt`, not `retryAfter`. */
+/** The wait when a rate-limit refusal states none. */
 const RATE_LIMIT_FALLBACK_SECONDS = 60;
 
 /**

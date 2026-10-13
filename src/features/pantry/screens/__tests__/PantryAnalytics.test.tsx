@@ -1,7 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, within } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { PantryAnalytics } from '../PantryAnalytics';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -256,64 +259,202 @@ describe('PantryAnalytics', () => {
     expect(screen.getByText('40')).toBeTruthy();
   });
 
-  it('renders with cost analytics data', () => {
-    jest
-      .spyOn(
-        require('#features/pantry/hooks/usePantryAnalytics'),
-        'usePantryAnalytics',
-      )
-      .mockReturnValue({
-        usageData: {
-          totalUsageCount: 10,
-          averageUsagePerDay: 1,
-          usageTrend: [],
-          usageByPurpose: [],
-          usageBySource: [],
-          topUsedItems: [],
-        },
-        wasteData: {
-          totalWasteCount: 0,
-          wasteRate: 0,
-          valueByCurrency: [],
-          composted: 0,
-          recycled: 0,
-          wasteTrend: [],
-          wasteByReason: [],
-          topWastedItems: [],
-        },
-        ledgerData: {
-          summary: {
-            totalAdded: 10,
-            totalConsumed: 5,
-            totalWasted: 1,
-            netQuantity: 4,
-            additionCount: 5,
-            consumptionCount: 3,
-            additionsByUnit: [],
-            consumptionByUnit: [],
+  describe('ledger cost analytics', () => {
+    type CostAnalytics = NonNullable<
+      NonNullable<
+        ReturnType<typeof usePantryAnalytics>['ledgerData']
+      >['costAnalytics']
+    >;
+    type Spent = CostAnalytics['totalSpent'][number];
+    type UnitCost = CostAnalytics['averageCostPerUnit'][number];
+
+    const spent = (amount: number, currencyCode: string): Spent => ({
+      __typename: 'CurrencyAmount',
+      amount,
+      currencyCode,
+    });
+    const unitCost = (
+      amount: number,
+      currencyCode: string,
+      unitSymbol: string | null,
+    ): UnitCost => ({
+      __typename: 'UnitCostAverage',
+      amount,
+      currencyCode,
+      unitSymbol,
+    });
+
+    /** Renders the screen over a ledger whose cost block is the one given. */
+    const renderWithCosts = (
+      costs: Pick<CostAnalytics, 'totalSpent' | 'averageCostPerUnit'> | null,
+    ) => {
+      const costAnalytics: CostAnalytics | null = costs && {
+        __typename: 'AdditionCostAnalytics',
+        costByStore: [],
+        ...costs,
+      };
+      jest
+        .spyOn(
+          require('#features/pantry/hooks/usePantryAnalytics'),
+          'usePantryAnalytics',
+        )
+        .mockReturnValue({
+          usageData: {
+            totalUsageCount: 10,
+            averageUsagePerDay: 1,
+            usageTrend: [],
+            usageByPurpose: [],
+            usageBySource: [],
+            topUsedItems: [],
           },
-          periodData: [],
-          costAnalytics: { totalSpent: 45.99, averageCostPerUnit: 4.6 },
-          topRestockedItems: [],
-        },
-        usageLoading: false,
-        wasteLoading: false,
-        ledgerLoading: false,
-        usageError: null,
-        wasteError: null,
-        ledgerError: null,
-        dateRange: '7d',
-        setDateRange: jest.fn(),
-        ledgerGranularity: 'WEEKLY',
-        setLedgerGranularity: jest.fn(),
-        refetch: jest.fn(() => Promise.resolve()),
+          wasteData: {
+            totalWasteCount: 0,
+            wasteRate: 0,
+            valueByCurrency: [],
+            composted: 0,
+            recycled: 0,
+            wasteTrend: [],
+            wasteByReason: [],
+            topWastedItems: [],
+          },
+          ledgerData: {
+            summary: {
+              totalAdded: 10,
+              totalConsumed: 5,
+              totalWasted: 1,
+              netQuantity: 4,
+              additionCount: 5,
+              consumptionCount: 3,
+              additionsByUnit: [],
+              consumptionByUnit: [],
+            },
+            periodData: [],
+            costAnalytics,
+            topRestockedItems: [],
+          },
+          usageLoading: false,
+          wasteLoading: false,
+          ledgerLoading: false,
+          usageError: null,
+          wasteError: null,
+          ledgerError: null,
+          dateRange: '7d',
+          setDateRange: jest.fn(),
+          ledgerGranularity: 'WEEKLY',
+          setLedgerGranularity: jest.fn(),
+          refetch: jest.fn(() => Promise.resolve()),
+        });
+      render(<PantryAnalytics route={route} />);
+    };
+
+    /** The texts one summary card shows, title first; undefined when absent. */
+    const cardTexts = (title: string): string[] | undefined => {
+      const card = screen
+        .queryAllByTestId('summary-card')
+        .find(candidate => within(candidate).queryByText(title));
+      return card
+        ? within(card)
+            .getAllByText(/[^]*/)
+            .map(node => String(node.props.children))
+        : undefined;
+    };
+    const sectionTitled = (title: string) =>
+      screen
+        .queryAllByTestId('chart-section')
+        .find(candidate => within(candidate).queryByText(title));
+
+    const totalSpent = t('labels.totalSpent');
+    const avgCostPerUnit = t('labels.avgCostPerUnit');
+    const perUnit = (unit: string) => t('pantryAnalytics.perUnit', { unit });
+
+    it('shows what was spent in one currency as that amount', () => {
+      renderWithCosts({
+        totalSpent: [spent(45.99, 'USD')],
+        averageCostPerUnit: [],
       });
 
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Total Spent')).toBeTruthy();
-    expect(screen.getByText('$45.99')).toBeTruthy();
-    expect(screen.getByText('Avg Cost/Unit')).toBeTruthy();
-    expect(screen.getByText('$4.60')).toBeTruthy();
+      expect(cardTexts(totalSpent)).toEqual([totalSpent, '$45.99']);
+    });
+
+    it('shows what was spent in two currencies as two amounts, never one total', () => {
+      renderWithCosts({
+        totalSpent: [spent(45.99, 'USD'), spent(12, 'EUR')],
+        averageCostPerUnit: [],
+      });
+
+      expect(cardTexts(totalSpent)).toEqual([totalSpent, '$45.99 · €12.00']);
+      expect(screen.queryByText(/57\.99/)).toBeNull();
+    });
+
+    it('shows an unknown spend, never zero, when nothing in the period was costed', () => {
+      renderWithCosts({ totalSpent: [], averageCostPerUnit: [] });
+
+      // The card's whole content: the em dash stands where an amount would.
+      expect(cardTexts(totalSpent)).toEqual([totalSpent, UNKNOWN_AMOUNT]);
+      // No average to show either: neither the card nor the breakdown.
+      expect(screen.queryByText(avgCostPerUnit)).toBeNull();
+    });
+
+    it('shows the one average on a card that names its unit', () => {
+      renderWithCosts({
+        totalSpent: [spent(45.99, 'USD')],
+        averageCostPerUnit: [unitCost(4.6, 'USD', 'kg')],
+      });
+
+      expect(cardTexts(avgCostPerUnit)).toEqual([
+        avgCostPerUnit,
+        '$4.60',
+        perUnit('kg'),
+      ]);
+      expect(sectionTitled(avgCostPerUnit)).toBeUndefined();
+    });
+
+    it('shows the one average without a unit caption when it has no unit', () => {
+      renderWithCosts({
+        totalSpent: [spent(45.99, 'USD')],
+        averageCostPerUnit: [unitCost(4.6, 'USD', null)],
+      });
+
+      expect(cardTexts(avgCostPerUnit)).toEqual([avgCostPerUnit, '$4.60']);
+    });
+
+    it('lists several averages apart, each amount with its unit, instead of one card', () => {
+      renderWithCosts({
+        totalSpent: [spent(45.99, 'USD'), spent(12, 'EUR')],
+        averageCostPerUnit: [
+          unitCost(4.6, 'USD', 'kg'),
+          unitCost(0.5, 'USD', 'pc'),
+          unitCost(3, 'EUR', 'kg'),
+          unitCost(7.25, 'EUR', null),
+        ],
+      });
+
+      // A kilogram and a piece do not average: no single figure on a card.
+      expect(cardTexts(avgCostPerUnit)).toBeUndefined();
+      const section = sectionTitled(avgCostPerUnit);
+      expect(section).toBeDefined();
+      expect(
+        within(section!)
+          .getAllByText(/[^]*/)
+          .map(node => String(node.props.children)),
+      ).toEqual([
+        avgCostPerUnit,
+        '$4.60',
+        perUnit('kg'),
+        '$0.50',
+        perUnit('pc'),
+        '€3.00',
+        perUnit('kg'),
+        '€7.25',
+      ]);
+    });
+
+    it('shows no cost cards when the ledger carries no cost analytics', () => {
+      renderWithCosts(null);
+
+      expect(screen.queryByText(totalSpent)).toBeNull();
+      expect(screen.queryByText(avgCostPerUnit)).toBeNull();
+    });
   });
 
   it('renders with period data in ledger', () => {

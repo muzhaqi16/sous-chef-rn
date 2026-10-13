@@ -66,6 +66,7 @@
     "hideNutrition": "Nascondi nutrizione",
     "viewNutritionDesc": "Calorie, macro e progresso degli obiettivi",
     "budgetSpent": "Spesi {{spent}} di {{budget}}",
+    "budgetOnly": "Budget {{budget}}",
     "spentAmount": "Spesi {{spent}}",
     "nutritionTrackingOn": "Monitoraggio nutrizionale attivo",
     "trackNutritionDesc": "Confronta questo piano con il tuo profilo dietetico",
@@ -160,7 +161,9 @@
     "saveAsTemplateLabel": "Salva come modello",
     "planSettingsLabel": "Impostazioni piano",
     "deleteMealPlanFailed": "Impossibile eliminare il piano pasti",
-    "mealPlanDeleted": "Piano pasti eliminato"
+    "mealPlanDeleted": "Piano pasti eliminato",
+    "mealsIncompleteTitle": "Impossibile caricare alcuni pasti",
+    "mealsIncompleteBody": "Questo piano mostra solo una parte dei suoi pasti. Tocca per riprovare."
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "es. Cene infrasettimanali",

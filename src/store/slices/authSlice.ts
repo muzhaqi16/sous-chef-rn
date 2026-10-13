@@ -96,6 +96,8 @@ export type AuthUserInput = User & {
   } | null;
   settings?: {
     showTutorials?: boolean | null;
+    /** The account's currency lives on its settings; absent until a first write. */
+    preferredCurrency?: string | null;
   } | null;
 };
 
@@ -217,6 +219,8 @@ export const createAuthSlice: StateCreator<
         // Flatten profile fields from the login/register GraphQL response so the
         // greeting can render the user's name immediately without a separate query.
         const profile = user.profile;
+        const currency =
+          user.settings?.preferredCurrency ?? user.preferredCurrency;
 
         // Normalize email to prevent validation issues (trim whitespace, lowercase)
         state.user = {
@@ -226,14 +230,15 @@ export const createAuthSlice: StateCreator<
           lastName: profile?.lastName ?? user.lastName,
           name: profile?.displayName ?? user.name,
           profilePicture: profile?.avatar ?? user.profilePicture,
+          preferredCurrency: currency,
         };
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
         state.isAutoLoggingIn = false; // Clear auto-login state on success
         // Mirrored out of the auth payload so every money surface can read it
         // without a query of its own; the reset manager clears it on sign-out.
-        if (user.preferredCurrency) {
-          state.preferredCurrency = user.preferredCurrency;
+        if (currency) {
+          state.preferredCurrency = currency;
         }
         // Seeded here, not from `useAppSettings` — that hook mounts only on the
         // App Settings screen, while a session end resets this to `true`. The

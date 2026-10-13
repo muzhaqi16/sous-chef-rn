@@ -5,13 +5,14 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
+  MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
-  ConfirmRecipeConsumptionDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { logger } from '#/utils/environment';
 import type { RootState } from '#store';
@@ -76,8 +77,7 @@ jest.mock('#/services/toastService', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-// Deterministic client-minted cooking-log id so we can assert the consumption
-// mutation sends it.
+// Deterministic client-minted cooking-log id so we can assert the cook sends it.
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
@@ -249,6 +249,23 @@ describe('useRecipeIngredientMatching', () => {
     await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
     expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
+  });
+
+  // `$servings` is a Float: two and a half servings is asked for as it is.
+  it('asks for the matches of a fractional number of servings, unrounded', async () => {
+    const m = matchesMock([]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    await act(async () => {
+      await result.current.loadMatches(2.5);
+    });
+
+    expect(m.fired).toEqual([
+      { recipeId: 'recipe-1', pantryId: 'pantry-1', servings: 2.5 },
+    ]);
   });
 
   it('logs and drops a match whose cached ingredient fragment is incomplete', async () => {
@@ -470,7 +487,7 @@ describe('useRecipeIngredientMatching', () => {
 });
 
 // A single included match (available, with a matched pantry item) so
-// confirmConsumption builds a non-empty consumptions array and fires.
+// confirmConsumption builds a non-empty `ingredientsUsed` and fires.
 const includedMatch = {
   ingredient: {
     __typename: 'RecipeIngredient',
@@ -495,42 +512,101 @@ const includedMatch = {
   suggestedUnit: { __typename: 'Unit', id: 'su-1' },
 };
 
-function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
-  return recordMock(ConfirmRecipeConsumptionDocument, {
-    data:
-      outcome.kind === 'success'
-        ? {
-            confirmRecipeConsumption: {
-              __typename: 'ConfirmRecipeConsumptionPayload',
-              totalConsumed: 1,
-              totalFailed: 0,
-              cookingLog: {
-                __typename: 'CookingLog',
-                id: 'client-cooklog-1',
-                servingsMade: 4,
-                notes: null,
-                cookedAt: '2026-01-01T00:00:00.000Z',
-              },
-            },
-          }
-        : {
-            confirmRecipeConsumption: {
-              __typename: 'ValidationError',
-              code: ErrorCode.ValidationFailed,
-              message: 'bad',
-            },
-          },
+/** A second included match, for a cook that states more than one stack. */
+const secondMatch = {
+  ...includedMatch,
+  ingredient: {
+    ...includedMatch.ingredient,
+    id: 'ing-2',
+    unit: { ...includedMatch.ingredient.unit, id: 'u-ing-2' },
+  },
+  matchedPantryItem: {
+    __typename: 'PantryItem',
+    id: 'pi-2',
+    unit: { __typename: 'Unit', id: 'u-ing-2' },
+  },
+  suggestedQuantity: 3,
+  // No suggestion: the entry falls back to the ingredient's own unit.
+  suggestedUnit: null,
+};
+
+type CookPayload = Extract<
+  NonNullable<
+    MockDataFor<typeof MarkRecipeAsCookedDocument>['markRecipeAsCooked']
+  >,
+  { __typename?: 'MarkRecipeAsCookedPayload' | null }
+>;
+type SkippedLine = NonNullable<
+  NonNullable<CookPayload['skippedIngredients']>[number]
+>;
+
+/** An entry no conversion could take to its stack's unit. */
+const skippedLine = (itemName: string): SkippedLine => ({
+  __typename: 'SkippedRecipeIngredient',
+  itemName,
+  code: ErrorCode.UnitInvalid,
+});
+
+type CookOutcome =
+  | { kind: 'success'; skipped?: string[]; converged?: boolean }
+  | { kind: 'queued' }
+  | { kind: 'rejected' }
+  | { kind: 'transport' };
+
+function cookMock(outcome: CookOutcome) {
+  if (outcome.kind === 'transport') {
+    return recordMock(MarkRecipeAsCookedDocument, {
+      error: new Error('network down'),
+    });
+  }
+  if (outcome.kind === 'queued') {
+    // No payload and no error: the offline queue took the write.
+    return recordMock(MarkRecipeAsCookedDocument, {
+      data: { markRecipeAsCooked: null },
+    });
+  }
+  if (outcome.kind === 'rejected') {
+    return recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'bad',
+          field: null,
+        },
+      },
+    });
+  }
+  return recordMock(MarkRecipeAsCookedDocument, {
+    data: {
+      markRecipeAsCooked: {
+        __typename: 'MarkRecipeAsCookedPayload',
+        converged: outcome.converged ?? false,
+        // Stated even when empty: left out, the SDL fills in entries.
+        skippedIngredients: (outcome.skipped ?? []).map(skippedLine),
+        cookingLog: {
+          __typename: 'CookingLog',
+          id: 'client-cooklog-1',
+          servingsMade: 4,
+          notes: null,
+          cookedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
+    },
   });
 }
 
 describe('useRecipeIngredientMatching — confirmConsumption', () => {
-  async function loadOneMatch(confirm: ReturnType<typeof confirmMock>) {
-    const matchesM = matchesMock([includedMatch]);
+  async function loadMatchesFor(
+    matches: Record<string, unknown>[],
+    cook: ReturnType<typeof cookMock>,
+  ) {
+    const matchesM = matchesMock(matches);
     const rendered = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       {
-        operationMocks: [matchesM.mock, confirm.mock],
-        cache: seedIngredientCache(['ing-1']),
+        operationMocks: [matchesM.mock, cook.mock],
+        cache: seedIngredientCache(['ing-1', 'ing-2']),
       },
     );
 
@@ -538,27 +614,49 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await rendered.result.current.loadMatches(4);
     });
     await waitFor(() =>
-      expect(rendered.result.current.editableMatches).toHaveLength(1),
+      expect(rendered.result.current.editableMatches).toHaveLength(
+        matches.length,
+      ),
     );
     return rendered;
   }
 
-  it('sends a client-minted cooking-log id with context.localFirst on success', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const { result } = await loadOneMatch(confirm);
+  const loadOneMatch = (cook: ReturnType<typeof cookMock>) =>
+    loadMatchesFor([includedMatch], cook);
+
+  it('sends the reviewed cook as one write that deducts exactly the stacks stated', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
 
     await act(async () => {
       await result.current.confirmConsumption();
     });
 
-    // The consumption mutation carried the client-minted cooking-log id.
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({ id: 'client-cooklog-1' }),
-      }),
-    );
+    // The cooking-log id is minted here, so a replayed cook converges on it.
+    expect(cook.fired).toEqual([
+      {
+        input: {
+          id: 'client-cooklog-1',
+          recipeId: 'recipe-1',
+          pantryId: 'pantry-1',
+          deductFromPantry: true,
+          exactStacks: true,
+          ingredientsUsed: [
+            {
+              recipeIngredientId: 'ing-1',
+              pantryItemId: 'pi-1',
+              actualQuantity: 2,
+              actualUnitId: 'su-1',
+            },
+          ],
+        },
+      },
+    ]);
     // Success path: toast + sheet closed + matches cleared.
-    expect(mockToastSuccess).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry',
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
     await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
     expect(result.current.editableMatches).toEqual([]);
   });
@@ -566,26 +664,78 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   // The log records what the cook entered before the review, not the
   // recipe's own servings and a placeholder note.
   it('records the servings and note the cook entered', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const { result } = await loadOneMatch(confirm);
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
 
     await act(async () => {
       await result.current.confirmConsumption({
-        servings: 2,
+        servings: 2.5,
         notes: 'Halved it',
       });
     });
 
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({ servings: 2, notes: 'Halved it' }),
-      }),
+    expect(cook.fired).toEqual([
+      {
+        input: expect.objectContaining({ servings: 2.5, notes: 'Halved it' }),
+      },
+    ]);
+  });
+
+  it('states one entry for each included stack and none for the rest', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [
+        includedMatch,
+        secondMatch,
+        // Offered, never deducted until the user turns it on.
+        {
+          ...includedMatch,
+          ingredient: { ...includedMatch.ingredient, id: 'ing-3' },
+          matchKind: RecipeIngredientMatchKind.Name,
+          matchedPantryItem: {
+            ...includedMatch.matchedPantryItem,
+            id: 'pi-3',
+          },
+        },
+        // No stack to draw on at all.
+        {
+          ...includedMatch,
+          ingredient: { ...includedMatch.ingredient, id: 'ing-4' },
+          isAvailable: false,
+          matchKind: RecipeIngredientMatchKind.None,
+          matchedPantryItem: null,
+          availableQuantity: 0,
+        },
+      ],
+      cook,
+    );
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-1',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'pi-2',
+        actualQuantity: 3,
+        actualUnitId: 'u-ing-2',
+      },
+    ]);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 2 ingredients from pantry',
     );
   });
 
   it('does not deduct a row whose quantity was cleared', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const { result } = await loadOneMatch(confirm);
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
 
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 0 });
@@ -594,29 +744,35 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await result.current.confirmConsumption();
     });
 
-    expect(confirm.fired).toEqual([]);
+    expect(cook.fired).toEqual([]);
     expect(mockToastInfo).toHaveBeenCalledWith(
       'No ingredients selected for deduction',
     );
   });
 
+  it('leaves a cleared row out of a cook that still deducts another', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
+
+    act(() => {
+      result.current.updateMatch(0, { adjustedQuantity: 0 });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ recipeIngredientId: 'ing-2' }),
+    ]);
+  });
+
   // A name-only match is offered but not deducted until the user turns it on.
   it('holds back a stack matched by name only until the user includes it', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const matchesM = matchesMock([
-      { ...includedMatch, matchKind: RecipeIngredientMatchKind.Name },
-    ]);
-    const { result } = renderHookWithApollo(
-      () => useRecipeIngredientMatching('recipe-1'),
-      {
-        operationMocks: [matchesM.mock, confirm.mock],
-        cache: seedIngredientCache(['ing-1']),
-      },
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, matchKind: RecipeIngredientMatchKind.Name }],
+      cook,
     );
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
 
     expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
     expect(result.current.editableMatches[0]!.selectedStack?.id).toBe('pi-1');
@@ -628,13 +784,9 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await result.current.confirmConsumption();
     });
 
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({
-          consumptions: [expect.objectContaining({ pantryItemId: 'pi-1' })],
-        }),
-      }),
-    );
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ pantryItemId: 'pi-1' }),
+    ]);
   });
 
   // The server can pick a stack that holds nothing (an emptied "milk");
@@ -669,27 +821,17 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   // "Olive oil" is served by the plain bottle and by the extra virgin stack
   // under its concept; the one the user picks is the one deducted.
   it('deducts from the stack the user picked instead of the server pick', async () => {
-    const confirm = confirmMock({ kind: 'success' });
+    const cook = cookMock({ kind: 'success' });
     const evoo = {
       __typename: 'PantryItem',
       id: 'pi-evoo',
       itemName: 'Extra virgin olive oil',
       unit: { __typename: 'Unit', id: 'u-ml' },
     };
-    const matchesM = matchesMock([
-      { ...includedMatch, alternativeMatches: [evoo] },
-    ]);
-    const { result } = renderHookWithApollo(
-      () => useRecipeIngredientMatching('recipe-1'),
-      {
-        operationMocks: [matchesM.mock, confirm.mock],
-        cache: seedIngredientCache(['ing-1']),
-      },
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, alternativeMatches: [evoo] }],
+      cook,
     );
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
 
     const [first] = result.current.editableMatches;
     if (!first) throw new Error('no match loaded');
@@ -705,34 +847,83 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await result.current.confirmConsumption();
     });
 
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({
-          consumptions: [
-            expect.objectContaining({
-              pantryItemId: 'pi-evoo',
-              recipeIngredientId: 'ing-1',
-              quantity: 2,
-            }),
-          ],
-        }),
-      }),
-    );
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-evoo',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+    ]);
   });
 
-  it('toasts an error and keeps the sheet open when the server rejects', async () => {
-    const confirm = confirmMock({ kind: 'rejected' });
-    const { result } = await loadOneMatch(confirm);
+  // The cook commits whole; what it reports apart are the entries no
+  // conversion could take to their stack's unit.
+  it('counts the entries the server skipped apart from the ones it deducted', async () => {
+    const cook = cookMock({ kind: 'success', skipped: ['Ingredient ing-2'] });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
 
     await act(async () => {
       await result.current.confirmConsumption();
     });
 
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry (1 not deducted)',
+    );
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+  });
+
+  it('counts every entry sent when the cook is queued offline', async () => {
+    const cook = cookMock({ kind: 'queued' });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(cook.fired).toHaveLength(1);
+    // No response to count: every entry replays on reconnect.
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 2 ingredients from pantry',
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    expect(result.current.editableMatches).toEqual([]);
+  });
+
+  it('toasts an error and keeps the sheet open when the server rejects', async () => {
+    const cook = cookMock({ kind: 'rejected' });
+    const { result } = await loadOneMatch(cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    // The app's copy for the code the refusal carries, never its `message`.
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Please check your input and try again',
+    );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    // Sheet stays open so the user can retry.
+    expect(result.current.isSheetVisible).toBe(true);
+    expect(result.current.editableMatches).toHaveLength(1);
+  });
+
+  it('toasts once and keeps the sheet open when the request fails', async () => {
+    const cook = cookMock({ kind: 'transport' });
+    const { result } = await loadOneMatch(cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
       'Failed to mark recipe as cooked',
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
-    // Sheet stays open so the user can retry.
     expect(result.current.isSheetVisible).toBe(true);
     expect(result.current.editableMatches).toHaveLength(1);
   });

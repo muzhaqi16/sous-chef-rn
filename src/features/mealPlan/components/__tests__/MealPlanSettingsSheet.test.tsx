@@ -94,6 +94,22 @@ jest.mock('../NutritionSummaryCard', () => ({
   },
 }));
 
+type GeneratedLists =
+  MealPlanSettingsSheet_MealPlanFragment['generatedShoppingListsConnection'];
+
+/** The lists a plan generated, as the edges of its connection. */
+const generatedLists = (
+  lists: Array<{ id: string; name: string }>,
+): GeneratedLists => ({
+  __typename: 'ShoppingListConnection',
+  edges: lists.map(list => ({
+    __typename: 'ShoppingListEdge',
+    node: { __typename: 'ShoppingList', ...list },
+  })),
+  pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
+  totalCount: lists.length,
+});
+
 const makeMealPlan = (
   overrides?: Partial<MealPlanSettingsSheet_MealPlanFragment>,
 ): MealPlanSettingsSheet_MealPlanFragment => ({
@@ -104,7 +120,7 @@ const makeMealPlan = (
   startDate: '2024-03-01',
   endDate: '2024-03-07',
   budgetAmount: null,
-  actualCost: 0,
+  actualCost: null,
   dietaryProfile: null,
   home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
   createdBy: {
@@ -128,7 +144,7 @@ const makeMealPlan = (
     coveragePercentage: 0,
   },
   nutritionGoalProgress: null,
-  generatedShoppingLists: [],
+  generatedShoppingListsConnection: generatedLists([]),
   ...overrides,
 });
 
@@ -167,8 +183,8 @@ describe('MealPlanSettingsSheet', () => {
   });
 
   // Deleting the selected plan evicts it while this sheet is still mounted and
-  // the query still hands it the masked ref. Reading `generatedShoppingLists`
-  // off that ref threw and took the Meal Plan screen down with it.
+  // the query still hands it the masked ref. Reading its generated lists off
+  // that ref threw and took the Meal Plan screen down with it.
   it('renders nothing for a plan evicted from the cache, rather than crashing', () => {
     expect(() =>
       renderWithApollo(
@@ -216,6 +232,55 @@ describe('MealPlanSettingsSheet', () => {
       />,
     );
     expect(screen.getByText('Spent $30.00 of $50.00')).toBeTruthy();
+    expect(screen.queryByText('Budget $50.00')).toBeNull();
+  });
+
+  // No recorded spend is unknown, not a spend of zero.
+  it('shows the budget alone when no spend is recorded against it', () => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        mealPlanRef={makeMealPlan({ budgetAmount: 50, actualCost: null })}
+      />,
+    );
+    expect(screen.getByText('Budget $50.00')).toBeTruthy();
+    expect(screen.queryByText(/Spent/)).toBeNull();
+  });
+
+  it('shows a recorded spend of zero against the budget as zero', () => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        mealPlanRef={makeMealPlan({ budgetAmount: 50, actualCost: 0 })}
+      />,
+    );
+    expect(screen.getByText('Spent $0.00 of $50.00')).toBeTruthy();
+  });
+
+  it('shows the spend alone when there is no budget', () => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        mealPlanRef={makeMealPlan({ budgetAmount: null, actualCost: 30 })}
+      />,
+    );
+    expect(screen.getByText('Spent $30.00')).toBeTruthy();
+    expect(screen.queryByText(/Budget/)).toBeNull();
+  });
+
+  it.each([
+    ['no spend is recorded', null],
+    ['the recorded spend is zero', 0],
+  ])('shows no cost line without a budget when %s', (_label, actualCost) => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        mealPlanRef={makeMealPlan({ budgetAmount: null, actualCost })}
+      />,
+    );
+    expect(screen.getByText('Weekly Plan')).toBeTruthy();
+    expect(screen.queryByText(/Spent/)).toBeNull();
+    expect(screen.queryByText(/Budget/)).toBeNull();
   });
 
   it('renders action items', () => {
@@ -255,16 +320,22 @@ describe('MealPlanSettingsSheet', () => {
     expect(screen.queryByText('My meal plan description')).toBeNull();
   });
 
-  it('renders generated shopping lists when they exist', () => {
+  it('renders the lists the plan generated, from the edges of its connection', () => {
     const mealPlan = makeMealPlan({
-      generatedShoppingLists: [
-        { __typename: 'ShoppingList', id: 'sl-1', name: 'Grocery Run 1' },
-        { __typename: 'ShoppingList', id: 'sl-2', name: 'Grocery Run 2' },
-      ],
+      generatedShoppingListsConnection: generatedLists([
+        { id: 'sl-1', name: 'Grocery Run 1' },
+        { id: 'sl-2', name: 'Grocery Run 2' },
+      ]),
     });
     render(<MealPlanSettingsSheet {...defaultProps} mealPlanRef={mealPlan} />);
     expect(screen.getByText('Generated Lists')).toBeTruthy();
     expect(screen.getByText('Grocery Run 1')).toBeTruthy();
     expect(screen.getByText('Grocery Run 2')).toBeTruthy();
+  });
+
+  it('renders no generated-lists section for a plan that generated none', () => {
+    render(<MealPlanSettingsSheet {...defaultProps} />);
+    expect(screen.getByText('Weekly Plan')).toBeTruthy();
+    expect(screen.queryByText('Generated Lists')).toBeNull();
   });
 });

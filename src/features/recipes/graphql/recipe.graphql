@@ -259,6 +259,8 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
   deleteRecipe(input: $input) {
     __typename
     ... on DeleteRecipePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       recipe {
         id
       }
@@ -382,80 +384,12 @@ mutation UpdateFavoriteRecipe($input: UpdateFavoriteRecipeInput!) {
   }
 }
 
-mutation CreateShoppingListItemsFromRecipe(
-  $input: CreateShoppingListItemsFromRecipeInput!
-) {
-  createShoppingListItemsFromRecipe(input: $input) {
-    __typename
-    ... on CreateShoppingListItemsFromRecipePayload {
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-      results {
-        success
-        outcome
-        # Which lines were added: the server skips optional ones ("salt to taste").
-        recipeIngredient {
-          id
-          ...RecipeIngredientReaders
-        }
-        item {
-          id
-          ...ShoppingListItemReaders
-          ...AddedShoppingListItemFields
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateShoppingListItemFromRecipeIngredient(
-  $input: CreateShoppingListItemFromRecipeIngredientInput!
-) {
-  createShoppingListItemFromRecipeIngredient(input: $input) {
-    __typename
-    ... on CreateShoppingListItemFromRecipeIngredientPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        shoppingList {
-          id
-          ...ShoppingListReaders
-        }
-      }
-      previousQuantity
-      quantityAdded
-      wasUpdated
-      unitConversionApplied
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 # The pick and up to three `alternativeMatches` come in the order a cook draws
 # them, so an empty stack is last.
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
-  $servings: Int
+  $servings: Float
 ) {
   matchRecipeIngredientsToPantry(
     pantryId: $pantryId
@@ -507,32 +441,6 @@ query MatchRecipeIngredientsToPantry(
           symbol
         }
       }
-    }
-  }
-}
-
-mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {
-  confirmRecipeConsumption(input: $input) {
-    __typename
-    ... on ConfirmRecipeConsumptionPayload {
-      # Replay signal: false = a partial crash already finished the leftover
-      # items; true = idempotent replay of a completed confirmation.
-      converged
-      totalConsumed
-      totalFailed
-      cookingLog {
-        id
-        servingsMade
-        notes
-        cookedAt
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
     }
   }
 }

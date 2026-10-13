@@ -17,10 +17,6 @@ fragment MealPlanReaders on MealPlan {
     id
   }
   endDate
-  generatedShoppingLists {
-    id
-    name
-  }
   home {
     id
     myMembership {
@@ -30,28 +26,6 @@ fragment MealPlanReaders on MealPlan {
     name
   }
   homeId
-  mealPlanItems {
-    id
-    calories
-    completedAt
-    customMealName
-    date
-    isCompleted
-    mealType
-    notes
-    recipe {
-      id
-      imageUrl
-      name
-      servings
-      totalTimeMinutes
-    }
-    servings
-    usedPantryItems {
-      pantryItemId
-      quantityUsed
-    }
-  }
   name
   nutritionGoalProgress {
     caloriesProgress {

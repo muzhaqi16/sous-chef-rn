@@ -25,9 +25,9 @@ const PASSING_CODES: readonly string[] = [
   TopLevelErrorCode.ServiceUnavailable,
 ];
 
-// A traffic limit on the connection and a request that timed out say nothing
-// about this receipt.
-const PASSING_STATUSES: readonly number[] = [401, 408, 429];
+// A traffic limit on the connection says nothing about this receipt. A request
+// that timed out answers 503, which passes as every server fault does.
+const PASSING_STATUSES: readonly number[] = [401, 429];
 
 /**
  * Whether a failed ask is the API's answer on this receipt, which stands. One

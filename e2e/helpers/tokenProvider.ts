@@ -19,7 +19,6 @@ interface AuthTokens {
     onBoarded: boolean;
     createdAt: string;
     updatedAt: string;
-    timezone: string;
   };
 }
 
@@ -132,7 +131,6 @@ export async function getAuthTokens(): Promise<AuthTokens> {
                 onBoarded
                 createdAt
                 updatedAt
-                timezone
                 # \`setAuth\` flattens these onto the store user. Without them an
                 # injected session has no name, so the header greets with the
                 # no-name fallback while a real login shows the person's name —

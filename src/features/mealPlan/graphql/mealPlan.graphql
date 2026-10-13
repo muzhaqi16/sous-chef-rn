@@ -29,7 +29,9 @@ query GetMealPlans(
   }
 }
 
-query GetMealPlan($id: ID!) {
+# `$mealsFirst` is the server's largest page, so a plan of up to 100 meals is
+# one request; `$mealsAfter` follows `endCursor` for a longer one.
+query GetMealPlan($id: ID!, $mealsFirst: Int!, $mealsAfter: String) {
   mealPlan(id: $id) {
     id
     ...MealPlanMain_mealPlan
@@ -107,6 +109,8 @@ mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
   deleteMealPlan(input: $input) {
     __typename
     ... on DeleteMealPlanPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       mealPlan {
         id
       }
@@ -191,6 +195,8 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
   deleteMealPlanItem(input: $input) {
     __typename
     ... on DeleteMealPlanItemPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       mealPlanItem {
         id
       }

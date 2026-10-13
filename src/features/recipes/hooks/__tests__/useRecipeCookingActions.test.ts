@@ -4,15 +4,16 @@ import {
   RecipeIngredientMatchKind,
 } from '#/graphql/generated/schemaTypes';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import {
-  ConfirmRecipeConsumptionDocument,
   MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import type { RootState } from '#store';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
@@ -46,6 +47,7 @@ jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useSelectedPantryId).mockReturnValue('pantry-1');
 });
 
 type SkippedIngredient = {
@@ -113,7 +115,7 @@ describe('useRecipeCookingActions', () => {
     );
   });
 
-  it('simple deduction sends a client-minted id with context.localFirst', async () => {
+  it('a deducting quick cook sends a client-minted id and the selected pantry', async () => {
     const cooked = cookedMock({ kind: 'success' });
     const { result } = renderHookWithApollo(
       () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
@@ -129,21 +131,45 @@ describe('useRecipeCookingActions', () => {
     });
 
     await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
-    expect(cooked.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({
+    expect(cooked.fired).toEqual([
+      {
+        input: {
           id: 'client-cooklog-1',
           recipeId: 'recipe-1',
           servings: 4,
           deductFromPantry: true,
-        }),
-      }),
-    );
+          pantryId: 'pantry-1',
+        },
+      },
+    ]);
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Recipe marked as cooked! Ingredients deducted from pantry.',
       ),
     );
+  });
+
+  // Omitted, the server deducts from the default pantry of the default home.
+  it('names no pantry for a deducting cook when none is selected', async () => {
+    jest.mocked(useSelectedPantryId).mockReturnValue(null);
+    const cooked = cookedMock({ kind: 'success' });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() => expect(cooked.fired).toHaveLength(1));
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({ deductFromPantry: true });
+    expect(inputOf(cooked.fired[0]!)).not.toHaveProperty('pantryId');
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
   });
 
   it('does not report full success when the server skipped an ingredient', async () => {
@@ -335,6 +361,12 @@ describe('useRecipeCookingActions', () => {
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith('Recipe marked as cooked!'),
     );
+    // A cook that deducts nothing draws on no pantry.
+    expect(cooked.fired).toHaveLength(1);
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({
+      deductFromPantry: false,
+    });
+    expect(inputOf(cooked.fired[0]!)).not.toHaveProperty('pantryId');
   });
 
   it('toasts the failure message and shows no success toast when the server rejects', async () => {
@@ -360,7 +392,7 @@ describe('useRecipeCookingActions', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
-  it('skip review sends a client-minted id with context.localFirst', async () => {
+  it('skip review sends a client-minted id and the selected pantry', async () => {
     const cooked = cookedMock({ kind: 'success' });
     const { result } = renderHookWithApollo(
       () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
@@ -372,15 +404,16 @@ describe('useRecipeCookingActions', () => {
     });
 
     await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
-    expect(cooked.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({
+    expect(cooked.fired).toEqual([
+      {
+        input: {
           id: 'client-cooklog-1',
           recipeId: 'recipe-1',
           deductFromPantry: true,
-        }),
-      }),
-    );
+          pantryId: 'pantry-1',
+        },
+      },
+    ]);
     // The mutation's own success path, and the point the write has settled.
     // The shared teardown in `__tests__/setup/globals.js` flushes pending work
     // before the missing-field guard reads, so a late write is attributed
@@ -461,16 +494,8 @@ describe('useRecipeCookingActions', () => {
         ],
       },
     });
-    const confirm = recordMock(ConfirmRecipeConsumptionDocument, {
-      data: {
-        confirmRecipeConsumption: {
-          __typename: 'ConfirmRecipeConsumptionPayload',
-          converged: false,
-          totalConsumed: 1,
-          totalFailed: 0,
-        },
-      },
-    });
+    // The reviewed cook is the quick cook's own write, stating its stacks.
+    const confirm = cookedMock({ kind: 'success' });
     const { result } = renderHookWithApollo(
       () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
       { operationMocks: [matches.mock, confirm.mock] },
@@ -492,15 +517,28 @@ describe('useRecipeCookingActions', () => {
       await result.current.handleConfirmReview();
     });
 
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({
+    expect(confirm.fired).toEqual([
+      {
+        input: {
+          id: 'client-cooklog-1',
           recipeId: 'recipe-1',
+          pantryId: 'pantry-1',
+          deductFromPantry: true,
+          exactStacks: true,
           servings: 2,
           notes: 'Halved it',
-          consumptions: [expect.objectContaining({ pantryItemId: 'pi-1' })],
-        }),
-      }),
+          ingredientsUsed: [
+            expect.objectContaining({
+              recipeIngredientId: 'ing-1',
+              pantryItemId: 'pi-1',
+              actualQuantity: 1,
+            }),
+          ],
+        },
+      },
+    ]);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry',
     );
   });
 });

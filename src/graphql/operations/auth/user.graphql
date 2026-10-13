@@ -74,35 +74,6 @@ query CanDeleteAccount {
 # MUTATIONS
 # ============================================
 
-mutation UpdateAccount($input: UpdateAccountInput!) {
-  updateAccount(input: $input) {
-    __typename
-    ... on UpdateAccountPayload {
-      user {
-        id
-        ...UserReaders
-        role
-        onBoarded
-        timezone
-        preferredCurrency
-        defaultHomeId
-        createdAt
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation UpdateUserProfile($input: UpdateProfileInput!) {
   updateProfile(input: $input) {
     __typename
@@ -201,7 +172,6 @@ mutation CompleteOnboarding {
         canAccessDevTools
         onBoarded
         createdAt
-        timezone
       }
     }
     ... on Error {
@@ -233,6 +203,9 @@ subscription UserEvents($userId: ID!) {
     subtype
     mutation
     actorUserId
+    # The device that caused the event: an accept on THIS device is announced
+    # back as ADDED_TO_*, and is not news to the person who just tapped it.
+    originatorClientId
     updatedFields
     timestamp
     userId
@@ -254,8 +227,6 @@ subscription UserEvents($userId: ID!) {
         emailVerified
         role
         onBoarded
-        timezone
-        preferredCurrency
       }
       # PROFILE_CHANGED normalizes this node straight into the cache (see
       # useUserSubscriptions), so it writes the SAME shape `GetUserProfile`

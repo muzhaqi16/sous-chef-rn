@@ -1,4 +1,5 @@
 import { generateEntityId } from '#/utils/generateEntityId';
+import { daysBetweenKeys } from '#/utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealTemplateInput,
@@ -38,9 +39,6 @@ interface Options {
   mintId?: () => string;
 }
 
-const DAY_MS = 86_400_000;
-const at = (iso: string) => new Date(iso).getTime();
-
 /**
  * Cut a reusable template from a plan. A plan's meals carry absolute dates and a
  * template's carry a day offset from its start, which is the whole conversion.
@@ -50,7 +48,6 @@ export function templateFromPlan(
   options: Options,
 ): DerivedTemplate {
   const mint = options.mintId ?? generateEntityId;
-  const start = at(source.startDate);
   const skipped: DerivedTemplate['skipped'] = [];
   const items: NonNullable<CreateMealTemplateInput['items']> = [];
 
@@ -62,7 +59,7 @@ export function templateFromPlan(
     }
     items.push({
       id: mint(),
-      dayOffset: Math.round((at(meal.date) - start) / DAY_MS),
+      dayOffset: daysBetweenKeys(source.startDate, meal.date),
       mealType: meal.mealType,
       meal: reference,
       ...(meal.servings != null && { servings: meal.servings }),
@@ -72,7 +69,7 @@ export function templateFromPlan(
 
   // The span the plan actually covers, counted inclusively: a Monday-to-Sunday
   // plan is seven days, not the six its endpoints differ by.
-  const durationDays = Math.round((at(source.endDate) - start) / DAY_MS) + 1;
+  const durationDays = daysBetweenKeys(source.startDate, source.endDate) + 1;
 
   return {
     template: {

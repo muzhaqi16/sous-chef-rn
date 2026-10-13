@@ -86,6 +86,7 @@ const seedRows = (rows: Array<{ id: string; status: NotificationStatus }>) =>
       actionUrl: null,
       sourceId: null,
       sourceType: null,
+      pantryItemId: null,
       sentAt: '2026-01-01T00:00:00.000Z',
       readAt: null,
       expiresAt: null,

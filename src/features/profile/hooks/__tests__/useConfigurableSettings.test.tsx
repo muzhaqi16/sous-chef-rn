@@ -63,6 +63,8 @@ jest.mock('#store/useAppStore', () => ({
       : state;
   }),
   useUser: jest.fn(() => ({ id: 'user-1', email: 'test@example.com' })),
+  // `useCurrencyPreference` writes a saved pick onto the persisted record.
+  useUpdateUser: jest.fn(() => jest.fn()),
   useNavigationUtils: jest.fn(() => ({
     getUserNavigationState: mockGetUserNavigationState,
   })),
@@ -104,6 +106,7 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 // alive.
 const mockToAppearance = jest.fn();
 const mockToDataSources = jest.fn();
+const mockToMyReports = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     toPersonalInformation: jest.fn(),
@@ -111,6 +114,7 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
     toDietaryProfile: jest.fn(),
     toAppSettings: jest.fn(),
     toDataSources: mockToDataSources,
+    toMyReports: mockToMyReports,
     toAppearance: mockToAppearance,
     toDebugInfo: jest.fn(),
     toPerformanceDashboard: jest.fn(),
@@ -133,6 +137,11 @@ jest.mock('#/config/settingsConfig', () => ({
         {
           key: 'dataSources',
           labelKey: 'profile.dataSources.title',
+          type: 'navigation',
+        },
+        {
+          key: 'myReports',
+          labelKey: 'reports.myReportsTitle',
           type: 'navigation',
         },
       ],
@@ -264,6 +273,22 @@ describe('useConfigurableSettings', () => {
     dataSources?.onPress?.();
 
     expect(mockToDataSources).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens My reports from its row', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const myReports = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
+    ).items.find(item => item.key === 'myReports');
+
+    expect(myReports?.label).toBe('My reports');
+    myReports?.onPress?.();
+
+    expect(mockToMyReports).toHaveBeenCalledTimes(1);
   });
 
   it('returns sections from config', () => {

@@ -15,6 +15,7 @@ fragment useNotifications_notification on Notification {
   expiresAt
   sourceId
   sourceType
+  pantryItemId
   actionUrl
   readAt
 }

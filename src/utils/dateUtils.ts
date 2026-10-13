@@ -1,4 +1,11 @@
-import { parseISO, isValid, format, parse } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  format,
+  isValid,
+  parse,
+  parseISO,
+} from 'date-fns';
 
 const MAX_REASONABLE_TIMESTAMP_MS = 4102444800000; // year 2100
 
@@ -73,36 +80,33 @@ export const fromDateKey = (key: string): Date =>
 export const isDateKey = (value: string): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-/**
- * A picked calendar day as the instant a meal or plan boundary is sent at:
- * local noon, whose UTC day is the local day from UTC-11 to UTC+12. The API
- * compares meals to their plan by UTC day.
- */
-export const toMealDateTime = (day: Date): string =>
-  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString();
-
-/** A plan's stored boundary instants, as ISO strings. */
+/** A plan's first and last day, as `LocalDate` keys; both are days of the plan. */
 export interface PlanBounds {
   startDate: string;
   endDate: string;
 }
 
 /**
- * A meal instant pulled inside its plan's stored instants, as long as it stays
- * on the same local day. A plan stored before boundaries were sent at noon can
- * put its first or last local day on another UTC day than a noon meal.
+ * A meal's day brought inside its plan: the API refuses a meal outside the
+ * plan's days. Keys of one format order as their days do, so no `Date` is
+ * built — one would read the key as UTC midnight.
  */
-export const keepMealInsidePlan = (
-  mealDate: string,
+export const keepDayInsidePlan = (
+  dayKey: string,
   bounds: PlanBounds | undefined,
 ): string => {
-  const meal = new Date(mealDate);
-  const start = bounds ? new Date(bounds.startDate).getTime() : NaN;
-  const end = bounds ? new Date(bounds.endDate).getTime() : NaN;
-  if ([meal.getTime(), start, end].some(Number.isNaN)) return mealDate;
-
-  const clamped = new Date(Math.min(Math.max(meal.getTime(), start), end));
-  return toDateKey(clamped) === toDateKey(meal)
-    ? clamped.toISOString()
-    : mealDate;
+  if (!bounds) return dayKey;
+  if (![dayKey, bounds.startDate, bounds.endDate].every(isDateKey)) {
+    return dayKey;
+  }
+  if (dayKey < bounds.startDate) return bounds.startDate;
+  return dayKey > bounds.endDate ? bounds.endDate : dayKey;
 };
+
+/** Whole days from one `LocalDate` key to another; negative when `to` is earlier. */
+export const daysBetweenKeys = (from: string, to: string): number =>
+  differenceInCalendarDays(fromDateKey(to), fromDateKey(from));
+
+/** The `LocalDate` key `days` after `key`. */
+export const addDaysToKey = (key: string, days: number): string =>
+  toDateKey(addDays(fromDateKey(key), days));

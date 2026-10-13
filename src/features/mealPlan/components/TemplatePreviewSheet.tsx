@@ -27,7 +27,7 @@ import { alertService } from '#/services/alertService';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -110,7 +110,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
     const servingsNum = parseInt(servings);
     onConfirm({
       templateId: template.id,
-      startDate: toMealDateTime(startDate),
+      startDate: toDateKey(startDate),
       name: nameOverride.trim() || undefined,
       servings:
         !isNaN(servingsNum) && servingsNum > 0 ? servingsNum : undefined,

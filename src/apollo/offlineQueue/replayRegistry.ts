@@ -25,7 +25,6 @@ import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
   reconcileShoppingAddReplay,
-  reconcileShoppingRowReplay,
   settleShoppingItemDelete,
 } from '#features/shoppingList/offline/replayReconcilers';
 import {
@@ -33,13 +32,9 @@ import {
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
-  UpdateShoppingListItemQuantityDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import {
-  AddRecipeToFavoritesDocument,
-  CreateShoppingListItemFromRecipeIngredientDocument,
-} from '#features/recipes/graphql/recipe.generated';
+import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import { reconcileAddRecipeToFavoritesReplay } from '#features/recipes/offline/replayReconcilers';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
@@ -81,6 +76,8 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [CreateHomeDocument, reconcileCreateHomeReplay],
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
   [DeleteMealPlanDocument, settleMealPlanDelete],
+  // A replayed delete answers `converged` as a success, not as not-found.
+  [DeleteMealPlanItemDocument, settleGoneMealPlanItem],
   [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
@@ -88,16 +85,13 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
   [RemoveItemFromShoppingListDocument, settleShoppingItemDelete],
-  [
-    CreateShoppingListItemFromRecipeIngredientDocument,
-    reconcileShoppingRowReplay,
-  ],
   [UpdateUserPreferencesDocument, reconcileSettingsReplay],
 ]);
 
 /**
  * Replays a `NotFoundError` makes moot: the entry dequeues as settled and the
- * handler removes the gone row, with no withdrawal toast.
+ * handler removes the gone row, with no withdrawal toast. A removal the server
+ * already applied answers `converged` as a success and never reaches here.
  */
 export const GONE_REPLAYS: ReplayReconcilerTable = byOperation([
   [MarkNotificationAsReadDocument, removeGoneNotification],
@@ -119,7 +113,6 @@ export const MERGED_QUANTITY_OVERWRITES: Record<
   (input: Record<string, unknown>) => boolean
 > = byOperation([
   [UpdatePantryItemQuantityDocument, always],
-  [UpdateShoppingListItemQuantityDocument, always],
   [AdjustPantryItemQuantityDocument, always],
   [ChangePantryItemUnitDocument, always],
   [UpdatePantryItemDocument, setsQuantityOrUnit],

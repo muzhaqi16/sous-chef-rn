@@ -45,7 +45,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MockLink } from '@apollo/client/testing';
-import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemDisplayFragmentDoc,
@@ -67,6 +67,8 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 
 const LIST_ID = 'list-1';
 const ITEM_ID = 'item-1';
+// The version the cached row holds, which the tick states.
+const ITEM_VERSION = 1;
 
 function seedItem(cache: InMemoryCache, isPurchased: boolean) {
   const data: ShoppingListItemDisplayFragment = {
@@ -85,7 +87,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
       movedToPantryAt: null,
       isPurchased,
     },
-    version: 1,
+    version: ITEM_VERSION,
     updatedAt: '2025-01-01T00:00:00.000Z',
     category: 'Dairy',
     notes: null,
@@ -113,10 +115,10 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
 
 function buildSettledServerResponse(
   newPurchased: boolean,
-): MockDataFor<typeof ToggleShoppingListItemPurchasedDocument> {
+): MockDataFor<typeof UpdateShoppingListItemDocument> {
   return {
-    toggleShoppingListItemPurchased: {
-      __typename: 'ToggleShoppingListItemPurchasedPayload',
+    updateShoppingListItem: {
+      __typename: 'UpdateShoppingListItemPayload',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,
@@ -131,7 +133,7 @@ function buildSettledServerResponse(
 
 function buildClient(opts: {
   initialPurchased: boolean;
-  serverResponse: MockDataFor<typeof ToggleShoppingListItemPurchasedDocument>;
+  serverResponse: MockDataFor<typeof UpdateShoppingListItemDocument>;
   serverDelayMs?: number;
 }) {
   const cache = makeCache();
@@ -141,8 +143,15 @@ function buildClient(opts: {
   const responses: MockedResponse[] = [
     completeMockedResponse({
       request: {
-        query: ToggleShoppingListItemPurchasedDocument,
-        variables: { input: { id: ITEM_ID, purchased: newPurchased } },
+        query: UpdateShoppingListItemDocument,
+        // Matched exactly: the tick carries the flag alone, no amounts.
+        variables: {
+          input: {
+            id: ITEM_ID,
+            version: ITEM_VERSION,
+            purchaseTracking: { isPurchased: newPurchased },
+          },
+        },
       },
       result: { data: opts.serverResponse },
       // `delay` makes the network response asynchronous so we can observe

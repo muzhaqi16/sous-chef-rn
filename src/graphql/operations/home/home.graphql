@@ -268,6 +268,8 @@ mutation DeleteHome($input: DeleteHomeInput!) {
   deleteHome(input: $input) {
     __typename
     ... on DeleteHomePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       home {
         id
       }
@@ -407,6 +409,8 @@ mutation RemoveMember($input: RemoveMemberInput!) {
   removeMember(input: $input) {
     __typename
     ... on RemoveMemberPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       membership {
         id
       }
@@ -429,6 +433,8 @@ mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
   deleteHomeInvite(input: $input) {
     __typename
     ... on DeleteHomeInvitePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       homeInvite {
         id
       }
@@ -498,6 +504,8 @@ mutation LeaveHome($input: LeaveHomeInput!) {
   leaveHome(input: $input) {
     __typename
     ... on LeaveHomePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       membership {
         id
       }

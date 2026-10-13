@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, MealPlanType } from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
@@ -15,6 +15,7 @@ import {
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import { alertService } from '#/services/alertService';
 import { useMealPlanActions } from '../useMealPlanActions';
 
@@ -192,7 +193,36 @@ describe('useMealPlanActions', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('updateMealPlan calls mutation with id and input', async () => {
+  const PLAN_VERSION = gql`
+    fragment SeedPlanNameAtVersion on MealPlan {
+      id
+      name
+      version
+    }
+  `;
+
+  const planAtVersion = (version: number) => {
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: PLAN_VERSION,
+      data: {
+        __typename: 'MealPlan',
+        id: 'plan-1',
+        name: 'Week Plan',
+        version,
+      },
+    });
+    return cache;
+  };
+
+  const readPlan = (cache: ReturnType<typeof makeCache>) =>
+    cache.readFragment<{ name: string; version: number }>({
+      id: 'MealPlan:plan-1',
+      fragment: PLAN_VERSION,
+    });
+
+  it('updateMealPlan states the id and the version the cache holds, and its answer lands in the cache', async () => {
+    const cache = planAtVersion(3);
     const data: MockDataFor<typeof UpdateMealPlanDocument> = {
       updateMealPlan: {
         __typename: 'UpdateMealPlanPayload',
@@ -200,6 +230,7 @@ describe('useMealPlanActions', () => {
           __typename: 'MealPlan',
           id: 'plan-1',
           name: 'Updated',
+          version: 4,
         },
       },
     };
@@ -209,6 +240,7 @@ describe('useMealPlanActions', () => {
 
     const { result } = renderHookWithApollo(() => useMealPlanActions(), {
       operationMocks: [update.mock],
+      cache,
     });
 
     let updated: boolean | undefined;
@@ -219,9 +251,93 @@ describe('useMealPlanActions', () => {
     });
 
     expect(updated).toBe(true);
-    expect(update.fired).toContainEqual({
-      input: { id: 'plan-1', name: 'Updated' },
+    // The caller states neither: the id is the argument, the version the cache's.
+    expect(update.fired).toEqual([
+      { input: { id: 'plan-1', name: 'Updated', version: 3 } },
+    ]);
+    expect(readPlan(cache)).toMatchObject({ name: 'Updated', version: 4 });
+  });
+
+  // The API refuses an edit that states no version, so one is never sent.
+  it('updateMealPlan sends nothing and reports a failure for a plan whose version the cache does not hold', async () => {
+    const update = recordMock(UpdateMealPlanDocument, {
+      error: new Error('should not be sent without a version'),
     });
+
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [update.mock],
+      cache: makeCache(),
+    });
+
+    let updated: boolean | undefined;
+    await act(async () => {
+      updated = await result.current.updateMealPlan('plan-1', {
+        name: 'Updated',
+      });
+    });
+
+    expect(updated).toBe(false);
+    expect(update.fired).toHaveLength(0);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateMealPlan puts the plan back and offers a refresh when it was changed elsewhere', async () => {
+    const cache = makeCache();
+    // The complete list-card row: what the local write and its revert read.
+    writeLocalMealPlan(
+      cache,
+      'plan-1',
+      {
+        name: 'Week Plan',
+        planType: MealPlanType.Weekly,
+        startDate: '2025-06-01',
+        endDate: '2025-06-07',
+      },
+      'user-1',
+    );
+    const data: MockDataFor<typeof UpdateMealPlanDocument> = {
+      updateMealPlan: {
+        __typename: 'ConflictError',
+        code: ErrorCode.VersionConflict,
+        message: 'raw server English',
+      },
+    };
+    const update = recordMock(UpdateMealPlanDocument, {
+      data,
+      delay: 20,
+    });
+
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [update.mock],
+      cache,
+    });
+
+    let pending: Promise<boolean> | undefined;
+    act(() => {
+      pending = result.current.updateMealPlan('plan-1', { name: 'Renamed' });
+    });
+    // Local-first: the rename shows before the server answers.
+    await waitFor(() => expect(readPlan(cache)?.name).toBe('Renamed'));
+
+    let updated: boolean | undefined;
+    await act(async () => {
+      updated = await pending;
+    });
+
+    expect(updated).toBe(false);
+    // A local plan is written at version 1, which is what the edit stated.
+    expect(update.fired).toEqual([
+      { input: { id: 'plan-1', name: 'Renamed', version: 1 } },
+    ]);
+    expect(readPlan(cache)).toMatchObject({ name: 'Week Plan', version: 1 });
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.arrayContaining([
+        expect.objectContaining({ onPress: expect.any(Function) }),
+      ]),
+    );
   });
 
   // Online writes are not queued, so nothing rebased the second onto the

@@ -6,6 +6,7 @@
  */
 
 import { useApolloClient, useSubscription } from '@apollo/client/react';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import {
   UserEventsDocument,
   type UserEventsSubscription,
@@ -69,9 +70,13 @@ function handleRemovedFromHome(
   toastService.error(t('accountEvents.removedFromHome'));
 }
 
-function handleAddedToHome(client: SubscriptionApolloClient) {
+/** `ownAccept`: the echo of an invite this device just accepted. */
+function handleAddedToHome(
+  client: SubscriptionApolloClient,
+  ownAccept: boolean,
+) {
   void client.refetchQueries({ include: [GetHomesDocument] });
-  toastService.success(t('accountEvents.addedToHome'));
+  if (!ownAccept) toastService.success(t('accountEvents.addedToHome'));
 }
 
 function handleRemovedFromShoppingList(
@@ -91,8 +96,8 @@ function handleRemovedFromShoppingList(
   toastService.error(t('accountEvents.removedFromShoppingList'));
 }
 
-function handleAddedToShoppingList() {
-  toastService.success(t('accountEvents.addedToShoppingList'));
+function handleAddedToShoppingList(ownAccept: boolean) {
+  if (!ownAccept) toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
 /**
@@ -149,7 +154,7 @@ export function useUserSubscriptions(userId?: string) {
           break;
 
         case UserSubtype.AddedToHome:
-          handleAddedToHome(client);
+          handleAddedToHome(client, isSelfEcho(payload, userId));
           break;
 
         case UserSubtype.RemovedFromShoppingList:
@@ -157,7 +162,7 @@ export function useUserSubscriptions(userId?: string) {
           break;
 
         case UserSubtype.AddedToShoppingList:
-          handleAddedToShoppingList();
+          handleAddedToShoppingList(isSelfEcho(payload, userId));
           break;
 
         case UserSubtype.Banned:

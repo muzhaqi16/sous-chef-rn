@@ -10,7 +10,11 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
-import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealPlanDocument,
+  MealPlanEventsDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
@@ -34,8 +38,10 @@ const mockAddToMealPlans = jest.fn();
 const mockAddToMealTemplates = jest.fn();
 const mockRemoveFromMealPlans = jest.fn();
 const mockRemoveFromMealTemplates = jest.fn();
-const mockAddToMealPlanItems = jest.fn();
-const mockRemoveFromMealPlanItems = jest.fn();
+// Called with the `Parent.field` each edge writer was built for, then its own
+// arguments: a plan's meals and a template's are edges of a connection.
+const mockAddEdge = jest.fn();
+const mockRemoveEdge = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   // The updater factories are stubbed so each call site can be asserted, but
   // the pure helpers keep their real behaviour — a fully-partial factory drops
@@ -49,14 +55,14 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
     fieldName === 'mealPlans'
       ? (...args: unknown[]) => mockRemoveFromMealPlans(...args)
       : (...args: unknown[]) => mockRemoveFromMealTemplates(...args),
-  createAddToParentArrayUpdater:
-    () =>
+  createAddToParentConnectionUpdater:
+    (parent: string, field: string) =>
     (...args: unknown[]) =>
-      mockAddToMealPlanItems(...args),
-  createRemoveFromParentArrayUpdater:
-    () =>
+      mockAddEdge(`${parent}.${field}`, ...args),
+  createRemoveFromParentConnectionUpdater:
+    (parent: string, field: string) =>
     (...args: unknown[]) =>
-      mockRemoveFromMealPlanItems(...args),
+      mockRemoveEdge(`${parent}.${field}`, ...args),
 }));
 
 /** Captures the hook's customOnData so tests can drive it with a payload. */
@@ -333,7 +339,8 @@ describe('useMealPlanSubscriptions', () => {
       makeClient(jest.fn()),
     );
 
-    expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+    expect(mockAddEdge).not.toHaveBeenCalled();
+    expect(mockRemoveEdge).not.toHaveBeenCalled();
   });
 
   it('removes an item deleted elsewhere', () => {
@@ -352,12 +359,49 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
-    expect(mockRemoveFromMealPlanItems).toHaveBeenCalledWith(
+    // The edge comes off the plan's meals connection, and the entity goes.
+    expect(mockRemoveEdge).toHaveBeenCalledTimes(1);
+    expect(mockRemoveEdge).toHaveBeenCalledWith(
+      'MealPlan.mealPlanItemsConnection',
       client.cache,
       'plan-1',
       'item-1',
       { evictItem: true },
     );
+    // Its totals moved too, which only the plan read restates.
+    flushAggregateRefresh();
+    expect(client.refetchQueries).toHaveBeenCalledWith({
+      include: [GetMealPlanDocument],
+    });
+  });
+
+  it('removes a template item deleted elsewhere from its template, without a read', async () => {
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(
+      getOnData(),
+      {
+        subtype: MealPlanSubtype.MealTemplateItemChanged,
+        mutation: MutationType.ItemRemoved,
+        templateId: 'tpl-1',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealTemplateItem', id: 'tpl-item-1' },
+      },
+      client,
+    );
+
+    expect(mockRemoveEdge).toHaveBeenCalledTimes(1);
+    expect(mockRemoveEdge).toHaveBeenCalledWith(
+      'MealTemplate.itemsConnection',
+      client.cache,
+      'tpl-1',
+      'tpl-item-1',
+      { evictItem: true },
+    );
+    expect(client.query).not.toHaveBeenCalled();
+    expect(client.refetchQueries).not.toHaveBeenCalled();
   });
 
   it('ignores its own echo', () => {
@@ -457,14 +501,16 @@ describe('useMealPlanSubscriptions', () => {
         client,
       );
 
+      // The first page of the template's meals, at the size its readers use.
       expect(client.query).toHaveBeenCalledWith(
         expect.objectContaining({
           query: MealTemplateItemsForEventDocument,
-          variables: { id: 'tpl-1' },
+          variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
           fetchPolicy: 'network-only',
         }),
       );
-      expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+      // No bare id is linked by hand: the read's own write lists the item.
+      expect(mockAddEdge).not.toHaveBeenCalled();
       expect(client.refetchQueries).not.toHaveBeenCalled();
     },
   );

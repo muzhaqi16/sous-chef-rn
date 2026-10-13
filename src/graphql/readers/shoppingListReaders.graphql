@@ -61,6 +61,7 @@ fragment ShoppingListReaders on ShoppingList {
   templateName
   totalCost
   totalItems
+  unpricedItems
   updatedAt
   version
 }

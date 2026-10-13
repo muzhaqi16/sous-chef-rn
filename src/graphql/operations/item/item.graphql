@@ -67,7 +67,7 @@ query SearchItemsSemantic(
   $prompt: String!
   $first: Int
   $maxDistance: Float
-  $filters: ItemFilters
+  $filters: SemanticItemFilters
 ) {
   searchItemsSemantic(
     prompt: $prompt

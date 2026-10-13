@@ -31,8 +31,13 @@ export const reconcileCreateMealPlanItemReplay: ReplayReconcilerTable[string] =
     if (!isRecord(item) || typeof item.id !== 'string') return;
     adoptServerMealPlanItem(cache, mealPlanId, item.id, mintedId);
     if (item.id !== mintedId) {
-      // `UpdateMealPlanItemInput` carries no version to move.
-      adopt?.({ mintedId, survivingId: item.id, version: undefined });
+      // The surviving row's version: an edit queued behind the create stated
+      // the minted row's, which the kept row is past.
+      adopt?.({
+        mintedId,
+        survivingId: item.id,
+        version: typeof item.version === 'number' ? item.version : undefined,
+      });
     }
   };
 

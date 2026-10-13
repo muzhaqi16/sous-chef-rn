@@ -7,7 +7,9 @@ import { logger } from '#/utils/environment';
 import {
   DeviceByDeviceIdDocument,
   RegisterDeviceDocument,
+  DeleteDeviceDocument,
   UpdateDeviceDocument,
+  type DeleteDeviceMutation,
   type UpdateDeviceMutation,
 } from '#operations/auth/device.generated';
 import { PermissionService } from '#/services/permissions/PermissionService';
@@ -164,12 +166,15 @@ export type DeviceUpdateOutcome =
 // block, and one inside a `try` body bails the React Compiler out of the whole
 // function.
 function readDeviceUpdate(result: {
-  data?: UpdateDeviceMutation | null;
+  data?: UpdateDeviceMutation | DeleteDeviceMutation | null;
   error?: unknown;
 }): DeviceUpdateOutcome {
   if (appliedPayload(result.data)) return { status: 'ok' };
   // Any other member is a refusal the server resolved, not a success.
-  const refusal = result.data?.updateDevice;
+  const refusal =
+    result.data && 'updateDevice' in result.data
+      ? result.data.updateDevice
+      : result.data?.deleteDevice;
   if (!refusal || !('code' in refusal)) {
     return { status: 'failed', error: result.error ?? null };
   }
@@ -184,6 +189,20 @@ async function updateDevice(
     const result = await client.mutate({
       mutation: UpdateDeviceDocument,
       variables: { input },
+      fetchPolicy: 'no-cache',
+    });
+    return readDeviceUpdate(result);
+  } catch (error) {
+    return { status: 'failed', error };
+  }
+}
+
+/** Removes a device row; a row already gone answers as done (`converged`). */
+async function deleteDevice(id: string): Promise<DeviceUpdateOutcome> {
+  try {
+    const result = await client.mutate({
+      mutation: DeleteDeviceDocument,
+      variables: { input: { id } },
       fetchPolicy: 'no-cache',
     });
     return readDeviceUpdate(result);
@@ -257,7 +276,7 @@ async function retireLegacyDeviceRow(): Promise<void> {
     return;
   }
 
-  const outcome = await updateDevice({ id: row.id, delete: true });
+  const outcome = await deleteDevice(row.id);
   if (outcome.status !== 'ok') {
     logger.warn('Could not retire the superseded device row:', outcome);
     return;
@@ -320,7 +339,7 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     // Keep the server token current: the OS rotates push tokens periodically, so
     // subscribe once and updateDevice on each rotation. This is the server's
     // row id, not the identity the device presents.
-    const serverDeviceId = registerPayload.device?.id;
+    const serverDeviceId = registerPayload.device.id;
     if (serverDeviceId) {
       pushTokenRefreshUnsubscribe?.();
       pushTokenRefreshUnsubscribe = onPushTokenRefresh(token => {

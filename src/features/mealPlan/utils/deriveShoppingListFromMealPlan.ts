@@ -1,5 +1,8 @@
 import { generateEntityId } from '#/utils/generateEntityId';
-import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  type BatchAddShoppingListItemInput,
+} from '#/graphql/generated/schemaTypes';
 
 /** One planned meal, as `useGenerateShoppingList_mealPlan` caches it. */
 export interface PlannedMeal {
@@ -45,7 +48,6 @@ export interface DerivedShoppingList {
 
 interface DeriveOptions {
   mealPlanId: string;
-  mealPlanName: string;
   checkPantry: boolean;
   /** Null means the pantry is not in the cache, not that it is empty. */
   pantryRows: PantryStock[] | null;
@@ -157,7 +159,7 @@ export function deriveShoppingListFromMealPlan(
       recipeContext: {
         mealPlanId: options.mealPlanId,
         mealPlanItemId: entry.mealPlanItemId,
-        mealPlanReference: options.mealPlanName,
+        addedContext: AddedContext.FromMealPlan,
         recipeId: entry.recipeId,
         recipeIngredientId: entry.recipeIngredientId,
       },

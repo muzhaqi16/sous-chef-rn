@@ -301,5 +301,46 @@
   },
   "restrictionSection": {
     "empty": "Asnjë i shtuar ende"
+  },
+  "reports": {
+    "reportReview": "Raporto këtë vlerësim",
+    "reportRecipe": "Raporto këtë recetë",
+    "sheetTitle": "Raporto te moderatorët",
+    "reason": {
+      "spam": "Spam",
+      "inappropriateContent": "Përmbajtje e papërshtatshme",
+      "harassment": "Ngacmim ose bullizëm",
+      "hateSpeech": "Gjuhë e urrejtjes",
+      "fakeInformation": "Informacion i rremë ose mashtrues",
+      "scamFraud": "Mashtrim ose skemë mashtruese",
+      "impersonation": "Shtirje si dikush tjetër",
+      "privacyViolation": "Shkelje e privatësisë",
+      "copyright": "Shkelje e të drejtave të autorit"
+    },
+    "reasonRequired": "Zgjidh një arsye",
+    "descriptionLabel": "Çfarë ndodhi?",
+    "descriptionPlaceholder": "Shto çdo gjë që i ndihmon moderatorët ta shqyrtojnë",
+    "descriptionRequired": "Përshkruaj çfarë ndodhi, që moderatorët të mund ta shqyrtojnë",
+    "send": "Dërgo raportimin",
+    "sent": "Raportimi u dërgua. Moderatorët do ta shqyrtojnë.",
+    "alreadyOpen": "Këtë e ke raportuar tashmë. Është ende në shqyrtim.",
+    "needsConnection": "Për të dërguar një raportim duhet lidhje me internetin. Provo sërish kur të kesh lidhje.",
+    "failed": "Raportimi nuk u dërgua dot. Provo sërish.",
+    "myReportsTitle": "Raportimet e mia",
+    "about": {
+      "recipe": "Raportim për një recetë",
+      "recipeReview": "Raportim për një vlerësim",
+      "profile": "Raportim për një profil",
+      "user": "Raportim për një përdorues"
+    },
+    "reportedOn": "Dërguar më {{date}}",
+    "status": {
+      "pending": "Në pritje të shqyrtimit",
+      "investigating": "Në shqyrtim",
+      "resolved": "I pranuar",
+      "dismissed": "I mbyllur"
+    },
+    "emptyTitle": "Ende asnjë raportim",
+    "emptyDescription": "Raportimet që u dërgon moderatorëve shfaqen këtu, me gjendjen e secilit."
   }
 }

@@ -116,6 +116,7 @@
     "topWastedItems": "Articoli più sprecati",
     "activityOverTime": "Attività nel tempo",
     "additionsByUnit": "Aggiunte per unità",
+    "perUnit": "per {{unit}}",
     "consumptionByUnit": "Consumo per unità",
     "topRestockedItems": "Articoli più riassortiti",
     "transactionCount": "({{count}} transazioni)",

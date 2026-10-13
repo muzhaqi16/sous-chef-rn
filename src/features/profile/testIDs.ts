@@ -26,6 +26,14 @@ export const profileTestIDs = {
 
   cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',
 
+  /** A reason in the report sheet, by its `ReportType` value. */
+  reportReason: (type: string) => `report-reason-${type}`,
+  reportDescriptionInput: 'report-description-input',
+  reportSendButton: 'report-send-button',
+  reportFailure: 'report-failure',
+  /** A row on the My reports screen, by report id. */
+  reportRow: (id: string) => `report-row-${id}`,
+
   /** A navigation row on the profile menu, by its settings-config key. */
   menuItem: (key: string) => `profile-menu-${key}`,
 };

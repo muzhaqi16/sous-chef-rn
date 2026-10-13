@@ -102,6 +102,7 @@ export function useAppNavigation() {
     toPersonalInformation: () => navigation.navigate('PersonalInformation'),
     toAppSettings: () => navigation.navigate('AppSettings'),
     toDataSources: () => navigation.navigate('DataSources'),
+    toMyReports: () => navigation.navigate('MyReports'),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
     toReceiptScan: () =>

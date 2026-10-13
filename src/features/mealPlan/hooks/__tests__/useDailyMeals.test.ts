@@ -13,8 +13,9 @@ import {
 import { MealType } from '#/graphql/generated/schemaTypes';
 
 const today = new Date(2025, 5, 15); // June 15, 2025
-const todayISO = '2025-06-15T12:00:00Z';
-const otherDayISO = '2025-06-16T12:00:00Z';
+// A meal's day is a `LocalDate` key: the day itself, never an instant.
+const todayKey = '2025-06-15';
+const otherDayKey = '2025-06-16';
 
 const makeItem = (
   overrides: Partial<{
@@ -30,7 +31,7 @@ const makeItem = (
   return {
     __typename: 'MealPlanItem',
     id: 'item-1',
-    date: todayISO,
+    date: todayKey,
     mealType: MealType.Breakfast,
     customMealName: null,
     recipe:
@@ -68,16 +69,56 @@ const refsOf = (items: DailyMeals_ItemFragment[]): DailyMealsItem[] =>
 const renderDailyMeals = (
   items: DailyMeals_ItemFragment[],
   cache: InMemoryCache = seed(items),
-) => renderHookWithApollo(() => useDailyMeals(refsOf(items), today), { cache });
+  selectedDate: Date = today,
+) =>
+  renderHookWithApollo(() => useDailyMeals(refsOf(items), selectedDate), {
+    cache,
+  });
 
 describe('useDailyMeals', () => {
   it('returns empty state when no items match the date', () => {
-    const items = [makeItem({ date: otherDayISO })];
+    const items = [makeItem({ date: otherDayKey })];
 
     const { result } = renderDailyMeals(items);
 
     expect(result.current.dailyMeals).toEqual([]);
     expect(result.current.isEmpty).toBe(true);
+  });
+
+  it('shows only the meals of the selected day, by their day key', () => {
+    const items = [
+      makeItem({ id: 'before', date: '2025-06-14', mealType: MealType.Lunch }),
+      makeItem({ id: 'on', date: todayKey, mealType: MealType.Lunch }),
+      makeItem({ id: 'after', date: otherDayKey, mealType: MealType.Lunch }),
+    ];
+
+    const { result } = renderDailyMeals(items);
+
+    expect(
+      result.current.dailyMeals
+        .find(g => g.mealType === 'LUNCH')
+        ?.items.map(i => i.id),
+    ).toEqual(['on']);
+  });
+
+  // Local midnight is the previous UTC day east of UTC, and the last minute
+  // is the next UTC day west of it: neither end of the day may shift the key.
+  it.each([
+    ['its first minute', new Date(2025, 5, 15, 0, 0)],
+    ['noon', new Date(2025, 5, 15, 12, 0)],
+    ['its last minute', new Date(2025, 5, 15, 23, 59)],
+  ])('shows the day of the selected local date at %s', (_label, selected) => {
+    const items = [
+      makeItem({ id: 'before', date: '2025-06-14', mealType: MealType.Lunch }),
+      makeItem({ id: 'on', date: todayKey, mealType: MealType.Lunch }),
+      makeItem({ id: 'after', date: otherDayKey, mealType: MealType.Lunch }),
+    ];
+
+    const { result } = renderDailyMeals(items, seed(items), selected);
+
+    expect(
+      result.current.dailyMeals.flatMap(group => group.items.map(i => i.id)),
+    ).toEqual(['on']);
   });
 
   it('groups items by meal type in correct order', () => {
@@ -227,25 +268,39 @@ describe('useDailyMeals', () => {
     ).toHaveLength(0);
   });
 
+  it('marks the days holding a meal by the meals own keys, one per day', () => {
+    const items = [
+      makeItem({ id: 'i1', date: todayKey }),
+      makeItem({ id: 'i2', date: todayKey, mealType: MealType.Dinner }),
+      makeItem({ id: 'i3', date: '2025-07-01', mealType: MealType.Lunch }),
+    ];
+
+    const { result } = renderDailyMeals(items);
+
+    expect([...result.current.daysWithMeals].sort()).toEqual([
+      todayKey,
+      '2025-07-01',
+    ]);
+  });
+
   it('marks every day holding a meal, and follows a meal moved to another day', async () => {
     const items = [makeItem({ id: 'i1' })];
     const cache = seed(items);
     const { result } = renderDailyMeals(items, cache);
 
-    expect([...result.current.daysWithMeals]).toHaveLength(1);
-    const [before] = [...result.current.daysWithMeals];
+    expect([...result.current.daysWithMeals]).toEqual([todayKey]);
 
     await act(async () => {
       cache.writeFragment({
         fragment: DailyMeals_ItemFragmentDoc,
         fragmentName: 'DailyMeals_item',
-        data: makeItem({ id: 'i1', date: otherDayISO }),
+        data: makeItem({ id: 'i1', date: otherDayKey }),
       });
       await Promise.resolve();
     });
 
     await waitFor(() =>
-      expect([...result.current.daysWithMeals]).not.toEqual([before]),
+      expect([...result.current.daysWithMeals]).toEqual([otherDayKey]),
     );
     expect(result.current.isEmpty).toBe(true);
   });

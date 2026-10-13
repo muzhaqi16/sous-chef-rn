@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@apollo/client/react';
-import { UpdateAccountDocument } from '#operations/auth/user.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useUpdateUser } from '#store/useAppStore';
 import { usePreferredCurrency } from '#/domain/money';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { alertService } from '#/services/alertService';
@@ -14,16 +14,17 @@ export interface CurrencyOption {
 
 /**
  * The account's currency: the option list, the current code, and the write.
- * `updateAccount`, NOT `updateSettings` — the server denominates an unnamed
- * cost from `User.preferredCurrency`, so writing the `UserSettings` column of
- * the same name moves a value nothing reads.
+ * It is the settings' own (`updateSettings { regional }`): the server
+ * denominates an unnamed cost from it. The write is NOT `localFirst` — queued,
+ * the money on screen would read in a currency the account does not hold.
  */
 export function useCurrencyPreference() {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
   const setPreferredCurrency = useAppStore(state => state.setPreferredCurrency);
   const { data } = useQuery(GetCurrenciesDocument);
-  const [updateAccount] = useMutation(UpdateAccountDocument);
+  const updateUser = useUpdateUser();
+  const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
   const options: CurrencyOption[] = (data?.currencies ?? []).map(currency => ({
     value: currency.code,
@@ -47,14 +48,19 @@ export function useCurrencyPreference() {
 
     const settled = await settleMutation(
       () =>
-        updateAccount({ variables: { input: { preferredCurrency: code } } }),
+        updateSettings({
+          variables: { input: { regional: { preferredCurrency: code } } },
+        }),
       {
-        document: UpdateAccountDocument,
+        document: UpdateUserPreferencesDocument,
         fallback: t('settings.updateFailed'),
         onFailed: () => setPreferredCurrency(previous),
       },
     );
-    return settled.status !== 'failed';
+    if (settled.status === 'failed') return false;
+    // The persisted record follows: at the next launch it wins over the mirror.
+    updateUser({ preferredCurrency: code });
+    return true;
   };
 
   /**

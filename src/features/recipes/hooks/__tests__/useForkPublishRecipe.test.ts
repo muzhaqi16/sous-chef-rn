@@ -13,7 +13,7 @@ import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -208,6 +208,10 @@ describe('useForkRecipe', () => {
 });
 
 describe('usePublishRecipe', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   // A submission lands in PENDING_REVIEW until a moderator approves, so the
   // cache must not claim the recipe is published while it waits.
   it('shows a submitted draft in review before the server answers', async () => {
@@ -240,46 +244,82 @@ describe('usePublishRecipe', () => {
     expect(recipe?.status).toBe('PENDING_REVIEW');
   });
 
-  it('returns true when the submission is queued offline', async () => {
+  it('states the cached version, and returns true when the submission is queued offline', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: { updateRecipe: null }, // queued signature
+    });
     const { result } = renderHookWithApollo(() => usePublishRecipe(), {
-      operationMocks: [
-        {
-          request: { query: UpdateRecipeDocument, variables: () => true },
-          result: { data: { updateRecipe: null } }, // queued signature
-        },
-      ],
+      cache: seedSource(),
+      operationMocks: [update.mock],
     });
 
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setSubmitted('recipe-1', true);
     });
+
     expect(ok).toBe(true);
+    // The API refuses an edit that states no version.
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: 'recipe-1',
+          status: RecipeStatus.Published,
+          version: SOURCE.version,
+        },
+      },
+    ]);
   });
 
-  it('returns false when the update is rejected', async () => {
-    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
-      operationMocks: [
-        {
-          request: { query: UpdateRecipeDocument, variables: () => true },
-          result: {
-            data: {
-              updateRecipe: {
-                __typename: 'ValidationError',
-                code: ErrorCode.ValidationFailed,
-                message: 'bad',
-                field: 'status',
-              },
-            },
-          },
+  it('returns false and puts the status back when the update is rejected', async () => {
+    const cache = seedSource();
+    const update = recordMock(UpdateRecipeDocument, {
+      data: {
+        updateRecipe: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'bad',
+          field: 'status',
         },
-      ],
+      },
+    });
+    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
+      cache,
+      operationMocks: [update.mock],
     });
 
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setSubmitted('recipe-1', false);
     });
+
     expect(ok).toBe(false);
+    // The refusal, not an unsent write, is what failed it.
+    expect(update.fired).toHaveLength(1);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    const recipe = cache.readFragment<{ status: string }>({
+      id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
+      fragment: RecipeForm_RecipeFragmentDoc,
+      fragmentName: 'RecipeForm_recipe',
+    });
+    expect(recipe?.status).toBe(SOURCE.status);
+  });
+
+  it('does not send a status change for a recipe whose version it never read', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: { updateRecipe: null },
+    });
+    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
+      operationMocks: [update.mock],
+    });
+
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setSubmitted('recipe-1', true);
+    });
+
+    expect(ok).toBe(false);
+    expect(update.fired).toEqual([]);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 });

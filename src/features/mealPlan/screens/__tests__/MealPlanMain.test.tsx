@@ -1,10 +1,11 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
+import { View as HeaderHost } from 'react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { MealPlanMain } from '../MealPlanMain';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealType } from '#/graphql/generated/schemaTypes';
 
 // Mock token scheduler / refreshToken
@@ -87,7 +88,8 @@ jest.mock('#features/mealPlan/hooks/useMealPlanItemActions', () => ({
 
 jest.mock('#features/mealPlan/hooks/useMealPlanCalendar', () => ({
   useMealPlanCalendar: jest.fn(() => ({
-    selectedDate: new Date('2026-03-01'),
+    // A picked day arrives as local midnight.
+    selectedDate: new Date(2026, 2, 1),
     weekDays: [],
     viewMode: 'week',
     setViewMode: jest.fn(),
@@ -171,8 +173,12 @@ jest.mock('#features/mealPlan/components/WeekStrip', () => ({
 jest.mock('#components/atoms/MonthCalendar', () => ({
   MonthCalendar: () => null,
 }));
+const dayMealListProps: Array<{ listHeader?: React.ReactElement }> = [];
 jest.mock('#features/mealPlan/components/DayMealList', () => ({
-  DayMealList: () => null,
+  DayMealList: (props: { listHeader?: React.ReactElement }) => {
+    dayMealListProps.push(props);
+    return null;
+  },
 }));
 jest.mock('#features/mealPlan/components/CalendarToggleBar', () => ({
   CalendarToggleBar: () => null,
@@ -497,7 +503,8 @@ describe('MealPlanMain', () => {
       '#features/mealPlan/hooks/useMealPlanCalendar',
     );
     useMealPlanCalendar.mockReturnValue({
-      selectedDate: new Date('2026-03-01'),
+      // A picked day arrives as local midnight.
+      selectedDate: new Date(2026, 2, 1),
       weekDays: [],
       viewMode: 'month',
       setViewMode: jest.fn(),
@@ -582,7 +589,7 @@ describe('MealPlanMain', () => {
     );
     useMealPlan.mockReturnValue({
       mealPlan: { id: 'plan-1', name: 'My Plan' },
-      items: [{ id: 'i1', date: '2026-03-01T12:00:00Z' }],
+      items: [{ id: 'i1', date: '2026-03-01' }],
       nutritionSummary: { calories: 2000, protein: 100 },
       refetch: jest.fn().mockResolvedValue({}),
     });
@@ -652,14 +659,76 @@ describe('MealPlanMain', () => {
     await props.onAddRecipe('recipe-1', MealType.Dinner);
     await props.onAddCustomMeal('Leftovers', MealType.Lunch);
 
-    const day = toMealDateTime(new Date('2026-03-01'));
+    // The picked local day as a `LocalDate` key, not an instant.
     expect(createItem).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ date: day }),
+      expect.objectContaining({
+        meal: { recipeId: 'recipe-1' },
+        mealType: MealType.Dinner,
+        date: '2026-03-01',
+      }),
     );
     expect(createItem).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ date: day }),
+      expect.objectContaining({
+        meal: { customMealName: 'Leftovers' },
+        mealType: MealType.Lunch,
+        date: '2026-03-01',
+      }),
     );
+  });
+
+  describe('a plan whose later pages of meals could not be read', () => {
+    const renderWithPlan = (plan: Record<string, unknown>) => {
+      mockDeferredScreen.mockImplementation(
+        ({ component: Component }: DeferredScreenMockProps) => <Component />,
+      );
+      const { useMealPlans } = jest.requireMock(
+        '#features/mealPlan/hooks/useMealPlans',
+      );
+      useMealPlans.mockReturnValue(
+        mockMealPlansState({
+          currentPlan: { id: 'plan-1', name: 'My Plan' },
+          mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+        }),
+      );
+      const { useMealPlan } = jest.requireMock(
+        '#features/mealPlan/hooks/useMealPlan',
+      );
+      useMealPlan.mockReturnValue({
+        mealPlan: { id: 'plan-1', name: 'My Plan' },
+        items: [],
+        nutritionSummary: null,
+        refetch: jest.fn().mockResolvedValue({}),
+        ...plan,
+      });
+      dayMealListProps.length = 0;
+      renderWithApollo(<MealPlanMain />);
+      // The banner leads the day's list, which this suite stubs out.
+      const header = dayMealListProps[dayMealListProps.length - 1]?.listHeader;
+      return render(<HeaderHost>{header}</HeaderHost>);
+    };
+
+    it('says the plan is partial, and reads the rest again on a tap', () => {
+      const retryRemainingMeals = jest.fn();
+      const header = renderWithPlan({
+        mealsIncomplete: true,
+        retryRemainingMeals,
+      });
+
+      fireEvent.press(header.getByTestId(mealPlanTestIDs.mealsIncomplete));
+
+      expect(header.getByText("Some meals couldn't be loaded")).toBeTruthy();
+      expect(retryRemainingMeals).toHaveBeenCalledTimes(1);
+    });
+
+    it('says nothing for a plan read whole', () => {
+      const header = renderWithPlan({
+        mealsIncomplete: false,
+        retryRemainingMeals: jest.fn(),
+      });
+
+      expect(header.queryByTestId(mealPlanTestIDs.mealsIncomplete)).toBeNull();
+    });
   });
 });

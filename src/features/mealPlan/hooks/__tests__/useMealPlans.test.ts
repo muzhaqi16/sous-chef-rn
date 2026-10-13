@@ -10,6 +10,7 @@ import {
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { addDaysToKey } from '#/utils/dateUtils';
 import { useMealPlans } from '../useMealPlans';
 
 function seedPlanCache(
@@ -50,6 +51,12 @@ function seedPlanCache(
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
+// The device's calendar day, pinned: every plan below is dated against it.
+const TODAY = '2026-03-10';
+const YESTERDAY = '2026-03-09';
+const TOMORROW = '2026-03-11';
+jest.mock('#hooks/useToday', () => ({ useToday: () => '2026-03-10' }));
+
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
@@ -65,10 +72,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function planData(
+function planConnection(
   plans: Array<{ id: string; startDate: string; endDate: string }>,
-): MockedResponse {
-  const data: MockDataFor<typeof GetMealPlansDocument> = {
+): MockDataFor<typeof GetMealPlansDocument> {
+  return {
     mealPlans: {
       __typename: 'MealPlanConnection',
       edges: plans.map(p => ({
@@ -87,8 +94,13 @@ function planData(
       },
     },
   };
+}
+
+function planData(
+  plans: Array<{ id: string; startDate: string; endDate: string }>,
+): MockedResponse {
   return recordMock(GetMealPlansDocument, {
-    data,
+    data: planConnection(plans),
   }).mock;
 }
 
@@ -109,12 +121,7 @@ describe('useMealPlans', () => {
   });
 
   it('returns mealPlans from query data', async () => {
-    const now = new Date();
-    const plan = {
-      id: '1',
-      startDate: now.toISOString(),
-      endDate: now.toISOString(),
-    };
+    const plan = { id: '1', startDate: TODAY, endDate: TODAY };
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [planData([plan])],
       cache: seedPlanCache([plan]),
@@ -124,13 +131,10 @@ describe('useMealPlans', () => {
   });
 
   it('identifies active plan as current', async () => {
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 86400000);
-    const tomorrow = new Date(now.getTime() + 86400000);
     const activePlan = {
       id: 'active',
-      startDate: yesterday.toISOString(),
-      endDate: tomorrow.toISOString(),
+      startDate: YESTERDAY,
+      endDate: TOMORROW,
     };
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [planData([activePlan])],
@@ -141,13 +145,47 @@ describe('useMealPlans', () => {
     );
   });
 
+  // A plan's last day is one of its days: it is current until that day ends.
+  it.each([
+    ['its last day', { startDate: '2026-03-04', endDate: TODAY }],
+    ['its first day', { startDate: TODAY, endDate: '2026-03-16' }],
+    ['the one day of a one-day plan', { startDate: TODAY, endDate: TODAY }],
+  ])(
+    'keeps a plan current on %s, over one starting tomorrow',
+    async (_label, days) => {
+      const plans = [
+        { id: 'upcoming', startDate: TOMORROW, endDate: '2026-03-17' },
+        { id: 'today', ...days },
+      ];
+      const { result } = renderHookWithApollo(() => useMealPlans(), {
+        operationMocks: [planData(plans)],
+        cache: seedPlanCache(plans),
+      });
+
+      await waitFor(() =>
+        expect(result.current.state.mealPlans).toHaveLength(2),
+      );
+      expect(result.current.state.currentPlan?.id).toBe('today');
+    },
+  );
+
+  it('takes the upcoming plan as current once the other ended yesterday', async () => {
+    const plans = [
+      { id: 'upcoming', startDate: TOMORROW, endDate: '2026-03-17' },
+      { id: 'ended', startDate: '2026-03-03', endDate: YESTERDAY },
+    ];
+    const { result } = renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [planData(plans)],
+      cache: seedPlanCache(plans),
+    });
+
+    await waitFor(() =>
+      expect(result.current.state.currentPlan?.id).toBe('upcoming'),
+    );
+  });
+
   it("follows a plan's own edit, which leaves the list query's result as it was", async () => {
-    const now = new Date();
-    const plan = {
-      id: 'active',
-      startDate: new Date(now.getTime() - 86400000).toISOString(),
-      endDate: new Date(now.getTime() + 86400000).toISOString(),
-    };
+    const plan = { id: 'active', startDate: YESTERDAY, endDate: TOMORROW };
     const cache = seedPlanCache([plan]);
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [planData([plan])],
@@ -208,13 +246,32 @@ describe('useMealPlans', () => {
     expect(currentVariant.first).toBeLessThanOrEqual(3);
   });
 
+  // `filters.startDate` keeps plans ending on or after it: a day, so a plan on
+  // its last day is not cut off at the hour the request happens to be sent.
+  it('asks for the plans ending today or later by the day key, nearest first', async () => {
+    const recorded = recordMock(GetMealPlansDocument, {
+      data: planConnection([]),
+    });
+    renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [recorded.mock],
+    });
+
+    await waitFor(() =>
+      expect(recorded.fired).toContainEqual({
+        first: 3,
+        filters: { startDate: TODAY },
+        orderBy: { startDate: SortOrder.Asc },
+      }),
+    );
+  });
+
   describe('beyond the first page', () => {
-    const DAY = 86400000;
     type Plan = { id: string; startDate: string; endDate: string };
+    /** A week-long plan starting `startOffsetDays` from the pinned today. */
     const planAt = (id: string, startOffsetDays: number): Plan => ({
       id,
-      startDate: new Date(Date.now() + startOffsetDays * DAY).toISOString(),
-      endDate: new Date(Date.now() + (startOffsetDays + 6) * DAY).toISOString(),
+      startDate: addDaysToKey(TODAY, startOffsetDays),
+      endDate: addDaysToKey(TODAY, startOffsetDays + 6),
     });
     const connection = (
       plans: Plan[],
@@ -291,7 +348,7 @@ describe('useMealPlans', () => {
       );
       expect(server.fired).toContainEqual(
         expect.objectContaining({
-          filters: { startDate: expect.any(String) },
+          filters: { startDate: TODAY },
           orderBy: { startDate: SortOrder.Asc },
         }),
       );

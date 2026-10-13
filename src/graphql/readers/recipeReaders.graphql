@@ -109,6 +109,7 @@ fragment RecipeReaders on Recipe {
     id
     cookedCount
     folder
+    lastCookedAt
     notes
     personalRating
     tags

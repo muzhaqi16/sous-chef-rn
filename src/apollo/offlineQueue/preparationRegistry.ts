@@ -12,9 +12,7 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
-  ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListItemDocument,
-  UpdateShoppingListItemQuantityDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
@@ -42,8 +40,6 @@ export const REPLAY_PREPARATIONS: Readonly<Record<string, ReplayPreparer>> =
     [AddItemToShoppingListFromFilteredPantryDocument, withCurrentUnits],
     [AddItemToShoppingListFromPantryItemDocument, withCurrentUnits],
     [UpdateShoppingListItemDocument, withCurrentUnits],
-    [UpdateShoppingListItemQuantityDocument, withCurrentUnits],
-    [ToggleShoppingListItemPurchasedDocument, asQueued],
     [RemoveItemFromShoppingListDocument, asQueued],
     [MoveShoppingListItemDocument, asQueued],
   ]);

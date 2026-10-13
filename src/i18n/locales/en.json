@@ -20,6 +20,8 @@
       "genericRetry": "Something went wrong. Please try again.",
       "homeAccessDenied": "You don't have access to this home",
       "homeInviteExpired": "Home invitation has expired",
+      "homeMemberLimitReached": "This home has reached its member limit",
+      "payloadTooLarge": "That is too much to send at once. Try a smaller change.",
       "homeInviteInvalid": "Invalid home invitation",
       "homeMemberAlreadyExists": "User is already a member of this home",
       "homeNotFound": "Home not found",

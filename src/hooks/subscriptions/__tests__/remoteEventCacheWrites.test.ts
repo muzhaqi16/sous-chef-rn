@@ -12,6 +12,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import {
@@ -25,7 +26,13 @@ import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
-import { MealPlanForEventDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealPlanDocument,
+  MealPlanForEventDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 
@@ -289,12 +296,16 @@ describe('a meal plan created elsewhere', () => {
 describe('a meal-template item added elsewhere', () => {
   it('reaches the open template complete, without blanking it or refetching it whole', async () => {
     useStore.setState({ selectedHomeId: 'home-1', isHomeSelectionReady: true });
+    const wholePage = { hasNextPage: false, endCursor: null };
     const template = recordMock(GetMealTemplateDocument, {
       data: {
         mealTemplate: {
           __typename: 'MealTemplate',
           id: 'tpl-1',
-          items: [{ __typename: 'MealTemplateItem', id: 'item-1' }],
+          itemsConnection: {
+            edges: [{ node: { __typename: 'MealTemplateItem', id: 'item-1' } }],
+            pageInfo: wholePage,
+          },
         },
       },
     });
@@ -303,15 +314,20 @@ describe('a meal-template item added elsewhere', () => {
         mealTemplate: {
           __typename: 'MealTemplate',
           id: 'tpl-1',
-          items: [
-            { __typename: 'MealTemplateItem', id: 'item-1' },
-            {
-              __typename: 'MealTemplateItem',
-              id: 'item-2',
-              customMealName: 'Soup',
-              recipe: null,
-            },
-          ],
+          itemsConnection: {
+            edges: [
+              { node: { __typename: 'MealTemplateItem', id: 'item-1' } },
+              {
+                node: {
+                  __typename: 'MealTemplateItem',
+                  id: 'item-2',
+                  customMealName: 'Soup',
+                  recipe: null,
+                },
+              },
+            ],
+            pageInfo: wholePage,
+          },
         },
       },
     });
@@ -321,17 +337,18 @@ describe('a meal-template item added elsewhere', () => {
       () => {
         useMealPlanSubscriptions('user-1');
         const { data } = useQuery(GetMealTemplateDocument, {
-          variables: { id: 'tpl-1' },
+          variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
         });
-        renders.push(data?.mealTemplate?.items.map(item => item.id));
-        return { client: useApolloClient(), data };
+        const ids = data?.mealTemplate?.itemsConnection.edges.map(
+          edge => edge.node.id,
+        );
+        renders.push(ids);
+        return { client: useApolloClient(), ids };
       },
       { operationMocks: [template.mock, readBack.mock] },
     );
     await settle();
-    await waitFor(() =>
-      expect(result.current.data?.mealTemplate?.items).toHaveLength(1),
-    );
+    await waitFor(() => expect(result.current.ids).toEqual(['item-1']));
     const firstLoaded = renders.findIndex(ids => ids !== undefined);
 
     await act(async () => {
@@ -349,14 +366,96 @@ describe('a meal-template item added elsewhere', () => {
     });
     await settle();
 
+    // The read-back restates the first page of the same one list the screen
+    // reads, so the new meal joins it as an edge.
     await waitFor(() =>
-      expect(
-        result.current.data?.mealTemplate?.items.map(item => item.id),
-      ).toEqual(['item-1', 'item-2']),
+      expect(result.current.ids).toEqual(['item-1', 'item-2']),
     );
-    expect(readBack.fired).toEqual([{ id: 'tpl-1' }]);
+    expect(readBack.fired).toEqual([
+      { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
+    ]);
     // The screen's own query ran once, at mount, and never went empty after.
     expect(template.fired).toHaveLength(1);
     expect(renders.slice(firstLoaded)).not.toContain(undefined);
+  });
+});
+
+describe('a meal removed elsewhere', () => {
+  const planHolding = (
+    ids: string[],
+  ): MockDataFor<typeof GetMealPlanDocument> => ({
+    mealPlan: {
+      __typename: 'MealPlan',
+      id: 'plan-1',
+      mealPlanItemsConnection: {
+        edges: ids.map(id => ({
+          node: { __typename: 'MealPlanItem', id },
+        })),
+        pageInfo: { hasNextPage: false, endCursor: null },
+      },
+    },
+  });
+
+  it('leaves the open plan at once, and the plan is read again for its totals', async () => {
+    useStore.setState({ selectedHomeId: 'home-1', isHomeSelectionReady: true });
+    const cache = makeCache();
+    const opened = recordMock(GetMealPlanDocument, {
+      data: planHolding(['meal-1', 'meal-2']),
+      maxUsageCount: 1,
+    });
+    const reRead = recordMock(GetMealPlanDocument, {
+      data: planHolding(['meal-2']),
+    });
+    const { result } = renderHookWithApollo(
+      () => {
+        useMealPlanSubscriptions('user-1');
+        const { items } = useMealPlan('plan-1');
+        return { client: useApolloClient(), ids: items.map(item => item.id) };
+      },
+      { cache, operationMocks: [opened.mock, reRead.mock] },
+    );
+    await settle();
+    await waitFor(() =>
+      expect(result.current.ids).toEqual(['meal-1', 'meal-2']),
+    );
+
+    await act(async () => {
+      onData()(
+        {
+          subtype: MealPlanSubtype.MealPlanItemChanged,
+          mutation: MutationType.ItemRemoved,
+          mealPlanId: 'plan-1',
+          actorUserId: 'user-2',
+          originatorClientId: 'device_other',
+          node: { __typename: 'MealPlanItem', id: 'meal-1' },
+        },
+        result.current.client,
+      );
+    });
+
+    // Its edge is off the plan's meals and its record gone, before any read.
+    expect(
+      cache
+        .readFragment({
+          id: cache.identify({ __typename: 'MealPlan', id: 'plan-1' }),
+          fragment: MealPlanMain_MealPlanFragmentDoc,
+          fragmentName: 'MealPlanMain_mealPlan',
+        })
+        ?.mealPlanItemsConnection.edges.map(edge => edge.node.id),
+    ).toEqual(['meal-2']);
+    expect(cache.extract()['MealPlanItem:meal-1']).toBeUndefined();
+    expect(reRead.fired).toHaveLength(0);
+
+    // The debounced plan read restates what only the server computes.
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+    await settle();
+    await waitFor(() =>
+      expect(reRead.fired).toEqual([
+        { id: 'plan-1', mealsFirst: MEALS_PAGE_SIZE },
+      ]),
+    );
+    await waitFor(() => expect(result.current.ids).toEqual(['meal-2']));
   });
 });

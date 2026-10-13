@@ -1,0 +1,7 @@
+fragment MyReportRow_report on MyUserReport {
+  id
+  type
+  status
+  contentType
+  createdAt
+}

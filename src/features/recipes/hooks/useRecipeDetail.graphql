@@ -16,6 +16,8 @@ mutation AddItemsToShoppingListFromRecipe(
         index
         clientId
         success
+        # MERGED: the line landed on one the list already held.
+        outcome
         failure {
           code
           reason

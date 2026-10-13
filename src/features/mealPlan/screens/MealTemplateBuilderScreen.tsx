@@ -84,7 +84,8 @@ export const MealTemplateBuilderScreen: React.FC<
 
   // Edit mode writes each item as it is saved; create mode holds drafts until
   // the template itself is created.
-  const { template: loaded } = useMealTemplateForEdit(templateId);
+  const { template: loaded, items: loadedItems } =
+    useMealTemplateForEdit(templateId);
 
   // Two forms on one screen: the template's own metadata, and the sub-form that
   // adds one meal to it.
@@ -94,7 +95,7 @@ export const MealTemplateBuilderScreen: React.FC<
     mode: 'onTouched',
   });
 
-  // Draft items (create mode). In edit mode the list comes from `loaded.items`.
+  // Draft items (create mode). In edit mode the list comes from the loaded template's meals.
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
   const itemForm = useForm<TemplateItemFormValues>({
@@ -128,7 +129,7 @@ export const MealTemplateBuilderScreen: React.FC<
   }, [loaded, templateForm]);
 
   const items: DraftItem[] = isEdit
-    ? (loaded?.items ?? []).map(item => ({
+    ? loadedItems.map(item => ({
         key: item.id,
         serverId: item.id,
         dayOffset: item.dayOffset,

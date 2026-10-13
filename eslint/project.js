@@ -276,6 +276,10 @@ const overrides = [
       // them. `__tests__/graphql/fragmentsAreReachable.test.ts` holds the
       // invariant instead, reading the generated exports.
       '@graphql-eslint/no-unused-fragments': 'off',
+      // The preset's 7 is its own default. The server's HTTP limit is depth 10
+      // as graphql-armor counts it, which is 9 here (this rule does not count
+      // the root field's level); `documentLimits.test.ts` holds the exact rule.
+      '@graphql-eslint/selection-set-depth': ['error', { maxDepth: 9 }],
       'sous-chef/selects-key-field-directly': 'error',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',

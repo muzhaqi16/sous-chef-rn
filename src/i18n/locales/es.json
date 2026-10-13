@@ -20,6 +20,8 @@
       "genericRetry": "Algo salió mal. Inténtalo de nuevo.",
       "homeAccessDenied": "No tienes acceso a este hogar",
       "homeInviteExpired": "La invitación al hogar ha caducado",
+      "homeMemberLimitReached": "Este hogar ha alcanzado su límite de miembros",
+      "payloadTooLarge": "Es demasiado para enviar de una vez. Prueba con un cambio más pequeño.",
       "homeInviteInvalid": "Invitación al hogar no válida",
       "homeMemberAlreadyExists": "El usuario ya es miembro de este hogar",
       "homeNotFound": "Hogar no encontrado",

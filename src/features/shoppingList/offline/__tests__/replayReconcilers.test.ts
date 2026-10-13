@@ -12,7 +12,6 @@ import {
 import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
 import {
   reconcileShoppingAddReplay,
-  reconcileShoppingRowReplay,
   settleShoppingItemDelete,
 } from '../replayReconcilers';
 import { withdrawAddedShoppingListItems } from '../queueWithdrawals';
@@ -235,30 +234,6 @@ describe('a replayed batch the service accepted in part', () => {
     reconcileShoppingAddReplay(cache, variables, data);
 
     expect(cache.extract()).toEqual(once);
-  });
-});
-
-describe('a recipe ingredient line merged on replay', () => {
-  it('folds the minted line into the one the service kept', () => {
-    const cache = seedList([row('held-flour', 'Flour', 2)]);
-    mint(cache, 'minted-flour', 'Flour');
-
-    reconcileShoppingRowReplay(
-      cache,
-      { input: { id: 'minted-flour', shoppingListId: 'list-1' } },
-      {
-        createShoppingListItemFromRecipeIngredient: {
-          __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
-          shoppingListItem: { id: 'held-flour' },
-        },
-      },
-    );
-
-    expect(readList(cache)).toEqual({
-      total: 1,
-      remaining: 1,
-      rows: [['held-flour', 2]],
-    });
   });
 });
 

@@ -38,6 +38,8 @@ query GetShoppingListDetails($id: ID!) {
     budgetAmount
     totalCost
     estimatedTotal
+    # The lines `estimatedTotal` leaves out, stated beside it.
+    unpricedItems
     currency
     priceTracking
     totalItems
@@ -565,6 +567,8 @@ mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
   deleteShoppingList(input: $input) {
     __typename
     ... on DeleteShoppingListPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       shoppingList {
         id
       }
@@ -616,6 +620,8 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
   removeShoppingListCollaborator(input: $input) {
     __typename
     ... on RemoveShoppingListCollaboratorPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       collaborator {
         id
       }
@@ -685,6 +691,8 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
         id
         ...ShoppingListItemReaders
         ...UpdateShoppingListItem_item
+        ...useToggleShoppingItem_item
+        ...useQuantityEditModal_updateQuantityResult
       }
       shoppingList {
         id
@@ -739,70 +747,6 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
         id
         ...ShoppingListItemReaders
         ...useItemReordering_moveResult
-      }
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-# ============================================
-# SPECIALIZED PERFORMANCE MUTATIONS
-# ============================================
-
-mutation ToggleShoppingListItemPurchased(
-  $input: ToggleShoppingListItemPurchasedInput!
-) {
-  toggleShoppingListItemPurchased(input: $input) {
-    __typename
-    ... on ToggleShoppingListItemPurchasedPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        ...useToggleShoppingItem_item
-      }
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation UpdateShoppingListItemQuantity(
-  $input: UpdateShoppingListItemQuantityInput!
-) {
-  updateShoppingListItemQuantity(input: $input) {
-    __typename
-    ... on UpdateShoppingListItemQuantityPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        ...useQuantityEditModal_updateQuantityResult
       }
       shoppingList {
         id

@@ -1,4 +1,5 @@
 import { generateEntityId } from '#/utils/generateEntityId';
+import { addDaysToKey, daysBetweenKeys } from '#/utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
@@ -45,8 +46,6 @@ interface DuplicateOptions {
   mintId?: () => string;
 }
 
-const dayMs = (iso: string) => new Date(iso).getTime();
-
 /**
  * Recreate a plan under new dates as the primitives it decomposes into. Pure, so
  * the caller reads the cache and fires the writes and this stays fixture-tested.
@@ -56,14 +55,15 @@ export function duplicatePlan(
   source: SourcePlan,
   options: DuplicateOptions,
 ): DuplicatedPlan | DuplicateRefusal {
-  const originalSpan = dayMs(source.endDate) - dayMs(source.startDate);
-  const newSpan = dayMs(options.newEndDate) - dayMs(options.newStartDate);
+  // Days are `LocalDate` keys: counted as calendar days, never as instants.
+  const originalSpan = daysBetweenKeys(source.startDate, source.endDate);
+  const newSpan = daysBetweenKeys(options.newStartDate, options.newEndDate);
   // The server refuses a range of a different length, so the same range that
   // fails online must fail here rather than queueing a write bound to fail.
   if (originalSpan !== newSpan) return 'duration-differs';
 
   const mint = options.mintId ?? generateEntityId;
-  const shift = dayMs(options.newStartDate) - dayMs(source.startDate);
+  const shift = daysBetweenKeys(source.startDate, options.newStartDate);
   const planId = mint();
 
   const plan: CreateMealPlanInput = {
@@ -93,7 +93,7 @@ export function duplicatePlan(
     items.push({
       id: mint(),
       mealPlanId: planId,
-      date: new Date(dayMs(meal.date) + shift).toISOString(),
+      date: addDaysToKey(meal.date, shift),
       mealType: meal.mealType,
       meal: reference,
       ...(meal.servings != null && { servings: meal.servings }),

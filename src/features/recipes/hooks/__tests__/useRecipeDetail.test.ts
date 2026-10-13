@@ -482,6 +482,7 @@ describe('useRecipeDetail', () => {
             notes: 'n',
             personalRating: 5,
             cookedCount: 3,
+            lastCookedAt: '2026-10-11T12:00:00.000Z',
           },
         }),
       });
@@ -493,6 +494,30 @@ describe('useRecipeDetail', () => {
       expect(result.current.savedNotes).toBe('n');
       expect(result.current.savedRating).toBe(5);
       expect(result.current.cookedCount).toBe(3);
+      expect(result.current.lastCookedAt).toBe('2026-10-11T12:00:00.000Z');
+    });
+
+    it('reads no last-cooked date for a saved recipe never cooked', () => {
+      mockUseRecipeData.mockReturnValueOnce({
+        ...mockRecipeDataReturn,
+        backendRecipe: backendRecipe({
+          savedDetails: {
+            __typename: 'SavedRecipe',
+            id: 'sd-1',
+            folder: null,
+            tags: [],
+            notes: null,
+            personalRating: null,
+            cookedCount: 0,
+            lastCookedAt: null,
+          },
+        }),
+      });
+
+      const { result } = renderHookWithApollo(() => useRecipeDetail());
+
+      expect(result.current.cookedCount).toBe(0);
+      expect(result.current.lastCookedAt).toBeNull();
     });
 
     it('reads nothing saved for an unsaved recipe', () => {
@@ -506,6 +531,7 @@ describe('useRecipeDetail', () => {
       expect(result.current.savedFolder).toBeNull();
       expect(result.current.savedTags).toEqual([]);
       expect(result.current.cookedCount).toBe(0);
+      expect(result.current.lastCookedAt).toBeNull();
     });
   });
 });

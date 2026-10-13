@@ -11,6 +11,7 @@ import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import {
   snapshotFields,
   writeEntityFields,
@@ -49,9 +50,11 @@ export function usePublishRecipe() {
     const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
     const settled = await settleMutation(
       () =>
-        mutate({
-          variables: { input: { id: recipeId, status } },
-        }),
+        chainVersionedWrite(client.cache, entity, version =>
+          mutate({
+            variables: { input: { id: recipeId, status, version } },
+          }),
+        ),
       {
         document: UpdateRecipeDocument,
         fallback: t('labels.failedToUpdateRecipe'),

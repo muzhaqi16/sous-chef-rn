@@ -301,5 +301,46 @@
   },
   "restrictionSection": {
     "empty": "Nessuno aggiunto"
+  },
+  "reports": {
+    "reportReview": "Segnala questa recensione",
+    "reportRecipe": "Segnala questa ricetta",
+    "sheetTitle": "Segnala ai moderatori",
+    "reason": {
+      "spam": "Spam",
+      "inappropriateContent": "Contenuto inappropriato",
+      "harassment": "Molestie o bullismo",
+      "hateSpeech": "Incitamento all'odio",
+      "fakeInformation": "Informazioni false o fuorvianti",
+      "scamFraud": "Truffa o frode",
+      "impersonation": "Furto d'identità",
+      "privacyViolation": "Violazione della privacy",
+      "copyright": "Violazione del copyright"
+    },
+    "reasonRequired": "Scegli un motivo",
+    "descriptionLabel": "Cosa è successo?",
+    "descriptionPlaceholder": "Aggiungi qualsiasi dettaglio che aiuti i moderatori a valutare",
+    "descriptionRequired": "Descrivi cosa è successo, così i moderatori possono valutare",
+    "send": "Invia segnalazione",
+    "sent": "Segnalazione inviata. I moderatori la esamineranno.",
+    "alreadyOpen": "Hai già inviato questa segnalazione. È ancora in esame.",
+    "needsConnection": "Per inviare una segnalazione serve una connessione. Riprova quando torni online.",
+    "failed": "Impossibile inviare la segnalazione. Riprova.",
+    "myReportsTitle": "Le mie segnalazioni",
+    "about": {
+      "recipe": "Segnalazione di una ricetta",
+      "recipeReview": "Segnalazione di una recensione",
+      "profile": "Segnalazione di un profilo",
+      "user": "Segnalazione di un utente"
+    },
+    "reportedOn": "Inviata il {{date}}",
+    "status": {
+      "pending": "In attesa di esame",
+      "investigating": "In esame",
+      "resolved": "Accolta",
+      "dismissed": "Chiusa"
+    },
+    "emptyTitle": "Ancora nessuna segnalazione",
+    "emptyDescription": "Le segnalazioni che invii ai moderatori compaiono qui, con lo stato di ciascuna."
   }
 }

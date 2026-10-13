@@ -62,6 +62,8 @@ mutation DeleteRecipeReview($input: DeleteRecipeReviewInput!) {
   deleteRecipeReview(input: $input) {
     __typename
     ... on DeleteRecipeReviewPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       recipeReview {
         id
       }

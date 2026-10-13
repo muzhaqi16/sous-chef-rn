@@ -1,4 +1,5 @@
 import { handleStoreRehydration, useStore } from '../index';
+import { createTestStore } from '#/test-utils/createTestStore';
 import { errorService } from '#/services/errorService';
 import { openedWithEmptyStore } from '#/storage/mmkv';
 import {
@@ -56,6 +57,61 @@ describe('handleStoreRehydration', () => {
       handleStoreRehydration(state, undefined);
 
       expect(state!.preferredCurrency).toBe('EUR');
+    });
+
+    // A pick that saved writes the record as well as the mirror
+    // (`useCurrencyPreference`), so the relaunch keeps it rather than putting
+    // back the currency the account signed in with.
+    it('keeps a currency picked and saved since sign-in', () => {
+      const store = createTestStore({
+        user: {
+          id: 'u1',
+          email: 'ada@example.com',
+          emailVerified: true,
+          onBoarded: true,
+          preferredCurrency: 'USD',
+        },
+        preferredCurrency: 'USD',
+      });
+      store.getState().setPreferredCurrency('EUR');
+      store.getState().updateUser({ preferredCurrency: 'EUR' });
+
+      // What a relaunch reads back: the persisted slice, through JSON.
+      const { partialize } = useStore.persist.getOptions();
+      const restored = {
+        ...JSON.parse(JSON.stringify(partialize!(store.getState()))),
+        setHydrated: jest.fn(),
+      } as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(restored, undefined);
+
+      expect(restored!.user?.preferredCurrency).toBe('EUR');
+      expect(restored!.preferredCurrency).toBe('EUR');
+    });
+
+    it("puts back the record's currency over a pick the record never took", () => {
+      // The mirror alone moved: the launch restores what the account holds.
+      const store = createTestStore({
+        user: {
+          id: 'u1',
+          email: 'ada@example.com',
+          emailVerified: true,
+          onBoarded: true,
+          preferredCurrency: 'USD',
+        },
+        preferredCurrency: 'USD',
+      });
+      store.getState().setPreferredCurrency('EUR');
+
+      const { partialize } = useStore.persist.getOptions();
+      const restored = {
+        ...JSON.parse(JSON.stringify(partialize!(store.getState()))),
+        setHydrated: jest.fn(),
+      } as Parameters<typeof handleStoreRehydration>[0];
+
+      handleStoreRehydration(restored, undefined);
+
+      expect(restored!.preferredCurrency).toBe('USD');
     });
   });
 

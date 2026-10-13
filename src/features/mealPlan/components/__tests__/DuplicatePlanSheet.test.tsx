@@ -4,8 +4,6 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
-import { addDays, parseISO } from 'date-fns';
-import { toMealDateTime } from '#/utils/dateUtils';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -111,8 +109,8 @@ describe('DuplicatePlanSheet', () => {
     name: 'Weekly Plan',
     description: null,
     planType: MealPlanType.Weekly,
-    startDate: '2025-03-01T00:00:00.000Z',
-    endDate: '2025-03-07T00:00:00.000Z',
+    startDate: '2025-03-01',
+    endDate: '2025-03-07',
     servings: 4,
     totalCalories: null,
     totalProtein: null,
@@ -216,37 +214,60 @@ describe('DuplicatePlanSheet', () => {
     // Transition to visible to trigger render-time state reset
     rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
     await user.press(screen.getByTestId('confirm-button'));
-    expect(defaultProps.onDuplicate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mealPlanId: 'mp-1',
-        newName: 'Weekly Plan (Copy)',
-        newStartDate: expect.any(String),
-        newEndDate: expect.any(String),
-      }),
-    );
+    expect(defaultProps.onDuplicate).toHaveBeenCalledWith({
+      mealPlanId: 'mp-1',
+      newName: 'Weekly Plan (Copy)',
+      newStartDate: '2025-03-08',
+      newEndDate: '2025-03-14',
+    });
   });
 
-  // The source plan's boundary can carry any time of day (older plans are UTC
-  // midnight); the copy is sent as the picked day's local noon, like every
-  // other plan boundary, or its last day falls outside the API's UTC-day range.
-  it('sends the new plan boundaries as local noon of the days shown', async () => {
+  const confirmWith = async (mealPlan: MealPlanDisplayFragment) => {
     const user = userEvent.setup();
+    const props = { ...defaultProps, mealPlan };
     const { rerender } = render(
-      <DuplicatePlanSheet {...defaultProps} visible={false} />,
+      <DuplicatePlanSheet {...props} visible={false} />,
     );
-    rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
+    rerender(<DuplicatePlanSheet {...props} visible={true} />);
+    return user;
+  };
+
+  // The copy starts the day after the source ends and covers as many days.
+  // 9 March 2025 is a 23-hour day in the US: the last day is still the 14th.
+  it('sends the copy first and last day as day keys, the same number of days long', async () => {
+    const user = await confirmWith(mockMealPlan);
     await user.press(screen.getByTestId('confirm-button'));
 
-    const shownStart = addDays(parseISO(mockMealPlan.endDate), 1);
-    expect(defaultProps.onDuplicate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newStartDate: toMealDateTime(shownStart),
-        newEndDate: toMealDateTime(addDays(shownStart, 6)),
-      }),
-    );
     const [[sent]] = defaultProps.onDuplicate.mock.calls;
-    expect(new Date(sent.newStartDate).getHours()).toBe(12);
-    expect(new Date(sent.newEndDate).getHours()).toBe(12);
+    expect(sent.newStartDate).toBe('2025-03-08');
+    expect(sent.newEndDate).toBe('2025-03-14');
+  });
+
+  it('steps the copy a week at a time, across a month boundary', async () => {
+    const user = await confirmWith({
+      ...mockMealPlan,
+      startDate: '2025-03-22',
+      endDate: '2025-03-28',
+    });
+    await user.press(screen.getByTestId('icon-chevron-forward'));
+    await user.press(screen.getByTestId('confirm-button'));
+
+    const [[sent]] = defaultProps.onDuplicate.mock.calls;
+    expect(sent.newStartDate).toBe('2025-04-05');
+    expect(sent.newEndDate).toBe('2025-04-11');
+  });
+
+  it('copies a one-day plan onto one day', async () => {
+    const user = await confirmWith({
+      ...mockMealPlan,
+      startDate: '2025-03-07',
+      endDate: '2025-03-07',
+    });
+    await user.press(screen.getByTestId('confirm-button'));
+
+    const [[sent]] = defaultProps.onDuplicate.mock.calls;
+    expect(sent.newStartDate).toBe('2025-03-08');
+    expect(sent.newEndDate).toBe('2025-03-08');
   });
 
   it('renders chevron navigation icons for date adjustment', () => {

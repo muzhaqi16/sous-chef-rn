@@ -8,7 +8,10 @@ import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { serializeError } from '#/utils/errorSerialization';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
+import {
+  GraphQLNetworkError,
+  refusalEnvelopeOf,
+} from '#/utils/errors/graphqlErrors';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -179,6 +182,10 @@ export class ErrorService {
     OPERATION_RATE_LIMITED: 'rateLimitExceeded',
     RESOURCE_VERSION_CONFLICT: 'versionConflict',
     WS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    // Refused before execution: the operation is not one this server accepts,
+    // or the request is larger than it reads.
+    OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    PAYLOAD_TOO_LARGE: 'payloadTooLarge',
     INTERNAL_SERVER_ERROR: 'genericLater',
     // Transient server-side conditions: the same request is worth retrying.
     DEADLOCK: 'genericRetry',
@@ -195,8 +202,6 @@ export class ErrorService {
     PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
     INSUFFICIENT_QUANTITY: 'insufficientQuantity',
     UNIT_CHANGE_NEEDS_RESOLUTION: 'unitChangeNeedsResolution',
-    // A low-stock line skipped because the target list already carries it.
-    ITEM_ALREADY_IN_LIST: 'shoppingItemAlreadyExists',
 
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'shoppingListNotFound',
@@ -207,6 +212,7 @@ export class ErrorService {
     HOME_INVITE_INVALID: 'homeInviteInvalid',
     HOME_INVITE_EXPIRED: 'homeInviteExpired',
     HOME_MEMBER_ALREADY_EXISTS: 'homeMemberAlreadyExists',
+    HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
   };
 
   // SERVICE_TIMEOUT and SERVICE_OVERLOADED are in the API's internal registry
@@ -382,7 +388,12 @@ export class ErrorService {
         }
       } else if (ServerError.is(error)) {
         const statusCode = error.statusCode;
-        if (statusCode === 401) errorCode = TopLevelErrorCode.AuthTokenInvalid;
+        // A refusal before execution carries its code in the body; the status
+        // is read only for a body that is not an envelope.
+        const envelope = refusalEnvelopeOf(error);
+        if (envelope) errorCode = envelope.code;
+        else if (statusCode === 401)
+          errorCode = TopLevelErrorCode.AuthTokenInvalid;
         // No GraphQL envelope here, so the status is all there is, and four
         // conditions share 403. Deliberately NOT an AUTH_* code: isAuthError()
         // must stay false, or a key-provisioning fault reads as a dead session.

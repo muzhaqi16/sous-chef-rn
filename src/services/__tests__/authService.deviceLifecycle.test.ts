@@ -86,11 +86,28 @@ import {
   recordRegisteredLocale,
 } from '#/storage/deviceId';
 import { MOCK_DEVICE_ID } from '#/storage/__mocks__/deviceId';
+import { DeleteDeviceDocument } from '#operations/auth/device.generated';
 
-/** Route client.mutate by input shape: RegisterDevice carries `deviceId`. */
-const routeMutate = () =>
-  mockMutate.mockImplementation(({ variables }) => {
+/**
+ * Route client.mutate: DeleteDevice by its document (its input is a bare
+ * `id`, as UpdateDevice's can be), RegisterDevice by the `deviceId` it carries.
+ * `deleteDevice` is what the server answers a delete with; the default is the
+ * row it removed.
+ */
+const routeMutate = (deleteDevice?: object) =>
+  mockMutate.mockImplementation(({ mutation, variables }) => {
     const input = (variables?.input ?? {}) as Record<string, unknown>;
+    if (mutation === DeleteDeviceDocument) {
+      return Promise.resolve({
+        data: {
+          deleteDevice: deleteDevice ?? {
+            __typename: 'DeleteDevicePayload',
+            converged: false,
+            device: { id: input.id },
+          },
+        },
+      });
+    }
     if ('deviceId' in input) {
       return Promise.resolve({
         data: {
@@ -128,6 +145,13 @@ const updateCallsWith = (key: string) =>
       (input): input is Record<string, unknown> =>
         !!input && 'id' in input && key in input,
     );
+
+/** The variables every DeleteDevice was sent with. */
+const deleteCalls = () =>
+  mockMutate.mock.calls
+    .map(([opts]) => opts)
+    .filter(opts => opts?.mutation === DeleteDeviceDocument)
+    .map(opts => opts.variables);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -452,9 +476,9 @@ describe('revoking this device’s credential', () => {
   });
 });
 
-// `updateDevice` returns a union: ConflictError | ForbiddenError | NotFoundError
-// | UpdateDevicePayload | ValidationError. A refusal RESOLVES, so a `.catch`
-// never sees it and the token keeps delivering to a signed-out account.
+// `deleteDevice` returns a union: ConflictError | DeleteDevicePayload |
+// ForbiddenError | NotFoundError | ValidationError. A refusal RESOLVES, so a
+// `.catch` never sees it and the token keeps delivering to a signed-out account.
 // An install that registered under the previous identifier has a second server
 // row. Its push token is live and no other client path can reach it, so it keeps
 // delivering to whoever signed in on this device before the identifier changed.
@@ -469,10 +493,10 @@ describe('retiring the row a superseded identifier registered', () => {
     await flush();
 
     expect(mockQuery).not.toHaveBeenCalled();
-    expect(updateCallsWith('delete')).toEqual([]);
+    expect(deleteCalls()).toEqual([]);
   });
 
-  it('soft-deletes the row and drops the key', async () => {
+  it('deletes the row and drops the key', async () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     foundRow({ id: 'srv-old', deviceId: LEGACY });
 
@@ -482,10 +506,30 @@ describe('retiring the row a superseded identifier registered', () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({ variables: { deviceId: LEGACY } }),
     );
-    expect(updateCallsWith('delete')).toContainEqual(
-      expect.objectContaining({ id: 'srv-old', delete: true }),
+    // The row's own delete, by the server's row id: `updateDevice` takes none.
+    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
+    expect(clearLegacyDeviceFingerprint).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      'Retired the superseded device row',
     );
-    expect(clearLegacyDeviceFingerprint).toHaveBeenCalled();
+  });
+
+  // A repeat of a delete that already landed: the row is gone, which is what
+  // was asked for, so the key goes too instead of retrying on every launch.
+  it('drops the key when the delete answers converged with no device', async () => {
+    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
+    foundRow({ id: 'srv-old', deviceId: LEGACY });
+    routeMutate({
+      __typename: 'DeleteDevicePayload',
+      converged: true,
+      device: null,
+    });
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
+    expect(clearLegacyDeviceFingerprint).toHaveBeenCalledTimes(1);
   });
 
   it('treats a row the server no longer has as already retired', async () => {
@@ -495,7 +539,7 @@ describe('retiring the row a superseded identifier registered', () => {
     authService.registerDeviceInBackground();
     await flush();
 
-    expect(updateCallsWith('delete')).toEqual([]);
+    expect(deleteCalls()).toEqual([]);
     expect(clearLegacyDeviceFingerprint).toHaveBeenCalled();
   });
 
@@ -512,33 +556,21 @@ describe('retiring the row a superseded identifier registered', () => {
   it('keeps the key when the server refuses the retirement', async () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     foundRow({ id: 'srv-old', deviceId: LEGACY });
-    mockMutate.mockImplementation(({ variables }) => {
-      const input = (variables?.input ?? {}) as Record<string, unknown>;
-      if ('deviceId' in input) {
-        return Promise.resolve({
-          data: {
-            registerDevice: {
-              __typename: 'RegisterDevicePayload',
-              device: { id: 'srv-1' },
-            },
-          },
-        });
-      }
-      return Promise.resolve({
-        data: {
-          updateDevice: {
-            __typename: 'ForbiddenError',
-            code: 'FORBIDDEN',
-            message: 'no',
-          },
-        },
-      });
+    routeMutate({
+      __typename: 'ForbiddenError',
+      code: 'FORBIDDEN',
+      message: 'no',
     });
 
     authService.registerDeviceInBackground();
     await flush();
 
+    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
     expect(clearLegacyDeviceFingerprint).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Could not retire the superseded device row:',
+      { status: 'refused', code: 'FORBIDDEN', message: 'no' },
+    );
   });
 
   it('is not attempted when the registration itself did not land', async () => {
@@ -653,7 +685,7 @@ describe('logout — push/notification teardown', () => {
     // Neither a clear nor a delete: the row carries the device credential
     // biometric sign-in exchanges after a deliberate sign-out.
     expect(updateCallsWith('clearPushToken')).toEqual([]);
-    expect(updateCallsWith('delete')).toEqual([]);
+    expect(deleteCalls()).toEqual([]);
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mockStoreState.resetStore).toHaveBeenCalledWith(
       expect.objectContaining({ auth: true }),

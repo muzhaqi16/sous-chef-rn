@@ -18,6 +18,8 @@ interface StorageLocationAdvancedSectionProps {
   capacity: string;
   capacityUnit: string;
   isDefault: boolean;
+  /** False for the current default, which only another location can take. */
+  canChangeDefault: boolean;
   onToggleClimateControlled: () => void;
   onCapacityChange: (capacity: string) => void;
   onCapacityUnitChange: (capacityUnit: string) => void;
@@ -36,6 +38,7 @@ export const StorageLocationAdvancedSection: React.FC<
   capacity,
   capacityUnit,
   isDefault,
+  canChangeDefault,
   onToggleClimateControlled,
   onCapacityChange,
   onCapacityUnitChange,
@@ -85,11 +88,13 @@ export const StorageLocationAdvancedSection: React.FC<
             />
           </View>
 
-          <FormCheckbox
-            label={t('storageLocationForm.setAsDefault')}
-            checked={isDefault}
-            onPress={onToggleDefault}
-          />
+          {canChangeDefault ? (
+            <FormCheckbox
+              label={t('storageLocationForm.setAsDefault')}
+              checked={isDefault}
+              onPress={onToggleDefault}
+            />
+          ) : null}
         </Animated.View>
       ) : null}
     </>

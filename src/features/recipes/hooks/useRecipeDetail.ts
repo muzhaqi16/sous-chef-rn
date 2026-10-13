@@ -181,6 +181,7 @@ export function useRecipeDetail() {
     savedNotes: data.backendRecipe?.savedDetails?.notes ?? null,
     savedRating: data.backendRecipe?.savedDetails?.personalRating ?? null,
     cookedCount: data.backendRecipe?.savedDetails?.cookedCount ?? 0,
+    lastCookedAt: data.backendRecipe?.savedDetails?.lastCookedAt ?? null,
 
     // Unfavorite
     handleUnfavoriteRecipe: savedMetadata.handleUnfavoriteRecipe,

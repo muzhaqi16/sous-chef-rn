@@ -44,3 +44,28 @@ export function chainEntityWrite<T>(
   });
   return sent;
 }
+
+/** An edit of a row whose version the cache does not hold. */
+export class UnreadVersionError extends Error {
+  constructor(typename: string) {
+    super(`${typename}: no cached version to state on this edit`);
+    this.name = 'UnreadVersionError';
+  }
+}
+
+/**
+ * {@link chainEntityWrite} for an input whose `version` is REQUIRED. The API
+ * refuses an edit that states none, so a row the cache holds no version of is
+ * not sent: the write rejects, and `settleMutation` reports it as failed.
+ */
+export function chainVersionedWrite<T>(
+  cache: ApolloCache,
+  entity: FieldsEntityRef,
+  send: (version: number) => Promise<T>,
+): Promise<T> {
+  return chainEntityWrite(cache, entity, version =>
+    version === undefined
+      ? Promise.reject(new UnreadVersionError(entity.__typename))
+      : send(version),
+  );
+}

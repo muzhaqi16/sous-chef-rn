@@ -1,0 +1,22 @@
+mutation CreateUserReport($input: CreateUserReportInput!) {
+  createUserReport(input: $input) {
+    __typename
+    ... on CreateUserReportPayload {
+      outcome
+      userReport {
+        id
+        ...MyUserReportReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

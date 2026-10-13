@@ -2,6 +2,7 @@ import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
+import { AddedContext } from '#/graphql/generated/schemaTypes';
 
 /**
  * The rules here are the server's, read out of
@@ -24,7 +25,6 @@ const meal = (
 
 const base = {
   mealPlanId: 'plan-1',
-  mealPlanName: 'Week One',
   checkPantry: false,
   pantryRows: null,
   mintId,
@@ -273,7 +273,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
     ).toEqual(['minted-1', 'minted-2']);
   });
 
-  it('marks every line with the plan it came from', () => {
+  it('marks every line with the plan and the meal it came from, as a meal-plan line', () => {
     const meals = [
       meal('mpi-1', 1, {
         id: 'r-1',
@@ -296,7 +296,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
     ).toEqual({
       mealPlanId: 'plan-1',
       mealPlanItemId: 'mpi-1',
-      mealPlanReference: 'Week One',
+      addedContext: AddedContext.FromMealPlan,
       recipeId: 'r-1',
       recipeIngredientId: 'ri-1',
     });

@@ -40,12 +40,24 @@ fragment MealPlanMain_mealPlan on MealPlan {
       avatar
     }
   }
-  mealPlanItems {
-    id
-    ...MealPlanItemCard_item
-    ...DailyMeals_item
-    ...MealPlanMain_item
-    ...MealPlanItemActions_item
+  # The page size is a VARIABLE: the server's cost rule multiplies a literal
+  # `first` into everything beneath it. Every selection of this field in one
+  # operation carries the same two arguments, or the document does not validate.
+  mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+    edges {
+      node {
+        id
+        ...MealPlanItemCard_item
+        ...DailyMeals_item
+        ...MealPlanMain_item
+        ...MealPlanItemActions_item
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
   nutritionSummary {
     totalCalories

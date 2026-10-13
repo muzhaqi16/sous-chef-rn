@@ -442,6 +442,73 @@ describe('classifyError — real Apollo error shapes', () => {
     expect(queueError.retryable).toBe(false);
   });
 
+  // A refusal before execution answers a GraphQL envelope under a non-2xx
+  // status as `application/json`, which Apollo leaves unparsed in `bodyText`.
+  const refusedBeforeExecution = (
+    status: number,
+    extensions: Record<string, unknown>,
+    headers: Record<string, string> = {},
+  ) =>
+    new ServerError(`Response not successful: Received status code ${status}`, {
+      response: new Response(null, { status, headers }),
+      bodyText: JSON.stringify({
+        errors: [{ message: 'refused', extensions }],
+      }),
+    });
+
+  it('defers a rate-limited write for the delay the body states', () => {
+    const queueError = classifyError(
+      refusedBeforeExecution(429, {
+        code: 'RATE_LIMIT_EXCEEDED',
+        retryAfter: 30,
+      }),
+    );
+
+    expect(queueError).toMatchObject({
+      type: 'server',
+      code: 'RATE_LIMIT_EXCEEDED',
+      retryable: false,
+      retryAfterMs: 30_000,
+    });
+  });
+
+  it('reads the delay from the Retry-After header when the body states none', () => {
+    const queueError = classifyError(
+      refusedBeforeExecution(
+        429,
+        { code: 'RATE_LIMIT_EXCEEDED' },
+        { 'retry-after': '45' },
+      ),
+    );
+
+    expect(queueError.retryAfterMs).toBe(45_000);
+  });
+
+  it('defers a write the server timed out on', () => {
+    const queueError = classifyError(
+      refusedBeforeExecution(503, { code: 'SERVICE_UNAVAILABLE' }),
+    );
+
+    expect(queueError).toMatchObject({
+      type: 'server',
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    });
+  });
+
+  it.each(['PAYLOAD_TOO_LARGE', 'OPERATION_NOT_ALLOWED'])(
+    'fails a write refused as %s once, with its code',
+    code => {
+      const queueError = classifyError(refusedBeforeExecution(413, { code }));
+
+      expect(queueError).toMatchObject({
+        type: 'unknown',
+        code,
+        retryable: false,
+      });
+    },
+  );
+
   // The session path's errors carry their code on the error itself.
   it('reads a code carried flat on the error', () => {
     expect(classifyError({ message: 'x', code: 'FORBIDDEN' }).code).toBe(

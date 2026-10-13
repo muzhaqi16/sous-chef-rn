@@ -19,11 +19,15 @@ import {
 } from '#features/pantry/hooks/useCreatePantry';
 import { useToday } from '#hooks/useToday';
 import {
+  localFirstFragment,
   snapshotFields,
   writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { chainEntityWrite } from '#/apollo/utils/entityWriteChain';
+import {
+  chainEntityWrite,
+  chainVersionedWrite,
+} from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
@@ -144,15 +148,20 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     updates: { name: string; description: string },
   ): Promise<boolean> => {
     const entity = { __typename: 'Pantry', id };
-    // Omits keys the read did not carry, so a refusal arriving before the
-    // query resolves reverts nothing rather than blanking the real name.
-    const previous = snapshotFields(pantry, updates);
+    // From the cache, not the query: another screen's read can hold the row
+    // before this one answers. Omits keys it lacks, so a revert blanks nothing.
+    const held = client.cache.readFragment<object>({
+      id: client.cache.identify(entity),
+      fragment: localFirstFragment('Pantry', Object.keys(updates).join(' ')),
+      returnPartialData: true,
+    });
+    const previous = snapshotFields(held, updates);
     writeEntityFields(client.cache, entity, updates);
 
     // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        chainEntityWrite(client.cache, entity, version =>
+        chainVersionedWrite(client.cache, entity, version =>
           updatePantry({
             variables: {
               input: { id, ...updates, version },

@@ -74,7 +74,6 @@ export type ConnectionData = {
 
 /** What a modifier receives: a field the server returned as `null` is stored as `null`. */
 type StoredConnection = ConnectionData | null | undefined;
-type StoredRefs = readonly Reference[] | null | undefined;
 
 type InsertPosition = 'start' | 'end';
 
@@ -268,30 +267,6 @@ function removeEdgeModifier(itemId: string, onRemoved: () => void) {
   };
 }
 
-function addRefModifier<T extends { id: string }>(
-  newItem: T,
-  position: InsertPosition,
-) {
-  return (existing: StoredRefs, details: ModifierDetails) => {
-    const { readField } = details;
-    const newItemRef = entityRef(newItem, details);
-    if (!newItemRef) return existing;
-    const refs = existing ?? [];
-    if (refs.some(ref => readField('id', ref) === newItem.id)) return existing;
-    return position === 'start' ? [newItemRef, ...refs] : [...refs, newItemRef];
-  };
-}
-
-function removeRefModifier(itemId: string, onRemoved: () => void) {
-  return (existing: StoredRefs, { readField }: ModifierDetails) => {
-    const refs = existing ?? [];
-    const kept = refs.filter(ref => readField('id', ref) !== itemId);
-    if (kept.length === refs.length) return existing;
-    onRemoved();
-    return kept;
-  };
-}
-
 /**
  * Add an item to a Query root Connection field. `cache.modify` fires for EVERY
  * cached `keyArgs` variant, so an item whose membership depends on filters or
@@ -411,70 +386,6 @@ export function createRemoveFromParentConnectionUpdater(
     } catch (error) {
       logger.warn(
         `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
-        serializeError(error),
-      );
-      return false;
-    }
-  };
-}
-
-/**
- * Add an item to a non-Connection array field nested in an entity. With `keyArgs`
- * the ref is inserted into every cached variant regardless of its filter/sort —
- * the same caveat as {@link createAddToParentConnectionUpdater}.
- */
-export function createAddToParentArrayUpdater<T extends { id: string }>(
-  parentTypename: string,
-  arrayField: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    newItem: T,
-    { position = 'start' }: { position?: InsertPosition } = {},
-  ): boolean => {
-    const id = identifyParent(cache, parentTypename, parentId);
-    if (!id) return false;
-    return tryModify(cache, `adding to ${parentTypename}.${arrayField}`, {
-      id,
-      fields: { [arrayField]: addRefModifier(newItem, position) },
-    });
-  };
-}
-
-/**
- * Remove an item from a parent entity's flat array field. A flat array has no
- * `read` policy to drop a dangling ref, so the ref is filtered out even when the
- * entity is evicted.
- */
-export function createRemoveFromParentArrayUpdater(
-  parentTypename: string,
-  arrayField: string,
-  itemTypename: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    itemId: string,
-    { evictItem = false }: RemoveOptions = {},
-  ): boolean => {
-    try {
-      const id = identifyParent(cache, parentTypename, parentId);
-      if (!id) return false;
-      let removed = false;
-      cache.modify({
-        id,
-        fields: {
-          [arrayField]: removeRefModifier(itemId, () => {
-            removed = true;
-          }),
-        },
-      });
-      if (evictItem) evictEntity(cache, itemTypename, itemId);
-      return removed;
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
         serializeError(error),
       );
       return false;

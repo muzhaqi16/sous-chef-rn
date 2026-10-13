@@ -336,17 +336,36 @@ query GetPantryLedgerAnalytics(
         consumed
         wasted
         net
-        additionCost
+        # One amount per currency: the server never sums across currencies.
+        additionCost {
+          amount
+          currencyCode
+        }
       }
       costAnalytics {
-        totalSpent
-        averageCostPerUnit
+        totalSpent {
+          amount
+          currencyCode
+        }
+        # One average per currency AND unit: a kilogram and a piece do not average.
+        averageCostPerUnit {
+          amount
+          currencyCode
+          unitSymbol
+        }
         costByStore {
           storeId
           storeName
-          totalSpent
+          totalSpent {
+            amount
+            currencyCode
+          }
           itemCount
-          averageCostPerUnit
+          averageCostPerUnit {
+            amount
+            currencyCode
+            unitSymbol
+          }
         }
       }
       topRestockedItems {
@@ -994,41 +1013,6 @@ mutation WastePantryItemBatch(
         id
         ...PantryItemReaders
         ...useWastePantryItemBatch_pantryItem
-      }
-      pantry {
-        id
-        ...PantryReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation ConvertExpiredBatchesToWaste(
-  $input: ConvertExpiredBatchesToWasteInput!
-  $today: LocalDate!
-) {
-  convertExpiredBatchesToWaste(input: $input) {
-    __typename
-    ... on ConvertExpiredBatchesToWastePayload {
-      storageLocation {
-        id
-        ...StorageLocationReaders
-      }
-      pantryItem {
-        id
-        ...PantryItemReaders
-        ...useConvertExpiredBatchesToWaste_pantryItem
       }
       pantry {
         id

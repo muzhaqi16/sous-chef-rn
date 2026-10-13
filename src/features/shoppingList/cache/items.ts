@@ -49,13 +49,14 @@ export const createLocalShoppingListItem = (
   fields: OptimisticShoppingListItemFields,
 ): LocalShoppingListItem => ({ ...fields, id });
 
+/** True when the list already showed the server's line as still to buy. */
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
   listId: string,
   serverItem: { id: string },
   clientId: string | null | undefined,
   { countsSettled = false }: { countsSettled?: boolean } = {},
-): void {
+): boolean {
   if (clientId && serverItem.id !== clientId) {
     // Catalog merge: the server folded the line into an EXISTING row, so the
     // optimistic add counted a row that never came to exist. Its count comes
@@ -64,7 +65,7 @@ export function reconcileShoppingItemCreateUpdate(
       countsSettled,
     });
   }
-  addNewItemToShoppingListCache(cache, listId, serverItem, false);
+  return addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
 // Structural slices the builder below reads, kept loose so every
@@ -92,6 +93,21 @@ interface AddItemsReconcileVariablesLike {
   };
 }
 
+/** What became of one sent line, as its reconcile found it. */
+export interface ReconciledLine {
+  /** Its place in the response's `results`. */
+  position: number;
+  /** The id its caller minted for it. */
+  clientId: string | undefined;
+  refused: boolean;
+  /**
+   * The list showed the server's line as still to buy before this reconcile.
+   * Read off the connection, which the response write leaves alone: the row
+   * itself already carries the answer by the time `update` runs.
+   */
+  listedBefore: boolean;
+}
+
 interface BuildAddItemsReconcileUpdateOptions {
   /** Target list id; when omitted, read from `variables.input.shoppingListId`. */
   listId?: string | null;
@@ -100,6 +116,8 @@ interface BuildAddItemsReconcileUpdateOptions {
    * message and optional refetch fallback. Omit to apply the reconcile directly.
    */
   wrap?: { operation: string; refetch?: () => void };
+  /** Told each line's outcome as it is reconciled. */
+  onLine?: (line: ReconciledLine) => void;
 }
 
 /**
@@ -110,6 +128,7 @@ interface BuildAddItemsReconcileUpdateOptions {
 export function buildAddItemsReconcileUpdate({
   listId,
   wrap,
+  onLine,
 }: BuildAddItemsReconcileUpdateOptions) {
   return (
     cache: ApolloCache,
@@ -135,18 +154,21 @@ export function buildAddItemsReconcileUpdate({
         // that field is a response-matching token a call site picks freely (the
         // recipe add sends a Spoonacular ingredient id), never this row's
         // minted cuid. Array position is the fallback.
-        const clientId = variables.input.items?.[result.index ?? position]?.id;
+        const clientId =
+          variables.input.items?.[result.index ?? position]?.id ?? undefined;
         const { item } = result;
         if (item && result.success !== false) {
-          reconcileShoppingItemCreateUpdate(
+          const listedBefore = reconcileShoppingItemCreateUpdate(
             cache,
             targetListId,
             item,
             clientId,
             { countsSettled },
           );
-        } else if (clientId) {
-          refused.push(clientId);
+          onLine?.({ position, clientId, refused: false, listedBefore });
+        } else {
+          if (clientId) refused.push(clientId);
+          onLine?.({ position, clientId, refused: true, listedBefore: false });
         }
       });
       withdrawShoppingListItems(cache, targetListId, refused, {

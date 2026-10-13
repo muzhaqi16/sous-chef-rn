@@ -23,9 +23,8 @@ fragment useQuantityEditModal_item on ShoppingListItem {
   }
 }
 
-# Narrow fragment for the UpdateShoppingListItemQuantity mutation response.
-# The mutation can change quantity, quantityInput, displayFormat, unit,
-# unitName, and version.
+# What a quantity edit changes on the row: spread by UpdateShoppingListItem,
+# the one door a quantity, unit or purchased-state change goes through.
 fragment useQuantityEditModal_updateQuantityResult on ShoppingListItem {
   id
   quantity

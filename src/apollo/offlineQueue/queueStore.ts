@@ -4,10 +4,11 @@ import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
-import { withExpiresOn } from './legacyExpiry';
+import { withCalendarDays, withExpiresOn } from './legacyExpiry';
 import { withRefInputs } from './legacyRefs';
 import { withoutRemovedFields } from './legacySelections';
 import { currentOperationName } from './legacyOperations';
+import { upgradeRetiredEntry } from './legacyRetired';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -26,9 +27,9 @@ const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
   const input: unknown = mutation.variables.input;
   return typeof input === 'object' &&
     input !== null &&
-    'itemId' in input &&
-    typeof input.itemId === 'string'
-    ? input.itemId
+    'id' in input &&
+    typeof input.id === 'string'
+    ? input.id
     : undefined;
 };
 
@@ -145,15 +146,27 @@ function documentParser(): (
   };
 }
 
+// A retired operation is replaced first, so every later rewrite and every
+// registry reads the write as the operation it replays as.
 const loadedEntry = (
   entry: StoredEntry,
-  mutation: DocumentNode,
-): QueuedMutation => ({
-  ...entry,
-  operationName: currentOperationName(entry.operationName),
-  mutation,
-  variables: withRefInputs(mutation, withExpiresOn(mutation, entry.variables)),
-});
+  stored: DocumentNode,
+): QueuedMutation => {
+  const { operationName, mutation, variables } = upgradeRetiredEntry({
+    operationName: currentOperationName(entry.operationName),
+    mutation: stored,
+    variables: entry.variables,
+  });
+  return {
+    ...entry,
+    operationName,
+    mutation,
+    variables: withRefInputs(
+      mutation,
+      withCalendarDays(mutation, withExpiresOn(mutation, variables)),
+    ),
+  };
+};
 
 /** User-scoped mutation queue persisted to MMKV. */
 export class QueueStore {

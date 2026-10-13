@@ -106,6 +106,7 @@ export const ListSettings: React.FC<
     templateName,
     templates,
     totalCost,
+    unpricedItems,
   } = useListSettings(route.params?.listId);
 
   // Ownership decides the whole screen — its title, its Save action and six
@@ -401,6 +402,7 @@ export const ListSettings: React.FC<
         priceTracking={priceTracking}
         setBudgetInput={setBudgetInput}
         totalCost={totalCost}
+        unpricedItems={unpricedItems}
       />
 
       <ReminderSection

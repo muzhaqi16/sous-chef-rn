@@ -80,12 +80,43 @@ describe('useRecipeFormWrites.updateRecipe', () => {
     const { result } = renderWrites([updateMock(REFUSAL)]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {});
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {
+      version: 3,
+    });
 
     expect(outcome).toEqual({
       status: 'rejected',
       failure: expect.objectContaining(REFUSED_FAILURE),
     });
+  });
+
+  // The API refuses an edit that states no version, so one the form never read
+  // is not sent at all.
+  it('fails an edit whose version the form never read, without sending it', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: {
+        updateRecipe: {
+          __typename: 'UpdateRecipePayload',
+          recipe: { __typename: 'Recipe', id: RECIPE_ID },
+        },
+      },
+    });
+    const { result } = renderWrites([update.mock]);
+    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+
+    const outcome = await result.current.updateRecipe(RECIPE_ID, {
+      version: null,
+      name: 'Bread',
+    });
+
+    expect(outcome).toEqual({
+      status: 'rejected',
+      failure: expect.objectContaining({
+        field: null,
+        body: t('recipes.updateRecipeFailed'),
+      }),
+    });
+    expect(update.fired).toEqual([]);
   });
 
   it('reports an edit made elsewhere since the form loaded', async () => {

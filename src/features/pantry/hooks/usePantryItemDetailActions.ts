@@ -17,7 +17,6 @@ import {
   buildAddItemsReconcileUpdate,
 } from '#features/shoppingList/cache/items';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
-import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
 import type { PackageSizeCorrectionInput } from '#features/pantry/components/modals/CorrectPackageSizeModal';
@@ -145,16 +144,12 @@ export function usePantryItemDetailActions({
   );
 
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
-    onSuccess: () => {
-      alertService.alert(t('labels.done'), t('success.expiredItemDiscarded'));
-    },
-  });
-
-  const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
-    onSuccess: () => {
+    onSuccess: ({ hasBatches }) => {
       alertService.alert(
         t('labels.done'),
-        t('success.expiredBatchesDiscarded'),
+        hasBatches
+          ? t('success.expiredBatchesDiscarded')
+          : t('success.expiredItemDiscarded'),
       );
     },
   });
@@ -304,26 +299,12 @@ export function usePantryItemDetailActions({
     if (!item) return;
 
     const hasBatches = (item.activeBatchCount ?? 0) > 0;
-
-    if (hasBatches) {
-      alertService.alert(
-        t('pantryItemDetail.discardBatchesTitle'),
-        t('pantryItemDetail.discardBatchesBody'),
-        [
-          { text: t('labels.cancel'), style: 'cancel' },
-          {
-            text: t('labels.discard'),
-            style: 'destructive',
-            onPress: () => {
-              void convertExpiredBatches(item.id);
-            },
-          },
-        ],
-      );
-    } else {
-      alertService.alert(
-        t('pantryItemDetail.discardItemTitle'),
-        t('pantryItemDetail.discardItemBody', {
+    const title = hasBatches
+      ? t('pantryItemDetail.discardBatchesTitle')
+      : t('pantryItemDetail.discardItemTitle');
+    const body = hasBatches
+      ? t('pantryItemDetail.discardBatchesBody')
+      : t('pantryItemDetail.discardItemBody', {
           quantity: formatQuantityForDisplay(item.quantity, {
             notation: resolveQuantityNotation(
               null,
@@ -331,19 +312,18 @@ export function usePantryItemDetailActions({
             ),
           }),
           unit: item.unit?.name ?? '',
-        }),
-        [
-          { text: t('labels.cancel'), style: 'cancel' },
-          {
-            text: t('labels.discard'),
-            style: 'destructive',
-            onPress: () => {
-              void convertExpiredToWaste(item.id);
-            },
-          },
-        ],
-      );
-    }
+        });
+
+    alertService.alert(title, body, [
+      { text: t('labels.cancel'), style: 'cancel' },
+      {
+        text: t('labels.discard'),
+        style: 'destructive',
+        onPress: () => {
+          void convertExpiredToWaste(item.id, { hasBatches });
+        },
+      },
+    ]);
   };
 
   const handleConfirmAdjust = (

@@ -11,6 +11,7 @@ import {
   TopItemsBarChart,
   TrendLineChart,
   formatReason,
+  moneyByCurrency,
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
@@ -33,18 +34,6 @@ export const WasteTab: React.FC<
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
-  // The API never adds amounts across currencies, so each is shown apart,
-  // largest first as it orders them.
-  const byCurrency = (
-    amounts: readonly { currencyCode: string; amount: number }[],
-  ) =>
-    amounts.length === 0
-      ? undefined
-      : amounts
-          .map(({ currencyCode, amount }) =>
-            money(amount, { code: currencyCode }),
-          )
-          .join(' · ');
 
   const wasteReasonData =
     wasteData?.wasteByReason.map(item => ({
@@ -56,7 +45,7 @@ export const WasteTab: React.FC<
     wasteData?.topWastedItems.map(item => ({
       label: item.itemName,
       value: item.count,
-      secondaryLabel: byCurrency(item.valueByCurrency),
+      secondaryLabel: moneyByCurrency(item.valueByCurrency),
     })) ?? [];
 
   if (wasteOffline) {
@@ -95,7 +84,7 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={byCurrency(wasteData?.valueByCurrency ?? []) ?? money(0)}
+          value={moneyByCurrency(wasteData?.valueByCurrency ?? []) ?? money(0)}
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />

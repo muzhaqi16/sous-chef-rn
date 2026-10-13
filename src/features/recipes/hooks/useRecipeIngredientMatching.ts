@@ -7,7 +7,7 @@ import {
 } from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
-  ConfirmRecipeConsumptionDocument,
+  MarkRecipeAsCookedDocument,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -16,7 +16,7 @@ import {
 } from '#features/recipes/graphql/recipeFragments.generated';
 import {
   RecipeIngredientMatchKind,
-  type ConfirmedIngredientConsumptionInput,
+  type IngredientUsageInput,
 } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
@@ -104,8 +104,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     },
   );
 
+  // The reviewed cook is the quick cook's own write with `exactStacks`: one
+  // transaction, so it deducts every stack stated or none.
   const [confirmMutation, { loading: confirmLoading }] = useMutation(
-    ConfirmRecipeConsumptionDocument,
+    MarkRecipeAsCookedDocument,
     { context: { localFirst: true } },
   );
 
@@ -214,8 +216,8 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
-    const consumptions: ConfirmedIngredientConsumptionInput[] =
-      editableMatches.flatMap(em => {
+    const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
+      em => {
         const pantryItem = em.selectedStack;
         if (!em.isIncluded || !pantryItem || em.adjustedQuantity <= 0) {
           return [];
@@ -224,24 +226,24 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           {
             recipeIngredientId: em.ingredient.id,
             pantryItemId: pantryItem.id,
-            quantity: em.adjustedQuantity,
-            unitId:
+            actualQuantity: em.adjustedQuantity,
+            actualUnitId:
               em.adjustedUnitId ??
               em.match.suggestedUnit?.id ??
               pantryItem.unit.id,
           },
         ];
-      });
+      },
+    );
 
-    if (consumptions.length === 0) {
+    if (ingredientsUsed.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
       return;
     }
 
     // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
-    // the API is unreachable. The shared id means a re-synced consumption
-    // converges on the same cooking log instead of creating a duplicate and
-    // re-consuming the pantry.
+    // the API is unreachable. The shared id means a re-synced cook converges on
+    // the same cooking log instead of creating a duplicate and re-deducting.
     const settled = await settleMutation(
       () =>
         confirmMutation({
@@ -250,60 +252,55 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
               id: generateEntityId(),
               recipeId,
               pantryId,
-              consumptions,
+              deductFromPantry: true,
+              // Each entry draws on the stack it names and no other; an
+              // ingredient with no entry is left alone.
+              exactStacks: true,
+              ingredientsUsed,
               servings: cook?.servings,
               notes: cook?.notes,
             },
           },
         }),
       {
-        document: ConfirmRecipeConsumptionDocument,
+        document: MarkRecipeAsCookedDocument,
         fallback: t('recipes.markCookedFailed'),
         // The review sheet reports the cook as a toast and stays open to retry.
         present: 'none',
       },
     );
-    // Applied and queued both succeed; a queued consumption replays later.
+    // Applied and queued both succeed; a queued cook replays later.
     if (settled.failure) {
       toastService.error(settled.failure.body);
       return;
     }
 
-    // The success union member carries no `success` flag — reaching it IS the
-    // success case; partial failures surface via `totalFailed`.
     const data = appliedPayload(settled.data);
-    // Replay diagnostics: `converged: true` means this whole confirmation had
-    // already committed (idempotent replay). A fresh commit — including one
-    // that healed leftover items from a partially-crashed earlier attempt —
-    // reports false, so only `true` is logged.
+    // Replay diagnostics: `converged: true` means this client-minted cooking-log
+    // id already existed (an idempotent replay), not a fresh cook.
     if (data?.converged) {
-      logger.info(
-        'confirmRecipeConsumption converged — replay of a committed confirmation',
-        { recipeId },
-      );
+      logger.info('markRecipeAsCooked converged — replay of a reviewed cook', {
+        recipeId,
+      });
     }
-    if (data) {
-      toastService.success(
-        data.totalFailed > 0
-          ? t('recipes.deductedFromPantryFailed', {
-              count: data.totalConsumed,
-              failed: data.totalFailed,
-            })
-          : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
-      );
-    } else {
-      // Queued offline — no response yet; show the optimistic count (every
-      // included consumption replays on reconnect).
-      toastService.success(
-        t('recipes.deductedFromPantry', { count: consumptions.length }),
-      );
-    }
+    // The cook commits whole. What it reports apart are the entries no
+    // conversion could take to their stack's unit; queued, every entry replays.
+    const skippedCount = data?.skippedIngredients.length ?? 0;
+    const deductedCount = ingredientsUsed.length - skippedCount;
+    toastService.success(
+      skippedCount > 0
+        ? t('recipes.deductedFromPantryFailed', {
+            count: deductedCount,
+            failed: skippedCount,
+          })
+        : t('recipes.deductedFromPantry', { count: deductedCount }),
+    );
 
     Telemetry.trackEvent('recipe_consumption_confirmed', {
       recipe_id: recipeId,
       pantry_id: pantryId,
-      consumed_count: data?.totalConsumed ?? 0,
-      failed_count: data?.totalFailed ?? 0,
+      consumed_count: data ? deductedCount : 0,
+      failed_count: skippedCount,
     });
 
     setIsSheetVisible(false);

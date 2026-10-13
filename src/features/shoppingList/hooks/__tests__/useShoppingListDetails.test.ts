@@ -24,6 +24,8 @@ interface BuildShoppingListArgs {
   name?: string;
   isDefault?: boolean;
   collaborators?: Array<{ id: string; email: string }>;
+  estimatedTotal?: number | null;
+  unpricedItems?: number;
 }
 
 type ShoppingListDetails = GetShoppingListDetailsQuery['shoppingList'];
@@ -51,8 +53,9 @@ function buildShoppingList(
     reminderEnabled: false,
     reminderDate: null,
     budgetAmount: null,
-    totalCost: 0,
-    estimatedTotal: 0,
+    totalCost: null,
+    estimatedTotal: args.estimatedTotal ?? null,
+    unpricedItems: args.unpricedItems ?? 0,
     currency: null,
     priceTracking: false,
     totalItems: 0,
@@ -170,6 +173,40 @@ describe('useShoppingListDetails', () => {
     expect(result.current.collaborators[0]!.email).toBe('alice@test.com');
     expect(result.current.isShared).toBe(true);
     expect(result.current.hasResult).toBe(true);
+  });
+
+  it('reads an estimate nobody can state as null, with the lines it leaves out', async () => {
+    const { result } = renderHookWithApollo(
+      () => useShoppingListDetails('list-1'),
+      {
+        operationMocks: [
+          buildDetailsMock('list-1', buildShoppingList({ unpricedItems: 3 })),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.shoppingList?.estimatedTotal).toBeNull();
+    expect(result.current.shoppingList?.totalCost).toBeNull();
+    expect(result.current.shoppingList?.unpricedItems).toBe(3);
+  });
+
+  it('reads a stated estimate beside its unpriced count', async () => {
+    const { result } = renderHookWithApollo(
+      () => useShoppingListDetails('list-1'),
+      {
+        operationMocks: [
+          buildDetailsMock(
+            'list-1',
+            buildShoppingList({ estimatedTotal: 12.5, unpricedItems: 0 }),
+          ),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.shoppingList?.estimatedTotal).toBe(12.5);
+    expect(result.current.shoppingList?.unpricedItems).toBe(0);
   });
 
   it('returns default values when no shopping list data', async () => {

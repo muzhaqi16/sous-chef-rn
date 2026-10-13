@@ -73,6 +73,8 @@ const ENUM_DEFAULTS = {
   'StorageLocation.type': 'CUSTOM',
   'StorageLocationCount.type': 'CUSTOM',
   'ShoppingListItem.displayFormat': 'AUTO',
+  // "MANUAL unless a flow that adds lines set it"; such a flow states its own.
+  'ShoppingListItemSource.addedContext': 'MANUAL',
   // "USER_CREATED when it came from no external source" — every local create.
   'Recipe.primarySource': 'USER_CREATED',
   'Recipe.status': 'DRAFT',

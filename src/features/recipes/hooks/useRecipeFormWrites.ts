@@ -28,9 +28,19 @@ import {
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+
+/**
+ * An edit's fields with the version the FORM read: an edit is judged against
+ * what the editor was looking at, not against whatever the cache holds by the
+ * time they save. Null until the recipe has loaded into the form.
+ */
+export type RecipeUpdateFields = Omit<UpdateRecipeInput, 'id' | 'version'> & {
+  version: number | null;
+};
 
 /** A refused save, as the form shows it: on its field, or as an alert. */
 export type RecipeWriteFailure = SettledFailure;
@@ -138,10 +148,15 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
    */
   const updateRecipe = async (
     id: string,
-    input: Omit<UpdateRecipeInput, 'id'>,
+    { version, ...fields }: RecipeUpdateFields,
   ): Promise<RecipeWriteOutcome> => {
     const settled = await settleMutation(
-      () => updateRecipeMutation({ variables: { input: { ...input, id } } }),
+      () =>
+        version === null
+          ? Promise.reject(new UnreadVersionError('Recipe'))
+          : updateRecipeMutation({
+              variables: { input: { ...fields, id, version } },
+            }),
       {
         document: UpdateRecipeDocument,
         fallback: t('recipes.updateRecipeFailed'),

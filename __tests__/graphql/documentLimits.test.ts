@@ -1,47 +1,43 @@
 /**
- * Subscription documents are validated far more tightly than HTTP operations.
+ * Every document the app sends fits the limits the server measures a request
+ * by. The server refuses a breach permanently — the same document is refused
+ * every time — and the local dev API runs with looser overrides than the
+ * defaults production takes, so only this test holds the real numbers.
  *
  * The server runs graphql-armor with a per-transport profile: HTTP gets depth
- * 12 / cost 3000, WebSocket gets depth 5 / cost 500. The reason is that a
- * subscription document is not one request — the server re-executes it on every
- * published event for the life of the connection, so a fat selection is a
- * standing cost rather than a one-time one.
+ * 10 / cost 3500, WebSocket gets depth 4 / cost 500. A subscription document is
+ * not one request — the server re-executes it on every published event for the
+ * life of the connection — so its budget is the tight one. A breach there is
+ * refused at subscribe time with
+ * `"Syntax Error: Query depth limit of 4 exceeded, found 6."`, per operation:
+ * the socket stays open and one stream silently goes dead. Hence the thin-event
+ * shape: subscribe to the envelope plus the identity of what changed, and read
+ * the entity back through a normal query, which gets the HTTP budget.
  *
- * A breach is refused at subscribe time with
- * `"Syntax Error: Query depth limit of 5 exceeded, found 8."` — worded as a
- * syntax error, though the document parses fine and `found N` is its computed
- * depth. The rejection is permanent (the same document is refused every time)
- * and it is per-operation: the socket stays open and its other subscriptions
- * keep delivering, so it surfaces as one stream silently going dead rather than
- * as a connection failure. That is why it needs a test.
+ * The counting rule: armor runs with `flattenFragments: true`, so a fragment,
+ * inline or named, adds NO level and NO cost multiplier of its own — depth and
+ * cost measure the data a document selects. A literal `first:`/`last:`
+ * multiplies its whole subtree's cost by the page size; a VARIABLE does not,
+ * which is why a page read states its size as one.
  *
- * The counting rule is the part worth knowing, because it is not the one most
- * people assume. Armor runs with `flattenFragments: false`, so:
- *
- *   - an INLINE fragment (`... on X`) counts as a depth level, and
- *   - a NAMED spread (`...Frag`) counts as a level PLUS the fragment's own
- *     internal depth.
- *
- * `node { ... on PantryItem { id } }` is therefore already depth 4, and any
- * named spread inside a `node` branch cannot fit under 5 no matter how small
- * the fragment is. Hence the thin-event shape: subscribe to the envelope plus
- * the identity of what changed, and read the entity back through a normal
- * query, which gets the HTTP budget.
+ * Two caps bound the document itself: the parser refuses one over 1000 tokens
+ * (400), and the request guard one over 20 000 characters. Both are measured on
+ * the operation together with every fragment sent with it.
  *
  * ---
- * Verified 2026-08 against `@escape.tech/graphql-armor-max-depth@2.4.2` and
- * `@escape.tech/graphql-armor-cost-limit`, as configured by the API's
- * `packages/core/src/config/armorConfig.ts` with the defaults in
- * `packages/core/src/config/env.ts`:
+ * The rules and their defaults are the API's:
+ * `packages/core/src/config/armorConfig.ts` (the rules, `MAX_DOCUMENT_TOKENS`),
+ * `config/sections/http.ts` and `config/sections/publicApi.ts` (the defaults):
  *
- *     MAX_SUBSCRIPTION_DEPTH=5   MAX_SUBSCRIPTION_COMPLEXITY=500
+ *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
+ *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
  *
- * `countDepth` / `computeCost` below are ports of those two rules. To re-derive
- * them, run the real rules over these documents:
- *
- *     node -e "…" # import maxDepthRule/costLimitRule from the API's
- *                 # node_modules and validate(schema, doc, [rule])
+ * `countDepth` / `computeCost` below are ports of
+ * `@escape.tech/graphql-armor-max-depth` and `-cost-limit`. To re-derive them,
+ * run the real rules over these documents — `validate(schema, doc, [rule])`
+ * with `maxDepthRule` / `costLimitRule` from the API's `node_modules` — and
+ * compare per operation.
  *
  * If the server's limits move, change the constants here — do not relax the
  * shape of the documents to match a number nobody checked.
@@ -50,8 +46,14 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, sep } from 'path';
 import {
   parse,
+  print,
+  visit,
   Kind,
+  Lexer,
+  Source,
+  TokenKind,
   type ASTNode,
+  type DocumentNode,
   type FragmentDefinitionNode,
   type OperationDefinitionNode,
 } from 'graphql';
@@ -62,10 +64,12 @@ const SRC = resolve(__dirname, '..', '..', 'src');
 // HTTP is what a query or mutation is validated against, WebSocket what a
 // subscription gets. Only the ceilings differ; the counting rule is identical,
 // which is why one implementation checks both.
-const MAX_SUBSCRIPTION_DEPTH = 5;
+const MAX_SUBSCRIPTION_DEPTH = 4;
 const MAX_SUBSCRIPTION_COST = 500;
-const MAX_QUERY_DEPTH = 12;
-const MAX_QUERY_COST = 3000;
+const MAX_QUERY_DEPTH = 10;
+const MAX_QUERY_COST = 3500;
+const MAX_DOCUMENT_TOKENS = 1000;
+const MAX_DOCUMENT_LENGTH = 20000;
 const OBJECT_COST = 1;
 const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
@@ -113,7 +117,10 @@ for (const file of collectGraphqlFiles(SRC)) {
   }
 }
 
-/** Port of `@escape.tech/graphql-armor-max-depth` with `flattenFragments: false`. */
+const isFragment = (node: ASTNode) =>
+  node.kind === Kind.INLINE_FRAGMENT || node.kind === Kind.FRAGMENT_SPREAD;
+
+/** Port of `@escape.tech/graphql-armor-max-depth` with `flattenFragments: true`. */
 function countDepth(
   node: ASTNode,
   parentDepth = 0,
@@ -124,25 +131,26 @@ function countDepth(
 
   if (selectionSet) {
     for (const child of selectionSet.selections) {
-      depth = Math.max(depth, countDepth(child, parentDepth + 1, visited));
+      // A fragment is not a level: its fields sit at its parent's depth.
+      const childDepth = isFragment(child) ? parentDepth : parentDepth + 1;
+      depth = Math.max(depth, countDepth(child, childDepth, visited));
     }
   } else if (node.kind === Kind.FRAGMENT_SPREAD) {
-    const spreadDepth = parentDepth + 1;
     const name = node.name.value;
-    if (visited.has(name)) return spreadDepth + (visited.get(name) ?? 0);
+    if (visited.has(name)) return parentDepth + (visited.get(name) ?? 0);
     visited.set(name, -1);
 
     const fragment = fragments.get(name);
     if (fragment) {
       const fragmentDepth = countDepth(fragment, 0, visited);
-      depth = Math.max(depth, spreadDepth + fragmentDepth);
+      depth = Math.max(depth, parentDepth + fragmentDepth);
       if (visited.get(name) === -1) visited.set(name, fragmentDepth);
     }
   }
   return depth;
 }
 
-/** Port of `@escape.tech/graphql-armor-cost-limit` with `flattenFragments: false`. */
+/** Port of `@escape.tech/graphql-armor-cost-limit` with `flattenFragments: true`. */
 function computeCost(
   node: ASTNode,
   depth = 0,
@@ -160,8 +168,9 @@ function computeCost(
 
   if (selectionSet) {
     cost = OBJECT_COST;
-    // Pagination multiplier. Only a field carries `ArgumentNode`s; armor's
-    // `'arguments' in node` reaches the same set through a looser check.
+    // Pagination multiplier, for a LITERAL page size only. Only a field carries
+    // `ArgumentNode`s; armor's `'arguments' in node` reaches the same set
+    // through a looser check.
     let setMultiplier = 1;
     if (node.kind === Kind.FIELD && node.arguments) {
       for (const arg of node.arguments) {
@@ -177,7 +186,10 @@ function computeCost(
       }
     }
     for (const child of selectionSet.selections) {
-      cost += DEPTH_COST_FACTOR * computeCost(child, depth + 1, visited);
+      // A fragment's cost is added as is; a field's is weighted by its level.
+      cost += isFragment(child)
+        ? computeCost(child, depth, visited)
+        : DEPTH_COST_FACTOR * computeCost(child, depth + 1, visited);
     }
     cost *= setMultiplier;
   } else if (node.kind === Kind.FRAGMENT_SPREAD) {
@@ -189,12 +201,42 @@ function computeCost(
 
     const fragment = fragments.get(name);
     if (fragment) {
-      const fragmentCost = computeCost(fragment, depth + 1, visited);
-      cost += DEPTH_COST_FACTOR * fragmentCost;
+      const fragmentCost = computeCost(fragment, depth, visited);
+      cost += fragmentCost;
       if (visited.get(name) === -1) visited.set(name, fragmentCost);
     }
   }
   return cost;
+}
+
+/** The operation as it is sent: itself and every fragment it reaches. */
+function sentDocument(def: OperationDefinitionNode): string {
+  const reached = new Map<string, FragmentDefinitionNode>();
+  const collect = (node: ASTNode) => {
+    visit(node, {
+      FragmentSpread(spread) {
+        const fragment = fragments.get(spread.name.value);
+        if (fragment && !reached.has(spread.name.value)) {
+          reached.set(spread.name.value, fragment);
+          collect(fragment);
+        }
+      },
+    });
+  };
+  collect(def);
+  const document: DocumentNode = {
+    kind: Kind.DOCUMENT,
+    definitions: [def, ...reached.values()],
+  };
+  return print(document);
+}
+
+/** Tokens as the server's parser counts them (`parseOptions.maxTokens`). */
+function countTokens(text: string): number {
+  const lexer = new Lexer(new Source(text));
+  let tokens = 0;
+  while (lexer.advance().kind !== TokenKind.EOF) tokens += 1;
+  return tokens;
 }
 
 describe('subscription document limits', () => {
@@ -218,10 +260,10 @@ describe('subscription document limits', () => {
       if (depth > MAX_SUBSCRIPTION_DEPTH) {
         throw new Error(
           `${name} (${file}) is depth ${depth}; the server refuses anything over ` +
-            `${MAX_SUBSCRIPTION_DEPTH} at subscribe time. Remember an inline ` +
-            `fragment counts as a level and a named spread counts as a level plus ` +
-            `the fragment's own depth — so a spread inside "node { ... on X }" ` +
-            `never fits. Select the id and read the entity back through a query.`,
+            `${MAX_SUBSCRIPTION_DEPTH} at subscribe time. A fragment adds no level, ` +
+            `so the fields under "node { ... on X }" sit at depth 3 and anything ` +
+            `nested twice below them does not fit. Select the id and read the ` +
+            `entity back through a query.`,
         );
       }
       if (cost > MAX_SUBSCRIPTION_COST) {
@@ -240,10 +282,11 @@ describe('HTTP document limits', () => {
     expect(httpOperations.length).toBeGreaterThan(100);
   });
 
-  // GetMealPlan is the one document carrying a fragment purely so a DERIVE can
-  // read it offline, so its headroom is a design constraint rather than a
-  // measurement: `useGenerateShoppingList_mealPlan` is affordable here and not
-  // inside a mutation payload. Pinned so a widening of either is deliberate.
+  // GetMealPlan carries a fragment purely so a DERIVE can read it offline:
+  // `useGenerateShoppingList_mealPlan` reaches an ingredient's item through the
+  // plan's meals connection, which puts the document AT the depth limit. Its
+  // page size is a variable; a literal `first: 100` would cost ~100× this.
+  // Pinned so a widening of either is deliberate.
   it('GetMealPlan stays at the depth and cost the derive fragment was placed for', () => {
     const plan = httpOperations.find(o => o.name === 'GetMealPlan');
     expect(plan).toBeDefined();
@@ -251,7 +294,7 @@ describe('HTTP document limits', () => {
     expect({
       depth: countDepth(plan!.def),
       cost: Math.round(computeCost(plan!.def)),
-    }).toEqual({ depth: 10, cost: 303 });
+    }).toEqual({ depth: 10, cost: 221 });
   });
 
   it.each(httpOperations.map(o => [o.name, o]))(
@@ -264,18 +307,43 @@ describe('HTTP document limits', () => {
       if (depth > MAX_QUERY_DEPTH) {
         throw new Error(
           `${name} (${file}) is depth ${depth}; the HTTP limit is ` +
-            `${MAX_QUERY_DEPTH}. A named spread counts as a level plus the ` +
-            `fragment's own depth, so a deep fragment reached through a ` +
-            `mutation payload is the usual cause.`,
+            `${MAX_QUERY_DEPTH}. A connection costs two levels (edges, node), ` +
+            `so a connection nested in a connection is the usual cause.`,
         );
       }
       if (cost > MAX_QUERY_COST) {
         throw new Error(
           `${name} (${file}) costs ${Math.round(cost)}; the HTTP limit is ` +
-            `${MAX_QUERY_COST}. A \`first:\`/\`last:\` argument multiplies its ` +
+            `${MAX_QUERY_COST}. A LITERAL \`first:\`/\`last:\` multiplies its ` +
             `whole subtree by the page size, and every level above it multiplies ` +
-            `by another ${DEPTH_COST_FACTOR} — which is why the same fragment is ` +
-            `affordable in a query and not inside a mutation payload.`,
+            `by another ${DEPTH_COST_FACTOR}: state the page size as a variable.`,
+        );
+      }
+    },
+  );
+});
+
+describe('document size limits', () => {
+  const operations = [...httpOperations, ...subscriptions];
+
+  it.each(operations.map(o => [o.name, o]))(
+    '%s fits the token and length caps with every fragment it sends',
+    (_name, operation) => {
+      const { name, file, def } = operation;
+      const text = sentDocument(def);
+      const tokens = countTokens(text);
+
+      if (tokens > MAX_DOCUMENT_TOKENS) {
+        throw new Error(
+          `${name} (${file}) is ${tokens} tokens; the parser refuses a ` +
+            `document over ${MAX_DOCUMENT_TOKENS}. Every fragment a mutation ` +
+            `spreads is sent with it.`,
+        );
+      }
+      if (text.length > MAX_DOCUMENT_LENGTH) {
+        throw new Error(
+          `${name} (${file}) is ${text.length} characters; the request ` +
+            `guard refuses a query over ${MAX_DOCUMENT_LENGTH}.`,
         );
       }
     },

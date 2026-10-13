@@ -7,7 +7,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   DisplayFormat,
@@ -17,10 +17,10 @@ import {
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 function updateMock() {
-  return recordMock(UpdateShoppingListItemQuantityDocument, {
+  return recordMock(UpdateShoppingListItemDocument, {
     data: {
-      updateShoppingListItemQuantity: {
-        __typename: 'UpdateShoppingListItemQuantityPayload',
+      updateShoppingListItem: {
+        __typename: 'UpdateShoppingListItemPayload',
         shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
       },
     },
@@ -238,19 +238,42 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '5',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
+  // An omitted unit is left as it is; a null one would clear it.
+  it('leaves the unit out of the update when none is chosen', async () => {
+    const m = updateMock();
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('5', null, null);
+    });
+
+    expect(m.fired).toEqual([
+      { input: { id: 'item-1', quantity: '5', version: 3 } },
+    ]);
+  });
+
   it('sends a comma decimal to the API with the separator normalized', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
           shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
         },
       },
@@ -272,9 +295,9 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '1.5',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
@@ -287,10 +310,10 @@ describe('useQuantityEditModal', () => {
   it('stores the quantity the person typed, not a thousand-fold of it', async () => {
     (getDeviceDecimalSeparator as jest.Mock).mockReturnValue(',');
 
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
           shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
         },
       },
@@ -316,19 +339,19 @@ describe('useQuantityEditModal', () => {
     expect(saved?.[3]).toBeCloseTo(1.125, 3);
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '1.125',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
   it('passes a mixed number through untouched', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
           shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
         },
       },
@@ -350,18 +373,18 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '2 1/3',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
   it('keeps the sheet open and alerts when the server refuses the quantity', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
+        updateShoppingListItem: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
           message: 'Invalid fraction format',
@@ -400,7 +423,7 @@ describe('useQuantityEditModal', () => {
   // A failure the server gave no verdict on still gets exactly ONE message: the
   // caller's copy, since there is no code to say anything more specific.
   it('alerts a transport failure once and keeps the sheet open', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       error: new Error('network down'),
     });
     const items = [createItem()];
@@ -431,8 +454,8 @@ describe('useQuantityEditModal', () => {
   // "queued for replay". That is an acceptance, not a failure: the queue
   // replays it later, so the sheet must close silently rather than alert.
   it('closes without alerting when the write is queued offline', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
-      data: { updateShoppingListItemQuantity: null },
+    const m = recordMock(UpdateShoppingListItemDocument, {
+      data: { updateShoppingListItem: null },
     });
     const items = [createItem()];
 
@@ -465,8 +488,8 @@ describe('useQuantityEditModal', () => {
           version: 3,
         },
       ]);
-      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
-        data: { updateShoppingListItemQuantity: member },
+      const m = recordMock(UpdateShoppingListItemDocument, {
+        data: { updateShoppingListItem: member },
       });
       const rendered = renderHookWithApollo(
         () => useQuantityEditModal({ items: [createItem()] }),

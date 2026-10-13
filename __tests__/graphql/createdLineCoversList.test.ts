@@ -16,6 +16,8 @@
 import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { parse, Kind, type SelectionSetNode, type DocumentNode } from 'graphql';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 
 const ROOT = resolve(__dirname, '..', '..');
 
@@ -29,24 +31,32 @@ const read = (p: string) => parse(readFileSync(resolve(ROOT, p), 'utf8'));
  * `...SortableItem_item` and friends — it happened to be latent only because
  * the created-line fragment already carried the fields those spreads add.
  */
-const FRAGMENTS: Map<string, SelectionSetNode> = (() => {
-  const map = new Map<string, SelectionSetNode>();
+// Derived from the tree, not a list: a fragment moved or added must not make
+// this gate quietly stop seeing through the spread that references it.
+const DOCUMENTS: DocumentNode[] = (() => {
+  const documents: DocumentNode[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = resolve(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.name.endsWith('.graphql')) {
-        for (const def of parse(readFileSync(full, 'utf8')).definitions) {
-          if (def.kind === Kind.FRAGMENT_DEFINITION) {
-            map.set(def.name.value, def.selectionSet);
-          }
-        }
+        documents.push(parse(readFileSync(full, 'utf8')));
       }
     }
   };
-  // Derived from the tree, not a list: a fragment moved or added must not make
-  // this gate quietly stop seeing through the spread that references it.
   walk(resolve(ROOT, 'src'));
+  return documents;
+})();
+
+const FRAGMENTS: Map<string, SelectionSetNode> = (() => {
+  const map = new Map<string, SelectionSetNode>();
+  for (const document of DOCUMENTS) {
+    for (const def of document.definitions) {
+      if (def.kind === Kind.FRAGMENT_DEFINITION) {
+        map.set(def.name.value, def.selectionSet);
+      }
+    }
+  }
   return map;
 })();
 
@@ -118,6 +128,39 @@ function listNodeSelection(): SelectionSetNode {
   }
   if (!found) throw new Error('GetShoppingListItemsFiltered node not found');
   return found;
+}
+
+/** The selection under `name`, looking through inline fragments. */
+function childSelection(
+  set: SelectionSetNode,
+  name: string,
+): SelectionSetNode | undefined {
+  for (const sel of set.selections) {
+    if (sel.kind === Kind.INLINE_FRAGMENT) {
+      const nested = childSelection(sel.selectionSet, name);
+      if (nested) return nested;
+    }
+    if (sel.kind === Kind.FIELD && sel.name.value === name) {
+      return sel.selectionSet;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Every authored mutation that adds lines to a list, with what it selects on
+ * each line it adds. Every feature's add is a copy of the one batch add.
+ */
+function creatingWriters(): { operation: string; line: SelectionSetNode }[] {
+  return DOCUMENTS.flatMap(document =>
+    document.definitions.flatMap(def => {
+      if (def.kind !== Kind.OPERATION_DEFINITION || !def.name) return [];
+      const added = childSelection(def.selectionSet, 'addItemsToShoppingList');
+      const results = added && childSelection(added, 'results');
+      const line = results && childSelection(results, 'item');
+      return line ? [{ operation: def.name.value, line }] : [];
+    }),
+  );
 }
 
 /**
@@ -222,16 +265,26 @@ describe('a created shopping-list line covers what the list reads', () => {
     expect(missing).toEqual([]);
   });
 
-  it('is the shape every creating writer spreads', () => {
-    // Named so a new creating writer is a deliberate addition here rather than
-    // a fourth hand-listed selection that drifts.
-    const spreaders = [
-      'src/features/recipes/graphql/recipe.graphql',
-      'src/features/recipes/hooks/useRecipeShoppingList.graphql',
-    ];
-    for (const file of spreaders) {
-      const src = readFileSync(resolve(ROOT, file), 'utf8');
-      expect(src).toContain(`...${CREATED_FRAGMENT}`);
-    }
+  it('is carried by every writer that adds a line, the recipe add among them', () => {
+    const writers = creatingWriters();
+    // A discovery that came up empty would pass the comparison vacuously.
+    expect(writers.map(writer => writer.operation)).toContain(
+      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
+    );
+
+    const created = fieldPaths(
+      findFragment(
+        read('src/features/shoppingList/graphql/shoppingListFragments.graphql'),
+        CREATED_FRAGMENT,
+      ),
+    );
+    // Followed through each writer's own spreads, so a writer that lists
+    // fields by hand is held to the same shape as one that spreads it.
+    const short = writers.flatMap(({ operation, line }) => {
+      const carried = new Set(fieldPaths(line));
+      const missing = created.filter(field => !carried.has(field));
+      return missing.length > 0 ? [`${operation}: ${missing.join(', ')}`] : [];
+    });
+    expect(short).toEqual([]);
   });
 });

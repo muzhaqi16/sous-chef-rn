@@ -24,6 +24,9 @@ import {
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { MealTemplateItemsForEventDocument } from './useMealPlanSubscriptions.generated';
+import { removeFromMealPlanItems } from '#features/mealPlan/cache/mealPlanItem';
+import { removeTemplateItemFromCache } from '#features/mealPlan/cache/mealTemplateItem';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
@@ -34,7 +37,6 @@ import {
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import {
   createAddToQueryConnectionUpdater,
-  createRemoveFromParentArrayUpdater,
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
@@ -73,18 +75,6 @@ const addToMealTemplates = createAddToQueryConnectionUpdater<EntityRef>(
 const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
-);
-
-const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
-  'MealPlan',
-  'mealPlanItems',
-  'MealPlanItem',
-);
-
-const removeFromMealTemplateItems = createRemoveFromParentArrayUpdater(
-  'MealTemplate',
-  'items',
-  'MealTemplateItem',
 );
 
 const isDelete = (mutation: MutationType) =>
@@ -228,8 +218,8 @@ function handlePlanItemChanged(
     return;
   }
 
-  // Add and update both ride the plan read: it returns `mealPlanItems` and the
-  // totals in one response, and applying a 7-day template pushes ~21 events
+  // Add and update both ride the plan read: it returns the plan's meals and
+  // its totals in one response, and applying a 7-day template pushes ~21 events
   // that a per-item read would turn into 21 requests.
   refreshPlanAggregates(client);
 }
@@ -307,21 +297,19 @@ async function handleTemplateItemChanged(
   const itemId = payload.node.id;
 
   if (isDelete(payload.mutation)) {
-    removeFromMealTemplateItems(client.cache, templateId, itemId, {
-      evictItem: true,
-    });
+    removeTemplateItemFromCache(client.cache, templateId, itemId);
     return;
   }
 
   if (subscriptionService.isPendingDelete(itemId)) return;
 
   // The event carries no values, so an add or edit is read back before it
-  // lands: the read writes the server's complete `items` list, where linking
-  // the bare id would leave every reader of the template incomplete.
+  // lands: the read writes the server's page of the template's meals, where
+  // linking the bare id would leave every reader of the template incomplete.
   await fetchEventEntity(
     client,
     MealTemplateItemsForEventDocument,
-    { id: templateId },
+    { id: templateId, itemsFirst: MEALS_PAGE_SIZE },
     'MealTemplateItem',
   );
 }

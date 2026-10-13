@@ -192,8 +192,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   const currency = shoppingList?.currency ?? null;
-  const totalCost = shoppingList?.totalCost ?? 0;
-  const estimatedTotal = shoppingList?.estimatedTotal ?? 0;
+  // Null is an amount nobody recorded, which is not an amount of zero.
+  const totalCost = shoppingList?.totalCost ?? null;
+  const estimatedTotal = shoppingList?.estimatedTotal ?? null;
+  const unpricedItems = shoppingList?.unpricedItems ?? 0;
   const priceTracking = shoppingList?.priceTracking ?? false;
 
   const reminderEnabled = shoppingList?.reminderEnabled ?? false;
@@ -621,5 +623,6 @@ export const useListSettings = (listId: string | undefined) => {
     templateName,
     templates,
     totalCost,
+    unpricedItems,
   };
 };

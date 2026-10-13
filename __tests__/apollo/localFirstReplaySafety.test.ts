@@ -63,12 +63,10 @@ const REPLAY_SAFETY_BASELINE: Record<
   // A replay writes the value already there, and there is no id for
   // `hasIdempotentInput` to find because the operation names no row.
   CompleteOnboarding: 'absolute-update',
-  CreateShoppingListItemsFromRecipe: 'bulk-create',
   DeleteMultipleNotifications: 'absolute-update',
   DeleteRecipeFolder: 'absolute-update',
   MarkAllNotificationsAsRead: 'absolute-update',
   MarkExpirationAction: 'absolute-update',
-  MarkExpirationNotificationAsRead: 'absolute-update',
   // Sets `UserSettings.defaultHomeId` to one existing home id. There is one
   // such field per user and the input names the home outright, so a replay
   // writes the value already there — and a replay that lands AFTER the user

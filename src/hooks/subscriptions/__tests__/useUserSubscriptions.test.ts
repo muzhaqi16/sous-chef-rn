@@ -7,6 +7,7 @@ import {
   UserSubtype,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
+import { getDeviceId } from '#/storage/deviceId';
 import { useUserSubscriptions } from '../useUserSubscriptions';
 
 type CapturedOnData = (data: unknown) => void;
@@ -22,12 +23,15 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 }));
 
 const mockToastError = jest.fn();
+const mockToastSuccess = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
     error: (...args: unknown[]) => mockToastError(...args),
-    success: jest.fn(),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
   },
 }));
+
+jest.mock('#/storage/deviceId');
 
 jest.mock('#/services/authService', () => ({
   authService: { logout: jest.fn(() => Promise.resolve()) },
@@ -143,6 +147,45 @@ describe('useUserSubscriptions', () => {
         'Your account has been banned',
       );
     });
+  });
+
+  describe('an accepted invite announced back', () => {
+    const THIS_DEVICE = 'device_this';
+    const ADDED = [
+      [UserSubtype.AddedToHome, 'You were added to a new home'],
+      [UserSubtype.AddedToShoppingList, 'You were added to a shopping list'],
+    ];
+
+    const drive = (subtype: string, originatorClientId: string) => {
+      jest.mocked(getDeviceId).mockReturnValue(THIS_DEVICE);
+      const getOnData = captureCustomOnData();
+      renderHookWithApollo(() => useUserSubscriptions('user-1'));
+      // The same account either way: only the device tells the two apart.
+      getOnData()({
+        __typename: 'UserEvent',
+        subtype,
+        actorUserId: 'user-1',
+        originatorClientId,
+      });
+    };
+
+    it.each(ADDED)(
+      'says nothing for %s when this device accepted it',
+      subtype => {
+        drive(subtype, THIS_DEVICE);
+
+        expect(mockToastSuccess).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(ADDED)(
+      'announces %s when another device accepted it',
+      (subtype, message) => {
+        drive(subtype, 'device_other');
+
+        expect(mockToastSuccess).toHaveBeenCalledWith(message);
+      },
+    );
   });
 
   it('leaves selections alone when removed from a home that is not selected', () => {

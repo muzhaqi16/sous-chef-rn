@@ -33,6 +33,7 @@ const mockStore = {
   setIsHomeSelectionReady: jest.fn(),
   setSelectedShoppingListId: jest.fn(),
   setPreferredCurrency: jest.fn(),
+  updateUser: jest.fn(),
   clearBiometricBackoff: jest.fn(),
   registerBiometricRefusal: jest.fn(),
   setHasStoredCredentials: jest.fn(),

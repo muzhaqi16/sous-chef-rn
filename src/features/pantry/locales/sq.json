@@ -116,6 +116,7 @@
     "topWastedItems": "Artikujt më të humbur",
     "activityOverTime": "Aktiviteti me kohë",
     "additionsByUnit": "Shtimet sipas njësisë",
+    "perUnit": "për {{unit}}",
     "consumptionByUnit": "Konsumi sipas njësisë",
     "topRestockedItems": "Artikujt më të riblerë",
     "transactionCount": "({{count}} transaksione)",

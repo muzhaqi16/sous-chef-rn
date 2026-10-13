@@ -17,6 +17,7 @@ describe('profileScreens', () => {
       'DeleteAccount',
       'DietaryProfile',
       'ImageCrop',
+      'MyReports',
       'NotificationSettings',
       'PerformanceDashboard',
       'PersonalInformation',

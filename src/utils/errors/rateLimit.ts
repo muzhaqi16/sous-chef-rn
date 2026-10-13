@@ -1,5 +1,6 @@
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
+import { refusalEnvelopeOf } from './graphqlErrors';
 
 // Exact codes, never a `RATE_` prefix: OPERATION_RATE_LIMITED does not carry it,
 // so a prefix test drops every per-operation limit. Only two are declared in the
@@ -7,8 +8,8 @@ import { t } from '#/i18n';
 // registry-only and stay literals.
 const RATE_LIMIT_CODES: string[] = [
   'RATE_LIMITED',
-  // The global budget. Carries `resetAt` rather than `retryAfter`, so the
-  // message below falls back to the server's text for it.
+  // The global budget, refused before execution: its code and `retryAfter`
+  // arrive in the body of a 429, read through `refusalEnvelopeOf`.
   TopLevelErrorCode.RateLimitExceeded,
   'RATE_LIMIT_IP_BLOCKED',
   'RATE_LIMIT_USER_BLOCKED',
@@ -51,24 +52,16 @@ function toErrorObject(error: unknown): ApolloErrorLike | null {
 }
 
 export function isRateLimitError(error: unknown): boolean {
-  const err = toErrorObject(error);
-  if (!err) return false;
-
-  const graphQLErrors = graphQLErrorsOf(err);
-  if (graphQLErrors) {
-    return graphQLErrors.some(gqlErr =>
-      RATE_LIMIT_CODES.includes(gqlErr.extensions?.code ?? ''),
-    );
-  }
-
-  if (err.extensions) {
-    return RATE_LIMIT_CODES.includes(err.extensions.code ?? '');
-  }
-
-  return false;
+  return getRateLimitDetails(error) !== null;
 }
 
 export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
+  const envelope = refusalEnvelopeOf(error);
+  if (envelope) {
+    return RATE_LIMIT_CODES.includes(envelope.code)
+      ? { retryAfter: envelope.retryAfter }
+      : null;
+  }
   const err = toErrorObject(error);
   if (!err) return null;
 

@@ -1,10 +1,14 @@
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   MealTemplateItemFragmentDoc,
   type MealTemplateItemFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { MealTemplateItemInput } from '#/graphql/generated/schemaTypes';
 import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 import {
   MealTemplateItem_RecipeRefFragmentDoc,
   MealTemplateItem_RowFragmentDoc,
@@ -15,11 +19,26 @@ import {
 } from './mealTemplateItemRowNeutral.generated';
 
 /**
- * Local-first writes for a template's items: the item mutations return the whole
- * `mealTemplate { items }` and rely on normalization, so offline nothing moves.
+ * Local-first writes for a template's items: an item mutation returns the item
+ * and its template's own fields, never the template's `itemsConnection`, so the
+ * edge is written here, online and offline alike.
  * Module scope, not inside the hook — a value block inside a try/catch bails
  * the whole function out of the React Compiler.
  */
+
+/** The template field its meals hang off. */
+const TEMPLATE_ITEMS_FIELD = 'itemsConnection';
+
+const addToTemplateItems = createAddToParentConnectionUpdater<{ id: string }>(
+  'MealTemplate',
+  TEMPLATE_ITEMS_FIELD,
+  'MealTemplateItem',
+);
+const removeFromTemplateItems = createRemoveFromParentConnectionUpdater(
+  'MealTemplate',
+  TEMPLATE_ITEMS_FIELD,
+  'MealTemplateItem',
+);
 
 export function readRecipeRef(
   cache: ApolloCache,
@@ -79,8 +98,8 @@ export function localTemplateItem(
 
 /**
  * Writes an item complete for every query reading one — what it states, else
- * what the cache holds, else the neutral value — and appends it to the
- * template's `items` list. Also restores a removed item from its snapshot.
+ * what the cache holds, else the neutral value — and appends its edge to the
+ * template's meals. Also restores a removed item from its snapshot.
  */
 export function addTemplateItemToCache(
   cache: ApolloCache,
@@ -101,52 +120,17 @@ export function addTemplateItemToCache(
     known: item,
   });
 
-  cache.modify({
-    id: parent,
-    fields: {
-      items(existing: readonly Reference[] = [], { toReference, readField }) {
-        const ref = toReference(
-          { __typename: item.__typename, id: item.id },
-          true,
-        );
-        if (!ref) return existing;
-        // The response normalizes the same id, so guard against a second edge.
-        const already = existing.some(
-          edge => readField<string>('id', edge) === item.id,
-        );
-        return already ? existing : [...existing, ref];
-      },
-    },
-  });
+  // Guards against a second edge: the response normalizes the same id.
+  addToTemplateItems(cache, templateId, item, { position: 'end' });
 }
 
-/** Drop an item from the template's `items` list and evict the entity. */
+/** Drop an item's edge from its template and evict the entity. */
 export function removeTemplateItemFromCache(
   cache: ApolloCache,
   templateId: string,
   itemId: string,
 ): void {
-  const parent = cache.identify({
-    __typename: 'MealTemplate',
-    id: templateId,
-  });
-  if (parent) {
-    cache.modify({
-      id: parent,
-      fields: {
-        items(existing: readonly Reference[] = [], { readField }) {
-          return existing.filter(
-            edge => readField<string>('id', edge) !== itemId,
-          );
-        },
-      },
-    });
-  }
-  const cacheId = cache.identify({
-    __typename: 'MealTemplateItem',
-    id: itemId,
-  });
-  if (cacheId) cache.evict({ id: cacheId });
+  removeFromTemplateItems(cache, templateId, itemId, { evictItem: true });
 }
 
 /**

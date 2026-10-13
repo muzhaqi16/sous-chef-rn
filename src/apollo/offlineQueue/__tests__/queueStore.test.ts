@@ -14,7 +14,7 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
-  ToggleShoppingListItemPurchasedDocument,
+  UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 
 // The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
@@ -207,12 +207,12 @@ describe('QueueStore', () => {
         const move1 = makeMutation({
           id: 'move-1',
           ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { itemId: 'item-A', afterItemId: 'x' } },
+          variables: { input: { id: 'item-A', afterItemId: 'x' } },
         });
         const move2 = makeMutation({
           id: 'move-2',
           ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { itemId: 'item-A', afterItemId: 'y' } },
+          variables: { input: { id: 'item-A', afterItemId: 'y' } },
         });
 
         store.addMutation(move1);
@@ -230,14 +230,14 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-a',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A' } },
+            variables: { input: { id: 'item-A' } },
           }),
         );
         store.addMutation(
           makeMutation({
             id: 'move-b',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-B' } },
+            variables: { input: { id: 'item-B' } },
           }),
         );
 
@@ -250,7 +250,7 @@ describe('QueueStore', () => {
             id: 'move-u1',
             userId: 'user-1',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A' } },
+            variables: { input: { id: 'item-A' } },
           }),
         );
         store.addMutation(
@@ -258,7 +258,7 @@ describe('QueueStore', () => {
             id: 'move-u2',
             userId: 'user-2',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A' } },
+            variables: { input: { id: 'item-A' } },
           }),
         );
 
@@ -273,7 +273,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-processing',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A' } },
+            variables: { input: { id: 'item-A' } },
             status: QueueStatus.PROCESSING,
           }),
         );
@@ -281,7 +281,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-new',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A' } },
+            variables: { input: { id: 'item-A' } },
           }),
         );
 
@@ -295,7 +295,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-1',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
           }),
         );
         store.addMutation(
@@ -311,7 +311,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-2',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-X' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-X' } },
           }),
         );
 
@@ -326,7 +326,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-1',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
             createdAt: 1_000,
           }),
         );
@@ -334,7 +334,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-2',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-Z' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-Z' } },
             createdAt: 5_000,
           }),
         );
@@ -358,7 +358,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-1',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
             createdAt: old,
           }),
         );
@@ -366,7 +366,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-2',
             ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { itemId: 'item-A', afterItemId: 'item-Z' } },
+            variables: { input: { id: 'item-A', afterItemId: 'item-Z' } },
             createdAt: Date.now(),
           }),
         );
@@ -379,8 +379,14 @@ describe('QueueStore', () => {
       const toggle = (id: string, itemId: string, createdAt: number) =>
         makeMutation({
           id,
-          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-          variables: { input: { id: itemId, purchased: true, version: 2 } },
+          ...queuedMutationFor(UpdateShoppingListItemDocument),
+          variables: {
+            input: {
+              id: itemId,
+              version: 2,
+              purchaseTracking: { isPurchased: true },
+            },
+          },
           createdAt,
         });
       const remove = (id: string, itemId: string) =>
@@ -1058,7 +1064,7 @@ describe('QueueStore', () => {
         makeMutation({
           id: 'm2',
           ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { itemId: 'cuid-move', afterItemId: 'row-0' } },
+          variables: { input: { id: 'cuid-move', afterItemId: 'row-0' } },
         }),
       );
 

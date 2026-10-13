@@ -69,6 +69,7 @@ fragment useRecipeData_recipe on Recipe {
     notes
     personalRating
     cookedCount
+    lastCookedAt
   }
   averageRating
   totalReviews

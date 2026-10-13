@@ -20,6 +20,8 @@
       "genericRetry": "Diçka shkoi keq. Provoni sërish.",
       "homeAccessDenied": "Nuk keni akses në këtë shtëpi",
       "homeInviteExpired": "Ftesa për shtëpinë ka skaduar",
+      "homeMemberLimitReached": "Kjo shtëpi ka arritur kufirin e anëtarëve",
+      "payloadTooLarge": "Është shumë për t'u dërguar njëherësh. Provo një ndryshim më të vogël.",
       "homeInviteInvalid": "Ftesë e pavlefshme për shtëpinë",
       "homeMemberAlreadyExists": "Përdoruesi është tashmë anëtar i kësaj shtëpie",
       "homeNotFound": "Shtëpia nuk u gjet",

@@ -309,7 +309,8 @@ describe('classifyCreateResult', () => {
     ['a server fault', httpStatus(502)],
     ['an internal error', refusedWith(TopLevelErrorCode.InternalServerError)],
     ['a traffic limit on the connection', httpStatus(429)],
-    ['a request timeout', httpStatus(408)],
+    // The API answers a timeout 503 SERVICE_UNAVAILABLE, as any server fault.
+    ['a request timeout', httpStatus(503)],
     ['a session mid-refresh', httpStatus(401)],
     ['a request that never left', new Error('Network request failed')],
   ])('resends after %s', (_, error) => {

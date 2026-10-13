@@ -15,21 +15,6 @@ fragment MealTemplateReaders on MealTemplate {
     name
   }
   homeId
-  items {
-    id
-    customMealName
-    dayOffset
-    mealType
-    notes
-    recipe {
-      id
-      imageUrl
-      name
-      servings
-      totalTimeMinutes
-    }
-    servings
-  }
   lastUsedAt
   name
   tags

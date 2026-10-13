@@ -20,7 +20,6 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
-  ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -550,10 +549,11 @@ describe("a merged create's queued writes", () => {
       },
       2,
     );
+    // A tick states the flag alone, so it overwrites no quantity the merge set.
     queueAfterCreate(
       'check',
-      ToggleShoppingListItemPurchasedDocument,
-      { id: 'minted-2', purchased: true, version: 1 },
+      UpdateShoppingListItemDocument,
+      { id: 'minted-2', version: 1, purchaseTracking: { isPurchased: true } },
       3,
     );
     mockClient.mutate
@@ -566,7 +566,11 @@ describe("a merged create's queued writes", () => {
 
     expect(sentInputs().slice(2)).toEqual([
       expect.objectContaining({ pantryItemId: 'surviving-1' }),
-      { id: 'surviving-2', purchased: true, version: 3 },
+      {
+        id: 'surviving-2',
+        version: 3,
+        purchaseTracking: { isPurchased: true },
+      },
     ]);
     expect(failed).not.toHaveBeenCalled();
     expect(kept).not.toHaveBeenCalled();
@@ -597,22 +601,27 @@ describe("a merged create's queued writes", () => {
       {
         id: 'm1',
         mealPlanId: 'plan-1',
-        date: '2026-10-01T00:00:00.000Z',
+        date: '2026-10-01',
         mealType: 'DINNER',
         meal: { recipeId: 'recipe-1' },
       },
       0,
     );
+    // Marked done while still offline: it states the version the local row
+    // was written at.
     queueAfterCreate('done', UpdateMealPlanItemDocument, {
       id: 'm1',
       isCompleted: true,
+      completedAt: '2026-10-01T18:00:00.000Z',
+      version: 1,
     });
     mockClient.mutate
       .mockResolvedValueOnce({
         data: {
           createMealPlanItem: {
             __typename: 'CreateMealPlanItemPayload',
-            mealPlanItem: { __typename: 'MealPlanItem', id: 's1' },
+            // Another device planned and edited this meal: its row is at 4.
+            mealPlanItem: { __typename: 'MealPlanItem', id: 's1', version: 4 },
           },
         },
       })
@@ -620,7 +629,7 @@ describe("a merged create's queued writes", () => {
         data: {
           updateMealPlanItem: {
             __typename: 'UpdateMealPlanItemPayload',
-            mealPlanItem: { __typename: 'MealPlanItem', id: 's1' },
+            mealPlanItem: { __typename: 'MealPlanItem', id: 's1', version: 5 },
           },
         },
       });
@@ -628,7 +637,14 @@ describe("a merged create's queued writes", () => {
 
     await manager.processQueue();
 
-    expect(sentInputs()[1]).toEqual({ id: 's1', isCompleted: true });
+    // `updateMealPlanItem` refuses a stale version, so the completion is sent
+    // at the surviving row's, not at the one the minted row was written at.
+    expect(sentInputs()[1]).toEqual({
+      id: 's1',
+      isCompleted: true,
+      completedAt: '2026-10-01T18:00:00.000Z',
+      version: 4,
+    });
     expect(failed).not.toHaveBeenCalled();
   });
 

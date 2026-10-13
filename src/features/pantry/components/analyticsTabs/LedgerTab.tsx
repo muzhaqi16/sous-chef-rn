@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { usePreferredCurrency } from '#/domain/money';
+import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import { useTranslation } from '#/i18n';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
@@ -18,6 +18,7 @@ import {
   OfflineTabState,
   TopItemsBarChart,
   money,
+  moneyByCurrency,
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
@@ -58,7 +59,9 @@ export const LedgerTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
-  const preferredCurrency = usePreferredCurrency();
+  // One average per currency AND unit: a kilogram and a piece do not average.
+  const unitCosts = ledgerData?.costAnalytics?.averageCostPerUnit ?? [];
+  const [onlyUnitCost] = unitCosts.length === 1 ? unitCosts : [];
 
   const ledgerPeriodData =
     ledgerData?.periodData.map(period => ({
@@ -184,23 +187,57 @@ export const LedgerTab: React.FC<
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('labels.totalSpent')}
-            value={money(
-              ledgerData.costAnalytics.totalSpent,
-              preferredCurrency,
-            )}
+            // No costed restock in the period is an unknown spend, never zero.
+            value={
+              moneyByCurrency(ledgerData.costAnalytics.totalSpent) ??
+              UNKNOWN_AMOUNT
+            }
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
-          <AnalyticsSummaryCard
-            title={t('labels.avgCostPerUnit')}
-            value={money(
-              ledgerData.costAnalytics.averageCostPerUnit,
-              preferredCurrency,
-            )}
-            icon="calculator-outline"
-            uniProps={theme => ({ color: theme.colors.warning })}
-          />
+          {!!onlyUnitCost && (
+            <AnalyticsSummaryCard
+              title={t('labels.avgCostPerUnit')}
+              value={money(onlyUnitCost.amount, onlyUnitCost.currencyCode)}
+              icon="calculator-outline"
+              uniProps={theme => ({ color: theme.colors.warning })}
+              subtitle={
+                onlyUnitCost.unitSymbol
+                  ? t('pantryAnalytics.perUnit', {
+                      unit: onlyUnitCost.unitSymbol,
+                    })
+                  : undefined
+              }
+            />
+          )}
         </View>
+      )}
+
+      {unitCosts.length > 1 && (
+        <ChartSection
+          title={t('labels.avgCostPerUnit')}
+          loading={ledgerLoading}
+          error={ledgerError}
+          isEmpty={false}
+        >
+          <View style={styles.unitBreakdownList}>
+            {unitCosts.map(cost => (
+              <View
+                key={`${cost.currencyCode}:${cost.unitSymbol ?? ''}`}
+                style={styles.unitBreakdownItem}
+              >
+                <Text role="bodyStrong">
+                  {money(cost.amount, cost.currencyCode)}
+                </Text>
+                {!!cost.unitSymbol && (
+                  <Text role="caption" tone="secondary">
+                    {t('pantryAnalytics.perUnit', { unit: cost.unitSymbol })}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </ChartSection>
       )}
 
       {/* Period Breakdown Chart */}

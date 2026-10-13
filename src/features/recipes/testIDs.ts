@@ -26,4 +26,6 @@ export const recipesTestIDs = {
   forkButton: 'recipe-fork-button',
   folderButton: 'recipe-folder-button',
   heartButton: 'recipe-heart-button',
+  reportButton: 'recipe-report-button',
+  reviewReportButton: (reviewId: string) => `review-report-${reviewId}`,
 };

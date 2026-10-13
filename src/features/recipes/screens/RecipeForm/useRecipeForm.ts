@@ -2,13 +2,13 @@ import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type {
   CreateRecipeInput,
-  UpdateRecipeInput,
   RecipeIngredientInput,
   Diet,
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
 import type {
   IngredientFormState,
   StepFormState,
@@ -232,9 +232,9 @@ export function useRecipeForm() {
   // Without `id`, which the caller adds. An omitted field is left unchanged, so
   // an emptied one is sent as null or []; the API refuses null for `name` and
   // `servings` (NOT NULL), so those stay omitted when blank.
-  const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
+  const buildUpdateInput = (): RecipeUpdateFields => {
     return {
-      version: state.version ?? undefined,
+      version: state.version,
       ingredients: buildIngredientsInput(),
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,

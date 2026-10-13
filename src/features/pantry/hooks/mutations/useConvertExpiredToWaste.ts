@@ -1,7 +1,9 @@
 /**
- * Sets `condition` SPOILED + `quantity` 0 and writes a WASTE usage record.
- * Local-first: the cache is written PERMANENTLY before firing (an
- * `optimisticResponse` rolls back on the queue's null result), and
+ * Wastes a stack's expired stock as one WASTE usage record. A stack with no
+ * batches is wasted whole: `condition` SPOILED + `quantity` 0, written to the
+ * cache PERMANENTLY before firing (an `optimisticResponse` rolls back on the
+ * queue's null result). A stack held in batches loses only the expired ones,
+ * which the server recomputes, so nothing is written ahead of its answer.
  * `input.idempotencyKey` keeps a queued replay from double-counting the ledger.
  */
 
@@ -18,7 +20,7 @@ import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
 
 interface UseConvertExpiredToWasteOptions {
-  onSuccess?: () => void;
+  onSuccess?: (wasted: { hasBatches: boolean }) => void;
 }
 
 export function useConvertExpiredToWaste({
@@ -32,7 +34,27 @@ export function useConvertExpiredToWaste({
 
   const convertExpiredToWaste = async (
     pantryItemId: string,
+    { hasBatches }: { hasBatches: boolean },
   ): Promise<boolean> => {
+    // Captured at the tap, so a replay judges the day the user saw.
+    const today = todayKey();
+    const variables = {
+      today,
+      input: { pantryItemId, idempotencyKey: generateEntityId(), today },
+    };
+    if (hasBatches) {
+      const settledBatches = await settleMutation(
+        () => convertMutation({ variables }),
+        {
+          document: ConvertExpiredToWasteDocument,
+          fallback: t('errors.discardExpiredFailed'),
+        },
+      );
+      if (settledBatches.status === 'failed') return false;
+      onSuccess?.({ hasBatches });
+      return true;
+    }
+
     const itemCacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: pantryItemId,
@@ -109,20 +131,11 @@ export function useConvertExpiredToWaste({
       clearPersistence();
     };
 
-    const settled = await settleMutation(
-      () =>
-        convertMutation({
-          variables: {
-            today: todayKey(),
-            input: { pantryItemId, idempotencyKey: generateEntityId() },
-          },
-        }),
-      {
-        document: ConvertExpiredToWasteDocument,
-        fallback: t('errors.discardExpiredFailed'),
-        onFailed: revert,
-      },
-    );
+    const settled = await settleMutation(() => convertMutation({ variables }), {
+      document: ConvertExpiredToWasteDocument,
+      fallback: t('errors.discardExpiredFailed'),
+      onFailed: revert,
+    });
     if (settled.status === 'failed') return false;
 
     // Applied: the response normalized the authoritative item. Queued: the
@@ -130,7 +143,7 @@ export function useConvertExpiredToWaste({
     if (settled.status === 'applied') {
       clearPersistence();
     }
-    onSuccess?.();
+    onSuccess?.({ hasBatches });
     return true;
   };
 

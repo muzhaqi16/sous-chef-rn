@@ -4,6 +4,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeDetail } from '../index';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -156,6 +157,10 @@ jest.mock(
 
 jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,
+}));
+
+jest.mock('#features/profile/ui/ReportContentSheet', () => ({
+  ReportContentSheet: () => null,
 }));
 
 jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
@@ -1693,6 +1698,59 @@ describe('RecipeDetail', () => {
       const tree = renderWithDetails('complete');
       expect(tree.queryByText("Details aren't here yet")).toBeNull();
       expect(tree.queryByText('Not available right now')).toBeNull();
+    });
+  });
+
+  describe('when a saved recipe was last cooked', () => {
+    const LAST_COOKED_AT = '2026-10-11T12:00:00.000Z';
+
+    const renderSaved = (cooked: {
+      cookedCount: number;
+      lastCookedAt: string | null;
+    }) => {
+      const { useRecipeDetail } = jest.requireMock<{
+        useRecipeDetail: jest.Mock;
+      }>('../../../hooks/useRecipeDetail');
+      const base = useRecipeDetail.getMockImplementation()?.();
+      useRecipeDetail.mockReturnValue({
+        ...base,
+        recipeId: 'r1',
+        error: null,
+        isSaved: true,
+        displayData: {
+          dataAttributions: [],
+          details: 'complete',
+          title: 'Shakshuka',
+          image: null,
+          servings: 2,
+          ingredients: [],
+          instructions: [],
+        },
+        backendRecipe: { id: 'r1', createdBy: { id: 'other' } },
+        ...cooked,
+      });
+      return render(<RecipeDetail route={route} />);
+    };
+
+    it('shows the date beside the cooked count', () => {
+      const tree = renderSaved({
+        cookedCount: 3,
+        lastCookedAt: LAST_COOKED_AT,
+      });
+
+      expect(tree.getByText('Cooked 3x')).toBeTruthy();
+      expect(
+        tree.getByText(
+          `Last cooked ${formatMonthDayYear(new Date(LAST_COOKED_AT))}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no date for a recipe never cooked', () => {
+      const tree = renderSaved({ cookedCount: 0, lastCookedAt: null });
+
+      expect(tree.getByText('Mark cooked')).toBeTruthy();
+      expect(tree.queryByText(/Last cooked/)).toBeNull();
     });
   });
 });

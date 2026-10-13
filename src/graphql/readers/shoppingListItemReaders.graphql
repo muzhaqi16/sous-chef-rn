@@ -125,8 +125,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   }
   sortOrder
   source {
-    autoAddReason
-    isAutoAdded
+    addedContext
     isFromMealPlan
   }
   storeInfo {

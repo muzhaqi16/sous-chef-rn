@@ -20,9 +20,13 @@ import {
   type SettledFailure,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import {
+  appliedPayload,
+  extractMutationPayload,
+} from '#/utils/errors/mutationPayload';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
@@ -43,6 +47,19 @@ export type InvitationFailure = SettledFailure;
 export type InvitationWriteResult =
   | { status: 'done'; acceptedHomeId?: string }
   | { status: 'failed'; failure: InvitationFailure };
+
+/**
+ * The invite is not pending any more: the server refused the write as a plain
+ * conflict. A full home is a `ConflictError` too, under its own code, and its
+ * invite stays pending until a seat frees.
+ */
+const isSpentInvite = (data: unknown): boolean => {
+  const payload = extractMutationPayload(data);
+  return (
+    payload?.__typename === 'ConflictError' &&
+    payload.code === ErrorCode.Conflict
+  );
+};
 
 const refusalOptions = (
   document: DocumentNode,
@@ -69,11 +86,17 @@ export function useInvitationActions(
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
-      // A refusal is a completed mutation, so this runs for one too. Every
-      // effect stays inside the payload check: the invite is still PENDING on
-      // a refusal, and evicting it here leaves nothing to accept later.
+      // A refusal is a completed mutation, so this runs for one too. An invite
+      // refused as a CONFLICT is spent (accepted, declined or revoked) and
+      // leaves the pending list; any other refusal leaves it PENDING, and
+      // evicting it here would leave nothing to accept later.
       const payload = appliedPayload(data);
-      if (!payload) return;
+      if (!payload) {
+        if (isSpentInvite(data) && inviteId && userId) {
+          removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+        }
+        return;
+      }
       addToHomes(cache, payload.membership.home, { position: 'end' });
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
@@ -99,7 +122,12 @@ export function useInvitationActions(
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
-      if (!payload) return;
+      if (!payload) {
+        if (isSpentInvite(data) && inviteId && userId) {
+          removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+        }
+        return;
+      }
       const id = payload.homeInvite.id;
       if (id && userId) {
         removePendingHomeInvite(cache, userId, id, { evictItem: true });

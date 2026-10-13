@@ -34,6 +34,7 @@ import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
@@ -96,15 +97,17 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     id: string,
     cached: UseGenerateShoppingList_MealPlanFragment,
   ): Promise<UseGenerateShoppingList_MealPlanFragment> => {
-    const unlinked = cached.mealPlanItems.some(item =>
-      item.recipe?.ingredientsConnection.edges.some(edge => !edge.node.item),
+    const unlinked = cached.mealPlanItemsConnection.edges.some(meal =>
+      meal.node.recipe?.ingredientsConnection.edges.some(
+        edge => !edge.node.item,
+      ),
     );
     if (!unlinked || apiUnavailable) return cached;
 
     const fetched = await client
       .query({
         query: GetMealPlanDocument,
-        variables: { id },
+        variables: { id, mealsFirst: MEALS_PAGE_SIZE },
         fetchPolicy: 'network-only',
       })
       .catch(() => null);
@@ -124,31 +127,46 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   const generateShoppingList = async (
     options: GenerateShoppingListOptions = {},
   ) => {
-    if (!mealPlanId || !complete) {
+    // A plan whose later pages of meals are unread would derive a short list.
+    if (
+      !mealPlanId ||
+      !complete ||
+      plan.mealPlanItemsConnection.pageInfo.hasNextPage
+    ) {
       toastService.error(t('generateShoppingList.planNotLoaded'));
       return null;
     }
 
     const source = await withLinkedIngredients(mealPlanId, plan);
+    // The re-read restates the first page; a plan that outgrew it meanwhile
+    // has unread meals again.
+    if (source.mealPlanItemsConnection.pageInfo.hasNextPage) {
+      toastService.error(t('generateShoppingList.planNotLoaded'));
+      return null;
+    }
 
-    const meals: PlannedMeal[] = source.mealPlanItems.map(item => ({
-      id: item.id,
-      servings: item.servings,
-      recipe: item.recipe
-        ? {
-            id: item.recipe.id,
-            servings: item.recipe.servings,
-            ingredients: item.recipe.ingredientsConnection.edges.map(edge => ({
-              id: edge.node.id,
-              name: edge.node.name,
-              quantity: edge.node.quantity,
-              isOptional: edge.node.isOptional,
-              unitId: edge.node.unit?.id,
-              itemId: edge.node.item?.id,
-            })),
-          }
-        : null,
-    }));
+    const meals: PlannedMeal[] = source.mealPlanItemsConnection.edges.map(
+      ({ node: item }) => ({
+        id: item.id,
+        servings: item.servings,
+        recipe: item.recipe
+          ? {
+              id: item.recipe.id,
+              servings: item.recipe.servings,
+              ingredients: item.recipe.ingredientsConnection.edges.map(
+                edge => ({
+                  id: edge.node.id,
+                  name: edge.node.name,
+                  quantity: edge.node.quantity,
+                  isOptional: edge.node.isOptional,
+                  unitId: edge.node.unit?.id,
+                  itemId: edge.node.item?.id,
+                }),
+              ),
+            }
+          : null,
+      }),
+    );
 
     const pantryRows: PantryStock[] | null = pantry.state.hasResult
       ? pantry.state.pantryItems.map(row => ({
@@ -161,7 +179,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const { inputs, displayNames, skipped, pantryChecked } =
       deriveShoppingListFromMealPlan(meals, {
         mealPlanId,
-        mealPlanName: source.name,
         checkPantry: options.checkPantry ?? true,
         pantryRows,
       });

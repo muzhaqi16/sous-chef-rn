@@ -15,6 +15,9 @@ fragment useNotificationsOnLaunch_notification on Notification {
   expiresAt
   sourceId
   sourceType
+  # The stack as the server resolves it NOW (a merge is followed); null when
+  # the notification is about none, or its batch is gone.
+  pantryItemId
   actionUrl
   readAt
   status
