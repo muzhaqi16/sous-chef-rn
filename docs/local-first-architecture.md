@@ -431,12 +431,21 @@ query-blocking, orthogonal to connectivity.
   operation (no conversion route, a fact the food does not record, a measure the stack cannot
   express), none of which a refresh clears — and the replay re-sends the same unit, so retrying only
   delays the withdrawal. The interactive path refetches the ranked units so the user can pick another.
-- **A queued write outlives the build that shaped it.** `queueStore` rewrites each entry on load
-  into this build's input shapes (`legacyExpiry.ts`, `legacyRefs.ts`), and drops from its stored
-  document the fields the API has removed since (`legacySelections.ts`: the batch lines' old failure
-  fields, `quantityIncremented`, the recipe add's and batch move's old lists): the API refuses a
-  retired shape or an unknown field before any resolver runs, so an entry left as queued is a write
-  lost after an upgrade.
+- **A queued write outlives the build that shaped it.** `queueStore` rewrites each entry on load,
+  in this order: an operation the API removed becomes the one that replaced it, document and
+  variables both (`legacyRetired.ts`: the purchased toggle and the quantity edit →
+  `UpdateShoppingListItem`, the reviewed cook → `MarkRecipeAsCooked` with `exactStacks`, the
+  expired-batches waste → `ConvertExpiredToWaste`); its inputs take this build's shapes
+  (`legacyExpiry.ts`: an `expiresAt` instant → `expiresOn`, a meal-plan instant → its calendar day;
+  `legacyRefs.ts`: `@oneOf` references); and its stored document loses the fields the API has
+  removed since (`legacySelections.ts`: the batch lines' old failure fields, a shopping line's
+  auto-add fields, a plan's and a template's bare lists, the user's region fields). An edit stored
+  without a `version` the API now requires is given the cached row's at replay (`prepareReplay.ts`).
+  The API refuses a retired shape or an unknown field before any resolver runs, so an entry left as
+  queued is a write lost after an upgrade. `storedQueueUpgrade.test.ts` loads every mutation of the
+  previous build that the pulled schema refuses and validates what comes out. One is not rewritten:
+  a single recipe-ingredient add, whose replacement needs an item reference the stored input does
+  not carry — its replay is refused and withdrawn through the reported path.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope
@@ -496,7 +505,7 @@ permanent cache write):**
   server copy is a cross-device mirror. `useAppSettings` syncs the store back off the query, so a
   server rejection reverts the store too.
 - **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
-  `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`, `ConvertExpiredBatchesToWaste`)
+  `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`)
   — replay as the **original canonical mutation**, made at-most-once by a client-minted
   `input.idempotencyKey` the server records in the same transaction as the delta (deltas are relative, so
   entity-id idempotency can't dedupe them; the key can). A replay returns
@@ -529,8 +538,7 @@ drain reads the parent reference off the input, so no per-feature special-casing
 ## 11. Server contract (verified)
 
 - **Client-supplied `id`** is accepted on every named client-create input: `CreatePantryItemInput`,
-  `BatchAddShoppingListItemInput`,
-  `CreateShoppingListItemFromRecipeIngredientInput`, `CreateShoppingListInput`, plus `createHome` /
+  `BatchAddShoppingListItemInput`, `CreateShoppingListInput`, plus `createHome` /
   `createStorageLocation` / `createMealPlan(Item)` / `createMealTemplate` / `createRecipe` (top-level).
   Format: cuid2 (validator `/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/` also accepts legacy cuid v1
   and 24-char hex); omitted → Prisma `@default(cuid(2))`. Note `createShoppingList`
