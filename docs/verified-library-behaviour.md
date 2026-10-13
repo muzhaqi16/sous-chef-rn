@@ -260,6 +260,47 @@ Re-check:
 grep -n -A 6 "updateTheme: () =>" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
 ```
 
+### Unistyles' useAnimatedTheme misses a theme change made while its screen is paused
+
+**Claim:** `useAnimatedTheme` drops its listener while a screen paused by
+`inactiveBehavior: 'pause'` is hidden, and re-subscribes on reveal without
+reading the theme again. A `useAnimatedStyle` over it keeps the old theme's
+values. `useUnistyles` and `withUnistyles` catch up on their own.
+
+**Verified against `react-native-unistyles@3.5.3` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
+emulator).** With Profile two levels down the stack, the theme went from dark to
+light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
+avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
+the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
+no mismatch there, because the value is Reanimated's. With
+`#hooks/ui/useAnimatedTheme` the same run gave the light surface
+`rgb(255, 255, 255)`, and a paused `CollapsingHeroDetail` came back with its
+pinned bar in the new theme.
+
+The mechanism: the hook subscribes through `StyleSheet.addChangeListener` in a
+`useEffect`. A hidden `Activity` runs the cleanup and the reveal runs the effect
+again, and nothing reads `UnistylesRuntime.getTheme()` in between.
+`useProxifiedUnistyles` does that read after a cleanup
+([unistyles#1300](https://github.com/jpudysz/react-native-unistyles/pull/1300));
+`useAnimatedTheme` does not.
+
+The fix: `#hooks/ui/useAnimatedTheme` wraps the library hook. When its effect
+runs again after a cleanup, it sets the shared value if the theme object changed
+in between. `no-restricted-imports` bans the library hook everywhere else.
+Guarded by `src/hooks/ui/__tests__/useAnimatedTheme.test.tsx`. Only a screen two
+or more levels below the top is paused, so a repro needs a three-deep stack.
+
+Re-check:
+
+```
+sed -n '/useEffect(() => {/,/}, \[scopedTheme\])/p' node_modules/react-native-unistyles/src/reanimated/useAnimatedTheme.native.ts
+```
+
+The effect reads `getTheme()` only inside the listener. On a device: point
+`ProfileHero` at the library hook, open Profile, push two more screens,
+`setTheme` to the other theme, and go back twice.
+
 ### react-compiler try shapes
 
 **Claim:** inside hook/component bodies, exactly two `try` shapes make the

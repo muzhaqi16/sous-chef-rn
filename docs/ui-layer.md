@@ -155,6 +155,11 @@ they read it.
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
   `FloatingTabBar`). Or they sit on a non-animated parent (the list rows'
   `rowWrapper`).
+- **The animated theme is `useAnimatedTheme` from `#hooks/ui/useAnimatedTheme`**
+  (`no-restricted-imports`). Unistyles' own hook stops listening while a paused
+  screen is hidden and never reads the theme again, so the app's reads it when
+  the screen is shown
+  ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
   `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to
