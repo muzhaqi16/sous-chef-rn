@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}} g ({{openedDays}} g dopo l'apertura)",
     "shelfLifeOpened": "{{days}} g dopo l'apertura",
-    "packages": "Confezioni"
+    "packages": "Confezioni",
+    "removedTitle": "Questo articolo non è più nella tua dispensa",
+    "removedBody": "È stato rimosso, forse da un altro dispositivo."
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",

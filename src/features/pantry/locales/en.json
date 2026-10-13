@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}}d ({{openedDays}}d once opened)",
     "shelfLifeOpened": "{{days}}d once opened",
-    "packages": "Packages"
+    "packages": "Packages",
+    "removedTitle": "This item is no longer in your pantry",
+    "removedBody": "It was removed, perhaps from another device."
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",

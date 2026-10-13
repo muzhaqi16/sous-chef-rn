@@ -427,6 +427,22 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.queryByTestId('state-loading')).toBeNull();
   });
 
+  it('says a stack the server holds nothing for is gone, not that it failed to load', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        recordMock(GetPantryItemDocument, { data: { pantryItem: null } }).mock,
+      ],
+    });
+
+    expect(await screen.findByTestId('pantry-item-removed')).toBeTruthy();
+    expect(
+      screen.getByText('This item is no longer in your pantry'),
+    ).toBeTruthy();
+    expect(screen.getByText('Go Back')).toBeTruthy();
+    expect(screen.queryByTestId('state-error')).toBeNull();
+    expect(screen.queryByTestId('state-loading')).toBeNull();
+  });
+
   it('renders loader before the query resolves', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [

@@ -15,7 +15,10 @@ import {
   recordMock,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  ConvertExpiredToWasteDocument,
+  GetPantryItemBatchesDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { ItemCondition, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -213,6 +216,7 @@ describe('useConvertExpiredToWaste — a stack with no batches', () => {
 
 describe('useConvertExpiredToWaste — a stack held in batches', () => {
   it('writes nothing ahead of the answer, sends the dated keyed input, and a queued (null) result leaves the stack as it was', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
     const cache = seedItem();
     const { result, fired, onSuccess } = renderConvert(cache, [
       convertMock(QUEUED),
@@ -234,9 +238,13 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
     expectConvertSent(fired);
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
+    // Nothing to read yet: the resync after the queue drains re-reads them.
+    expect(refetchQueries).not.toHaveBeenCalled();
+    refetchQueries.mockRestore();
   });
 
   it('takes the stack the server recomputed when the convert applies', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
     const cache = seedItem();
     const { result, onSuccess } = renderConvert(cache, [
       convertMock({
@@ -270,6 +278,13 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
     });
     expect(persistedState()).toEqual({});
     expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
+    // The answer restates the stack, not its batches: they are read again, or
+    // the wasted batch would stay listed with its discard still on offer.
+    expect(refetchQueries).toHaveBeenCalledTimes(1);
+    expect(refetchQueries).toHaveBeenCalledWith({
+      include: [GetPantryItemBatchesDocument],
+    });
+    refetchQueries.mockRestore();
   });
 
   it('alerts, reports no success and leaves the stack alone on a rejection (error-union result)', async () => {

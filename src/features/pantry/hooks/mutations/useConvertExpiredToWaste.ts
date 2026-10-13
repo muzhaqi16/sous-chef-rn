@@ -8,7 +8,10 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  ConvertExpiredToWasteDocument,
+  GetPantryItemBatchesDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { UseConvertExpiredToWaste_StateFragmentDoc } from './useConvertExpiredToWaste.generated';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -51,6 +54,11 @@ export function useConvertExpiredToWaste({
         },
       );
       if (settledBatches.status === 'failed') return false;
+      // The answer restates the stack, not its batches: read them again so the
+      // wasted batch leaves the list. A queued waste is re-read after the drain.
+      if (settledBatches.status === 'applied') {
+        void client.refetchQueries({ include: [GetPantryItemBatchesDocument] });
+      }
       onSuccess?.({ hasBatches });
       return true;
     }

@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}} d ({{openedDays}} d pas hapjes)",
     "shelfLifeOpened": "{{days}} d pas hapjes",
-    "packages": "Paketime"
+    "packages": "Paketime",
+    "removedTitle": "Ky artikull nuk është më në qilarin tënd",
+    "removedBody": "U hoq, ndoshta nga një pajisje tjetër."
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",

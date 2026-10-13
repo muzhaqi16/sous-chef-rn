@@ -10,6 +10,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
 import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
@@ -192,14 +193,30 @@ export const PantryItemDetail: React.FC<
     // fires the moment the create lands, so the skip must not read as empty.
     loading: itemLoading || isUnconfirmed,
     error: itemError,
-    // "Something to show" is the cache entity, not `data`. `deletedOnServer`
-    // overrides it, and is deliberately narrow — only an explicit
-    // RESOURCE_NOT_FOUND on an acknowledged row, so offline hides nothing.
-    hasResult: !!item && !deletedOnServer,
-    isEmpty: !item || deletedOnServer,
+    // "Something to show" is the cache entity, not `data`.
+    hasResult: !!item,
+    isEmpty: !item,
   });
 
-  if (!item || deletedOnServer) {
+  // The server answered that the stack is gone. That is an answer, not a
+  // failed load: it gets its own words and a way back, never "try again".
+  if (deletedOnServer) {
+    return (
+      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
+        <View style={commonStyles.loadingContainer}>
+          <EmptyState
+            icon="trash-outline"
+            title={t('pantryItemDetail.removedTitle')}
+            description={t('pantryItemDetail.removedBody')}
+            action={{ label: t('labels.goBack'), onPress: goBack }}
+            testID={pantryTestIDs.itemRemoved}
+          />
+        </View>
+      </CollapsingHeroDetail>
+    );
+  }
+
+  if (!item) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
         <View style={commonStyles.loadingContainer}>

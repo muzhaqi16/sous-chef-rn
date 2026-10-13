@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}} d ({{openedDays}} d una vez abierto)",
     "shelfLifeOpened": "{{days}} d una vez abierto",
-    "packages": "Paquetes"
+    "packages": "Paquetes",
+    "removedTitle": "Este artículo ya no está en tu despensa",
+    "removedBody": "Se eliminó, quizá desde otro dispositivo."
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
