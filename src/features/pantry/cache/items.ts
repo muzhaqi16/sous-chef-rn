@@ -43,11 +43,15 @@ export function reconcileCreatedPantryItem(
   pantryItem: PantryItemRef,
   clientId: string | null | undefined,
 ): void {
+  if (clientId && clientId !== pantryItem.id) {
+    // The held row is never added: the write reaches every cached variant, so
+    // it would land in, and count toward, the filtered ones it is not in.
+    removeFromPantryItemsCache(cache, pantryId, clientId, { evictItem: true });
+    evictLocalPantryItemSeeds(cache, clientId);
+    return;
+  }
   // NOT the counting helper: the eager write already counted this row.
   addToPantryItemsCache(cache, pantryId, pantryItem);
-  if (!clientId || clientId === pantryItem.id) return;
-  removeFromPantryItemsCache(cache, pantryId, clientId, { evictItem: true });
-  evictLocalPantryItemSeeds(cache, clientId);
 }
 
 /**
