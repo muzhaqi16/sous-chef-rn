@@ -18,7 +18,7 @@ const mockNav = jest
   .useAppNavigation();
 
 jest.mock('#/services/errorService');
-const { localizedErrorMessage } = jest.requireMock('#/services/errorService');
+const { errorCopy } = jest.requireMock('#/services/errorService');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -212,8 +212,9 @@ describe('DeleteAccountScreen - error state', () => {
     });
     await screen.findByText('Unable to check account status');
     expect(screen.queryByText('Network error')).toBeNull();
-    expect(localizedErrorMessage).toHaveBeenCalledWith(
+    expect(errorCopy).toHaveBeenCalledWith(
       expect.anything(),
+      expect.any(Function),
       'An error occurred. Please try again.',
     );
     expect(screen.getByText('Something went wrong.')).toBeTruthy();

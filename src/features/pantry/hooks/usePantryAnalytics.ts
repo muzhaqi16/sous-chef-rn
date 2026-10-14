@@ -16,7 +16,7 @@ import {
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { useTranslation } from '#/i18n';
-import { localizedErrorMessage } from '#/services/errorService';
+import { errorCopy } from '#/services/errorService';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']
@@ -135,9 +135,7 @@ export function usePantryAnalytics({
   const ledgerAnalytics = ledgerQueryData?.pantry?.ledgerAnalytics ?? null;
 
   const toCopy = (error: unknown) =>
-    error
-      ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
-      : undefined;
+    error ? errorCopy(error, t, t('errors.codes.genericRetry')) : undefined;
 
   // Filtered by `dateRange` / `granularity`, so each combination is its own
   // cache entry — offline, changing a filter is a guaranteed miss even when the

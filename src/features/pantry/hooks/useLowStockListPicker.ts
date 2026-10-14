@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import type { AddToListOutcome } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 
 /** One low-stock row, in the shape `addToList` needs. */
@@ -35,6 +35,7 @@ interface Options {
 export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
   // One state, not a visible flag beside a pending row: the two were only ever
   // set together, and `null` says "closed" without a second way to disagree.
+  const { t } = useTranslation();
   const [target, setTarget] = useState<PickerTarget | null>(null);
   const [busy, setBusy] = useState(false);
 

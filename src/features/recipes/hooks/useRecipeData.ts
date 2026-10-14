@@ -1,4 +1,4 @@
-import { localizedErrorMessage } from '#/services/errorService';
+import { errorCopy } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -186,7 +186,7 @@ export function useRecipeData({
   const resolveError = () => {
     if (openFailure) return openFailure;
     if (current && error) {
-      return localizedErrorMessage(error, t('recipes.loadFailed'));
+      return errorCopy(error, t, t('recipes.loadFailed'));
     }
     if (!recipeId && !hint) return t('recipes.recipeNotFound');
     return null;

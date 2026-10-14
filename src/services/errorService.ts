@@ -28,6 +28,7 @@ import {
 } from '#/utils/errors/versionConflict';
 import { Telemetry } from '#/services/telemetry';
 import { t, type KeyUnder } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 
 export interface ErrorResult<T = unknown> {
   success: boolean;
@@ -280,14 +281,25 @@ export class ErrorService {
   }
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
+    return this.messageForCode(errorCode, t, fallbackMessage);
+  }
+
+  /** {@link getUserFriendlyMessage} in the language of the caller's `t`. */
+  messageForCode(
+    errorCode: string,
+    translate: Translate,
+    fallbackMessage?: string,
+  ): string {
     const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
     // An unmapped code takes the caller's own localized copy; the server's
     // message never reaches here.
     if (!suffix) {
-      return firstNonBlank(fallbackMessage) ?? t('errors.codes.unexpected');
+      return (
+        firstNonBlank(fallbackMessage) ?? translate('errors.codes.unexpected')
+      );
     }
     // The table holds suffixes; the whole key is composed here.
-    return t(`errors.codes.${suffix}`);
+    return translate(`errors.codes.${suffix}`);
   }
 
   getErrorCategory(errorCode: string): string {
@@ -348,84 +360,110 @@ export class ErrorService {
     });
   }
 
+  /**
+   * What a failure is: its code, the text to log for it, and the fields a
+   * refusal named. It builds no copy, so it can be read while rendering. A
+   * null `diagnostic` is the version conflict's, whose only text is copy.
+   */
+  private classify(error: unknown): {
+    errorCode: string;
+    diagnostic: string | null;
+    validationErrors: Record<string, string> | undefined;
+  } {
+    let errorCode = 'UNKNOWN_ERROR';
+    let diagnostic: string | null = 'An unexpected error occurred';
+    let validationErrors: Record<string, string> | undefined;
+
+    // Check for query complexity errors first
+    if (isQueryComplexityError(error)) {
+      errorCode = 'QUERY_TOO_COMPLEX';
+      diagnostic = describeQueryComplexity(error);
+    }
+    // Check for version conflict errors
+    else if (isVersionConflictError(error)) {
+      errorCode = ErrorCode.VersionConflict;
+      diagnostic = null;
+    }
+    // Apollo error types
+    else if (CombinedGraphQLErrors.is(error)) {
+      const graphQLError = error.errors[0];
+      if (graphQLError) {
+        errorCode =
+          (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
+        diagnostic = graphQLError.message;
+
+        if (
+          errorCode === ErrorService.VALIDATION_FAILED &&
+          graphQLError.extensions?.validationErrors
+        ) {
+          validationErrors = toValidationErrors(
+            graphQLError.extensions.validationErrors,
+          );
+        }
+      }
+    } else if (ServerError.is(error)) {
+      const statusCode = error.statusCode;
+      // A refusal before execution carries its code in the body; the status
+      // is read only for a body that is not an envelope.
+      const envelope = refusalEnvelopeOf(error);
+      if (envelope) errorCode = envelope.code;
+      else if (statusCode === 401)
+        errorCode = TopLevelErrorCode.AuthTokenInvalid;
+      // No GraphQL envelope here, so the status is all there is, and four
+      // conditions share 403. Deliberately NOT an AUTH_* code: isAuthError()
+      // must stay false, or a key-provisioning fault reads as a dead session.
+      else if (statusCode === 403) errorCode = TopLevelErrorCode.Forbidden;
+      else if (statusCode === 404)
+        errorCode = TopLevelErrorCode.ResourceNotFound;
+      else if (statusCode === 429)
+        errorCode = TopLevelErrorCode.RateLimitExceeded;
+      else if (statusCode >= 500)
+        errorCode = TopLevelErrorCode.ServiceUnavailable;
+      else errorCode = 'NETWORK_ERROR';
+
+      diagnostic = error.message || `Unable to connect (${statusCode}).`;
+    } else if (ServerParseError.is(error)) {
+      errorCode = TopLevelErrorCode.ServiceUnavailable;
+      diagnostic = 'Server response could not be parsed';
+    } else if (CombinedProtocolErrors.is(error)) {
+      errorCode = 'NETWORK_ERROR';
+      diagnostic = error.message || 'Unable to connect.';
+    } else if (error instanceof GraphQLNetworkError) {
+      errorCode = 'NETWORK_ERROR';
+      diagnostic = error.message;
+    } else if (error instanceof Error && isNetworkError(error)) {
+      // Before the plain `instanceof Error` arm, which a fetch failure also
+      // satisfies: read there it is UNKNOWN_ERROR, "an unexpected error".
+      errorCode = 'NETWORK_ERROR';
+      diagnostic = error.message;
+    } else if (error instanceof Error) {
+      diagnostic = error.message;
+    } else if (typeof error === 'string') {
+      diagnostic = error;
+    }
+
+    return { errorCode, diagnostic, validationErrors };
+  }
+
+  /** The code a failure carries, with nothing logged and no copy built. */
+  codeOf(error: unknown): string {
+    try {
+      return this.classify(error).errorCode;
+    } catch {
+      return 'ERROR_HANDLER_FAILED';
+    }
+  }
+
   parseApolloError(
     error: unknown,
     config: ErrorConfig = {},
   ): ErrorResult<never> {
     const { operation = 'Unknown', customMessage, logError = true } = config;
 
-    let errorCode = 'UNKNOWN_ERROR';
-    let diagnostic = 'An unexpected error occurred';
-    let validationErrors: Record<string, string> | undefined;
-
     try {
-      // Check for query complexity errors first
-      if (isQueryComplexityError(error)) {
-        errorCode = 'QUERY_TOO_COMPLEX';
-        diagnostic = describeQueryComplexity(error);
-      }
-      // Check for version conflict errors
-      else if (isVersionConflictError(error)) {
-        errorCode = ErrorCode.VersionConflict;
-        diagnostic = getVersionConflictMessage();
-      }
-      // Apollo error types
-      else if (CombinedGraphQLErrors.is(error)) {
-        const graphQLError = error.errors[0];
-        if (graphQLError) {
-          errorCode =
-            (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
-          diagnostic = graphQLError.message;
-
-          if (
-            errorCode === ErrorService.VALIDATION_FAILED &&
-            graphQLError.extensions?.validationErrors
-          ) {
-            validationErrors = toValidationErrors(
-              graphQLError.extensions.validationErrors,
-            );
-          }
-        }
-      } else if (ServerError.is(error)) {
-        const statusCode = error.statusCode;
-        // A refusal before execution carries its code in the body; the status
-        // is read only for a body that is not an envelope.
-        const envelope = refusalEnvelopeOf(error);
-        if (envelope) errorCode = envelope.code;
-        else if (statusCode === 401)
-          errorCode = TopLevelErrorCode.AuthTokenInvalid;
-        // No GraphQL envelope here, so the status is all there is, and four
-        // conditions share 403. Deliberately NOT an AUTH_* code: isAuthError()
-        // must stay false, or a key-provisioning fault reads as a dead session.
-        else if (statusCode === 403) errorCode = TopLevelErrorCode.Forbidden;
-        else if (statusCode === 404)
-          errorCode = TopLevelErrorCode.ResourceNotFound;
-        else if (statusCode === 429)
-          errorCode = TopLevelErrorCode.RateLimitExceeded;
-        else if (statusCode >= 500)
-          errorCode = TopLevelErrorCode.ServiceUnavailable;
-        else errorCode = 'NETWORK_ERROR';
-
-        diagnostic = error.message || `Unable to connect (${statusCode}).`;
-      } else if (ServerParseError.is(error)) {
-        errorCode = TopLevelErrorCode.ServiceUnavailable;
-        diagnostic = 'Server response could not be parsed';
-      } else if (CombinedProtocolErrors.is(error)) {
-        errorCode = 'NETWORK_ERROR';
-        diagnostic = error.message || 'Unable to connect.';
-      } else if (error instanceof GraphQLNetworkError) {
-        errorCode = 'NETWORK_ERROR';
-        diagnostic = error.message;
-      } else if (error instanceof Error && isNetworkError(error)) {
-        // Before the plain `instanceof Error` arm, which a fetch failure also
-        // satisfies: read there it is UNKNOWN_ERROR, "an unexpected error".
-        errorCode = 'NETWORK_ERROR';
-        diagnostic = error.message;
-      } else if (error instanceof Error) {
-        diagnostic = error.message;
-      } else if (typeof error === 'string') {
-        diagnostic = error;
-      }
+      const classified = this.classify(error);
+      const { errorCode, validationErrors } = classified;
+      const diagnostic = classified.diagnostic ?? getVersionConflictMessage();
 
       const category = this.getErrorCategory(errorCode);
       const userFriendlyMessage =
@@ -567,4 +605,18 @@ export const localizedErrorMessage = (
   if (!code) return fallback ?? t('errors.codes.unexpected');
   if (fallback && TRANSPORT_CODES.has(code)) return fallback;
   return errorService.getUserFriendlyMessage(code, fallback);
+};
+
+/**
+ * {@link localizedErrorMessage} for copy read while rendering: resolved with
+ * the caller's `t`, so it follows a language change, and with nothing logged.
+ */
+export const errorCopy = (
+  error: unknown,
+  translate: Translate,
+  fallback?: string,
+): string => {
+  const code = errorService.codeOf(error);
+  if (fallback && TRANSPORT_CODES.has(code)) return fallback;
+  return errorService.messageForCode(code, translate, fallback);
 };

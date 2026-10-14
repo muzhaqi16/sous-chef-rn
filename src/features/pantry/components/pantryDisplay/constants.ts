@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import { t } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 
@@ -22,15 +22,26 @@ export const MVCP_DISABLED = { disabled: true };
 // only — it does NOT limit what the list renders (that is DRAW_DISTANCE's job).
 export const IMAGE_PRELOAD_COUNT = 24;
 
-// A function, not a const: at import time these labels would freeze whichever
-// language was active when the module loaded, and never see a change.
-export const getDefaultPantryTabs = (): FilterTabConfig<LocationFilter>[] => [
-  { id: 'all', label: t('pantryTabs.all') },
+// A function of the caller's `t`, not a const: a const would keep the language
+// the module loaded in, and the module's own `t` the one a caller first
+// rendered in.
+export const getDefaultPantryTabs = (
+  translate: Translate,
+): FilterTabConfig<LocationFilter>[] => [
+  { id: 'all', label: translate('pantryTabs.all') },
   {
     id: 'fridge',
-    label: t('labels.storageRefrigerated'),
+    label: translate('labels.storageRefrigerated'),
     icon: 'thermometer-outline',
   },
-  { id: 'freezer', label: t('labels.storageFrozen'), icon: 'snow-outline' },
-  { id: 'pantry', label: t('labels.storageAmbient'), icon: 'cube-outline' },
+  {
+    id: 'freezer',
+    label: translate('labels.storageFrozen'),
+    icon: 'snow-outline',
+  },
+  {
+    id: 'pantry',
+    label: translate('labels.storageAmbient'),
+    icon: 'cube-outline',
+  },
 ];

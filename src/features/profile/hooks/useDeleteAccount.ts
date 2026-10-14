@@ -5,7 +5,7 @@ import {
 } from '#operations/auth/user.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
-import { localizedErrorMessage } from '#/services/errorService';
+import { errorCopy } from '#/services/errorService';
 
 /** Whether this account may be deleted, what blocks it, and the delete itself. */
 export function useDeleteAccount() {
@@ -36,7 +36,7 @@ export function useDeleteAccount() {
     blockers: data?.canDeleteAccount.blockers ?? [],
     checkingEligibility,
     eligibilityErrorMessage: eligibilityError
-      ? localizedErrorMessage(eligibilityError, t('account.deleteGenericError'))
+      ? errorCopy(eligibilityError, t, t('account.deleteGenericError'))
       : null,
     refetchEligibility,
     deleteAccount,

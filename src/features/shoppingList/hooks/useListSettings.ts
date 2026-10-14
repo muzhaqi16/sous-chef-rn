@@ -131,7 +131,7 @@ export const useListSettings = (listId: string | undefined) => {
         shoppingList?.home?.myMembership,
       )
     : null;
-  const roleDisplay = formatRoleDisplay(role);
+  const roleDisplay = formatRoleDisplay(role, t);
   const ownerInfo = ownershipSnapshot
     ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;

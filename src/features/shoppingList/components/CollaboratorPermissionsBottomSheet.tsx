@@ -206,10 +206,11 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       >
         <View style={styles.headerBlock}>
           <Text role="bodyStrong">
-            {getCollaboratorDisplayName(collaborator)}
+            {getCollaboratorDisplayName(collaborator, t)}
           </Text>
           {!!collaborator.email &&
-            collaborator.email !== getCollaboratorDisplayName(collaborator) && (
+            collaborator.email !==
+              getCollaboratorDisplayName(collaborator, t) && (
               <Text role="caption" tone="secondary" style={styles.emailCaption}>
                 {collaborator.email}
               </Text>

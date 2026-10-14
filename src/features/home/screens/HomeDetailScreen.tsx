@@ -322,6 +322,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                       role: member.role,
                       displayName: member.displayName,
                     },
+                    t,
                     currentUser?.id,
                   ),
             };

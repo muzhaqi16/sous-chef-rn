@@ -12,6 +12,8 @@ describe('a member this build has never heard of', () => {
   });
 
   it('renders a role as a member rather than as nothing', () => {
-    expect(formatRole('SUPERVISOR' as MembershipRole)).toBe(t('roles.member'));
+    expect(formatRole('SUPERVISOR' as MembershipRole, t)).toBe(
+      t('roles.member'),
+    );
   });
 });

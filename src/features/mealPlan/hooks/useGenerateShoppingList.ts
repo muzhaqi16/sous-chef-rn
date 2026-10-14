@@ -32,7 +32,7 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
-import { t } from '#/i18n';
+import { t as tGlobal, useTranslation } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import {
@@ -57,13 +57,13 @@ function unreadSource(
   plan: UseGenerateShoppingList_MealPlanFragment,
 ): string | null {
   if (plan.mealPlanItemsConnection.pageInfo.hasNextPage) {
-    return t('generateShoppingList.planNotLoaded');
+    return tGlobal('generateShoppingList.planNotLoaded');
   }
   const overLimit = plan.mealPlanItemsConnection.edges
     .map(meal => meal.node.recipe)
     .find(recipe => recipe?.ingredientsConnection.pageInfo.hasNextPage);
   return overLimit
-    ? t('generateShoppingList.recipeOverLimit', {
+    ? tGlobal('generateShoppingList.recipeOverLimit', {
         name: overLimit.name,
         count: MAX_RECIPE_INGREDIENTS,
       })
@@ -76,6 +76,7 @@ function unreadSource(
  * every one of them queued and keyed by a client-minted id.
  */
 export function useGenerateShoppingList(mealPlanId: string | null) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const pantryId = useSelectedPantryId();
 
@@ -325,7 +326,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 }
 
 const defaultListName = (planName: string | null | undefined) =>
-  t('generateShoppingList.defaultName', { name: planName ?? '' });
+  tGlobal('generateShoppingList.defaultName', { name: planName ?? '' });
 
 function report(outcome: {
   name: string;
@@ -335,7 +336,7 @@ function report(outcome: {
   checkPantry: boolean | undefined;
 }) {
   toastService.success(
-    t('generateShoppingList.createdSuccess', {
+    tGlobal('generateShoppingList.createdSuccess', {
       name: outcome.name,
       count: outcome.added,
       shared: '',
@@ -343,10 +344,10 @@ function report(outcome: {
   );
   if (outcome.skipped > 0) {
     toastService.info(
-      t('generateShoppingList.someSkipped', { count: outcome.skipped }),
+      tGlobal('generateShoppingList.someSkipped', { count: outcome.skipped }),
     );
   }
   if ((outcome.checkPantry ?? true) && !outcome.pantryChecked) {
-    toastService.info(t('generateShoppingList.pantryNotChecked'));
+    toastService.info(tGlobal('generateShoppingList.pantryNotChecked'));
   }
 }

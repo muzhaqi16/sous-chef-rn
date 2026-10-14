@@ -11,6 +11,7 @@ import {
   CollaboratorRole,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 const makeOwnership = (userId: string, profile?: Record<string, unknown>) => ({
   userId,
@@ -225,11 +226,11 @@ describe('ownershipHelpers', () => {
       [MembershipRole.Member, 'Member'],
       [MembershipRole.Guest, 'Guest'],
     ])('formats %s as %s', (input, expected) => {
-      expect(formatRoleDisplay(input)).toBe(expected);
+      expect(formatRoleDisplay(input, t)).toBe(expected);
     });
 
     it('returns Unknown for null', () => {
-      expect(formatRoleDisplay(null)).toBe('Unknown');
+      expect(formatRoleDisplay(null, t)).toBe('Unknown');
     });
   });
 });

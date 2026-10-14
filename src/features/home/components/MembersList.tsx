@@ -44,6 +44,7 @@ const MemberChip: React.FC<{
   role: MembershipRole;
   isCurrentUser: boolean;
 }> = ({ displayName, role, isCurrentUser }) => {
+  const { t } = useTranslation();
   styles.useVariants({ currentUser: isCurrentUser });
   return (
     <View style={styles.memberChip}>
@@ -51,7 +52,7 @@ const MemberChip: React.FC<{
         {displayName}
       </Text>
       <Text role="caption" style={styles.memberRole}>
-        {formatRole(role)}
+        {formatRole(role, t)}
       </Text>
     </View>
   );
@@ -81,7 +82,7 @@ export const MembersList: React.FC<MembersListProps> = ({
       </Text>
       <View style={styles.membersList}>
         {members.map(member => {
-          const displayName = getMemberDisplayName(member, currentUser?.id);
+          const displayName = getMemberDisplayName(member, t, currentUser?.id);
           const isCurrentUser = member.user?.id === currentUser?.id;
           return (
             <MemberChip
