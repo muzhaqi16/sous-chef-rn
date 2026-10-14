@@ -11,19 +11,27 @@ const MAX_ITEMS = 100;
 
 /**
  * The list's open lines naming one of `itemIds`, asked for those items alone,
- * so a long list is never paged through to find them.
+ * so a long list is never paged through to find them. `spareItemIds` are asked
+ * for too while the API's limit has room, and never in place of one of `itemIds`.
  */
 export function useOpenListLinesFor(
   listId: string | undefined,
   itemIds: readonly string[],
+  spareItemIds: readonly string[] = [],
 ): {
   lines: ShoppingListItemNode[];
   loading: boolean;
-  /** Some lines naming these items went unread: past a page, or past the API's item limit. */
+  /** Some lines naming `itemIds` went unread: past a page, or past the API's item limit. */
   incomplete: boolean;
 } {
   const distinct = [...new Set(itemIds)].sort();
-  const ids = distinct.slice(0, MAX_ITEMS);
+  const asked = new Set(distinct.slice(0, MAX_ITEMS));
+  for (const itemId of [...spareItemIds].sort()) {
+    if (asked.size >= MAX_ITEMS) break;
+    asked.add(itemId);
+  }
+  // Sorted as one: the same items are the same lookup however they are split.
+  const ids = [...asked].sort();
   const { data, loading } = useQuery(
     GetShoppingListItemsFilteredDocument,
     listId && ids.length > 0
@@ -47,6 +55,6 @@ export function useOpenListLinesFor(
     lines: extractNodes(connection),
     loading: loading && !shown,
     incomplete:
-      distinct.length > ids.length || !!connection?.pageInfo.hasNextPage,
+      distinct.length > MAX_ITEMS || !!connection?.pageInfo.hasNextPage,
   };
 }

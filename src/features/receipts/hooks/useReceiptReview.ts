@@ -95,48 +95,6 @@ export function useReceiptReview() {
     draft?.store?.id,
     draft?.printedStore,
   );
-  // A list line links by its catalog item, so the review asks only for the
-  // lines naming an item a receipt line is, or may be.
-  const {
-    lines: openLines,
-    loading: openLinesLoading,
-    incomplete: listIncomplete,
-  } = useOpenListLinesFor(
-    listId,
-    lines
-      .flatMap(line => {
-        const match = matchFor(line.index);
-        const ids = [
-          match?.preselect?.itemId,
-          match?.guess?.itemId,
-          draft?.choices?.[line.index]?.itemId,
-          ...(match?.candidates ?? []).map(candidate => candidate.itemId),
-        ];
-        return ids.filter((itemId): itemId is string => !!itemId);
-      })
-      .concat(pickingItemId ?? []),
-  );
-  const { createStore } = useCreateStore();
-  // Adding is busy from the store's create on: a second tap would add every line twice.
-  const [placingStore, setPlacingStore] = useState(false);
-  // What the user picked, else the store the receipt's header names.
-  const store =
-    draft?.store ??
-    (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
-  // The server judges its own reading by the rule its lines follow, which
-  // knows a discount it found was never taken off.
-  const totalsGap =
-    draft?.parsedBy === 'server'
-      ? draft.totalsGap ?? null
-      : draft?.parsed
-      ? receiptTotalsGap(draft.parsed)
-      : null;
-  // A receipt that printed no readable day was bought the day it was scanned.
-  const purchasedOn =
-    draft?.purchasedOn ??
-    (draft ? toDateKey(new Date(draft.scannedAt)) : today);
-
-  const added = new Set(draft?.added);
   const chosen = lines.map(line => {
     const explicit = draft?.choices?.[line.index];
     const match = matchFor(line.index);
@@ -160,6 +118,48 @@ export function useReceiptReview() {
       skipped: explicit === null,
     };
   });
+  // A list line links by its catalog item, so the review asks only for the
+  // lines naming an item a receipt line is. What a line may be instead rides
+  // along while the lookup has room, so picking one shows its list line at once.
+  const {
+    lines: openLines,
+    loading: openLinesLoading,
+    incomplete: listIncomplete,
+  } = useOpenListLinesFor(
+    listId,
+    chosen
+      .flatMap(({ choice }) => choice?.itemId ?? [])
+      .concat(pickingItemId ?? []),
+    chosen.flatMap(({ match }) => {
+      const ids = [
+        match?.preselect?.itemId,
+        match?.guess?.itemId,
+        ...(match?.candidates ?? []).map(candidate => candidate.itemId),
+      ];
+      return ids.filter((itemId): itemId is string => !!itemId);
+    }),
+  );
+  const { createStore } = useCreateStore();
+  // Adding is busy from the store's create on: a second tap would add every line twice.
+  const [placingStore, setPlacingStore] = useState(false);
+  // What the user picked, else the store the receipt's header names.
+  const store =
+    draft?.store ??
+    (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
+  // The server judges its own reading by the rule its lines follow, which
+  // knows a discount it found was never taken off.
+  const totalsGap =
+    draft?.parsedBy === 'server'
+      ? draft.totalsGap ?? null
+      : draft?.parsed
+      ? receiptTotalsGap(draft.parsed)
+      : null;
+  // A receipt that printed no readable day was bought the day it was scanned.
+  const purchasedOn =
+    draft?.purchasedOn ??
+    (draft ? toDateKey(new Date(draft.scannedAt)) : today);
+
+  const added = new Set(draft?.added);
   const pending = chosen.flatMap(({ line, choice }) =>
     choice && !added.has(line.index)
       ? [{ index: line.index, printed: line.printed, choice }]

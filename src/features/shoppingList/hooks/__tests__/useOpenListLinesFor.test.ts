@@ -62,4 +62,21 @@ describe('useOpenListLinesFor', () => {
     expect(asked.fired[0]?.itemIds).toHaveLength(100);
     expect(result.current.incomplete).toBe(true);
   });
+
+  // A receipt's lines bring five candidates each: past the limit they give
+  // way, never the items the lines are, whichever sorts first.
+  it('asks for the spare items only while the limit has room', async () => {
+    const asked = lookup();
+    const needed = itemsOf(98).map(id => `z-${id}`);
+    const { result } = renderHookWithApollo(
+      () => useOpenListLinesFor('list-1', needed, itemsOf(50)),
+      { operationMocks: [asked.mock] },
+    );
+
+    await waitFor(() => expect(asked.fired).toHaveLength(1));
+    expect(asked.fired[0]?.itemIds).toHaveLength(100);
+    expect(asked.fired[0]?.itemIds).toEqual(expect.arrayContaining(needed));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.incomplete).toBe(false);
+  });
 });
