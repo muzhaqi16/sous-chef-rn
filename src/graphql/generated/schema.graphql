@@ -5147,6 +5147,25 @@ enum ImageUploadPurpose {
   RECEIPT_PHOTO
 }
 
+"""A catalog item a parsed line may name, and how well it matches."""
+type IngredientCandidate {
+  item: Item!
+  """0 to 1, from the name and its meaning; comparable within one line"""
+  score: Float!
+}
+
+"""How sure a parsed ingredient line's best catalog candidate is."""
+enum IngredientMatchConfidence {
+  """
+  Named exactly, or clearly ahead of every other candidate: a capture links it
+  """
+  CONFIDENT
+  """Nothing in the catalog is close enough to propose"""
+  NONE
+  """Candidates exist, none clearly ahead: offered for review, never linked"""
+  UNSURE
+}
+
 """Input for ingredient usage when marking recipe as cooked"""
 input IngredientUsageInput {
   actualQuantity: Float!
@@ -7779,6 +7798,34 @@ input MeasurementProfileInput {
   portion unit when omitted.
   """
   wholePortionsOnly: Boolean
+}
+
+"""
+The region a source's units were read in: an Australian "cup" is the 250 mL
+metric cup, a British "pint" the imperial pint.
+"""
+type MeasurementRegion {
+  basis: MeasurementRegionBasis!
+  """
+  An ISO 3166 country code, or METRIC when only the caller's metric preference decided
+  """
+  region: String!
+}
+
+"""
+What decided the region a source's unit spellings were read in, strongest first.
+"""
+enum MeasurementRegionBasis {
+  """The locale the caller sent, or their device's"""
+  CALLER_LOCALE
+  """Nothing said: US customary, as an assumption"""
+  DEFAULT
+  """The page's declared language (en-AU)"""
+  PAGE_LANGUAGE
+  """The site's country domain (.co.uk)"""
+  SITE_DOMAIN
+  """The caller's preferred unit system"""
+  USER_SETTING
 }
 
 """Reusable sub-input for media assets (images)"""
@@ -11039,6 +11086,52 @@ type PantryUsageStats {
   lowStockItemCount: Int!
 }
 
+input ParseIngredientLinesInput {
+  """
+  One ingredient per line, at most the recipe ingredient limit, each at most 500 characters
+  """
+  lines: [String!]!
+  """
+  The source's locale (de-DE): its decimal mark, and its measurement region
+  """
+  locale: String
+}
+
+type ParseIngredientLinesPayload {
+  """One parse per line sent, in order"""
+  lines: [ParsedIngredientLine!]!
+  measurementRegion: MeasurementRegion!
+}
+
+"""
+An ingredient line read into its parts, with the catalog items it may name.
+Nothing is stored: send the parts to createRecipe or updateRecipeIngredients.
+"""
+type ParsedIngredientLine {
+  """Best first; empty when the line names nothing close"""
+  candidates: [IngredientCandidate!]!
+  confidence: IngredientMatchConfidence!
+  isOptional: Boolean!
+  """The best candidate's item when the confidence is CONFIDENT"""
+  item: Item
+  name: String!
+  """A package size, a size word, or another parenthesis"""
+  note: String
+  """The line exactly as given"""
+  originalText: String!
+  """Handling after the name: sifted, to taste"""
+  preparation: String
+  """The amount; null when the line states none (to taste)"""
+  quantity: Float
+  """
+  The unit, resolved in the source's measurement region. A count ("2 eggs")
+  is in pieces; null when the line states no amount or its unit is unknown.
+  """
+  unit: Unit
+  """The unit as the line spells it, when it named one"""
+  unitText: String
+}
+
 type ParsedReceipt {
   """ISO 4217, when the receipt shows it"""
   currency: String
@@ -12154,6 +12247,11 @@ type Query {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  Ingredient lines a user pastes, read as a capture reads them: amount, unit,
+  name, handling and catalog candidates. Writes nothing.
+  """
+  parseIngredientLines(input: ParseIngredientLinesInput!): ParseIngredientLinesPayload!
   """
   Parse a typed amount ("1/4", "1 1/4", "0.25") by the parser every write
   door uses: greater than 0, at most 99,999. The display forms follow the
