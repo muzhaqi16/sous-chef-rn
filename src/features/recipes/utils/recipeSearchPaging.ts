@@ -23,11 +23,11 @@ import {
   SPOONACULAR_TO_INTOLERANCE_ENUM,
 } from '#features/recipes/utils/recipeFilterMaps';
 import {
-  type DisplayItem,
+  type RecipeSearchRow,
   type LocalRecipeNode,
   type SpoonacularRecipe,
-  toSpoonacularDisplayItems,
-  toLocalDisplayItems,
+  spoonacularRows,
+  localRows,
 } from '#features/recipes/utils/recipeDisplayTransforms';
 
 /**
@@ -198,7 +198,7 @@ export async function fetchSpoonacularTextPage(
 // One combined page of results plus the advanced cursor state — the shared
 // unit of work for both the initial search and load-more.
 export interface SearchPageResult {
-  items: DisplayItem[];
+  rows: RecipeSearchRow[];
   localEndCursor: string | null;
   localHasNextPage: boolean;
   // How many rows this page actually fetched (advances the offset).
@@ -211,7 +211,7 @@ export interface SearchPageResult {
 }
 
 // Fetch ONE page from both sources, combine + dedupe (against `seen`, which is
-// mutated), and return the new display items + advanced source cursors. Shared
+// mutated), and return the new rows + advanced source cursors. Shared
 // by the initial search (offset 0, no cursor) and load-more (next offset +
 // cursor). Local failures resolve to null and degrade silently; Spoonacular
 // errors are captured, not thrown, so a one-source failure still returns the
@@ -317,13 +317,13 @@ export async function fetchRecipeSearchPage(
     seen,
   );
 
-  const items = [
-    ...toLocalDisplayItems(localNodes, enrichmentFor),
-    ...toSpoonacularDisplayItems(dedupedSpoonacular),
+  const rows = [
+    ...localRows(localNodes, enrichmentFor),
+    ...spoonacularRows(dedupedSpoonacular),
   ];
 
   return {
-    items,
+    rows,
     localEndCursor: localPageInfo?.endCursor ?? null,
     localHasNextPage: localPageInfo?.hasNextPage ?? false,
     spoonacularResultCount: spoonacularResults.length,
@@ -338,7 +338,7 @@ export async function executeRecipeTextSearch(
   client: ApolloClient,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setDisplayResults: (v: DisplayItem[]) => void,
+  setRows: (rows: RecipeSearchRow[]) => void,
   setPagination: (p: SearchPagination) => void,
   shouldCommit: () => boolean,
 ): Promise<void> {
@@ -363,7 +363,7 @@ export async function executeRecipeTextSearch(
   // the newer search now owns. Mirrors the load-more path's mid-flight guard.
   if (!shouldCommit()) return;
 
-  setDisplayResults(page.items);
+  setRows(page.rows);
   setPagination({
     query,
     filters,
@@ -380,7 +380,7 @@ export async function executeRecipeTextSearch(
   });
 
   if (page.spoonacularError) {
-    if (page.items.length === 0) {
+    if (page.rows.length === 0) {
       handleSearchError(page.spoonacularError, 'Search error');
     } else {
       // Local results are on screen — degrade silently.
@@ -401,7 +401,10 @@ export async function executeRecipeTextSearch(
 export async function executeRecipeLoadMore(
   pagination: SearchPagination,
   client: ApolloClient,
-): Promise<{ items: DisplayItem[]; nextPagination: SearchPagination } | null> {
+): Promise<{
+  rows: RecipeSearchRow[];
+  nextPagination: SearchPagination;
+} | null> {
   const { query, filters, seen } = pagination;
 
   const fetchLocal = pagination.localHasNextPage;
@@ -439,7 +442,7 @@ export async function executeRecipeLoadMore(
   }
 
   return {
-    items: page.items,
+    rows: page.rows,
     nextPagination: {
       ...pagination,
       // Only the queried source's cursor advances; the exhausted one is left as-is.
@@ -463,7 +466,7 @@ export async function executeRecipeIngredientSearch(
   ingredientString: string,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setDisplayResults: (v: DisplayItem[]) => void,
+  setRows: (rows: RecipeSearchRow[]) => void,
   shouldCommit: () => boolean,
 ): Promise<void> {
   setLoading(true);
@@ -479,7 +482,7 @@ export async function executeRecipeIngredientSearch(
     // stale response can't clobber the fresher results or clear the loading flag
     // the newer search now owns. Mirrors executeRecipeTextSearch's guard.
     if (!shouldCommit()) return;
-    setDisplayResults(toSpoonacularDisplayItems(cached.results));
+    setRows(spoonacularRows(cached.results));
     setLoading(false);
     return;
   }
@@ -496,7 +499,7 @@ export async function executeRecipeIngredientSearch(
     // so warm the cache unconditionally; only the visible commit is guarded.
     cacheStore.setCached(cacheKey, results);
     if (shouldCommit()) {
-      setDisplayResults(toSpoonacularDisplayItems(results));
+      setRows(spoonacularRows(results));
     }
   } catch (error) {
     handleSearchError(error, 'Ingredient search error');

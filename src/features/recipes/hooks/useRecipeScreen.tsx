@@ -21,7 +21,11 @@ import {
   INTOLERANCE_ENUM_TO_SPOONACULAR,
 } from '#features/recipes/utils/recipeFilterMaps';
 import { isLifestyleDiet } from '#domain/dietary';
-import type { DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
+import {
+  toDisplayItems,
+  type DisplayItem,
+  type RecipeSearchRow,
+} from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   EMPTY_PAGINATION,
   executeRecipeIngredientSearch,
@@ -95,10 +99,11 @@ export function useRecipeScreen() {
   // what tells it a new search replaced the state mid-flight, so the stale page
   // is dropped instead of corrupting the new list.
   const [searchData, setSearchData] = useState<{
-    items: DisplayItem[];
+    rows: RecipeSearchRow[];
     pagination: SearchPagination;
-  }>({ items: [], pagination: EMPTY_PAGINATION });
-  const searchResults = searchData.items;
+  }>({ rows: [], pagination: EMPTY_PAGINATION });
+  // Written here, not when a page arrives, so the list follows a language change.
+  const searchResults = toDisplayItems(searchData.rows, t);
   const searchPagination = searchData.pagination;
   // Guards against overlapping load-more calls (onEndReached can fire several
   // times before the next page resolves) and re-appending the same page.
@@ -120,11 +125,10 @@ export function useRecipeScreen() {
     setIngredientSearchQuery('');
   };
 
-  // Results arrive pre-transformed into DisplayItems (see the recipeDisplay
-  // transforms). A fresh search replaces the list and resets pagination (the
-  // cursors come from executeRecipeTextSearch via setSearchPagination).
-  const setDisplayResults = (displayItems: DisplayItem[]) => {
-    setSearchData(prev => ({ ...prev, items: displayItems }));
+  // A fresh search replaces the list and resets pagination (the cursors come
+  // from executeRecipeTextSearch via setSearchPagination).
+  const setSearchRows = (rows: RecipeSearchRow[]) => {
+    setSearchData(prev => ({ ...prev, rows }));
   };
 
   const setSearchPagination = (pagination: SearchPagination) => {
@@ -142,7 +146,7 @@ export function useRecipeScreen() {
       client,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       setSearchPagination,
       () => generation === searchGenerationRef.current,
     );
@@ -186,8 +190,7 @@ export function useRecipeScreen() {
   const showSearchResults = searchPerformed && searchResults.length > 0;
   const showDiscovery = !searchPerformed && discovery.items.length > 0;
 
-  // Results are pre-transformed at data arrival (see setDisplayResults) — the
-  // whole list is shown; pagination is real, not a client-side slice.
+  // The whole list is shown; pagination is real, not a client-side slice.
   const searchItems = showSearchResults ? searchResults : [];
 
   // More remains while EITHER source still has a page to fetch.
@@ -214,7 +217,7 @@ export function useRecipeScreen() {
       setSearchData(prev =>
         prev.pagination === captured
           ? {
-              items: [...prev.items, ...outcome.items],
+              rows: [...prev.rows, ...outcome.rows],
               pagination: outcome.nextPagination,
             }
           : prev,
@@ -259,7 +262,7 @@ export function useRecipeScreen() {
       client,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       setSearchPagination,
       () => generation === searchGenerationRef.current,
     );
@@ -293,7 +296,7 @@ export function useRecipeScreen() {
       ingredientString,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       () => generation === searchGenerationRef.current,
     );
   };
@@ -308,7 +311,7 @@ export function useRecipeScreen() {
           client,
           setSearchLoading,
           setSearchPerformed,
-          setDisplayResults,
+          setSearchRows,
           setSearchPagination,
           () => generation === searchGenerationRef.current,
         );
@@ -324,7 +327,7 @@ export function useRecipeScreen() {
     searchGenerationRef.current += 1;
     setSearchQuery('');
     setSearchPerformed(false);
-    setSearchData({ items: [], pagination: EMPTY_PAGINATION });
+    setSearchData({ rows: [], pagination: EMPTY_PAGINATION });
     // Clear the loading flag too — a search cleared mid-flight would otherwise
     // leave the empty state stuck on the "searching…" spinner.
     setSearchLoading(false);
