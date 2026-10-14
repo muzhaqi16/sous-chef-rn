@@ -73,6 +73,30 @@ Example:
 directive @public on FIELD_DEFINITION
 
 """
+Require that a server-owned feature flag is on for the caller.
+
+A caller whose flag is off is refused before the resolver runs, with a
+top-level error carrying `FEATURE_DISABLED` (HTTP 403) and `feature`
+naming the flag, so a refused operation writes nothing and queues nothing.
+The flag is resolved on the server for every request; a value the client
+cached does not open the gate. → docs/api/feature-flags.md
+
+NOT AN AUTH POSTURE. A flag resolves per user, so a field carrying it MUST
+also carry `@auth` or `@requireSystemRole`. Schema build fails otherwise.
+
+Example:
+  type Mutation {
+    createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
+      @auth
+      @requireFeature(flag: RECIPE_CAPTURE)
+  }
+"""
+directive @requireFeature(
+  """The flag that must be on for the caller"""
+  flag: FeatureFlagName!
+) on FIELD_DEFINITION
+
+"""
 Require that the caller's email address is verified.
 
 Applies to the outward-facing writes — the ones that expose the caller's data
@@ -4519,6 +4543,31 @@ enum ExternalSyncStatus {
 type FailedIPStat {
   count: Int!
   ipAddress: String
+}
+
+"""
+A server-owned feature flag. A client ignores a member it does not know: a
+new flag is a new member.
+"""
+enum FeatureFlagName {
+  """Reading pasted ingredient lines (parseIngredientLines)"""
+  INGREDIENT_PASTE
+  """
+  Recipes suggested from what the caller's pantries hold (recipeSuggestions)
+  """
+  PANTRY_SUGGESTIONS
+  """
+  Capturing a recipe from a page, shared text or cookbook photos (createRecipeCapture)
+  """
+  RECIPE_CAPTURE
+}
+
+"""One server-owned feature flag, resolved for the caller"""
+type FeatureFlagState {
+  """Whether the feature is on for the caller"""
+  enabled: Boolean!
+  """The flag"""
+  flag: FeatureFlagName!
 }
 
 """Sub-input for feature-specific notifications"""
@@ -12216,6 +12265,13 @@ type Query {
     id: ID!
   ): Membership
   """
+  Every server-owned feature flag resolved for the caller: one entry per
+  FeatureFlagName. Read it at sign-in and on resync and keep it for offline
+  use; an operation behind a flag that is off is refused with
+  FEATURE_DISABLED whatever the client cached.
+  """
+  myFeatureFlags: [FeatureFlagState!]!
+  """
   The current user's own item edit suggestions, newest first. Same filters as
   the admin queue, scoped to the caller — there is no arg to widen that scope.
   """
@@ -12407,6 +12463,9 @@ type Query {
   
   Forward only, via first. The ranking depends on the caller's pantry and
   day, so after, before and last are not offered.
+  
+  Behind the PANTRY_SUGGESTIONS flag: refused with FEATURE_DISABLED while it
+  is off for the caller.
   """
   recipeSuggestions(
     """How many suggestions: 20 when omitted, at most 100"""
@@ -16692,6 +16751,10 @@ enum TopLevelErrorCode {
   DB_CONSTRAINT_VIOLATION
   EMAIL_ALREADY_EXISTS
   EMAIL_ALREADY_VERIFIED
+  """
+  A feature flag the operation needs is off for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags. A 403 — clients must not sign the user out.
+  """
+  FEATURE_DISABLED
   """
   Authenticated, active, and not allowed. The ONE authorization code, whichever layer refuses: the auth directive family, a service-thrown AuthorizationError, or the ForbiddenError union member.
   """
