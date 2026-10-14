@@ -6,7 +6,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { todayKey } from '#/utils/dateUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import type { ReceiptParseQuery } from '../hooks/useServerReceiptParse.generated';
 import type {
@@ -23,6 +22,8 @@ type ServerParse = NonNullable<ReceiptParseQuery['receiptParse']>;
 const PASSING_CODES: readonly string[] = [
   TopLevelErrorCode.InternalServerError,
   TopLevelErrorCode.ServiceUnavailable,
+  // The operation's own budget, a minute long: traffic, as a 429 is.
+  TopLevelErrorCode.OperationRateLimited,
 ];
 
 // A traffic limit on the connection says nothing about this receipt. A request
@@ -120,6 +121,21 @@ export function outcomeOf(parse: ServerParse): ServerParseOutcome | undefined {
   }
 }
 
+/**
+ * Seconds until the daily allowance is back, when that is what refused the
+ * ask. The API states it from execution, in the response's errors; a 429 is
+ * the gate's traffic limit, which carries the same code and a wait of its own.
+ */
+const dailyAllowanceWait = (error: unknown): number | null => {
+  if (!CombinedGraphQLErrors.is(error)) return null;
+  const refusal = error.errors.find(
+    ({ extensions }) =>
+      extensions?.code === TopLevelErrorCode.RateLimitExceeded,
+  );
+  const retryAfter = refusal?.extensions?.retryAfter;
+  return typeof retryAfter === 'number' && retryAfter > 0 ? retryAfter : null;
+};
+
 const isUpgradeRequired = (error: unknown) =>
   CombinedGraphQLErrors.is(error) &&
   error.errors.some(
@@ -165,9 +181,9 @@ export function classifyCreateResult(
   // Every refusal on `pages` is a size bound: the scan caps the pages at ten,
   // so it is the character limit, which only the API knows.
   if (refusedField === 'pages') return { kind: 'settle', outcome: 'tooLong' };
-  const retryAfter = getRateLimitDetails(error)?.retryAfter;
+  const retryAfter = dailyAllowanceWait(error);
   // The daily allowance is asked again once it says.
-  if (retryAfter && retryAfter > 0) {
+  if (retryAfter !== null) {
     const retryAt = new Date(now + retryAfter * 1000).toISOString();
     return { kind: 'settle', outcome: { retryAt } };
   }

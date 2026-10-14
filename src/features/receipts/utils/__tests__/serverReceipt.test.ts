@@ -250,9 +250,32 @@ describe('fromServerReceipt', () => {
 });
 
 describe('classifyCreateResult', () => {
-  const refusedWith = (code: string) =>
+  const refusedWith = (
+    code: string,
+    extensions: Record<string, unknown> = {},
+  ) =>
     new CombinedGraphQLErrors({
-      errors: [{ message: 'refused', extensions: { code } }],
+      errors: [{ message: 'refused', extensions: { code, ...extensions } }],
+    });
+  // The gate's 429 as the API sends it: the envelope, with its own wait.
+  const gateRefusal = () =>
+    new ServerError('HTTP', {
+      response: new Response('', {
+        status: 429,
+        headers: { 'retry-after': '30' },
+      }),
+      bodyText: JSON.stringify({
+        errors: [
+          {
+            message: 'Too many requests',
+            extensions: {
+              code: TopLevelErrorCode.RateLimitExceeded,
+              retryAfter: 30,
+              limiter: 'ip',
+            },
+          },
+        ],
+      }),
     });
   const httpStatus = (status: number) =>
     new ServerError('HTTP', {
@@ -308,13 +331,36 @@ describe('classifyCreateResult', () => {
   it.each([
     ['a server fault', httpStatus(502)],
     ['an internal error', refusedWith(TopLevelErrorCode.InternalServerError)],
-    ['a traffic limit on the connection', httpStatus(429)],
+    ['a traffic limit on the connection', gateRefusal()],
+    [
+      "the operation's own traffic budget",
+      refusedWith(TopLevelErrorCode.OperationRateLimited, { retryAfter: 40 }),
+    ],
     // The API answers a timeout 503 SERVICE_UNAVAILABLE, as any server fault.
     ['a request timeout', httpStatus(503)],
     ['a session mid-refresh', httpStatus(401)],
     ['a request that never left', new Error('Network request failed')],
   ])('resends after %s', (_, error) => {
     expect(ask(error)).toBe('resend');
+  });
+
+  it('settles the daily allowance with the time it is back', () => {
+    expect(
+      classifyCreateResult(
+        {
+          accepted: false,
+          parse: null,
+          refusedField: null,
+          error: refusedWith(TopLevelErrorCode.RateLimitExceeded, {
+            retryAfter: 3600,
+          }),
+        },
+        Date.parse('2026-10-06T12:00:00Z'),
+      ),
+    ).toEqual({
+      kind: 'settle',
+      outcome: { retryAt: '2026-10-06T13:00:00.000Z' },
+    });
   });
 
   it('waits for the next visit when the app must be updated', () => {
