@@ -194,10 +194,14 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     return outcomeOf(settled.failure);
   };
 
-  /** The recipe as the server now has it, for a form reopening after a conflict. */
+  /**
+   * The recipe as the server now has it, for a form reopening after a conflict;
+   * null when it could not be re-read, since the cache still holds the copy the
+   * save was refused against.
+   */
   const reloadRecipe = async (): Promise<RecipeForm_RecipeFragment | null> => {
-    await refetchRecipe();
-    return readRecipe();
+    const refreshed = await refetchRecipe().catch(() => null);
+    return refreshed && !refreshed.error ? readRecipe() : null;
   };
 
   return {

@@ -6,7 +6,10 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
-import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  GetRecipeDocument,
+  UpdateRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
@@ -180,5 +183,54 @@ describe('useRecipeFormWrites.updateRecipe', () => {
         title: t('errors.changedElsewhereTitle'),
       }),
     });
+  });
+});
+
+describe('useRecipeFormWrites.reloadRecipe', () => {
+  const recipeMock = (
+    answer: Pick<MockFor<typeof GetRecipeDocument>, 'result' | 'error'>,
+  ): MockFor<typeof GetRecipeDocument> => ({
+    request: { query: GetRecipeDocument, variables: () => true },
+    ...answer,
+  });
+  const loaded = recipeMock({
+    result: {
+      data: { recipe: { __typename: 'Recipe', id: RECIPE_ID, name: 'Soup' } },
+    },
+  });
+
+  const renderLoaded = async (reread: MockFor<typeof GetRecipeDocument>) => {
+    const view = renderHookWithApollo(() => useRecipeFormWrites(RECIPE_ID), {
+      operationMocks: [loaded, reread],
+    });
+    await waitFor(() => expect(view.result.current.recipeRef).not.toBeNull());
+    return view;
+  };
+
+  it('reads the recipe again from the server', async () => {
+    const { result } = await renderLoaded(
+      recipeMock({
+        result: {
+          data: {
+            recipe: { __typename: 'Recipe', id: RECIPE_ID, name: 'Stew' },
+          },
+        },
+      }),
+    );
+
+    await expect(result.current.reloadRecipe()).resolves.toEqual(
+      expect.objectContaining({ name: 'Stew' }),
+    );
+  });
+
+  // The cache still holds the copy the save was refused against: handing it
+  // back would reset the form to it, edit lost and version still stale.
+  it('returns nothing when the recipe could not be re-read', async () => {
+    const { result } = await renderLoaded(
+      recipeMock({ error: new Error('Network request failed') }),
+    );
+    expect(result.current.readRecipe()).not.toBeNull();
+
+    await expect(result.current.reloadRecipe()).resolves.toBeNull();
   });
 });

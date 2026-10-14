@@ -89,7 +89,16 @@ export const RecipeFormScreen: React.FC<
     presentFailure(failure, {
       onConflictRefresh: () => {
         void reloadRecipe().then(recipe => {
-          if (recipe) populateFromRecipe(recipe);
+          if (recipe) {
+            populateFromRecipe(recipe);
+            return;
+          }
+          // The form keeps what was typed: resetting it to the copy the save
+          // was refused against would lose the edit and conflict again.
+          alertService.alert(
+            t('recipes.loadFailed'),
+            t('errors.codes.genericRetry'),
+          );
         });
       },
     });
