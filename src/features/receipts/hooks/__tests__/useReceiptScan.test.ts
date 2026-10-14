@@ -208,7 +208,19 @@ describe('useReceiptScan', () => {
     ]);
   });
 
-  it('asks the scanner for at most ten pages, and keeps a longer scan as ten', async () => {
+  it('asks the scanner for no more pages than go as photos', async () => {
+    scannedOnePage();
+    const { result } = renderScan();
+
+    await act(() => result.current.scan());
+
+    expect(scanDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ maxNumDocuments: 4 }),
+    );
+  });
+
+  // iOS's scanner takes any number of pages.
+  it('keeps the text of a scan longer than ten pages as ten', async () => {
     const shots = Array.from({ length: 12 }, (_, at) => at + 1);
     scanDocument.mockResolvedValue({
       status: ScanDocumentResponseStatus.Success,
@@ -221,9 +233,6 @@ describe('useReceiptScan', () => {
 
     await act(() => result.current.scan());
 
-    expect(scanDocument).toHaveBeenCalledWith(
-      expect.objectContaining({ maxNumDocuments: 10 }),
-    );
     const pages = useReceiptDraftStore.getState().draft?.pages;
     expect(pages).toHaveLength(10);
     expect(pages?.[8]).toBe('ITEM 9  1.00');
@@ -246,15 +255,15 @@ describe('useReceiptScan', () => {
 
   describe('when the phone cannot read the pages', () => {
     const PAGES = Array.from(
-      { length: 5 },
+      { length: 4 },
       (_, at) => `file:///page-${at}.jpg`,
     );
 
-    const failedRead = async () => {
+    const failedRead = async (pages = PAGES) => {
       const view = renderScan();
       scanDocument.mockResolvedValue({
         status: ScanDocumentResponseStatus.Success,
-        scannedImages: PAGES,
+        scannedImages: pages,
       });
       recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
       await act(() => view.result.current.scan());
@@ -271,7 +280,19 @@ describe('useReceiptScan', () => {
       expect(useReceiptDraftStore.getState().draft).toBeNull();
     });
 
-    it('sends up to four photos on consent, keeps only their keys, and deletes every copy', async () => {
+    // iOS's scanner takes more pages than go as photos.
+    it('sends no part of a longer scan, and deletes its pages', async () => {
+      const pages = [...PAGES, 'file:///page-4.jpg'];
+      const { result } = await failedRead(pages);
+
+      expect(result.current.status).toBe('failed');
+      expect(deletePhotos).toHaveBeenCalledWith(pages);
+      expect(preparePhotos).not.toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft).toBeNull();
+    });
+
+    it('sends the photos on consent, keeps only their keys, and deletes every copy', async () => {
       const { result } = await failedRead();
       preparePhotos.mockImplementation(async uris =>
         uris.map((_, at) => ({
@@ -285,9 +306,7 @@ describe('useReceiptScan', () => {
 
       await act(() => result.current.sendPhotos());
 
-      expect(preparePhotos).toHaveBeenCalledWith(PAGES.slice(0, 4));
-      // The fifth page is not sent and goes at once.
-      expect(deletePhotos).toHaveBeenCalledWith(PAGES.slice(4));
+      expect(preparePhotos).toHaveBeenCalledWith(PAGES);
       expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(4);
       expect(mockUploadUnconfirmed).toHaveBeenCalledWith(
         expect.anything(),
@@ -311,6 +330,29 @@ describe('useReceiptScan', () => {
           ],
         }),
       );
+      expect(result.current.status).toBe('saved');
+    });
+
+    // The second tap lands before the screen has re-rendered as sending.
+    it('sends the photos once when the send is tapped twice', async () => {
+      const { result } = await failedRead();
+      preparePhotos.mockImplementation(async uris =>
+        uris.map((_, at) => ({
+          uri: `file:///prepared-${at}.jpg`,
+          fileSize: 900,
+        })),
+      );
+      mockUploadUnconfirmed.mockImplementation(async (file: { uri: string }) =>
+        file.uri.replace('file:///prepared', 'receipt-photos/u1/p'),
+      );
+
+      await act(async () => {
+        const { sendPhotos } = result.current;
+        await Promise.all([sendPhotos(), sendPhotos()]);
+      });
+
+      expect(preparePhotos).toHaveBeenCalledTimes(1);
+      expect(useReceiptDraftStore.getState().draft?.photoKeys).toHaveLength(4);
       expect(result.current.status).toBe('saved');
     });
 
@@ -574,18 +616,17 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('saved');
     });
 
-    it('sends at once the pages of a long receipt the phone could not read', async () => {
+    it('sends no part of a long receipt the phone could not read', async () => {
       scannedPages(5);
       recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
-      preparePhotos.mockResolvedValue(prepared(4));
-      uploadsAll();
       const { result } = renderScan();
 
       await act(() => result.current.scan());
 
-      expect(preparePhotos).toHaveBeenCalled();
-      expect(useReceiptDraftStore.getState().draft?.photoKeys).toHaveLength(4);
-      expect(result.current.status).toBe('saved');
+      expect(preparePhotos).not.toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft).toBeNull();
+      expect(result.current.status).toBe('failed');
     });
 
     it('keeps the text and records no photos when the screen goes mid-upload', async () => {

@@ -18,7 +18,7 @@ import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useIsOnline } from '#store/useAppStore';
 import type { ImageFile } from '#/types/media';
 import { hasItemLines } from '../utils/hasItemLines';
-import { MAX_PAGES, MAX_PHOTOS, receiptText } from '../utils/receiptText';
+import { MAX_PHOTOS, receiptText } from '../utils/receiptText';
 import { readReceiptDate } from '../utils/receiptDate';
 import { todayKey } from '#/utils/dateUtils';
 import { getDeviceDateOrder } from '#/utils/deviceLocale';
@@ -231,12 +231,13 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       recognized = await TextRecognition.recognizeAndDelete(imageUris);
     } catch (error) {
       errorService.reportError(error, { operation: 'Recognise receipt text' });
-      unread.current = imageUris;
-      // One who agreed to send photos is not asked again.
-      if (await readsPhotosFirst()) {
-        await sendPhotos();
+      // Only iOS's scanner takes this many, and a receipt is not sent in part.
+      if (imageUris.length > MAX_PHOTOS) {
+        dropPhotos(imageUris);
+        setStatus('failed');
         return;
       }
+      unread.current = imageUris;
       setStatus('readFailed');
       return;
     }
@@ -305,7 +306,8 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const readPages = async (imageUris: string[], library = false) => {
     setStatus('reading');
     scanStarted.current = scanStart(imageUris.length);
-    // More pages than the server reads as photos are read from their text.
+    // More pages than go as photos, which iOS's scanner takes, are read from
+    // their text.
     if (imageUris.length <= MAX_PHOTOS && (await readsPhotosFirst())) {
       await readPhotosFirst(imageUris, library);
       return;
@@ -318,7 +320,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     try {
       response = await DocumentScanner.scanDocument({
         responseType: ResponseType.ImageFilePath,
-        maxNumDocuments: MAX_PAGES,
+        maxNumDocuments: MAX_PHOTOS,
       });
     } catch {
       // No document scanner here (the iOS simulator, an Android phone without
@@ -382,12 +384,13 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const sendPhotos = async () => {
     if (!isOnline) return;
     const pages = unread.current;
+    // A second tap finds them taken: it must not save a receipt of no photos.
+    if (pages.length === 0) return;
     unread.current = [];
     setStatus('sending');
-    dropPhotos(pages.slice(MAX_PHOTOS));
     let photos: PreparedPhoto[];
     try {
-      photos = await TextRecognition.preparePhotos(pages.slice(0, MAX_PHOTOS));
+      photos = await TextRecognition.preparePhotos(pages);
     } catch (error) {
       errorService.reportError(error, { operation: 'Prepare receipt photos' });
       setStatus('failed');

@@ -2,11 +2,12 @@ import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptLines } from './assembleReceiptLines';
 import { redactReceiptText } from './redactReceiptText';
 
-// The most pages the API reads as text. Android's scanner stops at it; iOS's
-// takes any number, so the text of later shots continues the last page sent.
-export const MAX_PAGES = 10;
+// The most pages the API reads as text. iOS's scanner takes any number, so the
+// text of later shots continues the last page sent.
+const MAX_PAGES = 10;
 
-// The most photos the API reads of one receipt.
+// The most photos the API reads of one receipt, and so the most pages Android's
+// scanner takes: a scan the phone cannot read goes as its photos.
 export const MAX_PHOTOS = 4;
 
 const capPages = (pages: string[]) =>

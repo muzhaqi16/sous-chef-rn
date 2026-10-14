@@ -472,6 +472,7 @@ those repos.
 
 **Receipt reading.** The server's reading of a receipt is the one reading: `fromServerReceipt` copies its lines and adds none of its own.
 
+- A scan is at most four pages (`MAX_PHOTOS`), the most the API reads as photos: Android's scanner stops there. iOS's takes no limit, so a longer scan is read from its text, and one the phone cannot read is not sent in part.
 - With the user's one-time consent (`receiptPhotoConsentStore`, session-scoped) and a connection, a scan of up to four pages sends photos (`createReceiptParse { photos }`).
 - `TextRecognition.preparePhotos({ keepPages })` prepares the photos first, and they go up together, within one time limit, while `recognizeAndDelete` reads the text from the same pages. The native side runs calls in order, so the pages are never deleted under the preparation.
 - The redacted text stays beside the photos as the fallback: offline, a failed upload, or a photo parse that reads nothing. The draft records which one a parse read (`serverParse.via`).
