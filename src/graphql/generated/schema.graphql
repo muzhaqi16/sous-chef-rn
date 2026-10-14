@@ -13447,6 +13447,9 @@ type RecipeIngredientMatch {
   """
   availableQuantity: Float
   ingredient: RecipeIngredient!
+  """
+  Whether the stack covers the amount; for an ingredient stating none, whether it holds any stock.
+  """
   isAvailable: Boolean!
   """
   The match kind as a number: ITEM 1, CONCEPT 0.9, NAME 0.7, NONE 0.
@@ -13462,10 +13465,15 @@ type RecipeIngredientMatch {
   matchedPantryItem: PantryItem
   """
   How much more the ingredient needs, in its unit. Null when it is available,
-  or when `availableQuantity` is unknown.
+  when `availableQuantity` is unknown, or when the recipe states no amount.
   """
   shortfall: Float
-  suggestedQuantity: Float!
+  """
+  The ingredient's amount scaled to the servings asked for. Null when the
+  recipe states none: a shopping list carries such a line without a quantity,
+  and only while it is not available.
+  """
+  suggestedQuantity: Float
   suggestedUnit: Unit
 }
 
