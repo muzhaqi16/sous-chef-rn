@@ -156,12 +156,23 @@ directive @requireVerifiedEmail(
   whenInputTrue: String
 ) on FIELD_DEFINITION
 
-input AcceptHomeInviteInput {
-  token: String!
+"""
+An invite, by exactly one of its emailed token or its id. Either way the
+caller must be the invite's addressee with a verified email.
+"""
+input AcceptHomeInviteInput @oneOf {
+  """The invite's id, as pendingHomeInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link"""
+  token: String
 }
 
 type AcceptHomeInvitePayload {
   home: Home
+  """
+  The list the invite opens on; null when it named none, or the list is gone or unreadable
+  """
+  landingShoppingList: ShoppingList
   membership: Membership!
 }
 
@@ -4998,6 +5009,11 @@ type HomeInvite {
   invitedUserId: ID
   """Who sent the invite; null once that account is deleted"""
   inviter: User
+  """
+  The list the invite opens on; null when it named none, or when the list is
+  gone or the caller cannot read it.
+  """
+  landingShoppingList: ShoppingList
   """The invite's newest logs. `limit` defaults to 10 and is capped at 50."""
   logs(
     """At most this many entries, newest first"""
@@ -5480,6 +5496,11 @@ enum InviteStatus {
 input InviteToHomeInput {
   email: EmailAddress!
   homeId: ID!
+  """
+  A live shopping list of the same home to open on acceptance; the email
+  names it. A list of another home is refused (ValidationError on this field).
+  """
+  landingShoppingListId: ID
   message: String
   role: MembershipRole!
 }
@@ -6615,10 +6636,19 @@ scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/fi
 
 input JoinHomeByCodeInput {
   joinCode: String!
+  """
+  The list the join link names. Answered as the landing list only when it is
+  a live list of the joined home; it never causes the join to be refused.
+  """
+  landingShoppingListId: ID
 }
 
 type JoinHomeByCodePayload {
   home: Home
+  """
+  The list the join link named, when it is a live list of the joined home; null otherwise
+  """
+  landingShoppingList: ShoppingList
   membership: Membership!
 }
 
@@ -8488,11 +8518,13 @@ input MultiUnitMeasurementInput {
 
 type Mutation {
   """
-  Accept a home invitation using its token. Requires a verified email
+  Accept a home invitation by its token or, for a partner who signed up
+  without opening the email, by its id. Requires a verified email
   (AUTH_EMAIL_NOT_VERIFIED otherwise): holding the invited address is not
   proof of owning it. An invitation already accepted, declined or revoked
   answers ConflictError, and one that has expired a ValidationError on the
-  token; only a token matching no invitation answers NotFoundError.
+  field that named it; only an invitation that does not exist answers
+  NotFoundError.
   """
   acceptHomeInvite(input: AcceptHomeInviteInput!): AcceptHomeInviteResult!
   """
@@ -8981,6 +9013,20 @@ type Mutation {
   Sets isOpened=true and openedAt to current time on the targeted batch.
   """
   openPantryItemBatch(input: OpenPantryItemBatchInput!): OpenPantryItemBatchResult!
+  """
+  Record a household's answers about stacks of one pantry it was asked to
+  check (Pantry.stockToConfirm). Every entry that applies confirms its stack
+  now. STILL_HAVE changes nothing else and advances no version. SOME_LEFT and
+  USED_UP correct the stack to the count found, as adjustPantryItemQuantity
+  does, with the reason "Stock check": counted neither as consumption nor as
+  waste. THREW_OUT records everything held as waste. A stack holding nothing
+  records the confirmation alone. An entry naming a stack that is not an
+  active stack of the pantry, or carrying a field its answer does not take,
+  fails on its own; the entries that apply commit together, computed from the
+  stacks as they are now, and a replay applies nothing twice. Each changed
+  stack is published to pantry subscribers after the check commits.
+  """
+  recordPantryStockCheck(input: RecordPantryStockCheckInput!): RecordPantryStockCheckResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """
@@ -10161,6 +10207,14 @@ type Pantry {
   expiring and expired counts are judged on.
   """
   stats(today: LocalDate!): PantryStats!
+  """
+  The stacks most worth a "still have it?" check for the caller's date:
+  active stacks that hold stock and are LOW or MEDIUM, LOW first, then the
+  longest unconfirmed, then by id. Answer them with recordPantryStockCheck.
+  Bounded field: limit defaults to 20 and is clamped server-side to a
+  maximum of 50.
+  """
+  stockToConfirm(limit: Int = 20, today: LocalDate!): [PantryItem!]!
   storageLocationsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -10505,6 +10559,11 @@ type PantryItem {
   sourceShoppingListItemId: ID
   """Whole and partly used packages, batch by batch."""
   stockBreakdown: StockBreakdown!
+  """
+  How sure the API is that this stack still holds what it records, for the
+  caller's calendar date. Null for a removed stack.
+  """
+  stockConfidence(today: LocalDate!): PantryStockConfidence
   """
   The named place in the home where the stack is kept, such as a particular fridge; null when unassigned
   """
@@ -11083,6 +11142,55 @@ type PantryStats {
   totalValue: Float
   """The currency totalValue is in; null when it is."""
   valueCurrency: Currency
+}
+
+"""One answer about one stack in recordPantryStockCheck"""
+input PantryStockCheckEntryInput {
+  answer: StockCheckAnswer!
+  """The stack the answer is about: an active stack of the request's pantry"""
+  pantryItemId: ID!
+  """
+  SOME_LEFT only, and required there: what is left, zero or more, in the stack's tracking unit
+  """
+  quantity: Float
+  """THREW_OUT only: why it was thrown out"""
+  wasteReason: WasteReason
+}
+
+"""One entry's outcome in recordPantryStockCheck"""
+type PantryStockCheckResult {
+  """The entry's answer, as sent"""
+  answer: StockCheckAnswer!
+  """Why the entry failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """The stack as it stands after the check; null when the entry failed"""
+  pantryItem: PantryItem
+  """The entry's stack, as sent"""
+  pantryItemId: ID!
+  success: Boolean!
+}
+
+"""
+How sure the API is that a pantry stack still holds what it records, for the
+caller's calendar date. Every surface that judges stock gives the same level
+and reasons for the same stack and date.
+"""
+type PantryStockConfidence {
+  """
+  The latest of the stack's creation, a ledger entry on it that was not
+  undone (an arrival, a use, waste or a correction), and a stock-check answer
+  about it. Editing the stack's other fields does not confirm it.
+  """
+  lastConfirmedAt: DateTime!
+  level: StockConfidence!
+  """Why the stack is in doubt; empty exactly when level is HIGH"""
+  reasons: [StockDoubtReason!]!
+  """
+  When the household is predicted to run out of this item, as a calendar day
+  counted from today; null without a reported buying rhythm. Computed in
+  instants, so it can be a day off at a time-zone edge.
+  """
+  runOutOn: LocalDate
 }
 
 """Subtype discriminator for pantry domain events."""
@@ -14170,6 +14278,35 @@ type RecipeSuggestionEdge {
   node: Recipe!
 }
 
+input RecordPantryStockCheckInput {
+  """1 to 50 answers, each about a different stack"""
+  entries: [PantryStockCheckEntryInput!]!
+  """
+  A client-minted CUID2 for this check: a replay with the same key is refused
+  as already applied (ConflictError, IDEMPOTENT_REPLAY), so the check is
+  recorded at most once
+  """
+  idempotencyKey: ID
+  """
+  The pantry the stacks belong to; the caller must be able to edit its items
+  """
+  pantryId: ID!
+}
+
+type RecordPantryStockCheckPayload {
+  """The pantry the stacks belong to"""
+  pantry: Pantry!
+  """One result per entry, in request order"""
+  results: [PantryStockCheckResult!]!
+}
+
+"""
+Result of RecordPantryStockCheck. Select on RecordPantryStockCheckPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordPantryStockCheckResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryStockCheckPayload | ValidationError
+
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
   """The price's currency; the user's own when omitted"""
@@ -15087,6 +15224,12 @@ type ShoppingList {
   is shared through home membership, a personal list through collaborators.
   """
   homeId: ID
+  """
+  A household list's invite link: it joins the list's home and lands on this
+  list. Null for a personal list, while the home's join link is off, or when
+  the caller may not manage the home's sharing.
+  """
+  householdInviteLink: ShareLink
   """The list's unique identifier"""
   id: ID!
   """Whether status is COMPLETED; always in step with status"""
@@ -15217,12 +15360,16 @@ type ShoppingList {
   suggestedTotal: Float
   """
   Items worth adding to this shopping list, one list per section. An item
-  appears at most once, in the first section that offers it: recentlyDeleted,
-  frequentlyAdded, popular. Each section holds up to limit.
+  appears at most once, in the first section that offers it: runningLow,
+  recentlyDeleted, frequentlyAdded, popular. Each section holds up to limit.
   """
   suggestions(
     """At most this many per section: default 10, at most 50"""
     limit: Int = 10
+    """
+    The viewer's calendar date; runningLow is computed only when it is sent
+    """
+    today: LocalDate
   ): ShoppingListSuggestions!
   """Free-text labels on the list, at most 10; empty when none"""
   tags: [String!]!
@@ -15795,10 +15942,24 @@ type ShoppingListSuggestion {
   name: String!
   """Popularity ranking position (for POPULAR source)"""
   popularityRank: Int
+  """
+  When the household is predicted to run out, as a calendar day counted from
+  the viewer's today; computed in instants, so it can be a day off at a
+  time-zone edge (for RUNNING_LOW source)
+  """
+  runOutOn: LocalDate
   """Shopping list item ID - only present for RECENTLY_DELETED source"""
   shoppingListItemId: ID
   """Source of this suggestion"""
   source: SuggestionSource!
+  """
+  How many days usually pass between the household's buys of it (for RUNNING_LOW source)
+  """
+  usualIntervalDays: Int
+  """
+  How much the household usually buys at once, in lastUnitId; null when its buys do not convert to one unit (for RUNNING_LOW source)
+  """
+  usualQuantity: Float
 }
 
 """
@@ -15814,6 +15975,12 @@ type ShoppingListSuggestions {
   popular: [ShoppingListSuggestion!]!
   """Items removed from this list, most recently removed first"""
   recentlyDeleted: [ShoppingListSuggestion!]!
+  """
+  What the household is predicted to run out of within two days of today, or
+  usually buys and holds none of, soonest first; named by the product it last
+  bought. Home lists only, and only with today: empty otherwise.
+  """
+  runningLow: [ShoppingListSuggestion!]!
 }
 
 """
@@ -16080,6 +16247,50 @@ jar.
 type StockBreakdown {
   fullPackages: Int!
   partialPackages: [PartialPackage!]!
+}
+
+"""A member's answer about a pantry stack they were asked to check"""
+enum StockCheckAnswer {
+  """Some is left: corrects the stack to the stated quantity"""
+  SOME_LEFT
+  """The stack holds what it records; confirms it and changes nothing"""
+  STILL_HAVE
+  """It was thrown out: records everything held as waste"""
+  THREW_OUT
+  """None is left: corrects the stack to zero"""
+  USED_UP
+}
+
+"""How sure the API is that a pantry stack still holds what it records"""
+enum StockConfidence {
+  """Recently confirmed, not expired, and not predicted to run out soon"""
+  HIGH
+  """
+  Probably gone or unknown; a list built against the pantry does not count it
+  """
+  LOW
+  """
+  Worth confirming soon: unconfirmed for 30 days, or predicted to run out within two days
+  """
+  MEDIUM
+}
+
+"""Why the API doubts a stack's recorded stock"""
+enum StockDoubtReason {
+  """
+  Nobody has used, restocked, corrected or confirmed it for 30 days (MEDIUM) or 60 (LOW)
+  """
+  NOT_CONFIRMED_RECENTLY
+  """
+  Its expiry date is before the caller's today; expiring today is not past it
+  """
+  PAST_EXPIRY
+  """
+  Its item's predicted run-out has passed and nobody has touched the stack since
+  """
+  PAST_PREDICTED_RUN_OUT
+  """Its item is predicted to run out within two days of the caller's today"""
+  PREDICTED_RUN_OUT_SOON
 }
 
 """Reusable sub-input for storage details"""
@@ -16642,6 +16853,8 @@ enum SuggestionSource {
   POPULAR
   """Item was recently removed from this shopping list"""
   RECENTLY_DELETED
+  """The household is predicted to run out of it soon"""
+  RUNNING_LOW
 }
 
 """
