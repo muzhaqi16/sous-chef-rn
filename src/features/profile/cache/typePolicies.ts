@@ -30,4 +30,9 @@ export const profileTypePolicies: TypePolicies = {
       notificationsConnection: mergeConnectionByNodeId(['filters', 'orderBy']),
     },
   },
+  Query: {
+    fields: {
+      myUserReports: mergeConnectionByNodeId([]),
+    },
+  },
 };

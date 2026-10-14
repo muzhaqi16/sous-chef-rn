@@ -45,7 +45,11 @@ describe('StorageLocationSheet', () => {
     const { getByText } = render(
       <StorageLocationSheet
         {...defaultProps}
-        initialData={{ id: '1', name: 'Fridge', type: StorageType.Refrigerator }}
+        initialData={{
+          id: '1',
+          name: 'Fridge',
+          type: StorageType.Refrigerator,
+        }}
       />,
     );
     expect(getByText('Edit Storage Location')).toBeTruthy();

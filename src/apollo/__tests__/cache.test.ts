@@ -18,6 +18,7 @@ type Connection = {
   __typename: string;
   edges: Edge[];
   pageInfo: { __typename: string; hasNextPage: boolean; endCursor: string };
+  totalCount?: number | null;
 };
 type HomeConnectionResult = {
   home: { __typename: string; id: string; shoppingListsConnection: Connection };
@@ -44,14 +45,11 @@ type MealPlanResult = {
   mealPlan: {
     __typename: string;
     id: string;
-    mealPlanItems: {
-      __typename: string;
-      id: string;
-      version: number;
-      updatedAt: string;
-      name: string;
-    }[];
+    mealPlanItemsConnection: Connection;
   };
+};
+type RecipeResult = {
+  recipe: { __typename: string; id: string; ingredientsConnection: Connection };
 };
 type UserProfileFragmentResult = {
   __typename: string;
@@ -1886,117 +1884,222 @@ describe('cache', () => {
     });
   });
 
-  describe('MealPlan.mealPlanItems merge', () => {
+  describe('MealPlan.mealPlanItemsConnection merge', () => {
     const MEAL_PLAN_QUERY = gql`
-      query GetMealPlan($id: ID!) {
+      query GetMealPlan($id: ID!, $mealsFirst: Int!, $mealsAfter: String) {
         mealPlan(id: $id) {
           id
-          mealPlanItems {
-            id
-            version
-            updatedAt
-            name
+          mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+            edges {
+              node {
+                id
+                customMealName
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+    // A derived write reads the list with no arguments at all.
+    const BARE_MEALS_FRAGMENT = gql`
+      fragment BareMeals on MealPlan {
+        id
+        mealPlanItemsConnection {
+          edges {
+            node {
+              id
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
           }
         }
       }
     `;
 
-    it('uses intelligent merge for meal plan items', () => {
-      const cache = makeCache();
-      cache.writeQuery({
-        query: MEAL_PLAN_QUERY,
-        variables: { id: 'mp1' },
-        data: {
-          mealPlan: {
-            __typename: 'MealPlan',
-            id: 'mp1',
-            mealPlanItems: [
-              {
-                __typename: 'MealPlanItem',
-                id: 'mpi-1',
-                version: 1,
-                updatedAt: '2024-01-01',
-                name: 'Monday Dinner',
-              },
-            ],
-          },
-        },
-      });
-      cache.writeQuery({
-        query: MEAL_PLAN_QUERY,
-        variables: { id: 'mp1' },
-        data: {
-          mealPlan: {
-            __typename: 'MealPlan',
-            id: 'mp1',
-            mealPlanItems: [
-              {
-                __typename: 'MealPlanItem',
-                id: 'mpi-1',
-                version: 2,
-                updatedAt: '2024-01-02',
-                name: 'Monday Dinner Updated',
-              },
-              {
-                __typename: 'MealPlanItem',
-                id: 'mpi-2',
-                version: 1,
-                updatedAt: '2024-01-02',
-                name: 'Tuesday Lunch',
-              },
-            ],
-          },
-        },
-      });
-      const result = cache.readQuery<MealPlanResult>({
-        query: MEAL_PLAN_QUERY,
-        variables: { id: 'mp1' },
-      });
-      expect(result?.mealPlan.mealPlanItems).toHaveLength(2);
-    });
-
-    const readItemIds = (cache: ReturnType<typeof makeCache>) =>
-      cache
-        .readQuery<MealPlanResult>({
-          query: MEAL_PLAN_QUERY,
-          variables: { id: 'mp1' },
-        })
-        ?.mealPlan.mealPlanItems.map(i => i.id) ?? [];
-
-    const writeItems = (
-      cache: ReturnType<typeof makeCache>,
-      items: Array<{ id: string; name: string }>,
+    const writePage = (
+      cache: InMemoryCache,
+      ids: string[],
+      page: {
+        after?: string;
+        hasNextPage?: boolean;
+        endCursor?: string;
+        totalCount?: number;
+      } = {},
     ) =>
       cache.writeQuery({
         query: MEAL_PLAN_QUERY,
-        variables: { id: 'mp1' },
+        variables: { id: 'mp1', mealsFirst: 2, mealsAfter: page.after },
         data: {
           mealPlan: {
             __typename: 'MealPlan',
             id: 'mp1',
-            mealPlanItems: items.map(i => ({
-              __typename: 'MealPlanItem',
-              id: i.id,
-              version: 1,
-              updatedAt: '2024-01-01',
-              name: i.name,
-            })),
+            mealPlanItemsConnection: {
+              __typename: 'MealPlanItemConnection',
+              edges: ids.map(id => ({
+                __typename: 'MealPlanItemEdge',
+                node: {
+                  __typename: 'MealPlanItem',
+                  id,
+                  customMealName: `Meal ${id}`,
+                },
+              })),
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: page.hasNextPage ?? false,
+                endCursor: page.endCursor ?? '',
+              },
+              // Every production document selects the count: only an explicit
+              // zero may empty a populated list.
+              totalCount: page.totalCount ?? ids.length,
+            },
           },
         },
       });
 
-    it('preserves an un-replayed local meal item over an authoritative refetch', () => {
+    const readMeals = (cache: InMemoryCache) =>
+      cache.readQuery<MealPlanResult>({
+        query: MEAL_PLAN_QUERY,
+        variables: { id: 'mp1', mealsFirst: 2 },
+      })?.mealPlan.mealPlanItemsConnection;
+
+    const readItemIds = (cache: InMemoryCache) =>
+      readMeals(cache)?.edges.map(edge => edge.node.id) ?? [];
+
+    const noneQueued = () =>
+      jest
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
+        .mockReturnValue(new Set());
+
+    it('reads two pages written with `after` as one list, in order', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-1', 'mpi-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+      });
+      writePage(cache, ['mpi-3', 'mpi-4'], {
+        after: 'cursor-2',
+        endCursor: 'cursor-4',
+      });
+
+      expect(readItemIds(cache)).toEqual(['mpi-1', 'mpi-2', 'mpi-3', 'mpi-4']);
+      // The last page's cursor state is the list's: nothing is left to read.
+      expect(readMeals(cache)?.pageInfo).toMatchObject({
+        hasNextPage: false,
+        endCursor: 'cursor-4',
+      });
+      spy.mockRestore();
+    });
+
+    it('holds one list per plan whatever arguments read it', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-1', 'mpi-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+      });
+      writePage(cache, ['mpi-3'], { after: 'cursor-2' });
+
+      const bare = cache.readFragment<MealPlanResult['mealPlan']>({
+        id: 'MealPlan:mp1',
+        fragment: BARE_MEALS_FRAGMENT,
+      });
+      expect(
+        bare?.mealPlanItemsConnection.edges.map(edge => edge.node.id),
+      ).toEqual(['mpi-1', 'mpi-2', 'mpi-3']);
+      expect(bare?.mealPlanItemsConnection.pageInfo.hasNextPage).toBe(false);
+      spy.mockRestore();
+    });
+
+    it('keeps one edge for a meal a later page states again', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-1', 'mpi-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+      });
+      writePage(cache, ['mpi-2', 'mpi-3'], { after: 'cursor-2' });
+
+      expect(readItemIds(cache)).toEqual(['mpi-1', 'mpi-2', 'mpi-3']);
+      spy.mockRestore();
+    });
+
+    it('takes a first-page refresh of the whole plan as the list: a new meal joins, one removed elsewhere goes', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-server', 'mpi-gone']);
+      writePage(cache, ['mpi-server', 'mpi-new']);
+
+      expect(readItemIds(cache)).toEqual(['mpi-server', 'mpi-new']);
+      spy.mockRestore();
+    });
+
+    it('keeps the pages read past the first when a longer plan refreshes its first page', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-1', 'mpi-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+      });
+      writePage(cache, ['mpi-3', 'mpi-4'], {
+        after: 'cursor-2',
+        endCursor: 'cursor-4',
+      });
+      // The refresh restates its own page, up to mpi-2: mpi-1 was removed
+      // elsewhere and mpi-new added ahead of it.
+      writePage(cache, ['mpi-new', 'mpi-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+      });
+
+      expect(readItemIds(cache)).toEqual([
+        'mpi-new',
+        'mpi-2',
+        'mpi-3',
+        'mpi-4',
+      ]);
+      // The loaded window still ends where the last page left it.
+      expect(readMeals(cache)?.pageInfo).toMatchObject({
+        hasNextPage: false,
+        endCursor: 'cursor-4',
+      });
+      spy.mockRestore();
+    });
+
+    it('empties the plan when a first-page refresh answers with no meals', () => {
+      const spy = noneQueued();
+      const cache = makeCache();
+
+      writePage(cache, ['mpi-1', 'mpi-2']);
+      // Every meal was removed elsewhere while no event reached this device.
+      // The refresh states `totalCount: 0`, which is what may empty the list.
+      writePage(cache, []);
+
+      expect(readItemIds(cache)).toEqual([]);
+      spy.mockRestore();
+    });
+
+    it('preserves an un-replayed local meal over an authoritative refetch', () => {
       const spy = jest
         .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['mpi-local']));
       const cache = makeCache();
 
-      writeItems(cache, [
-        { id: 'mpi-server', name: 'Monday Dinner' },
-        { id: 'mpi-local', name: 'Tuesday Lunch (offline)' },
-      ]);
-      // Refetch that doesn't yet include the still-queued local item.
-      writeItems(cache, [{ id: 'mpi-server', name: 'Monday Dinner' }]);
+      writePage(cache, ['mpi-server', 'mpi-local']);
+      // Refetch that doesn't yet include the still-queued local meal.
+      writePage(cache, ['mpi-server']);
 
       expect(readItemIds(cache)).toEqual(
         expect.arrayContaining(['mpi-server', 'mpi-local']),
@@ -2005,20 +2108,176 @@ describe('cache', () => {
       spy.mockRestore();
     });
 
-    it('drops a server-removed meal item with no pending mutation', () => {
-      const spy = jest
-        .spyOn(queueStore, 'getUnconfirmedCreateIds')
-        .mockReturnValue(new Set());
+    it('drops a server-removed meal with no pending mutation', () => {
+      const spy = noneQueued();
       const cache = makeCache();
 
-      writeItems(cache, [
-        { id: 'mpi-server', name: 'Monday Dinner' },
-        { id: 'mpi-gone', name: 'Deleted elsewhere' },
-      ]);
-      writeItems(cache, [{ id: 'mpi-server', name: 'Monday Dinner' }]);
+      writePage(cache, ['mpi-server', 'mpi-gone']);
+      writePage(cache, ['mpi-server']);
 
       expect(readItemIds(cache)).toEqual(['mpi-server']);
       spy.mockRestore();
+    });
+  });
+
+  describe('Recipe.ingredientsConnection merge', () => {
+    // One page is the whole list: a recipe holds no more than the page.
+    const RECIPE_QUERY = gql`
+      query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
+        recipe(id: $id) {
+          id
+          ingredientsConnection(first: $ingredientsFirst) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+    // A local create writes the list, and a copy reads it, with no arguments.
+    const BARE_INGREDIENTS_FRAGMENT = gql`
+      fragment BareIngredients on Recipe {
+        id
+        ingredientsConnection {
+          edges {
+            node {
+              id
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+    // A meal plan reads each recipe's list through its own selection.
+    const PLAN_INGREDIENTS_FRAGMENT = gql`
+      fragment PlanIngredients on Recipe {
+        id
+        ingredientsConnection(first: $ingredientsFirst) {
+          edges {
+            node {
+              id
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    const ingredients = (
+      ids: string[],
+      page: { hasNextPage?: boolean; endCursor?: string; total?: number },
+    ) => ({
+      __typename: 'RecipeIngredientConnection',
+      edges: ids.map(id => ({
+        __typename: 'RecipeIngredientEdge',
+        node: { __typename: 'RecipeIngredient', id, name: `Name ${id}` },
+      })),
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: page.hasNextPage ?? false,
+        endCursor: page.endCursor ?? '',
+      },
+      totalCount: page.total ?? ids.length,
+    });
+
+    const writePage = (
+      cache: InMemoryCache,
+      ids: string[],
+      page: { hasNextPage?: boolean; endCursor?: string; total?: number } = {},
+    ) =>
+      cache.writeQuery({
+        query: RECIPE_QUERY,
+        variables: { id: 'r1', ingredientsFirst: 2 },
+        data: {
+          recipe: {
+            __typename: 'Recipe',
+            id: 'r1',
+            ingredientsConnection: ingredients(ids, page),
+          },
+        },
+      });
+
+    const readWith = (
+      cache: InMemoryCache,
+      fragment: typeof BARE_INGREDIENTS_FRAGMENT,
+    ) =>
+      cache.readFragment<RecipeResult['recipe']>({
+        id: 'Recipe:r1',
+        fragment,
+        variables: { ingredientsFirst: 2 },
+      })?.ingredientsConnection;
+
+    it('holds one list per recipe whatever arguments read it', () => {
+      const cache = makeCache();
+
+      writePage(cache, ['ri-1', 'ri-2']);
+
+      for (const fragment of [
+        BARE_INGREDIENTS_FRAGMENT,
+        PLAN_INGREDIENTS_FRAGMENT,
+      ]) {
+        const read = readWith(cache, fragment);
+        expect(read?.edges.map(edge => edge.node.id)).toEqual(['ri-1', 'ri-2']);
+        expect(read?.pageInfo.hasNextPage).toBe(false);
+      }
+    });
+
+    it('reads a list written with no arguments through a selection that carries them', () => {
+      const cache = makeCache();
+
+      cache.writeFragment({
+        id: 'Recipe:r1',
+        fragment: BARE_INGREDIENTS_FRAGMENT,
+        data: {
+          __typename: 'Recipe',
+          id: 'r1',
+          ingredientsConnection: ingredients(['ri-local'], {}),
+        },
+      });
+
+      expect(
+        readWith(cache, PLAN_INGREDIENTS_FRAGMENT)?.edges.map(
+          edge => edge.node.id,
+        ),
+      ).toEqual(['ri-local']);
+    });
+
+    // `hasNextPage` on the one page is what every derived write refuses on.
+    it('marks a cached recipe that a restated page finds over the limit', () => {
+      const cache = makeCache();
+
+      writePage(cache, ['ri-1', 'ri-2']);
+      // The recipe grew elsewhere; any read of it restates its one page.
+      writePage(cache, ['ri-1', 'ri-2'], {
+        hasNextPage: true,
+        endCursor: 'cursor-2',
+        total: 3,
+      });
+
+      for (const fragment of [
+        BARE_INGREDIENTS_FRAGMENT,
+        PLAN_INGREDIENTS_FRAGMENT,
+      ]) {
+        const read = readWith(cache, fragment);
+        expect(read?.edges.map(edge => edge.node.id)).toEqual(['ri-1', 'ri-2']);
+        expect(read?.pageInfo.hasNextPage).toBe(true);
+      }
     });
   });
 

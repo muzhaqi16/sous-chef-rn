@@ -20,6 +20,7 @@ export const pantryTestIDs = {
   addAllLowStockButton: 'add-all-low-stock',
 
   itemDetail: 'pantry-item-detail',
+  itemRemoved: 'pantry-item-removed',
   itemDiscardButton: 'pantry-item-discard-button',
   itemAddToListButton: 'pantry-item-add-to-list-button',
   itemAdjustButton: 'pantry-item-adjust-button',

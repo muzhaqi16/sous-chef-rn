@@ -19,10 +19,12 @@ export const invitationRefusalCopy = (): SettleOptions['copy'] => {
       body: t('invitationAcceptance.wrongAccount'),
     },
     [ErrorCode.NotFound]: unavailable,
+    // Already accepted, declined or revoked: the invite is spent.
     [ErrorCode.Conflict]: unavailable,
+    // The token is refused: it names no invite, or one that has expired.
     [ErrorCode.ValidationFailed]: {
       title: t('labels.error'),
-      body: t('invitationAcceptance.invalidInvitation'),
+      body: t('invitationAcceptance.notFound'),
     },
   };
 };

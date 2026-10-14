@@ -212,6 +212,7 @@ describe('useRecipeFavoriteState', () => {
           notes: null,
           personalRating: null,
           cookedCount: 0,
+          lastCookedAt: null,
         }),
       );
       expect(result.current.isSaved).toBe(true);

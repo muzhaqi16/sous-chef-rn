@@ -4,6 +4,7 @@ import {
   formatQuantityAsFraction,
   formatQuantityForDisplay,
   formatQuantityForInput,
+  formatNetWeightDisplay,
   getUnitDisplayText,
   parseStoredQuantityText,
 } from '../formatQuantity';
@@ -50,19 +51,19 @@ describe('formatQuantityDisplay', () => {
   });
 
   it('upscales grams to kilograms at 1000', () => {
-    expect(formatQuantityDisplay(1500, 'g')).toBe('1.5kg');
-    expect(formatQuantityDisplay(1000, 'g')).toBe('1kg');
-    expect(formatQuantityDisplay(2000, 'g')).toBe('2kg');
+    expect(formatQuantityDisplay(1500, 'g')).toBe('1.5 kg');
+    expect(formatQuantityDisplay(1000, 'g')).toBe('1 kg');
+    expect(formatQuantityDisplay(2000, 'g')).toBe('2 kg');
   });
 
   it('keeps up to three decimals when upscaling', () => {
-    expect(formatQuantityDisplay(1250, 'g')).toBe('1.25kg');
-    expect(formatQuantityDisplay(1333, 'mL')).toBe('1.333L');
+    expect(formatQuantityDisplay(1250, 'g')).toBe('1.25 kg');
+    expect(formatQuantityDisplay(1333, 'mL')).toBe('1.333 L');
   });
 
   it('upscales milliliters to liters at 1000', () => {
-    expect(formatQuantityDisplay(1500, 'ml')).toBe('1.5L');
-    expect(formatQuantityDisplay(3000, 'ml')).toBe('3L');
+    expect(formatQuantityDisplay(1500, 'ml')).toBe('1.5 L');
+    expect(formatQuantityDisplay(3000, 'ml')).toBe('3 L');
   });
 
   it('does not upscale below 1000', () => {
@@ -84,6 +85,32 @@ describe('formatQuantityDisplay', () => {
 
   it('formats integers cleanly', () => {
     expect(formatQuantityDisplay(5, 'lb')).toBe('5 lb');
+  });
+});
+
+describe('formatNetWeightDisplay', () => {
+  it('returns null for no weight', () => {
+    expect(formatNetWeightDisplay(null)).toBeNull();
+  });
+  it('upscales g to kg when >= 1000', () => {
+    expect(formatNetWeightDisplay(1500, { symbol: 'g' })).toBe('1.5 kg');
+  });
+  it('upscales ml to L when >= 1000', () => {
+    expect(formatNetWeightDisplay(2000, { symbol: 'ml' })).toBe('2 L');
+  });
+  it('formats integer values', () => {
+    expect(formatNetWeightDisplay(500, { symbol: 'g' })).toBe('500 g');
+  });
+  it('shows a package size as any other amount is shown', () => {
+    for (const [amount, symbol] of [
+      [1250, 'g'],
+      [1333, 'mL'],
+      [12.5, 'oz'],
+    ] as const) {
+      expect(formatNetWeightDisplay(amount, { symbol })).toBe(
+        formatQuantityDisplay(amount, symbol),
+      );
+    }
   });
 });
 

@@ -32,8 +32,13 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
-import { t } from '#/i18n';
+import { t as tGlobal, useTranslation } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
@@ -43,11 +48,35 @@ export interface GenerateShoppingListOptions {
 }
 
 /**
+ * Why a plan cannot be derived from, in the user's words: later pages of its
+ * meals are unread, or one of its recipes is over the ingredient limit and
+ * holds only its first page, and the list would come out short. Null for a
+ * plan read to the end.
+ */
+function unreadSource(
+  plan: UseGenerateShoppingList_MealPlanFragment,
+): string | null {
+  if (plan.mealPlanItemsConnection.pageInfo.hasNextPage) {
+    return tGlobal('generateShoppingList.planNotLoaded');
+  }
+  const overLimit = plan.mealPlanItemsConnection.edges
+    .map(meal => meal.node.recipe)
+    .find(recipe => recipe?.ingredientsConnection.pageInfo.hasNextPage);
+  return overLimit
+    ? tGlobal('generateShoppingList.recipeOverLimit', {
+        name: overLimit.name,
+        count: MAX_RECIPE_INGREDIENTS,
+      })
+    : null;
+}
+
+/**
  * Builds the list from the cached plan instead of asking the server to fan out,
  * so it works offline: a create, a batch add, and a link back to the plan,
  * every one of them queued and keyed by a client-minted id.
  */
 export function useGenerateShoppingList(mealPlanId: string | null) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const pantryId = useSelectedPantryId();
 
@@ -96,15 +125,21 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     id: string,
     cached: UseGenerateShoppingList_MealPlanFragment,
   ): Promise<UseGenerateShoppingList_MealPlanFragment> => {
-    const unlinked = cached.mealPlanItems.some(item =>
-      item.recipe?.ingredientsConnection.edges.some(edge => !edge.node.item),
+    const unlinked = cached.mealPlanItemsConnection.edges.some(meal =>
+      meal.node.recipe?.ingredientsConnection.edges.some(
+        edge => !edge.node.item,
+      ),
     );
     if (!unlinked || apiUnavailable) return cached;
 
     const fetched = await client
       .query({
         query: GetMealPlanDocument,
-        variables: { id },
+        variables: {
+          id,
+          mealsFirst: MEALS_PAGE_SIZE,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
         fetchPolicy: 'network-only',
       })
       .catch(() => null);
@@ -128,26 +163,43 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       toastService.error(t('generateShoppingList.planNotLoaded'));
       return null;
     }
+    const unread = unreadSource(plan);
+    if (unread) {
+      toastService.error(unread);
+      return null;
+    }
 
     const source = await withLinkedIngredients(mealPlanId, plan);
+    // The re-read restates each first page: a plan that outgrew its own has
+    // unread meals again, and a recipe that did is over the ingredient limit.
+    const unreadSince = unreadSource(source);
+    if (unreadSince) {
+      toastService.error(unreadSince);
+      return null;
+    }
 
-    const meals: PlannedMeal[] = source.mealPlanItems.map(item => ({
-      id: item.id,
-      servings: item.servings,
-      recipe: item.recipe
-        ? {
-            id: item.recipe.id,
-            servings: item.recipe.servings,
-            ingredients: item.recipe.ingredientsConnection.edges.map(edge => ({
-              id: edge.node.id,
-              name: edge.node.name,
-              quantity: edge.node.quantity,
-              unitId: edge.node.unit?.id,
-              itemId: edge.node.item?.id,
-            })),
-          }
-        : null,
-    }));
+    const meals: PlannedMeal[] = source.mealPlanItemsConnection.edges.map(
+      ({ node: item }) => ({
+        id: item.id,
+        servings: item.servings,
+        recipe: item.recipe
+          ? {
+              id: item.recipe.id,
+              servings: item.recipe.servings,
+              ingredients: item.recipe.ingredientsConnection.edges.map(
+                edge => ({
+                  id: edge.node.id,
+                  name: edge.node.name,
+                  quantity: edge.node.quantity,
+                  isOptional: edge.node.isOptional,
+                  unitId: edge.node.unit?.id,
+                  itemId: edge.node.item?.id,
+                }),
+              ),
+            }
+          : null,
+      }),
+    );
 
     const pantryRows: PantryStock[] | null = pantry.state.hasResult
       ? pantry.state.pantryItems.map(row => ({
@@ -160,7 +212,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const { inputs, displayNames, skipped, pantryChecked } =
       deriveShoppingListFromMealPlan(meals, {
         mealPlanId,
-        mealPlanName: source.name,
         checkPantry: options.checkPantry ?? true,
         pantryRows,
       });
@@ -275,7 +326,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 }
 
 const defaultListName = (planName: string | null | undefined) =>
-  t('generateShoppingList.defaultName', { name: planName ?? '' });
+  tGlobal('generateShoppingList.defaultName', { name: planName ?? '' });
 
 function report(outcome: {
   name: string;
@@ -285,7 +336,7 @@ function report(outcome: {
   checkPantry: boolean | undefined;
 }) {
   toastService.success(
-    t('generateShoppingList.createdSuccess', {
+    tGlobal('generateShoppingList.createdSuccess', {
       name: outcome.name,
       count: outcome.added,
       shared: '',
@@ -293,10 +344,10 @@ function report(outcome: {
   );
   if (outcome.skipped > 0) {
     toastService.info(
-      t('generateShoppingList.someSkipped', { count: outcome.skipped }),
+      tGlobal('generateShoppingList.someSkipped', { count: outcome.skipped }),
     );
   }
   if ((outcome.checkPantry ?? true) && !outcome.pantryChecked) {
-    toastService.info(t('generateShoppingList.pantryNotChecked'));
+    toastService.info(tGlobal('generateShoppingList.pantryNotChecked'));
   }
 }

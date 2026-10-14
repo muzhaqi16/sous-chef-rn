@@ -71,12 +71,23 @@ jest.mock('#features/catalog/ui/NetWeightEntryList/NetWeightEntryList', () => ({
 }));
 
 jest.mock('#components/molecules/DynamicFormFields', () => ({
-  DynamicFormFields: ({ fields }: { fields: { label: string }[] }) => {
+  DynamicFormFields: ({
+    fields,
+    errors,
+  }: {
+    fields: { name: string; label: string }[];
+    errors: Record<string, { message?: string } | undefined>;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="dynamic-form-fields">
         {fields.map((field, i: number) => (
-          <Text key={i}>{field.label}</Text>
+          <View key={i}>
+            <Text>{field.label}</Text>
+            {!!errors[field.name]?.message && (
+              <Text>{errors[field.name]?.message}</Text>
+            )}
+          </View>
         ))}
       </View>
     );
@@ -184,5 +195,31 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
     expect(onSubmit.mock.calls[0]?.[0]?.netWeights).toEqual([
       { value: 500, unitName: 'g', unitId: 'unit-g' },
     ]);
+  });
+});
+
+describe('AddItemForm — a barcode the server refuses', () => {
+  it('shows the refusal on the barcode field, on the page that has it', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn(async () => ({
+      field: 'upc' as const,
+      message: 'That barcode isn’t valid.',
+    }));
+    render(
+      <AddItemForm
+        {...defaultProps}
+        onSubmit={onSubmit}
+        initialData={{ name: 'Rice', upc: '012345678901' }}
+      />,
+    );
+    // The barcode field is on the Product page, not the one the form opens on.
+    expect(screen.queryByText('UPC/Barcode')).toBeNull();
+
+    const add = screen.getByText('Add Item');
+    await waitFor(() => expect(add).not.toBeDisabled());
+    await user.press(add);
+
+    expect(await screen.findByText('That barcode isn’t valid.')).toBeTruthy();
+    expect(screen.getByText('UPC/Barcode')).toBeTruthy();
   });
 });

@@ -213,6 +213,16 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
         labelKey: 'labels.appSettings',
         type: 'navigation',
       },
+      {
+        key: 'dataSources',
+        labelKey: 'profile.dataSources.title',
+        type: 'navigation',
+      },
+      {
+        key: 'myReports',
+        labelKey: 'reports.myReportsTitle',
+        type: 'navigation',
+      },
     ],
   },
   {

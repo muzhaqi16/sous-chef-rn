@@ -81,6 +81,7 @@
     "catalogUnavailableSubtitle": "Su fuente no encontró esta receta. Tira hacia abajo más tarde para volver a intentarlo.",
     "percentHealthy": "{{percent}}% saludable",
     "cookedCount": "Cocinada {{count}}x",
+    "lastCooked": "Cocinada por última vez el {{date}}",
     "markCooked": "Marcar como cocinada",
     "nutritionTitle": "Nutrición",
     "caloriesPerServingLabel": "Cal / ración",
@@ -94,6 +95,8 @@
     "draftBadge": "Borrador — no publicado",
     "inReviewBadge": "En revisión — solo tú puedes verla hasta que se apruebe",
     "reviewNote": "Nota de moderación: {{note}}",
+    "pendingChangesBadge": "Cambios en revisión — todos ven la versión publicada hasta que se aprueben",
+    "revisionRejectedNote": "Tus últimos cambios no se aprobaron. Nota de moderación: {{note}}",
     "forkFailed": "No se pudo bifurcar la receta",
     "forkSourceNotLoaded": "Abre esta receta con conexión una vez, para que esté en tu dispositivo y se pueda copiar.",
     "forkCopyName": "{{name}} (mi versión)",
@@ -182,6 +185,7 @@
     "deleteFolderFailed": "No se pudo eliminar la carpeta.",
     "editRecipe": "Editar receta",
     "updateRecipeFailed": "No se pudo actualizar la receta.",
+    "editIngredientsOverLimit": "Esta receta tiene más de {{count}} ingredientes, así que no se puede guardar por completo. No se ha cambiado nada.",
     "createRecipeFailed": "No se pudo crear la receta.",
     "unexpectedError": "Ocurrió un error inesperado.",
     "nameRequired": "El nombre de la receta es obligatorio",
@@ -207,8 +211,8 @@
     "noIngredientsForDeduction": "Ningún ingrediente seleccionado para descontar",
     "deductedFromPantry_one": "Se descontó {{count}} ingrediente de la despensa",
     "deductedFromPantry_other": "Se descontaron {{count}} ingredientes de la despensa",
-    "deductedFromPantryFailed_one": "Se descontó {{count}} ingrediente de la despensa ({{failed}} fallaron)",
-    "deductedFromPantryFailed_other": "Se descontaron {{count}} ingredientes de la despensa ({{failed}} fallaron)",
+    "deductedFromPantryFailed_one": "Se descontó {{count}} ingrediente de la despensa ({{failed}} sin descontar)",
+    "deductedFromPantryFailed_other": "Se descontaron {{count}} ingredientes de la despensa ({{failed}} sin descontar)",
     "submitReviewFailed": "No se pudo enviar la reseña",
     "updateReviewFailed": "No se pudo actualizar la reseña",
     "deleteReviewFailed": "No se pudo eliminar la reseña",
@@ -226,6 +230,7 @@
     "addedItemsToList": "Se añadieron {{count}} artículos a \"{{listName}}\"",
     "addedItemsToListUpdated": "Se añadieron {{count}} artículos a \"{{listName}}\", se actualizaron {{updated}}",
     "noIngredientsToAdd": "No hay ingredientes disponibles para añadir.",
+    "ingredientsOverLimit": "Esta receta tiene más de {{count}} ingredientes, así que no se puede añadir ni copiar por completo.",
     "cannotAddExternalIngredients": "Aún no se pueden añadir ingredientes de recetas externas. Guarda la receta primero.",
     "ingredientsCount": "Ingredientes ({{count}})",
     "unnamedIngredient": "Ingrediente sin nombre",
@@ -301,6 +306,7 @@
     "ratingBreakdownRow": "{{count}} reseñas con {{stars}} estrellas",
     "favoriteA11y": "Añadir a favoritos",
     "unfavoriteA11y": "Quitar de favoritos",
+    "ingredientsTooMany": "Una receta puede tener como máximo {{count}} ingredientes",
     "stepsTooMany": "Una receta puede tener como máximo {{count}} pasos",
     "tagsTooMany": "Una receta puede tener como máximo {{count}} etiquetas",
     "tagTooLong": "Cada etiqueta puede tener como máximo {{count}} caracteres",
@@ -377,6 +383,8 @@
     "summaryPartial_other": "{{count}} parciales",
     "summaryMissing_one": "{{count}} faltante",
     "summaryMissing_other": "{{count}} faltantes",
+    "summaryUnsure_one": "{{count}} por revisar",
+    "summaryUnsure_other": "{{count}} por revisar",
     "skipReview": "Omitir revisión"
   },
   "markCookedModal": {
@@ -462,6 +470,7 @@
   "ingredientMatch": {
     "optional": "Opcional",
     "matchedPantryItem": "Coincide: {{name}} ({{amount}} disponible)",
-    "qtyLabel": "Cant.:"
+    "qtyLabel": "Cant.:",
+    "unsureHint": "Coincide solo por el nombre. Actívalo si es el artículo correcto."
   }
 }

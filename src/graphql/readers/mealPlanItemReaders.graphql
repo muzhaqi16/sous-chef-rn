@@ -20,4 +20,5 @@ fragment MealPlanItemReaders on MealPlanItem {
     pantryItemId
     quantityUsed
   }
+  version
 }

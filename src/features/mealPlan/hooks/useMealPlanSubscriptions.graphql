@@ -1,13 +1,22 @@
 # Event read-back for a template item added or edited elsewhere. The event
 # names the item by id only and there is no single-item query, so the
-# template's items come back whole — the server's list, complete for every
-# reader of `MealTemplate.items`.
-query MealTemplateItemsForEvent($id: ID!) {
+# template's first page of items comes back — the server's list, complete for
+# every reader of `MealTemplate.itemsConnection`.
+query MealTemplateItemsForEvent($id: ID!, $itemsFirst: Int!) {
   mealTemplate(id: $id) {
     id
-    items {
-      id
-      ...MealTemplateItemFragment
+    itemsConnection(first: $itemsFirst) {
+      edges {
+        node {
+          id
+          ...MealTemplateItemFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }

@@ -14,6 +14,10 @@ import {
 } from './replayPreparation';
 import type { QueuedMutation, ReplayInputs } from './types';
 import { todayKey } from '#/utils/dateUtils';
+import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
+import { localFirstFragment } from '#/apollo/utils/localFirstFields';
+import { isRecord } from '#/utils/isRecord';
+import { isOwnKey } from '#/utils/isOwnKey';
 
 /**
  * queueLink's "replay-safe without an explicit `context.localFirst` opt-in"
@@ -42,7 +46,55 @@ export async function prepareReplay(
   context: ReplayContext,
 ): Promise<OperationVariables> {
   const prepare = REPLAY_PREPARATIONS[mutation.operationName] ?? asQueued;
-  return withReplayDay(mutation, await prepare(mutation, context));
+  return withReplayDay(
+    mutation,
+    withStatedVersion(mutation, await prepare(mutation, context), context),
+  );
+}
+
+type VersionedEdit =
+  | 'UpdateMealPlanItemInput'
+  | 'UpdateRecipeInput'
+  | 'UpdatePantryInput';
+
+/**
+ * Edits the API holds to a `version` that an earlier build queued without one,
+ * by the entity each edits.
+ */
+const VERSIONED_EDIT_ENTITY: Record<VersionedEdit, string> = {
+  UpdateMealPlanItemInput: 'MealPlanItem',
+  UpdateRecipeInput: 'Recipe',
+  UpdatePantryInput: 'Pantry',
+};
+
+/**
+ * States the version the cache holds on an edit stored without one. With no
+ * cached row the input is left as it is: the API refuses it, and the write is
+ * withdrawn through the reported path.
+ */
+function withStatedVersion(
+  mutation: QueuedMutation,
+  variables: OperationVariables,
+  { cache }: ReplayContext,
+): OperationVariables {
+  const input: unknown = variables.input;
+  const inputType = inputTypeNameOf(mutation.mutation) ?? '';
+  if (
+    !isRecord(input) ||
+    typeof input.version === 'number' ||
+    typeof input.id !== 'string' ||
+    !isOwnKey(VERSIONED_EDIT_ENTITY, inputType)
+  ) {
+    return variables;
+  }
+  const typename = VERSIONED_EDIT_ENTITY[inputType];
+  const held = cache.readFragment<{ version?: number | null }>({
+    id: cache.identify({ __typename: typename, id: input.id }),
+    fragment: localFirstFragment(typename, 'version'),
+  });
+  return typeof held?.version === 'number'
+    ? { ...variables, input: { ...input, version: held.version } }
+    : variables;
 }
 
 /**

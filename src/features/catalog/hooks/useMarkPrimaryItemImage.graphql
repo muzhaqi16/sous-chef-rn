@@ -1,7 +1,6 @@
-# Repoints which of an item's photos is the hero. Server-gated exactly like any
-# other direct item edit (creator or admin), so callers must route on the item's
-# viewer-scoped `canEdit` before offering the affordance — everyone else gets a
-# ForbiddenError.
+# Repoints which of an item's photos is the hero. Server-gated like any other
+# direct item edit, and offered only where the app writes the item directly
+# (`writesItemDirectly`: the viewer's own private item, never a public one).
 #
 # The payload re-selects the whole gallery through the carousel's own fragment
 # rather than the `{ id isPrimary }` the API docs show. Apollo normalizes

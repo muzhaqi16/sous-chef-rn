@@ -1,3 +1,5 @@
+import { ValidationError } from 'yup';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import { recipeFormSchema, recipeFormDefaults } from '../recipeFormConfig';
 
 const base = () => ({
@@ -24,9 +26,53 @@ async function firstError(state: unknown): Promise<string | null> {
   }
 }
 
+/** The first refusal with the field it is reported on; null for a valid form. */
+async function firstRefusal(
+  state: unknown,
+): Promise<{ path: string | undefined; message: string } | null> {
+  try {
+    await recipeFormSchema.validate(state, { abortEarly: true });
+    return null;
+  } catch (e) {
+    if (!(e instanceof ValidationError)) throw e;
+    return { path: e.path, message: e.message };
+  }
+}
+
 describe('the recipe form bounds', () => {
   it('accepts a valid recipe', async () => {
     expect(await firstError(base())).toBeNull();
+  });
+
+  // A recipe holds at most 100 ingredients, which is one page of them.
+  describe('the ingredient limit', () => {
+    const ingredientsOf = (count: number) =>
+      Array.from({ length: count }, (_, sortOrder) => ({
+        id: `i${sortOrder}`,
+        name: `Ingredient ${sortOrder}`,
+        quantity: 1,
+        isOptional: false,
+        sortOrder,
+      }));
+
+    it('is 100', () => {
+      expect(MAX_RECIPE_INGREDIENTS).toBe(100);
+    });
+
+    it('refuses a 101st ingredient on the ingredients field', async () => {
+      expect(
+        await firstRefusal({ ...base(), ingredients: ingredientsOf(101) }),
+      ).toEqual({
+        path: 'ingredients',
+        message: 'A recipe can have at most 100 ingredients',
+      });
+    });
+
+    it('accepts exactly 100', async () => {
+      expect(
+        await firstRefusal({ ...base(), ingredients: ingredientsOf(100) }),
+      ).toBeNull();
+    });
   });
 
   describe('imageUrl', () => {

@@ -2,13 +2,13 @@ import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type {
   CreateRecipeInput,
-  UpdateRecipeInput,
   RecipeIngredientInput,
   Diet,
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
 import type {
   IngredientFormState,
   StepFormState,
@@ -162,7 +162,7 @@ export function useRecipeForm() {
     setValue('intolerances', intolerances, { shouldDirty: true });
   };
 
-  // Build ingredient input array (shared by create and update-ingredients).
+  // Build ingredient input array (shared by create and update).
   // Names are sanitized at the API boundary: a backend ingredient name loaded
   // into the form may carry a legacy " $X.XX" token, and the API stores names
   // verbatim — strip it so we never re-persist a price baked into the name.
@@ -232,8 +232,11 @@ export function useRecipeForm() {
   // Without `id`, which the caller adds. An omitted field is left unchanged, so
   // an emptied one is sent as null or []; the API refuses null for `name` and
   // `servings` (NOT NULL), so those stay omitted when blank.
-  const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
+  const buildUpdateInput = (): RecipeUpdateFields => {
     return {
+      version: state.version,
+      ingredientsUnread: state.ingredientsUnread,
+      ingredients: buildIngredientsInput(),
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
       status: state.status,
@@ -270,29 +273,36 @@ export function useRecipeForm() {
     };
   };
 
-  // Populate from existing recipe (edit mode)
+  // Populate from existing recipe (edit mode). A pending edit reopens from
+  // what it proposes: a save sends the whole form, so live values would set
+  // every pending change back.
   const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
+    const proposed = recipe.pendingRevision?.proposed;
+    const content = proposed ?? recipe;
+    const ingredients = proposed
+      ? proposed.ingredients
+      : extractNodes(recipe.ingredientsConnection);
     const formState: RecipeFormState = {
-      name: recipe.name,
-      description: recipe.description ?? '',
-      imageUrl: recipe.imageUrl ?? '',
-      videoUrl: recipe.videoUrl ?? '',
-      servings: String(recipe.servings),
-      prepTimeMinutes: recipe.prepTimeMinutes
-        ? String(recipe.prepTimeMinutes)
+      name: content.name,
+      description: content.description ?? '',
+      imageUrl: content.imageUrl ?? '',
+      videoUrl: content.videoUrl ?? '',
+      servings: String(content.servings),
+      prepTimeMinutes: content.prepTimeMinutes
+        ? String(content.prepTimeMinutes)
         : '',
-      cookTimeMinutes: recipe.cookTimeMinutes
-        ? String(recipe.cookTimeMinutes)
+      cookTimeMinutes: content.cookTimeMinutes
+        ? String(content.cookTimeMinutes)
         : '',
-      caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
-      difficulty: recipe.difficulty,
-      category: recipe.category,
-      cuisines: [...recipe.cuisines],
+      caloriesPerServing: formatNumberForInput(content.caloriesPerServing),
+      difficulty: content.difficulty,
+      category: content.category,
+      cuisines: [...content.cuisines],
       status: recipe.status,
-      diets: recipe.diets,
-      healthGoals: recipe.healthGoals,
-      intolerances: recipe.intolerances,
-      ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
+      diets: content.diets,
+      healthGoals: content.healthGoals,
+      intolerances: content.intolerances,
+      ingredients: ingredients.map(ing => ({
         id: generateTempId(),
         name: ing.name,
         quantity: ing.quantity,
@@ -304,17 +314,22 @@ export function useRecipeForm() {
         isOptional: ing.isOptional,
         sortOrder: ing.sortOrder,
       })),
-      steps: Array.isArray(recipe.instructions)
-        ? recipe.instructions.map((step: unknown, i: number) => ({
+      steps: Array.isArray(content.instructions)
+        ? content.instructions.map((step: unknown, i: number) => ({
             id: generateTempId(),
             instruction: stepInstruction(step),
             sortOrder: i,
           }))
         : [],
-      notes: recipe.notes ?? '',
-      tips: recipe.tips ?? '',
-      originalAuthor: recipe.originalAuthor ?? '',
-      tags: recipe.tags.join(', '),
+      notes: content.notes ?? '',
+      tips: content.tips ?? '',
+      originalAuthor: content.originalAuthor ?? '',
+      tags: content.tags.join(', '),
+      version: recipe.version,
+      // A proposed edit carries its whole list; the live one is one page, and
+      // `hasNextPage` marks a recipe over the ingredient limit.
+      ingredientsUnread:
+        !proposed && recipe.ingredientsConnection.pageInfo.hasNextPage,
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.
@@ -339,7 +354,6 @@ export function useRecipeForm() {
     setIntolerances,
     buildCreateInput,
     buildUpdateInput,
-    buildIngredientsInput,
     populateFromRecipe,
   };
 }

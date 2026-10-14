@@ -197,7 +197,26 @@
     "loadingImage": "Cargando imagen...",
     "cropInstructions": "Pellizca para ampliar, arrastra para mover. El área circular será tu foto de perfil.",
     "imageNotLoaded": "La imagen no se cargó correctamente",
-    "cropImageFailed": "No se pudo recortar la imagen. Inténtalo de nuevo."
+    "cropImageFailed": "No se pudo recortar la imagen. Inténtalo de nuevo.",
+    "dataSources": {
+      "title": "Fuentes de datos",
+      "intro": "{{appName}} construye su catálogo de alimentos con estos conjuntos de datos abiertos.",
+      "visit": "Abrir sitio web",
+      "publicDomain": "Dominio público (obra del Gobierno de EE. UU.).",
+      "openFoodFacts": {
+        "name": "Open Food Facts",
+        "provides": "Nombres, marcas, tamaños de paquete y fotos de los productos escaneados.",
+        "licence": "Base de datos: Open Database License (ODbL). Fotos: Creative Commons Reconocimiento-CompartirIgual (CC BY-SA)."
+      },
+      "usdaFoodDataCentral": {
+        "name": "USDA FoodData Central",
+        "provides": "Información nutricional y fichas de producto."
+      },
+      "usdaFoodKeeper": {
+        "name": "USDA FoodKeeper",
+        "provides": "Cuánto duran los alimentos en la despensa, la nevera y el congelador."
+      }
+    }
   },
   "personalInformation": {
     "sectionPrivacySettings": "Ajustes de Privacidad",
@@ -282,5 +301,46 @@
   },
   "restrictionSection": {
     "empty": "Aún no hay ninguno"
+  },
+  "reports": {
+    "reportReview": "Denunciar esta reseña",
+    "reportRecipe": "Denunciar esta receta",
+    "sheetTitle": "Denunciar ante los moderadores",
+    "reason": {
+      "spam": "Spam",
+      "inappropriateContent": "Contenido inapropiado",
+      "harassment": "Acoso o intimidación",
+      "hateSpeech": "Discurso de odio",
+      "fakeInformation": "Información falsa o engañosa",
+      "scamFraud": "Estafa o fraude",
+      "impersonation": "Suplantación de identidad",
+      "privacyViolation": "Vulneración de la privacidad",
+      "copyright": "Infracción de derechos de autor"
+    },
+    "reasonRequired": "Elige un motivo",
+    "descriptionLabel": "¿Qué ha pasado?",
+    "descriptionPlaceholder": "Añade cualquier detalle que ayude a los moderadores a revisarlo",
+    "descriptionRequired": "Describe lo que ha pasado para que los moderadores puedan revisarlo",
+    "send": "Enviar denuncia",
+    "sent": "Denuncia enviada. Los moderadores la revisarán.",
+    "alreadyOpen": "Ya lo denunciaste. Sigue en revisión.",
+    "needsConnection": "Para enviar una denuncia hace falta conexión. Inténtalo de nuevo cuando vuelvas a tenerla.",
+    "failed": "No se pudo enviar la denuncia. Inténtalo de nuevo.",
+    "myReportsTitle": "Mis denuncias",
+    "about": {
+      "recipe": "Denuncia de una receta",
+      "recipeReview": "Denuncia de una reseña",
+      "profile": "Denuncia de un perfil",
+      "user": "Denuncia de un usuario"
+    },
+    "reportedOn": "Enviada el {{date}}",
+    "status": {
+      "pending": "Pendiente de revisión",
+      "investigating": "En revisión",
+      "resolved": "Aceptada",
+      "dismissed": "Cerrada"
+    },
+    "emptyTitle": "Aún no hay denuncias",
+    "emptyDescription": "Las denuncias que envíes a los moderadores aparecen aquí, con el estado de cada una."
   }
 }

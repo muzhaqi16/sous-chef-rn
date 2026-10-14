@@ -6,7 +6,7 @@ export const mealPlanFeature: FeatureManifest = {
   tab: {
     screenName: 'MealPlan',
     // `labels.mealPlan` for the same reason as recipes — see that manifest.
-    titleKey: 'labels.mealPlan',
+    titleKey: 'navigation.tabs.mealPlan',
     order: 40,
     icon: { active: 'calendar', inactive: 'calendar-outline' },
     mainScreen: 'MealPlanMain',

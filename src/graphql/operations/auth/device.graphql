@@ -56,6 +56,27 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
   }
 }
 
+# Retires a device row: the one a superseded identifier registered. A repeat
+# answers `converged` with no device, so the retirement is safe to re-run.
+mutation DeleteDevice($input: DeleteDeviceInput!) {
+  deleteDevice(input: $input) {
+    __typename
+    ... on DeleteDevicePayload {
+      converged
+      device {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

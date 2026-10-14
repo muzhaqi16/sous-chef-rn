@@ -23,6 +23,7 @@ import {
 } from '#features/shoppingList/utils/purchasePrice';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { parseMoneyInput } from '#/utils/validation/common';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -46,7 +47,7 @@ interface PurchaseAmountSheetProps {
 }
 
 /** null for empty, invalid or negative input. */
-const parseNumberInput = (input: string): number | null => {
+const parseQuantityInput = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const num = parseDecimalInput(trimmed);
@@ -95,8 +96,8 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      // The seed is read back by `parseNumberInput`, so it must carry the
-      // device's separator; a period reads as grouping on a comma device.
+      // The seed is read back by the parsers, so it must carry the device's
+      // separator; a period reads as grouping on a comma device.
       setQuantityInput(
         formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
       );
@@ -108,8 +109,8 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     }
   }
 
-  const parsedQty = parseNumberInput(quantityInput);
-  const parsedTotal = parseNumberInput(priceInput);
+  const parsedQty = parseQuantityInput(quantityInput);
+  const parsedTotal = parseMoneyInput(priceInput);
   // Shown only when the split is not trivial — at quantity 1 the per-unit
   // price IS the total.
   const perUnitPrice =
@@ -126,9 +127,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   const quantityError = quantityIsUsable
     ? null
     : t('purchaseAmountSheet.quantityRequired');
+  const priceError =
+    parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
 
   const handleConfirm = () => {
-    if (!quantityIsUsable) return;
+    if (!quantityIsUsable || parsedTotal === undefined) return;
     onConfirm(parsedQty, parsedTotal);
   };
 
@@ -145,7 +148,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           onClose={onClose}
           confirm={{
             onPress: handleConfirm,
-            disabled: !quantityIsUsable,
+            disabled: !quantityIsUsable || parsedTotal === undefined,
             loading,
           }}
         />
@@ -190,7 +193,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
           <View style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('purchaseAmountSheet.totalPrice')}
+              {t('labels.totalPaid')}
             </SectionHeader>
             <View style={styles.inputRow}>
               <Text role="body" tone="secondary" style={styles.prefix}>
@@ -206,10 +209,20 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 placeholder={localizeNumericHint(
                   t('purchaseAmountSheet.pricePlaceholder'),
                 )}
-                accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
+                accessibilityLabel={t('labels.totalPaid')}
                 testID={shoppingListTestIDs.purchasePriceInput}
               />
             </View>
+            {priceError ? (
+              <Text
+                role="error"
+                tone="error"
+                style={styles.fieldError}
+                testID={shoppingListTestIDs.purchasePriceError}
+              >
+                {priceError}
+              </Text>
+            ) : null}
             {perUnitPrice != null ? (
               <Text role="caption" tone="secondary" style={styles.perUnitHint}>
                 {t(

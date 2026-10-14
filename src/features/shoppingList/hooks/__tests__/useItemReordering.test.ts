@@ -118,7 +118,7 @@ describe('useItemReordering', () => {
     expect(mockGenerateKeyBetween).toHaveBeenCalledWith('aaa', 'eee');
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-2',
+        id: 'item-2',
         afterItemId: 'item-1',
         beforeItemId: 'item-3',
       },
@@ -161,7 +161,7 @@ describe('useItemReordering', () => {
     expect(mockGenerateKeyBetween).toHaveBeenCalledWith(null, 'aaa');
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-2',
+        id: 'item-2',
         afterItemId: undefined,
         beforeItemId: 'item-1',
       },

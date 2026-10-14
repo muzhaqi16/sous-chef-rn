@@ -95,6 +95,13 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'and cannot be re-pointed at one another.',
     },
     {
+      keys: ['labels.mealPlan', 'navigation.tabs.mealPlan'],
+      reason:
+        "The screen's title and its tab's label: a tab holds about ten " +
+        'characters, so es says "Plan" where the title says "Plan de ' +
+        'comidas". One key would cut the tab off or shorten the title.',
+    },
+    {
       keys: ['errors.entityInvite', 'homeManagement.cardInvite'],
       reason:
         'The English is one word for two roles: es "Invitación" vs ' +
@@ -400,7 +407,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       keys: [
         'pantryItemDetail.fields.added',
         'pantryAnalytics.added',
-        'barcode.added',
+        'labels.added',
       ],
       reason:
         'The English is one word for two roles: sq "Shtuar" vs "Të ' +

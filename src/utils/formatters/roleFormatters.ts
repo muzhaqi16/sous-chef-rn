@@ -1,19 +1,19 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { unknownMember } from '#/utils/closedEnum';
 
-export function formatRole(role: MembershipRole): string {
+export function formatRole(role: MembershipRole, translate: Translate): string {
   switch (role) {
     case MembershipRole.Owner:
-      return t('roles.owner');
+      return translate('roles.owner');
     case MembershipRole.Admin:
-      return t('labels.admin');
+      return translate('labels.admin');
     case MembershipRole.Member:
-      return t('roles.member');
+      return translate('roles.member');
     case MembershipRole.Guest:
-      return t('labels.guest');
+      return translate('labels.guest');
     default:
       unknownMember(role, 'membership role');
-      return t('roles.member');
+      return translate('roles.member');
   }
 }

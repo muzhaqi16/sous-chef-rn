@@ -28,6 +28,8 @@ export interface EmptyStateProps {
     variant?: 'primary' | 'secondary' | 'outline';
     /** Optional leading icon on the action button (e.g. "add" for a CTA) */
     icon?: IconName;
+    /** Shown but not tappable; the `hint` says why. */
+    disabled?: boolean;
   };
 
   /** Secondary action button */
@@ -151,6 +153,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           variant={action.variant ?? 'primary'}
           size="medium"
           icon={action.icon}
+          disabled={action.disabled}
           style={styles.actionButton}
         >
           {action.label}

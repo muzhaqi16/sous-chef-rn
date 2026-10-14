@@ -7,7 +7,6 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
-  ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListItemDocument,
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
@@ -44,14 +43,8 @@ export function useToggleShoppingItem({
   const { t } = useTranslation();
 
   // An API unreachable while "online" queues for replay rather than raising a
-  // blocking error; the toggle is idempotent on a real id.
-  const [togglePurchasedMutation] = useMutation(
-    ToggleShoppingListItemPurchasedDocument,
-    { context: { localFirst: true } },
-  );
-
-  // Amounts go through updateShoppingListItem — the toggle input can't carry
-  // purchaseTracking.
+  // blocking error. The server does not hold an update carrying only
+  // `purchaseTracking` to its `version`, so a tick replays over a reorder.
   const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument, {
     context: { localFirst: true },
   });
@@ -133,9 +126,16 @@ export function useToggleShoppingItem({
     };
 
     const togglePurchasedMutationOptions: Parameters<
-      typeof togglePurchasedMutation
+      typeof updatePurchaseMutation
     >[0] = {
-      variables: { input: { id: itemId, purchased: newStatus } },
+      variables: {
+        input: {
+          id: itemId,
+          version: snapshot.version,
+          // The flag alone: the server refuses amounts beside an un-tick.
+          purchaseTracking: { isPurchased: newStatus },
+        },
+      },
       onCompleted: data => {
         // Drop the offline marker only once the server confirms — a queued
         // completion resolves with a null payload and must keep it.
@@ -167,9 +167,9 @@ export function useToggleShoppingItem({
     // A queued toggle keeps the optimistic flip; a failure reverts it and
     // refetches, since the server's state is the one to show.
     const settled = await settleMutation(
-      () => togglePurchasedMutation(togglePurchasedMutationOptions),
+      () => updatePurchaseMutation(togglePurchasedMutationOptions),
       {
-        document: ToggleShoppingListItemPurchasedDocument,
+        document: UpdateShoppingListItemDocument,
         fallback: t('errors.updateItemFailed'),
         onFailed: () => {
           revert();

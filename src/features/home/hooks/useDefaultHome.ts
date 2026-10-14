@@ -11,6 +11,7 @@ import {
   useAppStore,
 } from '#store/useAppStore';
 import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { pantriesOf, defaultPantryOf } from '#domain/homePantries';
 import { logger } from '#/utils/environment';
@@ -66,8 +67,7 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   } = usePantryState();
   const canAttemptQueries = useAppStore(
-    state =>
-      (!!state.accessToken || !!state.refreshToken) && !state.isLoggingOut,
+    state => holdsSessionTokens(state) && !state.isLoggingOut,
   );
 
   // Track if we've already initialized defaults to prevent cascading re-renders

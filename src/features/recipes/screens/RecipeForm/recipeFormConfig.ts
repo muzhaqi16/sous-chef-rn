@@ -1,5 +1,7 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#/i18n';
+import { lazyMessage } from '#/utils/validation/common';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeStatus,
   type Cuisine,
@@ -15,10 +17,6 @@ import type {
   StepFormState,
 } from './formState';
 
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
-
 // The API's URL scalar takes an absolute http(s) URL of at most 2048 characters
 // and refuses anything else before any resolver runs, with no field to report
 // on. Blank stays valid: the field is optional and is sent as undefined.
@@ -26,12 +24,12 @@ const httpUrl = (key: TranslationKey) =>
   string()
     .defined()
     .trim()
-    .url(msg(key))
-    .matches(/^https?:\/\//i, { message: msg(key), excludeEmptyString: true })
-    .max(2048, msg(key));
-const msgWith =
-  (key: TranslationKey, options: Record<string, unknown>) => (): string =>
-    t(key, options);
+    .url(lazyMessage(key))
+    .matches(/^https?:\/\//i, {
+      message: lazyMessage(key),
+      excludeEmptyString: true,
+    })
+    .max(2048, lazyMessage(key));
 
 /** The API's JSON-scalar bounds. */
 const JSON_MAX_ITEMS = 1000;
@@ -70,7 +68,7 @@ function utf8ByteLength(value: string): number {
 
 const ingredientSchema: ObjectSchema<IngredientFormState> = object({
   id: string().defined(),
-  name: string().trim().required(msg('recipes.ingredientNameRequired')),
+  name: string().trim().required(lazyMessage('recipes.ingredientNameRequired')),
   quantity: number().defined(),
   unitId: string().nullable().optional(),
   itemId: string().nullable().optional(),
@@ -85,12 +83,12 @@ const stepSchema: ObjectSchema<StepFormState> = object({
   id: string().defined(),
   instruction: string()
     .trim()
-    .required(msg('recipes.stepInstructionsRequired')),
+    .required(lazyMessage('recipes.stepInstructionsRequired')),
   sortOrder: number().defined(),
 });
 
 export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
-  name: string().trim().required(msg('recipes.nameRequired')),
+  name: string().trim().required(lazyMessage('recipes.nameRequired')),
   description: string().defined(),
   imageUrl: httpUrl('errors.field.imageUrl'),
   videoUrl: httpUrl('errors.field.videoUrl'),
@@ -107,7 +105,13 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
   intolerances: array().of(mixed<Intolerance>().defined()).defined(),
   ingredients: array()
     .of(ingredientSchema)
-    .min(1, msg('recipes.ingredientRequired'))
+    .min(1, lazyMessage('recipes.ingredientRequired'))
+    .max(
+      MAX_RECIPE_INGREDIENTS,
+      lazyMessage('recipes.ingredientsTooMany', {
+        count: MAX_RECIPE_INGREDIENTS,
+      }),
+    )
     .defined(),
   // The API bounds every JSON-scalar input at 64 KiB serialized, 8 levels deep
   // and 1,000 items at any depth, and `instructions` is the one this app sends.
@@ -115,12 +119,12 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
   // here rather than discovered as a field error after a long save.
   steps: array()
     .of(stepSchema)
-    .min(1, msg('recipes.stepRequired'))
+    .min(1, lazyMessage('recipes.stepRequired'))
     .max(
       JSON_MAX_ITEMS,
-      msgWith('recipes.stepsTooMany', { count: JSON_MAX_ITEMS }),
+      lazyMessage('recipes.stepsTooMany', { count: JSON_MAX_ITEMS }),
     )
-    .test('json-size', msg('recipes.stepsTooLarge'), steps =>
+    .test('json-size', lazyMessage('recipes.stepsTooLarge'), steps =>
       steps ? utf8ByteLength(JSON.stringify(steps)) <= JSON_MAX_BYTES : true,
     )
     .defined(),
@@ -129,21 +133,23 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
     .defined()
     .max(
       TIPS_MAX_LENGTH,
-      msgWith('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
+      lazyMessage('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
     ),
   originalAuthor: string().defined(),
   tags: string()
     .defined()
     .test(
       'tags-count',
-      msgWith('recipes.tagsTooMany', { count: TAGS_MAX }),
+      lazyMessage('recipes.tagsTooMany', { count: TAGS_MAX }),
       value => parseCommaTags(value).length <= TAGS_MAX,
     )
     .test(
       'tag-length',
-      msgWith('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
+      lazyMessage('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
       value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
     ),
+  version: number().nullable().defined(),
+  ingredientsUnread: mixed<boolean>().defined(),
 });
 
 export const recipeFormDefaults = (): RecipeFormState => ({
@@ -168,4 +174,6 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   tips: '',
   originalAuthor: '',
   tags: '',
+  version: null,
+  ingredientsUnread: false,
 });

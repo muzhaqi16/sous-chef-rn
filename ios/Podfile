@@ -10,7 +10,7 @@ end
 node_require('react-native/scripts/react_native_pods.rb')
 node_require('react-native-permissions/scripts/setup.rb')
 
-ios_deployment_target = '16.0'
+ios_deployment_target = '15.1'
 platform :ios, ios_deployment_target
 prepare_react_native_project!
 

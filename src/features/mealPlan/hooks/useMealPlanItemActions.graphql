@@ -1,5 +1,7 @@
 fragment MealPlanItemActions_item on MealPlanItem {
   id
+  # Stated on every `updateMealPlanItem`: the server refuses a stale one.
+  version
   isCompleted
   completedAt
   servings
@@ -14,7 +16,7 @@ fragment MealPlanItemActions_item on MealPlanItem {
 # Compound fragment for `toggleCompleted` — must satisfy the full
 # `UpdateMealPlanItem` mutation `mealPlanItem` selection set so the
 # optimistic response can spread the item without a type cast. Read off the
-# cache by id; `GetMealPlan` selects all four fragments on `mealPlanItems`.
+# cache by id; `GetMealPlan` selects all four fragments on each meal.
 fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
   id
   ...MealPlanItemCard_item
@@ -23,7 +25,7 @@ fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
   ...MealPlanItemActions_item
 }
 
-# The plan's stored boundaries, which a new meal's instant must fall between.
+# The plan's first and last day, which a new meal's day must fall between.
 fragment MealPlanItemActions_planBounds on MealPlan {
   id
   startDate

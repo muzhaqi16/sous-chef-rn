@@ -1,6 +1,6 @@
 /**
  * A meal plan item's local-first cache writes: the complete optimistic item and
- * its place on the plan's `mealPlanItems`.
+ * its edge on the plan's `mealPlanItemsConnection`.
  */
 
 import type { ApolloCache } from '@apollo/client';
@@ -9,8 +9,8 @@ import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '#features/mea
 import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import {
-  createAddToParentArrayUpdater,
-  createRemoveFromParentArrayUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { errorService } from '#/services/errorService';
@@ -23,13 +23,15 @@ import {
   NEUTRAL_LOCAL_MEAL_PLAN_ITEM_BY_TYPE,
 } from './mealPlanItemRowNeutral.generated';
 
-export const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
+/** The plan field its meals hang off; the pending-delete guard names it too. */
+export const MEAL_PLAN_ITEMS_FIELD = 'mealPlanItemsConnection';
+
+export const addToMealPlanItems = createAddToParentConnectionUpdater<{
+  id: string;
+}>('MealPlan', MEAL_PLAN_ITEMS_FIELD, 'MealPlanItem');
+export const removeFromMealPlanItems = createRemoveFromParentConnectionUpdater(
   'MealPlan',
-  'mealPlanItems',
-);
-export const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
-  'MealPlan',
-  'mealPlanItems',
+  MEAL_PLAN_ITEMS_FIELD,
   'MealPlanItem',
 );
 
@@ -55,6 +57,7 @@ export function adoptServerMealPlanItem(
 export type OptimisticMealPlanItem = {
   __typename: 'MealPlanItem';
   id: string;
+  version: number;
   date: string;
   mealType: CreateMealPlanItemInput['mealType'];
   customMealName: string | null;
@@ -100,6 +103,9 @@ function writeMealPlanItemRow(
     known: {
       __typename: 'MealPlanItem',
       id,
+      // What the server gives a new row, so an edit queued behind this create
+      // has a version to state.
+      version: 1,
       date: input.date,
       mealType: input.mealType,
       customMealName: input.meal.customMealName ?? null,

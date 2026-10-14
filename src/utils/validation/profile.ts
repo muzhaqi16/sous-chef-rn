@@ -1,19 +1,13 @@
 import { object, string } from 'yup';
-import { nameRule, normalizeSmartPunctuation } from './common';
+import { lazyMessage, nameRule, normalizeSmartPunctuation } from './common';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import { t, type KeyUnder } from '#/i18n';
+import type { KeyUnder } from '#/i18n';
 import { isOwnKey } from '#utils/isOwnKey';
 
-/**
- * Schemas are built once at module scope, so a message resolved eagerly would
- * freeze whichever language was active at import time. Yup accepts a function
- * and calls it when the rule fails, so the lookup lands after any language
- * change. Same pattern as `features/catalog/utils/itemValidation.ts`.
- */
-const msg =
-  (key: KeyUnder<'profileValidation'>, options?: Record<string, unknown>) =>
-  (): string =>
-    t(`profileValidation.${key}`, options);
+const msg = (
+  key: KeyUnder<'profileValidation'>,
+  options?: Record<string, unknown>,
+) => lazyMessage(`profileValidation.${key}`, options);
 
 // display name rule
 const displayNameRule = string()

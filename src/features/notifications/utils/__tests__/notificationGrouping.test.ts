@@ -9,6 +9,7 @@ import {
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import type { DisplayNotification } from '../toDisplayNotification';
+import { t } from '#/i18n';
 
 function makeNotification(
   overrides: Partial<DisplayNotification> = {},
@@ -98,7 +99,7 @@ describe('createNotificationFeedRows', () => {
       yesterday: [],
       older: [makeNotification({ sentAt: '2020-01-01T00:00:00Z' })],
     };
-    const rows = createNotificationFeedRows(groups);
+    const rows = createNotificationFeedRows(groups, t);
     expect(headers(rows)).toHaveLength(2);
     expect(headers(rows)[0]).toContain('Urgent');
     expect(headers(rows)[1]).toBe('Older');
@@ -106,12 +107,15 @@ describe('createNotificationFeedRows', () => {
 
   it('puts each notification under its own header', () => {
     const urgent = makeNotification({ priority: Priority.Urgent });
-    const rows = createNotificationFeedRows({
-      urgent: [urgent],
-      today: [],
-      yesterday: [],
-      older: [],
-    });
+    const rows = createNotificationFeedRows(
+      {
+        urgent: [urgent],
+        today: [],
+        yesterday: [],
+        older: [],
+      },
+      t,
+    );
     expect(rows).toHaveLength(2);
     expect(rows[0]!.kind).toBe('header');
     expect(rows[1]).toEqual({ kind: 'item', notification: urgent });
@@ -124,7 +128,7 @@ describe('createNotificationFeedRows', () => {
       yesterday: [],
       older: [],
     };
-    expect(createNotificationFeedRows(groups)).toEqual([]);
+    expect(createNotificationFeedRows(groups, t)).toEqual([]);
   });
 
   it('preserves group order', () => {
@@ -134,7 +138,7 @@ describe('createNotificationFeedRows', () => {
       yesterday: [makeNotification()],
       older: [makeNotification()],
     };
-    expect(headers(createNotificationFeedRows(groups))).toEqual([
+    expect(headers(createNotificationFeedRows(groups, t))).toEqual([
       expect.stringContaining('Urgent'),
       'Today',
       'Yesterday',

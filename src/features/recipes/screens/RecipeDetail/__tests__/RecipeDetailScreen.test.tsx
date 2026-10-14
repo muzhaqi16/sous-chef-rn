@@ -4,6 +4,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeDetail } from '../index';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -158,6 +159,10 @@ jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,
 }));
 
+jest.mock('#features/profile/ui/ReportContentSheet', () => ({
+  ReportContentSheet: () => null,
+}));
+
 jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
   IngredientCard: () => null,
 }));
@@ -243,7 +248,7 @@ describe('RecipeDetail', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('renders recipe content when displayData exists', () => {
+  it("renders recipe content, with its provider's notice", () => {
     const { useRecipeDetail } = jest.requireMock(
       '../../../hooks/useRecipeDetail',
     );
@@ -254,6 +259,14 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [
+          {
+            source: 'SPOONACULAR',
+            notice: 'Recipe data from Spoonacular.',
+            licenseUrl: null,
+            sourceUrl: 'https://spoonacular.com/recipes/carbonara-1',
+          },
+        ],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -315,6 +328,7 @@ describe('RecipeDetail', () => {
     const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
+    expect(tree.getByText('Recipe data from Spoonacular.')).toBeTruthy();
   });
 
   it('keeps a cached recipe on screen when the refresh fails', () => {
@@ -330,6 +344,7 @@ describe('RecipeDetail', () => {
       // `displayData` blanked the screen and called it "recipe not found".
       error: 'Network request failed',
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -409,6 +424,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Quick Soup',
         servings: 6,
@@ -593,6 +609,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Vegan Bowl',
         image: null,
@@ -669,6 +686,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saved Recipe',
         image: 'https://example.com/img.jpg',
@@ -743,6 +761,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'A Recipe',
         image: null,
@@ -808,6 +827,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Test',
         image: null,
@@ -936,6 +956,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -1002,6 +1023,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1067,6 +1089,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1132,6 +1155,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saving Recipe',
         image: 'https://example.com/img.jpg',
@@ -1198,6 +1222,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'With Instructions',
         image: null,
@@ -1268,6 +1293,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe With Ingredients',
         image: null,
@@ -1336,6 +1362,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Cooking Recipe',
         image: null,
@@ -1401,6 +1428,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'My Pasta Recipe',
         image: null,
@@ -1471,6 +1499,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -1538,6 +1567,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Zero Time Recipe',
         image: null,
@@ -1606,6 +1636,7 @@ describe('RecipeDetail', () => {
         error: null,
         isSaved,
         displayData: {
+          dataAttributions: [],
           details,
           title: 'Spinach Strata',
           image: null,
@@ -1667,6 +1698,59 @@ describe('RecipeDetail', () => {
       const tree = renderWithDetails('complete');
       expect(tree.queryByText("Details aren't here yet")).toBeNull();
       expect(tree.queryByText('Not available right now')).toBeNull();
+    });
+  });
+
+  describe('when a saved recipe was last cooked', () => {
+    const LAST_COOKED_AT = '2026-10-11T12:00:00.000Z';
+
+    const renderSaved = (cooked: {
+      cookedCount: number;
+      lastCookedAt: string | null;
+    }) => {
+      const { useRecipeDetail } = jest.requireMock<{
+        useRecipeDetail: jest.Mock;
+      }>('../../../hooks/useRecipeDetail');
+      const base = useRecipeDetail.getMockImplementation()?.();
+      useRecipeDetail.mockReturnValue({
+        ...base,
+        recipeId: 'r1',
+        error: null,
+        isSaved: true,
+        displayData: {
+          dataAttributions: [],
+          details: 'complete',
+          title: 'Shakshuka',
+          image: null,
+          servings: 2,
+          ingredients: [],
+          instructions: [],
+        },
+        backendRecipe: { id: 'r1', createdBy: { id: 'other' } },
+        ...cooked,
+      });
+      return render(<RecipeDetail route={route} />);
+    };
+
+    it('shows the date beside the cooked count', () => {
+      const tree = renderSaved({
+        cookedCount: 3,
+        lastCookedAt: LAST_COOKED_AT,
+      });
+
+      expect(tree.getByText('Cooked 3x')).toBeTruthy();
+      expect(
+        tree.getByText(
+          `Last cooked ${formatMonthDayYear(new Date(LAST_COOKED_AT))}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no date for a recipe never cooked', () => {
+      const tree = renderSaved({ cookedCount: 0, lastCookedAt: null });
+
+      expect(tree.getByText('Mark cooked')).toBeTruthy();
+      expect(tree.queryByText(/Last cooked/)).toBeNull();
     });
   });
 });

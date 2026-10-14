@@ -94,6 +94,10 @@ const ALLOWED_DROPS: Record<string, string[]> = {
   'src/hooks/animations/useMotionEnabled.ts': [
     'react-native-reanimated#useReducedMotion',
   ],
+  // The wrapper that re-reads the animated theme when a paused screen is shown.
+  'src/hooks/ui/useAnimatedTheme.ts': [
+    'react-native-unistyles/reanimated#useAnimatedTheme',
+  ],
   'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
   // Device storage's writers.
   'src/apollo/**/*.{ts,tsx}': ['#storage/mmkv#*', '#/storage/mmkv#*'],

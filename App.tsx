@@ -12,6 +12,7 @@ import { useIsHydrated } from '#store/useAppStore';
 import { client, restorePersistedCache } from '#/apollo/client';
 import { connectResyncSources } from '#/apollo/refetchEvents';
 import { Navigation } from '#navigation/RootNavigator';
+import { navigationRef } from '#services/NavigationService';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/molecules/Toast';
 import { OfflineTransitionToaster } from '#components/atoms/OfflineTransitionToaster';
@@ -44,9 +45,12 @@ setPushTokenProvider(
   Platform.OS === 'ios' ? iosPushProvider : nativePushProvider,
 );
 
-// Foreground, API-reachable and socket-reconnect triggers for the client's
-// resync (`src/apollo/refetchEvents.ts`).
-connectResyncSources(client);
+// Foreground, API-reachable, socket-reconnect and language triggers for the
+// client's resync (`src/apollo/refetchEvents.ts`); navigation paces the
+// language catch-up.
+connectResyncSources(client, {
+  onNavigation: listener => navigationRef.addListener('state', listener),
+});
 
 const App = () => {
   const isHydrated = useIsHydrated();

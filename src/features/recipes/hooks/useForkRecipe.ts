@@ -25,6 +25,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 export function useForkRecipe() {
   const { t } = useTranslation();
@@ -49,6 +50,15 @@ export function useForkRecipe() {
     });
     if (!source) {
       toastService.error(t('recipes.forkSourceNotLoaded'));
+      return null;
+    }
+    // The device's copy is written as a whole recipe. `hasNextPage` marks a
+    // source over the ingredient limit: its copy would show, and later save, a
+    // short list.
+    if (source.ingredientsConnection.pageInfo.hasNextPage) {
+      toastService.error(
+        t('recipes.ingredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
+      );
       return null;
     }
 

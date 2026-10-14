@@ -116,10 +116,8 @@ export interface ExpiryReminderFields {
   isMultiBatch: boolean;
   batchOpenedAt: string | null;
   batchAddedAt: string | null;
-  // Always set by the server (see expirationCheckProcessor) for both the
-  // batch-level and item-level reminder paths — unlike sourceId/sourceType,
-  // which alias either PantryItem or PantryItemBatch depending on which path
-  // fired, this is unambiguously the pantry item id.
+  // The stack as it was when the reminder was written, so a later merge
+  // leaves it stale: `Notification.pantryItemId` is the one to act on.
   pantryItemId: string | null;
 }
 

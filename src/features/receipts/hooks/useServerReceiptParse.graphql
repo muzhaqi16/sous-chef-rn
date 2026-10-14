@@ -1,0 +1,52 @@
+# The server's reading of a receipt the phone could not structure: queued with
+# a client-minted id (a resend returns the same parse), then polled.
+mutation CreateReceiptParse($input: CreateReceiptParseInput!) {
+  createReceiptParse(input: $input) {
+    __typename
+    ... on CreateReceiptParsePayload {
+      receiptParse {
+        id
+        status
+        ...ReceiptParseReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+query ReceiptParse($id: ID!) {
+  receiptParse(id: $id) {
+    id
+    status
+    warnings {
+      code
+      counted
+      printed
+    }
+    receipt {
+      merchant {
+        name
+        address
+        storeNumber
+      }
+      purchasedOn
+      lines {
+        text
+        kind
+        product
+        code
+        quantity
+        unit
+        unitPrice
+        amount
+        appliesTo
+      }
+    }
+  }
+}

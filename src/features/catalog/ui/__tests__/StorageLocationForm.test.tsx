@@ -146,17 +146,60 @@ describe('StorageLocationForm', () => {
           name: 'Wine Cellar',
           type: StorageType.Refrigerator,
           isClimateControlled: true,
-          isDefault: true,
+          isDefault: false,
         }}
       />,
     );
     await user.press(screen.getByText('Advanced Settings'));
     await user.press(screen.getByText('Climate Controlled'));
-    await user.press(screen.getByText('Set as Default Location'));
     await user.press(screen.getByText('Update'));
 
     expect(defaultProps.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ isClimateControlled: false, isDefault: false }),
     );
+  });
+
+  it('turns the default on for a location that is not it', async () => {
+    const user = userEvent.setup();
+    render(
+      <StorageLocationForm
+        {...defaultProps}
+        initialData={{
+          name: 'Wine Cellar',
+          type: StorageType.Refrigerator,
+          isDefault: false,
+        }}
+      />,
+    );
+    await user.press(screen.getByText('Advanced Settings'));
+    await user.press(screen.getByText('Set as Default Location'));
+    await user.press(screen.getByText('Update'));
+
+    expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ isDefault: true }),
+    );
+  });
+
+  // The API refuses unsetting the current default: it moves only by another
+  // location taking it.
+  it('offers no default box and states no default when editing the current default', async () => {
+    const user = userEvent.setup();
+    render(
+      <StorageLocationForm
+        {...defaultProps}
+        initialData={{
+          name: 'Wine Cellar',
+          type: StorageType.Refrigerator,
+          isDefault: true,
+        }}
+      />,
+    );
+    await user.press(screen.getByText('Advanced Settings'));
+    expect(screen.queryByText('Set as Default Location')).toBeNull();
+    await user.press(screen.getByText('Update'));
+
+    expect(defaultProps.onSubmit).toHaveBeenCalledTimes(1);
+    const [[submitted]] = jest.mocked(defaultProps.onSubmit).mock.calls;
+    expect(submitted).not.toHaveProperty('isDefault');
   });
 });

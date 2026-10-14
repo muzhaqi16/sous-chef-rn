@@ -12,8 +12,10 @@ import {
 import {
   ErrorCode,
   PantrySuggestionSource,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -125,6 +127,15 @@ describe('AddToPantrySheet', () => {
   it('renders AddItemSheet when visible', () => {
     renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
+  });
+
+  it('offers a receipt scan, which opens the receipt scanner', () => {
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
+    const { receiptAction } = sheetProps.current;
+    expect(receiptAction).toEqual({
+      onPress: useAppNavigation().toReceiptScan,
+      accessibilityLabel: 'Add from a receipt',
+    });
   });
 
   it('renders without crashing when pantryId is undefined', () => {
@@ -491,20 +502,19 @@ describe('AddToPantrySheet', () => {
       defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-l' },
     };
 
-    const restocked: MockFor<typeof RestockPantryItemDocument> = {
-      request: { query: RestockPantryItemDocument, variables: () => true },
-      result: {
-        data: {
-          restockPantryItem: {
-            __typename: 'RestockPantryItemPayload',
-            pantryItemUsage: {
-              __typename: 'PantryItemUsage',
-              id: 'usage-1',
-              pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-            },
-          },
+    const restockData = {
+      restockPantryItem: {
+        __typename: 'RestockPantryItemPayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         },
       },
+    } as const;
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
+      request: { query: RestockPantryItemDocument, variables: () => true },
+      result: { data: restockData },
     };
 
     const readQuantity = (cache: ReturnType<typeof makeCache>) =>
@@ -515,6 +525,7 @@ describe('AddToPantrySheet', () => {
 
     it('restocks the row it can see instead of firing a create', async () => {
       const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Count);
       const create = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
@@ -523,9 +534,12 @@ describe('AddToPantrySheet', () => {
           },
         },
       });
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: restockData,
+      });
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
-        operationMocks: [create.mock, restocked],
+        operationMocks: [create.mock, restock.mock],
       });
 
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
@@ -539,15 +553,38 @@ describe('AddToPantrySheet', () => {
       // The point of the whole exercise: nothing was queued that the server would
       // only refuse, so there is nothing to undo on reconnect.
       expect(create.fired).toHaveLength(0);
+      // The restock carries the day it was made, which dates its default expiry.
+      const [fired] = restock.fired;
+      expect(fired?.input).toMatchObject({
+        today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      });
+      expect(fired?.input).toMatchObject({ today: fired?.today });
       expect(toastService.error).not.toHaveBeenCalled();
       // Once, not twice — the generic "Added" toast must not fire alongside it.
       expect(toastService.success).toHaveBeenCalledTimes(1);
     });
 
-    it('bumps the quantity locally, so the change shows before the server replies', () => {
+    const typedUnit = (
+      cache: ReturnType<typeof makeCache>,
+      id: string,
+      type: UnitType,
+    ) =>
+      cache.writeFragment({
+        id: `Unit:${id}`,
+        fragment: gql`
+          fragment StockedUnitType on Unit {
+            id
+            type
+          }
+        `,
+        data: { __typename: 'Unit', id, type },
+      });
+
+    it('bumps a counted stack locally, so the change shows before the server replies', () => {
       // Offline the restock's `update` never runs. Without the local write the
       // toast would claim a change the list does not show.
       const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Count);
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
         operationMocks: [restocked],
@@ -559,6 +596,38 @@ describe('AddToPantrySheet', () => {
       quickAdd(milkInLitres);
 
       expect(readQuantity(cache)).toBe(4);
+    });
+
+    it('adds one package to a stack held by volume as the API counts an add, never 1 L', async () => {
+      // A restock refuses packages nothing sizes; a forced add counts them in
+      // a counted stack of the item.
+      const cache = seedStocked([stockedEdge]);
+      typedUnit(cache, 'unit-l', UnitType.Volume);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: restockData,
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock, restock.mock],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd(milkInLitres);
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(create.fired[0]?.input).toMatchObject({
+        item: { id: 'item-1' },
+        amount: { packages: { count: 1 } },
+        forceAdd: true,
+      });
+      expect(restock.fired).toHaveLength(0);
+      // The held litres never move by 1 L.
+      expect(readQuantity(cache)).toBe(3);
     });
 
     it('leaves the count alone — a restock adds no row', async () => {
@@ -708,7 +777,7 @@ describe('AddToPantrySheet', () => {
         },
       });
 
-    it('restocks the held stack a low-stock row names, even past the loaded window', async () => {
+    it('restocks the item a low-stock row names, even past the loaded window', async () => {
       const create = recordCreate();
       const restock = recordRestock();
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
@@ -721,9 +790,13 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(suggestionRow(PantrySuggestionSource.LowStock, 'pi-held'));
 
-      await waitFor(() => expect(restock.fired).toHaveLength(1));
-      expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-held' } });
-      expect(create.fired).toHaveLength(0);
+      // The stack is past the loaded window, so its unit is unknown: a forced
+      // add joins the item's counted stack, or counts it as the API counts an add.
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(create.fired[0]).toMatchObject({
+        input: { amount: { packages: { count: 1 } }, forceAdd: true },
+      });
+      expect(restock.fired).toHaveLength(0);
       expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
     });
 

@@ -87,18 +87,25 @@ describe('useAppNavigation', () => {
   });
 
   describe('nested-stack helpers', () => {
-    it('toPantryMain focuses the Home > Pantry tab', () => {
+    // Popping back to the tabs, never a second `Home` over a modal.
+    it('toPantryMain pops back to the Home > Pantry tab', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryMain());
-      expect(mockNavigate).toHaveBeenCalledWith('Home', { screen: 'Pantry' });
+      expect(mockNavigate).toHaveBeenCalledWith(
+        'Home',
+        { screen: 'Pantry' },
+        { pop: true },
+      );
     });
 
-    it('toShoppingListMain focuses the Home > ShoppingList tab', () => {
+    it('toShoppingListMain pops back to the Home > ShoppingList tab', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toShoppingListMain());
-      expect(mockNavigate).toHaveBeenCalledWith('Home', {
-        screen: 'ShoppingList',
-      });
+      expect(mockNavigate).toHaveBeenCalledWith(
+        'Home',
+        { screen: 'ShoppingList' },
+        { pop: true },
+      );
     });
 
     it('toBarcode navigates Barcode > BarcodeScanner with params', () => {
@@ -142,6 +149,7 @@ describe('useAppNavigation', () => {
       const params = {
         itemId: 'i1',
         itemName: 'Apple',
+        dataAttributions: [],
         nutritionFacts: {
           calories: 52,
           totalFat: 0.2,

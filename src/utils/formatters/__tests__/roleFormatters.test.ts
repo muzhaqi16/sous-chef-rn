@@ -1,5 +1,6 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { formatRole } from '../roleFormatters';
+import { t } from '#/i18n';
 
 describe('roleFormatters', () => {
   describe('formatRole', () => {
@@ -9,7 +10,7 @@ describe('roleFormatters', () => {
       [MembershipRole.Member, 'Member'],
       [MembershipRole.Guest, 'Guest'],
     ])('formats %s as %s', (input, expected) => {
-      expect(formatRole(input)).toBe(expected);
+      expect(formatRole(input, t)).toBe(expected);
     });
   });
 });

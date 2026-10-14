@@ -21,6 +21,7 @@ const photo = (
   perspective: 'front',
   isPrimary: true,
   status: ItemImageStatus.Approved,
+  credit: null,
   variants: [
     {
       __typename: 'ItemImage',
@@ -41,7 +42,7 @@ const heroUris = (): string[] =>
     .filter((uri: unknown): uri is string => typeof uri === 'string');
 
 describe('ItemPhotoCarousel', () => {
-  it('renders the SIZE_512 rendition of the first photo', () => {
+  it('renders the original of the first photo', () => {
     renderWithApollo(
       <ItemPhotoCarousel
         photos={[photo()]}
@@ -50,7 +51,7 @@ describe('ItemPhotoCarousel', () => {
       />,
     );
 
-    expect(heroUris()).toContain('https://cdn.example.com/front-512.jpg');
+    expect(heroUris()).toContain('https://cdn.example.com/front.jpg');
   });
 
   // The bug this whole change exists to fix: the hero must be the photo the
@@ -73,21 +74,10 @@ describe('ItemPhotoCarousel', () => {
       />,
     );
 
-    expect(heroUris()[0]).toBe('https://cdn.example.com/front-512.jpg');
+    expect(heroUris()[0]).toBe('https://cdn.example.com/a.jpg');
   });
 
   // Renditions are generated asynchronously, so a just-uploaded photo has none.
-  it('falls back to the original when a photo has no renditions', () => {
-    renderWithApollo(
-      <ItemPhotoCarousel
-        photos={[photo({ variants: [] })]}
-        imageHeight={280}
-        resizeMode="cover"
-      />,
-    );
-
-    expect(heroUris()).toContain('https://cdn.example.com/front.jpg');
-  });
 
   it('renders the fallback url when the item has no photos', () => {
     renderWithApollo(
@@ -114,6 +104,41 @@ describe('ItemPhotoCarousel', () => {
     );
 
     expect(screen.getByText('Pending review')).toBeTruthy();
+  });
+
+  it('credits a licensed photo on its page', () => {
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[
+          photo({
+            credit: {
+              __typename: 'ImageCredit',
+              text: 'Open Food Facts',
+              license: 'CC BY-SA 3.0',
+              licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+              sourceUrl: 'https://world.openfoodfacts.org/product/1',
+            },
+          }),
+        ]}
+        imageHeight={280}
+        resizeMode="cover"
+      />,
+    );
+
+    expect(screen.getByText('Photo: Open Food Facts')).toBeTruthy();
+    expect(screen.getByText('CC BY-SA 3.0')).toBeTruthy();
+  });
+
+  it('shows no credit on a photo that needs none', () => {
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[photo()]}
+        imageHeight={280}
+        resizeMode="cover"
+      />,
+    );
+
+    expect(screen.queryByText(/^Photo:/)).toBeNull();
   });
 
   it('does not badge an approved photo', () => {
@@ -147,17 +172,6 @@ describe('ItemPhotoCarousel', () => {
 
   // The hero band is a cover crop, so the 512px rendition is the right asset
   // here — the fullscreen viewer is the one that must reach the original.
-  it('uses the rendition, not the original, for the hero band', () => {
-    renderWithApollo(
-      <ItemPhotoCarousel
-        photos={[photo()]}
-        imageHeight={280}
-        resizeMode="cover"
-      />,
-    );
-
-    expect(heroUris()).not.toContain('https://cdn.example.com/front.jpg');
-  });
 
   // A lone broken photo leaves nothing to show, so the host can collapse its
   // hero rather than reserve 280pt for a placeholder icon.

@@ -99,7 +99,7 @@ export function writeEntityFields<TFields extends object>(
  */
 const localFirstFragments = new Map<string, DocumentNode>();
 
-function localFirstFragment(
+export function localFirstFragment(
   typename: string,
   selections: string,
 ): DocumentNode {

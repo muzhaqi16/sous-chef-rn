@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { InfoRow } from '#components/atoms/InfoRow';
+import { MonthCalendar } from '#components/atoms/MonthCalendar';
+import { Reveal } from '#components/atoms/Reveal';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { useTranslation } from '#/i18n';
+import { kitTestIDs } from '#components/testIDs';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -18,13 +21,21 @@ interface DatePickerFieldProps {
   minimumDate?: Date;
   maximumDate?: Date;
   required?: boolean;
+  /** A set date can be cleared back to none. */
+  clearable?: boolean;
   error?: string;
+  /**
+   * `'row'` shows a date already known as text, tapped to change it, rather
+   * than as an input waiting for one.
+   */
+  presentation?: 'field' | 'row';
+  /** The field's; the calendar's is `kitTestIDs.datePickerCalendar(testID)`. */
   testID?: string;
 }
 
 /**
- * DatePickerField - Reusable date picker with label and icon
- * Handles platform-specific date picker display (iOS inline, Android dialog)
+ * A date as a field that slides the app's month calendar open under it, the
+ * same on both platforms. Picking a day closes it.
  */
 export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   label,
@@ -34,66 +45,94 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   minimumDate,
   maximumDate,
   required,
+  clearable,
   error,
+  presentation = 'field',
   testID,
 }) => {
   const { t } = useTranslation();
-  const [showPicker, setShowPicker] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const handleDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    // On Android, the picker closes automatically
-    if (Platform.OS === 'android') {
-      setShowPicker(false);
-    }
+  const calendar = (
+    <Reveal open={open}>
+      <MonthCalendar
+        selectedDate={value}
+        onSelectDate={date => {
+          onChange(date);
+          setOpen(false);
+        }}
+        {...(minimumDate ? { minDate: minimumDate } : {})}
+        {...(maximumDate ? { maxDate: maximumDate } : {})}
+        {...(testID ? { testID: kitTestIDs.datePickerCalendar(testID) } : {})}
+      />
+    </Reveal>
+  );
 
-    if (event.type === 'set' && selectedDate) {
-      onChange(selectedDate);
-      setShowPicker(false);
-    } else if (event.type === 'dismissed') {
-      // User cancelled
-      setShowPicker(false);
-    }
-  };
-
-  const handlePress = () => {
-    setShowPicker(prev => !prev);
-  };
-
-  const formatDate = (date: Date): string => {
-    return formatMonthDayYear(date);
-  };
+  if (presentation === 'row') {
+    return (
+      <View testID={testID}>
+        <AppPressable
+          onPress={() => setOpen(prev => !prev)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+        >
+          <InfoRow
+            label={label ?? t('labels.selectDate')}
+            value={null}
+            icon="calendar-outline"
+            showColon={false}
+            showBorder={false}
+          >
+            <View style={styles.rowValue}>
+              <Text role="bodyStrong">
+                {value
+                  ? formatMonthDayYear(value)
+                  : placeholder ?? t('labels.selectDate')}
+              </Text>
+              <ExpandChevron expanded={open} />
+            </View>
+          </InfoRow>
+        </AppPressable>
+        {calendar}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
-      <AppPressable
-        style={[styles.input, error && styles.inputError]}
-        onPress={handlePress}
-      >
-        <Icon name="calendar-outline" size={20} tone="textSecondary" />
-        <Text style={[styles.dateText, !value && styles.placeholder]}>
-          {value ? formatDate(value) : placeholder ?? t('labels.selectDate')}
-        </Text>
-      </AppPressable>
+      <View style={styles.row}>
+        <AppPressable
+          style={[styles.input, error && styles.inputError]}
+          onPress={() => setOpen(prev => !prev)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+        >
+          <Icon name="calendar-outline" size={20} tone="textSecondary" />
+          <Text style={[styles.dateText, !value && styles.placeholder]}>
+            {value
+              ? formatMonthDayYear(value)
+              : placeholder ?? t('labels.selectDate')}
+          </Text>
+        </AppPressable>
+        {clearable && value ? (
+          <AppPressable
+            style={styles.clearButton}
+            onPress={() => onChange(null)}
+            accessibilityLabel={t('a11y.clearField', {
+              label: label ?? t('labels.selectDate'),
+            })}
+          >
+            <Icon name="close" size={20} tone="textSecondary" />
+          </AppPressable>
+        ) : null}
+      </View>
       {error ? (
         <Text role="error" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
-      {!!showPicker && (
-        <ThemedDateTimePicker
-          style={styles.calendarPicker}
-          value={value ?? new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
-          onChange={handleDateChange}
-        />
-      )}
+      {calendar}
     </View>
   );
 };
@@ -103,6 +142,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   input: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: theme.sizes.input.md,
@@ -113,6 +153,14 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     gap: theme.spacing.sm,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  clearButton: {
+    padding: theme.spacing.sm,
   },
   inputError: {
     borderColor: theme.colors.error,
@@ -127,7 +175,9 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginTop: theme.spacing.xs,
   },
-  calendarPicker: {
-    alignSelf: 'center',
+  rowValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
 }));

@@ -1,4 +1,7 @@
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
+import { getI18n } from '#/i18n/config';
+
+const t = getI18n().t;
 
 /**
  * The row's border and its expiry text read the same state.
@@ -29,13 +32,13 @@ describe('the expiry ladder', () => {
     [8, 'normal', 'normal'],
     [null, 'normal', 'normal'],
   ])('expiresIn %s is %s, shown as %s', (expiresIn, type, variant) => {
-    const status = getExpirationStatus(expiresIn);
+    const status = getExpirationStatus(expiresIn, t);
     expect(status.type).toBe(type);
     expect(toItemVariant(status.type)).toBe(variant);
   });
 
   // The bug in one line: today has not expired.
   it('does not call an item expiring today expired', () => {
-    expect(toItemVariant(getExpirationStatus(0).type)).not.toBe('expired');
+    expect(toItemVariant(getExpirationStatus(0, t).type)).not.toBe('expired');
   });
 });

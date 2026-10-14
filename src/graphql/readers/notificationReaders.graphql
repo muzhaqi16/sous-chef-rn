@@ -6,6 +6,7 @@ fragment NotificationReaders on Notification {
   expiresAt
   isAuthoredContent
   message
+  pantryItemId
   payload
   priority
   readAt

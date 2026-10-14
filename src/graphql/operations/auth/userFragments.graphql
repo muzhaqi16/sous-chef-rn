@@ -14,12 +14,6 @@ fragment LoginUser on User {
   canAccessDevTools
   onBoarded
   createdAt
-  timezone
-  # The currency the SERVER records a new cost in when nothing else names one
-  # (`resolveIntakeCurrency`: purchase → list → this → the system default). Read
-  # here because it is also what an undenominated figure is displayed in, and a
-  # display that disagreed with intake would misreport what the money is.
-  preferredCurrency
   defaultHomeId
   defaultHome {
     id
@@ -65,6 +59,12 @@ fragment LoginUser on User {
     id
     theme
     showTutorials
+    timezone
+    # The currency the SERVER records a new cost in when nothing else names one
+    # (`resolveIntakeCurrency`: purchase → list → this → the system default). Read
+    # here because it is also what an undenominated figure is displayed in, and a
+    # display that disagreed with intake would misreport what the money is.
+    preferredCurrency
   }
 }
 

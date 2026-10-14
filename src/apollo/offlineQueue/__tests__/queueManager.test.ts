@@ -13,7 +13,7 @@ import {
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
@@ -21,19 +21,20 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import {
   AddRecipeToFavoritesDocument,
-  ConfirmRecipeConsumptionDocument,
   CreateRecipeDocument,
   ForkRecipeDocument,
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
-  ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListDocument,
+  UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   AdjustPantryItemQuantityDocument,
@@ -504,6 +505,51 @@ describe('QueueManager', () => {
       expect(processed).not.toContain('mut-add-a');
     });
 
+    it("holds a pantry add behind the deferred create of its receipt's store", async () => {
+      // The store sits two levels down the add (`purchase.receipt.storeId`), and
+      // a store a receipt names can be minted offline on confirm.
+      const createStore = makeMutation({
+        id: 'mut-create-store',
+        ...queuedMutationFor(CreateStoreDocument),
+        variables: { input: { id: 'store-1', name: 'East End Food Co-Op' } },
+      });
+      const pantryAdd = makeMutation({
+        id: 'mut-pantry',
+        ...queuedMutationFor(CreatePantryItemDocument),
+        variables: {
+          input: {
+            id: 'pantry-item-1',
+            purchase: {
+              receipt: { purchasedOn: '2026-10-05', storeId: 'store-1' },
+            },
+          },
+        },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createStore,
+        pantryAdd,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-create-store') {
+            return {
+              success: false,
+              deferred: true,
+              deferralScope: 'entry',
+              mutationId: mutation.id,
+            };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-create-store']);
+    });
+
     it('holds an item behind a list create parked for re-authentication', async () => {
       const parkedList = makeMutation({
         id: 'mut-create-list',
@@ -599,9 +645,34 @@ describe('QueueManager', () => {
         { id: 'saved-1', recipeId: 'recipe-new' },
       ],
       [
-        'a consumption',
-        ConfirmRecipeConsumptionDocument,
-        { recipeId: 'recipe-new', pantryId: 'pan-1', consumptions: [] },
+        'a reviewed cook',
+        MarkRecipeAsCookedDocument,
+        {
+          id: 'log-2',
+          recipeId: 'recipe-new',
+          pantryId: 'pan-1',
+          deductFromPantry: true,
+          exactStacks: true,
+          ingredientsUsed: [],
+        },
+      ],
+      [
+        'its ingredients added to a list',
+        AddItemsToShoppingListFromRecipeDocument,
+        {
+          shoppingListId: 'list-1',
+          items: [
+            {
+              id: 'row-1',
+              item: { itemName: 'Flour' },
+              // The recipe is named only here, on the line.
+              recipeContext: {
+                recipeId: 'recipe-new',
+                addedContext: AddedContext.FromRecipe,
+              },
+            },
+          ],
+        },
       ],
       [
         'a planned meal',
@@ -1831,24 +1902,23 @@ describe('QueueManager', () => {
     const calculateRetryDelay = (retryCount: number) =>
       calculateRetryDelayFn(retryCount, 10);
 
-    it('uses exponential backoff', () => {
-      // With retryDelayMs = 10
-      // retryCount 0 -> 10 * 2^0 = 10 + jitter
-      // retryCount 1 -> 10 * 2^1 = 20 + jitter
-      // retryCount 2 -> 10 * 2^2 = 40 + jitter
-      const delay0 = calculateRetryDelay(0);
-      const delay1 = calculateRetryDelay(1);
-      const delay2 = calculateRetryDelay(2);
-
-      expect(delay0).toBeGreaterThanOrEqual(10);
-      expect(delay0).toBeLessThanOrEqual(510); // 10 + 500 jitter max
-      expect(delay1).toBeGreaterThanOrEqual(20);
-      expect(delay2).toBeGreaterThanOrEqual(40);
+    it('doubles per retry, plus up to half again at random', () => {
+      expect(calculateRetryDelay(0)).toBeGreaterThanOrEqual(10);
+      expect(calculateRetryDelay(0)).toBeLessThanOrEqual(15);
+      expect(calculateRetryDelay(1)).toBeGreaterThanOrEqual(20);
+      expect(calculateRetryDelay(1)).toBeLessThanOrEqual(30);
+      expect(calculateRetryDelay(2)).toBeGreaterThanOrEqual(40);
+      expect(calculateRetryDelay(2)).toBeLessThanOrEqual(60);
     });
 
-    it('caps at 30 seconds', () => {
-      const delay = calculateRetryDelay(20); // 10 * 2^20 would be huge
-      expect(delay).toBeLessThanOrEqual(30000);
+    // Capped before the jitter: capping the sum would put every device that
+    // reached the cap back on the same 30s tick.
+    it('caps at 30 seconds and still spreads retries past the cap', () => {
+      const random = jest.spyOn(Math, 'random');
+      random.mockReturnValueOnce(0).mockReturnValueOnce(1);
+      expect(calculateRetryDelay(20)).toBe(30_000);
+      expect(calculateRetryDelay(20)).toBe(45_000);
+      random.mockRestore();
     });
   });
 
@@ -2509,10 +2579,16 @@ describe('QueueManager', () => {
           'pid-1',
         ],
         [
-          'MoveShoppingListItemInput.itemId',
+          'MoveShoppingListItemInput.id',
           MoveShoppingListItemDocument,
-          { input: { itemId: 'iid-1', afterItemId: 'iid-0' } },
+          { input: { id: 'iid-1', afterItemId: 'iid-0' } },
           'iid-1',
+        ],
+        [
+          'UpdateShoppingListItemInput.id',
+          UpdateShoppingListItemDocument,
+          { input: { id: 'sli-7', version: 1, quantity: '2' } },
+          'sli-7',
         ],
         [
           'OpenPantryItemBatchInput.batchId',
@@ -2593,8 +2669,14 @@ describe('QueueManager', () => {
 
         const mutation = makeMutation({
           id: 'max-retry-1',
-          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-          variables: { input: { id: 'sli-99', purchased: true } },
+          ...queuedMutationFor(UpdateShoppingListItemDocument),
+          variables: {
+            input: {
+              id: 'sli-99',
+              version: 1,
+              purchaseTracking: { isPurchased: true },
+            },
+          },
           retryCount: 0,
           maxRetries: 3,
         });
@@ -2794,8 +2876,14 @@ describe('QueueManager', () => {
         store.addMutation(
           makeMutation({
             id: 'tick',
-            ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-            variables: { input: { id: 'sli-1', purchased: true, version: 2 } },
+            ...queuedMutationFor(UpdateShoppingListItemDocument),
+            variables: {
+              input: {
+                id: 'sli-1',
+                version: 2,
+                purchaseTracking: { isPurchased: true },
+              },
+            },
             status: QueueStatus.AUTH_ERROR,
           }),
         );

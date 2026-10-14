@@ -2,7 +2,7 @@ import type {
   SearchRecipesResult,
   RecipeSearchResult,
 } from '#/services/spoonacular/types';
-import { t } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 
 export type DietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
 
@@ -22,9 +22,14 @@ export interface TransformedRecipeItem {
   dietTags?: DietTag[];
 }
 
-/** Unifies an ingredient-search and a text-search Spoonacular result. */
+/**
+ * Unifies an ingredient-search and a text-search Spoonacular result. Called
+ * where the row is rendered, with that caller's `t`: copy written when the
+ * result arrives keeps the language it arrived in.
+ */
 export function transformRecipeForDisplay(
   recipe: SearchRecipesResult | RecipeSearchResult,
+  translate: Translate,
 ): TransformedRecipeItem {
   const subtitleParts: string[] = [];
   let badge: { text: string; variant: 'info' } | undefined;
@@ -40,7 +45,7 @@ export function transformRecipeForDisplay(
       ingredientRecipe.missedIngredientCount;
 
     subtitleParts.push(
-      t('recipes.ingredientRatio', {
+      translate('recipes.ingredientRatio', {
         used: ingredientRecipe.usedIngredientCount,
         total: totalIngredients,
       }),
@@ -59,13 +64,13 @@ export function transformRecipeForDisplay(
 
     if (textRecipe.readyInMinutes) {
       subtitleParts.push(
-        `⏱ ${t('labels.min', { count: textRecipe.readyInMinutes })}`,
+        `⏱ ${translate('labels.min', { count: textRecipe.readyInMinutes })}`,
       );
     }
 
     if (textRecipe.servings) {
       subtitleParts.push(
-        t('recipes.servingsCount', { count: textRecipe.servings }),
+        translate('recipes.servingsCount', { count: textRecipe.servings }),
       );
     }
 

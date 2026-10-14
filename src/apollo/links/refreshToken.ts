@@ -3,6 +3,7 @@ import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import {
   isSessionEndingAuthCode,
   isSupersededRefreshCode,
@@ -111,9 +112,10 @@ type RefreshReason = 'scheduled' | 'recovery';
 
 const REFRESH_CONFIG = {
   MAX_RETRIES: 3,
-  RETRY_DELAY_BASE: 1000, // Base delay in ms
+  // Jittered: an outage fails every device's refresh at once, against an
+  // endpoint with its own rate limit.
+  RETRY_BACKOFF: { baseMs: 1000, jitter: 0.25 },
   MIN_REFRESH_INTERVAL: 5000, // Minimum time between refresh attempts
-  BACKOFF_MULTIPLIER: 2,
   // How long to give the winner of a rotation race to store its successor
   // before concluding there isn't one. Short, because the server's reuse grace
   // window is 10s and the successor is written the moment the winner resolves.
@@ -174,13 +176,6 @@ const deferredRefreshError = () =>
     'Token refresh deferred',
   );
 
-const calculateRetryDelay = (retryCount: number): number => {
-  return (
-    REFRESH_CONFIG.RETRY_DELAY_BASE *
-    Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount)
-  );
-};
-
 /**
  * Recover from a rotation we lost. The session is intact so the exchange is
  * retryable, but ONLY once a DIFFERENT token is stored: re-sending the spent one
@@ -197,9 +192,7 @@ const retryWithSuccessorToken = async (
   };
 
   if (!hasSuccessor()) {
-    await new Promise(resolve =>
-      setTimeout(resolve, REFRESH_CONFIG.SUPERSEDED_SETTLE_MS),
-    );
+    await sleep(REFRESH_CONFIG.SUPERSEDED_SETTLE_MS);
   }
 
   if (!hasSuccessor()) {
@@ -366,10 +359,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
       // For network errors, we retry but DON'T trigger logout after max retries
       if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
-        const delay = calculateRetryDelay(refreshState.retryCount - 1);
+        const delay = backoffDelay(
+          refreshState.retryCount - 1,
+          REFRESH_CONFIG.RETRY_BACKOFF,
+        );
         logger.info(`Will retry token refresh in ${delay}ms`);
 
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await sleep(delay);
         return performTokenRefresh(); // Recursive retry
       }
 

@@ -105,9 +105,9 @@ export function deviceRegionCurrency(): string | null {
 
 /**
  * True when the account has never been denominated. Absence is the only signal:
- * `User.preferredCurrency` is nullable, and a stored code cannot say whether it
- * was chosen or defaulted — reading the app's own default as "unchosen" moves
- * an account whose holder deliberately picked it.
+ * an account has no settings until its first settings write, and a stored code
+ * cannot say whether it was chosen or defaulted — reading the app's own default
+ * as "unchosen" moves an account whose holder deliberately picked it.
  */
 export function isUnchosenCurrency(code: string | null | undefined): boolean {
   return !code;

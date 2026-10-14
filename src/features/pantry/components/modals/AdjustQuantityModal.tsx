@@ -9,11 +9,11 @@ import { FormInput } from '#components/atoms/FormInput';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import {
+  formatNetWeightDisplay,
   formatQuantityForInput,
   isUnchangedQuantity,
   resolveQuantityNotation,

@@ -153,6 +153,11 @@ describe('useRecurringShoppingList', () => {
       homeId: 'home-1',
       unpurchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',
@@ -174,6 +179,11 @@ describe('useRecurringShoppingList', () => {
       },
       purchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',

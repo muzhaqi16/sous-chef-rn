@@ -14,12 +14,13 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { commonStyles } from '#/styles/commonStyles';
 import { sizes } from '#/theme/foundations/sizes';
 import { spacing } from '#/theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import {
   HeaderActionIcon,
@@ -206,6 +207,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         {hasHero ? (
           <Animated.View style={parallax ? heroParallaxStyle : undefined}>
             {renderHero(heroHeight)}
+            <ThemeEpochSentinel />
           </Animated.View>
         ) : (
           <View style={{ height: insets.top + HEADER_BAND_HEIGHT }} />
@@ -220,6 +222,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         >
           {children}
         </View>
+        <ThemeEpochSentinel />
       </Animated.ScrollView>
 
       <View

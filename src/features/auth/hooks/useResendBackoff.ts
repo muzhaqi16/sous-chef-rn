@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react';
-
-/**
- * Seconds between resend attempts. Index 0 is the never-attempted state, so
- * `registerAttempt` (counting from 1) always lands on a real delay.
- */
-const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
-
-const delayForAttempt = (attempt: number): number =>
-  RESEND_BACKOFF_DELAYS[
-    Math.min(Math.max(attempt, 0), RESEND_BACKOFF_DELAYS.length - 1)
-  ] ?? 0;
+import { retryCooldownMs } from '#/utils/backoff';
 
 export interface ResendBackoff {
   /** Seconds left before another attempt is allowed; 0 when one is. */
@@ -31,9 +21,7 @@ export function useResendBackoff(initialAttempts = 0): ResendBackoff {
   // Lazy initializers: without a deadline on the FIRST render the countdown
   // reads zero for a frame and the link paints enabled.
   const [cooldownUntil, setCooldownUntil] = useState(() =>
-    initialAttempts > 0
-      ? Date.now() + delayForAttempt(initialAttempts) * 1000
-      : 0,
+    initialAttempts > 0 ? Date.now() + retryCooldownMs(initialAttempts) : 0,
   );
   const [now, setNow] = useState(() => (initialAttempts > 0 ? Date.now() : 0));
 
@@ -58,10 +46,9 @@ export function useResendBackoff(initialAttempts = 0): ResendBackoff {
     const nextAttempt = attempts + 1;
     setAttempts(nextAttempt);
 
-    const delay = delayForAttempt(nextAttempt);
     const startedAt = Date.now();
     setNow(startedAt);
-    setCooldownUntil(startedAt + delay * 1000);
+    setCooldownUntil(startedAt + retryCooldownMs(nextAttempt));
   };
 
   return { countdown, canResend: countdown === 0, registerAttempt };

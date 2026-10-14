@@ -1,8 +1,9 @@
 /**
  * Local-first: the list is written to the cache PERMANENTLY before firing — an
  * `optimisticResponse` rolls back on the offline queue's null result. `input.id`
- * is the client-minted PK, so a queued replay converges on one row (a duplicate
- * surfaces as a ConflictError, which the queue drops).
+ * is the client-minted PK, so a queued replay converges on one row: the caller's
+ * own replay answers IDEMPOTENT_REPLAY, which settles as applied. An id another
+ * account holds answers CONFLICT, which withdraws the list and reports it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

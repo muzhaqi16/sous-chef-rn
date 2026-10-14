@@ -11,6 +11,12 @@ fragment ItemPhotoCarousel_itemPhoto on ItemPhoto {
   perspective
   isPrimary
   status
+  credit {
+    text
+    license
+    licenseUrl
+    sourceUrl
+  }
   variants {
     id
     url

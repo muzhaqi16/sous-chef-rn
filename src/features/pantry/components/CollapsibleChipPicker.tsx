@@ -1,18 +1,13 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { motion } from '#/theme/foundations/motion';
 
 interface CollapsibleChipPickerProps<T extends string> {
@@ -29,17 +24,6 @@ export const CollapsibleChipPicker = <T extends string>({
   onSelect,
 }: CollapsibleChipPickerProps<T>) => {
   const [expanded, setExpanded] = useState(false);
-
-  // Chevron rotation animation
-  const chevronRotation = useSharedValue(0);
-
-  useLayoutEffect(() => {
-    chevronRotation.set(withSpring(expanded ? 180 : 0, motion.spring.EXPAND));
-  }, [expanded, chevronRotation]);
-
-  const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.get()}deg` }],
-  }));
 
   // Find selected option label for collapsed display
   const selectedLabel = options.find(o => o.value === selectedValue)?.label;
@@ -68,9 +52,7 @@ export const CollapsibleChipPicker = <T extends string>({
               {selectedLabel}
             </Text>
           ) : null}
-          <Animated.View style={animatedChevronStyle}>
-            <Icon name="chevron-down" size={20} tone="textSecondary" />
-          </Animated.View>
+          <ExpandChevron expanded={expanded} />
         </View>
       </AppPressable>
       {/* Expanded chip grid */}

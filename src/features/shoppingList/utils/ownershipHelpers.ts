@@ -1,4 +1,5 @@
-import { t, type TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import {
   CollaboratorRole,
   MembershipRole,
@@ -228,6 +229,7 @@ const ROLE_LABEL_KEYS: Record<
 
 export function formatRoleDisplay(
   role: CollaboratorRole | MembershipRole | null,
+  translate: Translate,
 ): string {
-  return role ? t(ROLE_LABEL_KEYS[role]) : t('labels.unknown');
+  return role ? translate(ROLE_LABEL_KEYS[role]) : translate('labels.unknown');
 }

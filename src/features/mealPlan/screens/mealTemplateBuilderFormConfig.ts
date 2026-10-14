@@ -1,14 +1,10 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage } from '#/utils/validation/common';
 import {
   MealType,
   TemplateCategory,
   type MealRefInput,
 } from '#/graphql/generated/schemaTypes';
-
-// Messages resolve LAZILY: the schemas are built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 /** The template itself. */
 export interface TemplateFormValues {
@@ -39,7 +35,7 @@ export interface ItemMeal {
 export const templateSchema: ObjectSchema<TemplateFormValues> = object({
   name: string()
     .trim()
-    .required(msg('mealTemplateBuilder.nameRequiredMessage')),
+    .required(lazyMessage('mealTemplateBuilder.nameRequiredMessage')),
   category: mixed<TemplateCategory>()
     .oneOf(Object.values(TemplateCategory))
     .required(),
@@ -58,7 +54,9 @@ export const templateItemSchema: ObjectSchema<TemplateItemFormValues> = object({
     .when('itemRecipeId', {
       is: (recipeId: string) => !recipeId,
       then: schema =>
-        schema.required(msg('mealTemplateBuilder.itemNameRequiredMessage')),
+        schema.required(
+          lazyMessage('mealTemplateBuilder.itemNameRequiredMessage'),
+        ),
     }),
   itemRecipeId: string().defined(),
   itemRecipeName: string().defined(),

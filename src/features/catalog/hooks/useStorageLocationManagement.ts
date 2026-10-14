@@ -30,7 +30,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
 import { useTranslation } from '#/i18n';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { errorCopy, errorService } from '#/services/errorService';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -421,7 +421,7 @@ export function useStorageLocationManagement(
     updating,
     errorMessage:
       error && !networkBlocked
-        ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
+        ? errorCopy(error, t, t('errors.codes.genericRetry'))
         : null,
 
     // Actions

@@ -1,6 +1,6 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import {
   Cuisine,
   Difficulty,
@@ -10,12 +10,17 @@ import {
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import { useRecipeForm } from '../useRecipeForm';
 import type { RecipeForm_RecipeFragment } from '../RecipeForm.generated';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
+
+/** The cursor state of a whole ingredient list: a recipe within the limit. */
+const READ_TO_THE_END: RecipeForm_RecipeFragment['ingredientsConnection']['pageInfo'] =
+  { __typename: 'PageInfo', hasNextPage: false, endCursor: null };
 
 describe('useRecipeForm', () => {
   it('initializes with default state', () => {
@@ -179,6 +184,71 @@ describe('useRecipeForm', () => {
       'At least one ingredient is required',
     );
     expect(result.current.errors.name).toBeUndefined();
+  });
+
+  // A recipe holds at most 100 ingredients.
+  describe('the ingredient limit', () => {
+    const fill = (
+      result: { current: ReturnType<typeof useRecipeForm> },
+      count: number,
+    ) => {
+      act(() => {
+        result.current.updateField('name', 'Test Recipe');
+        result.current.addStep('Cook');
+        for (let index = 0; index < count; index += 1) {
+          result.current.addIngredient({ name: `Ingredient ${index}` });
+        }
+      });
+    };
+
+    it('attaches the refusal of a 101st ingredient to `ingredients`', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS + 1);
+
+      await submit(result);
+
+      expect(result.current.state.ingredients).toHaveLength(101);
+      expect(result.current.errors.ingredients?.message).toBe(
+        'A recipe can have at most 100 ingredients',
+      );
+    });
+
+    it('raises nothing for exactly 100', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS);
+
+      await submit(result);
+
+      expect(result.current.state.ingredients).toHaveLength(100);
+      expect(result.current.errors).toEqual({});
+    });
+
+    // An ingredient change validates the list, so the message does not wait
+    // for a save, and goes once the list is back within the limit.
+    it('reports the 101st ingredient as it is added, and clears on a removal', async () => {
+      const { result } = renderHook(() => useRecipeForm());
+      fill(result, MAX_RECIPE_INGREDIENTS);
+      await waitFor(() =>
+        expect(result.current.errors.ingredients).toBeUndefined(),
+      );
+
+      act(() => {
+        result.current.addIngredient({ name: 'One too many' });
+      });
+      await waitFor(() =>
+        expect(result.current.errors.ingredients?.message).toBe(
+          'A recipe can have at most 100 ingredients',
+        ),
+      );
+
+      const [first] = result.current.state.ingredients;
+      act(() => {
+        result.current.removeIngredient(first!.id);
+      });
+      await waitFor(() =>
+        expect(result.current.errors.ingredients).toBeUndefined(),
+      );
+    });
   });
 
   it('attaches the empty-list refusal to `steps`', async () => {
@@ -360,6 +430,7 @@ describe('useRecipeForm', () => {
     const recipe: RecipeForm_RecipeFragment = {
       __typename: 'Recipe',
       id: 'recipe-1',
+      version: 4,
       name: 'Existing Recipe',
       description: 'A recipe',
       imageUrl: 'http://img.jpg',
@@ -399,9 +470,12 @@ describe('useRecipeForm', () => {
             },
           },
         ],
+        pageInfo: READ_TO_THE_END,
+        totalCount: 1,
       },
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
+      pendingRevision: null,
     };
 
     act(() => {
@@ -418,6 +492,9 @@ describe('useRecipeForm', () => {
     expect(result.current.state.diets).toEqual([Diet.Keto]);
     expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
     expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);
+    // A save sends the version it loaded, so an edit made since is refused.
+    expect(result.current.buildUpdateInput().version).toBe(4);
+    expect(result.current.buildUpdateInput().ingredientsUnread).toBe(false);
   });
 
   it('populateFromRecipe handles { number, step } instruction format', () => {
@@ -426,6 +503,7 @@ describe('useRecipeForm', () => {
     const recipe: RecipeForm_RecipeFragment = {
       __typename: 'Recipe',
       id: 'recipe-2',
+      version: 1,
       name: 'External Recipe',
       description: '',
       imageUrl: null,
@@ -447,12 +525,15 @@ describe('useRecipeForm', () => {
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [],
+        pageInfo: READ_TO_THE_END,
+        totalCount: 0,
       },
       instructions: [
         { number: 1, step: 'Boil the water' },
         { number: 2, step: 'Cook the pasta' },
       ],
       notes: null,
+      pendingRevision: null,
     };
 
     act(() => {
@@ -462,6 +543,173 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps).toHaveLength(2);
     expect(result.current.state.steps[0]!.instruction).toBe('Boil the water');
     expect(result.current.state.steps[1]!.instruction).toBe('Cook the pasta');
+  });
+
+  // A save sends the whole form: filled from the live recipe, it would set
+  // every change the pending edit holds back to the published value.
+  it('populateFromRecipe reopens a pending edit from what it proposes', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-3',
+      version: 2,
+      name: 'Live Name',
+      description: 'Live description',
+      imageUrl: null,
+      videoUrl: null,
+      servings: 2,
+      prepTimeMinutes: 10,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.MainCourse,
+      cuisines: [],
+      status: RecipeStatus.Published,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: ['live'],
+      // The live recipe is over the ingredient limit, so the device holds part
+      // of its list; the proposed one below is whole.
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+        totalCount: 150,
+      },
+      instructions: [{ text: 'Live step' }],
+      notes: null,
+      pendingRevision: {
+        __typename: 'RecipeRevision',
+        id: 'rev-1',
+        proposed: {
+          __typename: 'RecipeContent',
+          name: 'Proposed Name',
+          description: 'Proposed description',
+          imageUrl: null,
+          videoUrl: null,
+          servings: 6,
+          prepTimeMinutes: 15,
+          cookTimeMinutes: 30,
+          caloriesPerServing: null,
+          difficulty: Difficulty.Medium,
+          category: RecipeCategory.MainCourse,
+          cuisines: [Cuisine.Italian],
+          diets: [],
+          healthGoals: [],
+          intolerances: [],
+          notes: null,
+          tips: null,
+          originalAuthor: null,
+          tags: ['proposed'],
+          instructions: [{ text: 'Proposed step' }],
+          ingredients: [
+            {
+              __typename: 'RecipeIngredientLine',
+              name: 'Olive oil',
+              quantity: 2,
+              item: {
+                __typename: 'Item',
+                id: 'item-oil',
+                name: 'Olive oil',
+                imageUrl: null,
+              },
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-tbsp',
+                name: 'tablespoon',
+                symbol: 'tbsp',
+              },
+              isOptional: false,
+              notes: null,
+              preparation: null,
+              sortOrder: 0,
+              section: null,
+            },
+          ],
+        },
+      },
+    };
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+
+    expect(result.current.state.name).toBe('Proposed Name');
+    expect(result.current.state.servings).toBe('6');
+    expect(result.current.state.difficulty).toBe(Difficulty.Medium);
+    expect(result.current.state.tags).toBe('proposed');
+    expect(result.current.state.steps[0]!.instruction).toBe('Proposed step');
+    expect(result.current.state.ingredients).toEqual([
+      expect.objectContaining({
+        name: 'Olive oil',
+        quantity: 2,
+        unitId: 'unit-tbsp',
+        itemId: 'item-oil',
+      }),
+    ]);
+    // The status is the recipe's own: a pending edit leaves it PUBLISHED.
+    expect(result.current.state.status).toBe(RecipeStatus.Published);
+    // The form holds the proposed list, all of it, so its save may replace.
+    expect(result.current.buildUpdateInput().ingredientsUnread).toBe(false);
+  });
+
+  // A save replaces the whole list with the form's, which holds one page of a
+  // recipe over the limit.
+  it('populateFromRecipe marks a recipe over the ingredient limit', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-4',
+      version: 7,
+      name: 'Feast',
+      description: null,
+      imageUrl: null,
+      videoUrl: null,
+      servings: 12,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: Difficulty.Hard,
+      category: RecipeCategory.MainCourse,
+      cuisines: [],
+      status: RecipeStatus.Draft,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+        totalCount: 150,
+      },
+      instructions: [],
+      notes: null,
+      pendingRevision: null,
+    };
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+
+    expect(result.current.buildUpdateInput()).toEqual(
+      expect.objectContaining({ version: 7, ingredientsUnread: true }),
+    );
   });
 
   it('setDiets, setHealthGoals, setIntolerances update tags', () => {

@@ -133,7 +133,9 @@ export async function dismissBiometricPromptIfPresent() {
     element(by.id(authTestIDs.postLoginBiometricScreen)),
     async () => {
       console.log('📱 Skipping post-login biometric setup...');
-      await tapByID(kitTestIDs.biometricSkip(authTestIDs.postLoginBiometricView));
+      await tapByID(
+        kitTestIDs.biometricSkip(authTestIDs.postLoginBiometricView),
+      );
       console.log('✅ Post-login biometric setup skipped');
     },
     3000,

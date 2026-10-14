@@ -321,7 +321,7 @@ export const PantryContent = React.forwardRef<
       onLocationFilterChange(id);
     };
 
-    const resolvedTabs = tabs ?? getDefaultPantryTabs();
+    const resolvedTabs = tabs ?? getDefaultPantryTabs(t);
 
     const tabsWithAddButton = (() => {
       if (!onAddLocation) return resolvedTabs;

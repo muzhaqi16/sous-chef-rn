@@ -35,6 +35,8 @@ export interface AutocompleteSearchReturn<TItem> {
   isLoading: boolean;
   /** Whether search should be triggered (meets min chars and online) */
   shouldSearch: boolean;
+  /** No answer for the current term yet: the debounce runs or the query is in flight */
+  searchPending: boolean;
   /** Handle search term change (call from onChangeText) */
   handleSearchTermChange: (text: string) => void;
   /** Directly set search term without debounce (e.g., after selection reset) */
@@ -202,6 +204,7 @@ export function useAutocompleteSearch<TItem>(
     searchTerm,
     isLoading: loading,
     shouldSearch,
+    searchPending,
     handleSearchTermChange,
     setSearchTerm,
     reset,

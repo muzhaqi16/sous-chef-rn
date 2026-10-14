@@ -143,8 +143,8 @@ function subscriptionPlanBranch(document: DocumentNode): SelectionSetNode {
   throw new Error('MealPlan branch not found on mealPlanEvents.node');
 }
 
-/** The `mealTemplate.items` selection of a template query. */
-function templateItemsSelection(document: DocumentNode): SelectionSetNode {
+/** The `mealTemplate.itemsConnection` field of a template query. */
+function templateItemsField(document: DocumentNode): FieldNode {
   const operation = document.definitions.find(
     def => def.kind === 'OperationDefinition',
   );
@@ -153,12 +153,20 @@ function templateItemsSelection(document: DocumentNode): SelectionSetNode {
       s.kind === 'Field' && s.name.value === 'mealTemplate',
   );
   const itemsField = templateField?.selectionSet?.selections.find(
-    (s): s is FieldNode => s.kind === 'Field' && s.name.value === 'items',
+    (s): s is FieldNode =>
+      s.kind === 'Field' && s.name.value === 'itemsConnection',
   );
   if (!itemsField?.selectionSet) {
-    throw new Error('mealTemplate.items not found');
+    throw new Error('mealTemplate.itemsConnection not found');
   }
-  return itemsField.selectionSet;
+  return itemsField;
+}
+
+/** Its selection: the edges' nodes and the page it describes. */
+function templateItemsSelection(document: DocumentNode): SelectionSetNode {
+  const { selectionSet } = templateItemsField(document);
+  if (!selectionSet) throw new Error('itemsConnection selects nothing');
+  return selectionSet;
 }
 
 describe('MealPlanEvents completeness', () => {
@@ -166,8 +174,9 @@ describe('MealPlanEvents completeness', () => {
     ['GetMealTemplate', () => GetMealTemplateDocument],
     ['GetMealTemplateForEdit', () => GetMealTemplateForEditDocument],
   ])('reads back every template-item field %s reads', (_name, reader) => {
-    // The read-back REPLACES `MealTemplate.items`, so an item it leaves short
-    // makes the template screen's read incomplete and refetches it whole.
+    // The read-back writes the first page of `MealTemplate.itemsConnection`,
+    // so an item it leaves short makes the template screen's read incomplete
+    // and refetches it whole.
     const fragments = collectFragments([
       reader(),
       MealTemplateItemsForEventDocument,
@@ -180,8 +189,33 @@ describe('MealPlanEvents completeness', () => {
       ),
     );
 
-    expect(required).toContain('recipe.name');
+    expect(required).toContain('edges.node.recipe.name');
+    // The page it describes too: a reader past the first page follows it.
+    expect(required).toContain('pageInfo.hasNextPage');
+    expect(required).toContain('pageInfo.endCursor');
     expect(required.filter(path => !fetched.has(path))).toEqual([]);
+  });
+
+  // A read-back that named a cursor would land as a later page of the list
+  // instead of restating its first one.
+  it('reads the template meals back as the first page, at the page size the screens read', () => {
+    const argumentsOf = (document: DocumentNode) =>
+      (templateItemsField(document).arguments ?? []).map(argument => [
+        argument.name.value,
+        argument.value.kind === 'Variable' ? argument.value.name.value : null,
+      ]);
+
+    expect(argumentsOf(MealTemplateItemsForEventDocument)).toEqual([
+      ['first', 'itemsFirst'],
+    ]);
+    expect(argumentsOf(GetMealTemplateDocument)).toEqual([
+      ['first', 'itemsFirst'],
+      ['after', 'itemsAfter'],
+    ]);
+    expect(argumentsOf(GetMealTemplateForEditDocument)).toEqual([
+      ['first', 'itemsFirst'],
+      ['after', 'itemsAfter'],
+    ]);
   });
 
   it('reads back every field MealPlanDisplay needs', () => {

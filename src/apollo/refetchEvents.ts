@@ -12,6 +12,11 @@ import { queueManager } from './offlineQueue/queueManager';
 import { LogoutCleanup } from './logoutCleanup';
 import { onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
+import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
+import {
+  startAnswersForSwitch,
+  wasAnsweredSinceSwitch,
+} from './answeredSinceSwitch';
 import { logger } from '#/utils/environment';
 
 type RefetchSource = keyof RefetchEvents;
@@ -47,6 +52,45 @@ const wsReconnected = () =>
     onWebSocketReconnected(() => observer.next()),
   );
 
+/** Subscribes to navigation state changes; returns the unsubscribe. */
+type NavigationSubscribe = (listener: () => void) => () => void;
+
+const hasLiveSession = (): boolean =>
+  !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
+
+// Offline a catch-up would only fail: `apiReachable` re-asks what is active.
+const canCatchUp = (): boolean =>
+  hasLiveSession() && !isApiUnavailable(useStore.getState());
+
+// Catalog names come in the request's language (`languageLink`), so a switch
+// re-reads what is on screen. A screen paused at the switch is not active, so
+// no refetch reaches it, and on resume it reads the cache: after a switch,
+// every navigation catches up on what has not been asked since.
+// Only a real change counts: i18next also reports a switch to the same
+// language, and rehydration applies the saved one before any query exists.
+const languageChanged =
+  (client: ApolloClient, onNavigation?: NavigationSubscribe) => () =>
+    new Observable<RefetchEvents['languageChanged']>(observer => {
+      let current = getResolvedLanguage();
+      let stopNavigation: (() => void) | undefined;
+      const stopLanguage = onLanguageChanged(() => {
+        const next = getResolvedLanguage();
+        if (next === current) return;
+        current = next;
+        if (client.getObservableQueries('all').size === 0) return;
+        stopNavigation ??= onNavigation?.(() => {
+          if (canCatchUp()) observer.next();
+        });
+        // What was answered before the switch is in the old language.
+        startAnswersForSwitch();
+        observer.next();
+      });
+      return () => {
+        stopLanguage();
+        stopNavigation?.();
+      };
+    });
+
 // The socket re-acks a second or two after the app returns to the foreground.
 const SETTLE_MS = 1_500;
 // A steady trickle of triggers still resyncs.
@@ -58,24 +102,36 @@ interface PendingResync {
   firstTriggerAt: number;
 }
 
-const hasLiveSession = (): boolean =>
-  !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
+const isCatchUp = (batch: PendingResync): boolean =>
+  [...batch.sources].every(name => name === 'languageChanged');
+
+// A language catch-up re-asks only what has not been answered since the
+// switch, whoever asked; any other trigger re-asks everything.
+const reasks =
+  (batch: PendingResync) =>
+  (query: ObservableQuery): boolean =>
+    batch.matchers.some(matcher => matcher(query)) &&
+    !(
+      isCatchUp(batch) &&
+      !!query.queryName &&
+      wasAnsweredSinceSwitch(query.queryName, query.variables)
+    );
 
 async function refetchActive(
   client: ApolloClient,
   batch: PendingResync,
 ): Promise<void> {
-  if (!hasLiveSession()) return;
-
   const source = [...batch.sources].sort().join('+');
+  if (!(isCatchUp(batch) ? canCatchUp() : hasLiveSession())) return;
+  const wanted = reasks(batch);
   let refetched = 0;
   try {
     await client.refetchQueries({
       include: 'active',
       onQueryUpdated: query => {
-        const matches = batch.matchers.some(matcher => matcher(query));
-        if (matches) refetched++;
-        return matches;
+        if (!wanted(query)) return false;
+        refetched++;
+        return true;
       },
     });
   } catch (error) {
@@ -83,6 +139,8 @@ async function refetchActive(
     logger.debug('Resync did not complete cleanly:', error);
   }
 
+  // A catch-up after every navigation mostly finds nothing to ask.
+  if (refetched === 0) return;
   logger.info(`🔄 Resync (${source}): refetched ${refetched} active quer(ies)`);
   Telemetry.increment('resync_queries_total', refetched, { source });
 }
@@ -116,6 +174,17 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 
   const resync = async (client: ApolloClient) => {
     running = true;
+    // A catch-up after a navigation mostly finds every active query asked
+    // since the switch: then it touches neither the queue nor the network.
+    if (
+      pending &&
+      isCatchUp(pending) &&
+      ![...client.getObservableQueries('active')].some(reasks(pending))
+    ) {
+      takePending();
+      running = false;
+      return;
+    }
     // Replay first: a refetch racing the queue would paint the server's older
     // values over writes that have not landed yet.
     await queueManager.whenIdle().catch(() => {});
@@ -127,11 +196,8 @@ export const createRefetchEventManager = (): RefetchEventManager => {
   };
 
   // Returns synchronously, as a handler must; the waits are `resync`'s.
-  const coalescingHandler: RefetchEventManager.EventHandler = ({
-    client,
-    source,
-    matchesRefetchOn,
-  }) => {
+  const coalescingHandler: RefetchEventManager.EventHandler = context => {
+    const { client, source, matchesRefetchOn } = context;
     pending ??= {
       sources: new Set(),
       matchers: [],
@@ -146,14 +212,22 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 };
 
 /**
- * Starts the three triggers. Called once at app start rather than from
+ * Starts the triggers. Called once at app start rather than from
  * `client.ts`: a source subscribes as it is set, and importing the client must
- * not subscribe to the store, AppState and the socket.
+ * not subscribe to the store, AppState and the socket. `onNavigation` comes
+ * from the composition root, which owns navigation.
  */
-export const connectResyncSources = (client: ApolloClient): void => {
+export const connectResyncSources = (
+  client: ApolloClient,
+  { onNavigation }: { onNavigation?: NavigationSubscribe } = {},
+): void => {
   const manager = client.refetchEventManager;
   if (!manager) return;
   manager.setEventSource('appForeground', appForeground);
   manager.setEventSource('apiReachable', apiReachable);
   manager.setEventSource('wsReconnected', wsReconnected);
+  manager.setEventSource(
+    'languageChanged',
+    languageChanged(client, onNavigation),
+  );
 };

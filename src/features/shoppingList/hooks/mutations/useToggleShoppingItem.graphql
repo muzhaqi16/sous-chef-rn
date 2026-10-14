@@ -1,7 +1,7 @@
-# The snapshot useToggleShoppingItem reverts from, and the shape
-# ToggleShoppingListItemPurchased selects on `shoppingListItem` — keep them in
-# sync. Every field here is one a refusal has to be able to put back, so a field
-# the flip CLEARS must be selected or the revert cannot restore it.
+# The snapshot useToggleShoppingItem reverts from, spread by
+# UpdateShoppingListItem on `shoppingListItem`. Every field here is one a
+# refusal has to be able to put back, so a field the flip CLEARS must be
+# selected or the revert cannot restore it.
 fragment useToggleShoppingItem_item on ShoppingListItem {
   id
   itemName

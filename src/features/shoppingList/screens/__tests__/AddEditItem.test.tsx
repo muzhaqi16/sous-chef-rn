@@ -13,7 +13,11 @@ import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { alertService, type AlertButton } from '#/services/alertService';
-import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  DisplayFormat,
+  ErrorCode,
+} from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
 import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
@@ -320,8 +324,7 @@ function buildDetailShoppingListItem(id: string) {
     priceEstimate: { __typename: 'PriceEstimate', estimated: null },
     source: {
       __typename: 'ShoppingListItemSource',
-      isAutoAdded: false,
-      autoAddReason: null,
+      addedContext: AddedContext.Manual,
       isFromMealPlan: false,
     },
     priority: 0,

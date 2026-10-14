@@ -2,7 +2,7 @@ import React, { useLayoutEffect } from 'react';
 import { useTranslation } from '#/i18n';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

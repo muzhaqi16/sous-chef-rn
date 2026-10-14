@@ -47,7 +47,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Take photos of your pantry items and scan barcodes to quickly add products to your inventory.</string>
+	<string>Take photos of your pantry items, and scan barcodes and receipts to quickly add products to your inventory.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to securely access your saved login credentials</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

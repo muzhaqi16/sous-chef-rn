@@ -64,13 +64,13 @@ export default StyleSheet.create(theme => ({
     paddingVertical: 0,
   },
 
+  // iOS draws a multiline input from its top whatever textAlignVertical says,
+  // so it sizes to its lines and the row centres it: one line sits where a
+  // single-line input's does, and more lines grow the row.
   inputMultiline: {
+    alignSelf: 'auto',
     textAlignVertical: 'top',
     paddingVertical: theme.spacing.sm,
-  },
-
-  inputContainerMultiline: {
-    alignItems: 'flex-start',
   },
 
   inputWithRightIcon: {

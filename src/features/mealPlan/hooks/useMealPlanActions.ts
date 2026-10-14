@@ -10,6 +10,8 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
+  GetMealPlanDocument,
+  GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   MealPlanDisplayFragmentDoc,
@@ -21,6 +23,7 @@ import type {
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { removeFromMealPlans } from '#features/mealPlan/cache/removals';
 import { settleMealPlanDelete } from '#features/mealPlan/offline/replayReconcilers';
 import {
@@ -52,7 +55,7 @@ interface CreateMealPlanOptions {
 /** Fields an update can change that live on the cached `MealPlanDisplay`. */
 function mergeUpdateIntoSnapshot(
   snapshot: MealPlanDisplayFragment,
-  input: Omit<UpdateMealPlanInput, 'id'>,
+  input: Omit<UpdateMealPlanInput, 'id' | 'version'>,
 ): MealPlanDisplayFragment {
   return {
     ...snapshot,
@@ -182,7 +185,7 @@ export function useMealPlanActions() {
   /** `true` once the change landed or is queued; `false` when it reverted. */
   const updateMealPlan = async (
     id: string,
-    input: Omit<UpdateMealPlanInput, 'id'>,
+    input: Omit<UpdateMealPlanInput, 'id' | 'version'>,
   ): Promise<boolean> => {
     const snapshot = readPlanSnapshot(id);
     // Permanent write BEFORE firing — survives an offline/API-down queue.
@@ -207,15 +210,26 @@ export function useMealPlanActions() {
       }
     };
 
+    // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        updateMealPlanMutation({
-          variables: { input: { ...input, id } },
-        }),
+        chainVersionedWrite(
+          client.cache,
+          { __typename: 'MealPlan', id },
+          version =>
+            updateMealPlanMutation({
+              variables: { input: { ...input, id, version } },
+            }),
+        ),
       {
         document: UpdateMealPlanDocument,
         fallback: t('errors.saveFailed'),
         onFailed: revertUpdate,
+        onConflictRefresh: () => {
+          void client.refetchQueries({
+            include: [GetMealPlanDocument, GetMealPlansDocument],
+          });
+        },
       },
     );
     return settled.status !== 'failed';

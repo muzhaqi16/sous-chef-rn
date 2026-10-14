@@ -33,8 +33,13 @@ export function makeQueuedMutation(
 export function queuedMutationFor(
   document: DocumentNode,
   overrides: Partial<QueuedMutation> = {},
-): Pick<QueuedMutation, 'operationName' | 'mutation'> & Partial<QueuedMutation> {
-  return { operationName: operationNameOf(document), mutation: document, ...overrides };
+): Pick<QueuedMutation, 'operationName' | 'mutation'> &
+  Partial<QueuedMutation> {
+  return {
+    operationName: operationNameOf(document),
+    mutation: document,
+    ...overrides,
+  };
 }
 
 export interface SyncCacheStub extends ApolloCache {

@@ -1,7 +1,7 @@
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
 import { Priority } from '#/graphql/generated/schemaTypes';
 import { safeParseDate } from '#utils/dateUtils';
-import { t } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 
 export interface NotificationGroups {
   urgent: DisplayNotification[];
@@ -63,12 +63,16 @@ export type NotificationFeedRow =
  */
 export const createNotificationFeedRows = (
   groups: NotificationGroups,
+  translate: Translate,
 ): NotificationFeedRow[] =>
   [
-    { title: t('notificationGroups.urgent'), data: groups.urgent },
-    { title: t('labels.today'), data: groups.today },
-    { title: t('notificationGroups.yesterday'), data: groups.yesterday },
-    { title: t('notificationGroups.older'), data: groups.older },
+    { title: translate('notificationGroups.urgent'), data: groups.urgent },
+    { title: translate('labels.today'), data: groups.today },
+    {
+      title: translate('notificationGroups.yesterday'),
+      data: groups.yesterday,
+    },
+    { title: translate('notificationGroups.older'), data: groups.older },
   ]
     .filter(section => section.data.length > 0)
     .flatMap((section): NotificationFeedRow[] => [

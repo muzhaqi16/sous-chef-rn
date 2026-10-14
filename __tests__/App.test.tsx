@@ -10,10 +10,14 @@
  */
 
 // Navigation tree → all screens → dozens of native modules
-jest.mock('../src/navigation/RootNavigator', () => ({ Navigation: () => null }));
+jest.mock('../src/navigation/RootNavigator', () => ({
+  Navigation: () => null,
+}));
 
 // Hooks / services that pull in native SDKs
-jest.mock('../src/hooks/useNetworkStatus', () => ({ useNetworkStatus: jest.fn() }));
+jest.mock('../src/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: jest.fn(),
+}));
 jest.mock('../src/services/performance/MemoryMonitor', () => ({
   MemoryMonitor: { start: jest.fn(), stop: jest.fn() },
 }));
@@ -38,7 +42,12 @@ jest.mock('../src/apollo/client', () => ({
   },
 }));
 jest.mock('../src/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onOnline: jest.fn(), onOffline: jest.fn(), processQueue: jest.fn(), setFailureHandler: jest.fn() },
+  queueManager: {
+    onOnline: jest.fn(),
+    onOffline: jest.fn(),
+    processQueue: jest.fn(),
+    setFailureHandler: jest.fn(),
+  },
 }));
 jest.mock('../src/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
@@ -54,6 +63,8 @@ describe('App module', () => {
   it('exports a default component', () => {
     const mod = require('../App');
     expect(mod).toBeDefined();
-    expect(typeof mod.default === 'function' || typeof mod === 'function').toBe(true);
+    expect(typeof mod.default === 'function' || typeof mod === 'function').toBe(
+      true,
+    );
   });
 });

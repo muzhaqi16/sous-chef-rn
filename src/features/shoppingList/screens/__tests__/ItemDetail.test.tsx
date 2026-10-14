@@ -6,6 +6,7 @@ import type { MockLink } from '@apollo/client/testing';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
 
@@ -148,8 +149,7 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     lastEditedBy: null,
     source: {
       __typename: 'ShoppingListItemSource',
-      isAutoAdded: false,
-      autoAddReason: null,
+      addedContext: AddedContext.Manual,
       isFromMealPlan: false,
     },
     ...overrides,
@@ -366,6 +366,60 @@ describe('ShoppingListItemDetail', () => {
     });
     await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
     expect(screen.getByText('Test User')).toBeTruthy();
+  });
+
+  describe('where the line was added from', () => {
+    const renderWithSource = (
+      addedContext: AddedContext,
+      fromMealPlan = false,
+    ) =>
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [
+          buildItemMock(
+            'si1',
+            buildShoppingListItem({
+              source: {
+                __typename: 'ShoppingListItemSource',
+                addedContext,
+                isFromMealPlan: fromMealPlan,
+              },
+            }),
+          ),
+        ],
+      });
+
+    it('names a low-stock line', async () => {
+      renderWithSource(AddedContext.LowStock);
+
+      await waitFor(() => expect(screen.getByText('Added From')).toBeTruthy());
+      expect(screen.getByText('A low-stock item')).toBeTruthy();
+    });
+
+    it('names a line added from a recipe', async () => {
+      renderWithSource(AddedContext.FromRecipe);
+
+      await waitFor(() => expect(screen.getByText('Added From')).toBeTruthy());
+      expect(screen.getByText('A recipe')).toBeTruthy();
+    });
+
+    it('says nothing for a line someone typed in', async () => {
+      renderWithSource(AddedContext.Manual);
+
+      await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
+      expect(screen.queryByText('Added From')).toBeNull();
+      expect(screen.queryByText('From Meal Plan')).toBeNull();
+    });
+
+    // A meal-plan line keeps its own row; a second one naming the same origin
+    // would say it twice.
+    it('leaves a meal-plan line to its own row', async () => {
+      renderWithSource(AddedContext.FromMealPlan, true);
+
+      await waitFor(() =>
+        expect(screen.getByText('From Meal Plan')).toBeTruthy(),
+      );
+      expect(screen.queryByText('Added From')).toBeNull();
+    });
   });
 
   it('renders the hero image when one resolves and images are enabled', async () => {

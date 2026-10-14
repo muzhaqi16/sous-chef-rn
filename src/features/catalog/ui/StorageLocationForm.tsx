@@ -55,7 +55,8 @@ export interface StorageLocationFormValues {
   isClimateControlled: boolean | null;
   capacity: number | null;
   capacityUnit: string | null;
-  isDefault: boolean | null;
+  /** Absent when editing the current default, which this form cannot unset. */
+  isDefault?: boolean | null;
 }
 
 interface StorageLocationFormProps {
@@ -140,7 +141,9 @@ export const StorageLocationForm = forwardRef<
         isClimateControlled: formData.isClimateControlled,
         capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
         capacityUnit: formData.capacityUnit || null,
-        isDefault: formData.isDefault,
+        // The API refuses unsetting the current default: it moves only by
+        // another location taking it, so the current default states nothing.
+        ...(initialData?.isDefault ? {} : { isDefault: formData.isDefault }),
       };
 
       onSubmit(finalData);
@@ -383,6 +386,7 @@ export const StorageLocationForm = forwardRef<
           capacity={formData.capacity}
           capacityUnit={formData.capacityUnit}
           isDefault={formData.isDefault}
+          canChangeDefault={!initialData?.isDefault}
           onToggleClimateControlled={() =>
             setFormData({
               ...formData,

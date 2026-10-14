@@ -81,6 +81,7 @@
     "catalogUnavailableSubtitle": "La sua fonte non ha trovato questa ricetta. Trascina verso il basso più tardi per riprovare.",
     "percentHealthy": "{{percent}}% sana",
     "cookedCount": "Cucinata {{count}}x",
+    "lastCooked": "Cucinata l'ultima volta il {{date}}",
     "markCooked": "Segna come cucinata",
     "nutritionTitle": "Valori nutrizionali",
     "caloriesPerServingLabel": "Cal / porzione",
@@ -94,6 +95,8 @@
     "draftBadge": "Bozza — non pubblicata",
     "inReviewBadge": "In revisione — solo tu puoi vederla finché non viene approvata",
     "reviewNote": "Nota di moderazione: {{note}}",
+    "pendingChangesBadge": "Modifiche in revisione — tutti vedono la versione pubblicata finché non vengono approvate",
+    "revisionRejectedNote": "Le tue ultime modifiche non sono state approvate. Nota di moderazione: {{note}}",
     "forkFailed": "Impossibile duplicare la ricetta",
     "forkSourceNotLoaded": "Apri questa ricetta una volta con la connessione, così è sul dispositivo e si può copiare.",
     "forkCopyName": "{{name}} (la mia versione)",
@@ -182,6 +185,7 @@
     "deleteFolderFailed": "Impossibile eliminare la cartella.",
     "editRecipe": "Modifica ricetta",
     "updateRecipeFailed": "Impossibile aggiornare la ricetta.",
+    "editIngredientsOverLimit": "Questa ricetta ha più di {{count}} ingredienti, quindi non si può salvare per intero. Non è stato modificato nulla.",
     "createRecipeFailed": "Impossibile creare la ricetta.",
     "unexpectedError": "Si è verificato un errore imprevisto.",
     "nameRequired": "Il nome della ricetta è obbligatorio",
@@ -207,8 +211,8 @@
     "noIngredientsForDeduction": "Nessun ingrediente selezionato per la detrazione",
     "deductedFromPantry_one": "Detratto {{count}} ingrediente dalla dispensa",
     "deductedFromPantry_other": "Detratti {{count}} ingredienti dalla dispensa",
-    "deductedFromPantryFailed_one": "Detratto {{count}} ingrediente dalla dispensa ({{failed}} non riusciti)",
-    "deductedFromPantryFailed_other": "Detratti {{count}} ingredienti dalla dispensa ({{failed}} non riusciti)",
+    "deductedFromPantryFailed_one": "Detratto {{count}} ingrediente dalla dispensa ({{failed}} non detratti)",
+    "deductedFromPantryFailed_other": "Detratti {{count}} ingredienti dalla dispensa ({{failed}} non detratti)",
     "submitReviewFailed": "Impossibile inviare la recensione",
     "updateReviewFailed": "Impossibile aggiornare la recensione",
     "deleteReviewFailed": "Impossibile eliminare la recensione",
@@ -226,6 +230,7 @@
     "addedItemsToList": "Aggiunti {{count}} articoli a \"{{listName}}\"",
     "addedItemsToListUpdated": "Aggiunti {{count}} articoli a \"{{listName}}\", aggiornati {{updated}}",
     "noIngredientsToAdd": "Nessun ingrediente disponibile da aggiungere.",
+    "ingredientsOverLimit": "Questa ricetta ha più di {{count}} ingredienti, quindi non si può aggiungere né copiare per intero.",
     "cannotAddExternalIngredients": "Non è ancora possibile aggiungere ingredienti da ricette esterne. Salva prima la ricetta.",
     "ingredientsCount": "Ingredienti ({{count}})",
     "unnamedIngredient": "Ingrediente senza nome",
@@ -301,6 +306,7 @@
     "ratingBreakdownRow": "{{count}} recensioni con {{stars}} stelle",
     "favoriteA11y": "Aggiungi ai preferiti",
     "unfavoriteA11y": "Rimuovi dai preferiti",
+    "ingredientsTooMany": "Una ricetta può avere al massimo {{count}} ingredienti",
     "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
     "tagsTooMany": "Una ricetta può avere al massimo {{count}} tag",
     "tagTooLong": "Ogni tag può avere al massimo {{count}} caratteri",
@@ -377,6 +383,8 @@
     "summaryPartial_other": "{{count}} parziali",
     "summaryMissing_one": "{{count}} mancante",
     "summaryMissing_other": "{{count}} mancanti",
+    "summaryUnsure_one": "{{count}} da verificare",
+    "summaryUnsure_other": "{{count}} da verificare",
     "skipReview": "Salta revisione"
   },
   "markCookedModal": {
@@ -462,6 +470,7 @@
   "ingredientMatch": {
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
-    "qtyLabel": "Q.tà:"
+    "qtyLabel": "Q.tà:",
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto."
   }
 }

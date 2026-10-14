@@ -12,7 +12,8 @@ import type {
 import { useFocusEffect } from '@react-navigation/native';
 import { defaultPantryOf } from '#domain/homePantries';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import type { BadgeContent } from '#components/atoms/Badge';
 import {
   useRecipeCacheStore,
@@ -34,9 +35,37 @@ export interface DiscoveryItem {
 const DISCOVERY_PAGE_SIZE = 15;
 const DISCOVERY_FETCH_SIZE = 25;
 
+/**
+ * A suggestion as it is kept: the recipe a source returned, with no copy
+ * written. The hook writes the copy while rendering, so a suggestion reads in
+ * the language it is shown in, not the one it was fetched in.
+ */
+type DiscoveryRow =
+  | { kind: 'random'; recipe: RecipeInformation }
+  | {
+      kind: 'pantry';
+      recipe: RecipeSearchResult;
+      info: RecipeInformation | undefined;
+    };
+
+const randomRows = (recipes: readonly RecipeInformation[]): DiscoveryRow[] =>
+  recipes.map((recipe): DiscoveryRow => ({ kind: 'random', recipe }));
+
+const pantryRows = (
+  results: readonly RecipeSearchResult[],
+  infoMap: ReadonlyMap<number, RecipeInformation>,
+): DiscoveryRow[] =>
+  results.map(
+    (recipe): DiscoveryRow => ({
+      kind: 'pantry',
+      recipe,
+      info: infoMap.get(recipe.id),
+    }),
+  );
+
 // Combined state to avoid multiple separate renders
 interface DiscoveryState {
-  items: DiscoveryItem[];
+  rows: DiscoveryRow[];
   visibleCount: number;
   totalResults: number;
   mode: DiscoveryMode;
@@ -44,7 +73,7 @@ interface DiscoveryState {
 }
 
 const INITIAL_DISCOVERY_STATE: DiscoveryState = {
-  items: [],
+  rows: [],
   visibleCount: DISCOVERY_PAGE_SIZE,
   totalResults: 0,
   mode: 'none',
@@ -66,22 +95,27 @@ interface UseRecipeDiscoveryResult {
 }
 
 /** Transforms a RecipeInformation (random recipe) into a DiscoveryItem */
-function transformRandomRecipe(recipe: RecipeInformation): DiscoveryItem {
+function transformRandomRecipe(
+  recipe: RecipeInformation,
+  translate: Translate,
+): DiscoveryItem {
   const subtitleParts: string[] = [];
   if (recipe.servings) {
-    subtitleParts.push(t('recipes.servingsCount', { count: recipe.servings }));
+    subtitleParts.push(
+      translate('recipes.servingsCount', { count: recipe.servings }),
+    );
   }
   const totalTime =
     recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
   if (totalTime) {
-    subtitleParts.push(t('labels.min', { count: totalTime }));
+    subtitleParts.push(translate('labels.min', { count: totalTime }));
   }
 
   return {
     id: String(recipe.id),
     title: recipe.title,
     subtitle: subtitleParts.join(' \u2022 '),
-    badge: { text: t('labels.suggested') },
+    badge: { text: translate('labels.suggested') },
     imageUrl: recipe.image,
     spoonacularId: recipe.id,
   };
@@ -90,7 +124,8 @@ function transformRandomRecipe(recipe: RecipeInformation): DiscoveryItem {
 /** Transforms a pantry search result into a DiscoveryItem, enriched with bulk info */
 function transformPantryResult(
   recipe: RecipeSearchResult,
-  info?: RecipeInformation,
+  info: RecipeInformation | undefined,
+  translate: Translate,
 ): DiscoveryItem {
   const totalIngredients =
     recipe.usedIngredientCount + recipe.missedIngredientCount;
@@ -100,7 +135,9 @@ function transformPantryResult(
     subtitleParts.push(`❤️ ${recipe.likes}`);
   }
   if (info?.servings) {
-    subtitleParts.push(t('recipes.servingsCount', { count: info.servings }));
+    subtitleParts.push(
+      translate('recipes.servingsCount', { count: info.servings }),
+    );
   }
   // Spoonacular reports an unknown duration as 0, so a zero falls through.
   const totalTime = [
@@ -109,7 +146,7 @@ function transformPantryResult(
     info?.cookingMinutes,
   ].find(minutes => minutes !== undefined && minutes !== 0);
   if (totalTime) {
-    subtitleParts.push(t('labels.min', { count: totalTime }));
+    subtitleParts.push(translate('labels.min', { count: totalTime }));
   }
 
   return {
@@ -117,9 +154,9 @@ function transformPantryResult(
     title: recipe.title,
     subtitle:
       subtitleParts.join(' • ') ||
-      t('recipes.ingredientCount', { count: totalIngredients }),
+      translate('recipes.ingredientCount', { count: totalIngredients }),
     badge: {
-      text: t('recipes.pantryMatchLabel', {
+      text: translate('recipes.pantryMatchLabel', {
         used: recipe.usedIngredientCount,
         count: totalIngredients,
         missing: recipe.missedIngredientCount,
@@ -345,6 +382,7 @@ async function fetchRandomDiscovery(
 export function useRecipeDiscovery(
   dietaryTags?: string,
 ): UseRecipeDiscoveryResult {
+  const { t } = useTranslation();
   // From the cache: `useDefaultHome` owns the homes fetch.
   const { currentHome } = useCurrentHome();
   const defaultPantry = defaultPantryOf(currentHome);
@@ -408,7 +446,7 @@ export function useRecipeDiscovery(
 
     // Single state update — 1 render instead of 3
     setDiscoveryState({
-      items: firstPage.map(r => transformPantryResult(r, enrichment.get(r.id))),
+      rows: pantryRows(firstPage, enrichment),
       visibleCount: DISCOVERY_PAGE_SIZE,
       totalResults: results.length,
       mode: 'pantry',
@@ -434,9 +472,7 @@ export function useRecipeDiscovery(
             const visible = results.slice(0, DISCOVERY_PAGE_SIZE);
             setDiscoveryState(prev => ({
               ...prev,
-              items: visible.map(r =>
-                transformPantryResult(r, updatedMap.get(r.id)),
-              ),
+              rows: pantryRows(visible, updatedMap),
             }));
           });
         })
@@ -457,7 +493,7 @@ export function useRecipeDiscovery(
     allRandomResultsRef.current = results;
     const firstPage = results.slice(0, DISCOVERY_PAGE_SIZE);
     setDiscoveryState({
-      items: firstPage.map(transformRandomRecipe),
+      rows: randomRows(firstPage),
       visibleCount: DISCOVERY_PAGE_SIZE,
       totalResults: results.length,
       mode: 'random',
@@ -487,7 +523,7 @@ export function useRecipeDiscovery(
       setDiscoveryState(prev => ({
         ...prev,
         visibleCount: newCount,
-        items: visible.map(transformRandomRecipe),
+        rows: randomRows(visible),
       }));
       return;
     }
@@ -508,9 +544,7 @@ export function useRecipeDiscovery(
     setDiscoveryState(prev => ({
       ...prev,
       visibleCount: newCount,
-      items: visible.map(r =>
-        transformPantryResult(r, currentInfoMap.get(r.id)),
-      ),
+      rows: pantryRows(visible, currentInfoMap),
     }));
 
     // Enrich the new batch, deferred to idle
@@ -521,9 +555,7 @@ export function useRecipeDiscovery(
         requestIdleCallback(() => {
           setDiscoveryState(prev => ({
             ...prev,
-            items: allResults
-              .slice(0, newCount)
-              .map(r => transformPantryResult(r, updatedMap.get(r.id))),
+            rows: pantryRows(allResults.slice(0, newCount), updatedMap),
           }));
         });
       })
@@ -535,6 +567,12 @@ export function useRecipeDiscovery(
   const discoveryHasMore =
     discoveryState.mode !== 'none' &&
     discoveryState.visibleCount < discoveryState.totalResults;
+
+  const items = discoveryState.rows.map(row =>
+    row.kind === 'random'
+      ? transformRandomRecipe(row.recipe, t)
+      : transformPantryResult(row.recipe, row.info, t),
+  );
 
   // Fetch-key pattern: compute a stable key that changes when we should re-fetch.
   const [fetchKey, setFetchKey] = useState('');
@@ -635,7 +673,7 @@ export function useRecipeDiscovery(
 
   return {
     mode: discoveryState.mode,
-    items: discoveryState.items,
+    items,
     loading: discoveryState.loading,
     refresh,
     pantryItems,

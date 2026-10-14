@@ -24,6 +24,7 @@ import { Text } from '#components/atoms/Text';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { profileTestIDs } from '#features/profile/testIDs';
+import { useReceiptPhotoConsent } from '#features/receipts/hooks/useReceiptPhotoConsent';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -78,6 +79,9 @@ export const AppSettingsScreen: React.FC = () => {
     updatePreference,
     resetPreferences: resetUserPreferences,
   } = useUserPreferences();
+
+  const { consent: receiptPhotoConsent, setConsent: setReceiptPhotoConsent } =
+    useReceiptPhotoConsent();
 
   // Telemetry consent
   const userConsent = useAppStore(state => state.userConsent);
@@ -263,6 +267,15 @@ export const AppSettingsScreen: React.FC = () => {
           description={t('settings.showTutorialsDesc')}
           value={settings.showTutorials}
           onValueChange={value => handleSettingChange('showTutorials', value)}
+        />
+        <SettingSwitch
+          testID={profileTestIDs.settingsReceiptPhotosSwitch}
+          title={t('receipts.photoSetting.title')}
+          description={t('receipts.photoSetting.description')}
+          value={receiptPhotoConsent === 'granted'}
+          onValueChange={value =>
+            setReceiptPhotoConsent(value ? 'granted' : 'declined')
+          }
         />
 
         {settings.betaFeatures.length > 0 && (

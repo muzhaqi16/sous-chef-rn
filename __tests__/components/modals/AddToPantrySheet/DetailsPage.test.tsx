@@ -7,13 +7,16 @@ import { DetailsPage } from '#features/pantry/components/modals/AddToPantrySheet
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../src/components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
-  BottomSheetKeyboardAwareScrollView: ({
-    children,
-  }: {
-    children?: React.ReactNode;
-  }) => children,
-}));
+jest.mock(
+  '../../../../src/components/atoms/BottomSheetKeyboardAwareScrollView',
+  () => ({
+    BottomSheetKeyboardAwareScrollView: ({
+      children,
+    }: {
+      children?: React.ReactNode;
+    }) => children,
+  }),
+);
 jest.mock('../../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label?: string }) => {
     const { Text } = require('react-native');

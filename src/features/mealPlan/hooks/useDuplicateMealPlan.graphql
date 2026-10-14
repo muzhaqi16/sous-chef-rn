@@ -2,9 +2,7 @@
 # fields are the ones the server carries over; the item fields are what
 # `CreateMealPlanItemInput` needs to recreate a meal.
 #
-# Spread by GetMealPlan only, for the reason in
-# `useGenerateShoppingList.graphql`: `MealPlanMain_mealPlan` is also spread by a
-# mutation payload two levels deeper, where added depth is refused.
+# Spread by GetMealPlan only, beside the screen's own fragment.
 fragment useDuplicateMealPlan_mealPlan on MealPlan {
   id
   description
@@ -14,15 +12,24 @@ fragment useDuplicateMealPlan_mealPlan on MealPlan {
   homeId
   startDate
   endDate
-  mealPlanItems {
-    id
-    date
-    mealType
-    servings
-    notes
-    customMealName
-    recipe {
-      id
+  mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+    # A derived write reads every meal: it does not run on a first page alone.
+    pageInfo {
+      hasNextPage
+    }
+    totalCount
+    edges {
+      node {
+        id
+        date
+        mealType
+        servings
+        notes
+        customMealName
+        recipe {
+          id
+        }
+      }
     }
   }
 }

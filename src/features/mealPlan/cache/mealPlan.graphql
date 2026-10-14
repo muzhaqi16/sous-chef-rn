@@ -1,6 +1,33 @@
 # A local-first plan's row: everything a query reads on a plan, so the list
-# card and the complete-gated detail screen read it offline.
+# card and the complete-gated detail screen read it offline. Readers leave
+# connections to their edge writers, so the two a plan holds are named here: a
+# new plan has no meals and has generated no list, and both are written empty.
 fragment mealPlan_row on MealPlan {
   id
   ...MealPlanReaders
+  mealPlanItemsConnection {
+    edges {
+      node {
+        id
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  generatedShoppingListsConnection {
+    edges {
+      node {
+        id
+        name
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
@@ -11,13 +12,14 @@ import { formatCurrency } from '#/utils/formatters/number';
 interface BudgetSectionProps {
   budgetInput: string;
   currency: string | null;
-  estimatedTotal: number;
+  estimatedTotal: number | null;
   handleTogglePriceTracking: (value: boolean) => void;
   isOwner: boolean;
   listId: string | undefined;
   priceTracking: boolean;
   setBudgetInput: (value: string) => void;
-  totalCost: number;
+  totalCost: number | null;
+  unpricedItems: number;
 }
 
 /** the limit, the running totals, price tracking. Owner-only, and only for a list that already exists. */
@@ -31,9 +33,12 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
   priceTracking,
   setBudgetInput,
   totalCost,
+  unpricedItems,
 }) => {
   const { t } = useTranslation();
   if (!listId || !isOwner) return null;
+
+  const estimate = formatCurrency(estimatedTotal, currency);
 
   return (
     <View style={commonStyles.settingsSection}>
@@ -47,8 +52,21 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
       />
       <InfoRow
         label={t('shoppingListScreens.estimatedTotalLabel')}
-        value={formatCurrency(estimatedTotal, currency)}
-      />
+        value={estimate}
+      >
+        {unpricedItems > 0 ? (
+          <View style={styles.estimate}>
+            <Text role="bodyStrong" tone="secondary" align="right">
+              {estimate}
+            </Text>
+            <Text role="caption" tone="secondary" align="right">
+              {t('shoppingListScreens.unpricedItemsNote', {
+                count: unpricedItems,
+              })}
+            </Text>
+          </View>
+        ) : undefined}
+      </InfoRow>
 
       <BaseInput
         label={t('shoppingListScreens.budgetAmountLabel')}
@@ -76,3 +94,10 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  estimate: {
+    alignItems: 'flex-end',
+    gap: theme.spacing.xs,
+  },
+}));

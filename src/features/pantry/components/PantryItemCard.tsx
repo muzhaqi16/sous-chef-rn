@@ -174,7 +174,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const isOutOfStock = pantryItem.heldQuantity <= 0;
   const expiresOn = pantryItem.expiresOn;
   const expiresIn = expiresOn ? daysUntilExpiry(expiresOn, today) : null;
-  const expStatus = getExpirationStatus(expiresIn);
+  const expStatus = getExpirationStatus(expiresIn, t);
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
 

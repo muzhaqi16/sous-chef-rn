@@ -33,6 +33,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { dayAsInstant } from '#/utils/dateUtils';
 
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
 export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
@@ -130,7 +131,7 @@ export const useListSettings = (listId: string | undefined) => {
         shoppingList?.home?.myMembership,
       )
     : null;
-  const roleDisplay = formatRoleDisplay(role);
+  const roleDisplay = formatRoleDisplay(role, t);
   const ownerInfo = ownershipSnapshot
     ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;
@@ -192,8 +193,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   const currency = shoppingList?.currency ?? null;
-  const totalCost = shoppingList?.totalCost ?? 0;
-  const estimatedTotal = shoppingList?.estimatedTotal ?? 0;
+  // Null is an amount nobody recorded, which is not an amount of zero.
+  const totalCost = shoppingList?.totalCost ?? null;
+  const estimatedTotal = shoppingList?.estimatedTotal ?? null;
+  const unpricedItems = shoppingList?.unpricedItems ?? 0;
   const priceTracking = shoppingList?.priceTracking ?? false;
 
   const reminderEnabled = shoppingList?.reminderEnabled ?? false;
@@ -427,9 +430,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   // Reminder — a picked date sets/updates it; the clear action removes it.
+  // The API reads the reminder's day in the owner's recorded time zone.
   const handleSetReminderDate = (date: Date | null) => {
     if (listId && date) {
-      void setReminder(listId, date.toISOString(), true);
+      void setReminder(listId, dayAsInstant(date), true);
     }
   };
 
@@ -621,5 +625,6 @@ export const useListSettings = (listId: string | undefined) => {
     templateName,
     templates,
     totalCost,
+    unpricedItems,
   };
 };

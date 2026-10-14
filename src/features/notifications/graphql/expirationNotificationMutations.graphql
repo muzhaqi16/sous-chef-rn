@@ -2,7 +2,10 @@
 # EXPIRATION NOTIFICATION MUTATIONS
 # ============================================
 
-mutation MarkExpirationAction($input: MarkExpirationActionInput!) {
+mutation MarkExpirationAction(
+  $input: MarkExpirationActionInput!
+  $today: LocalDate!
+) {
   markExpirationAction(input: $input) {
     __typename
     ... on MarkExpirationActionPayload {
@@ -11,31 +14,13 @@ mutation MarkExpirationAction($input: MarkExpirationActionInput!) {
         ...ExpirationNotificationReaders
         status
       }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation MarkExpirationNotificationAsRead(
-  $input: MarkExpirationNotificationAsReadInput!
-) {
-  markExpirationNotificationAsRead(input: $input) {
-    __typename
-    ... on MarkExpirationNotificationAsReadPayload {
-      expirationNotification {
+      pantry {
         id
-        ...ExpirationNotificationReaders
-        status
+        ...PantryReaders
+      }
+      storageLocation {
+        id
+        ...StorageLocationReaders
       }
     }
     ... on Error {

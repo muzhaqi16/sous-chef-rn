@@ -52,6 +52,7 @@ const node = (
   expiresAt: null,
   sourceId: null,
   sourceType: null,
+  pantryItemId: null,
   actionUrl: null,
   readAt: null,
   status,

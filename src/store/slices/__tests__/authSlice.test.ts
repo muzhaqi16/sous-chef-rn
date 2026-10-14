@@ -107,6 +107,65 @@ describe('authSlice', () => {
       });
     });
 
+    describe("the account's currency", () => {
+      // It lives on the settings row. The record is what a relaunch restores
+      // and the mirror what every money surface reads, so both take it.
+      it('takes the currency the settings state onto the record and the mirror', () => {
+        const store = createTestStore();
+
+        store
+          .getState()
+          .setAuth(
+            { ...testUser, settings: { preferredCurrency: 'EUR' } },
+            'a',
+            'r',
+          );
+
+        expect(store.getState().user?.preferredCurrency).toBe('EUR');
+        expect(store.getState().preferredCurrency).toBe('EUR');
+      });
+
+      it('reads the settings ahead of a currency carried on the user itself', () => {
+        const store = createTestStore();
+
+        store.getState().setAuth(
+          {
+            ...testUser,
+            preferredCurrency: 'GBP',
+            settings: { preferredCurrency: 'EUR' },
+          },
+          'a',
+          'r',
+        );
+
+        expect(store.getState().user?.preferredCurrency).toBe('EUR');
+        expect(store.getState().preferredCurrency).toBe('EUR');
+      });
+
+      it('keeps the currency a record carries when no settings come with it', () => {
+        // A session restored from the persisted record: no `settings` to read.
+        const store = createTestStore();
+
+        store
+          .getState()
+          .setAuth({ ...testUser, preferredCurrency: 'GBP' }, 'a', 'r');
+
+        expect(store.getState().user?.preferredCurrency).toBe('GBP');
+        expect(store.getState().preferredCurrency).toBe('GBP');
+      });
+
+      it('states no currency for an account that has no settings yet', () => {
+        const store = createTestStore();
+        const mirrorBefore = store.getState().preferredCurrency;
+
+        store.getState().setAuth({ ...testUser, settings: null }, 'a', 'r');
+
+        // Nothing to mirror, and no code on the record to restore at launch.
+        expect(store.getState().user?.preferredCurrency).toBeUndefined();
+        expect(store.getState().preferredCurrency).toBe(mirrorBefore);
+      });
+    });
+
     it('flattens profile fields from GraphQL response', () => {
       const store = createTestStore();
       const userWithProfile = {

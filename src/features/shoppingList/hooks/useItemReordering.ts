@@ -207,7 +207,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         moveItem({
           variables: {
             input: {
-              itemId,
+              id: itemId,
               afterItemId: moveAfterItemId,
               beforeItemId: moveBeforeItemId,
             },

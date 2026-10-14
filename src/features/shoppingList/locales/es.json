@@ -83,6 +83,8 @@
     "failedToClearReminder": "No se pudo quitar el recordatorio",
     "budgetSection": "Presupuesto",
     "estimatedTotalLabel": "Total estimado",
+    "unpricedItemsNote_one": "{{count}} artículo sin precio",
+    "unpricedItemsNote_other": "{{count}} artículos sin precio",
     "budgetAmountLabel": "Límite de presupuesto",
     "budgetPlaceholder": "Sin presupuesto",
     "priceTrackingLabel": "Seguimiento de precios",
@@ -152,7 +154,15 @@
     "lastEditedBy": "Última edición por",
     "addedOn": "Añadido el",
     "lastUpdated": "Última actualización",
-    "autoAdded": "Añadido automáticamente",
+    "addedFrom": "Añadido desde",
+    "addedFromSource": {
+      "expiring": "Un artículo por caducar",
+      "lowStock": "Un artículo con pocas existencias",
+      "pantryMissing": "Falta en la despensa",
+      "recipe": "Una receta",
+      "recurring": "Una lista recurrente",
+      "suggested": "Una sugerencia"
+    },
     "fromMealPlan": "Desde el plan de comidas",
     "brandPlaceholder": "ej., Oatly, Chobani",
     "netWeightPlaceholder": "ej., 500",
@@ -179,7 +189,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Marcar como comprado",
-    "totalPrice": "Precio total",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} por unidad",

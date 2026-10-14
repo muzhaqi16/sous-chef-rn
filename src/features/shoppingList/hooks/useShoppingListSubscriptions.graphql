@@ -32,6 +32,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     id
     name
     symbol
+    type
   }
   sortOrder
   item {

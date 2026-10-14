@@ -1,23 +1,20 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
-import { normalizeSmartPunctuation } from '#/utils/validation/common';
+import {
+  lazyMessage,
+  normalizeSmartPunctuation,
+} from '#/utils/validation/common';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { t, type KeyUnder } from '#/i18n';
+import type { KeyUnder } from '#/i18n';
 import {
   BaseDimension,
   ItemType,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 
-/**
- * These schemas are built once at module scope, so a message resolved eagerly
- * would freeze whichever language happened to be active at import time. Yup
- * accepts a function and calls it when the rule actually fails, so the lookup
- * lands after any language change.
- */
-const msg =
-  (key: KeyUnder<'itemValidation'>, options?: Record<string, unknown>) =>
-  (): string =>
-    t(`itemValidation.${key}`, options);
+const msg = (
+  key: KeyUnder<'itemValidation'>,
+  options?: Record<string, unknown>,
+) => lazyMessage(`itemValidation.${key}`, options);
 
 /**
  * yup's own number cast rejects "0,5", which a comma keypad types. Typed text is
@@ -264,8 +261,8 @@ export type CreateItemFormData = InferType<typeof createItemSchema>;
 /**
  * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`,
  * and the reviewing admin has nothing else to judge the diff against. The
- * direct-edit path has no reviewer and `UpdateItemInput` takes no note, so it
- * keeps `createItemSchema` and omits the field.
+ * direct-edit path (the viewer's own private item) has no reviewer, so it keeps
+ * `createItemSchema` and omits the field.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,

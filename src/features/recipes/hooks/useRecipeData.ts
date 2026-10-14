@@ -1,4 +1,4 @@
-import { localizedErrorMessage } from '#/services/errorService';
+import { errorCopy } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -7,12 +7,15 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { knownEntry } from '#/utils/closedEnum';
 import {
   ExternalSyncStatus,
+  RecipeRevisionStatus,
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
+import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 
 export type MaterializedRecipe = UseRecipeData_RecipeFragment;
 
@@ -49,11 +52,17 @@ export interface RecipeDisplayData {
   dairyFree?: boolean;
   sourceName?: string;
   sourceUrl?: string;
+  /** The provider's notices, shown beside the recipe; empty for an in-app one. */
+  dataAttributions: readonly DataAttributionValue[];
   caloriesPerServing?: number;
   nutritionData?: unknown;
   status?: RecipeStatus;
   /** A moderator's note on the last decision; the author's own recipes only. */
   reviewNote?: string;
+  /** The author's edit to a published recipe is waiting for review. */
+  hasPendingRevision: boolean;
+  /** Why the author's last edit to a published recipe was rejected. */
+  revisionRejectionNote?: string;
   publishedAt?: string;
   forkedFromId?: string;
   forkedFromName?: string;
@@ -100,10 +109,16 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
     dairyFree: provider?.dairyFree ?? undefined,
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,
+    dataAttributions: recipe.dataAttributions,
     caloriesPerServing: recipe.caloriesPerServing ?? undefined,
     nutritionData: recipe.nutritionData ?? undefined,
     status: recipe.status,
     reviewNote: recipe.reviewNote ?? undefined,
+    hasPendingRevision: !!recipe.pendingRevision,
+    revisionRejectionNote:
+      recipe.latestRevision?.status === RecipeRevisionStatus.Rejected
+        ? recipe.latestRevision.reviewNote ?? undefined
+        : undefined,
     publishedAt: recipe.publishedAt ?? undefined,
     forkedFromId: recipe.forkedFromId ?? undefined,
     forkedFromName: recipe.forkedFrom?.name ?? undefined,
@@ -128,9 +143,17 @@ export function useRecipeData({
   openFailure,
 }: UseRecipeDataParams): UseRecipeDataResult {
   const { t } = useTranslation();
+  // One page is the whole list: a recipe holds no more ingredients than it.
   const { data, loading, error, refetch, variables } = useQuery(
     GetRecipeDocument,
-    recipeId ? { variables: { id: recipeId } } : skipToken,
+    recipeId
+      ? {
+          variables: {
+            id: recipeId,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        }
+      : skipToken,
   );
   // `skipToken` keeps the last run's variables, data and error: a result for
   // another recipe is not this one's.
@@ -154,6 +177,8 @@ export function useRecipeData({
         title: hint.name,
         image: hint.imageUrl,
         ingredients: [],
+        dataAttributions: [],
+        hasPendingRevision: false,
         details: 'opening',
       }
     : null;
@@ -161,7 +186,7 @@ export function useRecipeData({
   const resolveError = () => {
     if (openFailure) return openFailure;
     if (current && error) {
-      return localizedErrorMessage(error, t('recipes.loadFailed'));
+      return errorCopy(error, t, t('recipes.loadFailed'));
     }
     if (!recipeId && !hint) return t('recipes.recipeNotFound');
     return null;

@@ -7,14 +7,17 @@ import {
 } from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
-  ConfirmRecipeConsumptionDocument,
+  MarkRecipeAsCookedDocument,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import type { ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
+import {
+  RecipeIngredientMatchKind,
+  type IngredientUsageInput,
+} from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -27,37 +30,60 @@ import { errorService } from '#/services/errorService';
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
 
+/** What the cook entered before the review: the cooking log records it. */
+export interface CookEntry {
+  servings: number;
+  notes?: string;
+}
+
+export type PantryStackOption = NonNullable<
+  IngredientMatch['matchedPantryItem']
+>;
+
 export interface EditableMatch {
   match: IngredientMatch;
   /** Materialized RecipeIngredient fragment (id, isOptional, unit, …). The
    *  match's `ingredient` field is a masked fragment ref; we unmask once
    *  when building the editable so consumers can read fields directly. */
   ingredient: RecipeIngredientFragment;
+  /** Every stack that could serve the ingredient, the server's pick first. */
+  stackOptions: PantryStackOption[];
+  /** The stack the deduction draws on: the server's pick until the user picks. */
+  selectedStack: PantryStackOption | null;
   adjustedQuantity: number;
   adjustedUnitId: string | null;
   isIncluded: boolean;
 }
+
+export type MatchUpdate = Partial<
+  Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded' | 'selectedStack'>
+>;
 
 export interface MatchSummary {
   total: number;
   available: number;
   partial: number;
   missing: number;
+  unsure: number;
   included: number;
 }
 
-type AvailabilityStatus = 'available' | 'partial' | 'missing';
+type AvailabilityStatus = 'available' | 'partial' | 'missing' | 'unsure';
 
+/**
+ * `unsure` is a stack found by name only: it is offered, never deducted
+ * until the user turns it on. `missing` is no stack, or an empty one.
+ */
 export function getAvailabilityStatus(
   match: IngredientMatch,
 ): AvailabilityStatus {
-  if (match.isAvailable && match.matchConfidence >= 0.8) return 'available';
-  if (
-    match.matchedPantryItem &&
-    !match.isAvailable &&
-    match.availableQuantity > 0
-  )
-    return 'partial';
+  const stack = match.matchedPantryItem;
+  if (!stack) return 'missing';
+  if (match.matchKind === RecipeIngredientMatchKind.Name) return 'unsure';
+  if (match.isAvailable) return 'available';
+  // `availableQuantity` is null when the recipe's unit cannot express the
+  // stack (a loaf against a pound), so what the stack holds decides these two.
+  if (stack.displayAmount.quantity > 0) return 'partial';
   return 'missing';
 }
 
@@ -78,8 +104,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     },
   );
 
+  // The reviewed cook is the quick cook's own write with `exactStacks`: one
+  // transaction, so it deducts every stack stated or none.
   const [confirmMutation, { loading: confirmLoading }] = useMutation(
-    ConfirmRecipeConsumptionDocument,
+    MarkRecipeAsCookedDocument,
     { context: { localFirst: true } },
   );
 
@@ -126,13 +154,22 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           );
           return null;
         }
+        const status = getAvailabilityStatus(match);
         return {
           match,
           ingredient,
+          stackOptions: match.matchedPantryItem
+            ? [match.matchedPantryItem, ...match.alternativeMatches]
+            : [],
+          selectedStack: match.matchedPantryItem,
           adjustedQuantity: match.suggestedQuantity,
           adjustedUnitId:
             match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
-          isIncluded: !ingredient.isOptional && !!match.matchedPantryItem,
+          // An empty stack would only fail the deduction; picking another
+          // stack includes the line.
+          isIncluded:
+            !ingredient.isOptional &&
+            (status === 'available' || status === 'partial'),
         };
       })
       .filter((m): m is EditableMatch => m !== null);
@@ -142,12 +179,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     return true;
   };
 
-  const updateMatch = (
-    index: number,
-    updates: Partial<
-      Pick<EditableMatch, 'adjustedQuantity' | 'adjustedUnitId' | 'isIncluded'>
-    >,
-  ) => {
+  const updateMatch = (index: number, updates: MatchUpdate) => {
     setEditableMatches(prev => {
       const next = [...prev];
       const existing = next[index];
@@ -160,12 +192,14 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   let available = 0;
   let partial = 0;
   let missing = 0;
+  let unsure = 0;
   let included = 0;
 
   for (const em of editableMatches) {
     const status = getAvailabilityStatus(em.match);
     if (status === 'available') available++;
     else if (status === 'partial') partial++;
+    else if (status === 'unsure') unsure++;
     else missing++;
     if (em.isIncluded) included++;
   }
@@ -175,15 +209,16 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     available,
     partial,
     missing,
+    unsure,
     included,
   };
 
-  const confirmConsumption = async () => {
+  const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
-    const consumptions: ConfirmedIngredientConsumptionInput[] =
-      editableMatches.flatMap(em => {
-        const pantryItem = em.match.matchedPantryItem;
+    const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
+      em => {
+        const pantryItem = em.selectedStack;
         if (!em.isIncluded || !pantryItem || em.adjustedQuantity <= 0) {
           return [];
         }
@@ -191,79 +226,81 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           {
             recipeIngredientId: em.ingredient.id,
             pantryItemId: pantryItem.id,
-            quantity: em.adjustedQuantity,
-            unitId:
+            actualQuantity: em.adjustedQuantity,
+            actualUnitId:
               em.adjustedUnitId ??
               em.match.suggestedUnit?.id ??
               pantryItem.unit.id,
           },
         ];
-      });
+      },
+    );
 
-    if (consumptions.length === 0) {
+    if (ingredientsUsed.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
       return;
     }
 
     // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
-    // the API is unreachable. The shared id means a re-synced consumption
-    // converges on the same cooking log instead of creating a duplicate and
-    // re-consuming the pantry.
+    // the API is unreachable. The shared id means a re-synced cook converges on
+    // the same cooking log instead of creating a duplicate and re-deducting.
     const settled = await settleMutation(
       () =>
         confirmMutation({
           variables: {
-            input: { id: generateEntityId(), recipeId, pantryId, consumptions },
+            input: {
+              id: generateEntityId(),
+              recipeId,
+              pantryId,
+              deductFromPantry: true,
+              // Each entry draws on the stack it names and no other; an
+              // ingredient with no entry is left alone.
+              exactStacks: true,
+              ingredientsUsed,
+              servings: cook?.servings,
+              notes: cook?.notes,
+            },
           },
         }),
       {
-        document: ConfirmRecipeConsumptionDocument,
+        document: MarkRecipeAsCookedDocument,
         fallback: t('recipes.markCookedFailed'),
         // The review sheet reports the cook as a toast and stays open to retry.
         present: 'none',
       },
     );
-    // Applied and queued both succeed; a queued consumption replays later.
+    // Applied and queued both succeed; a queued cook replays later.
     if (settled.failure) {
       toastService.error(settled.failure.body);
       return;
     }
 
-    // The success union member carries no `success` flag — reaching it IS the
-    // success case; partial failures surface via `totalFailed`.
     const data = appliedPayload(settled.data);
-    // Replay diagnostics: `converged: true` means this whole confirmation had
-    // already committed (idempotent replay). A fresh commit — including one
-    // that healed leftover items from a partially-crashed earlier attempt —
-    // reports false, so only `true` is logged.
+    // Replay diagnostics: `converged: true` means this client-minted cooking-log
+    // id already existed (an idempotent replay), not a fresh cook.
     if (data?.converged) {
-      logger.info(
-        'confirmRecipeConsumption converged — replay of a committed confirmation',
-        { recipeId },
-      );
+      logger.info('markRecipeAsCooked converged — replay of a reviewed cook', {
+        recipeId,
+      });
     }
-    if (data) {
-      toastService.success(
-        data.totalFailed > 0
-          ? t('recipes.deductedFromPantryFailed', {
-              count: data.totalConsumed,
-              failed: data.totalFailed,
-            })
-          : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
-      );
-    } else {
-      // Queued offline — no response yet; show the optimistic count (every
-      // included consumption replays on reconnect).
-      toastService.success(
-        t('recipes.deductedFromPantry', { count: consumptions.length }),
-      );
-    }
+    // The cook commits whole. What it reports apart are the entries no
+    // conversion could take to their stack's unit; queued, every entry replays.
+    const skippedCount = data?.skippedIngredients.length ?? 0;
+    const deductedCount = ingredientsUsed.length - skippedCount;
+    toastService.success(
+      skippedCount > 0
+        ? t('recipes.deductedFromPantryFailed', {
+            count: deductedCount,
+            failed: skippedCount,
+          })
+        : t('recipes.deductedFromPantry', { count: deductedCount }),
+    );
 
     Telemetry.trackEvent('recipe_consumption_confirmed', {
       recipe_id: recipeId,
       pantry_id: pantryId,
-      consumed_count: data?.totalConsumed ?? 0,
-      failed_count: data?.totalFailed ?? 0,
+      consumed_count: data ? deductedCount : 0,
+      failed_count: skippedCount,
     });
 
     setIsSheetVisible(false);

@@ -5,7 +5,7 @@ import { ApolloProvider, useMutation } from '@apollo/client/react';
 import { of } from 'rxjs';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 
 /**
  * Local-first hooks set `context: { localFirst: true }` on `useMutation`, not
@@ -16,7 +16,7 @@ import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/p
 function renderWithContextTap(contexts: Array<Record<string, unknown>>) {
   const tap = new ApolloLink(operation => {
     contexts.push(operation.getContext());
-    return of({ data: { convertExpiredBatchesToWaste: null } });
+    return of({ data: { convertExpiredToWaste: null } });
   });
   const client = new ApolloClient({
     cache: makeCache(),
@@ -27,7 +27,7 @@ function renderWithContextTap(contexts: Array<Record<string, unknown>>) {
     React.createElement(ApolloProvider, { client, children });
   return renderHook(
     () =>
-      useMutation(ConvertExpiredBatchesToWasteDocument, {
+      useMutation(ConvertExpiredToWasteDocument, {
         context: { localFirst: true },
       }),
     { wrapper },

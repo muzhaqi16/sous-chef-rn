@@ -813,6 +813,37 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ flush gating
   describe('flush gating (offline + backoff)', () => {
+    // No jitter, so each backoff window ends on its exact tick.
+    let random: jest.SpyInstance;
+    beforeEach(() => {
+      random = jest.spyOn(Math, 'random').mockReturnValue(0);
+    });
+
+    afterEach(() => {
+      random.mockRestore();
+    });
+
+    it('spreads the backoff window up to a quarter past its length', async () => {
+      random.mockReturnValue(1);
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      mockSendLogs.mockRejectedValue(new Error('endpoint down'));
+
+      service.log('warn', 'x');
+      await service.flush(); // failure → a 5s window, 6.25s with full jitter
+      jest.advanceTimersByTime(5000);
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(1250);
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledTimes(2);
+
+      mockSendLogs.mockResolvedValue(undefined);
+    });
+
     it('skips log flushes while the device is offline and drains after reconnect', async () => {
       mockIsOnline = false;
       const service = new TelemetryService({

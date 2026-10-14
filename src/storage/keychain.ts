@@ -13,6 +13,7 @@ import {
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { t } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
 import {
@@ -268,7 +269,7 @@ export async function hasCredentials(email: string): Promise<boolean> {
       // Handle Android DataStore concurrency issue
       if (isDataStoreContention(err)) {
         // Wait a bit and retry once
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await sleep(100);
         try {
           const indicator = await getGenericPassword({
             service: indicatorService,
@@ -475,9 +476,7 @@ type RetryableRead<T> = T | { status: 'retry'; error: unknown };
 
 /** Sleep BETWEEN attempts, never inside one: the queue's lock is not held here. */
 const backoff = (attempt: number): Promise<void> =>
-  new Promise(resolve =>
-    setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
-  );
+  sleep(backoffDelay(attempt - 1, { baseMs: SESSION_LOAD_RETRY_BASE_MS }));
 
 async function readSessionTokensOnce(): Promise<
   RetryableRead<SessionTokenLoadResult>

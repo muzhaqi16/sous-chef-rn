@@ -17,4 +17,5 @@ fragment MembershipReaders on Membership {
     email
   }
   userId
+  version
 }

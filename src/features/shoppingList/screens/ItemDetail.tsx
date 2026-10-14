@@ -4,7 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -21,6 +21,7 @@ import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
@@ -31,6 +32,33 @@ import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { AddedContext } from '#/graphql/generated/schemaTypes';
+import type { TranslationKey } from '#/i18n';
+
+/**
+ * The flow that put a line on the list. Null for a line someone typed, for a
+ * meal-plan line (its own row says so) and for a context this build predates.
+ */
+function addedFromSourceKey(context: AddedContext): TranslationKey | null {
+  switch (context) {
+    case AddedContext.Expiring:
+      return 'shoppingListScreens.addedFromSource.expiring';
+    case AddedContext.LowStock:
+      return 'shoppingListScreens.addedFromSource.lowStock';
+    case AddedContext.PantryMissing:
+      return 'shoppingListScreens.addedFromSource.pantryMissing';
+    case AddedContext.FromRecipe:
+      return 'shoppingListScreens.addedFromSource.recipe';
+    case AddedContext.Recurring:
+      return 'shoppingListScreens.addedFromSource.recurring';
+    case AddedContext.Suggested:
+      return 'shoppingListScreens.addedFromSource.suggested';
+    case AddedContext.FromMealPlan:
+    case AddedContext.Manual:
+    default:
+      return null;
+  }
+}
 
 type RouteParams = {
   listId: string;
@@ -135,6 +163,7 @@ export const ShoppingListItemDetail: React.FC<
   const purchaseHistory = item.purchaseHistory;
   const purchaseCount = purchaseHistory.purchaseCount;
   const hasPurchases = purchaseHistory.previouslyPurchased;
+  const addedFromKey = addedFromSourceKey(item.source.addedContext);
 
   const handleViewHistory = () => {
     toPurchaseHistory({
@@ -379,9 +408,9 @@ export const ShoppingListItemDetail: React.FC<
               <Text role="label">{formatDate(item.updatedAt)}</Text>
             </DetailRow>
           )}
-          {!!item.source.isAutoAdded && (
-            <DetailRow label={t('shoppingListScreens.autoAdded')}>
-              <Text role="label">{t('labels.yes')}</Text>
+          {addedFromKey !== null && (
+            <DetailRow label={t('shoppingListScreens.addedFrom')}>
+              <Text role="label">{t(addedFromKey)}</Text>
             </DetailRow>
           )}
           {!!item.source.isFromMealPlan && (
@@ -390,6 +419,12 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
         </DetailSection>
+
+        {!!item.item?.dataAttributions.length && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
       {itemPhotos.length > 0 && (
         <ItemPhotoViewer
@@ -397,7 +432,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item?.canEdit}
+          item={item.item}
         />
       )}
     </>

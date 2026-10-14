@@ -81,6 +81,7 @@
     "catalogUnavailableSubtitle": "Burimi i saj nuk e gjeti këtë recetë. Tërhiq poshtë më vonë për të provuar përsëri.",
     "percentHealthy": "{{percent}}% e shëndetshme",
     "cookedCount": "Gatuar {{count}}x",
+    "lastCooked": "Gatuar së fundmi më {{date}}",
     "markCooked": "Shëno si të gatuar",
     "nutritionTitle": "Ushqyerja",
     "caloriesPerServingLabel": "Kal / racion",
@@ -94,6 +95,8 @@
     "draftBadge": "Draft — e papublikuar",
     "inReviewBadge": "Në shqyrtim — vetëm ti mund ta shohësh derisa të miratohet",
     "reviewNote": "Shënim nga moderimi: {{note}}",
+    "pendingChangesBadge": "Ndryshimet në shqyrtim — të gjithë shohin versionin e publikuar derisa të miratohen",
+    "revisionRejectedNote": "Ndryshimet e tua të fundit nuk u miratuan. Shënim nga moderimi: {{note}}",
     "forkFailed": "Receta nuk u degëzua",
     "forkSourceNotLoaded": "Hape këtë recetë një herë me lidhje, që të jetë në pajisje dhe të mund të kopjohet.",
     "forkCopyName": "{{name}} (versioni im)",
@@ -182,6 +185,7 @@
     "deleteFolderFailed": "Fshirja e dosjes dështoi.",
     "editRecipe": "Modifiko recetën",
     "updateRecipeFailed": "Përditësimi i recetës dështoi.",
+    "editIngredientsOverLimit": "Kjo recetë ka më shumë se {{count}} përbërës, ndaj nuk mund të ruhet plotësisht. Asgjë nuk u ndryshua.",
     "createRecipeFailed": "Krijimi i recetës dështoi.",
     "unexpectedError": "Ndodhi një gabim i papritur.",
     "nameRequired": "Emri i recetës është i detyrueshëm",
@@ -207,8 +211,8 @@
     "noIngredientsForDeduction": "Asnjë përbërës i zgjedhur për zbritje",
     "deductedFromPantry_one": "U zbrit {{count}} përbërës nga qilari",
     "deductedFromPantry_other": "U zbritën {{count}} përbërës nga qilari",
-    "deductedFromPantryFailed_one": "U zbrit {{count}} përbërës nga qilari ({{failed}} dështuan)",
-    "deductedFromPantryFailed_other": "U zbritën {{count}} përbërës nga qilari ({{failed}} dështuan)",
+    "deductedFromPantryFailed_one": "U zbrit {{count}} përbërës nga qilari ({{failed}} pa u zbritur)",
+    "deductedFromPantryFailed_other": "U zbritën {{count}} përbërës nga qilari ({{failed}} pa u zbritur)",
     "submitReviewFailed": "Dërgimi i vlerësimit dështoi",
     "updateReviewFailed": "Përditësimi i vlerësimit dështoi",
     "deleteReviewFailed": "Fshirja e vlerësimit dështoi",
@@ -226,6 +230,7 @@
     "addedItemsToList": "U shtuan {{count}} artikuj te \"{{listName}}\"",
     "addedItemsToListUpdated": "U shtuan {{count}} artikuj te \"{{listName}}\", u përditësuan {{updated}}",
     "noIngredientsToAdd": "Asnjë përbërës i disponueshëm për shtim.",
+    "ingredientsOverLimit": "Kjo recetë ka më shumë se {{count}} përbërës, ndaj nuk mund të shtohet ose të kopjohet plotësisht.",
     "cannotAddExternalIngredients": "Përbërësit nga recetat e jashtme nuk mund të shtohen ende. Ruaj recetën fillimisht.",
     "ingredientsCount": "Përbërësit ({{count}})",
     "unnamedIngredient": "Përbërës pa emër",
@@ -301,6 +306,7 @@
     "ratingBreakdownRow": "{{count}} vlerësime me {{stars}} yje",
     "favoriteA11y": "Shto te të preferuarat",
     "unfavoriteA11y": "Hiq nga të preferuarat",
+    "ingredientsTooMany": "Një recetë mund të ketë maksimumi {{count}} përbërës",
     "stepsTooMany": "Një recetë mund të ketë maksimumi {{count}} hapa",
     "tagsTooMany": "Një recetë mund të ketë maksimumi {{count}} etiketa",
     "tagTooLong": "Çdo etiketë mund të ketë maksimumi {{count}} karaktere",
@@ -377,6 +383,8 @@
     "summaryPartial_other": "{{count}} të pjesshëm",
     "summaryMissing_one": "{{count}} mungon",
     "summaryMissing_other": "{{count}} mungojnë",
+    "summaryUnsure_one": "{{count}} për t’u kontrolluar",
+    "summaryUnsure_other": "{{count}} për t’u kontrolluar",
     "skipReview": "Anashkalo shqyrtimin"
   },
   "markCookedModal": {
@@ -462,6 +470,7 @@
   "ingredientMatch": {
     "optional": "Opsional",
     "matchedPantryItem": "U përputh: {{name}} ({{amount}} në dispozicion)",
-    "qtyLabel": "Sasia:"
+    "qtyLabel": "Sasia:",
+    "unsureHint": "Përputhet vetëm emri. Aktivizoje nëse është artikulli i duhur."
   }
 }

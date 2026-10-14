@@ -20,7 +20,8 @@ import fs from 'fs';
 import path from 'path';
 
 const SRC = path.join(__dirname, '..', '..', 'src');
-const METRIC_CALL = /Telemetry\.(?:histogram|increment|gauge|counter)\(\s*\n?\s*['"]([a-z0-9_]+)['"]/g;
+const METRIC_CALL =
+  /Telemetry\.(?:histogram|increment|gauge|counter)\(\s*\n?\s*['"]([a-z0-9_]+)['"]/g;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -12,6 +12,7 @@ import { isSessionEnding, resetSessionEndingGate } from '#store/sessionEnding';
 import { logger } from '#/utils/environment';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { operationNameOf } from './utils/documentOperation';
+import { forgetAnswersSinceSwitch } from './answeredSinceSwitch';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -87,6 +88,10 @@ export class LogoutCleanup {
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
       }
+
+      // 6. Forget which queries were answered since a language switch: the
+      // keys carry the account's search terms and ids.
+      forgetAnswersSinceSwitch();
 
       logger.info('✅ Apollo logout cleanup completed');
     } catch (error) {

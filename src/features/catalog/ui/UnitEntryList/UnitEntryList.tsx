@@ -148,7 +148,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     label={
                       index === 0
                         ? t('unitEntryList.unitDefaultLabel')
-                        : t('storageLocationForm.unit')
+                        : t('labels.unit')
                     }
                     value={entry.unitName ?? ''}
                     onChangeText={(text: string) =>

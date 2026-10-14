@@ -15,17 +15,18 @@ binding, or a prop or hook return named `…animated…Style` — and also:
 
 ## Why
 
-Reanimated renders its host with React-side copies of the values it animates:
-each animated style's initial value, then its settled-props snapshot. Unistyles
-links every plain object in the style array to the node. When a theme rebuild
-reaches the node, Unistyles writes all of them back through commits Reanimated
-does not correct, and the node shows the stale copy until its next React
-re-render. The global dim flickered off at the end of every sheet open this
-way. Mechanism, versions and upstream issues:
-[Unistyles re-applies reanimated's React-side value](../verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation).
+Unistyles commits a theme change outside React, and the next React commit can
+put the old values back on a view Reanimated animates, because React's
+reference to that view is never refreshed. A freshly shown alert card stayed on
+the old theme's surface while its text followed the new one. Reanimated
+re-applies only the props it owns, so a `useAnimatedStyle` that reads
+`useAnimatedTheme()` follows every theme change. Evidence and the probe:
+[A React commit reverts Unistyles' theme values at and under a Reanimated view](../verified-library-behaviour.md#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view).
 
-A key that reads no theme has no Unistyles dependency, so no theme rebuild
-ever reaches the node.
+The app moves spacing, radii and the brand colour through `updateTheme`
+(density, font scale, high contrast, primary colour), so layout tokens count as
+themed too. A key that reads no theme has no Unistyles dependency, so no theme
+change can be lost on it.
 
 ## Use instead
 
@@ -48,10 +49,12 @@ const motionStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
 // styles.card: { position: 'absolute', borderCurve: 'continuous' }
 ```
 
-Or move the themed style to a non-animated parent or child, as `GlobalBackdrop`
-does with its colour and the list rows do with `commonStyles.rowWrapper`.
+Or move the themed style to a non-animated parent, as the list rows do with
+`commonStyles.rowWrapper`. A non-animated child is not safe on its own: it
+reverts with the view above it unless the container renders a
+`ThemeEpochSentinel`.
 
-If Unistyles or Reanimated fixes this upstream, turn this rule off. Code
-written this way stays correct either way.
+When the probe stops reproducing, turn this rule off. Code written this way
+stays correct either way.
 
 Source: [`eslint/plugin/rules/animated-node-takes-no-themed-style.js`](../../eslint/plugin/rules/animated-node-takes-no-themed-style.js) · spec: [`__tests__/lint/rules/animated-node-takes-no-themed-style.test.ts`](../../__tests__/lint/rules/animated-node-takes-no-themed-style.test.ts)

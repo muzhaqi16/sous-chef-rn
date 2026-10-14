@@ -457,20 +457,20 @@ counters on independent sequences, read by `getBuildNumber()`.
 
 The whole-tree gates, and where each runs:
 
-| Gate                                | Holds                                                                                        | Runs in               |
-| ----------------------------------- | -------------------------------------------------------------------------------------------- | --------------------- |
-| `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                  | pre-commit, CI        |
-| `check-codegen-orphans`             | no `.generated.ts` without its `.graphql` source (they break `tsc`)                          | pre-commit, CI        |
-| `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                            | pre-commit, CI        |
-| `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                               | pre-commit, CI        |
-| `check-launch-arg-auth`             | no distributable build accepts an injected session                                           | pre-commit, CI, build |
-| `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                       | pre-push, CI          |
-| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                       | pre-push, CI          |
-| `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal` | pre-push, CI          |
-| `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped              | pre-push, CI          |
+| Gate                                | Holds                                                                                                                                                                                                                              | Runs in               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                                                                                                                                                        | pre-commit, CI        |
+| `check-codegen-orphans`             | no `.generated.ts` without its `.graphql` source (they break `tsc`)                                                                                                                                                                | pre-commit, CI        |
+| `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                                                                                                                                                                  | pre-commit, CI        |
+| `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
+| `check-launch-arg-auth`             | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
+| `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                                                                                                                                                             | pre-push, CI          |
+| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                                                                                                                                                             | pre-push, CI          |
+| `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal`                                        | pre-push, CI          |
+| `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped                                                                                                                                                    | pre-push, CI          |
 | `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
-| `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                               | build                 |
-| `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                              | build                 |
+| `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                                                                                                                                                                     | build                 |
+| `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                                                                                                                                                                    | build                 |
 
 Everything else that used to be a script — the data-layer boundary, the
 canonical mechanisms, the token, typography and tier rules — is either a
@@ -493,10 +493,11 @@ that IS the canonical mechanism as its only exemption:
 
 ### Dependency vulnerabilities
 
-`npm audit --omit=dev --audit-level=high` (`npm run check:audit`) fails a PR on
-a known vulnerability in a PRODUCTION dependency, and `dependency-audit.yml`
-runs the same command weekly, opening or updating one `security`-labelled
-issue.
+`npm audit --omit=dev --audit-level=high` (`npm run check:audit`) reports a
+high or critical advisory in a PRODUCTION dependency on every PR without
+failing it (`continue-on-error`): the advisory shows as a failed step inside a
+passing job. Nothing is allowlisted. `dependency-audit.yml` runs the same
+command weekly, opening or updating one `security`-labelled issue.
 
 Dependabot proposes upgrades; it fails nothing, and its
 `open-pull-requests-limit: 0` on the actions ecosystem stops version-update PRs
@@ -582,17 +583,17 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 
 **Quality**
 
-| Command                 | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `typecheck`             | `tsc --noEmit` for app and tests                  |
-| `lint` / `lint:fix`     | ESLint (cached)                                   |
-| `format`                | Prettier                                          |
-| `i18n:check`            | Locale parity                                     |
+| Command                 | Description                                                 |
+| ----------------------- | ----------------------------------------------------------- |
+| `typecheck`             | `tsc --noEmit` for app and tests                            |
+| `lint` / `lint:fix`     | ESLint (cached)                                             |
+| `format`                | Prettier                                                    |
+| `i18n:check`            | Locale parity                                               |
 | `check:dead-modules`    | knip: a `src/` module or export with no production importer |
-| `check:import-cycles`   | madge: load-time import cycles                    |
-| `check:audit`           | `npm audit` over production dependencies          |
-| `test` / `test:changed` | Jest                                              |
-| `test:e2e*`             | Detox                                             |
+| `check:import-cycles`   | madge: load-time import cycles                              |
+| `check:audit`           | `npm audit` over production dependencies                    |
+| `test` / `test:changed` | Jest                                                        |
+| `test:e2e*`             | Detox                                                       |
 
 **Performance measurement**
 

@@ -4,7 +4,7 @@ import {
   useFragment,
   useMutation,
 } from '@apollo/client/react';
-import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#/services/telemetry';
@@ -69,7 +69,7 @@ export function useQuantityEditModal(
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument, {
+  const [updateQuantity] = useMutation(UpdateShoppingListItemDocument, {
     context: { localFirst: true },
   });
 
@@ -190,9 +190,10 @@ export function useQuantityEditModal(
         updateQuantity({
           variables: {
             input: {
-              itemId,
+              id: itemId,
               quantity: quantityInput,
-              unitId,
+              // An omitted unit is left as it is; null would clear it.
+              ...(unitId !== null && { unit: { id: unitId } }),
               version: selectedItemRaw.version,
             },
           },
@@ -201,7 +202,7 @@ export function useQuantityEditModal(
           },
         }),
       {
-        document: UpdateShoppingListItemQuantityDocument,
+        document: UpdateShoppingListItemDocument,
         fallback: t('errors.adjustQuantityFailed'),
         onFailed: () => {
           clearPersisted();

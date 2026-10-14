@@ -11,7 +11,7 @@ import { useTranslation } from '#/i18n';
 /**
  * Delete a recipe local-first: the row leaves the list BEFORE the mutation
  * fires, so the deletion is visible immediately and survives an offline queue
- * (a duplicate replay surfaces as NotFound, which counts as deleted).
+ * (a duplicate replay answers `converged`, a success with no recipe).
  */
 export function useDeleteRecipe() {
   const client = useApolloClient();

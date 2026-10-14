@@ -100,6 +100,8 @@ const defaultState = {
   tips: '',
   originalAuthor: '',
   tags: '',
+  version: null,
+  ingredientsUnread: false,
 };
 
 beforeEach(() => {

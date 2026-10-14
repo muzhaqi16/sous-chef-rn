@@ -129,7 +129,6 @@ function buildVerifyMock(
             canAccessDevTools: false,
             onBoarded: true,
             createdAt: '2025-01-01T00:00:00.000Z',
-            timezone: 'UTC',
             defaultHomeId: null,
             defaultHome: null,
             profile: {

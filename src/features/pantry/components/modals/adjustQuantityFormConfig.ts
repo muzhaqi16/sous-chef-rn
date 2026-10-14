@@ -1,11 +1,7 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage, quantityRule } from '#/utils/validation/common';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 export interface AdjustQuantityFormValues {
   quantityInput: string;
@@ -15,15 +11,10 @@ export interface AdjustQuantityFormValues {
 
 export const adjustQuantitySchema: ObjectSchema<AdjustQuantityFormValues> =
   object({
-    // The field takes a fraction ("1 1/4") as readily as a decimal, so the rule
-    // runs on the parsed number rather than on the string.
-    quantityInput: string()
-      .defined()
-      .test('is-quantity', msg('errors.invalidQuantity'), value => {
-        const parsed = parseFractionalInput(value);
-        return parsed !== null && !isNaN(parsed) && parsed >= 0;
-      }),
-    reason: string().trim().required(msg('adjustQuantity.reasonRequired')),
+    quantityInput: quantityRule('errors.invalidQuantity', { allowZero: true }),
+    reason: string()
+      .trim()
+      .required(lazyMessage('adjustQuantity.reasonRequired')),
     // Optional, and only shown for an opened item; a blank one means "unchanged".
     remainingWeightInput: string().defined(),
   });

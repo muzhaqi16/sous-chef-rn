@@ -13,7 +13,7 @@ Fills checked: `primary`, `danger`, `error`, `success`, `warning`, `info`.
 
 The foreground follows the fill's luminance, and the fill is user-overridable — so a hardcoded white is wrong for four of the seven pickable brand colours. There is no `colors.white`; text over a ground the theme does not paint (a photo, a camera preview, a dark scrim) reads `onScrim`.
 
-The mis-paired token is the subtler half: it reads as correct because it *is* a token rather than a literal, and it inverts with whichever fill it is actually named for.
+The mis-paired token is the subtler half: it reads as correct because it _is_ a token rather than a literal, and it inverts with whichever fill it is actually named for.
 
 ## Use instead
 

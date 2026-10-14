@@ -38,5 +38,4 @@ describe('module aliases have one source', () => {
 
     expect(folders.filter(folder => !targets.has(folder))).toEqual([]);
   });
-
 });

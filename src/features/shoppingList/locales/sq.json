@@ -83,6 +83,8 @@
     "failedToClearReminder": "Nuk u hoq kujtuesi",
     "budgetSection": "Buxheti",
     "estimatedTotalLabel": "Totali i vlerësuar",
+    "unpricedItemsNote_one": "{{count}} artikull pa çmim",
+    "unpricedItemsNote_other": "{{count}} artikuj pa çmim",
     "budgetAmountLabel": "Kufiri i buxhetit",
     "budgetPlaceholder": "Pa buxhet",
     "priceTrackingLabel": "Ndjekja e çmimeve",
@@ -152,7 +154,15 @@
     "lastEditedBy": "Ndryshuar nga",
     "addedOn": "Shtuar më",
     "lastUpdated": "Përditësuar së fundi",
-    "autoAdded": "I shtuar automatikisht",
+    "addedFrom": "Shtuar nga",
+    "addedFromSource": {
+      "expiring": "Një artikull që po skadon",
+      "lowStock": "Një artikull me sasi të ulët",
+      "pantryMissing": "Mungon në qilar",
+      "recipe": "Një recetë",
+      "recurring": "Një listë e përsëritur",
+      "suggested": "Një sugjerim"
+    },
     "fromMealPlan": "Nga plani i vakteve",
     "brandPlaceholder": "p.sh., Oatly, Chobani",
     "netWeightPlaceholder": "p.sh., 500",
@@ -179,7 +189,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Shëno si të blerë",
-    "totalPrice": "Çmimi total",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} për njësi",

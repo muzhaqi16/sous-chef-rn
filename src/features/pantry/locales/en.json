@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}}d ({{openedDays}}d once opened)",
     "shelfLifeOpened": "{{days}}d once opened",
-    "packages": "Packages"
+    "packages": "Packages",
+    "removedTitle": "This item is no longer in your pantry",
+    "removedBody": "It was removed, perhaps from another device."
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
@@ -116,6 +118,7 @@
     "topWastedItems": "Top Wasted Items",
     "activityOverTime": "Activity Over Time",
     "additionsByUnit": "Additions by Unit",
+    "perUnit": "per {{unit}}",
     "consumptionByUnit": "Consumption by Unit",
     "topRestockedItems": "Top Restocked Items",
     "transactionCount": "({{count}} transactions)",
@@ -249,8 +252,8 @@
     "failedItems_one": "Couldn't move {{names}}",
     "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
     "nothingLeftToMove": "Everything purchased is already in your pantry",
-    "packageSizeLabel": "Package size",
-    "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size."
+    "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size.",
+    "packageSizeNeedsCount": "A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g."
   },
   "pantryAction": {
     "useByDefault": "Use by",
@@ -270,6 +273,7 @@
   },
   "addToPantry": {
     "restocked": "Restocked {{name}}",
+    "fromReceipt": "Add from a receipt",
     "amountLeft_one": "{{amount}} left",
     "amountLeft_other": "{{amount}} left",
     "lowStockSettings": "Low Stock Settings",

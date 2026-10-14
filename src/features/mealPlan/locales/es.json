@@ -66,6 +66,7 @@
     "hideNutrition": "Ocultar nutrición",
     "viewNutritionDesc": "Calorías, macros y progreso de objetivos",
     "budgetSpent": "Gastado {{spent}} de {{budget}}",
+    "budgetOnly": "Presupuesto {{budget}}",
     "spentAmount": "Gastado {{spent}}",
     "nutritionTrackingOn": "Seguimiento nutricional activado",
     "trackNutritionDesc": "Compara este plan con tu perfil dietético",
@@ -111,6 +112,7 @@
     "sharedSuffix": " (compartida con {{homeName}})",
     "generateFailed": "No se pudo generar la lista de la compra",
     "planNotLoaded": "Abre primero el plan de comidas para tener sus recetas.",
+    "recipeOverLimit": "\"{{name}}\" tiene más de {{count}} ingredientes, así que no se puede añadir por completo a una lista de la compra.",
     "nothingToAdd": "Nada que añadir: este plan aún no tiene ingredientes de recetas.",
     "defaultName": "Lista de la compra para {{name}}",
     "someSkipped_one": "Se omitió {{count}} entrada porque su receta no está descargada.",
@@ -160,7 +162,9 @@
     "saveAsTemplateLabel": "Guardar como plantilla",
     "planSettingsLabel": "Ajustes del plan",
     "deleteMealPlanFailed": "No se pudo eliminar el plan de comidas",
-    "mealPlanDeleted": "Plan de comidas eliminado"
+    "mealPlanDeleted": "Plan de comidas eliminado",
+    "mealsIncompleteTitle": "No se pudieron cargar algunas comidas",
+    "mealsIncompleteBody": "Este plan muestra solo una parte de sus comidas. Toca para reintentar."
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "p. ej. Cenas entre semana",

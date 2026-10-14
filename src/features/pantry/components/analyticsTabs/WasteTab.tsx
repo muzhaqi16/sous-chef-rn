@@ -11,6 +11,7 @@ import {
   TopItemsBarChart,
   TrendLineChart,
   formatReason,
+  moneyByCurrency,
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
@@ -44,8 +45,7 @@ export const WasteTab: React.FC<
     wasteData?.topWastedItems.map(item => ({
       label: item.itemName,
       value: item.count,
-      secondaryLabel:
-        item.estimatedValue == null ? undefined : money(item.estimatedValue),
+      secondaryLabel: moneyByCurrency(item.valueByCurrency),
     })) ?? [];
 
   if (wasteOffline) {
@@ -84,7 +84,7 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={money(wasteData?.totalWasteValue)}
+          value={moneyByCurrency(wasteData?.valueByCurrency ?? []) ?? money(0)}
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />

@@ -8,6 +8,7 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 import { Telemetry } from '#/services/telemetry';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { getDeviceId } from '#/storage/deviceId';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
@@ -213,26 +214,15 @@ const reportDialFailedBeforeOpen = (
   Telemetry.warn('WebSocket dial closed before the socket opened', detail);
 };
 
-/**
- * Calculate reconnection delay with exponential backoff and jitter
- */
-const getReconnectDelay = (attempt: number): number => {
-  const ceiling =
-    dialFailureStreak >= DIAL_FAILURE_STREAK_LIMIT
-      ? STREAK_MAX_RECONNECT_DELAY_MS
-      : MAX_RECONNECT_DELAY_MS;
-  // The ceiling caps the BASE; jitter (up to 25%) then spreads on top of it.
-  // Clamping the sum instead would make every client past the ceiling compute
-  // exactly the ceiling, and they would all re-dial in the same tick.
-  const delay = Math.min(
-    BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-    ceiling,
-  );
-  return delay + delay * 0.25 * Math.random();
-};
-
-const sleep = (ms: number) =>
-  new Promise<void>(resolve => setTimeout(resolve, ms));
+const getReconnectDelay = (attempt: number): number =>
+  backoffDelay(attempt, {
+    baseMs: BASE_RECONNECT_DELAY_MS,
+    maxMs:
+      dialFailureStreak >= DIAL_FAILURE_STREAK_LIMIT
+        ? STREAK_MAX_RECONNECT_DELAY_MS
+        : MAX_RECONNECT_DELAY_MS,
+    jitter: 0.25,
+  });
 
 // The backoff wait, interruptible. A bare `sleep` cannot be shortened, so a
 // network that recovers mid-wait would still sit out the whole stretched

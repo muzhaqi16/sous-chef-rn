@@ -3,9 +3,12 @@ import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import {
+  ModerationContentType,
+  RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import { openWebUrl } from '#utils/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -31,6 +34,7 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
@@ -49,6 +53,11 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import {
+  ReportContentSheet,
+  type ReportTarget,
+} from '#features/profile/ui/ReportContentSheet';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
@@ -145,6 +154,7 @@ const RecipeDetailScreen: React.FC = () => {
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
@@ -158,6 +168,7 @@ const RecipeDetailScreen: React.FC = () => {
     savedNotes,
     savedRating,
     cookedCount,
+    lastCookedAt,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
 
@@ -185,6 +196,16 @@ const RecipeDetailScreen: React.FC = () => {
   const isOwner = !!user && backendRecipe?.createdBy?.id === user.id;
   const canFork =
     !!backendRecipe && !isOwner && displayData?.details === 'complete';
+  // Another user's recipe only: a catalog recipe has no author to report.
+  const author = backendRecipe?.createdBy;
+  const reportTarget: ReportTarget | null =
+    user && backendRecipe && author && author.id !== user.id
+      ? {
+          reportedUserId: author.id,
+          contentType: ModerationContentType.Recipe,
+          contentId: backendRecipe.id,
+        }
+      : null;
 
   const handleEditRecipe = () => {
     if (recipeId) {
@@ -218,6 +239,7 @@ const RecipeDetailScreen: React.FC = () => {
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
@@ -337,6 +359,17 @@ const RecipeDetailScreen: React.FC = () => {
             tone: 'favorite',
             loading: saving || updatingFolderTags,
             testID: recipesTestIDs.heartButton,
+          } satisfies HeaderAction,
+        ]
+      : []),
+    ...(reportTarget
+      ? [
+          {
+            icon: 'flag-outline',
+            accessibilityLabel: t('reports.reportRecipe'),
+            onPress: () => setShowReportSheet(true),
+            variant: 'secondary',
+            testID: recipesTestIDs.reportButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -479,6 +512,13 @@ const RecipeDetailScreen: React.FC = () => {
               )}
             </Pressable>
           )}
+          {!!isSaved && !!lastCookedAt && (
+            <Text role="caption" tone="secondary">
+              {t('recipes.lastCooked', {
+                date: formatMonthDayYear(new Date(lastCookedAt)),
+              })}
+            </Text>
+          )}
         </View>
 
         <RecipeEnrichment
@@ -491,6 +531,8 @@ const RecipeDetailScreen: React.FC = () => {
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
+          hasPendingRevision={displayData.hasPendingRevision}
+          revisionRejectionNote={displayData.revisionRejectionNote}
         />
 
         {!!isSaved && (
@@ -627,6 +669,15 @@ const RecipeDetailScreen: React.FC = () => {
             )}
           </Pressable>
         )}
+
+        {displayData.dataAttributions.length > 0 && (
+          <View style={styles.dataAttributions}>
+            <DataAttributionNotices
+              attributions={displayData.dataAttributions}
+              centered
+            />
+          </View>
+        )}
       </CollapsingHeroDetail>
 
       <ShoppingListPickerSheet
@@ -657,7 +708,7 @@ const RecipeDetailScreen: React.FC = () => {
         editableMatches={ingredientMatching.editableMatches}
         matchSummary={ingredientMatching.matchSummary}
         onUpdate={ingredientMatching.updateMatch}
-        onConfirm={ingredientMatching.confirmConsumption}
+        onConfirm={handleConfirmReview}
         onSkip={handleSkipReview}
         onClose={ingredientMatching.closeSheet}
         confirmLoading={ingredientMatching.confirmLoading}
@@ -709,6 +760,12 @@ const RecipeDetailScreen: React.FC = () => {
         updating={updatingFolderTags}
         recipeName={displayData.title}
       />
+
+      <ReportContentSheet
+        visible={showReportSheet}
+        target={reportTarget}
+        onDismiss={() => setShowReportSheet(false)}
+      />
     </>
   );
 };
@@ -744,7 +801,9 @@ const styles = StyleSheet.create(theme => ({
   },
   metadata: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    flexWrap: 'wrap',
+    columnGap: theme.spacing.md,
+    rowGap: theme.spacing.xs,
     marginBottom: theme.spacing.md,
   },
   cookedMetadata: {
@@ -795,6 +854,9 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
+  },
+  dataAttributions: {
+    marginTop: theme.spacing.md,
   },
   attributionText: {
     color: theme.colors.textSecondary,

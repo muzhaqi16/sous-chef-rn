@@ -14,6 +14,7 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 import { ItemCard } from './ItemCard';
 import type { BadgeContent } from '#components/atoms/Badge';
 import type { IconName } from '#/utils/iconUtils';
@@ -52,6 +53,8 @@ interface Item {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   imageUrl?: string; // Pass URL as data — renderItem creates CachedImage (avoids JSX in transforms)
+  /** A heading drawn above this row: the first row of each section carries its section's. */
+  sectionTitle?: string;
 }
 
 // Bridge component — reads actions from context, renders ItemCard
@@ -80,7 +83,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       </View>
     ) : undefined);
 
-  return (
+  const card = (
     <ItemCard
       id={item.id}
       title={item.title}
@@ -97,6 +100,15 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       }
     />
   );
+  if (!item.sectionTitle) return card;
+  return (
+    <>
+      <SectionHeader variant="overline" style={styles.sectionHeader}>
+        {item.sectionTitle}
+      </SectionHeader>
+      {card}
+    </>
+  );
 };
 
 const ItemListRenderItem = ItemListRenderItemComponent;
@@ -106,8 +118,9 @@ const renderItem = (info: ListRenderItemInfo<Item>) => (
   <ItemListRenderItem {...info} />
 );
 
-// Module-scope getItemType — all items are the same type for optimal recycler pooling
-const getItemType = () => 'item';
+// Module-scope getItemType — a row under a section heading recycles apart from the rest
+const getItemType = (item: Item) =>
+  item.sectionTitle ? 'sectionStart' : 'item';
 
 // Stable config — prevents scroll jumps during data updates (matches PantryContent & SortableList)
 const MVCP_DISABLED = { disabled: true };
@@ -342,5 +355,9 @@ export const ItemList: React.FC<ItemListProps> = ({
 const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingHorizontal: theme.layout.pageGutter,
+  },
+  sectionHeader: {
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
   },
 }));

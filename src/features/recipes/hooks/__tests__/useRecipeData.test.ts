@@ -1,7 +1,10 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { ExternalSyncStatus } from '#/graphql/generated/schemaTypes';
+import {
+  ExternalSyncStatus,
+  RecipeRevisionStatus,
+} from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -12,6 +15,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -25,6 +29,27 @@ const HINT: CatalogRecipeHint = {
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
 };
 
+type IngredientsFixture = NonNullable<RecipeFixture['ingredientsConnection']>;
+type PageInfoFixture = NonNullable<IngredientsFixture['pageInfo']>;
+
+/** A recipe's one page of ingredients; the whole list unless stated. */
+const ingredientsPage = (
+  ids: string[],
+  pageInfo: PageInfoFixture = { hasNextPage: false, endCursor: null },
+  totalCount: number = ids.length,
+): IngredientsFixture => ({
+  edges: ids.map((id, sortOrder) => ({
+    node: {
+      __typename: 'RecipeIngredient',
+      id,
+      name: `Ingredient ${id}`,
+      sortOrder,
+    },
+  })),
+  pageInfo,
+  totalCount,
+});
+
 /** A recipe the user wrote: no provider behind it. */
 const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
   __typename: 'Recipe',
@@ -33,6 +58,7 @@ const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
   isExternal: false,
   sourceMapping: null,
   externalDetails: null,
+  ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
 
@@ -47,6 +73,7 @@ const catalogRecipe = (
   isExternal: true,
   createdBy: null,
   sourceMapping: { __typename: 'RecipeSourceMapping', id: 'sm-1', syncStatus },
+  ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
 
@@ -99,6 +126,54 @@ describe('useRecipeData', () => {
       );
       expect(result.current.backendRecipe?.id).toBe('r1');
       expect(result.current.error).toBeNull();
+    });
+
+    // Both are null for anyone but the author, whose edit to a published
+    // recipe waits for review while the recipe stays live.
+    it("reads the author's pending edit and a rejected edit's note", async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          authoredRecipe({
+            pendingRevision: { __typename: 'RecipeRevision', id: 'rev-2' },
+            latestRevision: {
+              __typename: 'RecipeRevision',
+              id: 'rev-2',
+              status: RecipeRevisionStatus.Pending,
+              reviewNote: null,
+            },
+          }),
+        ),
+      ]);
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      expect(result.current.displayData).toEqual(
+        expect.objectContaining({
+          hasPendingRevision: true,
+          revisionRejectionNote: undefined,
+        }),
+      );
+    });
+
+    it('carries the note of a rejected edit once nothing is pending', async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          authoredRecipe({
+            pendingRevision: null,
+            latestRevision: {
+              __typename: 'RecipeRevision',
+              id: 'rev-1',
+              status: RecipeRevisionStatus.Rejected,
+              reviewNote: 'Keep the original photo.',
+            },
+          }),
+        ),
+      ]);
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      expect(result.current.displayData).toEqual(
+        expect.objectContaining({
+          hasPendingRevision: false,
+          revisionRejectionNote: 'Keep the original photo.',
+        }),
+      );
     });
 
     it('carries no provider chips for a recipe the user wrote', async () => {
@@ -169,6 +244,66 @@ describe('useRecipeData', () => {
     });
   });
 
+  describe('a recipe and its ingredients', () => {
+    const shownIds = (result: { current: ReturnType<typeof useRecipeData> }) =>
+      result.current.displayData?.ingredients.map(row => row.id);
+
+    it('reads a recipe with one request, at the largest page', async () => {
+      const get = recordMock(GetRecipeDocument, {
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(['i1', 'i2']),
+          }),
+        },
+      });
+      const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
+
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      expect(get.fired).toEqual([
+        { id: 'r1', ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE },
+      ]);
+    });
+
+    // "Add all", a copy and an edit all derive from this list, and refuse a
+    // recipe marked this way.
+    it('reads one page of a recipe over the ingredient limit and leaves it marked', async () => {
+      const get = recordMock(GetRecipeDocument, {
+        data: {
+          recipe: authoredRecipe({
+            ingredientsConnection: ingredientsPage(
+              ['i1', 'i2'],
+              { hasNextPage: true, endCursor: 'cursor-2' },
+              3,
+            ),
+          }),
+        },
+      });
+      const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
+
+      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      expect(
+        result.current.backendRecipe?.ingredientsConnection.pageInfo
+          .hasNextPage,
+      ).toBe(true);
+
+      // A pull reads the same one page again: nothing follows the cursor.
+      await act(async () => {
+        await result.current.refetch();
+      });
+
+      const onePage = {
+        id: 'r1',
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      };
+      expect(get.fired).toEqual([onePage, onePage]);
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
+      expect(
+        result.current.backendRecipe?.ingredientsConnection.pageInfo
+          .hasNextPage,
+      ).toBe(true);
+    });
+  });
+
   describe('what a catalog recipe has to show', () => {
     it.each([
       [ExternalSyncStatus.Synced, 'complete'],
@@ -203,6 +338,7 @@ describe('useRecipeData', () => {
                   id: 'sm-1',
                   syncStatus: newerStatus as ExternalSyncStatus,
                 },
+                ingredientsConnection: ingredientsPage([]),
               },
             },
           },
@@ -224,6 +360,8 @@ describe('useRecipeData', () => {
         title: 'Pasta with Garlic',
         image: HINT.imageUrl,
         ingredients: [],
+        dataAttributions: [],
+        hasPendingRevision: false,
         details: 'opening',
       });
       expect(result.current.loading).toBe(true);
@@ -282,6 +420,8 @@ describe('useRecipeData', () => {
         title: 'Row',
         image: undefined,
         ingredients: [],
+        dataAttributions: [],
+        hasPendingRevision: false,
         details: 'opening',
       });
       expect(result.current.error).toBeNull();

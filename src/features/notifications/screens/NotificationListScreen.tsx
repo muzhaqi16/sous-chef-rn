@@ -115,7 +115,7 @@ export const NotificationListScreen: React.FC = () => {
   };
 
   // Headers inlined into one array; FlashList tells the two apart by item type.
-  const rows = createNotificationFeedRows(filteredGroups);
+  const rows = createNotificationFeedRows(filteredGroups, t);
 
   const hasNotifications = rows.length > 0;
 

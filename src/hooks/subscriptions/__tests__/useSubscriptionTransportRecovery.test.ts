@@ -1,4 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import type { FormattedExecutionResult } from 'graphql';
 import {
   MAX_RESTART_ATTEMPTS,
   RESTART_STABLE_MS,
@@ -39,6 +41,12 @@ const socketClosed = (code?: number, reason = '') =>
       ? 'Socket closed'
       : `Socket closed with event ${code} ${reason}`,
   );
+
+/** A subscription the server ended with an error result; the socket stays up. */
+const serverEnded = (extensions: Record<string, unknown>) =>
+  new CombinedGraphQLErrors({
+    errors: [{ message: 'Server ended the subscription', extensions }],
+  } satisfies FormattedExecutionResult);
 
 const renderRecovery = (initial: {
   error?: Error;
@@ -131,6 +139,40 @@ describe('useSubscriptionTransportRecovery', () => {
   it('does not re-subscribe for an error that is not a transport termination', () => {
     const restart = jest.fn();
     renderRecovery({ error: new Error('Validation failed'), restart });
+
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+
+    expect(restart).not.toHaveBeenCalled();
+  });
+
+  // The schema documents SUBSCRIPTION_ERROR as retryable, and a database the
+  // API could not reach (as while it restarts) comes tagged `infrastructure`.
+  // The socket is still up in both, so no reconnect would re-subscribe.
+  it.each([
+    ['SUBSCRIPTION_ERROR', { code: 'SUBSCRIPTION_ERROR' }],
+    [
+      'an infrastructure INTERNAL_SERVER_ERROR',
+      { code: 'INTERNAL_SERVER_ERROR', category: 'infrastructure' },
+    ],
+  ])('re-subscribes after the server ends it with %s', (_label, extensions) => {
+    const restart = jest.fn();
+    renderRecovery({ error: serverEnded(extensions), restart });
+
+    act(() => {
+      jest.advanceTimersByTime(2_000);
+    });
+
+    expect(restart).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not re-subscribe after an internal error that is not infrastructure', () => {
+    const restart = jest.fn();
+    renderRecovery({
+      error: serverEnded({ code: 'INTERNAL_SERVER_ERROR' }),
+      restart,
+    });
 
     act(() => {
       jest.advanceTimersByTime(60_000);

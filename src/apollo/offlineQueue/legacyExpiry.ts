@@ -2,6 +2,7 @@ import type { OperationVariables } from '@apollo/client';
 import { Kind, type DocumentNode, type TypeNode } from 'graphql';
 import { isRecord } from '#/utils/isRecord';
 import { toDateKey } from '#/utils/dateUtils';
+import { isOwnKey } from '#/utils/isOwnKey';
 
 /** The inputs whose `expiresAt` became `expiresOn`; an invite's is still an instant. */
 const DATE_ONLY_EXPIRY_INPUTS = new Set([
@@ -52,4 +53,47 @@ export const withExpiresOn = (
   const instant = typeof expiresAt === 'string' ? new Date(expiresAt) : null;
   if (!instant || Number.isNaN(instant.getTime())) return variables;
   return { ...variables, input: { ...rest, expiresOn: toDateKey(instant) } };
+};
+
+type CalendarDayInput =
+  | 'CreateMealPlanInput'
+  | 'UpdateMealPlanInput'
+  | 'CreateMealPlanItemInput'
+  | 'UpdateMealPlanItemInput';
+
+/** The inputs whose days became `LocalDate`, with the fields that hold one. */
+const CALENDAR_DAY_FIELDS: Record<CalendarDayInput, readonly string[]> = {
+  CreateMealPlanInput: ['startDate', 'endDate'],
+  UpdateMealPlanInput: ['startDate', 'endDate'],
+  CreateMealPlanItemInput: ['date'],
+  UpdateMealPlanItemInput: ['date'],
+};
+
+/** An instant as the local day it falls on; a value that is not one, unchanged. */
+const asDayKey = (value: unknown): unknown => {
+  if (typeof value !== 'string' || !value.includes('T')) return value;
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? value : toDateKey(instant);
+};
+
+/**
+ * A meal-plan write queued by a build that sent a day as local noon through
+ * `toISOString()`. The API takes the calendar date and refuses a value with a
+ * time; read back on this device, the instant is the day the user picked.
+ */
+export const withCalendarDays = (
+  document: DocumentNode,
+  variables: OperationVariables,
+): OperationVariables => {
+  const input: unknown = variables.input;
+  const typeName = inputTypeOf(document) ?? '';
+  if (!isRecord(input) || !isOwnKey(CALENDAR_DAY_FIELDS, typeName)) {
+    return variables;
+  }
+  let next: Record<string, unknown> | null = null;
+  for (const field of CALENDAR_DAY_FIELDS[typeName]) {
+    const day = asDayKey(input[field]);
+    if (day !== input[field]) next = { ...(next ?? input), [field]: day };
+  }
+  return next ? { ...variables, input: next } : variables;
 };

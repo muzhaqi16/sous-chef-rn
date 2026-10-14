@@ -1,6 +1,20 @@
-# A local-first template's row: everything a query reads on one, its items
-# included.
+# A local-first template's row: everything a query reads on one. Readers leave
+# connections to their edge writers, so its meals are named here: a template
+# from a plan is created WITH them.
 fragment mealTemplate_row on MealTemplate {
   id
   ...MealTemplateReaders
+  itemsConnection {
+    edges {
+      node {
+        id
+        ...MealTemplateItemReaders
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
 }

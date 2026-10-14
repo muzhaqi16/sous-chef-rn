@@ -3,8 +3,8 @@
  * canonical original.
  *
  * The Feature API Boundary Convention stops a feature importing another's
- * `graphql/`, so several mutations exist as near-identical copies — four of
- * `AddItemsToShoppingList`, two of `CreatePantryItem`. Every copy is registered
+ * `graphql/`, so a mutation can exist as near-identical copies — four of
+ * `AddItemsToShoppingList`. Every copy is registered
  * in `REPLAY_PREPARATIONS` with the same preparer, so the queue treats them as
  * one operation while their selection sets are maintained by hand, separately,
  * in different features.
@@ -20,12 +20,6 @@
  * leaves the list's counts stale after an add.
  *
  * The check is a SUPERSET, not equality: a copy may legitimately select more.
- * And divergence is allowed where it is deliberate — but only with a written
- * reason, which is the whole point. `BarcodeCreatePantryItem` is the worked
- * example: it selects almost nothing off the created item because its `update`
- * callback materializes the entity from the CACHE by id (the optimistic write
- * has already put it there complete) rather than from the response. That is a
- * different architecture, not drift, and the exemption below says so.
  *
  * The operation list is derived from the replay registry rather than hand-kept,
  * so a newly registered copy is covered by being registered.
@@ -37,12 +31,10 @@ import type {
   SelectionSetNode,
 } from 'graphql';
 import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  BarcodeCreatePantryItemDocument,
-  BarcodeAddItemToShoppingListDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 
@@ -111,22 +103,6 @@ function payloadSelection(document: DocumentNode): SelectionSetNode {
   return rootField.selectionSet;
 }
 
-/**
- * Paths every copy is allowed to omit, with the reason. An entry here is a
- * decision, not a silencer — it says the copy's write path does not read that
- * field from the response.
- */
-const ALLOWED_OMISSIONS: Record<string, { reason: string; paths: RegExp }> = {
-  BarcodeCreatePantryItem: {
-    reason:
-      "materializes the entity from the CACHE by id (SearchResults' update " +
-      'callback reads SearchResults_pantryItem, which is `{ id }`), so the ' +
-      'response only has to identify the row — the optimistic write already ' +
-      'put it in the cache complete',
-    paths: /^pantryItem\./,
-  },
-};
-
 interface Copy {
   name: string;
   document: DocumentNode;
@@ -142,20 +118,6 @@ interface Family {
 }
 
 const FAMILIES: Family[] = [
-  {
-    entity: 'PantryItem',
-    canonical: { name: 'CreatePantryItem', document: CreatePantryItemDocument },
-    copies: [
-      {
-        name: 'BarcodeCreatePantryItem',
-        document: BarcodeCreatePantryItemDocument,
-      },
-    ],
-    fragmentSources: [
-      CreatePantryItemDocument,
-      BarcodeCreatePantryItemDocument,
-    ],
-  },
   {
     entity: 'ShoppingListItem',
     canonical: {
@@ -185,6 +147,9 @@ const FAMILIES: Family[] = [
   },
 ];
 
+/** Registered creates with no copy: every feature reaches them through the owner's hook. */
+const WITHOUT_COPIES = [operationNameOf(CreatePantryItemDocument)];
+
 const REGISTERED = new Set(Object.keys(REPLAY_PREPARATIONS));
 
 describe('local-first copy drift', () => {
@@ -192,9 +157,13 @@ describe('local-first copy drift', () => {
     // Derived, not hand-kept: a copy registered for replay but absent from
     // FAMILIES would go unchecked, which is exactly how the current drift got
     // in. This fails when someone registers a new copy without listing it.
-    const covered = new Set(
-      FAMILIES.flatMap(f => [f.canonical.name, ...f.copies.map(c => c.name)]),
-    );
+    const covered = new Set([
+      ...WITHOUT_COPIES,
+      ...FAMILIES.flatMap(f => [
+        f.canonical.name,
+        ...f.copies.map(c => c.name),
+      ]),
+    ]);
     const registeredCreates = [...REGISTERED].filter(
       op =>
         op.startsWith('Create') ||
@@ -220,11 +189,7 @@ describe('local-first copy drift', () => {
       const copyPaths = new Set(
         fieldPaths(payloadSelection(copy.document), fragments),
       );
-      const exemption = ALLOWED_OMISSIONS[copy.name];
-      const missing = canonicalPaths.filter(
-        path =>
-          !copyPaths.has(path) && !(exemption && exemption.paths.test(path)),
-      );
+      const missing = canonicalPaths.filter(path => !copyPaths.has(path));
       expect(missing).toEqual([]);
     });
   });

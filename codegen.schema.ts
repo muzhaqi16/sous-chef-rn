@@ -16,7 +16,9 @@ function isApiAvailable(url: string): boolean {
 }
 
 if (!isApiAvailable(API_URL)) {
-  console.log(`⚠ API unreachable at ${API_URL} – skipping schema pull, using existing local schema`);
+  console.log(
+    `⚠ API unreachable at ${API_URL} – skipping schema pull, using existing local schema`,
+  );
   process.exit(0);
 }
 

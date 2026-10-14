@@ -55,4 +55,10 @@ export interface RecipeFormState {
   originalAuthor: string;
   // Comma-separated recipe tags (freeform), split into a string[] on save.
   tags: string;
+  // The version the form loaded; null for a new recipe.
+  version: number | null;
+  // The recipe is over the ingredient limit, so the form loaded only the first
+  // page of its ingredients, which a save would replace the whole list with;
+  // false for a new recipe.
+  ingredientsUnread: boolean;
 }

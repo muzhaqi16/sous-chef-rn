@@ -198,7 +198,13 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(move.fired).toContainEqual({ input: { shoppingListId: 'list-1' } });
+    // `today` dates each moved line's default expiry.
+    expect(move.fired).toContainEqual({
+      input: {
+        shoppingListId: 'list-1',
+        today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      },
+    });
   });
 
   it('shows success toast with moved count', async () => {

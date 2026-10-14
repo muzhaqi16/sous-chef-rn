@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { ApolloClient } from '@apollo/client';
 import {
@@ -67,24 +68,29 @@ jest.mock('#features/shoppingList/cache/items', () => {
 });
 
 const mockConvertExpiredToWaste = jest.fn();
-const mockConvertExpiredBatches = jest.fn();
 const mockAdjustQuantity = jest.fn();
 const mockCorrectPackageSize = jest.fn().mockResolvedValue(true);
 
+interface MockWasted {
+  hasBatches: boolean;
+}
+
+// Keeps the real hook's contract: a convert that settles reports what it
+// wasted to `onSuccess`, and a failed one reports nothing.
 jest.mock('#features/pantry/hooks/mutations/useConvertExpiredToWaste', () => ({
-  useConvertExpiredToWaste: () => ({
-    convertExpiredToWaste: mockConvertExpiredToWaste,
+  useConvertExpiredToWaste: ({
+    onSuccess,
+  }: { onSuccess?: (wasted: MockWasted) => void } = {}) => ({
+    convertExpiredToWaste: async (pantryItemId: string, wasted: MockWasted) => {
+      const converted: boolean = await mockConvertExpiredToWaste(
+        pantryItemId,
+        wasted,
+      );
+      if (converted) onSuccess?.(wasted);
+      return converted;
+    },
   }),
 }));
-
-jest.mock(
-  '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste',
-  () => ({
-    useConvertExpiredBatchesToWaste: () => ({
-      convertExpiredBatches: mockConvertExpiredBatches,
-    }),
-  }),
-);
 
 jest.mock(
   '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity',
@@ -711,7 +717,8 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
-    it('calls convertExpiredBatches on batch-discard confirm', async () => {
+    it('wastes only the expired batches of a stack held in batches', async () => {
+      mockConvertExpiredToWaste.mockResolvedValue(true);
       const { result } = setup({
         item: { ...baseItem, activeBatchCount: 2 },
       });
@@ -722,10 +729,18 @@ describe('usePantryItemDetailActions', () => {
         .calls[0][2][1];
       await act(async () => discardButton.onPress());
 
-      expect(mockConvertExpiredBatches).toHaveBeenCalledWith('item-1');
+      expect(mockConvertExpiredToWaste).toHaveBeenCalledTimes(1);
+      expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
+        hasBatches: true,
+      });
+      expect(alertService.alert).toHaveBeenLastCalledWith(
+        t('labels.done'),
+        t('success.expiredBatchesDiscarded'),
+      );
     });
 
-    it('calls convertExpiredToWaste on item-discard confirm', async () => {
+    it('wastes a stack with no batches whole', async () => {
+      mockConvertExpiredToWaste.mockResolvedValue(true);
       const { result } = setup();
 
       act(() => result.current.handleDiscardExpired());
@@ -734,8 +749,39 @@ describe('usePantryItemDetailActions', () => {
         .calls[0][2][1];
       await act(async () => discardButton.onPress());
 
-      expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1');
+      expect(mockConvertExpiredToWaste).toHaveBeenCalledTimes(1);
+      expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
+        hasBatches: false,
+      });
+      expect(alertService.alert).toHaveBeenLastCalledWith(
+        t('labels.done'),
+        t('success.expiredItemDiscarded'),
+      );
     });
+
+    it.each([
+      { activeBatchCount: 2, hasBatches: true },
+      { activeBatchCount: 0, hasBatches: false },
+    ])(
+      'announces no discard when the convert fails (hasBatches: $hasBatches)',
+      async ({ activeBatchCount, hasBatches }) => {
+        mockConvertExpiredToWaste.mockResolvedValue(false);
+        const { result } = setup({ item: { ...baseItem, activeBatchCount } });
+
+        act(() => result.current.handleDiscardExpired());
+
+        const discardButton = (alertService.alert as jest.Mock).mock
+          .calls[0][2][1];
+        await act(async () => discardButton.onPress());
+
+        expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
+          hasBatches,
+        });
+        // Only the confirmation prompt: the hook under the mock owns the
+        // failure alert, and no success copy follows a failed convert.
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+      },
+    );
 
     it('does nothing when item is null', () => {
       const { result } = setup({ item: null });

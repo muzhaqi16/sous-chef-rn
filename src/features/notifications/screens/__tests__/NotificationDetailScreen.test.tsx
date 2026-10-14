@@ -68,6 +68,7 @@ const makeNotification = (
     expiresAt: null,
     sourceId: null,
     sourceType: null,
+    pantryItemId: null,
     actionUrl: null,
     readAt: null,
   });

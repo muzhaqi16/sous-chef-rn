@@ -68,4 +68,31 @@ describe('RecipeEnrichment', () => {
       screen.getByText("Moderator's note: Add the oven temperature."),
     ).toBeTruthy();
   });
+
+  // A published recipe stays live while its author's edit waits for review.
+  it('says an edit to a published recipe is waiting for review', () => {
+    render(
+      <RecipeEnrichment status={RecipeStatus.Published} hasPendingRevision />,
+    );
+    expect(
+      screen.getByText(
+        "Changes in review — everyone sees the published version until they're approved",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/In review — only you/)).toBeNull();
+  });
+
+  it("shows the moderator's note on a rejected edit to a published recipe", () => {
+    render(
+      <RecipeEnrichment
+        status={RecipeStatus.Published}
+        revisionRejectionNote="Keep the original photo."
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Your last changes weren't approved. Moderator's note: Keep the original photo.",
+      ),
+    ).toBeTruthy();
+  });
 });

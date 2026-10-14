@@ -81,6 +81,7 @@
     "catalogUnavailableSubtitle": "Its source couldn't find this recipe. Pull down later to try again.",
     "percentHealthy": "{{percent}}% healthy",
     "cookedCount": "Cooked {{count}}x",
+    "lastCooked": "Last cooked {{date}}",
     "markCooked": "Mark cooked",
     "nutritionTitle": "Nutrition",
     "caloriesPerServingLabel": "Cal / serving",
@@ -94,6 +95,8 @@
     "draftBadge": "Draft — not published",
     "inReviewBadge": "In review — only you can see it until it's approved",
     "reviewNote": "Moderator's note: {{note}}",
+    "pendingChangesBadge": "Changes in review — everyone sees the published version until they're approved",
+    "revisionRejectedNote": "Your last changes weren't approved. Moderator's note: {{note}}",
     "forkFailed": "Failed to fork recipe",
     "forkSourceNotLoaded": "Open this recipe while online once, so it is on your device to copy.",
     "forkCopyName": "{{name}} (My Version)",
@@ -182,6 +185,7 @@
     "deleteFolderFailed": "Failed to delete folder.",
     "editRecipe": "Edit Recipe",
     "updateRecipeFailed": "Failed to update recipe.",
+    "editIngredientsOverLimit": "This recipe has more than {{count}} ingredients, so it can't be saved in full. Nothing was changed.",
     "createRecipeFailed": "Failed to create recipe.",
     "unexpectedError": "An unexpected error occurred.",
     "nameRequired": "Recipe name is required",
@@ -207,8 +211,8 @@
     "noIngredientsForDeduction": "No ingredients selected for deduction",
     "deductedFromPantry_one": "Deducted {{count}} ingredient from pantry",
     "deductedFromPantry_other": "Deducted {{count}} ingredients from pantry",
-    "deductedFromPantryFailed_one": "Deducted {{count}} ingredient from pantry ({{failed}} failed)",
-    "deductedFromPantryFailed_other": "Deducted {{count}} ingredients from pantry ({{failed}} failed)",
+    "deductedFromPantryFailed_one": "Deducted {{count}} ingredient from pantry ({{failed}} not deducted)",
+    "deductedFromPantryFailed_other": "Deducted {{count}} ingredients from pantry ({{failed}} not deducted)",
     "submitReviewFailed": "Failed to submit review",
     "updateReviewFailed": "Failed to update review",
     "deleteReviewFailed": "Failed to delete review",
@@ -226,6 +230,7 @@
     "addedItemsToList": "Added {{count}} items to \"{{listName}}\"",
     "addedItemsToListUpdated": "Added {{count}} items to \"{{listName}}\", updated {{updated}}",
     "noIngredientsToAdd": "No ingredients available to add.",
+    "ingredientsOverLimit": "This recipe has more than {{count}} ingredients, so it can't be added or copied in full.",
     "cannotAddExternalIngredients": "Cannot add ingredients from external recipes yet. Please save the recipe first.",
     "ingredientsCount": "Ingredients ({{count}})",
     "unnamedIngredient": "Unnamed ingredient",
@@ -301,6 +306,7 @@
     "ratingBreakdownRow": "{{count}} reviews rated {{stars}} stars",
     "favoriteA11y": "Add to favourites",
     "unfavoriteA11y": "Remove from favourites",
+    "ingredientsTooMany": "A recipe can have at most {{count}} ingredients",
     "stepsTooMany": "A recipe can have at most {{count}} steps",
     "tagsTooMany": "A recipe can have at most {{count}} tags",
     "tagTooLong": "Each tag can be at most {{count}} characters",
@@ -377,6 +383,8 @@
     "summaryPartial_other": "{{count}} partial",
     "summaryMissing_one": "{{count}} missing",
     "summaryMissing_other": "{{count}} missing",
+    "summaryUnsure_one": "{{count}} to check",
+    "summaryUnsure_other": "{{count}} to check",
     "skipReview": "Skip Review"
   },
   "markCookedModal": {
@@ -462,6 +470,7 @@
   "ingredientMatch": {
     "optional": "Optional",
     "matchedPantryItem": "Matched: {{name}} ({{amount}} available)",
-    "qtyLabel": "Qty:"
+    "qtyLabel": "Qty:",
+    "unsureHint": "Matched by name only. Turn it on if this is the right item."
   }
 }

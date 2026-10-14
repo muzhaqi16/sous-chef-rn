@@ -1,8 +1,8 @@
 import { useAppStore, useUser } from '#store/useAppStore';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 
 export const useIsLoggedOut = () => {
   const user = useUser();
-  const accessToken = useAppStore(state => state.accessToken);
-  const refreshToken = useAppStore(state => state.refreshToken);
-  return !user && !accessToken && !refreshToken;
+  const holdsTokens = useAppStore(holdsSessionTokens);
+  return !user && !holdsTokens;
 };

@@ -74,7 +74,6 @@ export type ConnectionData = {
 
 /** What a modifier receives: a field the server returned as `null` is stored as `null`. */
 type StoredConnection = ConnectionData | null | undefined;
-type StoredRefs = readonly Reference[] | null | undefined;
 
 type InsertPosition = 'start' | 'end';
 
@@ -201,6 +200,20 @@ export function skipUnmatchedFilterVariants(
 }
 
 /**
+ * The entity as the cache holds it. Merging a response object over it would
+ * store its nested entities inline, cut off from their own records, so an edit
+ * to a row's `item` would not reach the row; only an entity the cache lacks is
+ * written from the object.
+ */
+function entityRef(
+  newItem: { id: string },
+  { toReference, canRead }: ModifierDetails,
+) {
+  const ref = toReference(newItem);
+  return ref && canRead(ref) ? ref : toReference(newItem, true);
+}
+
+/**
  * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong
  * silently. `totalCount` moves only where the record already holds one, so an
  * add never introduces a count a query then reads as a cache hit.
@@ -210,14 +223,12 @@ function addEdgeModifier<T extends { id: string }>(
   itemTypename: string,
   { position = 'start', skipStoreField }: AddToConnectionOptions,
 ) {
-  return (
-    existing: StoredConnection,
-    { toReference, readField, storeFieldName }: ModifierDetails,
-  ) => {
+  return (existing: StoredConnection, details: ModifierDetails) => {
+    const { readField, storeFieldName } = details;
     // Every "leave alone" path returns `existing` as is: Apollo reads an
     // `undefined` over a stored `null` as a delete.
     if (skipStoreField?.(storeFieldName)) return existing;
-    const newItemRef = toReference(newItem, true);
+    const newItemRef = entityRef(newItem, details);
     if (!newItemRef) return existing;
 
     const edges = existing?.edges ?? [];
@@ -253,32 +264,6 @@ function removeEdgeModifier(itemId: string, onRemoved: () => void) {
         totalCount: Math.max(0, totalCount - 1),
       }),
     };
-  };
-}
-
-function addRefModifier<T extends { id: string }>(
-  newItem: T,
-  position: InsertPosition,
-) {
-  return (
-    existing: StoredRefs,
-    { toReference, readField }: ModifierDetails,
-  ) => {
-    const newItemRef = toReference(newItem, true);
-    if (!newItemRef) return existing;
-    const refs = existing ?? [];
-    if (refs.some(ref => readField('id', ref) === newItem.id)) return existing;
-    return position === 'start' ? [newItemRef, ...refs] : [...refs, newItemRef];
-  };
-}
-
-function removeRefModifier(itemId: string, onRemoved: () => void) {
-  return (existing: StoredRefs, { readField }: ModifierDetails) => {
-    const refs = existing ?? [];
-    const kept = refs.filter(ref => readField('id', ref) !== itemId);
-    if (kept.length === refs.length) return existing;
-    onRemoved();
-    return kept;
   };
 }
 
@@ -401,70 +386,6 @@ export function createRemoveFromParentConnectionUpdater(
     } catch (error) {
       logger.warn(
         `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
-        serializeError(error),
-      );
-      return false;
-    }
-  };
-}
-
-/**
- * Add an item to a non-Connection array field nested in an entity. With `keyArgs`
- * the ref is inserted into every cached variant regardless of its filter/sort —
- * the same caveat as {@link createAddToParentConnectionUpdater}.
- */
-export function createAddToParentArrayUpdater<T extends { id: string }>(
-  parentTypename: string,
-  arrayField: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    newItem: T,
-    { position = 'start' }: { position?: InsertPosition } = {},
-  ): boolean => {
-    const id = identifyParent(cache, parentTypename, parentId);
-    if (!id) return false;
-    return tryModify(cache, `adding to ${parentTypename}.${arrayField}`, {
-      id,
-      fields: { [arrayField]: addRefModifier(newItem, position) },
-    });
-  };
-}
-
-/**
- * Remove an item from a parent entity's flat array field. A flat array has no
- * `read` policy to drop a dangling ref, so the ref is filtered out even when the
- * entity is evicted.
- */
-export function createRemoveFromParentArrayUpdater(
-  parentTypename: string,
-  arrayField: string,
-  itemTypename: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    itemId: string,
-    { evictItem = false }: RemoveOptions = {},
-  ): boolean => {
-    try {
-      const id = identifyParent(cache, parentTypename, parentId);
-      if (!id) return false;
-      let removed = false;
-      cache.modify({
-        id,
-        fields: {
-          [arrayField]: removeRefModifier(itemId, () => {
-            removed = true;
-          }),
-        },
-      });
-      if (evictItem) evictEntity(cache, itemTypename, itemId);
-      return removed;
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
         serializeError(error),
       );
       return false;

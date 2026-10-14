@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -66,6 +67,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
   onReject,
 }) => {
   const { t } = useTranslation();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const today = useToday();
   const user = useUser();
   const userId = user?.id ?? null;
@@ -88,6 +90,9 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
 
   const handleAccept = () => {
     if (!token) return;
+    // The API refuses an accept from an unverified email; the gate says so and
+    // offers the way to verify, with the invite still pending afterwards.
+    if (!requireVerifiedEmail()) return;
 
     setAccepting(true);
     void executeAsyncWithCleanup(

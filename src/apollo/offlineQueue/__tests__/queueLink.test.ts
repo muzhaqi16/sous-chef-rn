@@ -25,7 +25,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
@@ -375,8 +375,8 @@ describe('createQueueLink', () => {
       });
     });
 
-    // The replay needs the row's list, which the toggle input does not carry;
-    // read now, while the hook's own write keeps the row cached.
+    // The replay may run after the unit has left the cache, so the symbol its
+    // reference restates is read now, while the row keeps the unit cached.
     it('records the cached values the replay reads when it queues', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
@@ -394,10 +394,15 @@ describe('createQueueLink', () => {
         data: { __typename: 'Unit', id: 'unit-1', symbol: 'tbsp' },
       });
       const operation = makeOperation({
-        query: UpdateShoppingListItemQuantityDocument,
-        operationName: operationNameOf(UpdateShoppingListItemQuantityDocument),
+        query: UpdateShoppingListItemDocument,
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
         variables: {
-          input: { itemId: 'row-1', quantity: '2', unitId: 'unit-1' },
+          input: {
+            id: 'row-1',
+            version: 3,
+            quantity: '2',
+            unit: { id: 'unit-1' },
+          },
         },
         context: { localFirst: true },
         cache,

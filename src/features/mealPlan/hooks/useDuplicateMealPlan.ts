@@ -1,13 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  UseDuplicateMealPlan_MealPlanFragmentDoc,
-  type UseDuplicateMealPlan_MealPlanFragment,
-} from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
-import {
-  duplicatePlan,
-  type SourcePlan,
-} from '#features/mealPlan/utils/duplicatePlan';
+import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
+import { duplicatePlan } from '#features/mealPlan/utils/duplicatePlan';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { toastService } from '#/services/toastService';
@@ -21,6 +15,7 @@ import { t } from '#/i18n';
 export interface DuplicateMealPlanOptions {
   mealPlanId: string;
   newName: string;
+  /** The copy's first and last day, as `LocalDate` keys. */
   newStartDate: string;
   newEndDate: string;
 }
@@ -38,21 +33,8 @@ export function useDuplicateMealPlan() {
     { context: { localFirst: true } },
   );
 
-  const readSource = (mealPlanId: string): SourcePlan | null => {
-    const cacheId = client.cache.identify({
-      __typename: 'MealPlan',
-      id: mealPlanId,
-    });
-    if (!cacheId) return null;
-    return client.cache.readFragment<UseDuplicateMealPlan_MealPlanFragment>({
-      id: cacheId,
-      fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-      fragmentName: 'useDuplicateMealPlan_mealPlan',
-    });
-  };
-
   const duplicate = async (options: DuplicateMealPlanOptions) => {
-    const source = readSource(options.mealPlanId);
+    const source = readPlanSource(client.cache, options.mealPlanId);
     if (!source) {
       toastService.error(t('mealPlan.needsThePlan'));
       return null;

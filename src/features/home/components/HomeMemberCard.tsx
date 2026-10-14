@@ -87,7 +87,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           </Text>
           <View style={styles.roleBadge}>
             <Text role="label" tone="accent">
-              {formatRole(member.role)}
+              {formatRole(member.role, t)}
             </Text>
           </View>
         </View>

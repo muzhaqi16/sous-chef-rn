@@ -1,28 +1,12 @@
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { nativeMethod } from './nativeModule';
 
-interface StartupMarkNativeModule {
-  reportFullyDrawn?: () => void;
-  startProfiling?: () => boolean;
-  stopProfiling?: (filename: string) => Promise<string>;
-  writeTextFile?: (filename: string, contents: string) => Promise<string>;
-}
+// The profiling methods exist on both platforms: each gates on the method
+// being there, never on `Platform.OS`.
+const MODULE = 'StartupMarkModule';
 
-// Every method is optional, and each call site checks for it before calling.
-const isStartupMarkModule = (
-  value: unknown,
-): value is StartupMarkNativeModule =>
-  typeof value === 'object' && value !== null;
-
-/**
- * Resolved per call, NEVER captured at module scope: `index.js` imports this in
- * its first few lines, so a destructured binding freezes whatever the registry
- * held then — an `undefined` captured there makes every method a silent no-op
- * for the process. Not gated on `Platform.OS`; each method gates on itself.
- */
-const nativeModule = (): StartupMarkNativeModule | null => {
-  const candidate: unknown = NativeModules.StartupMarkModule;
-  return isStartupMarkModule(candidate) ? candidate : null;
-};
+const asPath = (value: unknown): string | null =>
+  typeof value === 'string' ? value : null;
 
 /**
  * Tells the PLATFORM the app is fully drawn — distinct from our own
@@ -33,7 +17,7 @@ const nativeModule = (): StartupMarkNativeModule | null => {
 export const StartupMark = {
   reportFullyDrawn() {
     if (Platform.OS === 'android') {
-      nativeModule()?.reportFullyDrawn?.();
+      nativeMethod(MODULE, 'reportFullyDrawn')?.();
     }
   },
 
@@ -44,15 +28,16 @@ export const StartupMark = {
    * merely existing proves nothing, since arming can fail.
    */
   startProfiling(): boolean {
-    const start = nativeModule()?.startProfiling;
-    if (!start) return false;
-    return start() === true;
+    return nativeMethod(MODULE, 'startProfiling')?.() === true;
   },
 
   /** Write a text file beside the profile (release strips `console`). */
-  writeTextFile(filename: string, contents: string): Promise<string | null> {
-    const write = nativeModule()?.writeTextFile;
-    return write ? write(filename, contents) : Promise.resolve(null);
+  async writeTextFile(
+    filename: string,
+    contents: string,
+  ): Promise<string | null> {
+    const write = nativeMethod(MODULE, 'writeTextFile');
+    return write ? asPath(await write(filename, contents)) : null;
   },
 
   /**
@@ -61,17 +46,15 @@ export const StartupMark = {
    * otherwise clear the fallback timer, leave the sampler running all session,
    * and report success while producing no trace.
    */
-  stopProfiling(filename: string): Promise<string | null> {
-    const stop = nativeModule()?.stopProfiling;
+  async stopProfiling(filename: string): Promise<string | null> {
+    const stop = nativeMethod(MODULE, 'stopProfiling');
     if (!stop) {
-      return Promise.reject(
-        new Error(
-          'StartupMark.stopProfiling is unavailable in this build: sampling ' +
-            'was started and cannot be stopped, so this session’s timings ' +
-            'are perturbed and no trace will be written.',
-        ),
+      throw new Error(
+        'StartupMark.stopProfiling is unavailable in this build: sampling ' +
+          'was started and cannot be stopped, so this session’s timings ' +
+          'are perturbed and no trace will be written.',
       );
     }
-    return stop(filename);
+    return asPath(await stop(filename));
   },
 };

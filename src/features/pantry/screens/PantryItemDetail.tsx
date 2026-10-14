@@ -2,6 +2,7 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -9,6 +10,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
 import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
@@ -22,7 +24,6 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
   formatPackageBreakdownFull,
-  formatNetWeightDisplay,
   formatQuantityBreakdown,
   formatStorageState,
   getExpiryInfo,
@@ -30,6 +31,7 @@ import {
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
+  formatNetWeightDisplay,
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
@@ -153,7 +155,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresOn, today);
+  const expiryInfo = getExpiryInfo(item?.expiresOn, today, t);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -164,6 +166,7 @@ export const PantryItemDetail: React.FC<
   const showNutrition = hasNutritionData(nutritionFacts);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
+    t,
   );
   const netWeightText = formatNetWeightDisplay(
     item?.netWeight,
@@ -175,6 +178,7 @@ export const PantryItemDetail: React.FC<
   );
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
+    t,
   );
   const portionsLeftText =
     item?.remainingPortions != null && item.portionUnit
@@ -191,14 +195,30 @@ export const PantryItemDetail: React.FC<
     // fires the moment the create lands, so the skip must not read as empty.
     loading: itemLoading || isUnconfirmed,
     error: itemError,
-    // "Something to show" is the cache entity, not `data`. `deletedOnServer`
-    // overrides it, and is deliberately narrow — only an explicit
-    // RESOURCE_NOT_FOUND on an acknowledged row, so offline hides nothing.
-    hasResult: !!item && !deletedOnServer,
-    isEmpty: !item || deletedOnServer,
+    // "Something to show" is the cache entity, not `data`.
+    hasResult: !!item,
+    isEmpty: !item,
   });
 
-  if (!item || deletedOnServer) {
+  // The server answered that the stack is gone. That is an answer, not a
+  // failed load: it gets its own words and a way back, never "try again".
+  if (deletedOnServer) {
+    return (
+      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
+        <View style={commonStyles.loadingContainer}>
+          <EmptyState
+            icon="trash-outline"
+            title={t('pantryItemDetail.removedTitle')}
+            description={t('pantryItemDetail.removedBody')}
+            action={{ label: t('labels.goBack'), onPress: goBack }}
+            testID={pantryTestIDs.itemRemoved}
+          />
+        </View>
+      </CollapsingHeroDetail>
+    );
+  }
+
+  if (!item) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
         <View style={commonStyles.loadingContainer}>
@@ -390,6 +410,7 @@ export const PantryItemDetail: React.FC<
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritionFacts,
+                  dataAttributions: item.item.dataAttributions,
                 })
               }
             />
@@ -493,6 +514,12 @@ export const PantryItemDetail: React.FC<
             </Text>
           )}
         </DetailSection>
+
+        {item.item.dataAttributions.length > 0 && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (
@@ -518,7 +545,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={item.item.canEdit}
+          item={item.item}
         />
       )}
     </>

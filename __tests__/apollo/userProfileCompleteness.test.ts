@@ -170,11 +170,17 @@ const requiredProfileFields = (): string[] =>
 /** Every `UserProfile` field a document selects, anywhere in its definitions. */
 const profileFieldsWrittenBy = (document: DocumentNode): Set<string> => {
   const found = new Set<string>();
-  const walk = (selectionSet: SelectionSetNode | undefined, inside: boolean) => {
+  const walk = (
+    selectionSet: SelectionSetNode | undefined,
+    inside: boolean,
+  ) => {
     for (const selection of selectionSet?.selections ?? []) {
       if (selection.kind === Kind.FIELD) {
         if (inside) found.add(selection.name.value);
-        walk(selection.selectionSet, inside || selection.name.value === 'profile');
+        walk(
+          selection.selectionSet,
+          inside || selection.name.value === 'profile',
+        );
       } else if (selection.kind === Kind.INLINE_FRAGMENT) {
         walk(
           selection.selectionSet,

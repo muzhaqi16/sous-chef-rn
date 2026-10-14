@@ -37,120 +37,6 @@ export interface CachedConnection {
 const MAX_WINDOW_EDGES = 100;
 
 /**
- * Version-aware merge: optimistic (`temp-`) items survive until the server
- * confirms, and conflicts resolve on `version`, falling back to `updatedAt`.
- */
-export function mergeArrayByIdIntelligent<
-  T extends { id: string; __ref?: string },
->(
-  // A cache write is not schema-validated, so either side can arrive as `null`.
-  existing: T[] | null = [],
-  incoming: T[] | null = [],
-  { readField }: Pick<FieldFunctionOptions, 'readField'>,
-): T[] {
-  // A null incoming keeps existing; an explicit [] means the list is genuinely empty.
-  if (incoming == null) {
-    return existing ?? [];
-  }
-
-  if (incoming.length === 0) {
-    return [];
-  }
-
-  // If no existing data, return incoming (first load or after cache clear)
-  if (!existing || existing.length === 0) {
-    return incoming;
-  }
-
-  // Create a map of existing items by ID with version metadata
-  const existingMap = new Map<
-    string,
-    { item: T; version: number; updatedAt: string }
-  >();
-  existing.forEach(item => {
-    const id = readField<string>('id', item);
-    if (id) {
-      existingMap.set(id, {
-        item,
-        version: readField<number>('version', item) ?? 0,
-        updatedAt: readField<string>('updatedAt', item) ?? '',
-      });
-    }
-  });
-
-  // Create a map of incoming items by ID with version metadata
-  const incomingMap = new Map<
-    string,
-    { item: T; version: number; updatedAt: string }
-  >();
-  incoming.forEach(item => {
-    const id = readField<string>('id', item);
-    if (id) {
-      incomingMap.set(id, {
-        item,
-        version: readField<number>('version', item) ?? 0,
-        updatedAt: readField<string>('updatedAt', item) ?? '',
-      });
-    }
-  });
-
-  // Merge with version-based conflict resolution
-  const merged: T[] = [];
-
-  // Process all incoming items
-  incomingMap.forEach(
-    (
-      {
-        item: incomingItem,
-        version: incomingVersion,
-        updatedAt: incomingUpdatedAt,
-      },
-      id,
-    ) => {
-      const existingData = existingMap.get(id);
-
-      if (!existingData) {
-        // New item from server, add it
-        merged.push(incomingItem);
-        return;
-      }
-
-      // Both exist - resolve conflict using version
-      if (incomingVersion > existingData.version) {
-        // Incoming has higher version, use it
-        merged.push(incomingItem);
-      } else if (incomingVersion < existingData.version) {
-        // Existing has higher version (optimistic update ahead of server), keep existing
-        merged.push(existingData.item);
-      } else {
-        // Same version - use timestamp as tiebreaker
-        if (incomingUpdatedAt >= existingData.updatedAt) {
-          merged.push(incomingItem);
-        } else {
-          merged.push(existingData.item);
-        }
-      }
-    },
-  );
-
-  // Keep existing items whose id still has a PENDING queue mutation, so an
-  // offline create survives a refetch that beats the queue drain. Once the
-  // queue empties the server page wins, and a genuinely deleted item (no
-  // pending op) is dropped. Mirrors the guard in itemsConnectionFieldPolicy.
-  const pendingIds = queueStore.getUnconfirmedCreateIds();
-  existingMap.forEach(({ item }, id) => {
-    if (incomingMap.has(id)) {
-      return; // Already processed above
-    }
-    if (pendingIds.has(id)) {
-      merged.push(item);
-    }
-  });
-
-  return merged;
-}
-
-/**
  * Reads the `node.id` from a connection edge via Apollo's `readField` helper.
  * Returns undefined when the edge or its node is missing — callers should skip
  * those edges rather than treat them as deduplication keys.
@@ -287,7 +173,12 @@ function mergeAuthoritativeFirstPage(
  * paginated lists use {@link itemsConnectionFieldPolicy} instead, which keeps
  * existing edge positions and bounds the window.
  */
-export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
+export function mergeConnectionByNodeId(
+  // `false` is one store field whatever arguments read it. An empty array is
+  // not: Apollo keys a selection WITH arguments `field:{}` and a bare one
+  // `field`, so the two never see each other's rows.
+  keyArgs: string[] | false = ['filters'],
+) {
   return {
     keyArgs,
     // Same self-healing read as itemsConnectionFieldPolicy — drop dangling

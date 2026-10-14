@@ -300,9 +300,7 @@ export const GlobalBackdrop: React.FC = () => {
     return null;
   }
 
-  // No themed Unistyles style on the animated node: Unistyles would capture
-  // reanimated's React-side opacity and write it back over the animation, so
-  // the colour sits one level down.
+  // The animated node takes no themed style, so the colour sits one level down.
   return (
     <Animated.View
       style={[StyleSheet.absoluteFill, animatedStyle]}

@@ -3,6 +3,10 @@ import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
+import { useConnectionData } from '#hooks/utils/useConnectionData';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
@@ -16,9 +20,17 @@ export function useMealPlan(id: string | null) {
   // what keeps the distinction sound, and makes the ack the fetch trigger.
   const isUnconfirmed = useIsCreateUnconfirmed(id);
 
-  const { data, loading, error, refetch } = useQuery(
+  const { data, loading, error, refetch, fetchMore } = useQuery(
     GetMealPlanDocument,
-    !id || isUnconfirmed ? skipToken : { variables: { id } },
+    !id || isUnconfirmed
+      ? skipToken
+      : {
+          variables: {
+            id,
+            mealsFirst: MEALS_PAGE_SIZE,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        },
   );
 
   useApolloErrorLogger(GetMealPlanDocument, error);
@@ -32,7 +44,24 @@ export function useMealPlan(id: string | null) {
     from: id ? { __typename: 'MealPlan', id } : null,
   });
   const mealPlan = id && liveMealPlan.complete ? liveMealPlan.data : null;
-  const items = mealPlan?.mealPlanItems ?? [];
+  // The meals are one cached list however many pages filled it; a plan past
+  // the first page reads the rest before the screen treats it as whole.
+  const meals = useConnectionData({
+    data: mealPlan ?? undefined,
+    selector: plan => plan.mealPlanItemsConnection,
+    key: id ?? '',
+    loading,
+    fetchMore,
+    cursorVariableName: 'mealsAfter',
+    refetch,
+  });
+  const remainingMeals = useLoadRemainingPages(
+    !!mealPlan,
+    loading,
+    meals,
+    id ?? '',
+  );
+  const items = meals.items;
   const itemDetails = useFragmentList({
     fragment: MealPlanMain_ItemFragmentDoc,
     fragmentName: 'MealPlanMain_item',
@@ -52,6 +81,9 @@ export function useMealPlan(id: string | null) {
     itemDetails,
     nutritionSummary: mealPlan?.nutritionSummary ?? null,
     mealPlanRef: data?.mealPlan ?? null,
+    /** Pages of meals remain that could not be read: the plan is partial. */
+    mealsIncomplete: remainingMeals.incomplete,
+    retryRemainingMeals: remainingMeals.retry,
     planNotFound,
     loading,
     error,

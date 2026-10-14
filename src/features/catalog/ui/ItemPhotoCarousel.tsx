@@ -26,6 +26,10 @@ import {
   ItemPhotoCarousel_ItemPhotoFragmentDoc,
   type ItemPhotoCarousel_ItemPhotoFragment,
 } from '#features/catalog/ui/ItemPhotoCarousel.generated';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+
+// The current page's dot; the credit clears the pill it sets the height of.
+const ACTIVE_DOT_SIZE = 10;
 
 /**
  * A photo as a caller can hold it: the masked ref Apollo hands back at runtime,
@@ -37,14 +41,21 @@ export type ItemPhotoRef =
   | ItemPhotoCarousel_ItemPhotoFragment;
 
 /**
- * The already-materialized form of a ref, or null when it is a bare masked ref.
- * Used as the fallback when the cache read comes back incomplete — a masked ref
- * carries no `url`, so rendering it would put `undefined` into an <Image>.
+ * A photo ref read through its fragment. An incomplete read falls back to the
+ * ref's materialized form, or null for a bare masked ref: it carries no `url`,
+ * so rendering it would put `undefined` into an <Image>.
  */
-export const materializedPhoto = (
+export const useItemPhoto = (
   ref: ItemPhotoRef,
-): ItemPhotoCarousel_ItemPhotoFragment | null =>
-  'url' in ref && typeof ref.url === 'string' ? ref : null;
+): ItemPhotoCarousel_ItemPhotoFragment | null => {
+  const result = useFragment({
+    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+    fragmentName: 'ItemPhotoCarousel_itemPhoto',
+    from: ref,
+  });
+  if (result.complete) return result.data;
+  return 'url' in ref && typeof ref.url === 'string' ? ref : null;
+};
 
 interface ItemPhotoCarouselProps {
   /** `Item.photos`, in the server's gallery order. Capped at 6 for display. */
@@ -135,6 +146,8 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   }
 
   const showDots = pages.length > 1;
+  // Floated dots lift a credit above them; dots below the photo leave it on the edge.
+  const creditDotsOffset = overlayDots ? dotsBottomOffset : null;
 
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
@@ -161,6 +174,8 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
             width={pageWidth}
             height={imageHeight}
             resizeMode={resizeMode}
+            creditDotsOffset={creditDotsOffset}
+            showDots={showDots}
             onPress={onPhotoPress ? () => onPhotoPress(pageIndex) : undefined}
             onFailed={pages.length === 1 ? onUnrenderable : undefined}
           />
@@ -201,19 +216,22 @@ const PhotoPage: React.FC<{
   width: number;
   height: number;
   resizeMode: 'cover' | 'contain';
+  creditDotsOffset: number | null;
+  showDots: boolean;
   onPress?: () => void;
   onFailed?: () => void;
-}> = ({ photoRef, width, height, resizeMode, onPress, onFailed }) => {
+}> = ({
+  photoRef,
+  width,
+  height,
+  resizeMode,
+  creditDotsOffset,
+  showDots,
+  onPress,
+  onFailed,
+}) => {
   const { t } = useTranslation();
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: photoRef,
-  });
-
-  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
-    ? result.data
-    : materializedPhoto(photoRef);
+  const photo = useItemPhoto(photoRef);
 
   if (!photo) return <View style={{ width, height }} />;
 
@@ -223,7 +241,9 @@ const PhotoPage: React.FC<{
 
   const frame = (
     <PhotoFrame
-      uri={photoDisplayUrl(photo, 'large')}
+      // The band spans the screen, and a rendition (512px at most) is soft at
+      // that width on a 3x phone, so it shows the original.
+      uri={photoDisplayUrl(photo, 'xlarge')}
       width={width}
       height={height}
       resizeMode={resizeMode}
@@ -260,6 +280,16 @@ const PhotoPage: React.FC<{
           </Text>
         </View>
       )}
+
+      {/* box-none: a tap beside the credit still opens the viewer. */}
+      {photo.credit ? (
+        <View
+          style={styles.credit(creditDotsOffset, showDots)}
+          pointerEvents="box-none"
+        >
+          <PhotoCredit credit={photo.credit} overPhoto />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -294,7 +324,8 @@ const PhotoFrame: React.FC<{
     <CachedImage
       uri={uri}
       style={{ width, height }}
-      displaySize={height}
+      // The decode WIDTH: a band is wider than it is tall.
+      displaySize={width}
       resizeMode={resizeMode}
       accessibilityLabel={accessibilityLabel}
       onError={() => {
@@ -345,6 +376,21 @@ const styles = StyleSheet.create(theme => ({
   pendingText: {
     color: theme.colors.onScrim,
   },
+  // On the photo's bottom edge, or above the floated dot pill: its active dot
+  // and its padding above and below.
+  credit: (dotsOffset: number | null, showDots: boolean) => ({
+    position: 'absolute',
+    left: theme.spacing.sm,
+    right: theme.spacing.sm,
+    alignItems: 'flex-end',
+    bottom:
+      dotsOffset === null
+        ? theme.spacing.sm
+        : dotsOffset +
+          (showDots
+            ? ACTIVE_DOT_SIZE + theme.spacing['2xs'] * 2 + theme.spacing.xs
+            : 0),
+  }),
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -378,8 +424,8 @@ const styles = StyleSheet.create(theme => ({
       active: {
         true: {
           backgroundColor: theme.colors.primary,
-          width: 10,
-          height: 10,
+          width: ACTIVE_DOT_SIZE,
+          height: ACTIVE_DOT_SIZE,
           borderRadius: theme.radii.full,
           borderCurve: 'continuous',
         },

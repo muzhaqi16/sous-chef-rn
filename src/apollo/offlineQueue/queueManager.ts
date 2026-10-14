@@ -45,6 +45,8 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { TimeoutError } from '#/utils/errors/timeoutError';
+import { withinMs } from '#/utils/withinMs';
+import { sleep } from '#/utils/backoff';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -67,6 +69,8 @@ const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
 };
+
+const TIMED_OUT = Symbol('timedOut');
 
 /** Deferrals that belong to one row, so the rest of the pass still runs. */
 const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
@@ -98,6 +102,10 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'targetBatchId',
   'purchaseId',
   'recipeId',
+  // A store a queued createStore may have minted.
+  'storeId',
+  'targetStoreId',
+  'preferredStoreId',
 ];
 
 /** `value` with every occurrence of the id `from` replaced by `to`. */
@@ -669,7 +677,7 @@ export class QueueManager {
         mutation.retryCount,
         this.config.retryDelayMs,
       );
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
 
       // Gate on `isApiUnavailable`, not bare `isOnline`: an open reachability
       // breaker (device online, API down) must defer rather than re-trip it.
@@ -936,26 +944,25 @@ export class QueueManager {
   }
 
   /**
-   * What a write waits on: the parents it attaches to, top-level and one level
-   * down (a batch row, `meal.recipeId`), and the entity it is derived from (a
-   * fork's source recipe).
+   * What a write waits on: the parents it attaches to at any depth (a batch
+   * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
+   * derived from (a fork's source recipe).
    */
   private getDependencyIds(mutation: QueuedMutation): string[] {
     const ids = new Set<string>(queuedSubject(mutation).sourceIds);
-    const collect = (record: unknown) => {
-      if (!isRecord(record)) return;
-      for (const key of PARENT_REFERENCE_KEYS) {
-        const value = record[key];
-        if (typeof value === 'string' && value) ids.add(value);
+    const collect = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(collect);
+        return;
       }
+      if (!isRecord(value)) return;
+      for (const key of PARENT_REFERENCE_KEYS) {
+        const id = value[key];
+        if (typeof id === 'string' && id) ids.add(id);
+      }
+      Object.values(value).forEach(collect);
     };
-    const input: unknown = mutation.variables.input;
-    if (!isRecord(input)) return [...ids];
-    collect(input);
-    for (const nested of Object.values(input)) {
-      if (Array.isArray(nested)) nested.forEach(collect);
-      else collect(nested);
-    }
+    collect(mutation.variables.input);
     return [...ids];
   }
 
@@ -1085,31 +1092,17 @@ export class QueueManager {
     }
   }
 
-  /**
-   * Races the replay against the processing timeout. The timer must be cleared
-   * once either settles, or every replay keeps the JS engine busy for 30s.
-   */
   private async executeWithTimeout(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
-            new TimeoutError(
-              'Operation timed out',
-              this.config.processingTimeoutMs,
-            ),
-          ),
-        this.config.processingTimeoutMs,
-      );
-    });
-    try {
-      return await Promise.race([this.executeMutation(mutation), timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
+    const ms = this.config.processingTimeoutMs;
+    const result = await withinMs(
+      this.executeMutation(mutation),
+      ms,
+      TIMED_OUT,
+    );
+    if (result === TIMED_OUT) throw new TimeoutError('Operation timed out', ms);
+    return result;
   }
 
   /**

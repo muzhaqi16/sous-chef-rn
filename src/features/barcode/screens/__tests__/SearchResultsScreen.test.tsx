@@ -17,8 +17,6 @@ const mockShowBottomSheet = jest.fn();
 jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
   useBottomSheetState: jest.fn(() => ({
     scannerSheetVisible: false,
-    searchError: null,
-    isSearching: false,
     hideBottomSheet: mockHideBottomSheet,
     showBottomSheet: mockShowBottomSheet,
   })),
@@ -32,15 +30,24 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+const searchResult = (
+  overrides: Partial<{
+    item: { id: string; name: string; canEdit: boolean; canSuggest: boolean };
+    loading: boolean;
+    error: string | null;
+  }> = {},
+) => ({
+  item: null,
+  loading: false,
+  error: null,
+  addingItem: false,
+  handleAddItem: jest.fn(),
+  handleRetry: jest.fn(),
+  ...overrides,
+});
+
 jest.mock('../../hooks/useSearchResults', () => ({
-  useSearchResults: jest.fn(() => ({
-    searchResults: [],
-    loading: false,
-    addingItem: false,
-    handleAddItem: jest.fn(),
-    handleRetry: jest.fn(),
-    clearSearch: jest.fn(),
-  })),
+  useSearchResults: jest.fn(),
 }));
 
 jest.mock('#components/molecules/ErrorState', () => ({
@@ -90,21 +97,12 @@ beforeEach(() => {
   const storeModule = require('#features/barcode/store/barcodeScannerStore');
   storeModule.useBottomSheetState.mockReturnValue({
     scannerSheetVisible: false,
-    searchError: null,
-    isSearching: false,
     hideBottomSheet: mockHideBottomSheet,
     showBottomSheet: mockShowBottomSheet,
   });
 
   const { useSearchResults } = require('../../hooks/useSearchResults');
-  useSearchResults.mockReturnValue({
-    searchResults: [],
-    loading: false,
-    addingItem: false,
-    handleAddItem: jest.fn(),
-    handleRetry: jest.fn(),
-    clearSearch: jest.fn(),
-  });
+  useSearchResults.mockReturnValue(searchResult());
 });
 
 describe('SearchResultsScreen', () => {
@@ -129,14 +127,7 @@ describe('SearchResultsScreen', () => {
 
   it('shows loading state when searching', () => {
     const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue({
-      searchResults: [],
-      loading: true,
-      addingItem: false,
-      handleAddItem: jest.fn(),
-      handleRetry: jest.fn(),
-      clearSearch: jest.fn(),
-    });
+    useSearchResults.mockReturnValue(searchResult({ loading: true }));
 
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
     // The brand loader sets its banner in caps, and the barcode reads back
@@ -147,28 +138,24 @@ describe('SearchResultsScreen', () => {
 
   it('shows search results when found', () => {
     const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue({
-      searchResults: [{ id: 'item-1', name: 'Test Product' }],
-      loading: false,
-      addingItem: false,
-      handleAddItem: jest.fn(),
-      handleRetry: jest.fn(),
-      clearSearch: jest.fn(),
-    });
+    useSearchResults.mockReturnValue(
+      searchResult({
+        item: {
+          id: 'item-1',
+          name: 'Test Product',
+          canEdit: false,
+          canSuggest: true,
+        },
+      }),
+    );
 
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
     expect(getByText('Found: Test Product')).toBeTruthy();
   });
 
   it('shows error state when search error exists', () => {
-    const storeModule = require('#features/barcode/store/barcodeScannerStore');
-    storeModule.useBottomSheetState.mockReturnValue({
-      scannerSheetVisible: false,
-      searchError: 'Network error',
-      isSearching: false,
-      hideBottomSheet: mockHideBottomSheet,
-      showBottomSheet: mockShowBottomSheet,
-    });
+    const { useSearchResults } = require('../../hooks/useSearchResults');
+    useSearchResults.mockReturnValue(searchResult({ error: 'Network error' }));
 
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
     expect(getByText('Network error')).toBeTruthy();
@@ -176,14 +163,11 @@ describe('SearchResultsScreen', () => {
 
   it('passes source and pantryId from route params', () => {
     const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue({
-      searchResults: [{ id: 'item-1', name: 'Test' }],
-      loading: false,
-      addingItem: false,
-      handleAddItem: jest.fn(),
-      handleRetry: jest.fn(),
-      clearSearch: jest.fn(),
-    });
+    useSearchResults.mockReturnValue(
+      searchResult({
+        item: { id: 'item-1', name: 'Test', canEdit: false, canSuggest: true },
+      }),
+    );
 
     const propsWithSource: ScreenProps = {
       route: {

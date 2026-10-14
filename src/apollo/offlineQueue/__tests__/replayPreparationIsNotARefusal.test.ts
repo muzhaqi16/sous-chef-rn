@@ -14,9 +14,9 @@ import type { DocumentNode } from 'graphql';
 import {
   AddItemToShoppingListDocument,
   RemoveItemFromShoppingListDocument,
-  ToggleShoppingListItemPurchasedDocument,
-  UpdateShoppingListItemQuantityDocument,
+  UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { QueueStore } from '../queueStore';
 
 /**
@@ -67,20 +67,59 @@ jest.mock('../queueStore', () => ({
 }));
 
 /** A quantity edit naming its unit by a flat id, which only a lookup can re-resolve. */
-const quantityEntry = () =>
+const flatUnitEntry = () =>
   makeQueuedMutation({
     id: 'quantity-1',
-    ...queuedMutationFor(UpdateShoppingListItemQuantityDocument),
+    ...queuedMutationFor(UpdatePantryItemQuantityDocument),
     variables: {
-      input: { itemId: 'sli-1', quantity: '2', unitId: 'unit-old' },
+      input: {
+        pantryItemId: 'pi-1',
+        quantity: '2',
+        unitId: 'unit-old',
+        version: 3,
+      },
     },
   });
+
+/** A shopping quantity edit: its unit is a reference, which takes a symbol. */
+const shoppingQuantityEntry = () =>
+  makeQueuedMutation({
+    id: 'quantity-2',
+    ...queuedMutationFor(UpdateShoppingListItemDocument),
+    variables: {
+      input: {
+        id: 'sli-1',
+        quantity: '2',
+        unit: { id: 'unit-old' },
+        version: 3,
+      },
+    },
+  });
+
+/** A tick: the update door, carrying the flag alone. */
+const tickInput = (isPurchased: boolean) => ({
+  id: 'sli-1',
+  version: 3,
+  purchaseTracking: { isPurchased },
+});
 
 const toggleEntry = () =>
   makeQueuedMutation({
     id: 'toggle-1',
-    ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-    variables: { input: { id: 'sli-1', purchased: true, version: 3 } },
+    ...queuedMutationFor(UpdateShoppingListItemDocument),
+    variables: { input: tickInput(true) },
+  });
+
+/** The cache knows the retired unit only by the symbol it had. */
+const cacheRetiredUnit = () =>
+  mockClient.cache.writeFragment({
+    fragment: gql`
+      fragment RetiredUnit on Unit {
+        id
+        symbol
+      }
+    `,
+    data: { __typename: 'Unit', id: 'unit-old', symbol: 'tbsp' },
   });
 
 describe('a replay that cannot be prepared on the device', () => {
@@ -101,17 +140,9 @@ describe('a replay that cannot be prepared on the device', () => {
   it('is raised as a prepared-failure, not as a bare Error', async () => {
     // A refusal named the unit retired, and the lookup for its current id
     // fails on the device's side.
-    mockClient.cache.writeFragment({
-      fragment: gql`
-        fragment RetiredUnit on Unit {
-          id
-          symbol
-        }
-      `,
-      data: { __typename: 'Unit', id: 'unit-old', symbol: 'tbsp' },
-    });
+    cacheRetiredUnit();
     mockClient.query.mockRejectedValue(new Error('Network request failed'));
-    const entry = quantityEntry();
+    const entry = flatUnitEntry();
     manager['staleReferenceRetried'].add(entry.id);
     const executeMutation = manager['executeMutation'].bind(manager);
 
@@ -121,10 +152,37 @@ describe('a replay that cannot be prepared on the device', () => {
     expect(mockClient.mutate).not.toHaveBeenCalled();
   });
 
+  it('restates a shopping quantity edit by its unit symbol, which needs no lookup', async () => {
+    // The same retired unit, on the update door: a unit reference takes the
+    // symbol, so a lookup that would fail is never made.
+    cacheRetiredUnit();
+    mockClient.query.mockRejectedValue(new Error('Network request failed'));
+    mockClient.mutate.mockResolvedValue({ data: {} });
+    const entry = shoppingQuantityEntry();
+    manager['staleReferenceRetried'].add(entry.id);
+
+    await manager['executeMutation'](entry);
+
+    expect(mockClient.query).not.toHaveBeenCalled();
+    expect(mockClient.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutation: UpdateShoppingListItemDocument,
+        variables: {
+          input: {
+            id: 'sli-1',
+            quantity: '2',
+            unit: { symbol: 'tbsp' },
+            version: 3,
+          },
+        },
+      }),
+    );
+  });
+
   it('classifies as a deferral that keeps the entry, not a permanent refusal', () => {
     const queueError = classifyError(
       new ReplayNotPreparedError(
-        operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        operationNameOf(UpdateShoppingListItemDocument),
         new Error('Network request failed'),
       ),
     );
@@ -143,7 +201,7 @@ describe('a replay that cannot be prepared on the device', () => {
     const result = await handleMutationError(
       toggleEntry(),
       new ReplayNotPreparedError(
-        operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        operationNameOf(UpdateShoppingListItemDocument),
         new Error('x'),
       ),
     );
@@ -164,7 +222,7 @@ describe('a replay that cannot be prepared on the device', () => {
     const result = await handleMutationError(
       toggleEntry(),
       new ReplayNotPreparedError(
-        operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        operationNameOf(UpdateShoppingListItemDocument),
         new Error('x'),
       ),
     );
@@ -184,7 +242,7 @@ describe('a replay that cannot be prepared on the device', () => {
     await handleMutationError(
       toggleEntry(),
       new ReplayNotPreparedError(
-        operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        operationNameOf(UpdateShoppingListItemDocument),
         new Error('x'),
       ),
     );
@@ -278,11 +336,11 @@ describe('an edit to a row that has left the cache', () => {
     });
   });
 
-  const queuedToggle = (id: string, purchased: boolean) =>
+  const queuedToggle = (id: string, isPurchased: boolean) =>
     makeQueuedMutation({
       id,
-      ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-      variables: { input: { id: 'sli-1', purchased, version: 3 } },
+      ...queuedMutationFor(UpdateShoppingListItemDocument),
+      variables: { input: tickInput(isPurchased) },
     });
 
   it('is sent as queued', async () => {
@@ -292,8 +350,8 @@ describe('an edit to a row that has left the cache', () => {
 
     expect(mockClient.mutate).toHaveBeenCalledWith(
       expect.objectContaining({
-        mutation: ToggleShoppingListItemPurchasedDocument,
-        variables: { input: { id: 'sli-1', purchased: true, version: 3 } },
+        mutation: UpdateShoppingListItemDocument,
+        variables: { input: tickInput(true) },
       }),
     );
   });
@@ -313,8 +371,8 @@ describe('an edit to a row that has left the cache', () => {
     await new QueueManager().processQueue();
 
     const sent = mockClient.mutate.mock.calls.map(
-      ([options]: [{ variables: { input: { purchased: boolean } } }]) =>
-        options.variables.input.purchased,
+      ([options]: [{ variables: { input: ReturnType<typeof tickInput> } }]) =>
+        options.variables.input.purchaseTracking.isPurchased,
     );
     expect(sent).toEqual([true, false]);
   });

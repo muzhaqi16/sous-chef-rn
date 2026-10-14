@@ -13,6 +13,7 @@ import {
 } from '../tokenRefreshBridge';
 import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { retryCooldownMs } from '#/utils/backoff';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 import type { UserRole } from '#/graphql/generated/schemaTypes';
@@ -95,6 +96,8 @@ export type AuthUserInput = User & {
   } | null;
   settings?: {
     showTutorials?: boolean | null;
+    /** The account's currency lives on its settings; absent until a first write. */
+    preferredCurrency?: string | null;
   } | null;
 };
 
@@ -149,16 +152,10 @@ export interface AuthState {
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
-/**
- * Seconds between device-credential exchanges after a refusal. Index 0 is the
- * never-refused state, so counting from 1 always lands on a real delay.
- */
-const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
-
-const backoffForAttempt = (attempt: number): number =>
-  (BIOMETRIC_BACKOFF_SECONDS[
-    Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
-  ] ?? 0) * 1000;
+/** A session's tokens are held: signed in, or signing back in from either one. */
+export const holdsSessionTokens = (
+  state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
+): boolean => !!state.accessToken || !!state.refreshToken;
 
 const initialAuthState = {
   user: null,
@@ -222,6 +219,8 @@ export const createAuthSlice: StateCreator<
         // Flatten profile fields from the login/register GraphQL response so the
         // greeting can render the user's name immediately without a separate query.
         const profile = user.profile;
+        const currency =
+          user.settings?.preferredCurrency ?? user.preferredCurrency;
 
         // Normalize email to prevent validation issues (trim whitespace, lowercase)
         state.user = {
@@ -231,14 +230,15 @@ export const createAuthSlice: StateCreator<
           lastName: profile?.lastName ?? user.lastName,
           name: profile?.displayName ?? user.name,
           profilePicture: profile?.avatar ?? user.profilePicture,
+          preferredCurrency: currency,
         };
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
         state.isAutoLoggingIn = false; // Clear auto-login state on success
         // Mirrored out of the auth payload so every money surface can read it
         // without a query of its own; the reset manager clears it on sign-out.
-        if (user.preferredCurrency) {
-          state.preferredCurrency = user.preferredCurrency;
+        if (currency) {
+          state.preferredCurrency = currency;
         }
         // Seeded here, not from `useAppSettings` — that hook mounts only on the
         // App Settings screen, while a session end resets this to `true`. The
@@ -340,7 +340,7 @@ export const createAuthSlice: StateCreator<
       set(state => {
         state.biometricAttempts += 1;
         // The server's own deadline wins: it knows what budget is left.
-        const wait = retryAfterMs ?? backoffForAttempt(state.biometricAttempts);
+        const wait = retryAfterMs ?? retryCooldownMs(state.biometricAttempts);
         state.biometricRetryAt = Date.now() + wait;
       });
     },

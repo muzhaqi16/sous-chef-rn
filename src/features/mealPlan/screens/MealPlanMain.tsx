@@ -4,9 +4,10 @@ import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
+import { AlertBanner } from '#components/molecules/AlertBanner';
 import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
-import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
+import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
@@ -55,7 +56,7 @@ import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle'
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { toDateKey } from '#/utils/dateUtils';
 
 /** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
  *  again while the plan list is still arriving. */
@@ -155,6 +156,8 @@ const MealPlanMainInner: React.FC = () => {
     items,
     itemDetails,
     nutritionSummary,
+    mealsIncomplete,
+    retryRemainingMeals,
     refetch,
   } = useActiveMealPlan({
     currentPlanId: currentPlan?.id ?? null,
@@ -300,7 +303,7 @@ const MealPlanMainInner: React.FC = () => {
       mealPlanId: activePlanId,
       meal: { recipeId },
       mealType,
-      date: toMealDateTime(calendar.selectedDate),
+      date: toDateKey(calendar.selectedDate),
     });
     if (result) {
       setAddMealVisible(false);
@@ -313,7 +316,7 @@ const MealPlanMainInner: React.FC = () => {
       mealPlanId: activePlanId,
       meal: { customMealName: name },
       mealType,
-      date: toMealDateTime(calendar.selectedDate),
+      date: toDateKey(calendar.selectedDate),
     });
     if (result) {
       setAddMealVisible(false);
@@ -517,7 +520,7 @@ const MealPlanMainInner: React.FC = () => {
         <MonthCalendar
           selectedDate={calendar.selectedDate}
           onSelectDate={calendar.selectDate}
-          daysWithMeals={daysWithMeals}
+          markedDays={daysWithMeals}
           minDate={calendar.minDate}
           maxDate={calendar.maxDate}
         />
@@ -543,14 +546,30 @@ const MealPlanMainInner: React.FC = () => {
         refreshing={refreshing}
         onRefresh={handleRefresh}
         listHeader={
-          nutritionSummary ? (
-            <View style={styles.nutritionContainer}>
-              <NutritionSummaryCard
-                nutritionSummary={nutritionSummary}
-                nutritionGoalProgress={activeMealPlan?.nutritionGoalProgress}
-              />
-            </View>
-          ) : undefined
+          <>
+            {mealsIncomplete ? (
+              <View style={styles.headerBlock}>
+                <AlertBanner
+                  variant="warning"
+                  icon="cloud-offline-outline"
+                  iconLibrary="Ionicons"
+                  title={t('mealPlanMain.mealsIncompleteTitle')}
+                  subtitle={t('mealPlanMain.mealsIncompleteBody')}
+                  onPress={retryRemainingMeals}
+                  showChevron={false}
+                  testID={mealPlanTestIDs.mealsIncomplete}
+                />
+              </View>
+            ) : null}
+            {nutritionSummary ? (
+              <View style={styles.headerBlock}>
+                <NutritionSummaryCard
+                  nutritionSummary={nutritionSummary}
+                  nutritionGoalProgress={activeMealPlan?.nutritionGoalProgress}
+                />
+              </View>
+            ) : null}
+          </>
         }
       />
 
@@ -641,7 +660,7 @@ const MealPlanMainInner: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  nutritionContainer: {
+  headerBlock: {
     marginBottom: theme.spacing.sm,
   },
 }));

@@ -4,7 +4,7 @@
  * never registers — fine for in-memory state, not for PERSISTED state, whose
  * keys are declared as DATA below and deleted without loading their module.
  */
-import { storage } from '#/storage/mmkv';
+import { RETIRED_PERSISTED_KEYS, storage } from '#/storage/mmkv';
 import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;
@@ -16,14 +16,17 @@ const stores = new Map<string, StoreReset>();
  * missing here survives sign-out on a shared device.
  */
 export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
-  // src/features/barcode/store/barcodeScannerStore.ts — scan history carries
-  // item names, brands and UPCs.
-  'sous-chef-barcode',
   // src/features/recipes/store/useRecipeCacheStore.ts — search terms and results.
   'recipe-search-cache',
   // src/features/recipes/store/useRecipeSuggestionsStore.ts — personalized
   // suggestions derived from the account's pantry.
   'recipe-suggestions-cache',
+  // src/features/receipts/store/receiptDraftStore.ts — a scanned receipt's
+  // redacted text names the shop and what was bought.
+  'sous-chef-receipt-draft',
+  // src/features/receipts/store/receiptPhotoConsentStore.ts — whether this
+  // user lets receipt photos be sent; the next user answers for themselves.
+  'sous-chef-receipt-photo-consent',
 ];
 
 /**
@@ -54,7 +57,10 @@ export const resetSessionScopedStores = (): void => {
 
   // Independent of the loop above: a store whose module was never evaluated has
   // no registration, but its persisted key is still on disk.
-  for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
+  for (const key of [
+    ...SESSION_SCOPED_PERSISTED_KEYS,
+    ...RETIRED_PERSISTED_KEYS,
+  ]) {
     try {
       storage.remove(key);
     } catch (error) {

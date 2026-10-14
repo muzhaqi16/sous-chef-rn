@@ -124,7 +124,6 @@ describe('every identity surface presents one value', () => {
 
     expect(inputWith('id')).toEqual(expect.objectContaining({ id: 'mine' }));
   });
-
 });
 
 describe('the sign-in input carries no device field', () => {

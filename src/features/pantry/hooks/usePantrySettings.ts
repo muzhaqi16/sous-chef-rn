@@ -19,10 +19,15 @@ import {
 } from '#features/pantry/hooks/useCreatePantry';
 import { useToday } from '#hooks/useToday';
 import {
+  localFirstFragment,
   snapshotFields,
   writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  chainEntityWrite,
+  chainVersionedWrite,
+} from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
@@ -70,6 +75,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
+    refetch: refetchPantry,
   } = useQuery(
     GetPantryDocument,
     hasValidPantryId && pantryId
@@ -102,13 +108,18 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     update: buildDeletePantryUpdater(homeId),
   });
 
-  /** False when the flag did not stick, so the caller can put its switch back. */
+  /**
+   * False when the flag did not stick, so the caller can put its switch back.
+   * In line with the pantry's saves: the server moves its version.
+   */
   const setDefault = async (id: string): Promise<boolean> => {
     const settled = await settleMutation(
       () =>
-        markAsDefault({
-          variables: { input: { id }, today: todayKey() },
-        }),
+        chainEntityWrite(client.cache, { __typename: 'Pantry', id }, () =>
+          markAsDefault({
+            variables: { input: { id }, today: todayKey() },
+          }),
+        ),
       {
         document: MarkPantryAsDefaultDocument,
         fallback: t('errors.saveSettingsFailed'),
@@ -137,20 +148,34 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     updates: { name: string; description: string },
   ): Promise<boolean> => {
     const entity = { __typename: 'Pantry', id };
-    // Omits keys the read did not carry, so a refusal arriving before the
-    // query resolves reverts nothing rather than blanking the real name.
-    const previous = snapshotFields(pantry, updates);
+    // From the cache, not the query: another screen's read can hold the row
+    // before this one answers. Omits keys it lacks, so a revert blanks nothing.
+    const held = client.cache.readFragment<object>({
+      id: client.cache.identify(entity),
+      fragment: localFirstFragment('Pantry', Object.keys(updates).join(' ')),
+      returnPartialData: true,
+    });
+    const previous = snapshotFields(held, updates);
     writeEntityFields(client.cache, entity, updates);
 
+    // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        updatePantry({
-          variables: { input: { id, ...updates }, today: todayKey() },
-        }),
+        chainVersionedWrite(client.cache, entity, version =>
+          updatePantry({
+            variables: {
+              input: { id, ...updates, version },
+              today: todayKey(),
+            },
+          }),
+        ),
       {
         document: UpdatePantryDocument,
         fallback: t('errors.saveSettingsFailed'),
         onFailed: () => writeEntityFields(client.cache, entity, previous),
+        onConflictRefresh: () => {
+          void refetchPantry();
+        },
       },
     );
     return settled.status !== 'failed';

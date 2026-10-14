@@ -26,7 +26,7 @@ import {
 import { makeCache } from '#/apollo/cache';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
-import { handleSubscriptionError } from '#utils/subscriptionErrorHandler';
+import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import { logger } from '#/utils/environment';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -87,8 +87,7 @@ jest.mock('#/services/notifications/localNotificationHelper', () => ({
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
   ...jest.requireActual<object>('#utils/subscriptionErrorHandler'),
-  handleSubscriptionError: jest.fn(),
-  clearAllRetryStates: jest.fn(),
+  reportSubscriptionError: jest.fn(),
 }));
 
 const mockSyncMarkAsRead = jest.fn();
@@ -159,6 +158,7 @@ function buildNotificationSubscriptionMock(
             expiresAt: null,
             sourceId: null,
             sourceType: null,
+            pantryItemId: null,
             actionUrl: null,
             readAt: null,
           },
@@ -205,6 +205,7 @@ function buildTransitionEventMock(
                   expiresAt: null,
                   sourceId: null,
                   sourceType: null,
+                  pantryItemId: null,
                   actionUrl: null,
                   readAt: '2024-01-01T00:01:00Z',
                 },
@@ -291,6 +292,7 @@ const seededCache = (
             expiresAt: null,
             sourceId: null,
             sourceType: null,
+            pantryItemId: null,
             actionUrl: null,
             readAt: null,
           },
@@ -602,7 +604,7 @@ describe('useNotificationListener', () => {
       });
 
       await waitFor(() => {
-        expect(handleSubscriptionError).toHaveBeenCalled();
+        expect(reportSubscriptionError).toHaveBeenCalled();
       });
       expect(warnedAboutSubscription()).toBe(false);
     });
@@ -617,7 +619,7 @@ describe('useNotificationListener', () => {
       });
 
       await waitFor(() => {
-        expect(handleSubscriptionError).toHaveBeenCalled();
+        expect(reportSubscriptionError).toHaveBeenCalled();
       });
       expect(warnedAboutSubscription()).toBe(true);
     });

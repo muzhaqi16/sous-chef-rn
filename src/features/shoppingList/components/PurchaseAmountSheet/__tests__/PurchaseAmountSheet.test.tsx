@@ -117,10 +117,10 @@ describe('PurchaseAmountSheet', () => {
     );
   });
 
-  it('renders Quantity and Total price section labels', () => {
+  it('renders Quantity and Total paid section labels', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     expect(screen.getByText('Quantity')).toBeTruthy();
-    expect(screen.getByText('Total price')).toBeTruthy();
+    expect(screen.getByText('Total paid')).toBeTruthy();
   });
 
   it('pre-fills the quantity input from requestedQuantity', () => {
@@ -299,5 +299,36 @@ describe('an unusable quantity is refused, not substituted', () => {
     expect(screen.queryByTestId('purchase-quantity-error')).toBeNull();
     fireEvent.press(screen.getByTestId('header-action-0'));
     expect(onConfirm).toHaveBeenCalledWith(4, 9.98);
+  });
+});
+
+describe('a total paid that is no amount', () => {
+  // It was dropped without a word: the purchase was recorded with no price.
+  it.each(['-3', '4,99x'])(
+    'refuses %p on the field and does not confirm',
+    typed => {
+      const onConfirm = jest.fn();
+      renderWithInit(buildProps({ onConfirm }));
+
+      fireEvent.changeText(screen.getByTestId('purchase-price-input'), typed);
+      fireEvent.press(screen.getByTestId('header-action-0'));
+
+      expect(screen.getByTestId('purchase-price-error')).toHaveTextContent(
+        'Enter the amount paid, like 3.49, or leave it empty.',
+      );
+      expect(onConfirm).not.toHaveBeenCalled();
+    },
+  );
+
+  it('clears the message and confirms once the total is usable', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm }));
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '4,99x');
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3.49');
+
+    expect(screen.queryByTestId('purchase-price-error')).toBeNull();
+    fireEvent.press(screen.getByTestId('header-action-0'));
+    expect(onConfirm).toHaveBeenCalledWith(2, 3.49);
   });
 });

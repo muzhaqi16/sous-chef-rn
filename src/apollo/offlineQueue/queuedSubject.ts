@@ -2,17 +2,14 @@ import type { DocumentNode } from 'graphql';
 import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
 import type {
   AddItemsToShoppingListInput,
-  ConvertExpiredBatchesToWasteInput,
   ConvertExpiredToWasteInput,
   CreatePantryItemUsageInput,
   ForkRecipeInput,
   MoveShoppingItemToPantryInput,
-  MoveShoppingListItemInput,
   OpenPantryItemBatchInput,
   RemoveRecipeFromFavoritesInput,
   UpdatePantryItemQuantityInput,
   UpdateRecipeIngredientsInput,
-  UpdateShoppingListItemQuantityInput,
   WastePantryItemBatchInput,
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
@@ -21,17 +18,14 @@ import { isRecord } from '#/utils/isRecord';
 /** The input types whose subject is a field other than `id`. */
 interface SubjectInputs {
   AddItemsToShoppingListInput: AddItemsToShoppingListInput;
-  ConvertExpiredBatchesToWasteInput: ConvertExpiredBatchesToWasteInput;
   ConvertExpiredToWasteInput: ConvertExpiredToWasteInput;
   CreatePantryItemUsageInput: CreatePantryItemUsageInput;
   ForkRecipeInput: ForkRecipeInput;
   MoveShoppingItemToPantryInput: MoveShoppingItemToPantryInput;
-  MoveShoppingListItemInput: MoveShoppingListItemInput;
   OpenPantryItemBatchInput: OpenPantryItemBatchInput;
   RemoveRecipeFromFavoritesInput: RemoveRecipeFromFavoritesInput;
   UpdatePantryItemQuantityInput: UpdatePantryItemQuantityInput;
   UpdateRecipeIngredientsInput: UpdateRecipeIngredientsInput;
-  UpdateShoppingListItemQuantityInput: UpdateShoppingListItemQuantityInput;
   WastePantryItemBatchInput: WastePantryItemBatchInput;
 }
 
@@ -46,17 +40,14 @@ const SUBJECT_KEYS: {
   readonly [K in keyof SubjectInputs]: keyof SubjectInputs[K] & string;
 } = {
   AddItemsToShoppingListInput: 'items',
-  ConvertExpiredBatchesToWasteInput: 'pantryItemId',
   ConvertExpiredToWasteInput: 'pantryItemId',
   CreatePantryItemUsageInput: 'pantryItemId',
   ForkRecipeInput: 'newRecipeId',
   MoveShoppingItemToPantryInput: 'pantryItemId',
-  MoveShoppingListItemInput: 'itemId',
   OpenPantryItemBatchInput: 'batchId',
   RemoveRecipeFromFavoritesInput: 'recipeId',
   UpdatePantryItemQuantityInput: 'pantryItemId',
   UpdateRecipeIngredientsInput: 'recipeId',
-  UpdateShoppingListItemQuantityInput: 'itemId',
   WastePantryItemBatchInput: 'batchId',
 };
 

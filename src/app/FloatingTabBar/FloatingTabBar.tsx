@@ -8,7 +8,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import {
   useTabBarState,
   useTabBarSetters,
@@ -158,10 +158,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     activeTabIndex.set(targetIndex);
     HapticService.selection();
 
+    // The library tab bar's rule: a press on the focused tab is a repeat, which
+    // native-stack answers by popping that tab's stack to its first screen.
     const event = navigation.emit({
       type: 'tabPress',
       target: route.key,
       canPreventDefault: true,
+      data: { behavior: { scrollToTop: isFocused, popToTop: isFocused } },
     });
 
     if (!event.defaultPrevented) {

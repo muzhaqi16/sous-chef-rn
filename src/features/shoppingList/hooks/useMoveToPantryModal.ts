@@ -103,7 +103,8 @@ export function useMoveToPantryModal(
     // filtered connection variant to remove the edge from.
     const item = items.find(i => i.id === selectedItemId);
     if (!item) return false;
-    return moveToPantry(item, input);
+    const outcome = await moveToPantry(item, input);
+    return outcome.status === 'moved';
   };
 
   return {

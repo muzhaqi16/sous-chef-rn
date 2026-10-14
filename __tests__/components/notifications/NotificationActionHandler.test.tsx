@@ -22,9 +22,12 @@ type NotificationActionRenderProps = Parameters<
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/features/notifications/components/InvitationAcceptanceModal', () => ({
-  InvitationAcceptanceModal: () => null,
-}));
+jest.mock(
+  '../../../src/features/notifications/components/InvitationAcceptanceModal',
+  () => ({
+    InvitationAcceptanceModal: () => null,
+  }),
+);
 type OnActionSelected = (
   notification: DisplayNotification,
   action: ExpirationAction,
@@ -32,38 +35,49 @@ type OnActionSelected = (
 let mockOnActionSelected: OnActionSelected | undefined;
 const mockSyncMarkAsRead = jest.fn();
 const mockSyncMarkAction = jest.fn();
-const mockSyncMarkRead = jest.fn();
 
-jest.mock('../../../src/features/notifications/components/ExpirationActionSheet', () => ({
-  ExpirationActionSheet: ({
-    onActionSelected,
-  }: {
-    onActionSelected: OnActionSelected;
-  }) => {
-    mockOnActionSelected = onActionSelected;
-    return null;
-  },
-}));
-jest.mock('../../../src/features/notifications/hooks/useExpirationNotificationSync', () => ({
-  useExpirationNotificationSync: () => ({
-    syncMarkAction: mockSyncMarkAction,
-    syncMarkRead: mockSyncMarkRead,
+jest.mock(
+  '../../../src/features/notifications/components/ExpirationActionSheet',
+  () => ({
+    ExpirationActionSheet: ({
+      onActionSelected,
+    }: {
+      onActionSelected: OnActionSelected;
+    }) => {
+      mockOnActionSelected = onActionSelected;
+      return null;
+    },
   }),
-}));
-jest.mock('../../../src/features/notifications/hooks/useNotificationSync', () => ({
-  useNotificationSync: () => ({
-    syncMarkAsRead: mockSyncMarkAsRead,
-    syncDelete: jest.fn(),
-    syncMarkAllAsRead: jest.fn(),
+);
+jest.mock(
+  '../../../src/features/notifications/hooks/useExpirationNotificationSync',
+  () => ({
+    useExpirationNotificationSync: () => ({
+      syncMarkAction: mockSyncMarkAction,
+    }),
   }),
-}));
+);
+jest.mock(
+  '../../../src/features/notifications/hooks/useNotificationSync',
+  () => ({
+    useNotificationSync: () => ({
+      syncMarkAsRead: mockSyncMarkAsRead,
+      syncDelete: jest.fn(),
+      syncMarkAllAsRead: jest.fn(),
+    }),
+  }),
+);
 jest.mock('../../../src/hooks/navigation/useAppNavigation');
 jest.mock('../../../src/store/useAppStore', () => ({
   useAppStore: <T,>(selector: (state: RootState) => T): T =>
-    selector({ setSelectedHomeId: jest.fn() } as Partial<RootState> as RootState),
+    selector({
+      setSelectedHomeId: jest.fn(),
+    } as Partial<RootState> as RootState),
 }));
 
 describe('NotificationActionHandler', () => {
+  beforeEach(() => jest.clearAllMocks());
+
   it('renders children with render prop', () => {
     const { getByText } = renderWithApollo(
       <NotificationActionHandler>
@@ -77,7 +91,7 @@ describe('NotificationActionHandler', () => {
     let receivedProps!: NotificationActionRenderProps;
     renderWithApollo(
       <NotificationActionHandler>
-        {(props) => {
+        {props => {
           receivedProps = props;
           return <Text>Test</Text>;
         }}
@@ -90,7 +104,7 @@ describe('NotificationActionHandler', () => {
     let receivedProps!: NotificationActionRenderProps;
     renderWithApollo(
       <NotificationActionHandler>
-        {(props) => {
+        {props => {
           receivedProps = props;
           return <Text>Test</Text>;
         }}
@@ -99,7 +113,9 @@ describe('NotificationActionHandler', () => {
     expect(receivedProps.handleNotificationAction).toBeDefined();
   });
 
-  it('marks the generic notification read when an expiration action is chosen', () => {
+  // The server keeps one read state: reading the feed notification reads the
+  // reminders it announced, so the reminder gets no write of its own.
+  it('sends the action and one mark-read of the feed notification when an expiration action is chosen', () => {
     renderWithApollo(
       <NotificationActionHandler>
         {() => <Text>Test</Text>}
@@ -122,11 +138,35 @@ describe('NotificationActionHandler', () => {
 
     act(() => mockOnActionSelected?.(notification, ExpirationAction.Consumed));
 
-    expect(mockSyncMarkAction).toHaveBeenCalledWith(
-      'n1',
-      'exp-1',
-      ExpirationAction.Consumed,
+    expect(mockSyncMarkAction.mock.calls).toEqual([
+      ['n1', 'exp-1', ExpirationAction.Consumed],
+    ]);
+    expect(mockSyncMarkAsRead.mock.calls).toEqual([['n1']]);
+  });
+
+  it('sends nothing for a notification with no linked reminder', () => {
+    renderWithApollo(
+      <NotificationActionHandler>
+        {() => <Text>Test</Text>}
+      </NotificationActionHandler>,
     );
-    expect(mockSyncMarkAsRead).toHaveBeenCalledWith('n1');
+    const unlinked: DisplayNotification = {
+      id: 'n2',
+      type: NotificationType.ExpiryReminder,
+      isAuthoredContent: false,
+      category: NotificationCategory.Pantry,
+      priority: Priority.Normal,
+      payload: { itemName: 'Milk', daysUntilExpiry: 1 },
+      sentAt: '2026-07-01T00:00:00Z',
+      isRead: false,
+      requiresAction: true,
+      actionType: 'VIEW_EXPIRING_ITEMS',
+      actionData: {},
+    };
+
+    act(() => mockOnActionSelected?.(unlinked, ExpirationAction.Consumed));
+
+    expect(mockSyncMarkAction).not.toHaveBeenCalled();
+    expect(mockSyncMarkAsRead).not.toHaveBeenCalled();
   });
 });

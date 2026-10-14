@@ -40,6 +40,7 @@ const node = (
   expiresAt: null,
   sourceId: null,
   sourceType: null,
+  pantryItemId: null,
   actionUrl: null,
   readAt:
     status === NotificationStatus.Read ? '2026-08-23T00:00:00.000Z' : null,

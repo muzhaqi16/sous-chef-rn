@@ -15,6 +15,8 @@ import {
 import { formatRelativeToNow } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useUser } from '#store/useAppStore';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -23,6 +25,8 @@ interface ReviewCardProps {
   onToggleHelpful: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Offered only on a review someone other than the viewer wrote. */
+  onReport?: (authorId: string) => void;
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({
@@ -32,8 +36,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   onToggleHelpful,
   onEdit,
   onDelete,
+  onReport,
 }) => {
   const { t } = useTranslation();
+  const viewer = useUser();
   // Per-entity cache subscription: re-renders only when this review's
   // RecipeReviewFragment fields change (e.g., helpful count after a
   // toggleHelpful mutation, or comment/rating after an updateReview).
@@ -56,6 +62,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       t('labels.someone')
     : t('labels.deletedUser');
   const avatar = user?.profile?.avatar;
+  const authorId = user?.id;
+  const reportable =
+    !!onReport && !!viewer && !!authorId && authorId !== viewer.id;
 
   return (
     <View style={styles.container}>
@@ -105,6 +114,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               </Pressable>
             )}
           </View>
+        )}
+        {!!reportable && (
+          <Pressable
+            onPress={() => onReport(authorId)}
+            hitSlop={hitSlop.md}
+            style={({ pressed }) => pressed && styles.pressed}
+            accessibilityRole="button"
+            accessibilityLabel={t('reports.reportReview')}
+            testID={recipesTestIDs.reviewReportButton(review.id)}
+          >
+            <Icon name="flag-outline" size={18} tone="textSecondary" />
+          </Pressable>
         )}
       </View>
       {/* Stars */}

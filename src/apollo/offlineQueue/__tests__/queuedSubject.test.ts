@@ -9,6 +9,7 @@ import {
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
+  UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
@@ -35,7 +36,14 @@ describe('queuedSubject', () => {
     [
       'a move names the row it moves',
       MoveShoppingListItemDocument,
-      { itemId: 'row-1', afterItemId: 'row-0' },
+      { id: 'row-1', afterItemId: 'row-0' },
+      ['row-1'],
+      [],
+    ],
+    [
+      'a shopping line edit or tick names the line',
+      UpdateShoppingListItemDocument,
+      { id: 'row-1', version: 2, purchaseTracking: { isPurchased: true } },
       ['row-1'],
       [],
     ],

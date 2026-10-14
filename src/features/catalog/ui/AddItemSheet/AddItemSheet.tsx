@@ -50,6 +50,7 @@ export function AddItemSheet<
   isMutating,
   onAddManually,
   onScanPress,
+  receiptAction,
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
@@ -313,6 +314,17 @@ export function AddItemSheet<
                   icon: 'barcode-outline',
                   onPress: onScanPress,
                 },
+                ...(receiptAction
+                  ? [
+                      {
+                        icon: 'receipt-outline',
+                        ...receiptAction,
+                        testID: catalogTestIDs.addItemSheetReceiptAction(
+                          config.testIDPrefix,
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
             />
 

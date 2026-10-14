@@ -20,6 +20,8 @@ import { refByIdOrName } from '#/utils/refInput';
  */
 export interface EditableItemSnapshot {
   id: string;
+  /** The version a direct edit sends back; `updateItem` refuses a stale one. */
+  version: number;
   /**
    * May this user write to the item directly with `updateItem`? Viewer-scoped.
    * `false` does NOT mean "suggest instead" — the two flags are independent, and
@@ -86,6 +88,7 @@ export function itemToEditableSnapshot(
   const primaryBrand = item.brands[0]?.brand;
   return {
     id: item.id,
+    version: item.version,
     canEdit: item.canEdit,
     canSuggest: item.canSuggest,
     name: item.name,
@@ -185,8 +188,11 @@ export function buildSuggestibleItemChanges(
   // (dual-label packaging), so only the first entry is diffable. Extra rows are
   // ignored — AddItemForm caps the list at one entry in edit modes.
   const netWeight = formData.netWeights?.[0];
+  // The form's size is a package size, so a size sent says so: a product whose
+  // figure was a serving would otherwise keep reading the new one as a serving.
   if (netWeight?.value != null && netWeight.value !== original.netWeight) {
     packageInfo.netWeight = netWeight.value;
+    packageInfo.netWeightKind = NetWeightKind.Package;
     changedFields.push('packageInfo.netWeight');
   }
   // The unit picker leaves `unitId` undefined when the user free-types a unit
@@ -270,34 +276,6 @@ export function withScannedPack(
     brandId: pack.brandId,
     brandName: pack.brandName,
   };
-}
-
-/**
- * A barcode's record takes only its size, what the size measures, its unit
- * and its brand; the rest of an edit is the item's. The form's size is a
- * package size, so a size sent to the barcode says so.
- */
-export function splitBarcodeChanges(changes: SuggestibleItemChangesInput): {
-  barcode: SuggestibleItemChangesInput;
-  item: SuggestibleItemChangesInput;
-} {
-  // A barcode has one brand: replacing it removes nothing from the item's.
-  const { packageInfo, brand, brandOps: _itemBrands, ...itemRest } = changes;
-  const { netWeight, displayUnit, ...packageRest } = packageInfo ?? {};
-  const barcode: SuggestibleItemChangesInput = {};
-  if (netWeight != null || displayUnit != null) {
-    barcode.packageInfo = {
-      ...(netWeight != null && {
-        netWeight,
-        netWeightKind: NetWeightKind.Package,
-      }),
-      ...(displayUnit != null && { displayUnit }),
-    };
-  }
-  if (brand != null) barcode.brand = brand;
-  const item: SuggestibleItemChangesInput = { ...itemRest };
-  if (Object.keys(packageRest).length > 0) item.packageInfo = packageRest;
-  return { barcode, item };
 }
 
 /** Prefill AddItemForm from the snapshot the diff will later compare against. */

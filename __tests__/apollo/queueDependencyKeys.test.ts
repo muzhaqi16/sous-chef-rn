@@ -48,9 +48,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   netWeightUnitId: 'unit vocabulary is server-owned',
   portionUnitId: 'unit vocabulary is server-owned',
   brandId: 'catalog rows are created online only',
-  storeId: 'catalog rows are created online only',
-  targetStoreId: 'catalog rows are created online only',
-  preferredStoreId: 'catalog rows are created online only',
+  chainId: 'store chains are server-owned reference data',
   dietaryProfileId: 'one per user, minted by the server at sign-up',
   notificationId: 'minted by the server, never by a queued write',
   externalSourceId: 'an external catalogue id',
@@ -133,7 +131,9 @@ describe('every id an enqueueable input declares is classified for the drain', (
       expect(
         unclassified.length === 0
           ? true
-          : `${name} declares ${unclassified.join(', ')}: add each to SUBJECT_KEYS (the write's own row), PARENT_REFERENCE_KEYS in queueManager (a row an earlier queued write may have minted, so the drain waits for it) or NEVER_QUEUED_REFERENCE with the reason.`,
+          : `${name} declares ${unclassified.join(
+              ', ',
+            )}: add each to SUBJECT_KEYS (the write's own row), PARENT_REFERENCE_KEYS in queueManager (a row an earlier queued write may have minted, so the drain waits for it) or NEVER_QUEUED_REFERENCE with the reason.`,
       ).toBe(true);
     },
   );

@@ -1,6 +1,7 @@
 import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
+import { getDeviceLocale } from './deviceLocale';
 import { getDeviceId } from '#/storage/deviceId';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
@@ -358,18 +359,6 @@ const collectAdditionalInfo = async () => {
   return additionalInfo;
 };
 
-/** The device's locale, or null when neither source can say. */
-function readDeviceLocale(): string | null {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.language) {
-      return navigator.language;
-    }
-    return Intl.DateTimeFormat().resolvedOptions().locale || null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Collects display-related information
  */
@@ -511,7 +500,7 @@ export const collectDeviceInformation =
         appVersion,
         screenResolution,
         timezone,
-        language: readDeviceLocale(),
+        language: getDeviceLocale(),
         ...browserInfo,
 
         // Enhanced security & identification
@@ -569,7 +558,7 @@ export const collectDeviceInformation =
         osVersion: Platform.Version.toString(),
         appVersion: '1.0.0',
         timezone: 'UTC',
-        language: readDeviceLocale(),
+        language: getDeviceLocale(),
       };
     }
   };

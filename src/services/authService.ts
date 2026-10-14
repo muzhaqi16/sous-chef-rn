@@ -19,7 +19,7 @@ import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
-import { UpdateAccountDocument } from '#operations/auth/user.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
   ExchangeDeviceCredentialDocument,
   IssueDeviceCredentialDocument,
@@ -49,6 +49,7 @@ import {
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { withinMs } from '#/utils/withinMs';
 import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
@@ -99,13 +100,13 @@ async function applyRegionCurrencyDefault(
   const navState = store.getUserNavigationState(user.id);
   if (navState?.currencyDefaultApplied) return;
 
-  // An account that HAS a currency has been denominated — by its holder or by
-  // this write on another device — so the server's own value is what stops
-  // this running twice, and the flag below only stops it running twice here.
-  if (!isUnchosenCurrency(user.preferredCurrency)) return;
+  // An account that HAS settings states a currency — its holder's, or this
+  // write's from another device — so the server's own row is what stops this
+  // running twice, and the flag below only stops it running twice here.
+  if (!isUnchosenCurrency(user.settings?.preferredCurrency)) return;
 
   const inferred = deviceRegionCurrency();
-  if (!inferred || inferred === user.preferredCurrency) return;
+  if (!inferred) return;
 
   const previous = store.preferredCurrency;
   // Ahead of the round trip so the money on screen is denominated at once;
@@ -117,9 +118,11 @@ async function applyRegionCurrencyDefault(
   // THROWS, which is the offline case this runs in most often.
   let result;
   try {
+    // Not `localFirst`: a queued write would leave the money on screen in a
+    // currency the account does not hold until some later replay.
     result = await client.mutate({
-      mutation: UpdateAccountDocument,
-      variables: { input: { preferredCurrency: inferred } },
+      mutation: UpdateUserPreferencesDocument,
+      variables: { input: { regional: { preferredCurrency: inferred } } },
     });
   } catch (error) {
     useStore.getState().setPreferredCurrency(previous);
@@ -129,13 +132,15 @@ async function applyRegionCurrencyDefault(
 
   if (appliedPayload(result.data)) {
     store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
+    // The persisted record follows, or the next launch restores the old one.
+    useStore.getState().updateUser({ preferredCurrency: inferred });
     return;
   }
 
   useStore.getState().setPreferredCurrency(previous);
   logger.warn(
     'Could not apply the region currency default:',
-    result.error ?? result.data?.updateAccount,
+    result.error ?? result.data?.updateSettings,
   );
 }
 
@@ -865,15 +870,11 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
 
 /** The revoke, bounded. A slow network must not hold the local sign-out. */
 async function revokeWithinBudget(): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const budget = new Promise<boolean>(resolve => {
-    timer = setTimeout(() => resolve(false), REVOKE_BUDGET_MS);
-  });
-  const revoked = await Promise.race([
+  const revoked = await withinMs(
     revokeDeviceCredentialForThisDevice(),
-    budget,
-  ]);
-  if (timer) clearTimeout(timer);
+    REVOKE_BUDGET_MS,
+    false,
+  );
   // The local slot goes either way, so this is a stale server row rather than a
   // sign-in the person loses — but it is a secret still exchangeable.
   if (!revoked) {

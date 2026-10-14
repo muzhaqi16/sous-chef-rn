@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
   useSharedValue,
   useDerivedValue,

@@ -1,7 +1,12 @@
 import { useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import {
+  useApolloClient,
+  useFragment,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import {
@@ -16,7 +21,10 @@ import {
   GetHomesDocument,
 } from '#operations/home/home.generated';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  MembershipRole,
+  type UpdateMembershipInput,
+} from '#/graphql/generated/schemaTypes';
 
 /** The per-member permission overrides `updateMembership` accepts. */
 export type MembershipPermissionKey =
@@ -32,6 +40,7 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -77,6 +86,7 @@ const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
  * Manages home details, members, and invites
  */
 export function useHomeDetailManagement(homeId: string) {
+  const client = useApolloClient();
   // Store state and actions for managing selections after leaving
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
@@ -113,9 +123,24 @@ export function useHomeDetailManagement(homeId: string) {
   // DELETES the field, blanking the card.
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
+  /** One membership edit, stating the version the cache holds for that row. */
+  const sendMembershipUpdate = (
+    membershipId: string,
+    fields: Omit<UpdateMembershipInput, 'id' | 'version'>,
+  ) =>
+    chainVersionedWrite(
+      client.cache,
+      { __typename: 'Membership', id: membershipId },
+      version =>
+        updateMembershipMutation({
+          variables: { input: { id: membershipId, ...fields, version } },
+        }),
+    );
+
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
-      if (!appliedPayload(data) || !variables) return;
+      // A member the server says is already gone converges too.
+      if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) return;
 
       try {
         const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
@@ -249,12 +274,7 @@ export function useHomeDetailManagement(homeId: string) {
     if (value === currentRole) return;
 
     await settleMutation(
-      () =>
-        updateMembershipMutation({
-          variables: {
-            input: { id: membershipId, role: value },
-          },
-        }),
+      () => sendMembershipUpdate(membershipId, { role: value }),
       {
         document: UpdateMembershipDocument,
         fallback: t('errors.updateMemberRoleFailed'),
@@ -271,10 +291,7 @@ export function useHomeDetailManagement(homeId: string) {
     value: boolean,
   ) => {
     const settled = await settleMutation(
-      () =>
-        updateMembershipMutation({
-          variables: { input: { id: membershipId, [permission]: value } },
-        }),
+      () => sendMembershipUpdate(membershipId, { [permission]: value }),
       {
         document: UpdateMembershipDocument,
         fallback: t('errors.updateMemberRoleFailed'),

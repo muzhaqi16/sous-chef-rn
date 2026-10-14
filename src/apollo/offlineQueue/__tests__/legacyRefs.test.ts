@@ -6,8 +6,10 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { MovePurchasedItemsToPantryDocument } from '#features/shoppingList/hooks/useBatchMoveToPantry.generated';
 import {
   AddDietaryRestrictionDocument,
@@ -231,7 +233,45 @@ describe('withRefInputs', () => {
   });
 
   it('leaves an input type it does not rewrite alone', () => {
-    const variables = { input: { id: 'p1', unit: { unitId: 'u1' } } };
-    expect(withRefInputs(RestockPantryItemDocument, variables)).toBe(variables);
+    const variables = { input: { recipeId: 'r1', unit: { unitId: 'u1' } } };
+    expect(withRefInputs(MarkRecipeAsCookedDocument, variables)).toBe(
+      variables,
+    );
+  });
+
+  // A queued move or restock from before the shared stock amount: the API now
+  // refuses the old fields, so each is restated as a measured amount.
+  it('states a queued move and restock as a measured amount', () => {
+    expect(
+      withRefInputs(MoveShoppingItemToPantryDocument, {
+        input: {
+          shoppingListItemId: 'sli1',
+          pantryId: 'pan1',
+          actualQuantity: 2,
+          actualUnitId: 'u-pc',
+          packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
+          actualPrice: 1.5,
+        },
+      }).input,
+    ).toEqual({
+      shoppingListItemId: 'sli1',
+      pantryId: 'pan1',
+      amount: { measured: { quantity: 2, unitId: 'u-pc' } },
+      actualPrice: 1.5,
+    });
+    expect(
+      withRefInputs(RestockPantryItemDocument, {
+        input: { id: 'p1', quantity: 1 },
+      }).input,
+    ).toEqual({ id: 'p1', amount: { measured: { quantity: 1 } } });
+  });
+
+  it('leaves a move already stating an amount alone', () => {
+    const variables = {
+      input: { shoppingListItemId: 'sli1', amount: { packages: { count: 2 } } },
+    };
+    expect(withRefInputs(MoveShoppingItemToPantryDocument, variables)).toBe(
+      variables,
+    );
   });
 });

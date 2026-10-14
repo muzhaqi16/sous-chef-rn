@@ -1,5 +1,7 @@
 fragment HomeMemberCard_member on Membership {
   id
+  # Stated on every `updateMembership`: the server refuses a stale one.
+  version
   homeId
   userId
   role

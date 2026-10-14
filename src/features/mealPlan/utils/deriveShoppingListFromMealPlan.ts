@@ -1,5 +1,8 @@
 import { generateEntityId } from '#/utils/generateEntityId';
-import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  type BatchAddShoppingListItemInput,
+} from '#/graphql/generated/schemaTypes';
 
 /** One planned meal, as `useGenerateShoppingList_mealPlan` caches it. */
 export interface PlannedMeal {
@@ -16,6 +19,7 @@ export interface PlannedIngredient {
   id: string;
   name: string;
   quantity: number;
+  isOptional: boolean;
   unitId?: string | null;
   itemId?: string | null;
 }
@@ -44,7 +48,6 @@ export interface DerivedShoppingList {
 
 interface DeriveOptions {
   mealPlanId: string;
-  mealPlanName: string;
   checkPantry: boolean;
   /** Null means the pantry is not in the cache, not that it is empty. */
   pantryRows: PantryStock[] | null;
@@ -70,8 +73,8 @@ const keyOf = (itemId: string, unitId: string) => `${itemId}:${unitId}`;
 
 /**
  * Turn a cached meal plan into the shopping-list lines it implies, so the action
- * runs with the API unreachable. Optional ingredients are INCLUDED, matching the
- * server, which never reads `isOptional` on this path.
+ * runs with the API unreachable. An optional ingredient is left out and not
+ * reported, as the server does.
  */
 export function deriveShoppingListFromMealPlan(
   meals: PlannedMeal[],
@@ -98,6 +101,7 @@ export function deriveShoppingListFromMealPlan(
     const multiplier = perRecipe > 0 ? (meal.servings ?? 1) / perRecipe : 1;
 
     for (const ingredient of recipe.ingredients) {
+      if (ingredient.isOptional) continue;
       const { itemId, unitId } = ingredient;
       // The server drops an ingredient missing either, rather than adding it as
       // free text. Reported here so the caller can name what it left out.
@@ -155,7 +159,7 @@ export function deriveShoppingListFromMealPlan(
       recipeContext: {
         mealPlanId: options.mealPlanId,
         mealPlanItemId: entry.mealPlanItemId,
-        mealPlanReference: options.mealPlanName,
+        addedContext: AddedContext.FromMealPlan,
         recipeId: entry.recipeId,
         recipeIngredientId: entry.recipeIngredientId,
       },

@@ -55,8 +55,8 @@ interface BottomSheetAutocompleteInputProps<T> {
   renderEmptyComponent?: () => React.ReactElement;
   renderLoadingComponent?: () => React.ReactElement;
 
-  // Footer
-  listFooterComponent?: React.ReactElement | null;
+  // Footer: a row after the suggestions; pressing it closes the picker as a pick does.
+  footer?: { content: React.ReactNode; onPress: () => void };
 
   // Optional callbacks
   onSearchChange?: (searchTerm: string) => void;
@@ -97,8 +97,7 @@ export function BottomSheetAutocompleteInput<T>({
   renderEmptyComponent,
   renderLoadingComponent,
 
-  // Footer
-  listFooterComponent,
+  footer,
 
   // Callbacks
   onSearchChange,
@@ -146,11 +145,11 @@ export function BottomSheetAutocompleteInput<T>({
     }
   }
 
-  // `data.length > 0` is the whole condition: the hooks answer from the warmed
+  // Rows or a footer are the whole condition: the hooks answer from the warmed
   // local sets when offline, so gating on `isOnline` hid suggestions the device
   // already had. Connectivity gates the network leg, inside the search hook.
   const shouldAutoOpen =
-    data.length > 0 &&
+    (data.length > 0 || !!footer) &&
     searchTerm.length >= minSearchLength &&
     !userDismissed &&
     hasInteracted;
@@ -324,7 +323,19 @@ export function BottomSheetAutocompleteInput<T>({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
-            ListFooterComponent={listFooterComponent}
+            ListFooterComponent={
+              footer ? (
+                <Pressable
+                  onPress={() => {
+                    footer.onPress();
+                    dismissPicker();
+                  }}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  {footer.content}
+                </Pressable>
+              ) : null
+            }
             ListEmptyComponent={
               loading
                 ? renderLoadingComponent?.() ?? defaultLoadingComponent()

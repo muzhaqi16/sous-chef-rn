@@ -94,24 +94,73 @@ describe('withoutRemovedFields', () => {
     expect(replayed).toMatch(/\.\.\. on Error \{\s+code/);
   });
 
-  it('drops the recipe add’s old lists and the fragment only they spread', () => {
+  it('drops the auto-add fields under a shopping line’s source', () => {
     expect(
       errorsAfterRewrite(`
-        mutation CreateShoppingListItemsFromRecipe(
-          $input: CreateShoppingListItemsFromRecipeInput!
-        ) {
-          createShoppingListItemsFromRecipe(input: $input) {
+        mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
+          updateShoppingListItem(input: $input) {
             __typename
-            ... on CreateShoppingListItemsFromRecipePayload {
-              addedItems { id ...Added }
-              updatedItems { id ...Added }
-              totalAdded
-              totalUpdated
-              totalSkipped
+            ... on UpdateShoppingListItemPayload {
+              shoppingListItem { id ...Line }
             }
           }
         }
-        fragment Added on ShoppingListItem { id itemName }
+        fragment Line on ShoppingListItem {
+          id
+          source { autoAddReason isAutoAdded isFromMealPlan }
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  it('drops a plan’s bare lists and the fragment only they spread', () => {
+    expect(
+      errorsAfterRewrite(`
+        mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
+          createMealPlanItem(input: $input) {
+            __typename
+            ... on CreateMealPlanItemPayload {
+              mealPlanItem { id }
+              mealPlan {
+                id
+                name
+                generatedShoppingLists { id name }
+                mealPlanItems { id ...Meal }
+              }
+            }
+          }
+        }
+        fragment Meal on MealPlanItem { id notes }
+      `),
+    ).toEqual([]);
+  });
+
+  it('drops a template’s bare meal list', () => {
+    expect(
+      errorsAfterRewrite(`
+        mutation AddTemplateItem($input: AddTemplateItemInput!) {
+          addTemplateItem(input: $input) {
+            __typename
+            ... on AddTemplateItemPayload {
+              mealTemplate { id items { id dayOffset } }
+            }
+          }
+        }
+      `),
+    ).toEqual([]);
+  });
+
+  it('drops the region fields the settings row holds now', () => {
+    expect(
+      errorsAfterRewrite(`
+        mutation CompleteOnboarding {
+          completeOnboarding {
+            __typename
+            ... on CompleteOnboardingPayload {
+              user { id onBoarded timezone preferredCurrency }
+            }
+          }
+        }
       `),
     ).toEqual([]);
   });
@@ -152,29 +201,6 @@ describe('withoutRemovedFields', () => {
   });
 
   it.each([
-    [
-      'a consumption’s failed lines',
-      `mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {
-        confirmRecipeConsumption(input: $input) {
-          __typename
-          ... on ConfirmRecipeConsumptionPayload {
-            failedItems { recipeIngredientId code errorId }
-          }
-        }
-      }`,
-    ],
-    [
-      'a low-stock add’s lines',
-      `mutation AddLowStock($input: AddLowStockItemsToShoppingListInput!) {
-        addLowStockItemsToShoppingList(input: $input) {
-          __typename
-          ... on AddLowStockItemsToShoppingListPayload {
-            addedItems { shoppingListItemId }
-            skippedItems { pantryItemId code }
-          }
-        }
-      }`,
-    ],
     [
       'a stack’s ledger total',
       `mutation UpdatePantryItem($input: UpdatePantryItemInput!) {

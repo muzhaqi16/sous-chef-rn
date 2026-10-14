@@ -19,6 +19,7 @@ import {
   InvitationAcceptanceModalDeclineShoppingListInviteDocument as DeclineShoppingListInviteDocument,
 } from '../InvitationAcceptanceModal.generated';
 import { alertService, type AlertButton } from '#/services/alertService';
+import { useStore } from '#store';
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
@@ -854,6 +855,57 @@ describe('InvitationAcceptanceModal', () => {
     });
     expect(toastService.error).not.toHaveBeenCalledWith('Invalid invite token');
     expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  describe('an account whose email is not verified', () => {
+    beforeEach(() => {
+      useStore.setState({
+        user: {
+          id: 'user-1',
+          email: 'invitee@example.com',
+          emailVerified: false,
+          onBoarded: true,
+        },
+      });
+    });
+
+    afterEach(() => {
+      useStore.setState({ user: null });
+    });
+
+    it.each([
+      ['a home invite', homeInvitation, acceptHomeOk],
+      ['a list invite', shoppingListInvitation, acceptShoppingListOk],
+    ])(
+      'is offered verification instead of accepting %s',
+      async (_label, invitation, acceptOk) => {
+        const user = userEvent.setup();
+        const acceptMock = acceptOk();
+
+        renderWithApollo(
+          <InvitationAcceptanceModal
+            {...defaultProps}
+            invitation={invitation}
+          />,
+          { operationMocks: [acceptMock.mock] },
+        );
+
+        await user.press(screen.getByText('Accept'));
+
+        expect(alertService.alert).toHaveBeenCalledWith(
+          'Verify your email first',
+          expect.any(String),
+          expect.arrayContaining([
+            expect.objectContaining({ text: 'Verify Now' }),
+          ]),
+        );
+        expect(acceptMock.fired).toHaveLength(0);
+        expect(defaultProps.onAccept).not.toHaveBeenCalled();
+        // The invite stays open behind the gate, still pending.
+        expect(defaultProps.onClose).not.toHaveBeenCalled();
+        expect(screen.getByText('Accept')).toBeTruthy();
+      },
+    );
   });
 
   it('tells a throttled accept how long to wait, not that accepting failed', async () => {

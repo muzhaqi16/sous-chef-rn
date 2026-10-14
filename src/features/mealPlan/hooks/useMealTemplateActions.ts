@@ -4,14 +4,6 @@ import {
   DeleteMealTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  UseMealTemplateActions_TemplateFragmentDoc,
-  type UseMealTemplateActions_TemplateFragment,
-} from '#features/mealPlan/hooks/useMealTemplateActions.generated';
-import {
-  UseDuplicateMealPlan_MealPlanFragmentDoc,
-  type UseDuplicateMealPlan_MealPlanFragment,
-} from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
@@ -26,10 +18,13 @@ import {
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MealPlanType,
-  type CreateMealPlanFromTemplateInput,
   type CreateMealTemplateInput,
-  type CreateTemplateFromMealPlanInput,
+  type TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
+import {
+  readPlanSource,
+  readTemplateSource,
+} from '#features/mealPlan/cache/derivationSources';
 import { toastService } from '#/services/toastService';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { Telemetry } from '#/services/telemetry';
@@ -50,6 +45,26 @@ const addToMealTemplates = createAddToQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
 );
+
+/** What a plan made from a template states; its meals come from the cache. */
+export interface PlanFromTemplateInput {
+  templateId: string;
+  /** The plan's first day, as a `LocalDate` key. */
+  startDate: string;
+  name?: string | null;
+  servings?: number | null;
+  budgetAmount?: number | null;
+  dietaryProfileId?: string | null;
+}
+
+/** What a template cut from a plan states; its meals come from the cache. */
+export interface TemplateFromPlanInput {
+  mealPlanId: string;
+  name: string;
+  description?: string | null;
+  category?: TemplateCategory | null;
+  tags?: string[] | null;
+}
 
 export function useMealTemplateActions() {
   const client = useApolloClient();
@@ -95,16 +110,6 @@ export function useMealTemplateActions() {
   const reportSkipped = (count: number) => {
     if (count === 0) return;
     toastService.info(t('duplicatePlan.someSkipped', { count }));
-  };
-
-  const readTemplate = (id: string) => {
-    const cacheId = client.cache.identify({ __typename: 'MealTemplate', id });
-    if (!cacheId) return null;
-    return client.cache.readFragment<UseMealTemplateActions_TemplateFragment>({
-      id: cacheId,
-      fragment: UseMealTemplateActions_TemplateFragmentDoc,
-      fragmentName: 'useMealTemplateActions_template',
-    });
   };
 
   /** `true` once the template landed or is queued; `false` when it reverted. */
@@ -162,10 +167,8 @@ export function useMealTemplateActions() {
     return settled.status !== 'failed';
   };
 
-  const createPlanFromTemplate = async (
-    input: CreateMealPlanFromTemplateInput,
-  ) => {
-    const template = readTemplate(input.templateId);
+  const createPlanFromTemplate = async (input: PlanFromTemplateInput) => {
+    const template = readTemplateSource(client.cache, input.templateId);
     if (!template) {
       toastService.error(t('mealPlan.needsTheTemplate'));
       return null;
@@ -217,20 +220,8 @@ export function useMealTemplateActions() {
     return { mealPlanId: derived.plan.id ?? null };
   };
 
-  const createTemplateFromPlan = async (
-    input: CreateTemplateFromMealPlanInput,
-  ) => {
-    const cacheId = client.cache.identify({
-      __typename: 'MealPlan',
-      id: input.mealPlanId,
-    });
-    const plan = cacheId
-      ? client.cache.readFragment<UseDuplicateMealPlan_MealPlanFragment>({
-          id: cacheId,
-          fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-          fragmentName: 'useDuplicateMealPlan_mealPlan',
-        })
-      : null;
+  const createTemplateFromPlan = async (input: TemplateFromPlanInput) => {
+    const plan = readPlanSource(client.cache, input.mealPlanId);
     if (!plan) {
       toastService.error(t('mealPlan.needsThePlan'));
       return null;
@@ -318,7 +309,7 @@ export function useMealTemplateActions() {
   };
 
   const duplicateTemplate = async (id: string, newName: string) => {
-    const template = readTemplate(id);
+    const template = readTemplateSource(client.cache, id);
     if (!template) {
       toastService.error(t('mealPlan.needsTheTemplate'));
       return null;

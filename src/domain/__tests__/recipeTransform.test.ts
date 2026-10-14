@@ -3,6 +3,10 @@ import type {
   RecipeSearchResult,
   SearchRecipesResult,
 } from '#/services/spoonacular/types';
+import { t } from '#/i18n';
+
+const shown = (recipe: RecipeSearchResult | SearchRecipesResult) =>
+  transformRecipeForDisplay(recipe, t);
 
 describe('transformRecipeForDisplay', () => {
   describe('ingredient-based search results', () => {
@@ -20,30 +24,24 @@ describe('transformRecipeForDisplay', () => {
     };
 
     it('returns the correct id format', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).id).toBe(
-        'spoonacular-42',
-      );
+      expect(shown(ingredientRecipe).id).toBe('spoonacular-42');
     });
 
     it('preserves title', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).title).toBe(
-        'Pasta Primavera',
-      );
+      expect(shown(ingredientRecipe).title).toBe('Pasta Primavera');
     });
 
     it('shows ingredient count subtitle', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).subtitle).toBe(
-        '5/8 ingredients',
-      );
+      expect(shown(ingredientRecipe).subtitle).toBe('5/8 ingredients');
     });
 
     it('includes likes badge when likes > 0', () => {
-      const result = transformRecipeForDisplay(ingredientRecipe);
+      const result = shown(ingredientRecipe);
       expect(result.badge).toEqual({ text: '❤️ 10', variant: 'info' });
     });
 
     it('omits badge when likes is 0', () => {
-      const result = transformRecipeForDisplay({
+      const result = shown({
         ...ingredientRecipe,
         likes: 0,
       });
@@ -52,20 +50,18 @@ describe('transformRecipeForDisplay', () => {
 
     it('omits badge when likes is missing', () => {
       const { likes, ...noLikes } = ingredientRecipe;
-      const result = transformRecipeForDisplay(noLikes);
+      const result = shown(noLikes);
       expect(result.badge).toBeUndefined();
     });
 
     it('preserves image url', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).imageUrl).toBe(
+      expect(shown(ingredientRecipe).imageUrl).toBe(
         'https://img.example.com/pasta.jpg',
       );
     });
 
     it('preserves spoonacularId', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).spoonacularId).toBe(
-        42,
-      );
+      expect(shown(ingredientRecipe).spoonacularId).toBe(42);
     });
   });
 
@@ -81,28 +77,26 @@ describe('transformRecipeForDisplay', () => {
     };
 
     it('shows time and servings subtitle', () => {
-      expect(transformRecipeForDisplay(textRecipe).subtitle).toBe(
-        '⏱ 30 min • 4 servings',
-      );
+      expect(shown(textRecipe).subtitle).toBe('⏱ 30 min • 4 servings');
     });
 
     it('shows only time when servings is missing', () => {
       const { servings, ...noServings } = textRecipe;
-      expect(transformRecipeForDisplay(noServings).subtitle).toBe('⏱ 30 min');
+      expect(shown(noServings).subtitle).toBe('⏱ 30 min');
     });
 
     it('shows only servings when time is missing', () => {
       const { readyInMinutes, ...noTime } = textRecipe;
-      expect(transformRecipeForDisplay(noTime).subtitle).toBe('4 servings');
+      expect(shown(noTime).subtitle).toBe('4 servings');
     });
 
     it('includes aggregateLikes badge', () => {
-      const result = transformRecipeForDisplay(textRecipe);
+      const result = shown(textRecipe);
       expect(result.badge).toEqual({ text: '❤️ 25', variant: 'info' });
     });
 
     it('omits badge when aggregateLikes is 0', () => {
-      const result = transformRecipeForDisplay({
+      const result = shown({
         ...textRecipe,
         aggregateLikes: 0,
       });

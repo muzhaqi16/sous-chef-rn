@@ -10,7 +10,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 jest.mock('#/services/errorService');
@@ -139,14 +139,14 @@ const counts = (cache: ReturnType<typeof seedCache>) =>
     fragment: COUNTS,
   });
 
-const refusal: MockFor<typeof ToggleShoppingListItemPurchasedDocument> = {
+const refusal: MockFor<typeof UpdateShoppingListItemDocument> = {
   request: {
-    query: ToggleShoppingListItemPurchasedDocument,
+    query: UpdateShoppingListItemDocument,
     variables: () => true,
   },
   result: {
     data: {
-      toggleShoppingListItemPurchased: {
+      updateShoppingListItem: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
         message: 'refused',

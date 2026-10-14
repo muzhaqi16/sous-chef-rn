@@ -16,14 +16,15 @@ import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {
   // A locally-created item owns its id before the server does, so a fetch before
-  // the create is acknowledged can only return RESOURCE_NOT_FOUND — and that
-  // error state never retries itself. Skipping makes the acknowledgement the
-  // fetch trigger; the optimistic entity renders the screen meanwhile.
+  // the create is acknowledged can only answer that there is no such stack —
+  // and that answer never retries itself. Skipping makes the acknowledgement
+  // the fetch trigger; the optimistic entity renders the screen meanwhile.
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
 
-  // `data` is deliberately unused: this query exists to FETCH and reconcile into
-  // the normalized entity the render path below reads.
+  // This query exists to FETCH and reconcile into the normalized entity the
+  // render path below reads; its own `data` is read only for a miss.
   const {
+    data: itemData,
     refetch,
     loading: itemLoading,
     error: itemError,
@@ -50,10 +51,15 @@ export function usePantryItemDetailData(itemId: string) {
   });
   const item = livePantryItem.complete ? livePantryItem.data : null;
 
-  // The pantry resolver throws rather than returning null, so a row deleted on
-  // another device arrives as RESOURCE_NOT_FOUND. Only trust it once the create
-  // is acknowledged — the identical error means "not told yet" while unconfirmed.
-  const deletedOnServer = !isUnconfirmed && isResourceNotFoundError(itemError);
+  // A stack removed on another device reads as an explicit null, as every by-id
+  // query reports a miss (an API before that answered RESOURCE_NOT_FOUND, still
+  // read). Trusted only once the create is acknowledged — the same answer means
+  // "not told yet" while unconfirmed — and only from a settled read.
+  const answeredNoSuchItem =
+    !itemLoading && !itemError && !!itemData && itemData.pantryItem === null;
+  const deletedOnServer =
+    !isUnconfirmed &&
+    (answeredNoSuchItem || isResourceNotFoundError(itemError));
 
   // Edges arrive masked, and a batch's own edit leaves the query result as it
   // was: each is read live so status/expiresOn reads and BatchSection's

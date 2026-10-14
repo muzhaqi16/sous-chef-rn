@@ -1,11 +1,9 @@
 import {
-  handleSubscriptionError,
-  clearRetryState,
-  clearAllRetryStates,
   classifyTransportTermination,
   isExpectedTransportError,
   isKnownServerError,
   isPermanentSubscriptionRejection,
+  reportSubscriptionError,
 } from '../subscriptionErrorHandler';
 import { TimeoutError } from '../errors/timeoutError';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
@@ -24,44 +22,21 @@ const resolverError = new CombinedGraphQLErrors({
 });
 
 beforeEach(() => {
-  clearAllRetryStates();
   jest.clearAllMocks();
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
 });
 
 describe('subscriptionErrorHandler', () => {
-  describe('handleSubscriptionError', () => {
-    it('suppresses a socket close', () => {
-      const result = handleSubscriptionError(
-        'TestSub',
-        new Error('Socket closed with event 1006 '),
-      );
-      expect(result).toBe(false);
-    });
-
-    it('suppresses a socket failure with no close event', () => {
-      expect(
-        handleSubscriptionError('TestSub', new Error('Socket closed')),
-      ).toBe(false);
-    });
-
+  describe('reportSubscriptionError', () => {
     it('reports a server error that mentions a connection', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Database connection pool exhausted' }],
       });
-      expect(handleSubscriptionError('TestSub', error)).toBe(false);
+      reportSubscriptionError('TestSub', error);
       expect(errorService.reportError).toHaveBeenCalledTimes(1);
     });
 
-    it('returns false for non-resolver errors and reports them to telemetry', () => {
-      const result = handleSubscriptionError('TestSub', {
-        message: 'Unknown server error',
-      });
-      expect(result).toBe(false);
+    it('reports an unexpected failure with the subscription it came from', () => {
+      reportSubscriptionError('TestSub', { message: 'Unknown server error' });
       expect(errorService.reportError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
@@ -71,85 +46,22 @@ describe('subscriptionErrorHandler', () => {
       );
     });
 
-    it('does NOT report suppressed transport errors to telemetry', () => {
-      handleSubscriptionError(
+    it('does not report transport churn, which recovers on its own', () => {
+      reportSubscriptionError(
         'TestSub',
         new Error('Socket closed with event 1006 '),
       );
-      handleSubscriptionError(
+      reportSubscriptionError('TestSub', new Error('Socket closed'));
+      reportSubscriptionError(
         'TestSub',
         new NetworkRequestError('Network request failed'),
       );
       expect(errorService.reportError).not.toHaveBeenCalled();
     });
 
-    it('retries server resolver errors', () => {
-      const onRetry = jest.fn();
-      const result = handleSubscriptionError('TestSub', resolverError, onRetry);
-      expect(result).toBe(true);
-    });
-
-    it('schedules retry callback with setTimeout', () => {
-      const onRetry = jest.fn();
-      handleSubscriptionError('TestSub', resolverError, onRetry);
-      expect(onRetry).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(2000);
-      expect(onRetry).toHaveBeenCalledTimes(1);
-    });
-
-    it('stops retrying after MAX_RETRIES (3)', () => {
-      const error = resolverError;
-
-      // First 3 retries should succeed
-      expect(handleSubscriptionError('TestSub', error)).toBe(true);
-      jest.advanceTimersByTime(3000);
-      expect(handleSubscriptionError('TestSub', error)).toBe(true);
-      jest.advanceTimersByTime(5000);
-      expect(handleSubscriptionError('TestSub', error)).toBe(true);
-
-      // 4th should fail
-      jest.advanceTimersByTime(10000);
-      expect(handleSubscriptionError('TestSub', error)).toBe(false);
-    });
-
-    it('respects backoff period', () => {
-      const error = resolverError;
-
-      handleSubscriptionError('TestSub', error);
-      // Immediate second call should be rejected (in backoff)
-      const result = handleSubscriptionError('TestSub', error);
-      expect(result).toBe(false);
-    });
-
-    it('uses separate retry state per operation', () => {
-      const error = resolverError;
-
-      handleSubscriptionError('Sub1', error);
-      const result = handleSubscriptionError('Sub2', error);
-      expect(result).toBe(true);
-    });
-  });
-
-  describe('clearRetryState', () => {
-    it('clears retry state for a specific operation', () => {
-      const error = resolverError;
-      handleSubscriptionError('TestSub', error);
-      clearRetryState('TestSub');
-      // After clearing, it should be able to retry again
-      jest.advanceTimersByTime(2000);
-      expect(handleSubscriptionError('TestSub', error)).toBe(true);
-    });
-  });
-
-  describe('clearAllRetryStates', () => {
-    it('clears all retry states', () => {
-      const error = resolverError;
-      handleSubscriptionError('Sub1', error);
-      handleSubscriptionError('Sub2', error);
-      clearAllRetryStates();
-      jest.advanceTimersByTime(2000);
-      expect(handleSubscriptionError('Sub1', error)).toBe(true);
-      expect(handleSubscriptionError('Sub2', error)).toBe(true);
+    it('does not report a resolver that returned no stream', () => {
+      reportSubscriptionError('TestSub', resolverError);
+      expect(errorService.reportError).not.toHaveBeenCalled();
     });
   });
 

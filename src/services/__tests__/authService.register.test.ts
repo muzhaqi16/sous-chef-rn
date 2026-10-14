@@ -31,6 +31,7 @@ const mockStore = {
   setIsHomeSelectionReady: jest.fn(),
   setSelectedShoppingListId: jest.fn(),
   setPreferredCurrency: jest.fn(),
+  updateUser: jest.fn(),
   getUserNavigationState: jest.fn(),
   setUserNavigationState: jest.fn(),
 };

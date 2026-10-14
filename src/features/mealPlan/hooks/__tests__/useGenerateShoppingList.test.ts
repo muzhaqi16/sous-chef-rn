@@ -47,7 +47,12 @@ import { toastService } from '#/services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { useStore } from '#store';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
@@ -68,8 +73,63 @@ const ingredient = (id: string, itemId: string, quantity: number) => ({
     name: `Ingredient ${id}`,
     quantity,
     isOptional: false,
-    unit: { __typename: 'Unit', id: 'unit-1', name: 'gram', symbol: 'g' },
+    // The id alone is cached: the derive keys on it and sends it back.
+    unit: { __typename: 'Unit', id: 'unit-1' },
     item: { __typename: 'Item', id: itemId, name: `Item ${itemId}` },
+  },
+});
+
+const RECIPE_NAME = 'Sunday Stew';
+
+/**
+ * A recipe's ingredient lines as one cached list: whole unless the recipe is
+ * over the ingredient limit, which `hasNextPage` marks.
+ */
+const ingredientsOf = (
+  ingredients: unknown[],
+  hasNextPage: boolean = false,
+) => ({
+  __typename: 'RecipeIngredientConnection',
+  pageInfo: {
+    __typename: 'PageInfo',
+    hasNextPage,
+    endCursor: hasNextPage ? 'cursor-next' : null,
+  },
+  totalCount: ingredients.length,
+  edges: ingredients,
+});
+
+/** A meal cooking `recipe-1`, which serves two, with these ingredient lines. */
+const recipeMeal = (
+  ingredients: unknown[],
+  servings: number = 4,
+  { overLimit = false }: { overLimit?: boolean } = {},
+) => ({
+  __typename: 'MealPlanItem',
+  id: 'mpi-1',
+  servings,
+  recipe: {
+    __typename: 'Recipe',
+    id: 'recipe-1',
+    name: RECIPE_NAME,
+    servings: 2,
+    ingredientsConnection: ingredientsOf(ingredients, overLimit),
+  },
+});
+
+const PLAN_NAME = 'Week One';
+
+/** The plan as `GetMealPlan` caches it: each meal an edge of one list. */
+const planOf = (meals: unknown[], hasNextPage: boolean = false) => ({
+  __typename: 'MealPlan',
+  id: PLAN_ID,
+  name: PLAN_NAME,
+  homeId: 'home-1',
+  mealPlanItemsConnection: {
+    __typename: 'MealPlanItemConnection',
+    pageInfo: { __typename: 'PageInfo', hasNextPage },
+    totalCount: meals.length,
+    edges: meals.map(node => ({ __typename: 'MealPlanItemEdge', node })),
   },
 });
 
@@ -77,37 +137,22 @@ const ingredient = (id: string, itemId: string, quantity: number) => ({
  * One meal whose recipe is cached with two ingredients, and one whose recipe is
  * not — the case the derive has to degrade per source rather than per action.
  */
-const plan = {
-  __typename: 'MealPlan',
-  id: PLAN_ID,
-  name: 'Week One',
-  homeId: 'home-1',
-  mealPlanItems: [
+const twoMeals = [
+  recipeMeal([
+    ingredient('ri-1', 'item-1', 3),
+    ingredient('ri-2', 'item-2', 1),
+  ]),
+  { __typename: 'MealPlanItem', id: 'mpi-2', servings: 2, recipe: null },
+];
+
+const seedPlan = (plan: ReturnType<typeof planOf>) =>
+  seedCache([
     {
-      __typename: 'MealPlanItem',
-      id: 'mpi-1',
-      servings: 4,
-      recipe: {
-        __typename: 'Recipe',
-        id: 'recipe-1',
-        servings: 2,
-        ingredientsConnection: {
-          __typename: 'RecipeIngredientConnection',
-          edges: [
-            ingredient('ri-1', 'item-1', 3),
-            ingredient('ri-2', 'item-2', 1),
-          ],
-        },
-      },
+      data: plan,
+      fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+      fragmentName: 'useGenerateShoppingList_mealPlan',
     },
-    {
-      __typename: 'MealPlanItem',
-      id: 'mpi-2',
-      servings: 2,
-      recipe: null,
-    },
-  ],
-};
+  ]);
 
 function createMock() {
   return recordMock(CreateShoppingListDocument, {
@@ -218,18 +263,81 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(typeof result.current.generateShoppingList).toBe('function');
   });
 
+  // A list derived from a first page alone would silently be a short one.
+  it('refuses a plan whose later pages of meals are unread, without firing anything', async () => {
+    const create = createMock();
+    const add = addMock();
+    const link = linkMock();
+    const { result } = renderHookWithApollo(
+      () => useGenerateShoppingList(PLAN_ID),
+      {
+        operationMocks: [create.mock, add.mock, link.mock],
+        cache: seedPlan(planOf(twoMeals, true)),
+      },
+    );
+
+    const response = await result.current.generateShoppingList({
+      checkPantry: false,
+    });
+
+    expect(response).toBeNull();
+    expect(create.fired).toHaveLength(0);
+    expect(add.fired).toHaveLength(0);
+    expect(link.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('generateShoppingList.planNotLoaded'),
+    );
+    expect(toastService.success).not.toHaveBeenCalled();
+  });
+
+  // One page is all a recipe holds, so one that answers `hasNextPage` is over
+  // the ingredient limit and the device has only part of it.
+  it('refuses a plan with a recipe over the ingredient limit, without firing anything', async () => {
+    const create = createMock();
+    const add = addMock();
+    const link = linkMock();
+    const { result } = renderHookWithApollo(
+      () => useGenerateShoppingList(PLAN_ID),
+      {
+        operationMocks: [create.mock, add.mock, link.mock],
+        cache: seedPlan(
+          planOf([
+            recipeMeal(
+              [
+                ingredient('ri-1', 'item-1', 3),
+                ingredient('ri-2', 'item-2', 1),
+              ],
+              4,
+              { overLimit: true },
+            ),
+          ]),
+        ),
+      },
+    );
+
+    const response = await result.current.generateShoppingList({
+      checkPantry: false,
+    });
+
+    expect(response).toBeNull();
+    expect(create.fired).toHaveLength(0);
+    expect(add.fired).toHaveLength(0);
+    expect(link.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    // Names the recipe and the limit: no refresh brings the rest in.
+    expect(toastService.error).toHaveBeenCalledWith(
+      `"${RECIPE_NAME}" has more than 100 ingredients, so it can't be added to a shopping list in full.`,
+    );
+    expect(toastService.success).not.toHaveBeenCalled();
+  });
+
   it('derives the cached meals and skips the one with no recipe', async () => {
     useStore.setState({ apiReachable: false });
     const create = createMock();
     const add = addMock();
     const link = linkMock();
-    const cache = seedCache([
-      {
-        data: plan,
-        fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
-        fragmentName: 'useGenerateShoppingList_mealPlan',
-      },
-    ]);
+    const cache = seedPlan(planOf(twoMeals));
 
     const { result } = renderHookWithApollo(
       () => useGenerateShoppingList(PLAN_ID),
@@ -250,14 +358,30 @@ describe('generating a shopping list from a cached meal plan', () => {
       input?: {
         items?: Array<{
           quantity: number;
-          recipeContext: { mealPlanId: string };
+          recipeContext: Record<string, unknown>;
         }>;
       };
     };
     const items = fired?.input?.items ?? [];
     expect(items).toHaveLength(2);
     expect(items.map(i => i.quantity)).toEqual([6, 2]);
-    expect(items[0]?.recipeContext.mealPlanId).toBe(PLAN_ID);
+    // Each line names the plan and the meal it came from, as a meal-plan line.
+    expect(items.map(i => i.recipeContext)).toEqual([
+      {
+        mealPlanId: PLAN_ID,
+        mealPlanItemId: 'mpi-1',
+        addedContext: AddedContext.FromMealPlan,
+        recipeId: 'recipe-1',
+        recipeIngredientId: 'ri-1',
+      },
+      {
+        mealPlanId: PLAN_ID,
+        mealPlanItemId: 'mpi-1',
+        addedContext: AddedContext.FromMealPlan,
+        recipeId: 'recipe-1',
+        recipeIngredientId: 'ri-2',
+      },
+    ]);
 
     // The list records the plan it came from, which the fan-out did inside its
     // own transaction and a client-assembled list has to say separately.
@@ -274,87 +398,80 @@ describe('generating a shopping list from a cached meal plan', () => {
       ...ingredient('ri-2', 'item-2', 1),
       node: { ...ingredient('ri-2', 'item-2', 1).node, item: null },
     };
-    const withRecipeEdges = (edges: unknown[]) => ({
-      ...plan,
-      mealPlanItems: [
-        {
-          ...plan.mealPlanItems[0],
-          recipe: {
-            ...plan.mealPlanItems[0]?.recipe,
-            ingredientsConnection: {
-              __typename: 'RecipeIngredientConnection',
-              edges,
-            },
-          },
-        },
-      ],
-    });
     const seedUnlinked = () =>
-      seedCache([
-        {
-          data: withRecipeEdges([ingredient('ri-1', 'item-1', 3), unlinked]),
-          fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
-          fragmentName: 'useGenerateShoppingList_mealPlan',
-        },
-      ]);
+      seedPlan(
+        planOf([recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked])]),
+      );
     // The server's answer, now linked, in the shape GetMealPlan selects.
-    const planMock = () =>
+    const planMock = ({ overLimit = false } = {}) =>
       recordMock(GetMealPlanDocument, {
         data: {
           mealPlan: {
             __typename: 'MealPlan',
             id: PLAN_ID,
-            name: plan.name,
-            homeId: plan.homeId,
-            mealPlanItems: [
-              {
-                __typename: 'MealPlanItem',
-                id: 'mpi-1',
-                servings: 4,
-                recipe: {
-                  __typename: 'Recipe',
-                  id: 'recipe-1',
-                  servings: 2,
-                  ingredientsConnection: {
-                    __typename: 'RecipeIngredientConnection',
-                    edges: [
-                      {
-                        __typename: 'RecipeIngredientEdge',
-                        node: {
-                          __typename: 'RecipeIngredient',
-                          id: 'ri-1',
-                          name: 'Ingredient ri-1',
-                          quantity: 3,
-                          isOptional: false,
-                          unit: { __typename: 'Unit', id: 'unit-1' },
-                          item: {
-                            __typename: 'Item',
-                            id: 'item-1',
-                            name: 'Item item-1',
-                          },
+            name: PLAN_NAME,
+            homeId: 'home-1',
+            mealPlanItemsConnection: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 1,
+              edges: [
+                {
+                  node: {
+                    __typename: 'MealPlanItem',
+                    id: 'mpi-1',
+                    servings: 4,
+                    recipe: {
+                      __typename: 'Recipe',
+                      id: 'recipe-1',
+                      name: RECIPE_NAME,
+                      servings: 2,
+                      ingredientsConnection: {
+                        __typename: 'RecipeIngredientConnection',
+                        pageInfo: {
+                          hasNextPage: overLimit,
+                          endCursor: overLimit ? 'cursor-next' : null,
                         },
-                      },
-                      {
-                        __typename: 'RecipeIngredientEdge',
-                        node: {
-                          __typename: 'RecipeIngredient',
-                          id: 'ri-2',
-                          name: 'Ingredient ri-2',
-                          quantity: 1,
-                          isOptional: false,
-                          unit: { __typename: 'Unit', id: 'unit-1' },
-                          item: {
-                            __typename: 'Item',
-                            id: 'item-2',
-                            name: 'Item item-2',
+                        totalCount: 2,
+                        edges: [
+                          {
+                            __typename: 'RecipeIngredientEdge',
+                            node: {
+                              __typename: 'RecipeIngredient',
+                              id: 'ri-1',
+                              name: 'Ingredient ri-1',
+                              quantity: 3,
+                              isOptional: false,
+                              unit: { __typename: 'Unit', id: 'unit-1' },
+                              item: {
+                                __typename: 'Item',
+                                id: 'item-1',
+                                name: 'Item item-1',
+                              },
+                            },
                           },
-                        },
+                          {
+                            __typename: 'RecipeIngredientEdge',
+                            node: {
+                              __typename: 'RecipeIngredient',
+                              id: 'ri-2',
+                              name: 'Ingredient ri-2',
+                              quantity: 1,
+                              isOptional: false,
+                              unit: { __typename: 'Unit', id: 'unit-1' },
+                              item: {
+                                __typename: 'Item',
+                                id: 'item-2',
+                                name: 'Item item-2',
+                              },
+                            },
+                          },
+                        ],
                       },
-                    ],
+                    },
                   },
                 },
-              },
-            ],
+              ],
+            },
           },
         },
       });
@@ -380,8 +497,47 @@ describe('generating a shopping list from a cached meal plan', () => {
         checkPantry: false,
       });
 
-      expect(refetch.fired).toHaveLength(1);
+      expect(refetch.fired).toEqual([
+        {
+          id: PLAN_ID,
+          mealsFirst: MEALS_PAGE_SIZE,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
+      ]);
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
+    });
+
+    // The re-read restates a recipe's one page.
+    it('refuses when the re-read finds the recipe grown past the ingredient limit', async () => {
+      const create = createMock();
+      const add = addMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [
+            planMock({ overLimit: true }).mock,
+            create.mock,
+            add.mock,
+            linkMock().mock,
+          ],
+          cache: seedUnlinked(),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      expect(response).toBeNull();
+      expect(create.fired).toHaveLength(0);
+      expect(add.fired).toHaveLength(0);
+      expect(toastService.error).toHaveBeenCalledWith(
+        t('generateShoppingList.recipeOverLimit', {
+          name: RECIPE_NAME,
+          count: MAX_RECIPE_INGREDIENTS,
+        }),
+      );
     });
 
     it('builds from the cache offline and leaves it out', async () => {
@@ -411,32 +567,17 @@ describe('generating a shopping list from a cached meal plan', () => {
   });
 
   describe('a derive the API takes in more than one batch', () => {
-    const bigPlan = (lines: number) => ({
-      ...plan,
-      mealPlanItems: [
-        {
-          ...plan.mealPlanItems[0],
-          servings: 2,
-          recipe: {
-            ...plan.mealPlanItems[0]?.recipe,
-            ingredientsConnection: {
-              __typename: 'RecipeIngredientConnection',
-              edges: Array.from({ length: lines }, (_, i) =>
-                ingredient(`ri-${i}`, `item-${i}`, 1),
-              ),
-            },
-          },
-        },
-      ],
-    });
     const seedBig = (lines: number) =>
-      seedCache([
-        {
-          data: bigPlan(lines),
-          fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
-          fragmentName: 'useGenerateShoppingList_mealPlan',
-        },
-      ]);
+      seedPlan(
+        planOf([
+          recipeMeal(
+            Array.from({ length: lines }, (_, i) =>
+              ingredient(`ri-${i}`, `item-${i}`, 1),
+            ),
+            2,
+          ),
+        ]),
+      );
     const cachedRows = (cache: ReturnType<typeof seedCache>) =>
       Object.keys(cache.extract()).filter(key =>
         key.startsWith('ShoppingListItem:'),
@@ -466,7 +607,7 @@ describe('generating a shopping list from a cached meal plan', () => {
       expect(toastService.success).toHaveBeenCalledTimes(1);
       expect(toastService.success).toHaveBeenCalledWith(
         t('generateShoppingList.createdSuccess', {
-          name: t('generateShoppingList.defaultName', { name: plan.name }),
+          name: t('generateShoppingList.defaultName', { name: PLAN_NAME }),
           count: 63,
           shared: '',
         }),
