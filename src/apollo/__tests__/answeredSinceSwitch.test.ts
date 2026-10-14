@@ -1,4 +1,5 @@
 import {
+  forgetAnswersSinceSwitch,
   noteAnsweredInLanguage,
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
@@ -22,5 +23,32 @@ describe('answeredSinceSwitch', () => {
     expect(wasAnsweredSinceSwitch('Search', { term: '0' })).toBe(false);
     expect(wasAnsweredSinceSwitch('Search', { term: '1999' })).toBe(true);
     expect(wasAnsweredSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
+  });
+
+  it('keeps a query answered whole as answered when a later answer errs', () => {
+    noteAnsweredInLanguage('Pantry', { id: 'p1' });
+    noteAnsweredInLanguage('Pantry', { id: 'p1' }, { erred: true });
+
+    expect(wasAnsweredSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
+  });
+
+  it('counts an answer whole as the end of a run of errors', () => {
+    noteAnsweredInLanguage('Pantry', { id: 'p1' }, { erred: true });
+    noteAnsweredInLanguage('Pantry', { id: 'p1' });
+
+    expect(wasAnsweredSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
+  });
+
+  // The keys carry search terms and ids; the catch-up a switch started goes on.
+  it("forgets every answer at a session end, and notes the next session's", () => {
+    noteAnsweredInLanguage('Search', { term: 'gluten free' });
+
+    forgetAnswersSinceSwitch();
+
+    expect(wasAnsweredSinceSwitch('Search', { term: 'gluten free' })).toBe(
+      false,
+    );
+    noteAnsweredInLanguage('Pantry', { id: 'p2' });
+    expect(wasAnsweredSinceSwitch('Pantry', { id: 'p2' })).toBe(true);
   });
 });

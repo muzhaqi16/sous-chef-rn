@@ -97,6 +97,21 @@ describe('languageLink', () => {
       expect(wasAnsweredSinceSwitch('TestOp', {})).toBe(false);
     });
 
+    // Asked again by every catch-up otherwise, for as long as it errs.
+    it('stops leaving out a query that errs every time', async () => {
+      const erred = {
+        data: null,
+        errors: [{ message: 'Forbidden' }],
+      };
+      await answer(query, erred);
+      await answer(query, erred);
+      expect(wasAnsweredSinceSwitch('TestOp', {})).toBe(false);
+
+      await answer(query, erred);
+
+      expect(wasAnsweredSinceSwitch('TestOp', {})).toBe(true);
+    });
+
     // A write is never re-asked, and a receipt parse's variables are large.
     it('leaves out a mutation', async () => {
       const mutation = gql`

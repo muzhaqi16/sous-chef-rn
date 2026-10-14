@@ -18,9 +18,9 @@ const sendLanguage = new SetContextLink(({ headers }) => ({
   },
 }));
 
-// Only a query is re-asked, and only its answer counts: complete, and in the
-// language it was asked in, since one in flight across a switch still carries
-// the old names.
+// Only a query is re-asked, and only its answer counts: in the language it was
+// asked in, since one in flight across a switch still carries the old names.
+// One with errors, or with no data, is noted as such: it is asked again.
 const noteAnswers = new ApolloLink((operation, forward) => {
   if (operation.operationType !== OperationTypeNode.QUERY) {
     return forward(operation);
@@ -29,13 +29,10 @@ const noteAnswers = new ApolloLink((operation, forward) => {
   return forward(operation).pipe(
     tap(result => {
       const { operationName } = operation;
-      if (
-        operationName &&
-        result.data &&
-        !result.errors?.length &&
-        askedIn === getResolvedLanguage()
-      ) {
-        noteAnsweredInLanguage(operationName, operation.variables);
+      if (operationName && askedIn === getResolvedLanguage()) {
+        noteAnsweredInLanguage(operationName, operation.variables, {
+          erred: !result.data || !!result.errors?.length,
+        });
       }
     }),
   );
