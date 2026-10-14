@@ -2375,6 +2375,46 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateReceiptParseResult = ConflictError | CreateReceiptParsePayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateRecipeCaptureInput {
+  """
+  Client-minted CUID2. Creating the same id again returns the capture it
+  created, so a retried request queues the source once.
+  """
+  id: ID!
+  """The source's locale (en-AU): its decimal mark and measurement region"""
+  locale: String
+  """
+  1 to 3 photos of a cookbook or printed page: keys from createImageUploadUrl
+  with purpose RECIPE_PHOTO. Read once and deleted, whatever the outcome.
+  """
+  photos: [String!]
+  """
+  The post or page the text came from: kept as attribution, never fetched
+  """
+  sourceUrl: String
+  """
+  Text a client shared, such as a caption, within a deployment limit on its characters
+  """
+  text: String
+  """
+  A recipe page's absolute http(s) URL. A social-media or video platform's
+  page is refused: share the post's text instead. Send one of url, text or
+  photos.
+  """
+  url: String
+}
+
+type CreateRecipeCapturePayload {
+  capture: RecipeCapture!
+}
+
+"""
+Result of CreateRecipeCapture. Select on CreateRecipeCapturePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateRecipeCaptureResult = ConflictError | CreateRecipeCapturePayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
   description: String
@@ -5145,6 +5185,10 @@ enum ImageUploadPurpose {
   A receipt photo for createReceiptParse: at most 4 MB and 4000 px on its longest edge, never served, deleted once parsed
   """
   RECEIPT_PHOTO
+  """
+  A cookbook page photo for createRecipeCapture: at most 4 MB and 4000 px on its longest edge, never served, deleted once read
+  """
+  RECIPE_PHOTO
 }
 
 """A catalog item a parsed line may name, and how well it matches."""
@@ -8523,6 +8567,13 @@ type Mutation {
   upsertExternalRecipe instead.
   """
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
+  """
+  Queue a recipe page, a shared caption or cookbook photos for the server to
+  read into the caller's private draft recipe. Returns at once with the
+  capture PENDING; poll recipeCapture until it is not. Each user has a daily
+  number of captures, and a smaller one of photo captures.
+  """
+  createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
   """Create a review for a published recipe."""
   createRecipeReview(input: CreateRecipeReviewInput!): CreateRecipeReviewResult!
   """
@@ -11124,6 +11175,10 @@ type ParsedIngredientLine {
   """The amount; null when the line states none (to taste)"""
   quantity: Float
   """
+  The heading the line falls under on its source (For the sauce); null for pasted lines
+  """
+  section: String
+  """
   The unit, resolved in the source's measurement region. A count ("2 eggs")
   is in pieces; null when the line states no amount or its unit is unknown.
   """
@@ -12319,6 +12374,10 @@ type Query {
     """The id of the Recipe to read"""
     id: ID!
   ): Recipe
+  """
+  A recipe capture the caller created; null for any other. Deleted after 7 days.
+  """
+  recipeCapture(id: ID!): RecipeCapture
   """List cooking logs for a specific recipe with cursor-based pagination."""
   recipeCookingLogs(
     """Resume after this cursor: a previous page's endCursor"""
@@ -13224,6 +13283,157 @@ input RecipeAttributionInput {
   originalAuthor: String
   source: String
   sourceUrl: URL
+}
+
+"""
+A recipe capture: a page, a caption or cookbook photos read in the
+background into the caller's private draft recipe. Deleted 7 days after
+creation; the recipe it saved stays.
+"""
+type RecipeCapture {
+  """
+  SAVED by finding the page among the caller's recipes: no second recipe was made
+  """
+  alreadySaved: Boolean!
+  completedAt: DateTime
+  createdAt: DateTime!
+  """What was read; null while PENDING, or when nothing was"""
+  draft: RecipeCaptureDraft
+  """Why FAILED or UNAVAILABLE; null otherwise"""
+  failure: RecipeCaptureFailure
+  """
+  What FAILED or UNAVAILABLE means for the user, in a fixed sentence; null otherwise
+  """
+  failureReason: String
+  id: ID!
+  """The region the source's units were read in; null until read"""
+  measurementRegion: MeasurementRegion
+  """
+  The draft recipe a SAVED capture created or found; null otherwise, or once deleted
+  """
+  recipe: Recipe
+  source: RecipeCaptureSource!
+  status: RecipeCaptureStatus!
+  """What the read noticed; empty when nothing was"""
+  warnings: [RecipeCaptureWarning!]!
+}
+
+"""
+What a capture read: the content a SAVED capture's recipe was written from,
+or what an INCOMPLETE capture hands the recipe editor. Each line keeps its
+catalog candidates for review.
+"""
+type RecipeCaptureDraft {
+  author: String
+  cookTimeMinutes: Int
+  description: String
+  """The source's https image, a link the server never downloads"""
+  imageUrl: String
+  lines: [ParsedIngredientLine!]!
+  name: String
+  prepTimeMinutes: Int
+  servings: Int
+  """The publisher or site"""
+  sourceName: String
+  steps: [RecipeCaptureStep!]!
+  totalTimeMinutes: Int
+}
+
+"""Why a capture ended FAILED or UNAVAILABLE, as a closed code."""
+enum RecipeCaptureFailure {
+  """The worker stopped waiting for the model service"""
+  CALLER_GONE
+  """No worker took the capture in time"""
+  DEADLINE_PASSED
+  """The model never answered in the asked shape"""
+  INVALID_ANSWER
+  """No model answered"""
+  MODEL_DOWN
+  """No model is configured for this read"""
+  NO_MODEL
+  """The text or page holds no recipe"""
+  NO_RECIPE
+  """No model service is configured"""
+  NO_SERVICE
+  """No worker consumes captures"""
+  NO_WORKER
+  """A photo was over the size or pixel limits, or not JPEG, PNG or WebP"""
+  PHOTO_REFUSED
+  """A photo could not be read from storage"""
+  PHOTO_STORAGE
+  """The capture could not be queued"""
+  QUEUE_UNAVAILABLE
+  """The model service refused the request"""
+  REQUEST_REFUSED
+  SERVICE_ERROR
+  """The model service is deployed without recipe reading"""
+  SERVICE_LACKS_RECIPES
+  SERVICE_REFUSED_TOKEN
+  SERVICE_TIMEOUT
+  SERVICE_UNREACHABLE
+  """The model's answer ran out of room before it ended"""
+  TRUNCATED
+  """The model service answered in a shape this server does not know"""
+  UNKNOWN
+  """
+  The page could not be fetched: refused, unreachable, too large or too slow
+  """
+  UNREACHABLE_URL
+  """The URL answered with something other than a web page"""
+  UNSUPPORTED_PAGE
+}
+
+"""What a capture was made from."""
+enum RecipeCaptureSource {
+  """Photos of a cookbook or printed page"""
+  PHOTO
+  """Text a client shared: a caption or description"""
+  TEXT
+  """A recipe page the server fetched"""
+  URL
+}
+
+enum RecipeCaptureStatus {
+  """The source could not be read into a recipe"""
+  FAILED
+  """
+  Read, but missing a name, ingredients or steps: no recipe; open the editor with the draft
+  """
+  INCOMPLETE
+  """Queued or running; poll again"""
+  PENDING
+  """
+  Read, and saved as the caller's private draft recipe (or found among theirs)
+  """
+  SAVED
+  """No worker or model service could take it now; try again later"""
+  UNAVAILABLE
+}
+
+"""A captured step, numbered by its place."""
+type RecipeCaptureStep {
+  """The heading the step falls under on its source; null when it has none"""
+  section: String
+  step: Int!
+  text: String!
+}
+
+type RecipeCaptureWarning {
+  code: RecipeCaptureWarningCode!
+  """Free text: the dropped line, or what was cut"""
+  detail: String!
+}
+
+"""Something a capture noticed about what it read."""
+enum RecipeCaptureWarningCode {
+  """The source held more than a recipe holds; the rest was cut"""
+  CONTENT_CLAMPED
+  """The photos held little readable text"""
+  LOW_TEXT
+  """
+  The model returned a line or step the source does not print; it was dropped
+  """
+  UNGROUNDED_LINE
 }
 
 enum RecipeCategory {
