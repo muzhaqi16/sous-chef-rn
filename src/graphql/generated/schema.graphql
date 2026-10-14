@@ -807,7 +807,7 @@ type BulkCreateItemResult {
 }
 
 input BulkCreateItemsInput {
-  """The items to create, each as createItem creates one; at most 200"""
+  """The items to create, each as createItem creates one; at most 100"""
   items: [CreateItemInput!]!
   """
   Count an entry that matches an existing item under summary.skipped rather
@@ -847,12 +847,12 @@ type BulkCreatePurchaseResult {
 }
 
 """
-Up to 200 purchases recorded in one call, each as createPurchase records it:
+Up to 100 purchases recorded in one call, each as createPurchase records it:
 one that fails is reported in its result and counted as failed in the
 summary, and the rest are kept.
 """
 input BulkCreatePurchasesInput {
-  """1 to 200 purchases; a client-minted id may appear at most once"""
+  """1 to 100 purchases; a client-minted id may appear at most once"""
   purchases: [CreatePurchaseInput!]!
 }
 
@@ -885,7 +885,7 @@ type BulkDeleteItemResult {
 }
 
 input BulkDeleteItemsInput {
-  """The items to soft-delete; at most 200"""
+  """The items to soft-delete; at most 100"""
   ids: [ID!]!
 }
 
@@ -923,7 +923,7 @@ missing or that the caller may not delete is reported in its result and
 counted as failed, and the rest are still removed.
 """
 input BulkDeletePurchasesInput {
-  """1 to 200 purchases to remove"""
+  """1 to 100 purchases to remove"""
   purchaseIds: [ID!]!
 }
 
@@ -5270,7 +5270,7 @@ type Item {
   brands: [ItemBrand!]!
   """
   Whether the CALLING user may write to this item directly with updateItem
-  (true for its creator and for admins). Resolved against the same predicate
+  (true for admins, and for the creator of a PRIVATE item). Resolved against the same predicate
   updateItem enforces, so it stays correct if that rule changes.
   
   Route on this together with canSuggest rather than inferring from
@@ -8208,7 +8208,7 @@ type Mutation {
   """
   bulkCreateItems(input: BulkCreateItemsInput!): BulkCreateItemsResult!
   """
-  Record up to 200 purchases at once, each as createPurchase does, with one
+  Record up to 100 purchases at once, each as createPurchase does, with one
   result per entry.
   """
   bulkCreatePurchases(input: BulkCreatePurchasesInput!): BulkCreatePurchasesResult!
@@ -8220,13 +8220,13 @@ type Mutation {
   """
   bulkDeleteItems(input: BulkDeleteItemsInput!): BulkDeleteItemsResult!
   """
-  Remove up to 200 purchases at once, each as deletePurchase does, with one
+  Remove up to 100 purchases at once, each as deletePurchase does, with one
   result per id. A purchase already removed succeeds again, with a null
   purchase.
   """
   bulkDeletePurchases(input: BulkDeletePurchasesInput!): BulkDeletePurchasesResult!
   """
-  Apply the same change to up to 200 of the caller's devices: the active,
+  Apply the same change to up to 100 of the caller's devices: the active,
   trusted and verified flags, or a delete. Each id reports its own outcome in
   results; one failed id does not stop the others.
   """
@@ -8397,7 +8397,7 @@ type Mutation {
   """Delete a meal template (soft delete)"""
   deleteMealTemplate(input: DeleteMealTemplateInput!): DeleteMealTemplateResult!
   """
-  Delete the caller's notifications by id, at most 200 per call. An id that
+  Delete the caller's notifications by id, at most 100 per call. An id that
   is not the caller's notification is skipped, and the summary counts what
   was deleted. To clear read notifications, send the ids of the read ones.
   """
@@ -8566,7 +8566,10 @@ type Mutation {
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
   """Mark a completed shopping list active again."""
   markShoppingListActive(input: MarkShoppingListActiveInput!): MarkShoppingListActiveResult!
-  """Mark a shopping list as the default."""
+  """
+  Make a shopping list its owner's default. Only an owner of the list may
+  (FORBIDDEN otherwise): an editor's own default is a list they own.
+  """
   markShoppingListAsDefault(input: MarkShoppingListAsDefaultInput!): MarkShoppingListAsDefaultResult!
   """
   Mark a storage location as the default for its home.
@@ -11604,7 +11607,7 @@ type Query {
   checkItemAvailability(
     """The catalog item's id"""
     itemId: ID!
-    """Only these stores, at most 200; every store when omitted or empty"""
+    """Only these stores, at most 100; every store when omitted or empty"""
     storeIds: [ID!]
   ): [ItemAvailability!]!
   """
@@ -11942,7 +11945,7 @@ type Query {
   """
   The devices this account is currently signed in from, newest first. One
   entry per device, not per token. A session with no device header appears as
-  an unknown device. At most 200.
+  an unknown device. At most 50.
   """
   mySessions: [DeviceSession!]!
   """The caller's own reports, newest first, as their reporter sees them."""
@@ -14727,7 +14730,6 @@ type ShoppingListItem {
   The catalog item this line buys; null when the line names none or that item was deleted
   """
   item: Item
-  itemBarcode: String
   """
   The line's name: the one the client gave it, else the catalog item's name when added. While it equals the catalog item's English name it reads in the request's language; null when the add recorded none
   """
@@ -16767,7 +16769,7 @@ input UpdateMealPlanInput {
   """Link or unlink dietary profile for nutrition goal tracking"""
   dietaryProfileId: ID
   """
-  A new last day, as YYYY-MM-DD; null is refused. The plan must not end before it starts (ValidationError on endDate).
+  A new last day, as YYYY-MM-DD; null is refused. The plan must not end before it starts, and a day before a meal the plan holds is refused (ValidationError on endDate either way).
   """
   endDate: LocalDate
   """The plan to update"""
@@ -16779,7 +16781,7 @@ input UpdateMealPlanInput {
   """New servings; null is refused"""
   servings: Int
   """
-  A new first day, as YYYY-MM-DD; null is refused. The plan must not end before it starts (ValidationError on endDate).
+  A new first day, as YYYY-MM-DD; null is refused. The plan must not end before it starts (ValidationError on endDate), and a day after a meal the plan holds is refused (ValidationError on startDate).
   """
   startDate: LocalDate
   """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
@@ -17273,7 +17275,7 @@ input UpdateShoppingListInput {
   description: String
   id: ID!
   """
-  true makes the list the caller's one default, as markShoppingListAsDefault does; false clears it
+  true makes the list the caller's one default, as markShoppingListAsDefault does; false clears it. Only an owner of the list may change it (FORBIDDEN otherwise).
   """
   isDefault: Boolean
   name: String
