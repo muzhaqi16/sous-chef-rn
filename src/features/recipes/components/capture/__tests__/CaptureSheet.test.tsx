@@ -10,9 +10,6 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureSheet, MAX_CAPTURE_TEXT } from '../CaptureSheet';
 
 const mockStart = jest.fn();
-jest.mock('#features/recipes/hooks/useRecipeCapture', () => ({
-  useRecipeCapture: () => ({ start: mockStart, sending: false }),
-}));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => false,
 }));
@@ -29,6 +26,8 @@ const renderSheet = (kind: 'link' | 'text', textAllowed = true) => {
       visible
       kind={kind}
       textAllowed={textAllowed}
+      onSend={mockStart}
+      sending={false}
       onDismiss={onDismiss}
     />,
   );

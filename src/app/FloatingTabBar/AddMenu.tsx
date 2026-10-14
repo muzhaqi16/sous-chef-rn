@@ -70,9 +70,12 @@ export const AddMenu: React.FC<AddMenuProps> = ({
 
   return (
     <>
+      {/* Never a screen-reader stop: the `+`, now Close, and Back dismiss it. */}
       <Animated.View
         style={[StyleSheet.absoluteFill, scrimStyle]}
         pointerEvents={open ? 'auto' : 'none'}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
       >
         <Pressable
           testID={kitTestIDs.tabBarAddMenuScrim}

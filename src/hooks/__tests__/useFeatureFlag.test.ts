@@ -1,4 +1,5 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
   renderHookWithApollo,
@@ -67,6 +68,32 @@ describe('useFeatureFlag', () => {
 
     await waitFor(() => expect(answer.fired).toHaveLength(1));
     expect(result.current).toBe(false);
+  });
+
+  it('keeps its last answer through a re-read that fails', async () => {
+    const answered = flags([
+      { flag: FeatureFlagName.RecipeCaptureUrl, enabled: true },
+    ]);
+    const failed = recordMock(MyFeatureFlagsDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHookWithApollo(
+      () => ({
+        enabled: useFeatureFlag('recipeCaptureUrl'),
+        client: useApolloClient(),
+      }),
+      { operationMocks: [{ ...answered.mock, maxUsageCount: 1 }, failed.mock] },
+    );
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+
+    await act(async () => {
+      await result.current.client
+        .refetchQueries({ include: [MyFeatureFlagsDocument] })
+        .catch(() => undefined);
+    });
+
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.enabled).toBe(true);
   });
 
   it('is off before the server has answered', () => {

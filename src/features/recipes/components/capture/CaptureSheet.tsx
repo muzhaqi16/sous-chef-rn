@@ -11,9 +11,9 @@ import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import {
-  useRecipeCapture,
-  type CaptureStart,
+import type {
+  CaptureRequest,
+  CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
 import type { CaptureField } from '#features/recipes/utils/recipeCaptureOutcome';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -28,16 +28,19 @@ const isWebLink = (value: string) => /^https?:\/\/\S+\.\S+$/i.test(value);
 interface CaptureFormProps {
   initialKind: CaptureSheetKind;
   textAllowed: boolean;
+  onSend: (request: CaptureRequest) => Promise<CaptureStart>;
+  sending: boolean;
   onClose: () => void;
 }
 
 const CaptureForm: React.FC<CaptureFormProps> = ({
   initialKind,
   textAllowed,
+  onSend,
+  sending,
   onClose,
 }) => {
   const { t } = useTranslation();
-  const { start, sending } = useRecipeCapture();
   const unavailable = useIsApiUnavailable();
   const [kind, setKind] = useState(initialKind);
   const [url, setUrl] = useState('');
@@ -120,7 +123,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
         setUrlError(t('recipes.captureLinkInvalid'));
         return;
       }
-      show(await start({ source: 'url', url: trimmedUrl }));
+      show(await onSend({ source: 'url', url: trimmedUrl }));
       return;
     }
     if (trimmedSource && !isWebLink(trimmedSource)) {
@@ -128,7 +131,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
       return;
     }
     show(
-      await start({
+      await onSend({
         source: 'text',
         text: trimmedText,
         ...(trimmedSource ? { sourceUrl: trimmedSource } : {}),
@@ -261,6 +264,12 @@ interface CaptureSheetProps {
   kind: CaptureSheetKind;
   /** A refused link offers the page's text instead. */
   textAllowed: boolean;
+  /**
+   * Starts the capture. It comes from the screen: the sheet renders outside
+   * the navigator, and the capture's outcome toast navigates.
+   */
+  onSend: (request: CaptureRequest) => Promise<CaptureStart>;
+  sending: boolean;
   onDismiss: () => void;
 }
 
@@ -269,6 +278,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   visible,
   kind,
   textAllowed,
+  onSend,
+  sending,
   onDismiss,
 }) => {
   // A fresh form per opening, kept while the sheet animates out.
@@ -295,6 +306,8 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
           key={opening.id}
           initialKind={opening.kind}
           textAllowed={textAllowed}
+          onSend={onSend}
+          sending={sending}
           onClose={onDismiss}
         />
       ) : null}

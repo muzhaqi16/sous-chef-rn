@@ -9,9 +9,6 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { PhotoCaptureSheet } from '../PhotoCaptureSheet';
 
 const mockStart = jest.fn();
-jest.mock('#features/recipes/hooks/useRecipeCapture', () => ({
-  useRecipeCapture: () => ({ start: mockStart, sending: false }),
-}));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => false,
 }));
@@ -38,7 +35,14 @@ beforeEach(() => {
 
 const renderSheet = () => {
   const onDismiss = jest.fn();
-  render(<PhotoCaptureSheet visible onDismiss={onDismiss} />);
+  render(
+    <PhotoCaptureSheet
+      visible
+      onSend={mockStart}
+      sending={false}
+      onDismiss={onDismiss}
+    />,
+  );
   return onDismiss;
 };
 const sendButton = () => screen.getByTestId(recipesTestIDs.captureSend);

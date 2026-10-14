@@ -19,12 +19,14 @@ const BUILD_FLAGS = resolveFeatureFlags(
  */
 export const useFeatureFlag = (flag: FeatureFlag): boolean => {
   const user = useUser();
-  const { data } = useQuery(
+  const { data, previousData } = useQuery(
     MyFeatureFlagsDocument,
     user ? { fetchPolicy: 'cache-first' } : skipToken,
   );
+  // A failed re-read empties `data`; the answer before it still stands.
+  const answer = data ?? previousData;
   if (!BUILD_FLAGS[flag]) return false;
   if (!isServerOwned(flag)) return true;
-  if (!data) return false;
-  return serverFlagsOf(data.myFeatureFlags)[flag] ?? false;
+  if (!answer) return false;
+  return serverFlagsOf(answer.myFeatureFlags)[flag] ?? false;
 };

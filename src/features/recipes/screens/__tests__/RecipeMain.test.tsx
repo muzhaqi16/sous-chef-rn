@@ -62,6 +62,10 @@ jest.mock('#features/recipes/components/capture/CaptureSheet', () => ({
 jest.mock('#features/recipes/components/capture/PhotoCaptureSheet', () => ({
   PhotoCaptureSheet: () => null,
 }));
+// The screen starts captures for its sheets, which render outside the navigator.
+jest.mock('#features/recipes/hooks/useRecipeCapture', () => ({
+  useRecipeCapture: () => ({ start: jest.fn(), sending: false }),
+}));
 jest.mock('#features/recipes/components/capture/CapturePollers', () => ({
   CapturePollers: () => null,
 }));

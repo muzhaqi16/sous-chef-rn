@@ -13,18 +13,29 @@ import { Icon } from '#utils/iconUtils';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useCapturePhotos } from '#features/recipes/hooks/useCapturePhotos';
-import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
+import type {
+  CaptureRequest,
+  CaptureStart,
+} from '#features/recipes/hooks/useRecipeCapture';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const THUMBNAIL_SIZE = 88;
 
-const PhotoForm: React.FC<{ visible: boolean; onClose: () => void }> = ({
+interface PhotoFormProps {
+  visible: boolean;
+  onSend: (request: CaptureRequest) => Promise<CaptureStart>;
+  sending: boolean;
+  onClose: () => void;
+}
+
+const PhotoForm: React.FC<PhotoFormProps> = ({
   visible,
+  onSend,
+  sending,
   onClose,
 }) => {
   const { t } = useTranslation();
   const photos = useCapturePhotos();
-  const { start, sending } = useRecipeCapture();
   const unavailable = useIsApiUnavailable();
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -47,7 +58,7 @@ const PhotoForm: React.FC<{ visible: boolean; onClose: () => void }> = ({
       setFailure(t('recipes.capturePhotoUploadFailed'));
       return;
     }
-    const outcome = await start({ source: 'photo', photoKeys: keys });
+    const outcome = await onSend({ source: 'photo', photoKeys: keys });
     switch (outcome.kind) {
       case 'started':
         onClose();
@@ -168,12 +179,17 @@ const PhotoForm: React.FC<{ visible: boolean; onClose: () => void }> = ({
 
 interface PhotoCaptureSheetProps {
   visible: boolean;
+  /** Starts the capture; from the screen, as the sheet renders outside the navigator. */
+  onSend: (request: CaptureRequest) => Promise<CaptureStart>;
+  sending: boolean;
   onDismiss: () => void;
 }
 
 /** A recipe from photos of one to three of its pages. */
 export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
   visible,
+  onSend,
+  sending,
   onDismiss,
 }) => {
   // A fresh set of pages per opening, kept while the sheet animates out.
@@ -193,7 +209,13 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
       contentContainerStyle={styles.content}
     >
       {opening > 0 ? (
-        <PhotoForm key={opening} visible={visible} onClose={onDismiss} />
+        <PhotoForm
+          key={opening}
+          visible={visible}
+          onSend={onSend}
+          sending={sending}
+          onClose={onDismiss}
+        />
       ) : null}
     </Sheet>
   );

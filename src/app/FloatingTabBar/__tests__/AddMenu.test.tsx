@@ -73,7 +73,12 @@ describe('AddMenu', () => {
       <Menu actions={[action('Link'), action('Photo')]} onClose={onClose} />,
     );
 
-    fireEvent.press(screen.getByTestId(kitTestIDs.tabBarAddMenuScrim));
+    // Hidden from screen readers, but a tap on it still closes the menu.
+    fireEvent.press(
+      screen.getByTestId(kitTestIDs.tabBarAddMenuScrim, {
+        includeHiddenElements: true,
+      }),
+    );
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

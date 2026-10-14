@@ -103,6 +103,7 @@ describe('useRecipeCapturePoll', () => {
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
         "Recipe import isn't available right now. Try again later.",
+        expect.objectContaining({ duration: expect.any(Number) }),
       ),
     );
     expect(useRecipeCaptureStore.getState().entries).toEqual([]);

@@ -19,6 +19,7 @@ import { PhotoCaptureSheet } from '#features/recipes/components/capture/PhotoCap
 import { CapturePollers } from '#features/recipes/components/capture/CapturePollers';
 import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
+import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
@@ -159,6 +160,9 @@ const RecipeMainInner: React.FC = () => {
   // Capture is a seam: off, its entries, sheets and rows are not rendered and
   // the `+` writes a recipe at once, as it always has.
   const captureSources = useCaptureSources();
+  // Here, not in the sheets: they render outside the navigator, and a
+  // capture's outcome toast navigates.
+  const capture = useRecipeCapture();
   const apiUnavailable = useIsApiUnavailable();
   const [captureSheet, setCaptureSheet] = useState<
     CaptureSheetKind | 'photo' | null
@@ -471,10 +475,14 @@ const RecipeMainInner: React.FC = () => {
             visible={captureSheet === 'link' || captureSheet === 'text'}
             kind={captureKind}
             textAllowed={captureSources.text}
+            onSend={capture.start}
+            sending={capture.sending}
             onDismiss={() => setCaptureSheet(null)}
           />
           <PhotoCaptureSheet
             visible={captureSheet === 'photo'}
+            onSend={capture.start}
+            sending={capture.sending}
             onDismiss={() => setCaptureSheet(null)}
           />
         </>
