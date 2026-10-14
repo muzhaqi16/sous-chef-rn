@@ -2284,6 +2284,62 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateReceiptCheckInInput {
+  """
+  Client-minted CUID2 for the receipt. Sending the same id again returns the
+  check-in it created and attempts only the lines not yet recorded. An id
+  another user holds is refused with a ConflictError.
+  """
+  id: ID!
+  """The confirmed lines, 1 to 100"""
+  lines: [ReceiptCheckInLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; lines are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """
+  The receipt's merchant header, when no store is given; it places the chain the lines are remembered under
+  """
+  merchantHeader: String
+  """
+  The pantry the stock goes to; the caller must be able to add items to it
+  """
+  pantryId: ID!
+  """The day on the receipt, as YYYY-MM-DD; not later than today"""
+  purchasedOn: LocalDate!
+  """The receipt's own number, as printed"""
+  receiptNumber: String
+  """
+  The shopping list whose lines the receipt ticks; the caller must be able to mark its lines purchased
+  """
+  shoppingListId: ID
+  """The receipt's store"""
+  storeId: ID
+  """The caller's own calendar date, as YYYY-MM-DD"""
+  today: LocalDate
+}
+
+type CreateReceiptCheckInPayload {
+  """The pantry the receipt was checked into"""
+  pantry: Pantry!
+  receiptCheckIn: ReceiptCheckIn!
+  """One result per line, in input order"""
+  results: [ReceiptCheckInLineResult!]!
+  """The shopping list its lines ticked, when one was given"""
+  shoppingList: ShoppingList
+  """
+  summary.succeeded = lines this call recorded; summary.skipped = lines already recorded; summary.failed = lines that failed
+  """
+  summary: BulkSummary!
+}
+
+"""
+Result of CreateReceiptCheckIn. Select on CreateReceiptCheckInPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateReceiptCheckInResult = ConflictError | CreateReceiptCheckInPayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateReceiptParseInput {
   """
   Client-minted CUID2. Creating the same id again returns the parse it
@@ -4156,6 +4212,10 @@ enum ErrorCode {
   """
   UNIT_CHANGE_NEEDS_RESOLUTION
   UNIT_INVALID
+  """
+  A cooked recipe's ingredient that states no amount, which the cook did not state either: nothing was deducted for it. Reported only as a skipped ingredient of markRecipeAsCooked, never as a failure.
+  """
+  UNSTATED_AMOUNT
   VALIDATION_FAILED
   VERSION_CONFLICT
 }
@@ -4619,6 +4679,20 @@ type Home {
     orderBy: MembershipOrderBy
   ): MembershipConnection!
   membershipStats: MembershipStats!
+  """
+  What this household spent, saved, wasted and paid per cooked meal over a
+  period. Readable by a member who can view the home; the waste and meal
+  figures are null for a member whose pantry view (`canViewPantry`) is off.
+  """
+  moneyReport(
+    """
+    The period, as pantry analytics read it: a preset range, or a custom
+    range running forward over at most 366 days; the last 30 days when omitted
+    """
+    filters: AnalyticsFilters
+    """The UTC bucket `spendByPeriod` is cut into"""
+    granularity: PeriodGranularity = MONTHLY
+  ): HouseholdMoneyReport!
   myMembership: Membership
   name: String!
   """Deep link that opens this home in the app (for existing members)."""
@@ -4926,6 +5000,70 @@ type HomeUsageStats {
   pantryItemCount: Int!
   """Total number of shopping lists"""
   shoppingListCount: Int!
+}
+
+"""
+A household's money over a period. Every amount is per currency and rounded
+to its minor unit; currencies are never summed together or converted, and a
+currency with nothing to report is absent.
+"""
+type HouseholdMoneyReport {
+  """
+  The cooking logs that drew stock from the household's pantries. Null for a
+  member who cannot view the pantries.
+  """
+  cookedMealCount: Int
+  """
+  The value cooking drew, divided by the cooked meals that drew stock of
+  known cost in that currency. Null for a member who cannot view the pantries.
+  """
+  costPerCookedMeal: [CurrencyAmount!]
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  """Its purchases in the period, priced or not"""
+  purchaseCount: Int!
+  """The discounts recorded on its purchases"""
+  savings: [CurrencyAmount!]!
+  """What the household paid: the totals of its priced purchases"""
+  spend: [CurrencyAmount!]!
+  """Spend per top-level category; the entries add up to `spend`"""
+  spendByCategory: [HouseholdSpendCategory!]!
+  """Spend per bucket of the requested granularity, oldest first"""
+  spendByPeriod: [HouseholdSpendPeriod!]!
+  """Spend per store; the entries add up to `spend`"""
+  spendByStore: [HouseholdSpendStore!]!
+  """The purchases recorded with no price: they add nothing to `spend`"""
+  unpricedPurchaseCount: Int!
+  """
+  What the stock wasted from the household's pantries was worth, at the cost
+  of the batches it came from; stock of unknown cost adds nothing. Null for a
+  member who cannot view the pantries.
+  """
+  wasteValue: [CurrencyAmount!]
+}
+
+"""A household's spend on one top-level category."""
+type HouseholdSpendCategory {
+  """The top-level category; null for purchases whose item has no category"""
+  category: Category
+  spend: [CurrencyAmount!]!
+}
+
+"""A household's spend in one period bucket."""
+type HouseholdSpendPeriod {
+  """
+  The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
+  the ISO week's Monday for WEEKLY, and YYYY-MM for MONTHLY.
+  """
+  period: String!
+  spend: [CurrencyAmount!]!
+}
+
+"""A household's spend at one store."""
+type HouseholdSpendStore {
+  spend: [CurrencyAmount!]!
+  """The store; null for purchases that name none"""
+  store: Store
 }
 
 type IPStat {
@@ -6958,7 +7096,7 @@ type MarkRecipeAsCookedPayload {
   cookingLog: CookingLog!
   recipe: Recipe
   """
-  Ingredients not deducted because no conversion reached the stack's unit.
+  Ingredients not deducted: no conversion reached the stack's unit, or the recipe states no amount.
   """
   skippedIngredients: [SkippedRecipeIngredient!]!
 }
@@ -8315,6 +8453,16 @@ type Mutation {
   is a ConflictError.
   """
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
+  """
+  Check a confirmed receipt into a household in one call, so a whole shop is
+  one request. Each line records its purchase with the receipt's store, day
+  and number, ticks the shopping-list line it names, and lands its stock: as
+  moveShoppingItemToPantry does for a listed line, and as createPantryItem
+  with forceAdd does for an unlisted one. The household's choices are
+  remembered as recordReceiptMatches remembers them. Each line commits or
+  fails on its own, and a check-in sent again records nothing twice.
+  """
+  createReceiptCheckIn(input: CreateReceiptCheckInInput!): CreateReceiptCheckInResult!
   """
   Queue a receipt's text, or its photos, for the server to read into lines,
   for a phone without on-device parsing. Returns at once with the parse
@@ -12089,20 +12237,28 @@ type Query {
     recipeId: ID!
   ): CookingLogConnection!
   """
-  Published recipes anyone can discover, most cooked first. Every caller gets
-  the same list: it reads neither the caller's pantry nor their dietary
-  profile.
+  Recipes the caller could cook from what their pantries hold. Published
+  recipes anyone can discover, and the caller's own and saved ones, come
+  first when at least half their non-optional ingredients are held: best
+  covered first, with stock about to expire lifting the recipes that use it.
+  The most cooked published recipes fill the rest of the page.
+  
+  A recipe tagged with an intolerance the caller's dietary profile holds as
+  an allergy or an intolerance is left out, and so is one not tagged with a
+  diet held that way. The check reads recipe tags only: an untagged recipe
+  is not screened by its ingredients.
+  
+  Forward only, via first. The ranking depends on the caller's pantry and
+  day, so after, before and last are not offered.
   """
   recipeSuggestions(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """How many suggestions: 20 when omitted, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): RecipeConnection!
+    """
+    The caller's own calendar date, as YYYY-MM-DD. With it, stock expiring within 3 days lifts the recipes that use it
+    """
+    today: LocalDate
+  ): RecipeSuggestionConnection!
   """
   The calling user's own recipes — both those they created and those they
   saved.
@@ -12443,6 +12599,97 @@ type RankedUnit {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""A receipt checked into a household in one call."""
+type ReceiptCheckIn {
+  createdAt: DateTime!
+  homeId: ID!
+  id: ID!
+  """How many lines the call that created it carried"""
+  lineCount: Int!
+  pantryId: ID!
+  """The day on the receipt"""
+  purchasedOn: LocalDate!
+  receiptNumber: String
+  shoppingListId: ID
+  storeId: ID
+}
+
+"""One confirmed line of a receipt being checked in."""
+input ReceiptCheckInLineInput {
+  """What was bought: an amount in a unit, or a count of packages"""
+  amount: StockAmountInput!
+  """The client's id for the line, echoed back on its result"""
+  clientId: String!
+  """
+  What the receipt printed as saved on the line; the purchase's original price is totalPaid plus it
+  """
+  discount: Float
+  """
+  The user changed or chose the item rather than accepting the proposal; false when omitted
+  """
+  edited: Boolean
+  """The stock's expiry day, as YYYY-MM-DD"""
+  expiresOn: LocalDate
+  """The catalog item the household confirmed for the line"""
+  itemId: ID!
+  """
+  Client-minted CUID2 for the stack or batch a stocked line adds, as
+  CreatePantryItemInput.id: an add sent again finds what it added.
+  """
+  pantryItemId: ID
+  """
+  Client-minted CUID2 for the line's purchase. A line whose purchase exists
+  is reported alreadyRecorded and writes nothing, so a check-in sent again
+  records nothing twice.
+  """
+  purchaseId: ID!
+  """
+  The line's product text as printed; remembered for the household as recordReceiptMatches remembers it
+  """
+  rawText: String
+  """
+  The step that proposed the item the user saw; null when nothing was proposed
+  """
+  resolvedBy: ReceiptMatchMethod
+  """
+  The shopping-list line this purchase ticks. It must be on the check-in's
+  shoppingListId and name the same item; otherwise the line fails with
+  VALIDATION_FAILED and writes nothing.
+  """
+  shoppingListItemId: ID
+  """
+  False records the purchase, ticks its list line, and leaves the pantry as it is; true when omitted
+  """
+  stock: Boolean
+  """The total paid for the line, after any discount"""
+  totalPaid: Float!
+}
+
+"""One line's outcome in createReceiptCheckIn."""
+type ReceiptCheckInLineResult {
+  """
+  True when the line's purchase already existed and this call wrote nothing for it
+  """
+  alreadyRecorded: Boolean!
+  """The line's clientId, as sent"""
+  clientId: String!
+  """Why the line failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """The line's position in the input"""
+  index: Int!
+  """
+  The stack the stock is in; null when the line failed or was not stocked
+  """
+  pantryItem: PantryItem
+  """The purchase the line recorded; null when the line failed"""
+  purchase: Purchase
+  """
+  The list line the purchase ticked; null when the line named none or failed
+  """
+  shoppingListItem: ShoppingListItem
+  success: Boolean!
 }
 
 """A catalog item proposed for a receipt line."""
@@ -13077,8 +13324,8 @@ type RecipeIngredient {
   
   Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
   SYSTEM, their device's locale, so two callers reading the same recipe get
-  different answers. Null when the ingredient names no unit, or when no seeded
-  unit of the system shares its dimension.
+  different answers. Null when the ingredient states no amount or names no
+  unit, or when no seeded unit of the system shares its dimension.
   """
   convertedQuantity: ConvertedValue
   estimatedPrice: Float
@@ -13089,8 +13336,15 @@ type RecipeIngredient {
   item: Item
   name: String!
   notes: String
+  """The line as originally written, when the ingredient came from text."""
+  originalText: String
   preparation: String
-  quantity: Float!
+  """
+  The amount, in `unit`. Null when the recipe states none ("salt, to taste"):
+  such a line is never deducted, priced or converted, and a shopping list
+  carries it without a quantity.
+  """
+  quantity: Float
   recipe: Recipe!
   section: String
   sortOrder: Int!
@@ -13154,8 +13408,13 @@ input RecipeIngredientInput {
   name: String!
   notes: String
   originalString: String
+  """The line as originally written, at most 500 characters."""
+  originalText: String
   preparation: String
-  quantity: Float!
+  """
+  Positive when present; omitted or null when the recipe states no amount.
+  """
+  quantity: Float
   section: String
   sortOrder: Int
   spoonacular: SpoonacularDataInput
@@ -13172,7 +13431,8 @@ type RecipeIngredientLine {
   name: String!
   notes: String
   preparation: String
-  quantity: Float!
+  """Null when the line states no amount."""
+  quantity: Float
   section: String
   sortOrder: Int!
   unit: Unit
@@ -13431,6 +13691,32 @@ enum RecipeStatus {
   PENDING_REVIEW
   """Approved by an admin and visible to everyone."""
   PUBLISHED
+}
+
+"""One ranked page of recipe suggestions."""
+type RecipeSuggestionConnection {
+  edges: [RecipeSuggestionEdge!]!
+  pageInfo: PageInfo!
+  """
+  The number of suggestions on this page; a ranked list has no later page to count
+  """
+  totalCount: Int!
+}
+
+"""A suggested recipe, and why it was suggested."""
+type RecipeSuggestionEdge {
+  """
+  The share of the recipe's non-optional ingredients the caller's pantries
+  hold, from 0 to 100: the figure Recipe.matchPercentage reports.
+  """
+  coverage: Int!
+  cursor: String!
+  """
+  The caller's stacks expiring within 3 days of today that the recipe would
+  use; empty when today was not sent.
+  """
+  expiringStacks: [PantryItem!]!
+  node: Recipe!
 }
 
 """Input for recording a price observation (historical tracking)"""
@@ -15095,8 +15381,9 @@ type ShoppingListUsageStats {
 }
 
 """
-A recipe ingredient the cook deduction could not express in a stack's unit.
-The stack was left untouched; nothing was deducted 1:1.
+A recipe ingredient the cook deduction left: one it could not express in a
+stack's unit (nothing was deducted 1:1), or one stating no amount
+(`UNSTATED_AMOUNT`). The stack it names was left untouched.
 """
 type SkippedRecipeIngredient {
   """
