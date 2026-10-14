@@ -33,6 +33,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { dayAsInstant } from '#/utils/dateUtils';
 
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
 export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
@@ -429,9 +430,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   // Reminder — a picked date sets/updates it; the clear action removes it.
+  // The API reads the reminder's day in the owner's recorded time zone.
   const handleSetReminderDate = (date: Date | null) => {
     if (listId && date) {
-      void setReminder(listId, date.toISOString(), true);
+      void setReminder(listId, dayAsInstant(date), true);
     }
   };
 

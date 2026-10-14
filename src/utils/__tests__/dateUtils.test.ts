@@ -185,6 +185,38 @@ describe('fromDateKey', () => {
   });
 });
 
+describe('dayAsInstant', () => {
+  // A phone in Paris whose account still holds New York: the API reads the
+  // reminder's day there, six hours behind.
+  const dayIn = (timeZone: string, instant: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(instant));
+
+  it('sends a picked day as an instant that is that day west of the phone too', () => {
+    const [midnight, sent] = inZone<[string, string]>(
+      'Europe/Paris',
+      `({ dayAsInstant, fromDateKey }) => {
+        const picked = fromDateKey('2026-10-20');
+        return [picked.toISOString(), dayAsInstant(picked)];
+      }`,
+    );
+
+    expect(dayIn('America/New_York', midnight)).toBe('2026-10-19');
+    expect(dayIn('America/New_York', sent)).toBe('2026-10-20');
+    expect(dayIn('Europe/Paris', sent)).toBe('2026-10-20');
+    expect(dayIn('Asia/Tokyo', sent)).toBe('2026-10-20');
+  });
+
+  it('keeps the day of a date that carries a time', () => {
+    const sent = inZone<string>(
+      'Europe/Paris',
+      `({ dayAsInstant }) => dayAsInstant(new Date(2026, 9, 20, 23, 30))`,
+    );
+
+    expect(dayIn('Europe/Paris', sent)).toBe('2026-10-20');
+    expect(dayIn('America/New_York', sent)).toBe('2026-10-20');
+  });
+});
+
 describe('keepDayInsidePlan', () => {
   const week = { startDate: '2026-09-21', endDate: '2026-09-27' };
 

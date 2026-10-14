@@ -76,6 +76,14 @@ export const todayKey = (): string => toDateKey(new Date());
 export const fromDateKey = (key: string): Date =>
   parse(key, 'yyyy-MM-dd', new Date());
 
+/**
+ * A picked day as the instant to send where the API takes a `DateTime` and
+ * reads its day in a time zone it holds: local noon is that day in every zone
+ * within twelve hours of the phone's, local midnight the day before west of it.
+ */
+export const dayAsInstant = (day: Date): string =>
+  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString();
+
 /** Whether a value from untyped data (a push payload) is a `LocalDate` key. */
 export const isDateKey = (value: string): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(value);
