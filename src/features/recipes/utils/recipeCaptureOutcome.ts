@@ -8,6 +8,7 @@ import type { TranslationKey } from '#/i18n';
 import {
   dailyAllowanceWait,
   isFeatureDisabled,
+  isPremiumRequired,
   isUpgradeRequired,
   isVerdict,
 } from '#domain/serverJobRefusals';
@@ -157,6 +158,7 @@ export type CaptureCreateResult =
   | { kind: 'limited'; retryAt: string }
   | { kind: 'upgrade' }
   | { kind: 'disabled' }
+  | { kind: 'premium' }
   | { kind: 'resend' };
 
 export function classifyCaptureCreate(
@@ -187,6 +189,7 @@ export function classifyCaptureCreate(
   }
   if (isUpgradeRequired(error)) return { kind: 'upgrade' };
   if (isFeatureDisabled(error)) return { kind: 'disabled' };
+  if (isPremiumRequired(error)) return { kind: 'premium' };
   // A refusal, in the payload or not, stands; one that never arrived does not.
   if (error === undefined || isVerdict(error)) {
     return { kind: 'refused', field: captureFieldOf(refusedField) };

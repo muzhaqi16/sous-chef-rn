@@ -6,7 +6,10 @@
 export type FeatureFlag =
   | 'ingredientPaste'
   | 'pantrySuggestions'
-  | 'recipeCapture';
+  | 'receiptParsing'
+  | 'recipeCapturePhoto'
+  | 'recipeCaptureText'
+  | 'recipeCaptureUrl';
 
 /**
  * What a build allows when neither the fork nor the build says otherwise. A
@@ -17,8 +20,12 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   ingredientPaste: true,
   // Discovery ranked by the API's `recipeSuggestions`; off, Spoonacular ranks it.
   pantrySuggestions: true,
-  // Recipes from a link, text or photos (`createRecipeCapture`).
-  recipeCapture: true,
+  // A receipt read by the API's `createReceiptParse`; off, only the phone reads it.
+  receiptParsing: true,
+  // Recipes from cookbook photos, shared text or a page's link (`createRecipeCapture`).
+  recipeCapturePhoto: true,
+  recipeCaptureText: true,
+  recipeCaptureUrl: true,
 };
 
 const isFeatureFlag = (name: string): name is FeatureFlag =>

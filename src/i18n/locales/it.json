@@ -57,6 +57,7 @@
       "unitInvalid": "Questa unità non può essere usata qui.",
       "unstatedAmount": "La ricetta non indica una quantità per questo ingrediente, quindi non è stato scalato nulla.",
       "featureDisabled": "Questa funzione non è disponibile sul tuo account al momento.",
+      "premiumRequired": "Serve un piano Premium.",
       "validationFailed": "Controlla i dati inseriti e riprova",
       "versionConflict": "È stato modificato altrove dopo che l'hai aperto. Aggiorna e riprova.",
       "unitChangeNeedsResolution": "Questo cambio di unità è solo una stima. Scegli se usare la stima o inserire tu la quantità."

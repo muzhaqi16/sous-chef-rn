@@ -57,6 +57,7 @@
       "unitInvalid": "That unit cannot be used here.",
       "unstatedAmount": "The recipe doesn't state an amount for this ingredient, so nothing was deducted.",
       "featureDisabled": "This isn't available on your account right now.",
+      "premiumRequired": "This needs a Premium plan.",
       "validationFailed": "Please check your input and try again",
       "versionConflict": "This changed somewhere else after you opened it. Please refresh and try again.",
       "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."

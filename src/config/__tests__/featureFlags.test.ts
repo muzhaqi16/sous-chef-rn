@@ -8,7 +8,10 @@ describe('resolveFeatureFlags', () => {
     expect(resolveFeatureFlags({}, undefined)).toEqual({
       ingredientPaste: true,
       pantrySuggestions: true,
-      recipeCapture: true,
+      receiptParsing: true,
+      recipeCapturePhoto: true,
+      recipeCaptureText: true,
+      recipeCaptureUrl: true,
     });
   });
 
@@ -22,12 +25,13 @@ describe('resolveFeatureFlags', () => {
     expect(
       resolveFeatureFlags(
         { pantrySuggestions: false },
-        'pantrySuggestions=on, ingredientPaste = OFF, recipeCapture=on',
+        'pantrySuggestions=on, ingredientPaste = OFF, recipeCaptureText=off',
       ),
-    ).toEqual({
+    ).toMatchObject({
       pantrySuggestions: true,
       ingredientPaste: false,
-      recipeCapture: true,
+      recipeCaptureText: false,
+      recipeCaptureUrl: true,
     });
   });
 
@@ -37,7 +41,10 @@ describe('resolveFeatureFlags', () => {
     ).toEqual({
       ingredientPaste: true,
       pantrySuggestions: true,
-      recipeCapture: true,
+      receiptParsing: true,
+      recipeCapturePhoto: true,
+      recipeCaptureText: true,
+      recipeCaptureUrl: true,
     });
   });
 });
@@ -46,10 +53,10 @@ describe('serverFlagsOf', () => {
   it("reads the server's answer as the client's flags", () => {
     expect(
       serverFlagsOf([
-        { flag: FeatureFlagName.RecipeCapture, enabled: true },
+        { flag: FeatureFlagName.RecipeCaptureUrl, enabled: true },
         { flag: FeatureFlagName.IngredientPaste, enabled: false },
       ]),
-    ).toEqual({ recipeCapture: true, ingredientPaste: false });
+    ).toEqual({ recipeCaptureUrl: true, ingredientPaste: false });
   });
 
   it('ignores a flag a newer server names', () => {
@@ -59,7 +66,7 @@ describe('serverFlagsOf', () => {
   });
 
   it('knows which flags the server owns', () => {
-    expect(isServerOwned('recipeCapture')).toBe(true);
+    expect(isServerOwned('recipeCapturePhoto')).toBe(true);
     expect(isServerOwned('pantrySuggestions')).toBe(true);
   });
 });

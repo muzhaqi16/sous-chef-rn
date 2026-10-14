@@ -45,6 +45,7 @@ const FORBIDDEN: string = ErrorCode.Forbidden;
 const ACCOUNT_SUSPENDED: string = ErrorCode.AuthAccountSuspended;
 const CLIENT_UPGRADE_REQUIRED: string = TopLevelErrorCode.ClientUpgradeRequired;
 const FEATURE_DISABLED: string = TopLevelErrorCode.FeatureDisabled;
+const PREMIUM_REQUIRED: string = TopLevelErrorCode.PremiumRequired;
 
 const isResourceAccessError = (code: string) => code === FORBIDDEN;
 
@@ -111,10 +112,10 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       const code = extensionText(err.extensions?.code, '');
       const message = String(err.message || '');
 
-      // The feature is off for this user: no retry or refresh changes that, and
-      // it is never a sign-out. The flags are asked again, so every screen that
-      // offers the feature stops.
-      if (code === FEATURE_DISABLED) {
+      // The feature is off for this user, or needs a plan they do not hold: no
+      // retry or refresh changes that, and it is never a sign-out. The flags
+      // are asked again, so every screen that offers the feature stops.
+      if (code === FEATURE_DISABLED || code === PREMIUM_REQUIRED) {
         void operation.client.refetchQueries({
           include: [MyFeatureFlagsDocument],
         });

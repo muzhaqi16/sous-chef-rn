@@ -706,6 +706,16 @@ describe('RecipeMain: the ways to add a recipe', () => {
     expect(lastMenu().every(action => !action.disabledReason)).toBe(true);
   });
 
+  it('offers only the sources switched on for this user', () => {
+    jest
+      .mocked(useFeatureFlag)
+      .mockImplementation(flag => flag === 'recipeCaptureText');
+
+    render(<RecipeMain />);
+
+    expect(lastMenu().map(action => action.key)).toEqual(['text', 'manual']);
+  });
+
   it('shows the capture entries disabled, with why, while the API is unreachable', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(true);
     jest.mocked(useIsApiUnavailable).mockReturnValue(true);

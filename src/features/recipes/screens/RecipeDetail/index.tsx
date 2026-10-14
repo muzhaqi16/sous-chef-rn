@@ -41,7 +41,7 @@ import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -125,7 +125,7 @@ const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
-  const captureEnabled = useFeatureFlag('recipeCapture');
+  const captureSources = useCaptureSources();
   const user = useUser();
   const { forkRecipe, forking } = useForkRecipe();
   const { setSubmitted, publishing } = usePublishRecipe();
@@ -602,7 +602,7 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {recipeId && captureEnabled ? (
+        {recipeId && captureSources.any ? (
           <CaptureReviewBanner
             recipeId={recipeId}
             ingredients={displayData.ingredients}

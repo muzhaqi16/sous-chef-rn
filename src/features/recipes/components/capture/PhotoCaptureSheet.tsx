@@ -61,6 +61,9 @@ const PhotoForm: React.FC<{ visible: boolean; onClose: () => void }> = ({
       case 'disabled':
         setFailure(t('errors.codes.featureDisabled'));
         return;
+      case 'premium':
+        setFailure(t('errors.codes.premiumRequired'));
+        return;
       case 'refused':
         setFailure(
           t(

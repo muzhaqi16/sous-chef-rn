@@ -66,6 +66,7 @@
     "capturePasteLink": "Ngjit lidhjen",
     "captureImport": "Importo recetën",
     "captureLinkInvalid": "Shkruaj lidhjen e plotë, që fillon me http:// ose https://",
+    "captureLinkUnreadable": "Kjo lidhje nuk lexohet dot drejtpërdrejt.",
     "captureLinkRefused": "Kjo lidhje nuk lexohet dot drejtpërdrejt. Ngjit tekstin e postimit.",
     "captureUseTextInstead": "Ngjit tekstin",
     "captureTextTitle": "Importo nga një tekst",

@@ -22,9 +22,16 @@ beforeEach(() => {
   mockStart.mockResolvedValue({ kind: 'started' });
 });
 
-const renderSheet = (kind: 'link' | 'text') => {
+const renderSheet = (kind: 'link' | 'text', textAllowed = true) => {
   const onDismiss = jest.fn();
-  render(<CaptureSheet visible kind={kind} onDismiss={onDismiss} />);
+  render(
+    <CaptureSheet
+      visible
+      kind={kind}
+      textAllowed={textAllowed}
+      onDismiss={onDismiss}
+    />,
+  );
   return onDismiss;
 };
 
@@ -96,6 +103,21 @@ describe('CaptureSheet: from a link', () => {
     expect(
       screen.getByTestId(recipesTestIDs.captureSourceInput).props.value,
     ).toBe('https://www.tiktok.com/@chef/1');
+  });
+
+  it('offers no text where text capture is off', async () => {
+    mockStart.mockResolvedValueOnce({ kind: 'refused', field: 'url' });
+    renderSheet('link', false);
+
+    type(recipesTestIDs.captureUrlInput, 'https://www.tiktok.com/@chef/1');
+    send();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("This link can't be read directly."),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByTestId(recipesTestIDs.captureUseText)).toBeNull();
   });
 
   it('says the daily allowance is spent', async () => {

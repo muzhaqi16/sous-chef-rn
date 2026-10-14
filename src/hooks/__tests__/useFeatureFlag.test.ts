@@ -44,10 +44,11 @@ beforeEach(() => {
 describe('useFeatureFlag', () => {
   it('is on where the server turns it on for this user', async () => {
     const { result } = renderHookWithApollo(
-      () => useFeatureFlag('recipeCapture'),
+      () => useFeatureFlag('recipeCaptureUrl'),
       {
         operationMocks: [
-          flags([{ flag: FeatureFlagName.RecipeCapture, enabled: true }]).mock,
+          flags([{ flag: FeatureFlagName.RecipeCaptureUrl, enabled: true }])
+            .mock,
         ],
       },
     );
@@ -57,10 +58,10 @@ describe('useFeatureFlag', () => {
 
   it('is off where the server turns it off', async () => {
     const answer = flags([
-      { flag: FeatureFlagName.RecipeCapture, enabled: false },
+      { flag: FeatureFlagName.RecipeCaptureUrl, enabled: false },
     ]);
     const { result } = renderHookWithApollo(
-      () => useFeatureFlag('recipeCapture'),
+      () => useFeatureFlag('recipeCaptureUrl'),
       { operationMocks: [answer.mock] },
     );
 

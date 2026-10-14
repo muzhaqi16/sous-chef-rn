@@ -41,6 +41,7 @@ export const getNotificationAction = (
     case NotificationType.ItemUpdated:
     case NotificationType.ListUpdated:
     case NotificationType.LowStock:
+    case NotificationType.RunningLow:
     case NotificationType.NewItemAdded:
     case NotificationType.RecipeCooked:
     case NotificationType.RecipeSaved:
@@ -64,6 +65,8 @@ export const getNotificationIcon = (
       return 'time';
     case NotificationType.LowStock:
       return 'cube';
+    case NotificationType.RunningLow:
+      return 'trending-down';
     case NotificationType.NewItemAdded:
       return 'add-circle';
     case NotificationType.ItemUpdated:
@@ -410,6 +413,8 @@ const joinNames = (
   t: Translate,
 ): string | null => {
   const shown = names.slice(0, DIGEST_NAME_CAP);
+  // No name to lead with: the caller counts instead.
+  if (shown.length === 0) return null;
   const remainder = Math.max(total, names.length) - shown.length;
   if (remainder > 0) {
     return t('notifications.copy.names.andMore', {
@@ -476,6 +481,24 @@ const buildPantryChangeMessage = (
   return itemName
     ? t(PANTRY_CHANGE_COPY[type].one, { names, count, itemName, pantryName })
     : generic;
+};
+
+const buildRunningLowMessage = (
+  payload: NotificationPayload,
+  t: Translate,
+): string => {
+  const itemNames = readNames(payload, 'itemNames');
+  const itemCount = readCount(payload, 'itemCount') ?? itemNames.length;
+  const names = joinNames(itemNames, itemCount, t);
+  if (names) {
+    return t('notifications.copy.message.runningLow', {
+      names,
+      count: Math.max(itemCount, itemNames.length),
+    });
+  }
+  return itemCount > 0
+    ? t('notifications.copy.message.runningLowCount', { count: itemCount })
+    : t('notifications.copy.message.runningLowGeneric');
 };
 
 const buildListReminderMessage = (
@@ -674,6 +697,8 @@ export const getNotificationCopy = (
       return buildListUpdatedCopy(payload, t);
     case NotificationType.LowStock:
       return { title, message: buildLowStockMessage(payload, t) };
+    case NotificationType.RunningLow:
+      return { title, message: buildRunningLowMessage(payload, t) };
     case NotificationType.ExpiryReminder: {
       const single = buildExpiryReminderMessage(payload, t, today);
       if (single) return { title, message: single };

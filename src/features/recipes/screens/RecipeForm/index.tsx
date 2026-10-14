@@ -16,6 +16,7 @@ import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/Re
 import { RecipeIngredientList } from '#features/recipes/components/recipeForm/RecipeIngredientList';
 import { useCaptureDraft } from '#features/recipes/hooks/useCaptureDraft';
 import { useCaptureReview } from '#features/recipes/hooks/useCaptureReview';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
 import { PasteIngredientsSheet } from '#features/recipes/components/recipeForm/PasteIngredientsSheet';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
@@ -182,9 +183,9 @@ export const RecipeFormScreen: React.FC<
   const [pasteVisible, setPasteVisible] = useState(false);
   const pasteEnabled = useFeatureFlag('ingredientPaste');
   // A captured recipe's unlinked lines offer the items its capture proposed.
-  const captureEnabled = useFeatureFlag('recipeCapture');
+  const captureSources = useCaptureSources();
   const { review: captureReview } = useCaptureReview(
-    captureEnabled ? recipeId : undefined,
+    captureSources.any ? recipeId : undefined,
   );
 
   const handleSaveIngredient = (ingredient: IngredientFormState) => {

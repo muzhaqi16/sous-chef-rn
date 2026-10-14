@@ -11,7 +11,10 @@ import type { FeatureFlag } from './featureFlags';
 const SERVER_FLAG: Record<FeatureFlagName, FeatureFlag> = {
   [FeatureFlagName.IngredientPaste]: 'ingredientPaste',
   [FeatureFlagName.PantrySuggestions]: 'pantrySuggestions',
-  [FeatureFlagName.RecipeCapture]: 'recipeCapture',
+  [FeatureFlagName.ReceiptParsing]: 'receiptParsing',
+  [FeatureFlagName.RecipeCapturePhoto]: 'recipeCapturePhoto',
+  [FeatureFlagName.RecipeCaptureText]: 'recipeCaptureText',
+  [FeatureFlagName.RecipeCaptureUrl]: 'recipeCaptureUrl',
 };
 
 const SERVER_OWNED = new Set<FeatureFlag>(Object.values(SERVER_FLAG));

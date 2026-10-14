@@ -9,6 +9,7 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { alertService } from '#/services/alertService';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useReceiptScan } from '../hooks/useReceiptScan';
@@ -84,6 +85,7 @@ const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack, toReceiptReview } = useAppNavigation();
+  const serverParsing = useFeatureFlag('receiptParsing');
   const {
     status,
     answerConsent,
@@ -96,10 +98,10 @@ export const ReceiptScanScreen: React.FC = () => {
     sendPhotos,
     declinePhotos,
     discard,
-  } = useReceiptScan({ onCancel: goBack });
+  } = useReceiptScan({ onCancel: goBack, serverParsing });
   // Only once the phone has had its go at the receipt.
   const { readingStatus, retryAt, slowPhotoRead } = useServerReceiptParse({
-    enabled: status === 'saved',
+    enabled: serverParsing && status === 'saved',
   });
 
   const header: ScreenHeaderConfig = {

@@ -57,6 +57,7 @@
       "unitInvalid": "Kjo njësi nuk mund të përdoret këtu.",
       "unstatedAmount": "Receta nuk tregon sasi për këtë përbërës, prandaj nuk u zbrit asgjë.",
       "featureDisabled": "Kjo nuk është e disponueshme në llogarinë tënde tani.",
+      "premiumRequired": "Kjo kërkon planin Premium.",
       "validationFailed": "Kontrolloni të dhënat e futura dhe provoni sërish",
       "versionConflict": "Kjo u ndryshua diku tjetër pasi e hapët. Rifreskoni dhe provoni sërish.",
       "unitChangeNeedsResolution": "Ky ndryshim njësie është vetëm një vlerësim. Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë."

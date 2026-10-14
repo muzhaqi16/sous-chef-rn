@@ -157,8 +157,13 @@ A capability inside a feature is switched by `featureFlags` instead
 (`src/config/featureFlags.ts`): a closed `FeatureFlag` union with a default
 each. The fork's `appConfig.featureFlags` overrides the default, and a build's
 `FEATURE_FLAGS` env value (`pantrySuggestions=off`) overrides both. Code reads a
-flag only through `useFeatureFlag`, so a per-user or remote switch later changes
-that hook and no caller. A flagged capability is a seam, not a branch in the
+flag only through `useFeatureFlag`. A flag the server owns
+(`src/config/serverFeatureFlags.ts` maps each `FeatureFlagName`) is on only where
+the build allows it AND the user's `myFeatureFlags` entry is `enabled`, which is
+true exactly when its state is `ON`: a feature that needs a plan the user lacks
+(`UPGRADE_REQUIRED`) reads as off. It is off until the first answer, and the
+cached answer holds offline; a `FEATURE_DISABLED` or `PREMIUM_REQUIRED` refusal
+re-reads it (`errorLink`). A flagged capability is a seam, not a branch in the
 code it extends:
 
 - the existing component takes it as an optional prop, and renders as before

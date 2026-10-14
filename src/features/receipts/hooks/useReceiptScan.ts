@@ -74,6 +74,8 @@ type ScanStart = 'scan' | 'photo' | 'pick';
 interface UseReceiptScanOptions {
   /** The user closed the scanner without a page, with no receipt saved. */
   onCancel: () => void;
+  /** The server reads receipts for this user; off, only the phone reads them. */
+  serverParsing: boolean;
 }
 
 /**
@@ -83,7 +85,10 @@ interface UseReceiptScanOptions {
  * as the fallback; otherwise the phone's model structures the text where there
  * is one, then the server reads it. No photo stays on the phone.
  */
-export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
+export function useReceiptScan({
+  onCancel,
+  serverParsing,
+}: UseReceiptScanOptions) {
   const draft = useReceiptDraft();
   const { saveDraft, clearDraft, recordPhotoKeys } = useReceiptDraftActions();
   const client = useApolloClient();
@@ -223,7 +228,9 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
 
   // A user who agreed, online: the scan's photos go to the server to be read.
   const readsPhotosFirst = async () =>
-    isOnline && (await storedReceiptPhotoConsent()) === 'granted';
+    serverParsing &&
+    isOnline &&
+    (await storedReceiptPhotoConsent()) === 'granted';
 
   const readText = async (imageUris: string[], library: boolean) => {
     let recognized: RecognizedPage[];
@@ -231,8 +238,9 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       recognized = await TextRecognition.recognizeAndDelete(imageUris);
     } catch (error) {
       errorService.reportError(error, { operation: 'Recognise receipt text' });
-      // Only iOS's scanner takes this many, and a receipt is not sent in part.
-      if (imageUris.length > MAX_PHOTOS) {
+      // Only iOS's scanner takes this many, and a receipt is not sent in part;
+      // nor is one the server does not read.
+      if (imageUris.length > MAX_PHOTOS || !serverParsing) {
         dropPhotos(imageUris);
         setStatus('failed');
         return;
@@ -365,7 +373,11 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     pick: choose,
   };
   const begin = async (start: ScanStart) => {
-    if (isOnline && (await storedReceiptPhotoConsent()) === null) {
+    if (
+      serverParsing &&
+      isOnline &&
+      (await storedReceiptPhotoConsent()) === null
+    ) {
       setAsking(start);
       return;
     }

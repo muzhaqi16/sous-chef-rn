@@ -70,9 +70,11 @@ const RECEIPT: RecognizedPage[] = [
   },
 ];
 
-const renderScan = () => {
+const renderScan = (serverParsing = true) => {
   const onCancel = jest.fn();
-  const view = renderHookWithApollo(() => useReceiptScan({ onCancel }));
+  const view = renderHookWithApollo(() =>
+    useReceiptScan({ onCancel, serverParsing }),
+  );
   return { ...view, onCancel };
 };
 
@@ -259,8 +261,8 @@ describe('useReceiptScan', () => {
       (_, at) => `file:///page-${at}.jpg`,
     );
 
-    const failedRead = async (pages = PAGES) => {
-      const view = renderScan();
+    const failedRead = async (pages = PAGES, serverParsing = true) => {
+      const view = renderScan(serverParsing);
       scanDocument.mockResolvedValue({
         status: ScanDocumentResponseStatus.Success,
         scannedImages: pages,
@@ -290,6 +292,14 @@ describe('useReceiptScan', () => {
       expect(preparePhotos).not.toHaveBeenCalled();
       expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft).toBeNull();
+    });
+
+    it('offers nothing to send, and deletes the pages, where the server reads no receipts', async () => {
+      const { result } = await failedRead(PAGES, false);
+
+      expect(result.current.status).toBe('failed');
+      expect(deletePhotos).toHaveBeenCalledWith(PAGES);
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
     });
 
     it('sends the photos on consent, keeps only their keys, and deletes every copy', async () => {
@@ -504,6 +514,19 @@ describe('useReceiptScan', () => {
       expect(recognizeAndDelete).toHaveBeenCalled();
       hydrated.mockRestore();
       rehydrate.mockRestore();
+    });
+
+    it('neither asks nor sends photos where the server reads no receipts', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      scannedOnePage();
+      const { result } = renderScan(false);
+
+      await act(() => result.current.scan());
+
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+      expect(preparePhotos).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptPhotoConsentStore.getState().consent).toBeNull();
     });
 
     it('scans without asking while offline, from the text', async () => {

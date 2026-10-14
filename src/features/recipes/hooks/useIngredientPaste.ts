@@ -4,7 +4,10 @@ import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { isFeatureDisabled } from '#domain/serverJobRefusals';
+import {
+  isFeatureDisabled,
+  isPremiumRequired,
+} from '#domain/serverJobRefusals';
 import { ParseIngredientLinesDocument } from './useIngredientPaste.generated';
 import {
   toPastedIngredient,
@@ -23,6 +26,12 @@ export function useIngredientPaste() {
     refetchOn: false,
   });
 
+  const failureCopy = (error: unknown) => {
+    if (isFeatureDisabled(error)) return t('errors.codes.featureDisabled');
+    if (isPremiumRequired(error)) return t('errors.codes.premiumRequired');
+    return t('recipes.pasteIngredientsFailed');
+  };
+
   /** The lines as form rows, in order; null after a failure it has reported. */
   const parseLines = async (
     lines: readonly string[],
@@ -40,11 +49,7 @@ export function useIngredientPaste() {
     }
     const parsed = result?.data?.parseIngredientLines.lines;
     if (!parsed) {
-      toastService.error(
-        isFeatureDisabled(result?.error)
-          ? t('errors.codes.featureDisabled')
-          : t('recipes.pasteIngredientsFailed'),
-      );
+      toastService.error(failureCopy(result?.error));
       return null;
     }
     return parsed.map(toPastedIngredient);

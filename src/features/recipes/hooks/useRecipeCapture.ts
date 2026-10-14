@@ -34,7 +34,8 @@ export type CaptureStart =
   | { kind: 'refused'; field: CaptureField | null }
   | { kind: 'limited' }
   | { kind: 'upgrade' }
-  | { kind: 'disabled' };
+  | { kind: 'disabled' }
+  | { kind: 'premium' };
 
 const RESENDS = 3;
 const RESEND_BASE_MS = 2000;
@@ -156,6 +157,9 @@ export function useRecipeCapture() {
       case 'disabled':
         settle(id);
         return { kind: 'disabled' };
+      case 'premium':
+        settle(id);
+        return { kind: 'premium' };
     }
   };
 

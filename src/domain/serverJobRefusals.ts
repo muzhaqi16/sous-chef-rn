@@ -70,3 +70,10 @@ export const isFeatureDisabled = (error: unknown) =>
   error.errors.some(
     ({ extensions }) => extensions?.code === TopLevelErrorCode.FeatureDisabled,
   );
+
+/** The feature needs a plan this user does not hold: no resend changes that. */
+export const isPremiumRequired = (error: unknown) =>
+  CombinedGraphQLErrors.is(error) &&
+  error.errors.some(
+    ({ extensions }) => extensions?.code === TopLevelErrorCode.PremiumRequired,
+  );

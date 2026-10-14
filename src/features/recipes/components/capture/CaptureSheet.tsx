@@ -27,10 +27,15 @@ const isWebLink = (value: string) => /^https?:\/\/\S+\.\S+$/i.test(value);
 
 interface CaptureFormProps {
   initialKind: CaptureSheetKind;
+  textAllowed: boolean;
   onClose: () => void;
 }
 
-const CaptureForm: React.FC<CaptureFormProps> = ({ initialKind, onClose }) => {
+const CaptureForm: React.FC<CaptureFormProps> = ({
+  initialKind,
+  textAllowed,
+  onClose,
+}) => {
   const { t } = useTranslation();
   const { start, sending } = useRecipeCapture();
   const unavailable = useIsApiUnavailable();
@@ -67,7 +72,11 @@ const CaptureForm: React.FC<CaptureFormProps> = ({ initialKind, onClose }) => {
   const showRefusal = (field: CaptureField | null) => {
     switch (field) {
       case 'url':
-        setUrlError(t('recipes.captureLinkRefused'));
+        setUrlError(
+          textAllowed
+            ? t('recipes.captureLinkRefused')
+            : t('recipes.captureLinkUnreadable'),
+        );
         setLinkRefused(true);
         return;
       case 'text':
@@ -95,6 +104,9 @@ const CaptureForm: React.FC<CaptureFormProps> = ({ initialKind, onClose }) => {
         return;
       case 'disabled':
         setFailure(t('errors.codes.featureDisabled'));
+        return;
+      case 'premium':
+        setFailure(t('errors.codes.premiumRequired'));
         return;
       case 'refused':
         showRefusal(outcome.field);
@@ -155,7 +167,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({ initialKind, onClose }) => {
             testID={recipesTestIDs.captureUrlInput}
           />
           <View style={styles.actions}>
-            {linkRefused ? (
+            {linkRefused && textAllowed ? (
               <Button
                 variant="outline"
                 size="small"
@@ -247,6 +259,8 @@ const CaptureForm: React.FC<CaptureFormProps> = ({ initialKind, onClose }) => {
 interface CaptureSheetProps {
   visible: boolean;
   kind: CaptureSheetKind;
+  /** A refused link offers the page's text instead. */
+  textAllowed: boolean;
   onDismiss: () => void;
 }
 
@@ -254,6 +268,7 @@ interface CaptureSheetProps {
 export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   visible,
   kind,
+  textAllowed,
   onDismiss,
 }) => {
   // A fresh form per opening, kept while the sheet animates out.
@@ -279,6 +294,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
         <CaptureForm
           key={opening.id}
           initialKind={opening.kind}
+          textAllowed={textAllowed}
           onClose={onDismiss}
         />
       ) : null}

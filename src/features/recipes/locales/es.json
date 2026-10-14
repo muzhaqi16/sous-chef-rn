@@ -66,6 +66,7 @@
     "capturePasteLink": "Pegar enlace",
     "captureImport": "Importar receta",
     "captureLinkInvalid": "Escribe el enlace completo, empezando por http:// o https://",
+    "captureLinkUnreadable": "Este enlace no se puede leer directamente.",
     "captureLinkRefused": "Este enlace no se puede leer directamente. Pega el texto de la publicación.",
     "captureUseTextInstead": "Pegar el texto",
     "captureTextTitle": "Importar desde un texto",
