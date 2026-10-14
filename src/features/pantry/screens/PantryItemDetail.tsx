@@ -155,7 +155,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresOn, today);
+  const expiryInfo = getExpiryInfo(item?.expiresOn, today, t);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -166,6 +166,7 @@ export const PantryItemDetail: React.FC<
   const showNutrition = hasNutritionData(nutritionFacts);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
+    t,
   );
   const netWeightText = formatNetWeightDisplay(
     item?.netWeight,
@@ -177,6 +178,7 @@ export const PantryItemDetail: React.FC<
   );
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
+    t,
   );
   const portionsLeftText =
     item?.remainingPortions != null && item.portionUnit
