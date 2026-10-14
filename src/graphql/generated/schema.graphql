@@ -73,27 +73,38 @@ Example:
 directive @public on FIELD_DEFINITION
 
 """
-Require that a server-owned feature flag is on for the caller.
+Require that a server-owned feature is ON for the caller.
 
-A caller whose flag is off is refused before the resolver runs, with a
-top-level error carrying `FEATURE_DISABLED` (HTTP 403) and `feature`
-naming the flag, so a refused operation writes nothing and queues nothing.
-The flag is resolved on the server for every request; a value the client
+Checked before the resolver runs, so a refused operation writes nothing and
+queues nothing. A caller whose feature is OFF is refused with a top-level
+`FEATURE_DISABLED`; one whose feature needs a plan they do not hold, with
+`PREMIUM_REQUIRED`. Both are HTTP 403 and name the feature in `feature`.
+The state is resolved on the server for every request; a value the client
 cached does not open the gate.
 
-NOT AN AUTH POSTURE. A flag resolves per user, so a field carrying it MUST
+REPEATABLE, WITH AN INPUT CONDITION. `whenInput` names a field of the
+operation's `input` argument; that occurrence applies only when the field
+is sent and is not null. One operation can so gate each of its input
+variants on its own feature. The name is checked when the schema is built.
+
+NOT AN AUTH POSTURE. A state resolves per user, so a field carrying it MUST
 also carry `@auth` or `@requireSystemRole`. Schema build fails otherwise.
 
 Example:
   type Mutation {
     createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
       @auth
-      @requireFeature(flag: RECIPE_CAPTURE)
+      @requireFeature(flag: RECIPE_CAPTURE_URL, whenInput: "url")
+      @requireFeature(flag: RECIPE_CAPTURE_PHOTO, whenInput: "photos")
   }
 """
 directive @requireFeature(
-  """The flag that must be on for the caller"""
+  """The feature that must be ON for the caller"""
   flag: FeatureFlagName!
+  """
+  A field of the operation's input: this occurrence applies only when it is sent and not null
+  """
+  whenInput: String
 ) on FIELD_DEFINITION
 
 """
@@ -4173,6 +4184,22 @@ Always include a __typename so the variant can be discriminated.
 """
 union EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError
 
+"""One of the caller's active holds on a plan"""
+type Entitlement {
+  """When it ends; null when it lasts until revoked"""
+  expiresAt: DateTime
+  """The plan held"""
+  plan: Plan!
+  """Where the hold comes from"""
+  source: EntitlementSource!
+}
+
+"""Where a user's hold on a plan comes from"""
+enum EntitlementSource {
+  """Granted by an admin"""
+  ADMIN
+}
+
 """
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
@@ -4546,8 +4573,8 @@ type FailedIPStat {
 }
 
 """
-A server-owned feature flag. A client ignores a member it does not know: a
-new flag is a new member.
+A server-owned feature. A client ignores a member it does not know: a new
+feature is a new member.
 """
 enum FeatureFlagName {
   """Reading pasted ingredient lines (parseIngredientLines)"""
@@ -4556,18 +4583,28 @@ enum FeatureFlagName {
   Recipes suggested from what the caller's pantries hold (recipeSuggestions)
   """
   PANTRY_SUGGESTIONS
+  """Reading a receipt on the server (createReceiptParse)"""
+  RECEIPT_PARSING
   """
-  Capturing a recipe from a page, shared text or cookbook photos (createRecipeCapture)
+  Capturing a recipe from cookbook photos (createRecipeCapture with photos)
   """
-  RECIPE_CAPTURE
+  RECIPE_CAPTURE_PHOTO
+  """Capturing a recipe from shared text (createRecipeCapture with text)"""
+  RECIPE_CAPTURE_TEXT
+  """Capturing a recipe from a page's URL (createRecipeCapture with url)"""
+  RECIPE_CAPTURE_URL
 }
 
-"""One server-owned feature flag, resolved for the caller"""
+"""One server-owned feature, resolved for the caller"""
 type FeatureFlagState {
-  """Whether the feature is on for the caller"""
+  """Whether the caller can use it now: true exactly when state is ON"""
   enabled: Boolean!
-  """The flag"""
+  """The feature"""
   flag: FeatureFlagName!
+  """The plan the feature needs; null when it is free"""
+  plan: Plan
+  """ON: show it. UPGRADE_REQUIRED: offer the plan. OFF: hide it"""
+  state: FeatureState!
 }
 
 """Sub-input for feature-specific notifications"""
@@ -4583,6 +4620,20 @@ input FeatureNotificationsInput {
   sharedListUpdates: Boolean
   shoppingListUpdates: Boolean
   weeklyDigest: Boolean
+}
+
+"""A feature's state for one user"""
+enum FeatureState {
+  """Not available to the user: hide it"""
+  OFF
+  """
+  Available: the feature is released to the user and they hold any plan it needs
+  """
+  ON
+  """
+  Released, but it needs a plan the user does not hold: show an upgrade prompt
+  """
+  UPGRADE_REQUIRED
 }
 
 """Sub-input for feature toggles"""
@@ -8608,6 +8659,9 @@ type Mutation {
   for a phone without on-device parsing. Returns at once with the parse
   PENDING; poll receiptParse until it is not. Each user has a daily number of
   parses, and a smaller one of photo parses.
+  
+  Behind the RECEIPT_PARSING feature: refused with FEATURE_DISABLED or
+  PREMIUM_REQUIRED while it is not ON for the caller.
   """
   createReceiptParse(input: CreateReceiptParseInput!): CreateReceiptParseResult!
   """
@@ -8621,6 +8675,10 @@ type Mutation {
   read into the caller's private draft recipe. Returns at once with the
   capture PENDING; poll recipeCapture until it is not. Each user has a daily
   number of captures, and a smaller one of photo captures.
+  
+  Each source is behind its own feature: RECIPE_CAPTURE_URL, _TEXT or
+  _PHOTO. A source whose feature is not ON for the caller is refused with
+  FEATURE_DISABLED or PREMIUM_REQUIRED.
   """
   createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
   """Create a review for a published recipe."""
@@ -9729,6 +9787,10 @@ enum NotificationType {
   RECIPE_RECOMMENDATIONS
   """Confirms that a recipe has been saved to the user's collection"""
   RECIPE_SAVED
+  """
+  Items the household usually buys are predicted to run out within two days; gated by `lowStockAlerts`
+  """
+  RUNNING_LOW
   """Other participants changed the items on a shared shopping list"""
   SHARED_LIST_CHANGED
   """A summary of the week's pantry activity"""
@@ -11332,6 +11394,12 @@ enum PeriodGranularity {
   WEEKLY
 }
 
+"""A paid plan a feature can require"""
+enum Plan {
+  """The premium plan"""
+  PREMIUM
+}
+
 type PlatformStat {
   count: Int!
   platform: MobilePlatform!
@@ -12264,6 +12332,8 @@ type Query {
     """The id of the Membership to read"""
     id: ID!
   ): Membership
+  """The caller's active holds on a plan; empty on the free tier"""
+  myEntitlements: [Entitlement!]!
   """
   Every server-owned feature flag resolved for the caller: one entry per
   FeatureFlagName. Read it at sign-in and on resync and keep it for offline
@@ -12360,7 +12430,9 @@ type Query {
   ): PantryItemBatchConnection!
   """
   Ingredient lines a user pastes, read as a capture reads them: amount, unit,
-  name, handling and catalog candidates. Writes nothing.
+  name, handling and catalog candidates. Writes nothing. Behind the
+  INGREDIENT_PASTE feature: refused with FEATURE_DISABLED or
+  PREMIUM_REQUIRED while it is not ON for the caller.
   """
   parseIngredientLines(input: ParseIngredientLinesInput!): ParseIngredientLinesPayload!
   """
@@ -16752,7 +16824,7 @@ enum TopLevelErrorCode {
   EMAIL_ALREADY_EXISTS
   EMAIL_ALREADY_VERIFIED
   """
-  A feature flag the operation needs is off for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags. A 403 — clients must not sign the user out.
+  A feature the operation needs is OFF for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags and hide the feature. A 403 — clients must not sign the user out.
   """
   FEATURE_DISABLED
   """
@@ -16797,6 +16869,10 @@ enum TopLevelErrorCode {
   The request body is over the server's size limit (HTTP 413). Send a smaller body; resending the same one cannot succeed.
   """
   PAYLOAD_TOO_LARGE
+  """
+  A feature the operation needs is released but requires a plan the caller does not hold. Carries feature, the FeatureFlagName, and plan, the Plan it needs. Retrying cannot fix it: show an upgrade prompt. A 403 — clients must not sign the user out.
+  """
+  PREMIUM_REQUIRED
   """Global rate limit. Carries retryAfter in seconds."""
   RATE_LIMIT_EXCEEDED
   RESOURCE_ALREADY_EXISTS
