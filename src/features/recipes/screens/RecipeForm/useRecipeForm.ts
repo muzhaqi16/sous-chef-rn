@@ -47,6 +47,28 @@ function stepInstruction(step: unknown): string {
     : '';
 }
 
+/** The unit as a row shows it. Module scope: an optional chain inside `??`
+ * stops the compiler lowering the hook. */
+const unitLabelOf = (
+  unit: { symbol: string; name: string } | null | undefined,
+): string => firstNonBlank(unit?.symbol, unit?.name) ?? '';
+
+/** What an incomplete capture read, as the form takes it. */
+export interface CaptureDraftFill {
+  name: string | null;
+  description: string | null;
+  servings: number | null;
+  prepTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
+  imageUrl: string | null;
+  author: string | null;
+  ingredients: Omit<IngredientFormState, 'id' | 'sortOrder'>[];
+  steps: string[];
+}
+
+const minutesText = (minutes: number | null) =>
+  minutes ? String(minutes) : '';
+
 export function useRecipeForm() {
   const form = useForm<RecipeFormState>({
     resolver: yupResolver(recipeFormSchema),
@@ -98,6 +120,21 @@ export function useRecipeForm() {
         sortOrder: current.length,
         ...ingredient,
       },
+    ]);
+  };
+
+  /** Rows read from pasted lines, after the ones the form holds. */
+  const appendIngredients = (
+    rows: readonly Omit<IngredientFormState, 'id' | 'sortOrder'>[],
+  ) => {
+    const current = getValues('ingredients');
+    setIngredients([
+      ...current,
+      ...rows.map((row, index) => ({
+        ...row,
+        id: generateTempId(),
+        sortOrder: current.length + index,
+      })),
     ]);
   };
 
@@ -170,6 +207,7 @@ export function useRecipeForm() {
     return state.ingredients.map((ing, index) => ({
       name: stripPriceFromName(ing.name),
       quantity: ing.quantity,
+      ...(ing.originalText && { originalText: ing.originalText }),
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,
       preparation: firstNonBlank(ing.preparation)?.trim(),
@@ -307,6 +345,9 @@ export function useRecipeForm() {
         name: ing.name,
         quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
+        unitLabel: unitLabelOf(ing.unit),
+        // A proposed revision's lines carry no line as written.
+        originalText: 'originalText' in ing ? ing.originalText : null,
         itemId: ing.item?.id ?? null,
         preparation: ing.preparation ?? '',
         section: ing.section ?? '',
@@ -336,6 +377,40 @@ export function useRecipeForm() {
     reset(formState);
   };
 
+  /**
+   * A new recipe filled with what a capture read. Nothing is saved until the
+   * user saves; a section the capture found nothing for is marked as needed.
+   */
+  const populateFromCapture = (fill: CaptureDraftFill) => {
+    const defaults = recipeFormDefaults();
+    reset({
+      ...defaults,
+      name: fill.name ?? '',
+      description: fill.description ?? '',
+      imageUrl: fill.imageUrl ?? '',
+      servings: fill.servings ? String(fill.servings) : defaults.servings,
+      prepTimeMinutes: minutesText(fill.prepTimeMinutes),
+      cookTimeMinutes: minutesText(fill.cookTimeMinutes),
+      originalAuthor: fill.author ?? '',
+      ingredients: fill.ingredients.map((row, index) => ({
+        ...row,
+        id: generateTempId(),
+        sortOrder: index,
+      })),
+      steps: fill.steps.map((instruction, index) => ({
+        id: generateTempId(),
+        instruction,
+        sortOrder: index,
+      })),
+    });
+    if (fill.ingredients.length === 0) {
+      void form.trigger('ingredients');
+    }
+    if (fill.steps.length === 0) {
+      void form.trigger('steps');
+    }
+  };
+
   return {
     state,
     errors: form.formState.errors,
@@ -343,6 +418,7 @@ export function useRecipeForm() {
     setError: form.setError,
     updateField,
     addIngredient,
+    appendIngredients,
     updateIngredient,
     removeIngredient,
     addStep,
@@ -355,5 +431,6 @@ export function useRecipeForm() {
     buildCreateInput,
     buildUpdateInput,
     populateFromRecipe,
+    populateFromCapture,
   };
 }

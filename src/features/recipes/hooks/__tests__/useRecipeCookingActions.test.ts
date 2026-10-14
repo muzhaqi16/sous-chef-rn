@@ -7,6 +7,7 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   MarkRecipeAsCookedDocument,
@@ -140,6 +141,7 @@ describe('useRecipeCookingActions', () => {
           deductFromPantry: true,
           pantryId: 'pantry-1',
         },
+        stacksFirst: 100,
       },
     ]);
     await waitFor(() =>
@@ -205,6 +207,124 @@ describe('useRecipeCookingActions', () => {
       ),
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('leaves the cache holding what a cooked stack has left', async () => {
+    // A cook publishes no pantry event: the stacks it returns are the update.
+    const cache = seedCache([
+      { __typename: 'PantryItem', id: 'pi-rice', quantity: 500 },
+    ]);
+    const cooked = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'MarkRecipeAsCookedPayload',
+          skippedIngredients: [],
+          cookingLog: {
+            __typename: 'CookingLog',
+            id: 'client-cooklog-1',
+            pantryItemsUsedConnection: {
+              __typename: 'PantryItemUsageConnection',
+              edges: [
+                {
+                  __typename: 'PantryItemUsageEdge',
+                  node: {
+                    __typename: 'PantryItemUsage',
+                    id: 'use-1',
+                    pantryItem: {
+                      __typename: 'PantryItem',
+                      id: 'pi-rice',
+                      quantity: 300,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock], cache },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    expect(cache.extract()['PantryItem:pi-rice']).toMatchObject({
+      quantity: 300,
+    });
+  });
+
+  it('reports a cook that skipped only lines stating no amount as a plain success', async () => {
+    // "Salt, to taste" has nothing to deduct: there is nothing for the user to fix.
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Salt',
+          code: ErrorCode.UnstatedAmount,
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    expect(mockToastWarning).not.toHaveBeenCalled();
+  });
+
+  it('names the other skips and leaves a line stating no amount out of them', async () => {
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Salt',
+          code: ErrorCode.UnstatedAmount,
+        },
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Garlic',
+          code: ErrorCode.UnitInvalid,
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. Garlic could not be deducted: its unit does not convert to the pantry stack.',
+      ),
+    );
   });
 
   it('names the cause when every skip is the same one', async () => {
@@ -384,9 +504,10 @@ describe('useRecipeCookingActions', () => {
       });
     });
 
+    // The refusal names `servings`, which has copy of its own.
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
-        'Failed to mark recipe as cooked',
+        'Enter a number of servings greater than zero',
       ),
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
@@ -412,6 +533,7 @@ describe('useRecipeCookingActions', () => {
           deductFromPantry: true,
           pantryId: 'pantry-1',
         },
+        stacksFirst: 100,
       },
     ]);
     // The mutation's own success path, and the point the write has settled.
@@ -535,6 +657,7 @@ describe('useRecipeCookingActions', () => {
             }),
           ],
         },
+        stacksFirst: 100,
       },
     ]);
     expect(mockToastSuccess).toHaveBeenCalledWith(

@@ -113,7 +113,7 @@ export const MyRecipes: React.FC = () => {
         description: t('recipes.myRecipesEmptyDescription'),
         action: {
           label: t('recipes.createRecipe'),
-          onPress: toRecipeCreate,
+          onPress: () => toRecipeCreate(),
         },
       };
 

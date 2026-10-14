@@ -55,6 +55,8 @@
       "unexpected": "An unexpected error occurred",
       "uniqueConstraint": "This value already exists",
       "unitInvalid": "That unit cannot be used here.",
+      "unstatedAmount": "The recipe doesn't state an amount for this ingredient, so nothing was deducted.",
+      "featureDisabled": "This isn't available on your account right now.",
       "validationFailed": "Please check your input and try again",
       "versionConflict": "This changed somewhere else after you opened it. Please refresh and try again.",
       "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."
@@ -180,6 +182,7 @@
       "newPassword": "That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.",
       "currentPassword": "That current password isn’t right. Check it and try again.",
       "servingsMade": "Enter a whole number of servings greater than zero",
+      "servings": "Enter a number of servings greater than zero",
       "key": "That image could not be confirmed. Pick it again and retry.",
       "imageUrl": "Enter the full image URL, starting with http:// or https://",
       "videoUrl": "Enter the full video URL, starting with http:// or https://",
@@ -303,6 +306,7 @@
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",
+    "open": "Open",
     "commaSeparated": "Comma-separated",
     "condition": "Condition",
     "confirm": "Confirm",
@@ -575,7 +579,6 @@
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
-    "betaFeaturesEnabled": "Beta Features Enabled",
     "experience": "Experience",
     "hapticFeedback": "Haptic Feedback",
     "hapticFeedbackDesc": "Vibration feedback for interactions and alerts",
@@ -685,7 +688,8 @@
   },
   "tabBar": {
     "actionButton": "Action button",
-    "actionButtonHint": "Opens the action for the current tab"
+    "actionButtonHint": "Opens the action for the current tab",
+    "addMenuHint": "Opens the ways to add"
   },
   "swipeActions": {
     "markUnpurchased": "Mark as unpurchased",

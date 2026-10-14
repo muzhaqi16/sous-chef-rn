@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { FeatureFlag } from './featureFlags';
 import logo from '../assets/images/logo.png';
 
 /**
@@ -45,6 +46,11 @@ export interface AppConfig {
    */
   features: Partial<Record<string, boolean>>;
   /**
+   * Capabilities inside a feature (`src/config/featureFlags.ts`); absent takes
+   * the default there. A build's `FEATURE_FLAGS` overrides this.
+   */
+  featureFlags: Partial<Record<FeatureFlag, boolean>>;
+  /**
    * Locales this app bundles, in menu order. Must match the JSON files
    * registered in `src/i18n/config.ts`.
    */
@@ -72,6 +78,7 @@ export const appConfig: AppConfig = {
     lastBiometricEmailKey: 'souschefrn-email',
   },
   features: {},
+  featureFlags: {},
   locales: ['en', 'it', 'es', 'sq'],
   assets: {
     logo,

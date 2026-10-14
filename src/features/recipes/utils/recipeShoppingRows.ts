@@ -9,7 +9,8 @@ import {
 export interface RecipeIngredientLine {
   id: string;
   name: string;
-  quantity: number;
+  /** Null when the recipe states no amount ("salt, to taste"). */
+  quantity: number | null;
   isOptional: boolean;
   unit?: { id: string; symbol?: string | null; name?: string | null } | null;
   item?: { id: string } | null;
@@ -53,8 +54,10 @@ export function recipeShoppingRows(
       const id = mintId();
       const itemName = firstNonBlank(ingredient.name) ?? unnamed;
       const itemId = ingredient.item?.id;
-      // An amount of zero states nothing; the API refuses one that is not above it.
-      const quantity = ingredient.quantity > 0 ? ingredient.quantity : null;
+      // An unstated amount is a line with none. A legacy zero states nothing
+      // either, and the API refuses a quantity that is not above it.
+      const stated = ingredient.quantity;
+      const quantity = stated !== null && stated > 0 ? stated : null;
       const unit = ingredient.unit;
       return {
         recipeIngredientId: ingredient.id,

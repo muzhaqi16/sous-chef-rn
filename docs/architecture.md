@@ -151,7 +151,23 @@ exception list.
 `src/config/appConfig.ts` is the fork-point: identity, deep links, brand colour,
 the keychain namespace, which locales ship, and `features` — a per-feature
 `false` that drops it from `FEATURE_REGISTRY`'s enabled set without touching the
-feature. The keychain strings are pinned by
+feature.
+
+A capability inside a feature is switched by `featureFlags` instead
+(`src/config/featureFlags.ts`): a closed `FeatureFlag` union with a default
+each. The fork's `appConfig.featureFlags` overrides the default, and a build's
+`FEATURE_FLAGS` env value (`pantrySuggestions=off`) overrides both. Code reads a
+flag only through `useFeatureFlag`, so a per-user or remote switch later changes
+that hook and no caller. A flagged capability is a seam, not a branch in the
+code it extends:
+
+- the existing component takes it as an optional prop, and renders as before
+  without it (`RecipeIngredientList`'s `onPasteIngredients`);
+- or a selector picks between the code that predates it and the new code, each
+  a separate hook (`useRecipeDiscovery` over `useSpoonacularDiscovery` and
+  `useServerRecipeSuggestions`).
+
+With the flag off, the feature does what it did before the capability existed. The keychain strings are pinned by
 `src/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
 service name, so changing one on a shipped app signs every user out silently.
 

@@ -101,6 +101,7 @@ const ingredient = (
   id: 'ing-1',
   name: 'Flour',
   quantity: 2,
+  originalText: null,
   estimatedPrice: null,
   item: null,
   unit: { __typename: 'Unit', id: 'unit-cup', name: 'cup', symbol: 'cup' },

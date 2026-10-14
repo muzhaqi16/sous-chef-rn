@@ -5,8 +5,20 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import {
+  useTabBarSetters,
+  type TabBarAddAction,
+} from '#/context/TabBarActionsContext';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import {
+  CaptureSheet,
+  type CaptureSheetKind,
+} from '#features/recipes/components/capture/CaptureSheet';
+import { PhotoCaptureSheet } from '#features/recipes/components/capture/PhotoCaptureSheet';
+import { CapturePollers } from '#features/recipes/components/capture/CapturePollers';
+import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
@@ -144,7 +156,61 @@ const RecipeMainInner: React.FC = () => {
     }),
   });
 
-  useTabBarAddButton(() => toRecipeCreate());
+  // Capture is a seam: off, its entries, sheets and rows are not rendered and
+  // the `+` writes a recipe at once, as it always has.
+  const captureEnabled = useFeatureFlag('recipeCapture');
+  const apiUnavailable = useIsApiUnavailable();
+  const [captureSheet, setCaptureSheet] = useState<
+    CaptureSheetKind | 'photo' | null
+  >(null);
+  const [captureKind, setCaptureKind] = useState<CaptureSheetKind>('link');
+  const openCapture = (kind: CaptureSheetKind | 'photo') => {
+    if (kind !== 'photo') setCaptureKind(kind);
+    setCaptureSheet(kind);
+  };
+  const captureUnavailable = apiUnavailable
+    ? t('recipes.captureNeedsConnection')
+    : undefined;
+  const captureActions: TabBarAddAction[] = captureEnabled
+    ? [
+        {
+          key: 'link',
+          label: t('recipes.addFromLink'),
+          icon: 'link-outline',
+          onPress: () => openCapture('link'),
+          disabledReason: captureUnavailable,
+          testID: recipesTestIDs.addFromLink,
+        },
+        {
+          key: 'photo',
+          label: t('recipes.addFromPhotos'),
+          icon: 'camera-outline',
+          onPress: () => openCapture('photo'),
+          disabledReason: captureUnavailable,
+          testID: recipesTestIDs.addFromPhotos,
+        },
+        {
+          key: 'text',
+          label: t('recipes.addFromText'),
+          icon: 'document-text-outline',
+          onPress: () => openCapture('text'),
+          disabledReason: captureUnavailable,
+          testID: recipesTestIDs.addFromText,
+        },
+      ]
+    : [];
+
+  // The ways to add a recipe, nearest the `+` first; one entry runs at once.
+  useTabBarAddMenu([
+    ...captureActions,
+    {
+      key: 'manual',
+      label: t('recipes.writeItMyself'),
+      icon: 'create-outline',
+      onPress: () => toRecipeCreate(),
+      testID: recipesTestIDs.addManually,
+    },
+  ]);
 
   const openIngredientSelector = () => {
     setIngredientSheetVisible(true);
@@ -301,6 +367,7 @@ const RecipeMainInner: React.FC = () => {
 
   const recipeListHeader = (
     <>
+      {captureEnabled ? <CaptureRows /> : null}
       {/* Filters only apply to text search (discovery + ingredient search
           can't take them) — only surface the active-filter row when a text
           search drives what's on screen. The header badge stays as the
@@ -393,6 +460,21 @@ const RecipeMainInner: React.FC = () => {
           }
         }}
       />
+
+      {captureEnabled ? (
+        <>
+          <CapturePollers />
+          <CaptureSheet
+            visible={captureSheet === 'link' || captureSheet === 'text'}
+            kind={captureKind}
+            onDismiss={() => setCaptureSheet(null)}
+          />
+          <PhotoCaptureSheet
+            visible={captureSheet === 'photo'}
+            onDismiss={() => setCaptureSheet(null)}
+          />
+        </>
+      ) : null}
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}
       <RecipeFilterSheet

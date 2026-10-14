@@ -21,6 +21,7 @@ import {
   type RecipeFilters,
   SPOONACULAR_TO_DIET_ENUM,
   SPOONACULAR_TO_INTOLERANCE_ENUM,
+  SPOONACULAR_TO_MEAL_TYPE_CATEGORY,
 } from '#features/recipes/utils/recipeFilterMaps';
 import {
   type RecipeSearchRow,
@@ -227,8 +228,8 @@ export async function fetchRecipeSearchPage(
   seen: SeenKeys,
 ): Promise<SearchPageResult> {
   // `activeFilters` holds Spoonacular strings; map them back to the
-  // Diet/Intolerance enums the GraphQL API takes (unmapped values drop), so
-  // both sources filter alike. Skipped when local has no more pages — a null
+  // Diet/Intolerance/RecipeCategory enums the GraphQL API takes (unmapped
+  // values drop), so both sources filter alike. Skipped when local has no more pages — a null
   // cursor re-fetches page 1 and double-appends it.
   const localDiets = filters.diet
     .map(d => SPOONACULAR_TO_DIET_ENUM[d])
@@ -236,6 +237,9 @@ export async function fetchRecipeSearchPage(
   const localIntolerances = filters.intolerances
     .map(i => SPOONACULAR_TO_INTOLERANCE_ENUM[i])
     .filter((i): i is Intolerance => Boolean(i));
+  const localCategory = filters.mealType
+    ? SPOONACULAR_TO_MEAL_TYPE_CATEGORY[filters.mealType]
+    : undefined;
   const searchLocalRecipes = async (): Promise<SearchRecipesQuery | null> => {
     try {
       const result = await client.query({
@@ -251,6 +255,7 @@ export async function fetchRecipeSearchPage(
           ...(filters.maxReadyTime && {
             maxReadyTime: filters.maxReadyTime,
           }),
+          ...(localCategory && { category: localCategory }),
         },
         fetchPolicy: 'network-only',
       });

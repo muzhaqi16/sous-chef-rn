@@ -55,6 +55,8 @@
       "unexpected": "Se ha producido un error inesperado",
       "uniqueConstraint": "Este valor ya existe",
       "unitInvalid": "Esa unidad no se puede usar aquí.",
+      "unstatedAmount": "La receta no indica una cantidad para este ingrediente, así que no se descontó nada.",
+      "featureDisabled": "Esto no está disponible en tu cuenta ahora.",
       "validationFailed": "Revisa los datos introducidos e inténtalo de nuevo",
       "versionConflict": "Esto se modificó en otro lugar después de que lo abrieras. Actualiza e inténtalo de nuevo.",
       "unitChangeNeedsResolution": "Este cambio de unidad es solo una estimación. Elige si usar la estimación o introducir la cantidad tú mismo."
@@ -180,6 +182,7 @@
       "newPassword": "Esa contraseña no cumple las reglas: de 8 a 72 caracteres, con una mayúscula, una minúscula y un número.",
       "currentPassword": "Esa contraseña actual no es correcta. Compruébala e inténtalo de nuevo.",
       "servingsMade": "Introduce un número entero de raciones mayor que cero",
+      "servings": "Introduce un número de raciones mayor que cero",
       "key": "No se pudo confirmar esa imagen. Vuelve a elegirla e inténtalo de nuevo.",
       "imageUrl": "Introduce la URL completa de la imagen, empezando por http:// o https://",
       "videoUrl": "Introduce la URL completa del vídeo, empezando por http:// o https://",
@@ -303,6 +306,7 @@
     "clearInput": "Borrar entrada",
     "clearRead": "Borrar leídas",
     "close": "Cerrar",
+    "open": "Abrir",
     "commaSeparated": "Separadas por comas",
     "condition": "Estado",
     "confirm": "Confirmar",
@@ -575,7 +579,6 @@
     "features": "Funcionalidades",
     "showTutorials": "Mostrar tutoriales",
     "showTutorialsDesc": "Muestra consejos y tutoriales útiles",
-    "betaFeaturesEnabled": "Funciones beta activas",
     "experience": "Experiencia",
     "hapticFeedback": "Respuesta háptica",
     "hapticFeedbackDesc": "Vibración para interacciones y alertas",
@@ -685,7 +688,8 @@
   },
   "tabBar": {
     "actionButton": "Botón de acción",
-    "actionButtonHint": "Abre la acción de la pestaña actual"
+    "actionButtonHint": "Abre la acción de la pestaña actual",
+    "addMenuHint": "Abre las formas de añadir"
   },
   "swipeActions": {
     "markUnpurchased": "Marcar como no comprado",

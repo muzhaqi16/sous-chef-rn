@@ -55,6 +55,8 @@
       "unexpected": "Ndodhi një gabim i papritur",
       "uniqueConstraint": "Kjo vlerë ekziston tashmë",
       "unitInvalid": "Kjo njësi nuk mund të përdoret këtu.",
+      "unstatedAmount": "Receta nuk tregon sasi për këtë përbërës, prandaj nuk u zbrit asgjë.",
+      "featureDisabled": "Kjo nuk është e disponueshme në llogarinë tënde tani.",
       "validationFailed": "Kontrolloni të dhënat e futura dhe provoni sërish",
       "versionConflict": "Kjo u ndryshua diku tjetër pasi e hapët. Rifreskoni dhe provoni sërish.",
       "unitChangeNeedsResolution": "Ky ndryshim njësie është vetëm një vlerësim. Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë."
@@ -180,6 +182,7 @@
       "newPassword": "Ai fjalëkalim nuk i plotëson rregullat: 8–72 karaktere, me një shkronjë të madhe, një të vogël dhe një numër.",
       "currentPassword": "Fjalëkalimi aktual nuk është i saktë. Kontrollo dhe provo përsëri.",
       "servingsMade": "Shkruaj një numër të plotë racionesh më të madh se zero",
+      "servings": "Shkruaj një numër racionesh më të madh se zero",
       "key": "Ai imazh nuk u konfirmua dot. Zgjidhe sërish dhe provo përsëri.",
       "imageUrl": "Shkruaj URL-në e plotë të imazhit, që fillon me http:// ose https://",
       "videoUrl": "Shkruaj URL-në e plotë të videos, që fillon me http:// ose https://",
@@ -303,6 +306,7 @@
     "clearInput": "Pastro fushën",
     "clearRead": "Pastro të lexuarat",
     "close": "Mbyll",
+    "open": "Hap",
     "commaSeparated": "Të ndara me presje",
     "condition": "Gjendja",
     "confirm": "Konfirmo",
@@ -575,7 +579,6 @@
     "features": "Veçoritë",
     "showTutorials": "Shfaq udhëzuesit",
     "showTutorialsDesc": "Shfaq këshilla dhe udhëzues të dobishëm",
-    "betaFeaturesEnabled": "Veçoritë beta të aktivizuara",
     "experience": "Përvoja",
     "hapticFeedback": "Përgjigje haptike",
     "hapticFeedbackDesc": "Dridhje për ndërveprime dhe sinjalizime",
@@ -685,7 +688,8 @@
   },
   "tabBar": {
     "actionButton": "Butoni i veprimit",
-    "actionButtonHint": "Hap veprimin për skedën aktuale"
+    "actionButtonHint": "Hap veprimin për skedën aktuale",
+    "addMenuHint": "Hap mënyrat për të shtuar"
   },
   "swipeActions": {
     "markUnpurchased": "Shëno si të pablerë",

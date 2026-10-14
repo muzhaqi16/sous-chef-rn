@@ -22,6 +22,8 @@ interface MarkCookedModalProps {
     notes?: string;
   }) => void;
   hasPantry?: boolean;
+  /** A planned meal records whole servings; a recipe cook scales by any amount. */
+  wholeServings?: boolean;
 }
 
 export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
@@ -31,6 +33,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   onClose,
   onConfirm,
   hasPantry = false,
+  wholeServings = false,
 }) => {
   const { t } = useTranslation();
 
@@ -68,12 +71,14 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   // uses, so the two are separated here: substituting the default for text
   // nobody could read cooks — and deducts — a number never entered.
   const servingsUnreadable = !!typedServings && parsedServings == null;
-  // `servingsMade` is an Int, so a fraction refuses the whole request.
+  // A planned meal's servings are an Int, so there a fraction refuses the
+  // whole request.
   const servingsError =
     servingsUnreadable ||
     (parsedServings != null &&
-      (!Number.isInteger(parsedServings) || parsedServings <= 0))
-      ? t('errors.field.servingsMade')
+      (parsedServings <= 0 ||
+        (wholeServings && !Number.isInteger(parsedServings))))
+      ? t(wholeServings ? 'errors.field.servingsMade' : 'errors.field.servings')
       : undefined;
 
   const handleConfirm = () => {

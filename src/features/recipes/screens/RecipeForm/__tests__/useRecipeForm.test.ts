@@ -459,6 +459,7 @@ describe('useRecipeForm', () => {
               id: 'ing-1',
               name: 'Salt',
               quantity: 1,
+              originalText: null,
               image: null,
               unit: null,
               item: null,
@@ -543,6 +544,82 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps).toHaveLength(2);
     expect(result.current.state.steps[0]!.instruction).toBe('Boil the water');
     expect(result.current.state.steps[1]!.instruction).toBe('Cook the pasta');
+  });
+
+  // The API matches a replaced ingredient by name, so a renamed one keeps its
+  // line as written only when the form sends it back.
+  it("keeps an ingredient's line as written and its unit through a rename", () => {
+    const { result } = renderHook(() => useRecipeForm());
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-4',
+      version: 1,
+      name: 'Captured',
+      description: null,
+      imageUrl: null,
+      videoUrl: null,
+      servings: 4,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.MainCourse,
+      cuisines: [],
+      status: RecipeStatus.Draft,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [
+          {
+            __typename: 'RecipeIngredientEdge',
+            node: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              name: 'all-purpose flour',
+              quantity: 2.5,
+              originalText: '2 ½ cups all-purpose flour, sifted',
+              image: null,
+              unit: {
+                __typename: 'Unit',
+                id: 'u-cup',
+                name: 'cup',
+                symbol: 'cup',
+              },
+              item: null,
+              preparation: 'sifted',
+              section: null,
+              notes: null,
+              isOptional: false,
+              sortOrder: 0,
+            },
+          },
+        ],
+        pageInfo: READ_TO_THE_END,
+        totalCount: 1,
+      },
+      instructions: [{ text: 'Sift' }],
+      notes: null,
+      pendingRevision: null,
+    };
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+    const [loaded] = result.current.state.ingredients;
+    expect(loaded?.unitLabel).toBe('cup');
+    act(() => {
+      result.current.updateIngredient(loaded!.id, { name: 'bread flour' });
+    });
+
+    expect(result.current.buildUpdateInput().ingredients?.[0]).toMatchObject({
+      name: 'bread flour',
+      originalText: '2 ½ cups all-purpose flour, sifted',
+    });
   });
 
   // A save sends the whole form: filled from the live recipe, it would set

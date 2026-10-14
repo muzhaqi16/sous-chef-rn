@@ -69,8 +69,10 @@ function utf8ByteLength(value: string): number {
 const ingredientSchema: ObjectSchema<IngredientFormState> = object({
   id: string().defined(),
   name: string().trim().required(lazyMessage('recipes.ingredientNameRequired')),
-  quantity: number().defined(),
+  quantity: number().nullable().defined(),
   unitId: string().nullable().optional(),
+  unitLabel: string().optional(),
+  originalText: string().nullable().optional(),
   itemId: string().nullable().optional(),
   preparation: string().optional(),
   section: string().optional(),

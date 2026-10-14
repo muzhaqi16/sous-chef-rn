@@ -18,6 +18,7 @@ fragment RecipeIngredientReaders on RecipeIngredient {
   }
   name
   notes
+  originalText
   preparation
   quantity
   section

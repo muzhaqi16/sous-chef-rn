@@ -102,7 +102,11 @@ export function useRecipeCookingActions({
       });
     }
 
-    const skippedIngredients = payload?.skippedIngredients ?? [];
+    // A line stating no amount ("salt, to taste") has nothing to deduct, so
+    // its skip is the recipe as written, not something for the user to fix.
+    const skippedIngredients = (payload?.skippedIngredients ?? []).filter(
+      item => item.code !== ErrorCode.UnstatedAmount,
+    );
     const skipped = {
       count: skippedIngredients.length,
       // Which lines, so the user knows what to fix. A blank name would read as

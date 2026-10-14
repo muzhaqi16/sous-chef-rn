@@ -601,3 +601,23 @@ tab's query are explained in [`architecture.md`](architecture.md) § Navigation:
 - why `Home` needs `'none'` for deep pushes;
 - the background work `'none'` keeps alive;
 - when to re-measure.
+
+### The tab bar's `+`
+
+A tab gives its `+` one handler with `useTabBarAddButton`, or several with
+`useTabBarAddMenu(actions)`. With two or more actions the `+` opens `AddMenu`
+(`src/app/FloatingTabBar/`): labelled entries above the `+`, which turns into
+the close control. One action runs on press, as a handler does.
+
+- **Per tab, not per focus.** A menu is keyed by the tab the hook finds at
+  focus: the focused route of the nearest tab navigator. It is removed on
+  unmount, and blur only closes it. The tab bar's active tab can lag a lazily
+  mounted tab's first focus, so the menu never reads it.
+- **Its own scrim.** `GlobalBackdrop` renders after the whole navigation tree,
+  so a claim would paint over the `+`. The menu draws its own scrim at the
+  bar's layer, ordered bar → scrim → entries → `+`, and handles Android back
+  itself.
+- **Disabled, never hidden.** An action that cannot run now carries a
+  `disabledReason`, shown under its label.
+- **Handlers are read at press.** A re-render with new closures registers
+  nothing; a changed label, icon or reason re-registers.

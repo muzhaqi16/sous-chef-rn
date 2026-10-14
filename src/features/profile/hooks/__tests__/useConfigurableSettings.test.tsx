@@ -206,8 +206,6 @@ function buildMocks() {
           language: 'en',
           timezone: 'UTC',
           preferredCurrency: 'USD',
-          enabledFeatures: [],
-          betaFeatures: [],
           createdAt: '2025-01-01T00:00:00.000Z',
           user: {
             __typename: 'User',

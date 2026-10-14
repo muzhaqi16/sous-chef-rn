@@ -50,7 +50,8 @@ export interface EditableMatch {
   stackOptions: PantryStackOption[];
   /** The stack the deduction draws on: the server's pick until the user picks. */
   selectedStack: PantryStackOption | null;
-  adjustedQuantity: number;
+  /** Null while the recipe states no amount and the cook has stated none. */
+  adjustedQuantity: number | null;
   adjustedUnitId: string | null;
   isIncluded: boolean;
 }
@@ -136,7 +137,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }
 
     const editable: EditableMatch[] = matches
-      .map(match => {
+      .map((match): EditableMatch | null => {
         // The match query spreads RecipeIngredientFragment on `ingredient`, so
         // the cache is normally complete here (and Apollo merges writes — it
         // never shrinks an entity). A null therefore means the server returned
@@ -166,8 +167,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           adjustedUnitId:
             match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
           // An empty stack would only fail the deduction; picking another
-          // stack includes the line.
+          // stack includes the line. One stating no amount has nothing to
+          // deduct until the cook states it.
           isIncluded:
+            match.suggestedQuantity !== null &&
             !ingredient.isOptional &&
             (status === 'available' || status === 'partial'),
         };
@@ -219,14 +222,20 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
       em => {
         const pantryItem = em.selectedStack;
-        if (!em.isIncluded || !pantryItem || em.adjustedQuantity <= 0) {
+        const quantity = em.adjustedQuantity;
+        if (
+          !em.isIncluded ||
+          !pantryItem ||
+          quantity === null ||
+          quantity <= 0
+        ) {
           return [];
         }
         return [
           {
             recipeIngredientId: em.ingredient.id,
             pantryItemId: pantryItem.id,
-            actualQuantity: em.adjustedQuantity,
+            actualQuantity: quantity,
             actualUnitId:
               em.adjustedUnitId ??
               em.match.suggestedUnit?.id ??

@@ -43,13 +43,31 @@ import { TAB_BAR_HEIGHT } from '#constants/layout';
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
 const mockOnAddPress = jest.fn();
-let mockTabBarState = {
+const mockSetAddMenuOpen = jest.fn();
+interface MockMenuEntry {
+  key: string;
+  label: string;
+  icon: string;
+  onPress: () => void;
+  testID?: string;
+}
+let mockTabBarState: {
+  onAddPress: () => void;
+  showAddButton: boolean;
+  addButtonConfig: { icon: string; iconLibrary: string };
+  isAddButtonDisabled: boolean;
+  addButtonDisabledMessage: string;
+  isOverlayOpen: boolean;
+  addMenu?: MockMenuEntry[];
+  isAddMenuOpen: boolean;
+} = {
   onAddPress: mockOnAddPress,
   showAddButton: true,
   addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
   isAddButtonDisabled: false,
   addButtonDisabledMessage: '',
   isOverlayOpen: false,
+  isAddMenuOpen: false,
 };
 
 jest.mock('#context/TabBarActionsContext', () => ({
@@ -59,6 +77,7 @@ jest.mock('#context/TabBarActionsContext', () => ({
     setScannerProps: jest.fn(),
     setAddProps: jest.fn(),
     setOverlayOpen: jest.fn(),
+    setAddMenuOpen: mockSetAddMenuOpen,
   })),
 }));
 
@@ -233,6 +252,7 @@ describe('FloatingTabBar', () => {
       isAddButtonDisabled: false,
       addButtonDisabledMessage: '',
       isOverlayOpen: false,
+      isAddMenuOpen: false,
     };
   });
 
@@ -265,6 +285,63 @@ describe('FloatingTabBar', () => {
     renderTabBar();
     await user.press(screen.getByTestId('add-button'));
     expect(mockOnAddPress).toHaveBeenCalled();
+  });
+
+  describe('with an add menu', () => {
+    const entry = (key: string): MockMenuEntry => ({
+      key,
+      label: key,
+      icon: 'add',
+      onPress: jest.fn(),
+      testID: `entry-${key}`,
+    });
+
+    it('opens the menu instead of running a handler', async () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+      expect(mockOnAddPress).not.toHaveBeenCalled();
+    });
+
+    it('closes the open menu from the +', async () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
+    });
+
+    it('shows the entries while open and runs a picked one', async () => {
+      const link = entry('Link');
+      mockTabBarState.addMenu = [link, entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('entry-Link'));
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
+      expect(link.onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a menu of one directly', async () => {
+      const only = entry('Write it myself');
+      mockTabBarState.addMenu = [only];
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(only.onPress).toHaveBeenCalledTimes(1);
+      expect(mockSetAddMenuOpen).not.toHaveBeenCalled();
+    });
   });
 
   it('shows toast when add button is disabled', async () => {

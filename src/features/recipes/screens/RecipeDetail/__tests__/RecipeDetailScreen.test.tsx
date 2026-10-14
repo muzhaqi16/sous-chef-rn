@@ -7,6 +7,10 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
 // Mock token scheduler / refreshToken
+// Capture's review banner has its own suite; this one renders without Apollo.
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => false,
+}));
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 

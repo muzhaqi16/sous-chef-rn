@@ -161,4 +161,47 @@ describe('RecipeIngredientEditor', () => {
 
     expect(getByText('Quantity:177.441')).toBeTruthy();
   });
+
+  // A captured line the server could not match offers what it proposed.
+  it('links an unmatched captured line to an item its capture proposed', () => {
+    const save = jest.fn();
+    const ref =
+      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
+    const candidatesFor = (line: string | null | undefined) =>
+      line === '2 scallions'
+        ? [
+            { itemId: 'item-green-onion', name: 'Green onion' },
+            { itemId: 'item-onion', name: 'Onion' },
+          ]
+        : [];
+    const { getByText, getByTestId } = render(
+      <RecipeIngredientEditor
+        ref={ref}
+        onSave={save}
+        candidatesFor={candidatesFor}
+      />,
+    );
+
+    act(() => {
+      ref.current?.open({
+        id: 'ing-1',
+        name: 'scallions',
+        quantity: 2,
+        originalText: '2 scallions',
+        itemId: null,
+        isOptional: false,
+        sortOrder: 0,
+      });
+    });
+    fireEvent.press(getByText('Green onion'));
+    fireEvent.press(getByTestId('header-right-0'));
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'scallions',
+        itemId: 'item-green-onion',
+        originalText: '2 scallions',
+      }),
+    );
+  });
 });

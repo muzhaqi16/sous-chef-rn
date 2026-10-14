@@ -1,4 +1,8 @@
-import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  Intolerance,
+  RecipeCategory,
+} from '#/graphql/generated/schemaTypes';
 
 // ── Filter types ──
 
@@ -51,6 +55,22 @@ export const INTOLERANCE_ENUM_TO_SPOONACULAR: Record<Intolerance, string> = {
   [Intolerance.Fish]: 'fish',
 };
 
+type MealTypeCategory =
+  | RecipeCategory.Breakfast
+  | RecipeCategory.Lunch
+  | RecipeCategory.Dinner
+  | RecipeCategory.Snack
+  | RecipeCategory.Dessert;
+
+/** The categories the meal-type filter offers (`MEAL_TYPES`). */
+const MEAL_TYPE_CATEGORY_TO_SPOONACULAR: Record<MealTypeCategory, string> = {
+  [RecipeCategory.Breakfast]: 'breakfast',
+  [RecipeCategory.Lunch]: 'lunch',
+  [RecipeCategory.Dinner]: 'dinner',
+  [RecipeCategory.Snack]: 'snack',
+  [RecipeCategory.Dessert]: 'dessert',
+};
+
 // Reverse lookups (Spoonacular string → enum), derived from the forward maps so
 // the two directions stay in sync. `Object.keys` widens to `string[]`; narrowing
 // each key back to its enum member is sound because the source map is keyed
@@ -69,4 +89,7 @@ function invertEnumMap<E extends string>(
 export const SPOONACULAR_TO_DIET_ENUM = invertEnumMap(DIET_ENUM_TO_SPOONACULAR);
 export const SPOONACULAR_TO_INTOLERANCE_ENUM = invertEnumMap(
   INTOLERANCE_ENUM_TO_SPOONACULAR,
+);
+export const SPOONACULAR_TO_MEAL_TYPE_CATEGORY = invertEnumMap(
+  MEAL_TYPE_CATEGORY_TO_SPOONACULAR,
 );

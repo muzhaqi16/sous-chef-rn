@@ -19,6 +19,10 @@ import {
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { recipesTestIDs } from '#features/recipes/testIDs';
+import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
 import { RecipeFormScreen } from '../index';
 
 type RecipeFormScreenProps = StaticScreenProps<
@@ -29,6 +33,9 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: jest.fn(() => true),
+}));
 
 jest.mock('#/utils/finallyHelpers');
 
@@ -56,15 +63,18 @@ jest.mock(
     RecipeIngredientList: ({
       error,
       ingredients,
+      onPasteIngredients,
     }: {
       error?: string;
       ingredients: unknown[];
+      onPasteIngredients?: () => void;
     }) => {
       const { Text } = require('react-native');
       return (
         <>
           <Text testID="ingredient-count">{ingredients.length}</Text>
           {error ? <Text>{error}</Text> : null}
+          {onPasteIngredients ? <Text testID="paste-offered" /> : null}
         </>
       );
     },
@@ -118,6 +128,7 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 beforeEach(() => {
+  jest.mocked(useFeatureFlag).mockReturnValue(true);
   jest.clearAllMocks();
 });
 
@@ -131,6 +142,22 @@ describe('RecipeFormScreen', () => {
       <RecipeFormScreen {...defaultProps} />,
     );
     expect(getByText('Create Recipe')).toBeTruthy();
+  });
+
+  it('offers pasting ingredients while the capability ships', () => {
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+    );
+    expect(getByTestId('paste-offered')).toBeTruthy();
+  });
+
+  it('is the form as it was without the capability', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+    const { queryByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+    );
+    expect(queryByTestId('paste-offered')).toBeNull();
+    expect(queryByTestId(recipesTestIDs.pasteIngredientsInput)).toBeNull();
   });
 
   it('renders in edit mode with recipeId', () => {
@@ -184,6 +211,62 @@ describe('RecipeFormScreen', () => {
 
     await user.press(getByTestId('save-button'));
 
+    expect(create.fired).toEqual([]);
+  });
+
+  // A caption that lists ingredients and no method ends INCOMPLETE.
+  it('opens filled with what an incomplete capture read, saving nothing', async () => {
+    type Line = NonNullable<
+      NonNullable<
+        NonNullable<
+          NonNullable<
+            MockDataFor<typeof RecipeCaptureDocument>['recipeCapture']
+          >['draft']
+        >['lines']
+      >[number]
+    >;
+    const lines = ['2 tbsp white miso', '1 tbsp honey', 'salt, to taste'].map(
+      (originalText): Line => ({
+        __typename: 'ParsedIngredientLine',
+        originalText,
+        name: originalText,
+        quantity: null,
+        unit: null,
+        item: null,
+        candidates: [],
+      }),
+    );
+    const capture = recordMock(RecipeCaptureDocument, {
+      data: {
+        recipeCapture: {
+          __typename: 'RecipeCapture',
+          id: 'capture-1',
+          status: RecipeCaptureStatus.Incomplete,
+          recipe: null,
+          draft: {
+            __typename: 'RecipeCaptureDraft',
+            name: 'Miso salmon',
+            lines,
+            steps: [],
+          },
+        },
+      },
+    });
+    const create = recordMock(CreateRecipeDocument, {
+      data: { createRecipe: { __typename: 'CreateRecipePayload' } },
+    });
+
+    const { getByTestId, findByText } = renderWithApollo(
+      <RecipeFormScreen route={{ params: { captureId: 'capture-1' } }} />,
+      { operationMocks: [capture.mock, create.mock] },
+    );
+
+    await waitFor(() =>
+      expect(getByTestId('ingredient-count')).toHaveTextContent('3'),
+    );
+    expect(
+      await findByText('At least one instruction step is required'),
+    ).toBeTruthy();
     expect(create.fired).toEqual([]);
   });
 

@@ -109,8 +109,11 @@ describe('recipeShoppingRows', () => {
   });
 
   // The API refuses a quantity that is not above zero; omitted, it states none.
-  it('states no quantity for an ingredient whose amount is zero', () => {
-    const [row] = rowsFor([line({ quantity: 0 })]);
+  it.each([
+    ['states no amount', null],
+    ['has a legacy zero amount', 0],
+  ])('states no quantity for an ingredient that %s', (_, quantity) => {
+    const [row] = rowsFor([line({ quantity })]);
 
     expect(row!.input).not.toHaveProperty('quantity');
     expect(row!.display.quantity).toBeNull();

@@ -36,6 +36,11 @@ export const recipesTypePolicies: TypePolicies = {
         ...mergeConnectionByNodeId(),
         keyArgs: ['filters'],
       },
+      // A ranking for one day: a new answer replaces the last, never merges.
+      recipeSuggestions: {
+        keyArgs: ['today'],
+        merge: (_existing: unknown, incoming: unknown) => incoming,
+      },
     },
   },
 };

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
@@ -13,7 +12,6 @@ import {
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useStore } from '#store';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
@@ -277,23 +275,6 @@ export const AppSettingsScreen: React.FC = () => {
             setReceiptPhotoConsent(value ? 'granted' : 'declined')
           }
         />
-
-        {settings.betaFeatures.length > 0 && (
-          <View style={styles.betaFeaturesContainer}>
-            <Text role="bodyStrong" tone="secondary">
-              {t('settings.betaFeaturesEnabled')}
-            </Text>
-            <View style={styles.chipContainer}>
-              {settings.betaFeatures.map((feature, index) => (
-                <View key={index} style={[commonStyles.chip, styles.betaChip]}>
-                  <Text role="label" style={commonStyles.chipText}>
-                    {feature}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
       </SettingsSection>
 
       <SettingsSection variant="inset" title={t('settings.experience')}>
@@ -352,23 +333,6 @@ const styles = StyleSheet.create(theme => ({
   },
   picker: {
     marginTop: theme.spacing.sm,
-  },
-  betaFeaturesContainer: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    marginTop: theme.spacing.sm,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  betaChip: {
-    marginRight: 0,
-    backgroundColor: theme.colors.warning + '20',
   },
 }));
 

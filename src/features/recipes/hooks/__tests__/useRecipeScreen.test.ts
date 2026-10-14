@@ -7,6 +7,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
 import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { RecipeCategory } from '#/graphql/generated/schemaTypes';
 import { useRecipeScreen } from '../useRecipeScreen';
 
 // ── Mock external Spoonacular HTTP service ──
@@ -1184,6 +1185,42 @@ describe('useRecipeScreen', () => {
       expect(secondCall.diet).toBeUndefined();
       expect(secondCall.maxReadyTime).toBe(15);
       expect(result.current.activeFilterCount).toBe(1);
+    });
+
+    it('narrows the local search to the meal type as its category', async () => {
+      mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
+      const fired: Record<string, unknown>[] = [];
+      const { result } = renderRecipeScreen([
+        searchRecipesPageMock({
+          matchAfter: null,
+          nodes: [],
+          hasNextPage: false,
+          endCursor: null,
+          fired,
+        }),
+      ]);
+
+      await act(async () => {
+        result.current.applyFilters({
+          diet: [],
+          intolerances: [],
+          mealType: 'breakfast',
+          maxReadyTime: null,
+        });
+      });
+      await act(async () => {
+        await result.current.handleTextSearch('pancakes');
+      });
+
+      await waitFor(() => expect(fired.length).toBeGreaterThan(0));
+      expect(fired[0]).toMatchObject({
+        query: 'pancakes',
+        category: RecipeCategory.Breakfast,
+      });
+      expect(mockSearchRecipes).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'breakfast' }),
+        undefined,
+      );
     });
 
     it('does not re-run a search when filters change before any search', async () => {

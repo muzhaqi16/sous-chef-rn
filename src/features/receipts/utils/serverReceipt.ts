@@ -1,12 +1,14 @@
-import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import {
   ReceiptParseStatus,
   ReceiptParseWarningCode,
-  TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { todayKey } from '#/utils/dateUtils';
+import {
+  dailyAllowanceWait,
+  isUpgradeRequired,
+  isVerdict,
+} from '#domain/serverJobRefusals';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import type { ReceiptParseQuery } from '../hooks/useServerReceiptParse.generated';
 import type {
   PrintedStore,
@@ -18,39 +20,6 @@ import type { ReceiptTotalsGap } from './receiptTotalsGap';
 import { fromServerReceipt } from './fromServerReceipt';
 
 type ServerParse = NonNullable<ReceiptParseQuery['receiptParse']>;
-
-const PASSING_CODES: readonly string[] = [
-  TopLevelErrorCode.InternalServerError,
-  TopLevelErrorCode.ServiceUnavailable,
-  // The operation's own budget, a minute long: traffic, as a 429 is.
-  TopLevelErrorCode.OperationRateLimited,
-];
-
-// A traffic limit on the connection says nothing about this receipt. A request
-// that timed out answers 503, which passes as every server fault does.
-const PASSING_STATUSES: readonly number[] = [401, 429];
-
-/**
- * Whether a failed ask is the API's answer on this receipt, which stands. One
- * that never arrived, a server fault, a traffic limit and a session mid-refresh
- * are not: the same ask may well succeed when sent again.
- */
-export function isVerdict(error: unknown): boolean {
-  if (ServerError.is(error)) {
-    return (
-      error.statusCode < 500 && !PASSING_STATUSES.includes(error.statusCode)
-    );
-  }
-  if (!CombinedGraphQLErrors.is(error)) return false;
-  return error.errors.every(({ extensions }) => {
-    const code = extensions?.code;
-    return (
-      typeof code === 'string' &&
-      !PASSING_CODES.includes(code) &&
-      !isAuthRefusalCode(code)
-    );
-  });
-}
 
 /**
  * The server's verdict that its lines do not add up to the receipt. A mismatch
@@ -120,28 +89,6 @@ export function outcomeOf(parse: ServerParse): ServerParseOutcome | undefined {
     }
   }
 }
-
-/**
- * Seconds until the daily allowance is back, when that is what refused the
- * ask. The API states it from execution, in the response's errors; a 429 is
- * the gate's traffic limit, which carries the same code and a wait of its own.
- */
-const dailyAllowanceWait = (error: unknown): number | null => {
-  if (!CombinedGraphQLErrors.is(error)) return null;
-  const refusal = error.errors.find(
-    ({ extensions }) =>
-      extensions?.code === TopLevelErrorCode.RateLimitExceeded,
-  );
-  const retryAfter = refusal?.extensions?.retryAfter;
-  return typeof retryAfter === 'number' && retryAfter > 0 ? retryAfter : null;
-};
-
-const isUpgradeRequired = (error: unknown) =>
-  CombinedGraphQLErrors.is(error) &&
-  error.errors.some(
-    ({ extensions }) =>
-      extensions?.code === TopLevelErrorCode.ClientUpgradeRequired,
-  );
 
 /**
  * What to do with the answer to an ask: poll a parse still running, settle the

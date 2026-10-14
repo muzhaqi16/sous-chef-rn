@@ -61,6 +61,9 @@ const KEYS = [
   // arguments. Off unless a build explicitly asks for it. Read the block above
   // `allowsLaunchArgAuth` in src/utils/environment.ts before setting it.
   'ALLOW_LAUNCH_ARG_AUTH',
+  // Capabilities this build switches on or off, over appConfig.featureFlags:
+  // `pantrySuggestions=off,ingredientPaste=on`. See src/config/featureFlags.ts.
+  'FEATURE_FLAGS',
 ];
 
 /**

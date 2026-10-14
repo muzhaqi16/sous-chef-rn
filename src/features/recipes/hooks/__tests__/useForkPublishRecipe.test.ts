@@ -65,6 +65,7 @@ const SOURCE = {
           id: 'ri-1',
           name: 'Tomatoes',
           quantity: 800,
+          originalText: null,
           item: {
             __typename: 'Item',
             id: 'item-1',

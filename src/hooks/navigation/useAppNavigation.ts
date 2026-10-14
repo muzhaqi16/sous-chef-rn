@@ -153,7 +153,9 @@ export function useAppNavigation() {
     /** A recipe link's resolver hands off to the detail screen and leaves the stack. */
     replaceWithRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.dispatch(replaceAction('RecipeDetail', params)),
-    toRecipeCreate: () => navigation.navigate('RecipeCreate'),
+    /** With `captureId`, the form opens filled with what that capture read. */
+    toRecipeCreate: (params?: RootStackParamList['RecipeCreate']) =>
+      navigation.navigate('RecipeCreate', params),
     toRecipeEdit: (params: RootStackParamList['RecipeEdit']) =>
       navigation.navigate('RecipeEdit', params),
     toSavedRecipes: () => navigation.navigate('SavedRecipes'),

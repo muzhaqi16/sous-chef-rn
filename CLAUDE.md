@@ -79,6 +79,10 @@ Map and reasoning: `docs/architecture.md`.
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
 - `src/domain/` is logic 2+ features share; `src/app/` is the composition root.
+- **A capability a fork or build may switch off is a `FeatureFlag`**
+  (`src/config/featureFlags.ts`), read only through `useFeatureFlag`; with it off
+  its feature works as before, so it plugs in through an optional prop or a
+  selector hook, never a branch inside existing code — `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
   folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
   `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.

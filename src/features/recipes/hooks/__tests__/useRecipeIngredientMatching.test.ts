@@ -650,6 +650,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
             },
           ],
         },
+        stacksFirst: 100,
       },
     ]);
     // Success path: toast + sheet closed + matches cleared.
@@ -677,6 +678,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(cook.fired).toEqual([
       {
         input: expect.objectContaining({ servings: 2.5, notes: 'Halved it' }),
+        stacksFirst: 100,
       },
     ]);
   });
@@ -786,6 +788,28 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       expect.objectContaining({ pantryItemId: 'pi-1' }),
+    ]);
+  });
+
+  // "Salt, to taste": held, but the recipe states no amount to deduct.
+  it('holds back a line stating no amount until the cook states one', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, suggestedQuantity: null }, secondMatch],
+      cook,
+    );
+
+    expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
+
+    act(() => {
+      result.current.updateMatch(0, { isIncluded: true });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ recipeIngredientId: 'ing-2' }),
     ]);
   });
 

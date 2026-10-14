@@ -175,6 +175,8 @@ export class ErrorService {
     NOT_FOUND: 'resourceNotFound',
     CONFLICT: 'resourceConflict',
     UNIT_INVALID: 'unitInvalid',
+    UNSTATED_AMOUNT: 'unstatedAmount',
+    FEATURE_DISABLED: 'featureDisabled',
     EMAIL_ALREADY_VERIFIED: 'emailAlreadyVerified',
     UNAUTHENTICATED: 'signInRequired',
     BAD_REQUEST: 'validationFailed',

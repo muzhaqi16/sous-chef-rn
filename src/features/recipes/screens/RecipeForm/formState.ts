@@ -11,8 +11,13 @@ import type {
 export interface IngredientFormState {
   id: string; // local temp id
   name: string;
-  quantity: number;
+  /** Null when the recipe states no amount ("salt, to taste"). */
+  quantity: number | null;
   unitId?: string | null;
+  /** The unit as shown; the form holds only its id otherwise. */
+  unitLabel?: string;
+  /** The line as written, from a capture or a paste; sent back on save. */
+  originalText?: string | null;
   itemId?: string | null;
   preparation?: string;
   section?: string;

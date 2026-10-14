@@ -40,6 +40,8 @@ import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -123,6 +125,7 @@ const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
+  const captureEnabled = useFeatureFlag('recipeCapture');
   const user = useUser();
   const { forkRecipe, forking } = useForkRecipe();
   const { setSubmitted, publishing } = usePublishRecipe();
@@ -598,6 +601,14 @@ const RecipeDetailScreen: React.FC = () => {
             </Text>
           </View>
         )}
+
+        {recipeId && captureEnabled ? (
+          <CaptureReviewBanner
+            recipeId={recipeId}
+            ingredients={displayData.ingredients}
+            onReview={handleEditRecipe}
+          />
+        ) : null}
 
         {/* Ingredients */}
         {displayData.ingredients.length > 0 && (

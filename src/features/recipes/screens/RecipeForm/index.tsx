@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import {
   useRecipeFormWrites,
   type RecipeWriteFailure,
@@ -13,6 +14,11 @@ import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from '#features/recipes/components/recipeForm/RecipeBasicFields';
 import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
 import { RecipeIngredientList } from '#features/recipes/components/recipeForm/RecipeIngredientList';
+import { useCaptureDraft } from '#features/recipes/hooks/useCaptureDraft';
+import { useCaptureReview } from '#features/recipes/hooks/useCaptureReview';
+import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
+import { PasteIngredientsSheet } from '#features/recipes/components/recipeForm/PasteIngredientsSheet';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeIngredientEditor,
   type RecipeIngredientEditorRef,
@@ -45,10 +51,11 @@ const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
 ];
 
 export const RecipeFormScreen: React.FC<
-  StaticScreenProps<{ recipeId?: string } | undefined>
+  StaticScreenProps<{ recipeId?: string; captureId?: string } | undefined>
 > = ({ route }) => {
   useScreenTransition('RecipeForm');
   const recipeId = route.params?.recipeId;
+  const captureId = route.params?.captureId;
   const isEditMode = !!recipeId;
 
   const { t } = useTranslation();
@@ -77,6 +84,17 @@ export const RecipeFormScreen: React.FC<
       populateFromRecipe(recipe);
     }
   }, [recipeRef, readRecipe, populateFromRecipe]);
+
+  // An incomplete capture fills a new recipe once, when its draft is read.
+  const { draft: captureDraft } = useCaptureDraft(captureId);
+  const { populateFromCapture } = form;
+  const filledFrom = useRef<string | null>(null);
+  useEffect(() => {
+    if (!captureId || !captureDraft || filledFrom.current === captureId) return;
+    filledFrom.current = captureId;
+    populateFromCapture(captureDraft);
+  }, [captureId, captureDraft, populateFromCapture]);
+  const { settle: settleCapture } = useRecipeCaptureActions();
 
   // A refusal naming a field the form renders a message for lands on it. An
   // edit made elsewhere since the form loaded offers to reload the form from it.
@@ -130,6 +148,8 @@ export const RecipeFormScreen: React.FC<
         : null;
       const outcome = await createRecipe(form.buildCreateInput(), createdBy);
       if (outcome.status === 'ok') {
+        // The capture it finished leaves the Recipes tab.
+        if (captureId) settleCapture(captureId);
         goBack();
         return;
       }
@@ -158,6 +178,14 @@ export const RecipeFormScreen: React.FC<
   const handleAddIngredient = () => {
     ingredientEditorRef.current?.open();
   };
+
+  const [pasteVisible, setPasteVisible] = useState(false);
+  const pasteEnabled = useFeatureFlag('ingredientPaste');
+  // A captured recipe's unlinked lines offer the items its capture proposed.
+  const captureEnabled = useFeatureFlag('recipeCapture');
+  const { review: captureReview } = useCaptureReview(
+    captureEnabled ? recipeId : undefined,
+  );
 
   const handleSaveIngredient = (ingredient: IngredientFormState) => {
     // Check if this is an existing ingredient being edited
@@ -216,6 +244,9 @@ export const RecipeFormScreen: React.FC<
           onEditIngredient={handleEditIngredient}
           onRemoveIngredient={form.removeIngredient}
           onAddIngredient={handleAddIngredient}
+          onPasteIngredients={
+            pasteEnabled ? () => setPasteVisible(true) : undefined
+          }
         />
 
         {/* Steps */}
@@ -242,8 +273,20 @@ export const RecipeFormScreen: React.FC<
       <RecipeIngredientEditor
         ref={ingredientEditorRef}
         onSave={handleSaveIngredient}
+        candidatesFor={captureReview?.candidatesFor}
       />
       <RecipeStepEditor ref={stepEditorRef} onSave={handleSaveStep} />
+      {pasteEnabled ? (
+        <PasteIngredientsSheet
+          visible={pasteVisible}
+          onDismiss={() => setPasteVisible(false)}
+          room={Math.max(
+            0,
+            MAX_RECIPE_INGREDIENTS - form.state.ingredients.length,
+          )}
+          onPasted={form.appendIngredients}
+        />
+      ) : null}
     </>
   );
 };
