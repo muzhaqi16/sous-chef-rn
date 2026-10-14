@@ -4636,14 +4636,18 @@ enum FeatureState {
   UPGRADE_REQUIRED
 }
 
-"""Sub-input for feature toggles"""
+"""
+Lists the user keeps about themselves. The server stores and returns them,
+never reads them, and they unlock nothing: a feature's availability is
+myFeatureFlags.
+"""
 input FeatureTogglesInput {
   """
-  Names of the beta features the user has opted into, replacing the whole list: at most 100, each 1 to 100 characters after trimming. Null is refused
+  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
   """
   betaFeatures: [String!]
   """
-  Names of the features the user has turned on, replacing the whole list: at most 100, each 1 to 100 characters after trimming. Null is refused
+  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
   """
   enabledFeatures: [String!]
 }
@@ -19017,13 +19021,17 @@ type UserSettings {
   alwaysShowFractions: Boolean!
   """Whether the app syncs automatically"""
   autoSync: Boolean!
-  """Names of the beta features the user has opted into; empty when none"""
+  """
+  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
+  """
   betaFeatures: [String!]!
   """Whether the app uses its compact layout"""
   compactMode: Boolean!
   """When the settings row was created"""
   createdAt: DateTime!
-  """Names of the features the user has turned on; empty when none"""
+  """
+  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
+  """
   enabledFeatures: [String!]!
   """The settings row's unique identifier"""
   id: ID!
