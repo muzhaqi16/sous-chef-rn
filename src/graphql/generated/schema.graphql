@@ -79,7 +79,7 @@ A caller whose flag is off is refused before the resolver runs, with a
 top-level error carrying `FEATURE_DISABLED` (HTTP 403) and `feature`
 naming the flag, so a refused operation writes nothing and queues nothing.
 The flag is resolved on the server for every request; a value the client
-cached does not open the gate. → docs/api/feature-flags.md
+cached does not open the gate.
 
 NOT AN AUTH POSTURE. A flag resolves per user, so a field carrying it MUST
 also carry `@auth` or `@requireSystemRole`. Schema build fails otherwise.
