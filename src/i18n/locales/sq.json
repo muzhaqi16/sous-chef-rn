@@ -619,7 +619,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Qilari",
-      "shoppingList": "Lista"
+      "shoppingList": "Lista",
+      "mealPlan": "Vaktet"
     }
   },
   "numberInputSheet": {

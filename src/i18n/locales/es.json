@@ -619,7 +619,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Despensa",
-      "shoppingList": "Lista"
+      "shoppingList": "Lista",
+      "mealPlan": "Plan"
     }
   },
   "numberInputSheet": {

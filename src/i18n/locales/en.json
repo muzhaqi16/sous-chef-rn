@@ -619,7 +619,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Pantry",
-      "shoppingList": "List"
+      "shoppingList": "List",
+      "mealPlan": "Meal Plan"
     }
   },
   "numberInputSheet": {

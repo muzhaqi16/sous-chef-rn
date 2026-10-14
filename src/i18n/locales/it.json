@@ -619,7 +619,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Dispensa",
-      "shoppingList": "Lista"
+      "shoppingList": "Lista",
+      "mealPlan": "Piano pasti"
     }
   },
   "numberInputSheet": {
