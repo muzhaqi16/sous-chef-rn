@@ -71,7 +71,8 @@ const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => ({
  * count (2 @) on a line in a unit is that many packages, which the server
  * turns into the line's unit; a bare 1 says only that it was bought, so the
  * list's amount stands. With no unit on either, it is what was bought, as its
- * stack counts it; null for a part of something no unit names.
+ * stack counts it. Null for a part of something (0.5) no unit names, on a line
+ * in a unit too: the list's amount is not what the receipt states.
  */
 const lineAmountOf = (
   choice: ReceiptLineChoice,
@@ -90,12 +91,14 @@ const lineAmountOf = (
       ? boughtAmountOf(choice.quantity, { heldUnit })
       : null;
   }
-  if (choice.quantity !== 1 && Number.isInteger(choice.quantity)) {
-    return stockAmountOf(choice.quantity, { asPackages: true });
+  if (choice.quantity === 1) {
+    return stockAmountOf(line.quantity ?? choice.quantity, {
+      unitId: lineUnit.id,
+    });
   }
-  return stockAmountOf(line.quantity ?? choice.quantity, {
-    unitId: lineUnit.id,
-  });
+  return Number.isInteger(choice.quantity)
+    ? stockAmountOf(choice.quantity, { asPackages: true })
+    : null;
 };
 
 /**

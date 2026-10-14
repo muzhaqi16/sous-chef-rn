@@ -13,8 +13,9 @@ jest.mock('#features/pantry/hooks/usePantryIntake', () => ({
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({ pantry: { id: 'p1', name: 'Kitchen' } }),
 }));
+const mockMoveToPantry = jest.fn();
 jest.mock('#features/shoppingList/hooks/useMoveToPantry', () => ({
-  useMoveToPantry: () => ({ moveToPantry: jest.fn() }),
+  useMoveToPantry: () => ({ moveToPantry: mockMoveToPantry }),
 }));
 
 const line = (index: number, itemName: string): ReceiptApplyLine => ({
@@ -22,8 +23,18 @@ const line = (index: number, itemName: string): ReceiptApplyLine => ({
   choice: lineChoice({ itemId: `cat-${index}`, itemName, price: 2.5 }),
 });
 
+/** An open list line of two pounds of the item. */
+const listLine = {
+  id: 'line-1',
+  quantity: 2,
+  unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+  item: { id: 'cat-1' },
+} as unknown as NonNullable<ReceiptApplyLine['listLine']>;
+
 beforeEach(() => {
   mockAddItem.mockReset();
+  mockMoveToPantry.mockReset();
+  mockMoveToPantry.mockResolvedValue({ status: 'moved' });
   seedDraft();
 });
 
@@ -50,5 +61,54 @@ describe('useApplyReceipt', () => {
     ]);
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([2]);
     expect(errorService.reportError).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a line off the list, in a unit the receipt does not name', () => {
+    const applyOff = async (quantity: number) => {
+      const { result } = renderHook(() => useApplyReceipt('list-1'));
+      await act(async () => {
+        await result.current.apply(
+          [
+            {
+              index: 1,
+              choice: lineChoice({ itemId: 'cat-1', quantity }),
+              listLine,
+            },
+          ],
+          { purchasedOn: '2026-09-30' },
+        );
+      });
+      return result;
+    };
+
+    it("records the list's amount for a bare 1", async () => {
+      await applyOff(1);
+
+      expect(mockMoveToPantry).toHaveBeenCalledWith(
+        listLine,
+        expect.objectContaining({
+          amount: { measured: { quantity: 2, unitId: 'unit-lb' } },
+        }),
+      );
+    });
+
+    it('records a printed count as that many packages', async () => {
+      await applyOff(3);
+
+      expect(mockMoveToPantry).toHaveBeenCalledWith(
+        listLine,
+        expect.objectContaining({ amount: { packages: { count: 3 } } }),
+      );
+    });
+
+    // 0.5 of something is not the two pounds the list planned.
+    it("asks for a unit rather than record the list's amount for a part", async () => {
+      const result = await applyOff(0.5);
+
+      expect(mockMoveToPantry).not.toHaveBeenCalled();
+      expect(result.current.failures).toEqual([
+        { index: 1, reason: expect.any(String) },
+      ]);
+    });
   });
 });
