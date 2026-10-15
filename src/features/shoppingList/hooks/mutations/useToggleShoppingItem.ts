@@ -190,7 +190,7 @@ export function useToggleShoppingItem({
    * `purchasedPrice` is PER UNIT — the server records
    * `Purchase.totalPrice = purchasedPrice × purchasedQuantity` and move-to-pantry
    * derives its per-unit cost from it. The Mark Purchased sheet collects the TOTAL
-   * paid, so `usePurchaseAmountModal` divides first; null omits it (server derives).
+   * paid, so `usePurchaseAmountModal` divides first; null records it unpriced.
    */
   const recordPurchase = async (
     itemId: string,
