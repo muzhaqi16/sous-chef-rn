@@ -221,7 +221,11 @@ query GetShoppingListItemsFiltered(
           # Store mode groups the line under its aisle.
           storeDepartment
           storeDepartmentOverride
-          # Store mode adds up what is left to buy.
+          # Store mode adds up what is left to buy: a typed estimate, else the
+          # suggestion, as the API's suggestedTotal does.
+          priceEstimate {
+            estimated
+          }
           suggestedPrice {
             amount
             currency {

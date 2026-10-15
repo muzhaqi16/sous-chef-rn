@@ -22,7 +22,7 @@ import { useAisleView } from './useAisleView';
 /** An aisle, every aisle, or what is already in the cart. */
 export type StoreModeTab = AisleTab | 'cart';
 
-/** What the lines left would cost at recorded prices. */
+/** What the lines left would cost, by typed estimate else recorded prices. */
 export interface StoreModeEstimate {
   price: string;
   /** How many of the lines left carry a price. */
@@ -30,24 +30,31 @@ export interface StoreModeEstimate {
   lines: number;
 }
 
-// One total only when every priced line shares a currency.
+// As the API's suggestedTotal: a line's typed estimate, else its suggestion,
+// both in the list's currency; no one total when suggestions disagree on it.
 function estimateLeft(
   lines: readonly ShoppingListItemNode[],
+  listCurrency: string | null,
 ): StoreModeEstimate | null {
   let total = 0;
   let priced = 0;
-  let currency: { code: string; decimalPlaces: number } | null = null;
+  let currency: { code: string; decimalPlaces: number | null } | null =
+    listCurrency ? { code: listCurrency, decimalPlaces: null } : null;
   for (const line of lines) {
-    const suggestion = line.suggestedPrice;
-    if (suggestion?.amount == null) continue;
-    if (currency && currency.code !== suggestion.currency.code) return null;
-    currency = suggestion.currency;
-    total += lineTotal(suggestion.amount, line.quantity ?? 0);
+    const typed = line.priceEstimate.estimated;
+    const suggestion = typed == null ? line.suggestedPrice : null;
+    const unitPrice = typed ?? suggestion?.amount;
+    if (unitPrice == null) continue;
+    if (suggestion) {
+      if (currency && currency.code !== suggestion.currency.code) return null;
+      currency = suggestion.currency;
+    }
+    total += lineTotal(unitPrice, line.quantity ?? 0);
     priced += 1;
   }
-  if (!currency) return null;
+  if (priced === 0) return null;
   return {
-    price: formatCurrency(total, currency.code, currency.decimalPlaces),
+    price: formatCurrency(total, currency?.code, currency?.decimalPlaces),
     priced,
     lines: lines.length,
   };
@@ -125,7 +132,10 @@ export function useStoreMode(listId: string) {
       lineCount: lines.length,
       cartCount: totalCountPurchased,
       totalCount: totalCountUnpurchased + totalCountPurchased,
-      estimate: estimateLeft(rawUnpurchasedItems),
+      estimate: estimateLeft(
+        rawUnpurchasedItems,
+        shoppingList?.currency ?? null,
+      ),
       routeNote,
       permissions,
       /** Every loaded line, for the sheets the rows open. */

@@ -45,6 +45,10 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       decimalPlaces
     }
   }
+  # Store mode totals it before suggestedPrice.
+  priceEstimate {
+    estimated
+  }
   # Store mode groups by it; a write that leaves it out blanks the row.
   storeDepartment
   storeDepartmentOverride

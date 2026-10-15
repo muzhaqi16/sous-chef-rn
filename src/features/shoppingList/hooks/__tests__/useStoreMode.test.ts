@@ -39,6 +39,7 @@ interface Line {
   quantity: number;
   sortOrder: string;
   storeDepartment: StoreDepartment;
+  priceEstimate: { estimated: number | null };
   suggestedPrice: {
     amount: number;
     currency: { code: string; decimalPlaces: number };
@@ -50,12 +51,14 @@ const line = (
   storeDepartment: StoreDepartment,
   price: { amount: number; code?: string } | null = null,
   quantity = 1,
+  estimated: number | null = null,
 ): Line => ({
   id,
   itemName: id,
   quantity,
   sortOrder: id,
   storeDepartment,
+  priceEstimate: { estimated },
   suggestedPrice: price && {
     amount: price.amount,
     currency: { code: price.code ?? 'USD', decimalPlaces: 2 },
@@ -128,6 +131,22 @@ describe('useStoreMode', () => {
     expect(result.current.state.estimate).toEqual({
       price: formatCurrency(6, 'USD', 2),
       priced: 2,
+      lines: 3,
+    });
+  });
+
+  it('counts a typed estimate before the recorded price, as the API totals a list', () => {
+    list.lines = [
+      line('apples', StoreDepartment.Produce, { amount: 1.5 }, 2, 2),
+      milk,
+      line('peas', StoreDepartment.Frozen, null, 1, 2.5),
+    ];
+    const { result } = renderHook(() => useStoreMode('list-1'));
+
+    // 2 × 2 typed, over the 1.50 recorded; 3 recorded; 2.50 typed.
+    expect(result.current.state.estimate).toEqual({
+      price: formatCurrency(9.5, 'USD', 2),
+      priced: 3,
       lines: 3,
     });
   });
