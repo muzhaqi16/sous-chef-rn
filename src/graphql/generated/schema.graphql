@@ -1197,6 +1197,10 @@ type Category {
   slug: String!
   """Position among its siblings, lowest first; 0 when none is set"""
   sortOrder: Int!
+  """
+  The store department set on the category itself; null when it takes its nearest ancestor's, or none
+  """
+  storeDepartment: StoreDepartment
   """What the category classifies"""
   type: CategoryType!
   """When the category was last written"""
@@ -2356,6 +2360,12 @@ input CreateReceiptCheckInInput {
   """The receipt's own number, as printed"""
   receiptNumber: String
   """
+  The caller's own receipt parse this check-in confirms. The store gets the
+  address and store number the parse read, where it has none; a parse that is
+  not the caller's, or not parsed, fills nothing and still checks in.
+  """
+  receiptParseId: ID
+  """
   The shopping list whose lines the receipt ticks; the caller must be able to mark its lines purchased
   """
   shoppingListId: ID
@@ -2839,8 +2849,15 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `dat
 """
 scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
-input DeclineHomeInviteInput {
-  token: String!
+"""
+An invite to decline, by exactly one of its emailed token or its id. By id,
+the caller must be its addressee with a verified email, as on acceptance.
+"""
+input DeclineHomeInviteInput @oneOf {
+  """The invite's id, as pendingHomeInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link"""
+  token: String
 }
 
 type DeclineHomeInvitePayload {
@@ -4604,6 +4621,10 @@ enum FeatureFlagName {
   RECIPE_CAPTURE_TEXT
   """Capturing a recipe from a page's URL (createRecipeCapture with url)"""
   RECIPE_CAPTURE_URL
+  """
+  A list's learned walking order (ShoppingList.storeRoute beyond the default)
+  """
+  STORE_ROUTES
 }
 
 """One server-owned feature, resolved for the caller"""
@@ -5897,6 +5918,12 @@ type Item {
   How this item is normally stored; a new pantry stack of it starts in this state.
   """
   storageState: StorageState!
+  """
+  The store department the item is shelved in: its primary category's, then its
+  other categories' by confidence, each through its nearest mapped ancestor; else
+  OTHER. A client places a line it creates offline by it.
+  """
+  storeDepartment: StoreDepartment!
   """This item's SKUs at individual stores, oldest first by default."""
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -8748,9 +8775,10 @@ type Mutation {
   """
   createUserReport(input: CreateUserReportInput!): CreateUserReportResult!
   """
-  Decline a home invitation using its token. Repeating it answers the same
-  invitation and changes nothing. One already accepted, revoked or expired
-  answers ConflictError and stays as it is.
+  Decline a home invitation by its token, or by its id for a verified
+  addressee. Repeating it answers the same invitation and changes nothing.
+  One already accepted, revoked or expired answers ConflictError and stays as
+  it is.
   """
   declineHomeInvite(input: DeclineHomeInviteInput!): DeclineHomeInviteResult!
   """Decline an invitation to collaborate on a shopping list."""
@@ -11450,6 +11478,10 @@ type ParsedReceiptLine {
   kind: ReceiptLineKind!
   """The product name as printed, on an ITEM"""
   product: String
+  """
+  How much the line bought: a weight or count printed with it, else the
+  pack size its product ends with ("Goat Cheese 4 oz" is 4 oz)
+  """
   quantity: Float
   """The line as the receipt prints it"""
   text: String!
@@ -11613,6 +11645,11 @@ type PriceSuggestion {
   """The latest observation behind it"""
   observedAt: DateTime!
   scope: PriceSuggestionScope!
+  """
+  Priced from similar products of the same kind, because the line's own
+  product has no price at that scope
+  """
+  substitute: Boolean!
 }
 
 """Where a suggested price came from."""
@@ -15353,6 +15390,15 @@ type ShoppingList {
   updateShoppingList sets ARCHIVED, PAUSED and CANCELLED.
   """
   status: ListStatus!
+  """
+  The walking order at a store: the household's own route, else the store's
+  pooled route, its chain's, else the default. A personal list skips the
+  household.
+  """
+  storeRoute(
+    """The store; the list's target store when omitted"""
+    storeId: ID
+  ): StoreRoute!
   """How many lines suggestedTotal prices by suggestion"""
   suggestedLines: Int!
   """
@@ -15690,6 +15736,14 @@ type ShoppingListItem {
   How the line came onto the list, and the recipe or meal plan it was added for
   """
   source: ShoppingListItemSource!
+  """
+  The store department the line is shelved in: its own override, else its item's, else OTHER
+  """
+  storeDepartment: StoreDepartment!
+  """
+  The department set on this line over its item's; null while it follows the item
+  """
+  storeDepartmentOverride: StoreDepartment
   """Where to find the line: its preferred store, aisle and store section"""
   storeInfo: ShoppingListItemStoreInfo!
   """
@@ -15925,6 +15979,11 @@ input ShoppingListStoreComparisonInput {
   listId: ID!
   """Compare store branches (the default) or whole chains"""
   scope: PriceComparisonScope
+  """
+  Up to five stores to compare instead of the household's own: those it
+  bought at, checked a receipt in at or targeted within the window
+  """
+  storeIds: [ID!]
   """How far back observations count: default 90 days, at most 365"""
   windowDays: Int
 }
@@ -16587,8 +16646,11 @@ type StoreComparisonCandidate {
   chain: StoreChain
   """Lines a branch fills from its chain's median"""
   chainFilledLines: Int!
-  """Every comparable line with a price anywhere, priced here or filled"""
-  estimatedTotal: Float!
+  """
+  Every comparable line with a price anywhere, priced here or filled; null
+  when no line has a price anywhere
+  """
+  estimatedTotal: Float
   """The list's target store, or that store's chain"""
   isTarget: Boolean!
   """The newest observation behind the lines it prices itself"""
@@ -16632,6 +16694,30 @@ type StoreCostBreakdown {
   storeName: String
   """What the restocks from this store cost, per currency, largest first"""
   totalSpent: [CurrencyAmount!]!
+}
+
+"""
+Where a store shelves an item. Declared in the default order a shopper walks a
+store; a learned StoreRoute reorders them per store.
+"""
+enum StoreDepartment {
+  BABY
+  BAKERY
+  BEVERAGES
+  BREAKFAST_CEREAL
+  CONDIMENTS_SPICES
+  DAIRY_EGGS
+  DELI
+  FROZEN
+  HOUSEHOLD
+  INTERNATIONAL
+  MEAT_SEAFOOD
+  OTHER
+  PANTRY
+  PERSONAL_CARE
+  PET
+  PRODUCE
+  SNACKS_CANDY
 }
 
 """
@@ -16731,7 +16817,38 @@ input StoreOrderBy {
 input StorePreferencesInput {
   aisle: String
   preferredStoreId: ID
+  """
+  The line's own store department, over its item's; null follows the item again
+  """
+  storeDepartmentOverride: StoreDepartment
   storeSection: String
+}
+
+"""
+A store's walking order: every store department once, the departments its
+shoppers reach first first. The client sorts the list's lines by it.
+"""
+type StoreRoute {
+  """When it was learned; null for the default"""
+  computedAt: DateTime
+  departments: [StoreDepartment!]!
+  source: StoreRouteSource!
+  """The store the route is for; null when the list names none"""
+  store: Store
+  """The trips the route was learned from; 0 for the default"""
+  trips: Int!
+}
+
+"""Where a store route was learned from."""
+enum StoreRouteSource {
+  """Every household's trips at this store's chain"""
+  CHAIN
+  """Nothing learned yet: the default walk"""
+  DEFAULT
+  """The list's household's own trips at this store"""
+  HOUSEHOLD
+  """Every household's trips at this store"""
+  STORE
 }
 
 input StoreSkuInput {
