@@ -10,6 +10,9 @@ const ISO_DATE = /(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/g;
 const fullYear = (year: string) =>
   year.length === 2 ? 2000 + Number(year) : Number(year);
 
+/** The earliest shop day the API takes; an earlier one is a ValidationError. */
+export const EARLIEST_RECEIPT_DAY = '2000-01-01';
+
 /** Older than this is a misread, not the day of the shop. */
 const OLDEST_DAYS = 366;
 

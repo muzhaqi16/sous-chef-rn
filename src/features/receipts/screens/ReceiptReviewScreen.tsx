@@ -19,6 +19,7 @@ import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
+import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
@@ -310,6 +311,7 @@ export const ReceiptReviewScreen: React.FC = () => {
                       onChange={date => {
                         if (date) setPurchasedOn(toDateKey(date));
                       }}
+                      minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
                       maximumDate={fromDateKey(today)}
                       testID={receiptsTestIDs.reviewDate}
                     />
@@ -325,6 +327,7 @@ export const ReceiptReviewScreen: React.FC = () => {
                     onChange={date => {
                       if (date) setPurchasedOn(toDateKey(date));
                     }}
+                    minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
                     maximumDate={fromDateKey(today)}
                     testID={receiptsTestIDs.reviewDate}
                   />
