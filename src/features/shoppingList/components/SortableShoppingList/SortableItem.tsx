@@ -39,6 +39,7 @@ import {
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
@@ -117,17 +118,23 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const quantity = data.quantity ?? 0;
   const quantityInput = data.quantityInput ?? null;
   // What a line still to buy would cost at recorded prices: the suggestion is
-  // per one of its unit, multiplied as the API's suggestedTotal does.
+  // per one of its unit, and a substitute is similar products' price, never
+  // shown as the product's own.
   const suggested = isPurchased ? null : data.suggestedPrice;
   const estimate =
     suggested?.amount != null && suggested.currency?.code
-      ? t('shoppingListScreens.suggestedLinePrice', {
-          price: formatCurrency(
-            suggested.amount * (quantity > 0 ? quantity : 1),
-            suggested.currency.code,
-            suggested.currency.decimalPlaces,
-          ),
-        })
+      ? t(
+          suggested.substitute
+            ? 'shoppingListScreens.suggestedLinePriceSimilar'
+            : 'shoppingListScreens.suggestedLinePrice',
+          {
+            price: formatCurrency(
+              lineTotal(suggested.amount, quantity),
+              suggested.currency.code,
+              suggested.currency.decimalPlaces,
+            ),
+          },
+        )
       : null;
   const isPendingSync = useIsPendingSync(itemId);
   const subtitle = isPendingSync ? (

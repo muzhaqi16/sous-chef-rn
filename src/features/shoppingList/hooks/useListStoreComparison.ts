@@ -15,7 +15,8 @@ export interface StoreComparisonCandidate {
   address: string | null;
   /** The chain a branch fills its gaps from; null when chains are compared. */
   chainName: string | null;
-  estimatedTotal: number;
+  /** Null when no comparable line has a price anywhere. */
+  estimatedTotal: number | null;
   pricedLines: number;
   chainFilledLines: number;
   anyStoreFilledLines: number;

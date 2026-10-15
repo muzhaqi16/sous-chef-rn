@@ -21,6 +21,7 @@ fragment SortableItem_item on ShoppingListItem {
   # the list's, then that store's chain, then any store. Null with none.
   suggestedPrice {
     amount
+    substitute
     currency {
       id
       code

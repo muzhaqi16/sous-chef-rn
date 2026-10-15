@@ -76,6 +76,9 @@ export function FilterTabBar<TKey extends string>({
               key={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
               onPress={btn.disabled ? undefined : btn.onPress}
               testID={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
+              accessibilityRole="button"
+              accessibilityLabel={btn.accessibilityLabel}
+              accessibilityState={{ disabled: !!btn.disabled }}
               style={[
                 btn.label ? styles.actionLabelButton : styles.actionButton,
                 !btn.label && styles.actionButtonWithBg,

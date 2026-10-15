@@ -18,7 +18,9 @@ import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingLi
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { BarAction } from '#components/molecules/BarActions';
 import { useStore } from '#store';
-import { userEvent } from '@testing-library/react-native';
+import { fireEvent, userEvent } from '@testing-library/react-native';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -29,6 +31,10 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
+
+jest.mock('#features/shoppingList/hooks/useStoreModeEnabled', () => ({
+  useStoreModeEnabled: jest.fn(() => false),
+}));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
@@ -114,6 +120,7 @@ jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
     openQuantityEdit: jest.fn(),
     openPurchaseAmount: jest.fn(),
     openMoveToPantry: jest.fn(),
+    openMoveToAisle: jest.fn(),
   })),
   useAnyShoppingListSheetVisible: jest.fn(() => false),
 }));
@@ -349,6 +356,31 @@ describe('ShoppingListMainContent', () => {
       />,
     );
     expect(getByTestId('shopping-list-screen')).toBeTruthy();
+  });
+
+  describe('store mode', () => {
+    it('offers no way in until it is turned on in Settings', () => {
+      const { queryByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+
+      expect(queryByTestId(shoppingListTestIDs.storeModeButton)).toBeNull();
+    });
+
+    it('opens store mode on the list on screen', () => {
+      jest.mocked(useStoreModeEnabled).mockReturnValue(true);
+      const screenData = makeScreenData();
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={screenData} />,
+      );
+
+      fireEvent.press(getByTestId(shoppingListTestIDs.storeModeButton));
+
+      expect(jest.mocked(useAppNavigation)().toStoreMode).toHaveBeenCalledWith({
+        listId: screenData.state.currentListId,
+      });
+      jest.mocked(useStoreModeEnabled).mockReturnValue(false);
+    });
   });
 
   it('renders with current list name', () => {

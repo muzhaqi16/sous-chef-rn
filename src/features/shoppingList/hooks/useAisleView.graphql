@@ -1,0 +1,15 @@
+# The walking order Store mode sorts a list's lines by. Keyed by store, so
+# each (list, store) pair keeps its own cached answer for offline use.
+query AisleViewRoute($id: ID!, $storeId: ID) {
+  shoppingList(id: $id) {
+    id
+    storeRoute(storeId: $storeId) {
+      departments
+      source
+      store {
+        id
+        name
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import type { FragmentType } from '@apollo/client/masking';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
@@ -83,6 +84,7 @@ describe('SortableShoppingList', () => {
         id: '1',
         isPurchased: false,
         sortOrder: 'a0',
+        storeDepartment: StoreDepartment.Other,
         // The masked ref is structurally a normalized ref: __typename + id is
         // enough for useFragment's cache lookup.
         itemRef: { __typename: 'ShoppingListItem', id: '1' } as FragmentType<

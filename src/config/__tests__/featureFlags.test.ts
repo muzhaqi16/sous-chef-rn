@@ -12,6 +12,8 @@ describe('resolveFeatureFlags', () => {
       recipeCapturePhoto: true,
       recipeCaptureText: true,
       recipeCaptureUrl: true,
+      storeMode: true,
+      storeRoutes: true,
     });
   });
 
@@ -45,6 +47,8 @@ describe('resolveFeatureFlags', () => {
       recipeCapturePhoto: true,
       recipeCaptureText: true,
       recipeCaptureUrl: true,
+      storeMode: true,
+      storeRoutes: true,
     });
   });
 });

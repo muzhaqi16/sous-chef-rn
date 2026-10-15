@@ -5,13 +5,19 @@
 
 import type { ApolloCache } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { Items_RowFragmentDoc } from './items.generated';
+import {
+  Items_ItemDepartmentFragmentDoc,
+  Items_RowFragmentDoc,
+} from './items.generated';
 import {
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
 } from './shoppingListItemRowNeutral.generated';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import {
+  DisplayFormat,
+  StoreDepartment,
+} from '#/graphql/generated/schemaTypes';
 import {
   settleMutation,
   settledStatus,
@@ -188,6 +194,19 @@ export function buildAddItemsReconcileUpdate({
   };
 }
 
+/** The aisle a catalog item is shelved in, when the cache holds it. */
+function heldItemDepartment(
+  cache: ApolloCache,
+  itemId: string | null | undefined,
+): StoreDepartment | undefined {
+  if (!itemId) return undefined;
+  return cache.readFragment({
+    id: cache.identify({ __typename: 'Item', id: itemId }),
+    fragment: Items_ItemDepartmentFragmentDoc,
+    fragmentName: 'items_itemDepartment',
+  })?.storeDepartment;
+}
+
 /**
  * Local-first optimistic add: writes the FULL display entity, the connection edge
  * and recomputed stats PERMANENTLY before the create fires, so it survives a
@@ -223,6 +242,10 @@ export function addLocalShoppingListItem(
       category: line.category ?? null,
       notes: null,
       sortOrder: '',
+      // Shelved where its item is until the server answers (the API's rule).
+      storeDepartment:
+        heldItemDepartment(cache, line.itemId) ?? StoreDepartment.Other,
+      storeDepartmentOverride: null,
       // Whole rather than through `writePurchaseInfo`, which patches an
       // existing record: a new line has no prior purchase to preserve.
       purchaseInfo: {

@@ -15,6 +15,7 @@ const SERVER_FLAG: Record<FeatureFlagName, FeatureFlag> = {
   [FeatureFlagName.RecipeCapturePhoto]: 'recipeCapturePhoto',
   [FeatureFlagName.RecipeCaptureText]: 'recipeCaptureText',
   [FeatureFlagName.RecipeCaptureUrl]: 'recipeCaptureUrl',
+  [FeatureFlagName.StoreRoutes]: 'storeRoutes',
 };
 
 const SERVER_OWNED = new Set<FeatureFlag>(Object.values(SERVER_FLAG));

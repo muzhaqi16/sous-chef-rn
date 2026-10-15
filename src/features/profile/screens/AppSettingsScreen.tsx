@@ -16,6 +16,7 @@ import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useStore } from '#store';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
@@ -77,6 +78,7 @@ export const AppSettingsScreen: React.FC = () => {
     updatePreference,
     resetPreferences: resetUserPreferences,
   } = useUserPreferences();
+  const storeModeOffered = useFeatureFlag('storeMode');
 
   const { consent: receiptPhotoConsent, setConsent: setReceiptPhotoConsent } =
     useReceiptPhotoConsent();
@@ -301,6 +303,15 @@ export const AppSettingsScreen: React.FC = () => {
             updatePreference({ showShoppingListImages: value })
           }
         />
+        {storeModeOffered ? (
+          <SettingSwitch
+            testID={profileTestIDs.settingsStoreModeSwitch}
+            title={t('settings.storeMode')}
+            description={t('settings.storeModeDesc')}
+            value={userPrefs.storeMode ?? false}
+            onValueChange={value => updatePreference({ storeMode: value })}
+          />
+        ) : null}
         <SettingSwitch
           testID={profileTestIDs.settingsShareUsageDataSwitch}
           title={t('settings.shareUsageData')}

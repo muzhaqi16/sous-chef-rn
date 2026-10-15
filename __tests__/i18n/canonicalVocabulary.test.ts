@@ -851,6 +851,7 @@ const RUNTIME_COMPOSED_NAMESPACES = [
   'recipes.healthGoal',
   'recipes.intolerance',
   'recipes.recipeStatus',
+  'shoppingListScreens.aisles.department',
   'storageLocationForm',
   'storageState',
   'storageStateShort',

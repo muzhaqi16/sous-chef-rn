@@ -85,6 +85,7 @@
     "listStoreLabel": "Shopping at",
     "listStoreDesc": "Where you're shopping. Prices you enter when you mark items purchased are saved for this store.",
     "suggestedLinePrice": "≈ {{price}}",
+    "suggestedLinePriceSimilar": "≈ {{price}}, similar products",
     "storeComparison": {
       "title": "Where it's cheapest",
       "scopeStores": "Stores",
@@ -197,7 +198,47 @@
     "priorityHigh": "High",
     "store": "Preferred Store",
     "storePlaceholder": "e.g., Costco",
-    "packageSizeCleared": "This item was already on the list with a different package size, so the line no longer records one."
+    "packageSizeCleared": "This item was already on the list with a different package size, so the line no longer records one.",
+    "aisles": {
+      "all": "All aisles",
+      "yourRoute": "Aisles in the order you walk {{store}}",
+      "shoppersRoute": "Aisles in the order shoppers walk {{store}}",
+      "move": "Move to aisle",
+      "resetAccessibility": "Put it back in its item's aisle",
+      "department": {
+        "PRODUCE": "Produce",
+        "BAKERY": "Bakery",
+        "DELI": "Deli",
+        "MEAT_SEAFOOD": "Meat & seafood",
+        "DAIRY_EGGS": "Dairy & eggs",
+        "FROZEN": "Frozen",
+        "PANTRY": "Pantry staples",
+        "BREAKFAST_CEREAL": "Breakfast & cereal",
+        "SNACKS_CANDY": "Snacks & sweets",
+        "BEVERAGES": "Drinks",
+        "CONDIMENTS_SPICES": "Condiments & spices",
+        "INTERNATIONAL": "International",
+        "HOUSEHOLD": "Household",
+        "PERSONAL_CARE": "Personal care",
+        "BABY": "Baby",
+        "PET": "Pet",
+        "OTHER": "Other"
+      }
+    },
+    "storeMode": {
+      "open": "Open store mode",
+      "inCart_one": "{{done}} of {{count}} item in the cart",
+      "inCart_other": "{{done}} of {{count}} items in the cart",
+      "atStore": "At {{store}}",
+      "chooseStore": "Choose the store you are at",
+      "estimate": "≈ {{price}} to go",
+      "estimatePartial_one": "≈ {{price}} for {{priced}} of the {{count}} item to go",
+      "estimatePartial_other": "≈ {{price}} for {{priced}} of the {{count}} items to go",
+      "cart": "In cart",
+      "allDone": "Everything's in the cart",
+      "allDoneHint": "Tap {{done}} once you have checked out.",
+      "cartEmpty": "Nothing in the cart yet"
+    }
   },
   "purchaseHistory": {
     "quantityLabel": "Quantity:",

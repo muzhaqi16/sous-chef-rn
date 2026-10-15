@@ -10,8 +10,13 @@ import {
 } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
+import {
+  isAisleHeader,
+  type SortableShoppingListProps,
+  type ShoppingListEntry,
+} from './types';
 import { SwipeableListItem } from './SortableItem';
+import { AisleHeader } from './AisleHeader';
 import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
 import {
   SortableListActionsProvider,
@@ -38,17 +43,19 @@ const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module scope: one stable reference each, nothing for the compiler to track.
 const MVCP_DISABLED = { disabled: true };
-const keyExtractor = (item: ShoppingListRowItem) => item.id;
-// Every row is the same component, so one recycling pool is correct.
-const getItemType = () => 'item';
+const keyExtractor = (entry: ShoppingListEntry) => entry.id;
+// A line and an aisle heading are different cells, so each has its own pool.
+const getItemType = (entry: ShoppingListEntry) =>
+  isAisleHeader(entry) ? 'aisle' : 'item';
 // FlashList v2 can transiently pass an undefined item while recycling cells
 // through a data swap or a layout-animation render, whatever its type says.
 type RecycledRenderItemInfo = Omit<
-  ListRenderItemInfo<ShoppingListRowItem>,
+  ListRenderItemInfo<ShoppingListEntry>,
   'item'
-> & { item: ShoppingListRowItem | undefined };
+> & { item: ShoppingListEntry | undefined };
 const renderItem = ({ item, ...info }: RecycledRenderItemInfo) => {
   if (!item) return null;
+  if (isAisleHeader(item)) return <AisleHeader aisle={item} />;
   return <SwipeableListItem {...info} item={item} />;
 };
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
@@ -77,14 +84,15 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onMomentumScrollEnd,
   scrollEventThrottle,
   onFirstContentLayout,
+  perfName = 'SortableShoppingList',
 }) => {
   const listPermissions = useShoppingListItemPermissions();
-  useCommitTracking('SortableShoppingList');
-  const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
+  useCommitTracking(perfName);
+  const flashListRef = useRef<FlashListRef<ShoppingListEntry>>(null);
   const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
 
   const perfCallbacks = useFlashListPerformance(flashListRef, {
-    componentName: 'SortableShoppingList',
+    componentName: perfName,
     reportInterval: 10000,
     // The list has no placeholder mode, so having rows is its only honest
     // content signal: an empty list emits no `app_fully_drawn_ms` at all.
@@ -94,7 +102,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   });
   useDataReferenceTracker(
     items,
-    'SortableList.items',
+    `${perfName}.items`,
     perfCallbacks.onDataReferenceChange,
   );
 
@@ -169,7 +177,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           <ItemSwipeActionsProvider value={itemSwipeActions}>
             <View style={styles.container}>
               <RowReflowContext.Provider value={reflow.reflowing}>
-                <FlashList<ShoppingListRowItem>
+                <FlashList<ShoppingListEntry>
                   renderScrollComponent={SwipeAwareScrollComponent}
                   ref={flashListRef}
                   CellRendererComponent={perfCallbacks.CellRendererComponent}

@@ -23,6 +23,8 @@ export interface FilterTabActionButton {
   onPress: () => void;
   testID?: string;
   disabled?: boolean;
+  /** Names an icon-only button, which nothing else can. */
+  accessibilityLabel?: string;
 }
 
 export interface FilterTabsProps<T extends string = string> {

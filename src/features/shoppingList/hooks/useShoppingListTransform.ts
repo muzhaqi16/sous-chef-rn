@@ -49,6 +49,7 @@ function wrapItems(
         id: node.id,
         isPurchased: forcePurchasedState,
         sortOrder: node.sortOrder,
+        storeDepartment: node.storeDepartment,
         itemRef: node,
       };
       rowCache.set(node, row);

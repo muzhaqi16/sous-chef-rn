@@ -121,6 +121,8 @@ const CandidateRow: React.FC<{
   comparison: StoreComparison;
 }> = ({ candidate, comparison }) => {
   const { t } = useTranslation();
+  // Only a candidate pricing enough lines itself shows a total that compares.
+  const total = candidate.ranked ? candidate.estimatedTotal : null;
   // How much of the total rests on this candidate's own prices.
   const breakdown = [
     t('shoppingListScreens.storeComparison.pricedHere', {
@@ -170,17 +172,17 @@ const CandidateRow: React.FC<{
       </View>
       {/* An unranked total rests mostly on other stores' prices. */}
       <Text
-        role={candidate.ranked ? 'bodyStrong' : 'caption'}
-        tone={candidate.ranked ? 'primary' : 'secondary'}
+        role={total == null ? 'caption' : 'bodyStrong'}
+        tone={total == null ? 'secondary' : 'primary'}
         style={styles.total}
       >
-        {candidate.ranked
-          ? formatCurrency(
-              candidate.estimatedTotal,
+        {total == null
+          ? t('shoppingListScreens.storeComparison.notEnoughPrices')
+          : formatCurrency(
+              total,
               comparison.currencyCode,
               comparison.decimalPlaces,
-            )
-          : t('shoppingListScreens.storeComparison.notEnoughPrices')}
+            )}
       </Text>
     </View>
   );

@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
@@ -257,6 +258,7 @@ function rowItem(
     id: entry.id,
     isPurchased,
     sortOrder: 'a',
+    storeDepartment: StoreDepartment.Other,
     // The masked ref is structurally a normalized ref: __typename + id is
     // enough for useFragment's cache lookup.
     itemRef: { __typename: entry.__typename, id: entry.id } as FragmentType<
@@ -317,6 +319,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     const suggestedPrice = {
       __typename: 'PriceSuggestion',
       amount: 1.25,
+      substitute: false,
       currency: {
         __typename: 'Currency',
         id: 'cur-usd',
@@ -333,6 +336,19 @@ describe('SwipeableListItem (SortableItem)', () => {
         { cache: seedRow(entry) },
       );
       expect(screen.getByText(/^2 liters · ≈ .*2\.50/)).toBeTruthy();
+    });
+
+    it("says when it is similar products' price, not the line's own", () => {
+      const entry = seedItem({
+        suggestedPrice: { ...suggestedPrice, substitute: true },
+      });
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+      expect(
+        screen.getByText(/^2 liters · ≈ .*1\.25, similar products$/),
+      ).toBeTruthy();
     });
 
     it('shows none on a bought line', () => {

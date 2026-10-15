@@ -3,3 +3,9 @@ fragment items_row on ShoppingListItem {
   id
   ...ShoppingListItemReaders
 }
+
+# The aisle a catalog item is shelved in, which a new line of it starts in.
+fragment items_itemDepartment on Item {
+  id
+  storeDepartment
+}

@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef } from 'react';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { SelectorContent } from './SelectorContent';
@@ -9,11 +9,19 @@ import type { AnimatedItemSelectorProps, SelectableItem } from './types';
 // (a `forwardRef` would erase the generic and force a cast at the call site).
 export const AnimatedItemSelector = <T extends SelectableItem>({
   config,
+  isVisible,
   onClose,
   onOpen,
   ref,
 }: AnimatedItemSelectorProps<T>) => {
   const trayRef = useRef<ActionTrayRef>(null);
+
+  // A host driving the tray with a flag rather than the ref.
+  useEffect(() => {
+    if (isVisible === undefined) return;
+    if (isVisible) trayRef.current?.open();
+    else trayRef.current?.close();
+  }, [isVisible]);
 
   useImperativeHandle(
     ref,

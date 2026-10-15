@@ -143,6 +143,8 @@ export function useAppNavigation() {
       navigation.navigate('ShareList', params),
     toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>
       navigation.navigate('PurchaseHistory', params),
+    toStoreMode: (params: RootStackParamList['StoreMode']) =>
+      navigation.navigate('StoreMode', params),
 
     // ─── Recipe detail/sub screens ────────────────────────────────────────
     // One RecipeDetail serves all three tabs that open it (Pantry, Recipe,

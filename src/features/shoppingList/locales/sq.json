@@ -85,6 +85,7 @@
     "listStoreLabel": "Blerje te",
     "listStoreDesc": "Ku bën pazar. Çmimet që fut kur shënon artikujt si të blerë ruhen për këtë dyqan.",
     "suggestedLinePrice": "≈ {{price}}",
+    "suggestedLinePriceSimilar": "≈ {{price}}, produkte të ngjashme",
     "storeComparison": {
       "title": "Ku kushton më pak",
       "scopeStores": "Dyqane",
@@ -197,7 +198,47 @@
     "priorityHigh": "E lartë",
     "store": "Dyqani i preferuar",
     "storePlaceholder": "p.sh., Costco",
-    "packageSizeCleared": "Ky artikull ishte tashmë në listë me një madhësi tjetër paketimi, prandaj rreshti nuk ruan më asnjë."
+    "packageSizeCleared": "Ky artikull ishte tashmë në listë me një madhësi tjetër paketimi, prandaj rreshti nuk ruan më asnjë.",
+    "aisles": {
+      "all": "Të gjithë korridoret",
+      "yourRoute": "Korridoret sipas rendit që ndiqni në {{store}}",
+      "shoppersRoute": "Korridoret sipas rendit që ndiqet zakonisht në {{store}}",
+      "move": "Zhvendose në një korridor tjetër",
+      "resetAccessibility": "Ktheje në korridorin e artikullit të vet",
+      "department": {
+        "PRODUCE": "Fruta dhe perime",
+        "BAKERY": "Furra",
+        "DELI": "Delikatesa",
+        "MEAT_SEAFOOD": "Mish dhe peshk",
+        "DAIRY_EGGS": "Bulmet dhe vezë",
+        "FROZEN": "Të ngrira",
+        "PANTRY": "Ushqime bazë",
+        "BREAKFAST_CEREAL": "Mëngjes dhe drithëra",
+        "SNACKS_CANDY": "Snacks dhe ëmbëlsira",
+        "BEVERAGES": "Pije",
+        "CONDIMENTS_SPICES": "Salca dhe erëza",
+        "INTERNATIONAL": "Ndërkombëtare",
+        "HOUSEHOLD": "Shtëpiake",
+        "PERSONAL_CARE": "Kujdes personal",
+        "BABY": "Foshnje",
+        "PET": "Kafshë shtëpiake",
+        "OTHER": "Të tjera"
+      }
+    },
+    "storeMode": {
+      "open": "Hap mënyrën e dyqanit",
+      "inCart_one": "{{done}} nga {{count}} artikull në shportë",
+      "inCart_other": "{{done}} nga {{count}} artikuj në shportë",
+      "atStore": "Te {{store}}",
+      "chooseStore": "Zgjidhni dyqanin ku ndodheni",
+      "estimate": "≈ {{price}} për të blerë",
+      "estimatePartial_one": "≈ {{price}} për {{priced}} nga {{count}} artikull për të blerë",
+      "estimatePartial_other": "≈ {{price}} për {{priced}} nga {{count}} artikuj për të blerë",
+      "cart": "Në shportë",
+      "allDone": "Gjithçka është në shportë",
+      "allDoneHint": "Prekni {{done}} pasi të keni paguar.",
+      "cartEmpty": "Ende asgjë në shportë"
+    }
   },
   "purchaseHistory": {
     "quantityLabel": "Sasia:",

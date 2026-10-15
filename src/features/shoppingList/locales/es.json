@@ -85,6 +85,7 @@
     "listStoreLabel": "Compras en",
     "listStoreDesc": "Dónde compras. Los precios que introduces al marcar artículos como comprados se guardan para esta tienda.",
     "suggestedLinePrice": "≈ {{price}}",
+    "suggestedLinePriceSimilar": "≈ {{price}}, productos similares",
     "storeComparison": {
       "title": "Dónde sale más barato",
       "scopeStores": "Tiendas",
@@ -197,7 +198,47 @@
     "priorityHigh": "Alta",
     "store": "Tienda preferida",
     "storePlaceholder": "ej., Costco",
-    "packageSizeCleared": "Este artículo ya estaba en la lista con otro tamaño de paquete, así que la línea ya no guarda ninguno."
+    "packageSizeCleared": "Este artículo ya estaba en la lista con otro tamaño de paquete, así que la línea ya no guarda ninguno.",
+    "aisles": {
+      "all": "Todos los pasillos",
+      "yourRoute": "Pasillos en el orden en que recorres {{store}}",
+      "shoppersRoute": "Pasillos en el orden en que se suele recorrer {{store}}",
+      "move": "Mover a otro pasillo",
+      "resetAccessibility": "Devolverlo al pasillo de su artículo",
+      "department": {
+        "PRODUCE": "Frutas y verduras",
+        "BAKERY": "Panadería",
+        "DELI": "Charcutería",
+        "MEAT_SEAFOOD": "Carne y pescado",
+        "DAIRY_EGGS": "Lácteos y huevos",
+        "FROZEN": "Congelados",
+        "PANTRY": "Despensa",
+        "BREAKFAST_CEREAL": "Desayuno y cereales",
+        "SNACKS_CANDY": "Aperitivos y dulces",
+        "BEVERAGES": "Bebidas",
+        "CONDIMENTS_SPICES": "Salsas y especias",
+        "INTERNATIONAL": "Internacional",
+        "HOUSEHOLD": "Hogar y limpieza",
+        "PERSONAL_CARE": "Cuidado personal",
+        "BABY": "Bebé",
+        "PET": "Mascotas",
+        "OTHER": "Otros"
+      }
+    },
+    "storeMode": {
+      "open": "Abrir el modo tienda",
+      "inCart_one": "{{done}} de {{count}} artículo en el carrito",
+      "inCart_other": "{{done}} de {{count}} artículos en el carrito",
+      "atStore": "En {{store}}",
+      "chooseStore": "Elige la tienda en la que estás",
+      "estimate": "≈ {{price}} por comprar",
+      "estimatePartial_one": "≈ {{price}} por {{priced}} de {{count}} artículo por comprar",
+      "estimatePartial_other": "≈ {{price}} por {{priced}} de {{count}} artículos por comprar",
+      "cart": "En el carrito",
+      "allDone": "Todo está en el carrito",
+      "allDoneHint": "Pulsa {{done}} cuando hayas pagado.",
+      "cartEmpty": "Aún no hay nada en el carrito"
+    }
   },
   "purchaseHistory": {
     "quantityLabel": "Cantidad:",

@@ -218,6 +218,18 @@ query GetShoppingListItemsFiltered(
             type
           }
           sortOrder
+          # Store mode groups the line under its aisle.
+          storeDepartment
+          storeDepartmentOverride
+          # Store mode adds up what is left to buy.
+          suggestedPrice {
+            amount
+            currency {
+              id
+              code
+              decimalPlaces
+            }
+          }
           item {
             id
             imageUrl
@@ -226,6 +238,8 @@ query GetShoppingListItemsFiltered(
               url
               kind
             }
+            # Where a new line of this item, or a reset one, is shelved.
+            storeDepartment
           }
           ...SortableItem_item
         }
@@ -698,6 +712,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
         ...UpdateShoppingListItem_item
         ...useToggleShoppingItem_item
         ...useQuantityEditModal_updateQuantityResult
+        ...useMoveToAisleModal_item
       }
       shoppingList {
         id

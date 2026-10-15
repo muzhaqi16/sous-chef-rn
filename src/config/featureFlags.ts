@@ -9,7 +9,9 @@ export type FeatureFlag =
   | 'receiptParsing'
   | 'recipeCapturePhoto'
   | 'recipeCaptureText'
-  | 'recipeCaptureUrl';
+  | 'recipeCaptureUrl'
+  | 'storeMode'
+  | 'storeRoutes';
 
 /**
  * What a build allows when neither the fork nor the build says otherwise. A
@@ -26,6 +28,11 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   recipeCapturePhoto: true,
   recipeCaptureText: true,
   recipeCaptureUrl: true,
+  // Store mode: the list walked aisle by aisle on a screen of its own, which a
+  // user turns on in Settings; off, the shopping list offers no way in.
+  storeMode: true,
+  // A list's walking order learned from trips (`ShoppingList.storeRoute`).
+  storeRoutes: true,
 };
 
 const isFeatureFlag = (name: string): name is FeatureFlag =>

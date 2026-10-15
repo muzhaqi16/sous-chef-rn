@@ -63,6 +63,8 @@ const AUTHORS: Record<string, string> = {
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
     'single host, self-inset',
+  'src/features/shoppingList/components/storeMode/StoreModeHeader.tsx':
+    'single host, self-inset',
   'src/features/shoppingList/components/skeletons/ShoppingListSkeleton.tsx':
     'single host, self-inset',
   'src/features/shoppingList/components/SkeletonList.tsx':

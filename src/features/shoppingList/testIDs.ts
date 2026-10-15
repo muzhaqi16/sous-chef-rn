@@ -19,6 +19,16 @@ export const shoppingListTestIDs = {
   tabBarPrefix: 'filter-tab',
   /** An action button that brings no testID of its own, by position. */
   tabBarAction: (index: number) => `filter-tab-action-${index}`,
+  /** The header icon that opens store mode, and store mode's own parts. */
+  storeModeButton: 'shopping-list-store-mode',
+  storeModeScreen: 'store-mode-screen',
+  storeModeDone: 'store-mode-done',
+  storeModeChooseStore: 'store-mode-choose-store',
+  /** One aisle's heading, by its department. */
+  aisleHeader: (department: string) => `shopping-list-aisle-${department}`,
+  aisleRouteNote: 'shopping-list-aisle-route-note',
+  /** Store mode's aisle row: tabs go through `kitTestIDs.filterTab` under this prefix. */
+  aisleTabPrefix: 'store-mode-aisle-tab',
 
   /** The add-item sheet's host prefix, for the `catalogTestIDs` sheet builders. */
   addSheetPrefix: 'add-shopping-item',

@@ -307,6 +307,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       icon: 'archive-outline',
       onPress: handleBatchMoveToPantryWithConfirmation,
       disabled: batchMoveToPantryLoading,
+      accessibilityLabel: t('shoppingListTabs.moveAllTitle'),
       testID: shoppingListTestIDs.batchMoveToPantryButton,
     });
   }
