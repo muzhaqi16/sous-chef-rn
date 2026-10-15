@@ -87,6 +87,8 @@ function writeRecipeRow(
           ? RecipeStatus.Draft
           : RecipeStatus.PendingReview,
       originalAuthor: input.attribution?.originalAuthor ?? null,
+      source: input.attribution?.source ?? null,
+      sourceUrl: input.attribution?.sourceUrl ?? null,
       tips: input.tips ?? null,
       tags: input.tags ?? [],
       // The create input's JSON is the same runtime instructions array the

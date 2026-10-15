@@ -20,6 +20,8 @@ export interface CaptureEntry {
   source: CaptureSource;
   /** What its row says: the page's host, or the text's first words. */
   label: string | null;
+  /** The page it read, or the post its text came from: the recipe's link. */
+  link?: string;
   createdAt: string;
   state: 'reading' | 'incomplete';
 }
@@ -107,6 +109,12 @@ registerSessionScopedStore('recipeCaptures', () =>
 
 export const useCaptureEntries = () =>
   useRecipeCaptureStore(state => state.entries);
+
+/** The link a capture this device asked for read; null when it had none. */
+export const useCaptureLink = (captureId: string | undefined) =>
+  useRecipeCaptureStore(
+    state => state.entries.find(entry => entry.id === captureId)?.link ?? null,
+  );
 
 /** The capture a recipe came from, while it is still held. */
 export const useHeldCaptureId = (recipeId: string | undefined) =>

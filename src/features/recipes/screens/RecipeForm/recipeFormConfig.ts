@@ -12,6 +12,7 @@ import {
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type {
+  CapturedFrom,
   IngredientFormState,
   RecipeFormState,
   StepFormState,
@@ -138,6 +139,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       lazyMessage('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
     ),
   originalAuthor: string().defined(),
+  capturedFrom: mixed<CapturedFrom>().nullable().defined(),
   tags: string()
     .defined()
     .test(
@@ -175,6 +177,7 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   notes: '',
   tips: '',
   originalAuthor: '',
+  capturedFrom: null,
   tags: '',
   version: null,
   ingredientsUnread: false,

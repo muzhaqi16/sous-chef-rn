@@ -57,6 +57,18 @@ function labelOf(request: CaptureRequest): string | null {
   }
 }
 
+/** The page a capture reads, or the post its text came from. */
+function linkOf(request: CaptureRequest): string | undefined {
+  switch (request.source) {
+    case 'url':
+      return request.url;
+    case 'text':
+      return request.sourceUrl;
+    case 'photo':
+      return undefined;
+  }
+}
+
 function sourceInput(
   request: CaptureRequest,
 ): Omit<CreateRecipeCaptureInput, 'id' | 'locale'> {
@@ -123,6 +135,7 @@ export function useRecipeCapture() {
       id,
       source: request.source,
       label: labelOf(request),
+      link: linkOf(request),
       createdAt: new Date().toISOString(),
     });
     setSending(true);

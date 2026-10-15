@@ -2,6 +2,7 @@ import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type {
   CreateRecipeInput,
+  RecipeAttributionInput,
   RecipeIngredientInput,
   Diet,
   HealthGoal,
@@ -53,6 +54,18 @@ const unitLabelOf = (
   unit: { symbol: string; name: string } | null | undefined,
 ): string => firstNonBlank(unit?.symbol, unit?.name) ?? '';
 
+/** Who wrote the recipe and where a capture read it; undefined when neither is known. */
+function attributionOf(
+  state: RecipeFormState,
+): RecipeAttributionInput | undefined {
+  const originalAuthor = state.originalAuthor.trim() || undefined;
+  const source = state.capturedFrom?.source ?? undefined;
+  const sourceUrl = state.capturedFrom?.sourceUrl ?? undefined;
+  return originalAuthor || source || sourceUrl
+    ? { originalAuthor, source, sourceUrl }
+    : undefined;
+}
+
 /** What an incomplete capture read, as the form takes it. */
 export interface CaptureDraftFill {
   name: string | null;
@@ -62,6 +75,9 @@ export interface CaptureDraftFill {
   cookTimeMinutes: number | null;
   imageUrl: string | null;
   author: string | null;
+  sourceName: string | null;
+  /** The link the capture read, as this device sent it. */
+  sourceUrl: string | null;
   ingredients: Omit<IngredientFormState, 'id' | 'sortOrder'>[];
   steps: string[];
 }
@@ -234,9 +250,7 @@ export function useRecipeForm() {
       notes: state.notes.trim() || undefined,
       tips: state.tips.trim() || undefined,
       tags: parseCommaTags(state.tags),
-      attribution: state.originalAuthor.trim()
-        ? { originalAuthor: state.originalAuthor.trim() }
-        : undefined,
+      attribution: attributionOf(state),
       ingredients,
       instructions,
       media: {
@@ -365,6 +379,7 @@ export function useRecipeForm() {
       notes: content.notes ?? '',
       tips: content.tips ?? '',
       originalAuthor: content.originalAuthor ?? '',
+      capturedFrom: null,
       tags: content.tags.join(', '),
       version: recipe.version,
       // A proposed edit carries its whole list; the live one is one page, and
@@ -392,6 +407,7 @@ export function useRecipeForm() {
       prepTimeMinutes: minutesText(fill.prepTimeMinutes),
       cookTimeMinutes: minutesText(fill.cookTimeMinutes),
       originalAuthor: fill.author ?? '',
+      capturedFrom: { source: fill.sourceName, sourceUrl: fill.sourceUrl },
       ingredients: fill.ingredients.map((row, index) => ({
         ...row,
         id: generateTempId(),

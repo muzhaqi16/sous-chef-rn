@@ -32,6 +32,12 @@ export interface StepFormState {
   sortOrder: number;
 }
 
+/** The publisher or site a capture named, and the link it read. */
+export interface CapturedFrom {
+  source: string | null;
+  sourceUrl: string | null;
+}
+
 export interface RecipeFormState {
   // Basic
   name: string;
@@ -58,6 +64,8 @@ export interface RecipeFormState {
   notes: string;
   tips: string;
   originalAuthor: string;
+  // Where a capture read the recipe: sent with a create, and no field shows it.
+  capturedFrom: CapturedFrom | null;
   // Comma-separated recipe tags (freeform), split into a string[] on save.
   tags: string;
   // The version the form loaded; null for a new recipe.

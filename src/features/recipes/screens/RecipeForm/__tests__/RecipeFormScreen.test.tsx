@@ -23,6 +23,7 @@ import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
+import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 import { RecipeFormScreen } from '../index';
 
 type RecipeFormScreenProps = StaticScreenProps<
@@ -268,6 +269,72 @@ describe('RecipeFormScreen', () => {
       await findByText('At least one instruction step is required'),
     ).toBeTruthy();
     expect(create.fired).toEqual([]);
+  });
+
+  // The server's own save of a complete capture records its site and link.
+  it('saves a finished capture with the site and link it was read from', async () => {
+    const user = userEvent.setup();
+    useRecipeCaptureStore.getState().addReading({
+      id: 'capture-2',
+      source: 'text',
+      label: 'Miso salmon',
+      link: 'https://www.instagram.com/p/abc/',
+      createdAt: new Date().toISOString(),
+    });
+    const capture = recordMock(RecipeCaptureDocument, {
+      data: {
+        recipeCapture: {
+          __typename: 'RecipeCapture',
+          id: 'capture-2',
+          status: RecipeCaptureStatus.Incomplete,
+          recipe: null,
+          draft: {
+            __typename: 'RecipeCaptureDraft',
+            name: 'Miso salmon',
+            imageUrl: null,
+            author: 'Ana',
+            sourceName: 'instagram.com',
+            lines: [
+              {
+                __typename: 'ParsedIngredientLine',
+                originalText: 'salmon',
+                name: 'salmon',
+                quantity: null,
+                unit: null,
+                item: null,
+                candidates: [],
+              },
+            ],
+            steps: [{ step: 1, text: 'Roast', section: null }],
+          },
+        },
+      },
+    });
+    const create = recordMock(CreateRecipeDocument, {
+      data: { createRecipe: { __typename: 'CreateRecipePayload' } },
+    });
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen route={{ params: { captureId: 'capture-2' } }} />,
+      { operationMocks: [capture.mock, create.mock] },
+    );
+    await waitFor(() =>
+      expect(getByTestId('ingredient-count')).toHaveTextContent('1'),
+    );
+
+    await user.press(getByTestId('save-button'));
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    expect(create.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({
+          attribution: {
+            originalAuthor: 'Ana',
+            source: 'instagram.com',
+            sourceUrl: 'https://www.instagram.com/p/abc/',
+          },
+        }),
+      }),
+    ]);
   });
 
   // A save replaces the recipe's whole ingredient list with the form's.
