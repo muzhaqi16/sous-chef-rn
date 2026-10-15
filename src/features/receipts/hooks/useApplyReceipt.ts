@@ -34,21 +34,15 @@ export interface ReceiptApplyLine {
   listLine?: ShoppingListItemNode;
 }
 
-// A bare 1 with no unit is left to the API: one, or the item's package size,
-// rather than one of its tracking unit (1 mL of milk).
-const statedQuantity = (choice: ReceiptLineChoice) =>
-  choice.unitId || choice.unitText || choice.quantity !== 1
-    ? choice.quantity
-    : undefined;
-
 const namesUnit = (choice: ReceiptLineChoice) =>
   choice.unitId !== null || choice.unitText !== '';
 
-// What an add off the list records. A printed count with no unit (2 @) is what
-// was bought, as its stack counts it; null for a part of something no unit names.
+// What an add off the list records. A count with no unit, 1 included, is what
+// was bought, as its stack counts it: an add stating none is one of the item's
+// tracking unit, which prices 1 g of cheese at the line's total. Null for a
+// part of something no unit names.
 const intakeOf = (choice: ReceiptLineChoice, heldUnit: HeldUnit) => {
-  const quantity = statedQuantity(choice);
-  if (quantity === undefined) return {};
+  const { quantity } = choice;
   if (namesUnit(choice)) {
     return { quantity, unit: refByIdOrName(choice.unitId, choice.unitText) };
   }

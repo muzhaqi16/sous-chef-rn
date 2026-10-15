@@ -63,6 +63,39 @@ describe('useApplyReceipt', () => {
     expect(errorService.reportError).toHaveBeenCalledTimes(1);
   });
 
+  // Left unstated, the API records one of the item's tracking unit: a block of
+  // cheese as 1 g, observed at its total per gram.
+  it.each([1, 2])(
+    'adds %i bought with no unit as that many packages',
+    async count => {
+      mockAddItem.mockResolvedValue({ status: 'added' });
+      const { result } = renderHook(() => useApplyReceipt(undefined));
+
+      await act(async () => {
+        await result.current.apply(
+          [
+            {
+              index: 1,
+              choice: lineChoice({
+                itemId: 'cat-1',
+                quantity: count,
+                price: 4.41,
+              }),
+            },
+          ],
+          { purchasedOn: '2026-10-15' },
+        );
+      });
+
+      const [[, input]] = mockAddItem.mock.calls;
+      expect(input).toMatchObject({
+        amount: { packages: { count } },
+        purchase: expect.objectContaining({ totalCost: 4.41 }),
+      });
+      expect(input).not.toHaveProperty('quantity');
+    },
+  );
+
   describe('a line off the list, in a unit the receipt does not name', () => {
     const applyOff = async (quantity: number) => {
       const { result } = renderHook(() => useApplyReceipt('list-1'));
