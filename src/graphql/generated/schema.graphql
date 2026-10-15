@@ -12852,6 +12852,11 @@ type Query {
     id: ID!
   ): ShoppingListItem
   """
+  Where a shopping list is cheapest, by branch or by chain. Refused as a read
+  of the list is to a caller who cannot read it.
+  """
+  shoppingListStoreComparison(input: ShoppingListStoreComparisonInput!): ShoppingListStoreComparison!
+  """
   Get shopping lists accessible to the current user (owned, collaborated, or home-based).
   The default list is `filters: { isDefault: true }`; a list's collaborators
   are ShoppingList.collaboratorsConnection.
@@ -15890,6 +15895,41 @@ input ShoppingListSettingsInput {
 }
 
 """
+Where a list is cheapest, from recorded prices. Each candidate prices the
+list's comparable lines (unpurchased, a catalog item, a unit that converts
+without an assumption) at its own median, a branch filling a gap from its
+chain, then from any store. Prices are counted as itemPriceComparison counts
+them; no household's prices are revealed.
+"""
+type ShoppingListStoreComparison {
+  """
+  The ranked candidates, cheapest first, at most five; then the target, when not among them
+  """
+  candidates: [StoreComparisonCandidate!]!
+  comparableLines: Int!
+  currency: Currency!
+  """
+  Unpurchased lines that cannot be compared: no catalog item, or a unit that does not convert
+  """
+  leftOutLines: Int!
+  scope: PriceComparisonScope!
+  shoppingList: ShoppingList!
+  """True when the list held more than the 200 lines a comparison considers"""
+  truncated: Boolean!
+  """Comparable lines no observation prices, left out of every total"""
+  unpricedLines: [ShoppingListItem!]!
+  windowDays: Int!
+}
+
+input ShoppingListStoreComparisonInput {
+  listId: ID!
+  """Compare store branches (the default) or whole chains"""
+  scope: PriceComparisonScope
+  """How far back observations count: default 90 days, at most 365"""
+  windowDays: Int
+}
+
+"""
 Subtype discriminator for shopping list domain events.
 Values match the client-side changeType contract.
 """
@@ -16535,6 +16575,35 @@ type Store {
 type StoreChain {
   id: ID!
   name: String!
+}
+
+"""
+One branch or chain the list's comparable lines are priced at, in the list's currency.
+"""
+type StoreComparisonCandidate {
+  """Lines filled from the any-store median"""
+  anyStoreFilledLines: Int!
+  """The branch's chain, or the chain compared"""
+  chain: StoreChain
+  """Lines a branch fills from its chain's median"""
+  chainFilledLines: Int!
+  """Every comparable line with a price anywhere, priced here or filled"""
+  estimatedTotal: Float!
+  """The list's target store, or that store's chain"""
+  isTarget: Boolean!
+  """The newest observation behind the lines it prices itself"""
+  newestObservedAt: DateTime
+  """The oldest observation behind the lines it prices itself"""
+  oldestObservedAt: DateTime
+  """Lines priced from this branch's or chain's own observations"""
+  pricedLines: Int!
+  """
+  Prices at least half of the comparable lines itself, so its total compares
+  """
+  ranked: Boolean!
+  scope: PriceComparisonScope!
+  """The branch, when scope is STORE"""
+  store: Store
 }
 
 """
