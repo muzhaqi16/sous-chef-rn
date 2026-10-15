@@ -82,6 +82,7 @@
     "failedToSetReminder": "Impossibile impostare il promemoria",
     "failedToClearReminder": "Impossibile rimuovere il promemoria",
     "budgetSection": "Budget",
+    "listStoreDesc": "Dove fai la spesa. I prezzi che inserisci quando segni gli articoli come acquistati vengono salvati per questo negozio.",
     "estimatedTotalLabel": "Totale stimato",
     "unpricedItemsNote_one": "{{count}} articolo senza prezzo",
     "unpricedItemsNote_other": "{{count}} articoli senza prezzo",

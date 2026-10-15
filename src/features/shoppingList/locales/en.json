@@ -82,6 +82,7 @@
     "failedToSetReminder": "Failed to set reminder",
     "failedToClearReminder": "Failed to clear reminder",
     "budgetSection": "Budget",
+    "listStoreDesc": "Where you're shopping. Prices you enter when you mark items purchased are saved for this store.",
     "estimatedTotalLabel": "Estimated Total",
     "unpricedItemsNote_one": "{{count}} item without a price",
     "unpricedItemsNote_other": "{{count}} items without a price",

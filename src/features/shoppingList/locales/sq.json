@@ -82,6 +82,7 @@
     "failedToSetReminder": "Nuk u caktua kujtuesi",
     "failedToClearReminder": "Nuk u hoq kujtuesi",
     "budgetSection": "Buxheti",
+    "listStoreDesc": "Ku bën pazar. Çmimet që fut kur shënon artikujt si të blerë ruhen për këtë dyqan.",
     "estimatedTotalLabel": "Totali i vlerësuar",
     "unpricedItemsNote_one": "{{count}} artikull pa çmim",
     "unpricedItemsNote_other": "{{count}} artikuj pa çmim",

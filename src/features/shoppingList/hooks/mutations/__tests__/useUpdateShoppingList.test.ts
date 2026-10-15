@@ -21,6 +21,7 @@ const LIST = {
   completedShopDate: null,
   budgetAmount: null,
   currency: 'USD',
+  targetStore: null,
   version: 1,
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -190,6 +191,59 @@ describe('useUpdateShoppingList', () => {
           id: 'list-1',
           name: 'Groceries',
           planning: { budgetAmount: 150, currency: 'USD' },
+          version: 1,
+        },
+      },
+    ]);
+  });
+
+  // The trip's store is where a ticked line's price is recorded.
+  it('sends the store as planning.targetStoreId, shows it by name at once, and clears it with null', async () => {
+    const cache = seedList();
+    const update = recordMock(UpdateShoppingListDocument, {
+      data: { updateShoppingList: null }, // queued signature
+    });
+    const { result } = renderHookWithApollo(
+      () => useUpdateShoppingList('Failed to save'),
+      { cache, operationMocks: [update.mock] },
+    );
+    const readStore = () =>
+      cache.readFragment<{ targetStore: { id: string; name: string } | null }>({
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        fragment: UseUpdateShoppingList_ListFragmentDoc,
+        fragmentName: 'useUpdateShoppingList_list',
+      })?.targetStore;
+
+    await act(async () => {
+      const promise = result.current.updateShoppingList('list-1', {
+        name: 'Groceries',
+        targetStore: { id: 'store-1', name: 'Costco' },
+      });
+      expect(readStore()).toMatchObject({ id: 'store-1', name: 'Costco' });
+      await promise;
+    });
+    await act(async () => {
+      await result.current.updateShoppingList('list-1', {
+        name: 'Groceries',
+        targetStore: null,
+      });
+    });
+
+    expect(readStore()).toBeNull();
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: 'list-1',
+          name: 'Groceries',
+          planning: { targetStoreId: 'store-1' },
+          version: 1,
+        },
+      },
+      {
+        input: {
+          id: 'list-1',
+          name: 'Groceries',
+          planning: { targetStoreId: null },
           version: 1,
         },
       },

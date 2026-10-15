@@ -38,24 +38,40 @@ import { dayAsInstant } from '#/utils/dateUtils';
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
 export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
 
+interface StoreChoice {
+  id: string;
+  name: string;
+}
+
 function syncListFormState(
   shoppingList:
-    | { name: string; isDefault: boolean; budgetAmount?: number | null }
+    | {
+        name: string;
+        isDefault: boolean;
+        budgetAmount?: number | null;
+        targetStore: StoreChoice | null;
+      }
     | null
     | undefined,
   listId: string | undefined,
   setName: (v: string) => void,
   setIsDefault: (v: boolean) => void,
   setBudgetInput: (v: string) => void,
+  setStoreInput: (v: string) => void,
+  setPickedStore: (store: StoreChoice | null) => void,
 ) {
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
     setBudgetInput(formatNumberForInput(shoppingList.budgetAmount));
+    setStoreInput(shoppingList.targetStore?.name ?? '');
+    setPickedStore(shoppingList.targetStore);
   } else if (listId) {
     setName('');
     setIsDefault(false);
     setBudgetInput('');
+    setStoreInput('');
+    setPickedStore(null);
   }
 }
 
@@ -73,6 +89,10 @@ export const useListSettings = (listId: string | undefined) => {
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
+  // What the store field shows, and the store picked from its suggestions: a
+  // typed name that is not picked names no store.
+  const [storeInput, setStoreInput] = useState('');
+  const [pickedStore, setPickedStore] = useState<StoreChoice | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
@@ -234,6 +254,8 @@ export const useListSettings = (listId: string | undefined) => {
       setName,
       setIsDefault,
       setBudgetInput,
+      setStoreInput,
+      setPickedStore,
     );
   }, [shoppingList, listId]);
 
@@ -255,6 +277,9 @@ export const useListSettings = (listId: string | undefined) => {
     }
   });
 
+  const handleStoreSelected = (id: string | null, storeName: string | null) =>
+    setPickedStore(id && storeName ? { id, name: storeName } : null);
+
   const handleSave = () => {
     if (!name.trim()) {
       toastService.error(t('errors.listNameEmpty'));
@@ -274,6 +299,7 @@ export const useListSettings = (listId: string | undefined) => {
       budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
         ? typedBudget
         : undefined;
+    const storeChanged = pickedStore?.id !== shoppingList?.targetStore?.id;
 
     void executeWithLoadingState(
       async () => {
@@ -318,6 +344,7 @@ export const useListSettings = (listId: string | undefined) => {
           await updateShoppingList(listId, {
             name: name.trim(),
             ...(defaultTurnedOff && { isDefault: false }),
+            ...(storeChanged && { targetStore: pickedStore }),
             ...(changedBudget !== undefined && {
               planning: {
                 budgetAmount: changedBudget,
@@ -577,6 +604,7 @@ export const useListSettings = (listId: string | undefined) => {
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
+    handleStoreSelected,
     handleToggleComplete,
     handleTogglePriceTracking,
     homes,
@@ -617,11 +645,13 @@ export const useListSettings = (listId: string | undefined) => {
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
+    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
+    storeInput,
     templateName,
     templates,
     totalCost,

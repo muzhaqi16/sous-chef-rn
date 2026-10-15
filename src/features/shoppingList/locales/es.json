@@ -82,6 +82,7 @@
     "failedToSetReminder": "No se pudo establecer el recordatorio",
     "failedToClearReminder": "No se pudo quitar el recordatorio",
     "budgetSection": "Presupuesto",
+    "listStoreDesc": "Dónde compras. Los precios que introduces al marcar artículos como comprados se guardan para esta tienda.",
     "estimatedTotalLabel": "Total estimado",
     "unpricedItemsNote_one": "{{count}} artículo sin precio",
     "unpricedItemsNote_other": "{{count}} artículos sin precio",

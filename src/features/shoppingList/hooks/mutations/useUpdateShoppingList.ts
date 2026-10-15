@@ -28,6 +28,9 @@ interface ShoppingListSettingsUpdate {
   // Rides on the same write as the rename: every versioned write bumps the
   // version, so a second write would need the first one's answer first.
   planning?: Pick<ShoppingListPlanningInput, 'budgetAmount' | 'currency'>;
+  // The trip's store, where a ticked line's price is recorded; null clears it.
+  // Sent as planning.targetStoreId; the name is for the local write.
+  targetStore?: { id: string; name: string } | null;
 }
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
@@ -40,6 +43,17 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     id: string,
     updates: ShoppingListSettingsUpdate,
   ) => {
+    const { targetStore, ...fields } = updates;
+    const planning =
+      targetStore === undefined
+        ? fields.planning
+        : { ...fields.planning, targetStoreId: targetStore?.id ?? null };
+    const localStore:
+      | UseUpdateShoppingList_ListFragment['targetStore']
+      | undefined =
+      targetStore === undefined
+        ? undefined
+        : targetStore && { __typename: 'Store', ...targetStore };
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
     const snapshot = cacheId
       ? client.cache.readFragment<UseUpdateShoppingList_ListFragment>({
@@ -73,6 +87,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
         ...(updates.planning?.currency !== undefined && {
           currency: updates.planning.currency,
         }),
+        ...(localStore !== undefined && { targetStore: localStore }),
         updatedAt: new Date().toISOString(),
       };
       try {
@@ -105,7 +120,14 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     const settled = await settleMutation(
       () =>
         mutate({
-          variables: { input: { id, ...updates, version: snapshot.version } },
+          variables: {
+            input: {
+              id,
+              ...fields,
+              ...(planning !== undefined && { planning }),
+              version: snapshot.version,
+            },
+          },
         }),
       {
         document: UpdateShoppingListDocument,

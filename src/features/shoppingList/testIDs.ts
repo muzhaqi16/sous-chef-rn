@@ -9,6 +9,8 @@ export const shoppingListTestIDs = {
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
   moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',
   clearAllButton: 'shopping-list-clear-all',
+  /** List settings: the store the list is shopped at. */
+  listSettingsStore: 'list-settings-store',
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',
