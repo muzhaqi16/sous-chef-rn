@@ -11,6 +11,9 @@ export const shoppingListTestIDs = {
   clearAllButton: 'shopping-list-clear-all',
   /** List settings: the store the list is shopped at. */
   listSettingsStore: 'list-settings-store',
+  /** List settings: where the list is cheapest, and one candidate by its id. */
+  storeComparison: 'list-store-comparison',
+  storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',

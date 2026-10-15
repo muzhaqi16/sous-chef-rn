@@ -19,6 +19,7 @@ import { useListSettings } from '#features/shoppingList/hooks/useListSettings';
 import { listSettingsStyles as styles } from '#features/shoppingList/components/listSettings/styles';
 import { BudgetSection } from '#features/shoppingList/components/listSettings/BudgetSection';
 import { StoreSection } from '#features/shoppingList/components/listSettings/StoreSection';
+import { StoreComparisonSection } from '#features/shoppingList/components/listSettings/StoreComparisonSection';
 import { ListStatusSection } from '#features/shoppingList/components/listSettings/ListStatusSection';
 import { RecurringSection } from '#features/shoppingList/components/listSettings/RecurringSection';
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
@@ -403,6 +404,8 @@ export const ListSettings: React.FC<
         setStoreInput={setStoreInput}
         handleStoreSelected={handleStoreSelected}
       />
+
+      <StoreComparisonSection listId={listId} />
 
       <BudgetSection
         budgetInput={budgetInput}

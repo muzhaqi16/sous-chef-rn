@@ -33,6 +33,7 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
       </Text>
       <StoreAutocompleteField
         variant="modal"
+        label={t('shoppingListScreens.listStoreLabel')}
         value={storeInput}
         onChangeText={setStoreInput}
         onStoreSelected={handleStoreSelected}

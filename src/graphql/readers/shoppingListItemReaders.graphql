@@ -134,6 +134,14 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       name
     }
   }
+  suggestedPrice {
+    amount
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
   unit {
     id
     name

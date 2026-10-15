@@ -234,6 +234,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
       isPurchased: false,
       movedToPantryAt: null,
     },
+    suggestedPrice: null,
     item: null,
     ...overrides,
   };
@@ -310,6 +311,50 @@ describe('SwipeableListItem (SortableItem)', () => {
       },
     );
     expect(screen.getByText('2 liters')).toBeTruthy();
+  });
+
+  describe('the price recorded prices suggest', () => {
+    const suggestedPrice = {
+      __typename: 'PriceSuggestion',
+      amount: 1.25,
+      currency: {
+        __typename: 'Currency',
+        id: 'cur-usd',
+        code: 'USD',
+        decimalPlaces: 2,
+      },
+    };
+
+    // Per one of the line's unit, so the line costs that times its quantity.
+    it('shows what the line would cost beside its category', () => {
+      const entry = seedItem({ quantity: 2, suggestedPrice });
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+      expect(screen.getByText(/^2 liters · ≈ .*2\.50/)).toBeTruthy();
+    });
+
+    it('shows none on a bought line', () => {
+      const entry = seedItem({
+        suggestedPrice,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedRow(entry) },
+      );
+      expect(screen.getByText('2 liters')).toBeTruthy();
+      expect(screen.queryByText(/≈/)).toBeNull();
+    });
   });
 
   it('renders a swipeable wrapper', () => {

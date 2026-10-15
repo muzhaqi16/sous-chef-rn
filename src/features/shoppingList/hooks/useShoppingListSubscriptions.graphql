@@ -35,6 +35,15 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     type
   }
   sortOrder
+  # The row reads it; a write that leaves it out blanks the row.
+  suggestedPrice {
+    amount
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
   item {
     id
     imageUrl

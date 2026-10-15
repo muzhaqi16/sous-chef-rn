@@ -17,6 +17,16 @@ fragment SortableItem_item on ShoppingListItem {
     # act on again. Cleared when the line re-enters an unpurchased state.
     movedToPantryAt
   }
+  # Per one of the line's unit, from recorded prices: the line's store, else
+  # the list's, then that store's chain, then any store. Null with none.
+  suggestedPrice {
+    amount
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
   item {
     id
     imageUrl

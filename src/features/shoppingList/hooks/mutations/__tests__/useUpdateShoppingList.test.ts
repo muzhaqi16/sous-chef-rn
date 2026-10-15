@@ -5,11 +5,16 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
+import { ApolloClient } from '@apollo/client';
+import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -248,6 +253,56 @@ describe('useUpdateShoppingList', () => {
         },
       },
     ]);
+  });
+
+  // The list's store prices every line's suggestion and marks the comparison's
+  // target, and the update's response carries neither.
+  describe('what the store prices', () => {
+    const toCostco = { id: 'store-1', name: 'Costco' };
+    const saveStore = async (
+      result: MockDataFor<typeof UpdateShoppingListDocument>,
+    ) => {
+      const refetchQueries = jest.spyOn(
+        ApolloClient.prototype,
+        'refetchQueries',
+      );
+      const update = recordMock(UpdateShoppingListDocument, { data: result });
+      const hook = renderHookWithApollo(
+        () => useUpdateShoppingList('Failed to save'),
+        { cache: seedList(), operationMocks: [update.mock] },
+      );
+      await act(async () => {
+        await hook.result.current.updateShoppingList('list-1', {
+          name: 'Groceries',
+          targetStore: toCostco,
+        });
+      });
+      return refetchQueries;
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('is asked again once a new store is applied', async () => {
+      const refetchQueries = await saveStore({
+        updateShoppingList: {
+          __typename: 'UpdateShoppingListPayload',
+          shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        },
+      });
+
+      expect(refetchQueries).toHaveBeenCalledWith({
+        include: [
+          GetShoppingListItemsFilteredDocument,
+          ListStoreComparisonDocument,
+        ],
+      });
+    });
+
+    it('is not asked while the change waits in the queue', async () => {
+      const refetchQueries = await saveStore({ updateShoppingList: null });
+
+      expect(refetchQueries).not.toHaveBeenCalled();
+    });
   });
 
   it("sends the server's bumped version on the next versioned write", async () => {

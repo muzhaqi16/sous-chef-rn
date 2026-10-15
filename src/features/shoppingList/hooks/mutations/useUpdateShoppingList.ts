@@ -6,7 +6,11 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
@@ -140,7 +144,18 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
 
     // Queued (offline / API down): the permanent write stands and the update
     // replays keyed by the list id; there is no server entity to return.
-    return appliedPayload(settled.data)?.shoppingList ?? null;
+    const updated = appliedPayload(settled.data)?.shoppingList ?? null;
+    // The list's store prices every line's suggestion and marks the comparison's
+    // target; neither is part of the list the response carries.
+    if (updated && targetStore !== undefined) {
+      void client.refetchQueries({
+        include: [
+          GetShoppingListItemsFilteredDocument,
+          ListStoreComparisonDocument,
+        ],
+      });
+    }
+    return updated;
   };
 
   return { updateShoppingList };
