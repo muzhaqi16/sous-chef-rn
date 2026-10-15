@@ -197,6 +197,42 @@ describe('redactReceiptText', () => {
     ).toEqual(['TAX  0.49', 'VISA  12.50', 'VISA 1234.56']);
   });
 
+  it('Giant Eagle: the name of the staff member who helped is masked', () => {
+    expect(
+      redactOne([
+        '#1619 EDGEWOOD',
+        'Helped by GEORGETTE N',
+        'POTATO SLD  8.99 F',
+      ]),
+    ).toEqual(['#1619 EDGEWOOD', 'Helped by [name]', 'POTATO SLD  8.99 F']);
+  });
+
+  it('keeps an item that only starts like a staff label', () => {
+    expect(redactOne(['TEAM MEMBER', 'SERVER 4.99'])).toEqual([
+      'TEAM MEMBER',
+      'SERVER 4.99',
+    ]);
+  });
+
+  // The duplicate receipt prints dots for spaces.
+  it('Giant Eagle duplicate: dotted payment rows go, a dotted name is masked', () => {
+    expect(
+      redactOne([
+        '........COTTAGE.CHSE...........4.79.F',
+        '.....Cashier:.PAT.................',
+        '***.REF.#.51833069687....H........',
+        'AID:.A0000000031010...............',
+        'TERMINAL:.393.....................',
+        '...****.BALANCE...............28.32..',
+        'DATE:.10/15/26..TIME:.04:18pm',
+      ]),
+    ).toEqual([
+      '........COTTAGE.CHSE...........4.79.F',
+      '.....Cashier:.[name]',
+      '...****.BALANCE...............28.32..',
+    ]);
+  });
+
   it("Trader Joe's: a labelled chip cryptogram goes", () => {
     expect(
       redactOne(['AVOCADO HASS EACH  5.97', 'C: 0123456789ABCDEF']),

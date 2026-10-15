@@ -1,10 +1,31 @@
 /**
  * Payment and loyalty details never leave the phone: a line carrying one is
  * dropped whole, and everything after the payment block's change or balance
- * line is cut. A deny-list, so what survives is predictable and tested per chain
- * (`__tests__/redactReceiptText.test.ts`); the API re-applies it as defence in
- * depth.
+ * line is cut. A staff member's name is masked. A deny-list, so what survives
+ * is predictable and tested per chain (`__tests__/redactReceiptText.test.ts`);
+ * the API re-applies it as defence in depth.
  */
+
+// Some tills print dots for spaces (Giant Eagle's duplicate receipt prints
+// `***.REF.#.51833069687`), so a line is also read with every dot that is no
+// decimal point as a space.
+const SPACING_DOT = /(?<!\d)\.|\.(?!\d)/g;
+
+const spacedDots = (line: string) =>
+  line.replace(SPACING_DOT, ' ').replace(/\s+/g, ' ').trim();
+
+// The name after the label that opens its line (`Helped by GEORGETTE N`,
+// `Cashier: Pat`), masked as the API masks it.
+const STAFF_NAME =
+  /^(\W*(?:HELPED BY|SERVED BY|YOUR CASHIER(?: TODAY)?(?: WAS| IS)?|CASHIER|CHECKER|OPERATOR|ASSOCIATE|CLERK|SERVER|TEAM MEMBER)\b\W*)[A-Za-z\u00C0-\u024F].*$/i;
+
+const maskStaffName = (line: string) => {
+  if (STAFF_NAME.test(line)) return line.replace(STAFF_NAME, '$1[name]');
+  const spaced = spacedDots(line);
+  return STAFF_NAME.test(spaced)
+    ? spaced.replace(STAFF_NAME, '$1[name]')
+    : line;
+};
 
 // `************4242`, `XXXX XXXX XXXX 4242`, `#####42`.
 const MASKED_CARD = /[*Xx#•]{4,}[\s-]*\d{2,4}\b/;
@@ -73,7 +94,7 @@ const MEMBER_NUMBER =
 const PAYMENT_BLOCK_END =
   /^\W*(?:\d{1,4}\s+)?(?:CHANGE|BALANCE)(?:\s+DUE)?\b[^A-Za-z]*\d+[.,]\d{1,2}\W*$/i;
 
-const isPaymentDetail = (line: string) =>
+const readsAsPaymentDetail = (line: string) =>
   MASKED_CARD.test(line) ||
   STARRED_LAST_FOUR.test(line) ||
   NETWORK_LAST_FOUR.test(line) ||
@@ -85,6 +106,12 @@ const isPaymentDetail = (line: string) =>
   CHIP_DATA.test(line) ||
   MEMBER_NUMBER.test(line);
 
+const isPaymentDetail = (line: string) =>
+  readsAsPaymentDetail(line) || readsAsPaymentDetail(spacedDots(line));
+
+const endsPaymentBlock = (line: string) =>
+  PAYMENT_BLOCK_END.test(line) || PAYMENT_BLOCK_END.test(spacedDots(line));
+
 /** Redacts a receipt's pages in order; the pages after the cut come back empty. */
 export function redactReceiptText(
   pages: readonly (readonly string[])[],
@@ -94,8 +121,8 @@ export function redactReceiptText(
     const kept: string[] = [];
     for (const line of page) {
       if (ended) break;
-      if (!isPaymentDetail(line)) kept.push(line);
-      if (PAYMENT_BLOCK_END.test(line)) ended = true;
+      if (!isPaymentDetail(line)) kept.push(maskStaffName(line));
+      if (endsPaymentBlock(line)) ended = true;
     }
     return kept;
   });
