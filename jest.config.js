@@ -18,6 +18,11 @@ module.exports = {
   // past the limit, which turns the unbounded drift into a hard ceiling.
   // CI (`ubuntu-latest`, 4 vCPU) already ran at 3 workers and passed, which is
   // why this never showed up there — keep its count rather than halving it.
+  //
+  // The `test` script caps each worker's heap at 3072MB, well under V8's
+  // default, and sized by the heaviest file: `hookMembersAreConsumed` type-checks
+  // the whole app in one worker (~1.45GB of heap), and at 1536MB it ran out on
+  // CI, where a worker carries what earlier files left under the idle limit.
   maxWorkers: process.env.CI ? '75%' : 4,
   workerIdleMemoryLimit: '512MB',
   setupFilesAfterEnv: ['./jest.setup.js'],
