@@ -285,15 +285,13 @@ they read it.
 - **Pick the `ScrollView` by what is inside it.** RNGH's `ScrollView` is only for
   a container with RNGH gesture components inside it; plain forms and settings
   screens use RN's.
-- **A swipeable row needs an RNGH scrollable host.** RNGH cancels only v1/v2
-  handlers when a native scrollable grabs the touch
-  (`cancelAllLegacyHandlers`), and `ReanimatedSwipeable` runs on the v3
-  detectors. Over a plain RN `ScrollView` the row's pan survives the takeover,
-  accumulates horizontal drift for the whole drag, and opens rows mid-scroll. No
-  `dragOffset` value fixes this, because the drift is unbounded. An RNGH
-  scrollable restores arbitration through the orchestrator. The source chain,
-  the on-device A/B and the `dragOffset` sign constraint are in
-  [RNGH v3 handlers survive a native scroll takeover](verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover).
+- **A swipeable row sits in an RNGH scrollable host.** RNGH cancels a row's
+  pending v3 gesture when a native scrollable takes the touch, so a drifting
+  scroll no longer opens rows and a fling-stopping tap no longer presses one,
+  over either host. The RNGH host stays because RNGH's refresh control needs it
+  and the measurement covers one list outside a pager. The A/B against 3.3.0 and
+  the `dragOffset` sign constraint are in
+  [A native scroll takeover cancels a pending RNGH v3 gesture](verified-library-behaviour.md#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture).
 - **Every FlashList must decide its scroll host.**
   `sous-chef/flashlist-declares-scroll-component` makes every FlashList
   declare a `renderScrollComponent` — RNGH's, or gorhom's

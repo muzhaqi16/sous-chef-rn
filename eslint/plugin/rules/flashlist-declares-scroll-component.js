@@ -1,7 +1,7 @@
 /**
  * The only hosts that carry RNGH's gesture into a FlashList: a presence check
- * alone passes `renderScrollComponent={ScrollView}`, which reinstates exactly
- * the mid-scroll swipe and phantom press this rule exists to prevent.
+ * alone passes `renderScrollComponent={ScrollView}`, which drops the host's
+ * gesture and its `nestedScrollEnabled={false}`.
  */
 const SCROLL_HOSTS = new Set([
   'SwipeAwareScrollComponent',
@@ -20,9 +20,9 @@ module.exports = {
     schema: [],
     messages: {
       undeclared:
-        "This FlashList declares no `renderScrollComponent`, so it renders through React Native's ScrollView. RNGH answers a native view grabbing the touch stream with `cancelAllLegacyHandlers()` — v1 and v2 only — so a row's `ReanimatedSwipeable` or RNGH `Pressable` survives the takeover: the swipe opens mid-scroll and a press fires on a finger that only stopped a fling. Pass `SwipeAwareScrollComponent`, or `BottomSheetScrollable` inside a sheet. If the rows carry no RNGH gesture, exempt the file in eslint/project.js with the reason.",
+        "This FlashList declares no `renderScrollComponent`, so it renders through React Native's ScrollView. `ThemedRefreshControl` throws in that host, and the rows' RNGH gestures meet the scroll only through RNGH's takeover cancellation, never its orchestrator. Pass `SwipeAwareScrollComponent`, or `BottomSheetScrollable` inside a sheet. If the rows carry no RNGH gesture, exempt the file in eslint/project.js with the reason.",
       wrongHost:
-        "`renderScrollComponent` names a host that does not carry RNGH's gesture, so the rows behave as if it were absent: the swipe opens mid-scroll and a press fires on a finger that only stopped a fling. Pass `SwipeAwareScrollComponent`, or `BottomSheetScrollable` inside a sheet.",
+        "`renderScrollComponent` names a host that does not carry RNGH's gesture, so the list behaves as if it were absent: `ThemedRefreshControl` has no RNGH host and the shared `nestedScrollEnabled={false}` is lost. Pass `SwipeAwareScrollComponent`, or `BottomSheetScrollable` inside a sheet.",
     },
   },
   create(context) {

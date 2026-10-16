@@ -309,9 +309,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   `Swipeable`, a `GestureDetector` chain or `RectButton`-style coordination, use
   RNGH's. Use RNGH's `ScrollView` only when RNGH gestures sit inside it.
 - **A FlashList whose rows carry RNGH gestures renders
-  `renderScrollComponent={SwipeAwareScrollComponent}`**: RNGH v3 handlers survive a
-  plain RN scroll takeover. A list with no RNGH rows may be exempted in
-  `eslint/project.js` (`sous-chef/flashlist-declares-scroll-component`). Verified: `#rngh-v3-handlers-survive-a-native-scroll-takeover`.
+  `renderScrollComponent={SwipeAwareScrollComponent}`**: RNGH's refresh control needs
+  it, and RNGH's own takeover cancellation is measured on one list only. A list with
+  no RNGH rows may be exempted in `eslint/project.js`
+  (`sous-chef/flashlist-declares-scroll-component`). Verified: `#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture`.
 - **Pull-to-refresh matches its host** (`sous-chef/rngh-refresh-control-matches-host`):
   an RNGH host takes an explicit `refreshControl={<ThemedRefreshControl … />}`
   (a bare `onRefresh` builds RN's control, which drops RNGH's gesture); a plain
