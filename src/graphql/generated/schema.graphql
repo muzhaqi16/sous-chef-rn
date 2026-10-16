@@ -1874,6 +1874,14 @@ input CreateItemInput {
   description: String
   externalSources: [ExternalSourceMappingInput!]
   healthInfo: HealthInfoInput
+  """
+  Client-minted CUID2 for the item. The created item takes it (outcome
+  CREATED). A create that matched an existing item (outcome MERGED) is
+  remembered under it, so a later write naming it acts on that item. Sent
+  again, it answers the same item. An id an item the caller cannot see
+  holds is refused with a ConflictError.
+  """
+  id: ID
   media: MediaAssetsInput
   """
   Client-settable item metadata. Deliberately narrower than the stored
@@ -2351,6 +2359,13 @@ input CreateReceiptCheckInInput {
   The receipt's merchant header, when no store is given; it places the chain the lines are remembered under
   """
   merchantHeader: String
+  """
+  A saving the receipt takes off the whole order rather than one line ("$5
+  off $50"), in the lines' currency. It is counted in the household's
+  savings and changes no line's price. A check-in sent again keeps the
+  first value.
+  """
+  orderDiscount: Float
   """
   The pantry the stock goes to; the caller must be able to add items to it
   """
@@ -5203,7 +5218,9 @@ type HouseholdMoneyReport {
   periodStart: DateTime!
   """Its purchases in the period, priced or not"""
   purchaseCount: Int!
-  """The discounts recorded on its purchases"""
+  """
+  The discounts recorded on its purchases, and its receipts' order-level discounts
+  """
   savings: [CurrencyAmount!]!
   """What the household paid: the totals of its priced purchases"""
   spend: [CurrencyAmount!]!
@@ -5381,6 +5398,15 @@ input InlineItemInput {
   category: CategoryRefInput
   description: String
   displayUnitId: ID
+  """
+  Client-minted CUID2 for the item, so a client can name it before the
+  server answers. A created item takes this id. One that matched an existing
+  item by barcode or name is remembered under it for the caller, so a later
+  write naming it acts on that item, and `item(id)` reads it. Sent again,
+  it answers the same item without matching anew. An id an item the caller
+  cannot see holds is refused with a ConflictError.
+  """
+  id: ID
   name: String
   netWeight: Float
   netWeights: [ItemNetWeightInput!]
@@ -6404,7 +6430,17 @@ the GraphQL executor (@oneOf) — the request is rejected before any resolver
 runs if zero or two are provided.
 """
 input ItemRefInput @oneOf {
+  """
+  An item typed for the line: it reads the inline item's name and
+  client-minted id. Matched by name, else created under the id, as
+  InlineItemInput describes.
+  """
+  inline: InlineItemInput
   itemId: ID
+  """
+  A typed name, read as `inline: { name }` with no client-minted id.
+  `inline` replaces it: it goes once every supported client sends `inline`.
+  """
   itemName: String
   """
   A barcode's product record, as Item.matchedVariation returned it: the line
@@ -13050,6 +13086,10 @@ type ReceiptCheckIn {
   id: ID!
   """How many lines the call that created it carried"""
   lineCount: Int!
+  """
+  The saving the receipt took off the whole order; null when none was stated
+  """
+  orderDiscount: Float
   pantryId: ID!
   """The day on the receipt"""
   purchasedOn: LocalDate!
@@ -13074,8 +13114,13 @@ input ReceiptCheckInLineInput {
   edited: Boolean
   """The stock's expiry day, as YYYY-MM-DD"""
   expiresOn: LocalDate
-  """The catalog item the household confirmed for the line"""
-  itemId: ID!
+  """
+  The line's item: an existing catalog item by id, or one described inline
+  (matched by barcode, then name, else created under its client-minted id),
+  as createPantryItem takes it. A scanned product record (variation) is
+  refused here. The line's result names the item it recorded.
+  """
+  item: PantryItemSourceInput!
   """
   Client-minted CUID2 for the stack or batch a stocked line adds, as
   CreatePantryItemInput.id: an add sent again finds what it added.
@@ -13105,7 +13150,11 @@ input ReceiptCheckInLineInput {
   False records the purchase, ticks its list line, and leaves the pantry as it is; true when omitted
   """
   stock: Boolean
-  """The total paid for the line, after any discount"""
+  """
+  The total paid for the line, after any discount. Zero only for a line its
+  discount made free (the free one of a deal): its purchase is recorded at
+  nothing paid, with the discount as its saving, and observes no price.
+  """
   totalPaid: Float!
 }
 
@@ -13121,6 +13170,12 @@ type ReceiptCheckInLineResult {
   failure: BatchElementFailure
   """The line's position in the input"""
   index: Int!
+  """
+  The item the line recorded, after matching: the one an inline item matched
+  or created. A client re-points what it holds under its own id to this one.
+  Null when the line failed.
+  """
+  item: Item
   """
   The stack the stock is in; null when the line failed or was not stocked
   """
@@ -14882,6 +14937,15 @@ input ResolveReceiptLinesInput {
 type ResolveReceiptLinesPayload {
   """The chain the merchant header names"""
   chain: StoreChain
+  """
+  When no store is placed, the household's own store that proposedStore
+  would duplicate: one of the proposed name with no address or number, of
+  no other chain, that a member created or the household bought or listed
+  at. Offer it before creating a store: a check-in naming it with its
+  receiptParseId gives it this receipt's address, chain and number. Read
+  for the pantry's (or homeId's) household; null otherwise.
+  """
+  completableStore: Store
   """One resolution per input line, in input order"""
   lines: [ReceiptLineResolution!]!
   """
