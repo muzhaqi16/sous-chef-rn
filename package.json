@@ -139,7 +139,7 @@
     "react-native-nitro-modules": "^0.37.1",
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
-    "react-native-permissions": "^5.6.2",
+    "react-native-permissions": "^5.6.3",
     "react-native-reanimated": "^4.7.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.27.0",
