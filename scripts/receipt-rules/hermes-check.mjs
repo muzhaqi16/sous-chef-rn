@@ -2,7 +2,7 @@
  * Runs the installed `@muzhaqi16/receipt-rules` corpus in the app's own Hermes,
  * before its version is pinned:
  *
- *   node scripts/receipt-rules/hermes-check.mjs [--port 8081] [--app dev.souschef.app] [--corpus <dir>]
+ *   node scripts/receipt-rules/hermes-check.mjs [--port 8081] [--app dev.souschef.app] [--device <name>] [--corpus <dir>]
  *
  * The dev app must be connected to Metro with the receipt scan screen open:
  * the receipts feature's lazy bundle is what loads the package. Every text of
@@ -21,6 +21,8 @@ const { values: args } = parseArgs({
   options: {
     port: { type: 'string', default: '8081' },
     app: { type: 'string', default: 'dev.souschef.app' },
+    // Part of the device's name, when more than one is on Metro.
+    device: { type: 'string' },
     corpus: { type: 'string' },
   },
 });
@@ -77,7 +79,10 @@ const target = async () => {
     response => response.json(),
   );
   const pages = list.filter(
-    page => page.webSocketDebuggerUrl && page.appId === args.app,
+    page =>
+      page.webSocketDebuggerUrl &&
+      page.appId === args.app &&
+      (!args.device || (page.deviceName ?? '').includes(args.device)),
   );
   const page = pages.at(-1);
   if (!page) {
