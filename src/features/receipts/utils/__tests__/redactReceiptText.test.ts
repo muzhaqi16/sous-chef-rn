@@ -207,6 +207,67 @@ describe('redactReceiptText', () => {
     ).toEqual(['#1619 EDGEWOOD', 'Helped by [name]', 'POTATO SLD  8.99 F']);
   });
 
+  it('Giant Eagle: a cashier is masked when recognition misspells the words around them', () => {
+    expect(
+      redactOne(['6493 Strip Ave. N', 'Yaur Cashier Todey was Sam K']),
+    ).toEqual(['6493 Strip Ave. N', 'Yaur Cashier Todey was [name]']);
+  });
+
+  it('Walmart: the manager printed after the phone number is masked', () => {
+    expect(
+      redactOne(['4125550100 Mgr. PAT', 'BANANAS 000000004011 KF  1.24 N']),
+    ).toEqual(['4125550100 Mgr. [name]', 'BANANAS 000000004011 KF  1.24 N']);
+  });
+
+  it("East End co-op: the member's name goes, and nothing after a change read apart from its amount", () => {
+    expect(
+      redactOne([
+        'Inv#:00123456 Trs#:654321',
+        'DOE, JANE',
+        'Goat Cheese - Honey 4 oz  $4.69 F',
+        'TOTAL SALES  $4.69',
+        'Visa',
+        '$0.00',
+        'Change',
+        'NETWORK.ID:VISA',
+        'SEQUENCE #: 123456',
+        'AUTHOR #: 654321',
+      ]),
+    ).toEqual([
+      'Inv#:00123456 Trs#:654321',
+      '[name]',
+      'Goat Cheese - Honey 4 oz  $4.69 F',
+      'TOTAL SALES  $4.69',
+      'Visa',
+      '$0.00',
+      'Change',
+    ]);
+  });
+
+  it('drops a spelled-out sequence number and a shortened authorisation label anywhere', () => {
+    expect(
+      redactOne(['MILK  3.48', 'SEQUENCE #: 123456', 'AUTHOR #: 654321']),
+    ).toEqual(['MILK  3.48']);
+  });
+
+  it('keeps a bare balance, which some tills print as the total, a town and its state, and a priced item', () => {
+    expect(
+      redactOne([
+        'CAMERON, MO',
+        'PEPPERS, GREEN  1.99',
+        '**** BALANCE',
+        '18.76',
+        'Org Pinto/Kid Bean  0.99  FA',
+      ]),
+    ).toEqual([
+      'CAMERON, MO',
+      'PEPPERS, GREEN  1.99',
+      '**** BALANCE',
+      '18.76',
+      'Org Pinto/Kid Bean  0.99  FA',
+    ]);
+  });
+
   it('keeps an item that only starts like a staff label', () => {
     expect(redactOne(['TEAM MEMBER', 'SERVER 4.99'])).toEqual([
       'TEAM MEMBER',

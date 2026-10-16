@@ -1,7 +1,7 @@
 /**
  * Payment and loyalty details never leave the phone: a line carrying one is
  * dropped whole, and everything after the payment block's change or balance
- * line is cut. A staff member's name is masked. A deny-list, so what survives
+ * line is cut. A staff member's or card member's name is masked. A deny-list, so what survives
  * is predictable and tested per chain (`__tests__/redactReceiptText.test.ts`);
  * the API re-applies it as defence in depth.
  */
@@ -15,12 +15,23 @@ const spacedDots = (line: string) =>
   line.replace(SPACING_DOT, ' ').replace(/\s+/g, ' ').trim();
 
 // The name after the label that opens its line (`Helped by GEORGETTE N`,
-// `Cashier: Pat`), masked as the API masks it.
+// `Cashier: Pat`), masked as the API masks it. Recognition misspells the words
+// around a cashier (`Yaur Cashier Todey was`).
 const STAFF_NAME =
-  /^(\W*(?:HELPED BY|SERVED BY|YOUR CASHIER(?: TODAY)?(?: WAS| IS)?|CASHIER|CHECKER|OPERATOR|ASSOCIATE|CLERK|SERVER|TEAM MEMBER)\b\W*)[A-Za-z\u00C0-\u024F].*$/i;
+  /^(\W*(?:\S{3,5}\s+CASHIER(?:\s+\S{3,6})?\s+(?:WAS|IS)|HELPED BY|SERVED BY|YOUR CASHIER(?: TODAY)?(?: WAS| IS)?|CASHIER|CHECKER|OPERATOR|ASSOCIATE|CLERK|SERVER|TEAM MEMBER)\b\W*)[A-Za-z\u00C0-\u024F].*$/i;
 
-const maskStaffName = (line: string) => {
+// Walmart prints its manager after the phone number: `(412) 555-0100 Mgr. PAT`.
+const MANAGER_NAME = /(\b(?:MGR|MANAGER)\b\W*)[A-Za-z\u00C0-\u024F].*$/i;
+
+// A member's name as the card carries it, alone on its line: the co-op's
+// `DOE, JANE`. A town and its state (`CAMERON, MO`) is an address.
+const CARDHOLDER_NAME =
+  /^\W*[A-Z][A-Za-z'’-]+,\s?[A-Z][A-Za-z'’-]{2,}(?:\s[A-Z][A-Za-z'’-]*\.?)?\W*$/;
+
+const maskName = (line: string) => {
+  if (CARDHOLDER_NAME.test(line)) return '[name]';
   if (STAFF_NAME.test(line)) return line.replace(STAFF_NAME, '$1[name]');
+  if (MANAGER_NAME.test(line)) return line.replace(MANAGER_NAME, '$1[name]');
   const spaced = spacedDots(line);
   return STAFF_NAME.test(spaced)
     ? spaced.replace(STAFF_NAME, '$1[name]')
@@ -68,16 +79,17 @@ const PAYMENT_LABEL =
 // such as `TRACE MINERALS` or `AIDELLS SAUSAGE` survives. The identifier may be
 // partly masked: ALDI's `Merchant ID: **12345`.
 const PAYMENT_ID =
-  /^\W*(?:REF(?:ERENCE)?|TRACE|AID|ATC|SEQ|TRANS?(?:ACTION)?\s*ID|TERMINAL|TERM|MID|TID|MERCHANT\s*(?:ID|#)|APP|VALIDATION|EFT)\s*(?:#|NO\.?|NUM(?:BER)?|ID)?\s*[:#-]?\s*[A-Z0-9*•]*\d/i;
+  /^\W*(?:REF(?:ERENCE)?|TRACE|AID|ATC|SEQ(?:UENCE)?|TRANS?(?:ACTION)?\s*ID|TERMINAL|TERM|MID|TID|MERCHANT\s*(?:ID|#)|APP|VALIDATION|EFT)\s*(?:#|NO\.?|NUM(?:BER)?|ID)?\s*[:#-]?\s*[A-Z0-9*•]*\d/i;
 
-// The British spelling too: ALDI UK's `Authorisation Code: 654321`.
+// The British spelling too: ALDI UK's `Authorisation Code: 654321`, and the
+// co-op's `AUTHOR #: 654321`.
 const AUTH_CODE_ANYWHERE =
-  /\b(?:AUTH(?:ORI[SZ]ATION)?|APPROVAL|APPR)\s*(?:CODE|#|NO\b|:)/i;
+  /\b(?:AUTH(?:OR(?:I[SZ]ATION)?)?|APPROVAL|APPR)\s*(?:CODE|#|NO\b|:)/i;
 
 // After a date on the same line, out of reach of the start-anchored label:
 // ALDI US's `09/30/26 09:51 Ref/Seq # 123456`.
 const REFERENCE_ANYWHERE =
-  /\b(?:REF(?:ERENCE)?|SEQ|TRACE)(?:\s*\/\s*SEQ)?\s*(?:#|NO\b\.?|NUM(?:BER)?\b|:)\s*\d/i;
+  /\b(?:REF(?:ERENCE)?|SEQ(?:UENCE)?|TRACE)(?:\s*\/\s*SEQ)?\s*(?:#|NO\b\.?|NUM(?:BER)?\b|:)\s*\d/i;
 
 // A chip record's hex run, longer than any item code, bare or under a short
 // label: the second line of ALDI US's IAD, Trader Joe's `C: 0123456789ABCDEF`.
@@ -93,6 +105,10 @@ const MEMBER_NUMBER =
 // drop the amount's last digit (Giant Eagle's `154.7`).
 const PAYMENT_BLOCK_END =
   /^\W*(?:\d{1,4}\s+)?(?:CHANGE|BALANCE)(?:\s+DUE)?\b[^A-Za-z]*\d+[.,]\d{1,2}\W*$/i;
+
+// A change line whose amount was read onto a row of its own. A bare balance is
+// the total of some tills (`**** BALANCE` above `18.76`), so only change ends it.
+const BARE_CHANGE = /^\W*(?:\d{1,4}\s+)?CHANGE(?:\s+DUE)?\W*$/i;
 
 const readsAsPaymentDetail = (line: string) =>
   MASKED_CARD.test(line) ||
@@ -110,7 +126,9 @@ const isPaymentDetail = (line: string) =>
   readsAsPaymentDetail(line) || readsAsPaymentDetail(spacedDots(line));
 
 const endsPaymentBlock = (line: string) =>
-  PAYMENT_BLOCK_END.test(line) || PAYMENT_BLOCK_END.test(spacedDots(line));
+  PAYMENT_BLOCK_END.test(line) ||
+  PAYMENT_BLOCK_END.test(spacedDots(line)) ||
+  BARE_CHANGE.test(line);
 
 /** Redacts a receipt's pages in order; the pages after the cut come back empty. */
 export function redactReceiptText(
@@ -121,7 +139,7 @@ export function redactReceiptText(
     const kept: string[] = [];
     for (const line of page) {
       if (ended) break;
-      if (!isPaymentDetail(line)) kept.push(maskStaffName(line));
+      if (!isPaymentDetail(line)) kept.push(maskName(line));
       if (endsPaymentBlock(line)) ended = true;
     }
     return kept;
