@@ -36,6 +36,7 @@ const FAILURE_COPY: Record<RecipeCaptureFailure, FailureCopy> = {
   [RecipeCaptureFailure.NoRecipe]: 'noRecipe',
   [RecipeCaptureFailure.Truncated]: 'unreadable',
   [RecipeCaptureFailure.InvalidAnswer]: 'unreadable',
+  [RecipeCaptureFailure.ReadFailed]: 'unreadable',
   [RecipeCaptureFailure.PhotoRefused]: 'photoRefused',
   [RecipeCaptureFailure.PhotoStorage]: 'photoStorage',
   [RecipeCaptureFailure.CallerGone]: 'unavailable',
