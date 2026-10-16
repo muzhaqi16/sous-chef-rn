@@ -527,6 +527,8 @@ export function useReceiptScan({
     pickedFromLibrary: fromLibrary,
     /** Sending the photo needs a connection. */
     canSendPhotos: isOnline,
+    /** A photo sent to be read has the personal details the phone read painted over. */
+    masksPhotos: TextRecognition.canMaskPhotos(),
     scan: () => begin('scan'),
     takePhoto: () => begin('photo'),
     pickPhoto: () => begin('pick'),

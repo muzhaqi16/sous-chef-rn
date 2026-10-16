@@ -17,6 +17,7 @@
     "saved": {
       "title": "Scontrino salvato",
       "body": "Viene conservato solo il testo dello scontrino, senza i numeri di carta e fedeltà.",
+      "bodyText": "Il telefono non è riuscito a leggere da solo questo scontrino, quindi il suo testo viene inviato per essere letto, senza i numeri di carta e fedeltà.",
       "bodyDevice": "Letto sul telefono, quindi non è stato inviato nulla. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
       "scanAnother": "Scansiona un altro scontrino",
       "review_one": "Rivedi {{count}} articolo",
@@ -33,7 +34,8 @@
       "tooLongBody": "È stato conservato solo il testo. Scansionalo in due parti per individuare i prodotti.",
       "limitedTitle": "Raggiunto il limite di scontrini di oggi",
       "limitedBody": "Il testo è stato conservato. Riapri questo scontrino dopo {{time}} per individuarne i prodotti.",
-      "bodyPhoto": "La foto è stata inviata per essere letta e viene eliminata appena letta. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
+      "bodyPhoto": "Il telefono non è riuscito a leggere da solo questo scontrino, quindi la sua foto è stata inviata così com'è per essere letta. La foto viene eliminata appena letta.",
+      "bodyPhotoMasked": "Il telefono non è riuscito a leggere da solo questo scontrino, quindi la sua foto è stata inviata per essere letta, con i numeri di carta, i numeri di socio e i nomi coperti. La foto viene eliminata appena letta.",
       "photoNotReadTitle": "La foto non è stata letta",
       "photoNotReadBody": "Non è stato conservato nulla. Scansiona di nuovo lo scontrino per riprovare.",
       "photoLimitedTitle": "Hai raggiunto il limite di foto di oggi",
@@ -119,22 +121,23 @@
     },
     "photoSend": {
       "title": "Inviare la foto per leggerla?",
-      "body": "Questo telefono non è riuscito a leggere lo scontrino. Con il tuo consenso, la foto viene inviata a {{appName}} per essere letta, poi eliminata. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
+      "body": "Questo telefono non è riuscito a leggere il testo dello scontrino. Con il tuo consenso, la foto viene inviata così com'è a {{appName}} per essere letta, poi eliminata.",
       "send": "Invia la foto",
       "dontSend": "Non inviare",
       "offline": "Connettiti a internet per inviare la foto.",
       "sending": "Invio della foto…"
     },
     "photoConsent": {
-      "title": "Leggere gli scontrini dalle foto?",
-      "body": "{{appName}} legge uno scontrino in modo più preciso dalla sua foto che dal testo riconosciuto dal telefono. Con il tuo consenso, le foto di ogni scontrino vengono inviate al server di {{appName}} per essere lette e poi eliminate.\n\nMentre una foto viene letta, il server vede l'intero scontrino. I numeri di carta e fedeltà vengono rimossi dal testo che viene conservato.",
-      "hint": "Scegli «Solo testo» per continuare a leggere gli scontrini dal testo del telefono. Puoi cambiarlo nelle Impostazioni dell'app.",
+      "title": "Inviare una foto quando il telefono non riesce a leggere uno scontrino?",
+      "body": "Il telefono legge da solo la maggior parte degli scontrini, e quelli non lo lasciano mai. Quando non ci riesce, {{appName}} legge lo scontrino in modo più preciso dalla sua foto che dal suo testo. Con il tuo consenso, quella foto viene inviata al server di {{appName}} ed eliminata appena letta.\n\nI numeri di carta, i numeri di socio e i nomi che il telefono trova vengono coperti prima dell'invio.",
+      "bodyUnmasked": "Il telefono legge da solo la maggior parte degli scontrini, e quelli non lo lasciano mai. Quando non ci riesce, {{appName}} legge lo scontrino in modo più preciso dalla sua foto che dal suo testo. Con il tuo consenso, quella foto viene inviata al server di {{appName}} ed eliminata appena letta.\n\nMentre la foto viene letta, il server vede l'intero scontrino.",
+      "hint": "Scegli «Solo testo» per inviare solo il testo dello scontrino, senza i numeri di carta e fedeltà, quando il telefono non riesce a leggerlo. Puoi cambiarlo nelle Impostazioni dell'app.",
       "send": "Invia le foto",
       "textOnly": "Solo testo"
     },
     "photoSetting": {
-      "title": "Invia le foto degli scontrini da leggere",
-      "description": "Gli scontrini si leggono in modo più preciso dalle foto. Le foto vengono eliminate dopo la lettura."
+      "title": "Invia le foto degli scontrini che il telefono non riesce a leggere",
+      "description": "Si leggono in modo più preciso dalle foto, che vengono eliminate dopo la lettura. Se disattivato, viene inviato solo il testo dello scontrino."
     }
   }
 }

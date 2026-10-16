@@ -110,6 +110,11 @@ export const TextRecognition = {
     await call('deletePhotos', imageUris);
   },
 
+  /** Whether this build can paint masks over a photo before it goes up. */
+  canMaskPhotos(): boolean {
+    return nativeMethod('TextRecognitionModule', 'maskPhotos') !== null;
+  },
+
   /**
    * Paints each prepared photo's masks over it, rewriting it in place. Null
    * where the build cannot mask: the photos are left as they were.

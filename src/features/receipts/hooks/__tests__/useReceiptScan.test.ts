@@ -35,6 +35,7 @@ jest.mock('#/native/TextRecognition', () => ({
     preparePhotos: jest.fn(),
     deletePhotos: jest.fn(),
     maskPhotos: jest.fn(),
+    canMaskPhotos: jest.fn(),
   },
 }));
 const mockUploadUnconfirmed = jest.fn();
@@ -63,6 +64,7 @@ const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
 const preparePhotos = jest.mocked(TextRecognition.preparePhotos);
 const deletePhotos = jest.mocked(TextRecognition.deletePhotos);
 const maskPhotos = jest.mocked(TextRecognition.maskPhotos);
+const canMaskPhotos = jest.mocked(TextRecognition.canMaskPhotos);
 const availability = jest.mocked(ReceiptStructuring.availability);
 const labelLines = jest.mocked(ReceiptStructuring.labelLines);
 const readReceipt = jest.mocked(rulesReadReceipt);
@@ -106,6 +108,7 @@ beforeEach(() => {
   deletePhotos.mockResolvedValue(undefined);
   // A build that cannot mask, unless a test says otherwise.
   maskPhotos.mockResolvedValue(null);
+  canMaskPhotos.mockReturnValue(false);
   useStore.setState({ isOnline: true });
   // The text path, unless a test says otherwise.
   useReceiptPhotoConsentStore.setState({ consent: 'declined' });
@@ -209,6 +212,13 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft?.purchasedOn).toBe(
       toDateKey(today),
     );
+  });
+
+  it('says whether a photo sent to be read is masked first', () => {
+    expect(renderScan().result.current.masksPhotos).toBe(false);
+
+    canMaskPhotos.mockReturnValue(true);
+    expect(renderScan().result.current.masksPhotos).toBe(true);
   });
 
   it('returns to the add sheet with nothing kept when the scanner is cancelled', async () => {

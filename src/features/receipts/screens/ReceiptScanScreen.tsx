@@ -34,14 +34,20 @@ interface ReadingBanner extends BannerCopy {
   photos?: BannerCopy;
 }
 
-// What left the phone: nothing for a receipt the phone read, else its photos
-// or its text, sent to be read.
+// What left the phone: nothing for a receipt the phone read; else its photos,
+// masked or as they were; else its text, sent only where the server reads
+// receipts.
 function savedBodyOf(
-  parsedBy: ReceiptDraft['parsedBy'],
-  sentPhotos: boolean,
+  { parsedBy, photoKeys, photosMasked }: ReceiptDraft,
+  serverParsing: boolean,
 ): TranslationKey {
   if (parsedBy === 'device') return 'receipts.saved.bodyDevice';
-  return sentPhotos ? 'receipts.saved.bodyPhoto' : 'receipts.saved.body';
+  if (photoKeys) {
+    return photosMasked
+      ? 'receipts.saved.bodyPhotoMasked'
+      : 'receipts.saved.bodyPhoto';
+  }
+  return serverParsing ? 'receipts.saved.bodyText' : 'receipts.saved.body';
 }
 
 // What the saved screen says of the server's reading, past `reading`'s spinner.
@@ -104,6 +110,7 @@ export const ReceiptScanScreen: React.FC = () => {
     draft,
     pickedFromLibrary,
     canSendPhotos,
+    masksPhotos,
     scan,
     takePhoto,
     pickPhoto,
@@ -186,7 +193,7 @@ export const ReceiptScanScreen: React.FC = () => {
         <View style={styles.saved}>
           <Text role="title">{t('receipts.saved.title')}</Text>
           <Text role="body" tone="secondary">
-            {t(savedBodyOf(draft.parsedBy, sentPhotos))}
+            {t(savedBodyOf(draft, serverParsing))}
           </Text>
           {pickedFromLibrary ? (
             <Text role="body" tone="secondary">
@@ -282,7 +289,11 @@ export const ReceiptScanScreen: React.FC = () => {
           <EmptyState
             icon="cloud-upload-outline"
             title={t('receipts.photoConsent.title')}
-            description={t('receipts.photoConsent.body')}
+            description={t(
+              masksPhotos
+                ? 'receipts.photoConsent.body'
+                : 'receipts.photoConsent.bodyUnmasked',
+            )}
             hint={t('receipts.photoConsent.hint')}
             action={{
               label: t('receipts.photoConsent.send'),

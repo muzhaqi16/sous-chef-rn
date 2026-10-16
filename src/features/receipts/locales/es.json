@@ -17,6 +17,7 @@
     "saved": {
       "title": "Recibo guardado",
       "body": "Solo se guarda el texto del recibo, sin los números de tarjeta ni de fidelidad.",
+      "bodyText": "Tu teléfono no pudo leer este recibo por sí solo, así que su texto se envía para leerlo, sin los números de tarjeta ni de fidelidad.",
       "bodyDevice": "Se leyó en tu teléfono, así que no se envió nada. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
       "scanAnother": "Escanear otro recibo",
       "review_one": "Revisar {{count}} artículo",
@@ -33,7 +34,8 @@
       "tooLongBody": "Solo se guardó el texto. Escanéalo en dos partes para identificar los productos.",
       "limitedTitle": "Se alcanzó el límite de recibos de hoy",
       "limitedBody": "El texto se guardó. Vuelve a abrir este recibo después de {{time}} para identificar sus productos.",
-      "bodyPhoto": "La foto se envió para leerla y se elimina en cuanto se lee. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
+      "bodyPhoto": "Tu teléfono no pudo leer este recibo por sí solo, así que su foto se envió tal cual para leerla. La foto se elimina en cuanto se lee.",
+      "bodyPhotoMasked": "Tu teléfono no pudo leer este recibo por sí solo, así que su foto se envió para leerla, con los números de tarjeta, los números de socio y los nombres tapados. La foto se elimina en cuanto se lee.",
       "photoNotReadTitle": "La foto no se leyó",
       "photoNotReadBody": "No se guardó nada. Vuelve a escanear el recibo para intentarlo de nuevo.",
       "photoLimitedTitle": "Se alcanzó el límite de fotos de hoy",
@@ -119,22 +121,23 @@
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",
-      "body": "Este teléfono no pudo leer el recibo. Si aceptas, la foto se envía a {{appName}} para leerla y luego se elimina. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
+      "body": "Este teléfono no pudo leer el texto del recibo. Si aceptas, la foto se envía tal cual a {{appName}} para leerla y luego se elimina.",
       "send": "Enviar la foto",
       "dontSend": "No enviar",
       "offline": "Conéctate a internet para enviar la foto.",
       "sending": "Enviando la foto…"
     },
     "photoConsent": {
-      "title": "¿Leer los recibos a partir de sus fotos?",
-      "body": "{{appName}} lee un recibo con más precisión a partir de su foto que del texto que reconoce tu teléfono. Con tu permiso, las fotos de cada recibo se envían al servidor de {{appName}} para leerlas y después se eliminan.\n\nMientras se lee una foto, el servidor ve el recibo completo. Los números de tarjeta y de fidelización se eliminan del texto que se guarda.",
-      "hint": "Elige «Solo texto» para seguir leyendo los recibos a partir del texto de tu teléfono. Puedes cambiarlo en Ajustes de la app.",
+      "title": "¿Enviar una foto cuando tu teléfono no pueda leer un recibo?",
+      "body": "Tu teléfono lee la mayoría de los recibos por sí mismo, y esos nunca salen de él. Cuando no puede, {{appName}} lee el recibo con más precisión a partir de su foto que de su texto. Con tu permiso, esa foto se envía al servidor de {{appName}} y se elimina en cuanto se lee.\n\nLos números de tarjeta, los números de socio y los nombres que encuentra tu teléfono se tapan antes de enviarla.",
+      "bodyUnmasked": "Tu teléfono lee la mayoría de los recibos por sí mismo, y esos nunca salen de él. Cuando no puede, {{appName}} lee el recibo con más precisión a partir de su foto que de su texto. Con tu permiso, esa foto se envía al servidor de {{appName}} y se elimina en cuanto se lee.\n\nMientras se lee la foto, el servidor ve el recibo completo.",
+      "hint": "Elige «Solo texto» para enviar solo el texto del recibo, sin los números de tarjeta ni de fidelidad, cuando tu teléfono no pueda leerlo. Puedes cambiarlo en Ajustes de la app.",
       "send": "Enviar fotos",
       "textOnly": "Solo texto"
     },
     "photoSetting": {
-      "title": "Enviar fotos de los recibos para leerlas",
-      "description": "Los recibos se leen con más precisión a partir de sus fotos. Las fotos se eliminan una vez leídas."
+      "title": "Enviar fotos de los recibos que tu teléfono no puede leer",
+      "description": "Se leen con más precisión a partir de sus fotos, que se eliminan una vez leídas. Desactivado, solo se envía el texto del recibo."
     }
   }
 }
