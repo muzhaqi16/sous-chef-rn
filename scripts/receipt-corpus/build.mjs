@@ -35,9 +35,7 @@ for (const dir of ['images', 'ocr', 'pages', 'labels']) {
 }
 mkdirSync(outDir, { recursive: true });
 
-const { assembleReceiptLines } = await import(
-  `${UTILS}/assembleReceiptLines.ts`
-);
+const { assembleReceiptRows } = await import(`${UTILS}/assembleReceiptRows.ts`);
 const { readReceiptDate } = await import(`${UTILS}/receiptDate.ts`);
 const { redactReceiptText } = await import(`${UTILS}/redactReceiptText.ts`);
 const { linesThroughTotal } = await import(`${UTILS}/structureReceipt.ts`);
@@ -77,9 +75,9 @@ run(`${ocrBin}-bin`, [join(cache, 'ocr'), ...sources.map(imageOf)]);
 
 const pagesOf = new Map();
 for (const source of sources) {
-  const lines = assembleReceiptLines([
+  const lines = assembleReceiptRows([
     readJson(join(cache, 'ocr', `${source.id}.json`)),
-  ]);
+  ]).map(({ rows }) => rows.map(row => row.text));
   const pages = redactReceiptText(lines).map(page => page.join('\n'));
   pagesOf.set(source.id, {
     printedOn: printedOn(

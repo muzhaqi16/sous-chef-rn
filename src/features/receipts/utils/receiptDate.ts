@@ -7,6 +7,10 @@ import type { DateOrder } from '#/utils/deviceLocale';
 const SLASH_DATE = /(?<!\d)(\d{1,2})[/-](\d{1,2})[/-](\d{4}|\d{2})(?!\d)/g;
 const ISO_DATE = /(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/g;
 
+/** Whether a line prints a date in either form the day is read from. */
+export const holdsDate = (line: string): boolean =>
+  line.search(SLASH_DATE) !== -1 || line.search(ISO_DATE) !== -1;
+
 const fullYear = (year: string) =>
   year.length === 2 ? 2000 + Number(year) : Number(year);
 

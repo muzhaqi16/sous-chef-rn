@@ -14,21 +14,29 @@ describe('receiptDraftStore', () => {
   describe('recordPhotoKeys', () => {
     it('keeps the photos of a draft nothing has asked about yet', () => {
       seedDraft();
-      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toEqual(PHOTOS);
+      expect(draft()?.photosMasked).toBeUndefined();
+    });
+
+    it('records that the photos were masked', () => {
+      seedDraft();
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, true);
+
+      expect(draft()?.photosMasked).toBe(true);
     });
 
     it('leaves a newer draft alone', () => {
       seedDraft({ scannedAt: '2026-10-07T12:00:00.000Z' });
-      actions().recordPhotoKeys('2026-10-07T11:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-07T11:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toBeUndefined();
     });
 
     it('leaves a draft already asked about alone', () => {
       seedDraft({ serverParse: { id: 'p1', via: 'text', state: 'pending' } });
-      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toBeUndefined();
     });
@@ -38,11 +46,12 @@ describe('receiptDraftStore', () => {
     it.each(['failed', 'unavailable', 'unreadable', 'tooLong'] as const)(
       'drops the spent photos of a receipt with text, so the text is asked for next (%s)',
       state => {
-        seedDraft({ photoKeys: PHOTOS });
+        seedDraft({ photoKeys: PHOTOS, photosMasked: true });
         actions().askServerParse('p1', 'photos');
         actions().settleServerParse('p1', state);
 
         expect(draft()?.photoKeys).toBeUndefined();
+        expect(draft()?.photosMasked).toBeUndefined();
         expect(draft()?.serverParse).toBeUndefined();
         expect(draft()?.pages).toEqual(['RECEIPT']);
       },

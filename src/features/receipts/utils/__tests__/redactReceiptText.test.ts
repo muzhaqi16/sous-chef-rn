@@ -120,13 +120,15 @@ describe('redactReceiptText', () => {
     ]);
   });
 
-  it('Costco: a member number recognition broke with a bar goes from the header', () => {
+  it('Costco: a member number recognition broke with a bar or misspelled goes from the header', () => {
     expect(
       redactOne([
         'COSTCO WHOLESALE',
         'Leesburg #123',
         '9Q Member 123| 456',
         'Member 1l2I 345!678',
+        '04 Menber 111222333444',
+        'Mernber 111222333444',
         '540003 FIRE EXT.  39.99 A',
       ]),
     ).toEqual([
@@ -167,6 +169,12 @@ describe('redactReceiptText', () => {
         ],
       ]),
     ).toEqual([['Celery  1.65  FA', 'VISA  16.19']]);
+  });
+
+  it('ALDI US: a reference goes when recognition reads its Seq as Seg', () => {
+    expect(
+      redactOne(['Celery  1.65  FA', '09/30/26 09:51 Ref/Seg # 123456']),
+    ).toEqual(['Celery  1.65  FA']);
   });
 
   it('ALDI UK: the British spelling and a partly masked merchant id go', () => {
@@ -211,6 +219,27 @@ describe('redactReceiptText', () => {
     expect(
       redactOne(['6493 Strip Ave. N', 'Yaur Cashier Todey was Sam K']),
     ).toEqual(['6493 Strip Ave. N', 'Yaur Cashier Todey was [name]']);
+    expect(redactOne(['Yaur Cashier Today vas Sam K'])).toEqual([
+      'Yaur Cashier Today vas [name]',
+    ]);
+  });
+
+  it("masks an email and a customer's phone, and keeps the store's phone and a count's price", () => {
+    expect(
+      redactOne([
+        'SAMPLE MART  (412) 555-0100',
+        'Receipts to pat@example.com',
+        'WHOLE MILK  3.48',
+        '2@4.99',
+        'Callback 412-555-0199',
+      ]),
+    ).toEqual([
+      'SAMPLE MART  (412) 555-0100',
+      'Receipts to [email]',
+      'WHOLE MILK  3.48',
+      '2@4.99',
+      'Callback [phone]',
+    ]);
   });
 
   it('Walmart: the manager printed after the phone number is masked', () => {

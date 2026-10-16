@@ -26,6 +26,7 @@ jest.mock('#/native/TextRecognition', () => ({
     recognizeAndDelete: jest.fn(),
     preparePhotos: jest.fn(),
     deletePhotos: jest.fn(),
+    maskPhotos: jest.fn(),
   },
 }));
 const mockUploadUnconfirmed = jest.fn();
@@ -48,6 +49,7 @@ const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
 const preparePhotos = jest.mocked(TextRecognition.preparePhotos);
 const deletePhotos = jest.mocked(TextRecognition.deletePhotos);
+const maskPhotos = jest.mocked(TextRecognition.maskPhotos);
 const availability = jest.mocked(ReceiptStructuring.availability);
 const labelLines = jest.mocked(ReceiptStructuring.labelLines);
 
@@ -86,6 +88,8 @@ beforeEach(() => {
   availability.mockResolvedValue('unavailable');
   dateOrder.mockReturnValue('monthFirst');
   deletePhotos.mockResolvedValue(undefined);
+  // A build that cannot mask, unless a test says otherwise.
+  maskPhotos.mockResolvedValue(null);
   useStore.setState({ isOnline: true });
   // The text path, unless a test says otherwise.
   useReceiptPhotoConsentStore.setState({ consent: 'declined' });
@@ -773,7 +777,7 @@ describe('useReceiptScan', () => {
       turnedOn.restore();
     });
 
-    it('sends the photos while the phone is still reading the text', async () => {
+    it('holds the photos until the phone has read the text', async () => {
       scannedPages(1);
       preparePhotos.mockResolvedValue(prepared(1));
       let read: (pages: RecognizedPage[]) => void = () => {};
@@ -790,16 +794,130 @@ describe('useReceiptScan', () => {
       await act(async () => {
         scanning = result.current.scan();
       });
-      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
-      expect(result.current.status).toBe('sending');
+      expect(preparePhotos).toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('reading');
 
       read(RECEIPT);
       await act(() => scanning);
 
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
       const draft = useReceiptDraftStore.getState().draft;
       expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
       expect(result.current.status).toBe('saved');
+    });
+
+    describe('masking the photos', () => {
+      // Rewritten in place: the same files, now smaller.
+      const masksInPlace = () =>
+        maskPhotos.mockImplementation(async photos =>
+          photos.map(({ uri }) => ({ uri, fileSize: 700 })),
+        );
+
+      it('paints over what the phone read before any photo goes up, and says so', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).toHaveBeenCalledWith([
+          {
+            uri: 'file:///prepared-0.jpg',
+            masks: expect.arrayContaining([
+              expect.objectContaining({ points: expect.any(Array) }),
+            ]),
+          },
+        ]);
+        expect(maskPhotos.mock.invocationCallOrder[0]).toBeLessThan(
+          mockUploadUnconfirmed.mock.invocationCallOrder[0] ?? 0,
+        );
+        expect(mockUploadUnconfirmed).toHaveBeenCalledWith(
+          expect.objectContaining({
+            uri: 'file:///prepared-0.jpg',
+            fileSize: 700,
+          }),
+          ImageUploadPurpose.ReceiptPhoto,
+          expect.anything(),
+        );
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBe(true);
+      });
+
+      it('sends the photos as they are, unmarked, from a build that cannot mask', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+      });
+
+      it('sends the photos unmarked when masking fails', async () => {
+        const reportError = jest.spyOn(errorService, 'reportError');
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        maskPhotos.mockRejectedValueOnce(new Error('out of memory'));
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+          operation: 'Mask receipt photos',
+        });
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+        reportError.mockRestore();
+      });
+
+      it('masks nothing, and marks nothing, when the phone read no payment block', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue([
+          {
+            lines: [line('WALMART', 0.05), line('GV WHOLE MILK  3.48 N', 0.1)],
+          },
+        ]);
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).not.toHaveBeenCalled();
+        expect(
+          useReceiptDraftStore.getState().draft?.photosMasked,
+        ).toBeUndefined();
+      });
+
+      it('marks nothing when the phone could not read the pages', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).not.toHaveBeenCalled();
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+      });
     });
 
     it('forgets the answer at sign-out', () => {

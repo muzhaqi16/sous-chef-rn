@@ -104,6 +104,8 @@ export interface ReceiptDraft {
    * text is sent instead. The server deletes the photos.
    */
   photoKeys?: string[];
+  /** Every photo had the personal details the phone read painted over. */
+  photosMasked?: boolean;
   scannedAt: string;
   /**
    * The day of the shop (YYYY-MM-DD): read from the receipt before redaction
@@ -170,9 +172,10 @@ interface ReceiptDraftState {
   chooseStore: (store: { id: string; name: string }) => void;
   /**
    * The upload keys of the photos of the draft scanned at `scannedAt`, before
-   * it is asked for. An upload that outlives its draft records nothing.
+   * it is asked for, and whether every one was masked. An upload that outlives
+   * its draft records nothing.
    */
-  recordPhotoKeys: (scannedAt: string, keys: string[]) => void;
+  recordPhotoKeys: (scannedAt: string, keys: string[], masked: boolean) => void;
   /**
    * Records that server parse `id` was asked for, of the photos or the text, if
    * nothing read the draft yet, or asked again after the daily allowance
@@ -355,10 +358,16 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
         ),
       chooseStore: store =>
         set(({ draft }) => (draft ? { draft: { ...draft, store } } : {})),
-      recordPhotoKeys: (scannedAt, keys) =>
+      recordPhotoKeys: (scannedAt, keys, masked) =>
         set(({ draft }) =>
           draft?.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
-            ? { draft: { ...draft, photoKeys: keys } }
+            ? {
+                draft: {
+                  ...draft,
+                  photoKeys: keys,
+                  ...(masked ? { photosMasked: true } : {}),
+                },
+              }
             : {},
         ),
       askServerParse: (id, via) =>
@@ -402,6 +411,7 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
           if (via === 'photos' && draft.pages.length > 0) {
             const {
               photoKeys: _spent,
+              photosMasked: _masked,
               serverParse: _photoParse,
               ...text
             } = draft;

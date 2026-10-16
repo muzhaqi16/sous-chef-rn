@@ -149,7 +149,10 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     }
     const locale = getDeviceLocale();
     const content = draft.photoKeys
-      ? { photos: draft.photoKeys }
+      ? {
+          photos: draft.photoKeys,
+          ...(draft.photosMasked ? { photosMasked: true } : {}),
+        }
       : { pages: draft.pages };
     const send = async () => {
       const settled = await settleMutation(

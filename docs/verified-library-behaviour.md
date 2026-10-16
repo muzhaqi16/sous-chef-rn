@@ -742,7 +742,7 @@ Verified 2026-09-30 on the iPhone 18 Pro simulator (iOS 27, arm64) through
 
 **Claim:** Vision returns a receipt's left column top to bottom, and then its
 price column as separate observations. A row's name and price are never one
-observation, so `receipts/utils/assembleReceiptLines.ts` rebuilds rows by
+observation, so `receipts/utils/assembleReceiptRows.ts` rebuilds rows by
 vertical overlap before redaction and parsing. On a rendered 18-row receipt:
 the 16 left-column rows first, then 8 prices, each price's `y` within 0.005 of
 its row's. The same call deletes the pages it read, plus any

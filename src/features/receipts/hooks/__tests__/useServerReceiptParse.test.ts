@@ -326,6 +326,26 @@ describe('useServerReceiptParse', () => {
     });
   });
 
+  it('says the photos were masked only when every one was', async () => {
+    seedMilkDraft({
+      pages: [],
+      photoKeys: ['receipt-photos/u1/p1.jpg'],
+      photosMasked: true,
+    });
+    const create = created(ReceiptParseStatus.Pending);
+    render([create.mock]);
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    expect(create.fired[0]).toEqual({
+      input: {
+        id: expect.any(String),
+        photos: ['receipt-photos/u1/p1.jpg'],
+        photosMasked: true,
+        locale: expect.any(String),
+      },
+    });
+  });
+
   it("fills a photo draft from the server's reading, as for text", async () => {
     seedMilkDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
     const create = created(ReceiptParseStatus.Pending);

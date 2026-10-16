@@ -290,14 +290,27 @@ function tiltedRows(
   return rows.map(row => row.map(({ line }) => line));
 }
 
+export interface ReceiptRow {
+  text: string;
+  /** The recognised lines it was joined from, left to right. */
+  lines: readonly RecognizedLine[];
+}
+
+export interface ReceiptRowsPage {
+  /** Top to bottom. */
+  rows: ReceiptRow[];
+  /** The slope the page's rows run along, as fractions of the page; down is +. */
+  tilt: number;
+}
+
 /**
  * Rebuilds each page's printed rows, top to bottom. Text recognition returns a
  * receipt's price column apart from the item names, so a row is re-joined from
  * the lines beside each other, left to right, two spaces marking the gap.
  */
-export function assembleReceiptLines(
+export function assembleReceiptRows(
   pages: readonly RecognizedPage[],
-): string[][] {
+): ReceiptRowsPage[] {
   return pages.map(page => {
     const clean = isMostlyLatin(page.lines)
       ? cleanLatin
@@ -305,18 +318,26 @@ export function assembleReceiptLines(
     const lines = page.lines.filter(line => line.text.trim() !== '');
     const slopes = measuredSlopes(lines);
     const tilt = weightedMedian(slopes);
-    const rows =
+    const rows = (
       Math.abs(tilt) < LEVEL
         ? levelRows(lines, tilt)
-        : tiltedRows(lines, tilt, slopes);
-    const texts = rows.map(row =>
-      row
-        .sort((a, b) => a.x - b.x)
-        .map(line => clean(joinSplitFigures(line.text.trim())))
-        .join('  '),
-    );
-    return printsDollars(texts)
-      ? texts.map(text => text.replace(EIGHT_FOR_DOLLAR, '$$$1'))
-      : texts;
+        : tiltedRows(lines, tilt, slopes)
+    ).map(row => {
+      const leftToRight = [...row].sort((a, b) => a.x - b.x);
+      return {
+        text: leftToRight
+          .map(line => clean(joinSplitFigures(line.text.trim())))
+          .join('  '),
+        lines: leftToRight,
+      };
+    });
+    if (!printsDollars(rows.map(row => row.text))) return { rows, tilt };
+    return {
+      rows: rows.map(row => ({
+        ...row,
+        text: row.text.replace(EIGHT_FOR_DOLLAR, '$$$1'),
+      })),
+      tilt,
+    };
   });
 }

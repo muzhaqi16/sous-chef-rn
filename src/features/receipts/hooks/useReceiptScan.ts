@@ -7,6 +7,7 @@ import DocumentScanner, {
 } from 'react-native-document-scanner-plugin';
 import {
   TextRecognition,
+  type PhotoMask,
   type PreparedPhoto,
   type RecognizedPage,
 } from '#/native/TextRecognition';
@@ -135,8 +136,11 @@ export function useReceiptScan({
   }, []);
 
   // The text of recognised pages as a draft; null when it holds no item lines.
-  const textDraft = (recognized: RecognizedPage[]): ReceiptDraft | null => {
-    const { assembled, redacted, pages } = receiptText(recognized);
+  const textDraft = ({
+    assembled,
+    redacted,
+    pages,
+  }: ReturnType<typeof receiptText>): ReceiptDraft | null => {
     // Read before redaction: receipts print the day below the payment block,
     // which redaction cuts. Only the day is kept from it.
     const purchasedOn = readReceiptDate(
@@ -174,11 +178,12 @@ export function useReceiptScan({
   };
 
   // A receipt the server reads from its photos alone.
-  const keepPhotos = (keys: string[], library: boolean) => {
+  const keepPhotos = (keys: string[], masked: boolean, library: boolean) => {
     endSaved();
     saveDraft({
       pages: [],
       photoKeys: keys,
+      ...(masked ? { photosMasked: true } : {}),
       scannedAt: new Date().toISOString(),
     });
     setFromLibrary(library);
@@ -249,7 +254,7 @@ export function useReceiptScan({
       setStatus('readFailed');
       return;
     }
-    const next = textDraft(recognized);
+    const next = textDraft(receiptText(recognized));
     if (!next) {
       setStatus('unreadable');
       return;
@@ -281,28 +286,49 @@ export function useReceiptScan({
     }
   };
 
-  // The photos go up as soon as they are prepared, while the phone reads the
-  // text from the same pages: the text stands in when they cannot go up.
+  // Each photo with its page's masks painted over it, or null when they go as
+  // they are, read by the service's own model.
+  const maskedPhotos = async (
+    photos: readonly PreparedPhoto[],
+    masks: readonly (readonly PhotoMask[])[] | null,
+  ) => {
+    const requests = photos.flatMap((photo, at) => {
+      const shapes = masks?.[at];
+      return shapes ? [{ uri: photo.uri, masks: shapes }] : [];
+    });
+    if (requests.length !== photos.length) return null;
+    let masked: PreparedPhoto[] | null = null;
+    try {
+      masked = await TextRecognition.maskPhotos(requests);
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Mask receipt photos' });
+    }
+    return masked?.length === photos.length ? masked : null;
+  };
+
+  // The photos go up only once the phone has read the same pages: their masks
+  // come from the text, which stands in when they cannot go up.
   const readPhotosFirst = async (imageUris: string[], library: boolean) => {
     // Asked for first: the native side prepares a scan's photos before it reads them.
     const preparing = preparedPhotos(imageUris);
-    const reading = readPreparedPages(imageUris).then(pages => {
-      const next = pages ? textDraft(pages) : null;
-      // Kept once read, so the text survives an upload that fails.
-      if (next) saveText(next);
-      return { pages, next };
-    });
+    const pages = await readPreparedPages(imageUris);
+    const read = pages ? receiptText(pages) : null;
+    const next = read ? textDraft(read) : null;
+    // Kept once read, so the text survives an upload that fails.
+    if (next) saveText(next);
     const photos = await preparing;
-    const keys = photos ? await upload(photos) : null;
-    const { pages, next } = await reading;
+    const masked = photos
+      ? await maskedPhotos(photos, read?.masks ?? null)
+      : null;
+    const keys = photos ? await upload(masked ?? photos) : null;
     if (photos && !open.current) return;
     if (keys && next) {
-      recordPhotoKeys(next.scannedAt, keys);
+      recordPhotoKeys(next.scannedAt, keys, masked !== null);
       setFromLibrary(library);
       setStatus('saved');
       markSaved('photos');
     } else if (keys) {
-      keepPhotos(keys, library);
+      keepPhotos(keys, masked !== null, library);
       markSaved('photos');
     } else if (next) {
       await structureOnDevice(next, library);
@@ -410,7 +436,7 @@ export function useReceiptScan({
     }
     const keys = await upload(photos);
     if (!open.current) return;
-    if (keys) keepPhotos(keys, false);
+    if (keys) keepPhotos(keys, false, false);
     else setStatus('failed');
   };
 

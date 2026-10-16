@@ -1,5 +1,5 @@
 import type { RecognizedPage } from '#/native/TextRecognition';
-import { assembleReceiptLines } from '../assembleReceiptLines';
+import { assembleReceiptRows } from '../assembleReceiptRows';
 
 type Row = [
   text: string,
@@ -50,9 +50,24 @@ const VISION_OUTPUT: Row[] = [
   ['0.00', 0.873, 0.829, 0.086, 0.031],
 ];
 
-describe('assembleReceiptLines', () => {
+// Each page's rows as text.
+const rowTexts = (pages: RecognizedPage[]) =>
+  assembleReceiptRows(pages).map(({ rows }) => rows.map(row => row.text));
+
+describe('assembleReceiptRows', () => {
+  it('keeps the lines each row was joined from, and the page tilt', () => {
+    const [assembled] = assembleReceiptRows([page(VISION_OUTPUT)]);
+    const milk = assembled?.rows[2];
+    expect(milk?.text).toBe('GV WHOLE MILK 007874235186 F  3.48 N');
+    expect(milk?.lines.map(line => line.text)).toEqual([
+      'GV WHOLE MILK 007874235186 F',
+      '3.48 N',
+    ]);
+    expect(assembled?.tilt).toBe(0);
+  });
+
   it('puts each price back on its item row, in printed order', () => {
-    expect(assembleReceiptLines([page(VISION_OUTPUT)])).toEqual([
+    expect(rowTexts([page(VISION_OUTPUT)])).toEqual([
       [
         'WALMART SUPERCENTER',
         'STORE #1234 (555) 555-1234',
@@ -77,7 +92,7 @@ describe('assembleReceiptLines', () => {
   // Apple Vision's reading of a hand-held Costco photo, tilted up to the right:
   // by height alone each name pairs with the price of the row below it.
   it("reads a tilted photo's rows along its slope", () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['12.49 E', 0.669, 0.266, 0.084, 0.032, -0.177],
         ['KS ORG A2 PR', 0.414, 0.286, 0.212, 0.052, -0.167],
@@ -100,7 +115,7 @@ describe('assembleReceiptLines', () => {
 
   // A Pak'nSave photo: its long names curl to -0.026 on rows that are level.
   it("reads a level page by height, whatever its lines' curl", () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['Our Shopping Hours are Mon - Sun', 0.1, 0.5, 0.7, 0.03, 0],
         ['$9.84 EA =', 0.554, 0.61, 0.141, 0.0248, 0],
@@ -125,7 +140,7 @@ describe('assembleReceiptLines', () => {
       texts.map((text, index) => [text, 0.05, 0.1 + index * 0.05, 0.6, 0.03]);
 
     expect(
-      assembleReceiptLines([
+      rowTexts([
         page(
           rows([
             'CARROTS . 73',
@@ -152,7 +167,7 @@ describe('assembleReceiptLines', () => {
   // ML Kit on a Giant Eagle photo: every price reads half a row below its
   // name, so by height alone each would join the row after its own.
   it('moves a price column read below its names back onto their rows', () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['SHELLED WALNUTS 1L', 0.27, 0.527, 0.34, 0.023],
         ['4.99 F', 0.73, 0.541, 0.115, 0.014],
@@ -178,7 +193,7 @@ describe('assembleReceiptLines', () => {
   // ML Kit on an ALDI photo: the prices read a third of a row high, and a tax
   // flag read apart from its price is the first line of its row.
   it('moves a price column read above its names, tax flags with it', () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['12.38 FA', 0.658, 0.129, 0.116, 0.0152],
         ['Ground beef', 0.264, 0.129, 0.228, 0.0246],
@@ -204,7 +219,7 @@ describe('assembleReceiptLines', () => {
   // a little above their names on evenly spaced rows, where the column moved a
   // whole row down agrees as well, every price beside the name above its own.
   it('keeps a price column off by a little on its own rows, never a row away', () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['ITEM A', 0.3065, 0.3819, 0.2921, 0.0126, -0.0075],
         ['1.99 F', 0.78, 0.392, 0.1146, 0.0123, -0.0144],
@@ -263,7 +278,7 @@ describe('assembleReceiptLines', () => {
   });
 
   it('reads a page by height alone where too few prices agree on an offset', () => {
-    const [lines] = assembleReceiptLines([
+    const [lines] = rowTexts([
       page([
         ['COFFEE', 0.1, 0.2, 0.3, 0.03],
         ['5.99', 0.75, 0.21, 0.08, 0.03],
@@ -282,7 +297,7 @@ describe('assembleReceiptLines', () => {
       ['EGGS', 0.1, 0.1, 0.3, 0.03],
     ]);
 
-    expect(assembleReceiptLines([first, second])).toEqual([['MILK'], ['EGGS']]);
+    expect(rowTexts([first, second])).toEqual([['MILK'], ['EGGS']]);
   });
 
   // Apple Vision's reading of photographed Giant Eagle and ALDI UK receipts.
@@ -291,7 +306,7 @@ describe('assembleReceiptLines', () => {
       texts.map((text, index) => [text, 0.05, 0.1 + index * 0.05, 0.5, 0.03]);
 
     expect(
-      assembleReceiptLines([
+      rowTexts([
         page(
           rows([
             'BK PIE 4 -PEACH  АC  1.50 F',
@@ -316,7 +331,7 @@ describe('assembleReceiptLines', () => {
   });
 
   it('reads back a dollar sign read as an 8 on a page printing dollars', () => {
-    const [dollars, plain] = assembleReceiptLines([
+    const [dollars, plain] = rowTexts([
       page([
         ['CREAM CHEESE BAR  $1.75  F', 0.05, 0.1, 0.9, 0.03],
         ['CREAM CHEESE BAR  81.75  F', 0.05, 0.15, 0.9, 0.03],
@@ -337,8 +352,6 @@ describe('assembleReceiptLines', () => {
   it('leaves a page printed in Cyrillic as read', () => {
     const cyrillic = page([['МОЛОКО 3,2%  89.90 А', 0.05, 0.1, 0.5, 0.03]]);
 
-    expect(assembleReceiptLines([cyrillic])).toEqual([
-      ['МОЛОКО 3,2%  89.90 А'],
-    ]);
+    expect(rowTexts([cyrillic])).toEqual([['МОЛОКО 3,2%  89.90 А']]);
   });
 });
