@@ -1,9 +1,5 @@
 import type { ReceiptLineLabels } from '#/native/ReceiptStructuring';
-import {
-  isUsableReceipt,
-  linesThroughTotal,
-  structureReceipt,
-} from '../structureReceipt';
+import { linesThroughTotal, structureReceipt } from '../structureReceipt';
 
 // Receipt lines and the labels Foundation Models returned for them in the app
 // on the iOS simulator (docs/verified-library-behaviour.md).
@@ -389,45 +385,6 @@ describe('linesThroughTotal', () => {
     const lines = ['TOTAL WINE & MORE', 'MERLOT  9.99', 'TOTAL ITEMS 1'];
 
     expect(linesThroughTotal(lines)).toEqual(lines);
-  });
-});
-
-describe('isUsableReceipt', () => {
-  it('keeps a receipt the model placed and that has a priced item', () => {
-    expect(
-      isUsableReceipt(
-        structureReceipt(WALMART, WALMART_LABELS),
-        WALMART_LABELS,
-      ),
-    ).toBe(true);
-  });
-
-  it('keeps one where the model skipped a few wordless lines', () => {
-    const skippedTwo: ReceiptLineLabels = {
-      lines: WALMART_LABELS.lines.filter(
-        label => label.line !== 6 && label.line !== 9,
-      ),
-    };
-
-    expect(
-      isUsableReceipt(structureReceipt(WALMART, skippedTwo), skippedTwo),
-    ).toBe(true);
-  });
-
-  it('drops one where the model skipped lines, or no item has a price', () => {
-    const skipped: ReceiptLineLabels = {
-      lines: WALMART_LABELS.lines.slice(0, 5),
-    };
-    expect(isUsableReceipt(structureReceipt(WALMART, skipped), skipped)).toBe(
-      false,
-    );
-
-    const noPrices: ReceiptLineLabels = {
-      lines: [{ line: 0, label: 'item', product: 'BANANAS' }],
-    };
-    expect(
-      isUsableReceipt(structureReceipt(['BANANAS'], noPrices), noPrices),
-    ).toBe(false);
   });
 });
 

@@ -315,26 +315,3 @@ export function structureReceipt(
   );
   return merchant ? { merchant, lines: parsed } : { lines: parsed };
 }
-
-// The model skips lines that carry no words (a lone `F`, a price on its own
-// row): it labelled 19 of a skewed Walmart photo's 23. Aligned by their words,
-// the labels it gave still read the receipt; far fewer is a run that failed.
-const MIN_PLACED = 0.75;
-
-/**
- * Worth keeping: the model placed most lines, and at least one item has a
- * price. Anything less goes back to the draft's plain text.
- */
-export function isUsableReceipt(
-  parsed: ParsedReceipt,
-  labels: ReceiptLineLabels,
-): boolean {
-  const placed = new Set(labels.lines.map(line => line.line)).size;
-  const covered = parsed.lines.length === 0 ? 0 : placed / parsed.lines.length;
-  return (
-    covered >= MIN_PLACED &&
-    parsed.lines.some(
-      line => line.kind === 'item' && line.lineTotal !== undefined,
-    )
-  );
-}

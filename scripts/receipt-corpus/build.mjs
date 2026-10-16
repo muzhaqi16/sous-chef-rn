@@ -36,7 +36,7 @@ for (const dir of ['images', 'ocr', 'pages', 'labels']) {
 mkdirSync(outDir, { recursive: true });
 
 const { assembleReceiptRows } = await import(`${UTILS}/assembleReceiptRows.ts`);
-const { readReceiptDate } = await import(`${UTILS}/receiptDate.ts`);
+const { readReceiptDate } = await import('@muzhaqi16/receipt-rules');
 const { redactReceiptText } = await import(`${UTILS}/redactReceiptText.ts`);
 const { linesThroughTotal } = await import(`${UTILS}/structureReceipt.ts`);
 

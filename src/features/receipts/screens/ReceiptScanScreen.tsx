@@ -86,6 +86,7 @@ export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack, toReceiptReview } = useAppNavigation();
   const serverParsing = useFeatureFlag('receiptParsing');
+  const deviceReading = useFeatureFlag('deviceReceiptReading');
   const {
     status,
     answerConsent,
@@ -98,7 +99,11 @@ export const ReceiptScanScreen: React.FC = () => {
     sendPhotos,
     declinePhotos,
     discard,
-  } = useReceiptScan({ onCancel: goBack, serverParsing });
+  } = useReceiptScan({
+    onCancel: goBack,
+    serverParsing,
+    deviceReading,
+  });
   // Only once the phone has had its go at the receipt.
   const { readingStatus, retryAt, slowPhotoRead } = useServerReceiptParse({
     enabled: serverParsing && status === 'saved',

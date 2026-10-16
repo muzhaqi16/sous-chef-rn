@@ -22,7 +22,6 @@ import {
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { checkInLineOf, type CheckInLineNeed } from '../utils/checkInLine';
-import { receiptTotalsGap } from '../utils/receiptTotalsGap';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
@@ -173,14 +172,9 @@ export function useReceiptReview() {
   const store =
     draft?.store ??
     (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
-  // The server judges its own reading by the rule its lines follow, which
-  // knows a discount it found was never taken off.
-  const totalsGap =
-    draft?.parsedBy === 'server'
-      ? draft.totalsGap ?? null
-      : draft?.parsed
-      ? receiptTotalsGap(draft.parsed)
-      : null;
+  // Judged where it was read, by the rule its lines follow: the server's, or
+  // the same rules on the phone, which know a discount never taken off.
+  const totalsGap = draft?.totalsGap ?? null;
   // A receipt that printed no readable day was bought the day it was scanned.
   const purchasedOn =
     draft?.purchasedOn ??

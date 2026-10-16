@@ -6,8 +6,7 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { isRecord } from '#/utils/isRecord';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import type { ParsedReceipt } from '../utils/parsedReceipt';
-import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
+import type { ParsedReceipt, ReceiptTotalsGap } from '../utils/parsedReceipt';
 
 /** What one receipt line becomes in the pantry. */
 export interface ReceiptLineChoice {
@@ -114,13 +113,13 @@ export interface ReceiptDraft {
   purchasedOn?: string;
   /** The store the user picked in the review, over the one the API resolved. */
   store?: { id: string; name: string };
-  /** Structured on the phone, when its model could, else by the server. */
+  /** Read on the phone, by the rules or its model, else by the server. */
   parsed?: ParsedReceipt;
   /** The server parse that read it: the check-in completes its store from it. */
   parseId?: string;
   /** Which of the two structured `parsed`. */
   parsedBy?: 'device' | 'server';
-  /** The server found its reading does not add up to the receipt. */
+  /** Whoever read it found its lines do not add up to the receipt. */
   totalsGap?: ReceiptTotalsGap;
   printedStore?: PrintedStore;
   serverParse?: ServerReceiptParse;

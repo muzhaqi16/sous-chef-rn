@@ -10,7 +10,6 @@ import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParse
 import { classifyCreateResult, outcomeOf } from '../serverReceipt';
 import { fromServerReceipt } from '../fromServerReceipt';
 import { receiptReviewLines } from '../receiptReviewLines';
-import { receiptTotalsGap } from '../receiptTotalsGap';
 
 type ServerReceipt = NonNullable<ReceiptParseReadersFragment['receipt']>;
 type ServerLine = ServerReceipt['lines'][number];
@@ -106,10 +105,6 @@ describe('fromServerReceipt', () => {
         price: 1.26,
       },
     ]);
-  });
-
-  it('counts a deposit toward the subtotal, as a fee', () => {
-    expect(receiptTotalsGap(fromServerReceipt(receipt))).toBeNull();
   });
 
   it('copies the figures the server gives, and reads none from the text', () => {

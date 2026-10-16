@@ -772,7 +772,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt: it invented purchase dates, negated item prices and shifted line indices. On a longer, skewed receipt it numbers lines itself, skipping lines with no words.
 
-So `receipts/utils/structureReceipt.ts` reads every figure from the printed text, places each label by the words it copied, lets the printed words overrule a label, and `isUsableReceipt` asks for 75% of lines placed. Labelling took a median 0.55 s per labelled line on the simulator (2026-10-02, 32-receipt corpus), and 5 receipts of 48–79 lines ran past the 20 s timeout.
+So `receipts/utils/structureReceipt.ts` reads every figure from the printed text, places each label by the words it copied, and lets the printed words overrule a label. A model reading is kept only when the receipt rules' check accepts it (`checkOnPhone`). Labelling took a median 0.55 s per labelled line on the simulator (2026-10-02, 32-receipt corpus), and 5 receipts of 48–79 lines ran past the 20 s timeout.
 
 Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 `globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.

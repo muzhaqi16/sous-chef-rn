@@ -6,6 +6,7 @@ describe('resolveFeatureFlags', () => {
   // The server decides per user; the build only allows.
   it('allows every capability by default', () => {
     expect(resolveFeatureFlags({}, undefined)).toEqual({
+      deviceReceiptReading: true,
       ingredientPaste: true,
       pantrySuggestions: true,
       receiptParsing: true,
@@ -37,10 +38,18 @@ describe('resolveFeatureFlags', () => {
     });
   });
 
+  it('lets a build turn reading receipts on the phone off', () => {
+    expect(resolveFeatureFlags({}, 'deviceReceiptReading=off')).toMatchObject({
+      deviceReceiptReading: false,
+      receiptParsing: true,
+    });
+  });
+
   it('ignores a flag or a value it does not know', () => {
     expect(
       resolveFeatureFlags({}, 'retiredFlag=off,ingredientPaste=maybe,,='),
     ).toEqual({
+      deviceReceiptReading: true,
       ingredientPaste: true,
       pantrySuggestions: true,
       receiptParsing: true,

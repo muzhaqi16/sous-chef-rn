@@ -8,16 +8,12 @@ import {
   isUpgradeRequired,
   isVerdict,
 } from '#domain/serverJobRefusals';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { ReceiptParseQuery } from '../hooks/useServerReceiptParse.generated';
-import type {
-  PrintedStore,
-  ServerParseOutcome,
-} from '../store/receiptDraftStore';
+import type { ServerParseOutcome } from '../store/receiptDraftStore';
 import { isPlausibleReceiptDay } from './receiptDate';
 import { receiptReviewLines } from './receiptReviewLines';
-import type { ReceiptTotalsGap } from './receiptTotalsGap';
-import { fromServerReceipt } from './fromServerReceipt';
+import type { ReceiptTotalsGap } from './parsedReceipt';
+import { fromServerReceipt, printedStoreOf } from './fromServerReceipt';
 
 type ServerParse = NonNullable<ReceiptParseQuery['receiptParse']>;
 
@@ -34,23 +30,6 @@ function totalsGapOf(
   );
   if (mismatch?.counted == null || mismatch.printed == null) return undefined;
   return { counted: mismatch.counted, printed: mismatch.printed };
-}
-
-/** The shop the parse read, when it read a name. */
-function printedStoreOf({
-  name,
-  address,
-  storeNumber,
-}: NonNullable<ServerParse['receipt']>['merchant']): PrintedStore | undefined {
-  const named = firstNonBlank(name);
-  if (!named) return undefined;
-  const printedAddress = firstNonBlank(address);
-  const printedNumber = firstNonBlank(storeNumber);
-  return {
-    name: named.trim(),
-    ...(printedAddress ? { address: printedAddress } : {}),
-    ...(printedNumber ? { storeNumber: printedNumber } : {}),
-  };
 }
 
 /** What a finished parse leaves on the draft; nothing while it runs. */

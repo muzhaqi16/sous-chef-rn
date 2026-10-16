@@ -490,15 +490,20 @@ describe('useReceiptReview', () => {
       null,
     ],
     [
-      "checks the phone's own reading on the phone",
-      { parsedBy: 'device' },
+      'shows the mismatch the phone found in its reading',
+      { parsedBy: 'device', totalsGap: { counted: 5.75, printed: 4.05 } },
       { counted: 5.75, printed: 4.05 },
+    ],
+    [
+      'shows none when the phone found its reading adds up',
+      { parsedBy: 'device' },
+      null,
     ],
   ])('%s', async (_name, readBy, totalsGap) => {
     const draft = useReceiptDraftStore.getState().draft!;
     const lines = draft.parsed!.lines.map(({ index: _index, ...line }) => line);
-    // A markdown the API found was never taken off reads as OTHER, which the
-    // phone's check counts as a fee.
+    // A markdown the API found was never taken off reads as OTHER, which a sum
+    // of the lines counts as a fee: only the reader's verdict is shown.
     lines.splice(3, 0, {
       rawText: 'Markdown: $1.70',
       kind: 'other',

@@ -4,6 +4,7 @@
  * without them. A whole feature is switched by `appConfig.features` instead.
  */
 export type FeatureFlag =
+  | 'deviceReceiptReading'
   | 'ingredientPaste'
   | 'pantrySuggestions'
   | 'receiptParsing'
@@ -18,6 +19,9 @@ export type FeatureFlag =
  * flag the server owns is on only where the server also says so for the user.
  */
 const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
+  // A receipt read on the phone by `@muzhaqi16/receipt-rules` first, kept when it
+  // adds up; off, every receipt is read as `receiptParsing` says.
+  deviceReceiptReading: true,
   // Pasted ingredient lines read by the API's `parseIngredientLines`.
   ingredientPaste: true,
   // Discovery ranked by the API's `recipeSuggestions`; off, Spoonacular ranks it.
