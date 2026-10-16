@@ -2433,6 +2433,14 @@ input CreateReceiptParseInput {
   and deletes them, whatever the outcome. Send pages or photos, not both.
   """
   photos: [String!]
+  """
+  The app covered the personal details (the payment block, card and member
+  numbers, names) of every photo in this parse before uploading them. Only
+  photos so marked may be read by a hosted model; otherwise the service's own
+  model reads them. Send it only when every photo was masked. Ignored without
+  photos.
+  """
+  photosMasked: Boolean
 }
 
 type CreateReceiptParsePayload {
