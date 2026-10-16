@@ -42,6 +42,7 @@ import { isOwnKey } from '#utils/isOwnKey';
 import {
   moveToPantryDefaults,
   moveToPantrySchema,
+  statesPackagesAsSize,
   type MoveToPantryFormValues,
 } from './moveToPantryFormConfig';
 import { toDateKey } from '#/utils/dateUtils';
@@ -173,6 +174,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
         ),
         notes: '',
+        packageSizeInput: '',
+        packageSizeUnitValue: '',
+        packageSizeUnitId: null,
+        packageSizeUnitType: null,
       };
       unitIdThisPass = resolvedUnit.id;
       setSeededUnitPrice(purchasedUnitPrice);
@@ -297,11 +302,21 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             netWeightUnitId: packageSizeUnitId,
           }
         : null;
-    const amount = stockAmountOf(quantityValue, {
-      asPackages: packageSize !== null,
-      packageSize,
-      unitId: confirmedUnitId,
-    });
+    const amount =
+      packageSize && confirmedUnitId && statesPackagesAsSize(values)
+        ? stockAmountOf(packageSize.netWeight, {
+            asPackages: true,
+            packageSize: {
+              netWeight: quantityValue,
+              netWeightUnitId: confirmedUnitId,
+            },
+            unitId: packageSize.netWeightUnitId,
+          })
+        : stockAmountOf(quantityValue, {
+            asPackages: packageSize !== null,
+            packageSize,
+            unitId: confirmedUnitId,
+          });
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
@@ -450,9 +465,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                         placeholder={t('labels.ozGMl')}
                         error={fieldState.error?.message}
                         testID={shoppingListTestIDs.moveToPantryPackageSizeUnit}
-                        onUnitSelected={id => {
+                        onUnitSelected={(id, _name, type) => {
                           setValue('packageSizeUnitId', id);
+                          setValue('packageSizeUnitType', type ?? null);
                           void trigger('packageSizeUnitValue');
+                          // The size's count rule reads the size's unit too.
+                          if (getFieldState('packageSizeInput').invalid) {
+                            void trigger('packageSizeInput');
+                          }
                         }}
                       />
                     )}

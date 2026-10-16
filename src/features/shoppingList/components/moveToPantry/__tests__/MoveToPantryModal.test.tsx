@@ -113,7 +113,11 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
       testID,
     }: {
       onChangeText: (text: string) => void;
-      onUnitSelected?: (unitId: string | null) => void;
+      onUnitSelected?: (
+        unitId: string | null,
+        name?: string,
+        type?: string,
+      ) => void;
       error?: string;
       testID?: string;
     }) => {
@@ -131,6 +135,17 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
             },
           },
           R.createElement(RN.Text, null, 'Pick kg'),
+        ),
+        R.createElement(
+          RN.Pressable,
+          {
+            testID: `${prefix}pick-box`,
+            onPress: () => {
+              onChangeText('box');
+              onUnitSelected?.('unit-box', 'box', 'COUNT');
+            },
+          },
+          R.createElement(RN.Text, null, 'Pick box'),
         ),
         R.createElement(
           RN.Pressable,
@@ -703,6 +718,86 @@ describe('MoveToPantryModal', () => {
       );
 
       enterPackageSize();
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    // 64 fl oz with a size of 1 box is one box of 64 fl oz, stated the other
+    // way round.
+    it('reads an amount with a count of packages in its size as that many packages of it', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '1',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-box`,
+        ),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() =>
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            amount: {
+              packages: {
+                count: 1,
+                size: { netWeight: 5, netWeightUnitId: 'u1' },
+                unitId: 'unit-box',
+              },
+            },
+          }),
+        ),
+      );
+      expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
+    });
+
+    it('opens again with no package size from the last time', async () => {
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal {...defaultProps} visible={false} />,
+        { cache: makeCache(), operationMocks: [purchaseMock(5, 0.59)] },
+      );
+      rerender(<MoveToPantryModal {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '1',
+      );
+
+      rerender(<MoveToPantryModal {...defaultProps} visible={false} />);
+      rerender(<MoveToPantryModal {...defaultProps} />);
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId('move-to-pantry-field-Package size').props.value,
+        ).toBe(''),
+      );
+    });
+
+    it('still refuses a part of a package in the size', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '1.5',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-box`,
+        ),
+      );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
 
       expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
