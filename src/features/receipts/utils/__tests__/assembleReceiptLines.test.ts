@@ -149,6 +149,70 @@ describe('assembleReceiptLines', () => {
     ]);
   });
 
+  // ML Kit on a Giant Eagle photo: every price reads half a row below its
+  // name, so by height alone each would join the row after its own.
+  it('moves a price column read below its names back onto their rows', () => {
+    const [lines] = assembleReceiptLines([
+      page([
+        ['SHELLED WALNUTS 1L', 0.27, 0.527, 0.34, 0.023],
+        ['4.99 F', 0.73, 0.541, 0.115, 0.014],
+        ['1 PT BLUEBERRIES', 0.28, 0.543, 0.29, 0.022],
+        ['3.99 F', 0.727, 0.557, 0.112, 0.014],
+        ['2.45 lb @ 3.99 /lb', 0.135, 0.559, 0.34, 0.019],
+        ['PEP RED PREMIUM', 0.268, 0.579, 0.281, 0.018],
+        ['9.78 F', 0.736, 0.586, 0.098, 0.017],
+        ['**** BALANCE', 0.166, 0.627, 0.225, 0.016],
+        ['18.76', 0.702, 0.637, 0.093, 0.015],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'SHELLED WALNUTS 1L  4.99 F',
+      '1 PT BLUEBERRIES  3.99 F',
+      '2.45 lb @ 3.99 /lb',
+      'PEP RED PREMIUM  9.78 F',
+      '**** BALANCE  18.76',
+    ]);
+  });
+
+  // ML Kit on an ALDI photo: the prices read a third of a row high, and a tax
+  // flag read apart from its price is the first line of its row.
+  it('moves a price column read above its names, tax flags with it', () => {
+    const [lines] = assembleReceiptLines([
+      page([
+        ['12.38 FA', 0.658, 0.129, 0.116, 0.0152],
+        ['Ground beef', 0.264, 0.129, 0.228, 0.0246],
+        ['FA', 0.752, 0.1665, 0.022, 0.0129],
+        ['1.65', 0.673, 0.1677, 0.048, 0.0141],
+        ['Celery', 0.263, 0.1736, 0.077, 0.0129],
+        ['0.81 FA', 0.673, 0.185, 0.105, 0.0152],
+        ['Kidney beans', 0.263, 0.19, 0.194, 0.0164],
+        ['15.83', 0.664, 0.243, 0.064, 0.0152],
+        ['SUBTOTAL', 0.248, 0.247, 0.103, 0.0164],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'Ground beef  12.38 FA',
+      'Celery  1.65  FA',
+      'Kidney beans  0.81 FA',
+      'SUBTOTAL  15.83',
+    ]);
+  });
+
+  it('reads a page by height alone where too few prices agree on an offset', () => {
+    const [lines] = assembleReceiptLines([
+      page([
+        ['COFFEE', 0.1, 0.2, 0.3, 0.03],
+        ['5.99', 0.75, 0.21, 0.08, 0.03],
+        ['TEA', 0.1, 0.26, 0.2, 0.03],
+        ['3.49', 0.75, 0.27, 0.08, 0.03],
+      ]),
+    ]);
+
+    expect(lines).toEqual(['COFFEE  5.99', 'TEA  3.49']);
+  });
+
   it('keeps pages apart and in scan order, and drops blank lines', () => {
     const first = page([['MILK', 0.1, 0.1, 0.3, 0.03]]);
     const second = page([

@@ -155,15 +155,73 @@ const printsDollars = (rows: readonly string[]) => {
 // rows that are level across the page).
 const LEVEL = 0.025;
 
-// One printed row when the centres sit within half the shorter line's height.
+// A price alone on its line, with its sign and tax flag: `12.38 FA`, `$3.49`.
+const PRICE_ONLY = /^\W*-?\$?\d{1,6}[.,]\d{2}-?(?:\s?[A-Z*]{1,2})?\W*$/;
+// So many prices must agree before the price column is moved.
+const PRICES_AGREEING = 3;
+
+interface ColumnOffset {
+  /** The price column's left edge: every line from it is moved. */
+  from: number;
+  offset: number;
+}
+
+const NO_OFFSET: ColumnOffset = { from: Infinity, offset: 0 };
+
+/**
+ * How far the price column sits below its names (above, when negative) across
+ * a level page. ML Kit reads a slight tilt or curl as every price lifted or
+ * dropped alike: Giant Eagle's half a row low, ALDI's a third of a row high.
+ * It is the offset most prices agree on, kept only where it pairs more prices
+ * than none does.
+ */
+function priceColumnOffset(lines: readonly RecognizedLine[]): ColumnOffset {
+  const prices = lines.filter(line => PRICE_ONLY.test(line.text.trim()));
+  if (prices.length < PRICES_AGREEING) return NO_OFFSET;
+  const from = Math.min(...prices.map(price => price.x));
+  const names = lines.filter(line => line.x + line.width <= from);
+  const agreeing = (offset: number) =>
+    prices.filter(price =>
+      names.some(
+        name =>
+          Math.abs(centerYOf(price) - offset - centerYOf(name)) <
+          Math.min(price.height, name.height) / 4,
+      ),
+    ).length;
+  const candidates = prices.flatMap(price =>
+    names
+      .map(name => centerYOf(price) - centerYOf(name))
+      .filter(apart => Math.abs(apart) < price.height),
+  );
+  let bestOffset = 0;
+  let bestCount = agreeing(0);
+  for (const offset of candidates) {
+    const count = agreeing(offset);
+    // A tie goes to the smaller move, and to no move at all.
+    const smaller = bestOffset !== 0 && Math.abs(offset) < Math.abs(bestOffset);
+    if (count > bestCount || (count === bestCount && smaller)) {
+      bestOffset = offset;
+      bestCount = count;
+    }
+  }
+  return bestOffset !== 0 && bestCount >= PRICES_AGREEING
+    ? { from, offset: bestOffset }
+    : NO_OFFSET;
+}
+
+// One printed row when the centres sit within half the shorter line's height,
+// the price column read back by its offset.
 function levelRows(lines: readonly RecognizedLine[]): RecognizedLine[][] {
+  const { from, offset } = priceColumnOffset(lines);
+  const rowY = (line: RecognizedLine) =>
+    centerYOf(line) - (line.x >= from ? offset : 0);
   const rows: RecognizedLine[][] = [];
-  for (const line of [...lines].sort((a, b) => centerYOf(a) - centerYOf(b))) {
+  for (const line of [...lines].sort((a, b) => rowY(a) - rowY(b))) {
     const row = rows.at(-1);
     const [first] = row ?? [];
     const sameRow =
       first &&
-      Math.abs(centerYOf(first) - centerYOf(line)) <
+      Math.abs(rowY(first) - rowY(line)) <
         Math.min(first.height, line.height) / 2;
     if (row && sameRow) row.push(line);
     else rows.push([line]);
