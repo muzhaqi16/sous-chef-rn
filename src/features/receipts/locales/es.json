@@ -17,6 +17,7 @@
     "saved": {
       "title": "Recibo guardado",
       "body": "Solo se guarda el texto del recibo, sin los números de tarjeta ni de fidelidad.",
+      "bodyDevice": "Se leyó en tu teléfono, así que no se envió nada. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
       "scanAnother": "Escanear otro recibo",
       "review_one": "Revisar {{count}} artículo",
       "review_other": "Revisar {{count}} artículos",

@@ -142,4 +142,35 @@ describe('ReceiptScanScreen', () => {
     ).toBeTruthy();
     expect(screen.getByText('Picking out the items…')).toBeTruthy();
   });
+
+  it('says a receipt read on the phone sent nothing', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        parsedBy: 'device',
+        parsed: {
+          lines: [
+            {
+              index: 0,
+              rawText: 'MILK 3.48',
+              kind: 'item',
+              product: 'MILK',
+              lineTotal: 3.48,
+            },
+          ],
+        },
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(
+      screen.getByText(
+        "Read on your phone, so nothing was sent. Card and loyalty numbers are removed from what's kept.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Only the receipt's text is kept/)).toBeNull();
+    expect(screen.getByText('Review 1 item')).toBeTruthy();
+  });
 });

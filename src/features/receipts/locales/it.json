@@ -17,6 +17,7 @@
     "saved": {
       "title": "Scontrino salvato",
       "body": "Viene conservato solo il testo dello scontrino, senza i numeri di carta e fedeltà.",
+      "bodyDevice": "Letto sul telefono, quindi non è stato inviato nulla. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
       "scanAnother": "Scansiona un altro scontrino",
       "review_one": "Rivedi {{count}} articolo",
       "review_other": "Rivedi {{count}} articoli",

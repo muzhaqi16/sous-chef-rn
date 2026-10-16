@@ -17,6 +17,7 @@
     "saved": {
       "title": "Receipt saved",
       "body": "Only the receipt's text is kept, with card and loyalty numbers removed.",
+      "bodyDevice": "Read on your phone, so nothing was sent. Card and loyalty numbers are removed from what's kept.",
       "scanAnother": "Scan another receipt",
       "review_one": "Review {{count}} item",
       "review_other": "Review {{count}} items",

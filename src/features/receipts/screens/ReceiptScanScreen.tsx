@@ -19,6 +19,7 @@ import {
 } from '../hooks/useServerReceiptParse';
 import { formatDateTime } from '#/utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
+import type { ReceiptDraft } from '../store/receiptDraftStore';
 import { receiptsTestIDs } from '../testIDs';
 
 interface BannerCopy {
@@ -31,6 +32,16 @@ interface ReadingBanner extends BannerCopy {
   icon: string;
   /** Its copy when the receipt went to the server as photos. */
   photos?: BannerCopy;
+}
+
+// What left the phone: nothing for a receipt the phone read, else its photos
+// or its text, sent to be read.
+function savedBodyOf(
+  parsedBy: ReceiptDraft['parsedBy'],
+  sentPhotos: boolean,
+): TranslationKey {
+  if (parsedBy === 'device') return 'receipts.saved.bodyDevice';
+  return sentPhotos ? 'receipts.saved.bodyPhoto' : 'receipts.saved.body';
 }
 
 // What the saved screen says of the server's reading, past `reading`'s spinner.
@@ -175,9 +186,7 @@ export const ReceiptScanScreen: React.FC = () => {
         <View style={styles.saved}>
           <Text role="title">{t('receipts.saved.title')}</Text>
           <Text role="body" tone="secondary">
-            {sentPhotos
-              ? t('receipts.saved.bodyPhoto')
-              : t('receipts.saved.body')}
+            {t(savedBodyOf(draft.parsedBy, sentPhotos))}
           </Text>
           {pickedFromLibrary ? (
             <Text role="body" tone="secondary">

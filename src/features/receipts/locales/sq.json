@@ -17,6 +17,7 @@
     "saved": {
       "title": "Fatura u ruajt",
       "body": "Ruhet vetëm teksti i faturës, pa numrat e kartës e të besnikërisë.",
+      "bodyDevice": "U lexua në telefonin tënd, ndaj nuk u dërgua asgjë. Numrat e kartës dhe të besnikërisë hiqen nga ajo që ruhet.",
       "scanAnother": "Skano një faturë tjetër",
       "review_one": "Shqyrto {{count}} artikull",
       "review_other": "Shqyrto {{count}} artikuj",
