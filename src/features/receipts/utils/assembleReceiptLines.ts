@@ -159,6 +159,7 @@ const LEVEL = 0.025;
 const PRICE_ONLY = /^\W*-?\$?\d{1,6}[.,]\d{2}-?(?:\s?[A-Z*]{1,2})?\W*$/;
 // So many prices must agree before the price column is moved.
 const PRICES_AGREEING = 3;
+const PRICE_COLUMN_SLACK = 0.05;
 
 interface ColumnOffset {
   /** The price column's left edge: every line from it is moved. */
@@ -168,18 +169,52 @@ interface ColumnOffset {
 
 const NO_OFFSET: ColumnOffset = { from: Infinity, offset: 0 };
 
+const centerXOf = (line: RecognizedLine) => line.x + line.width / 2;
+
+const medianOf = (values: readonly number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)] ?? 0;
+};
+
+// The spacing of the printed rows: the gaps between the names' centres, a
+// line's fragments on one row aside.
+function rowPitch(names: readonly RecognizedLine[]): number {
+  const heights = medianOf(names.map(name => name.height));
+  const centres = names.map(centerYOf).sort((a, b) => a - b);
+  const gaps: number[] = [];
+  for (const [at, centre] of centres.entries()) {
+    const previous = centres[at - 1];
+    if (previous !== undefined && centre - previous > heights / 2) {
+      gaps.push(centre - previous);
+    }
+  }
+  return medianOf(gaps);
+}
+
 /**
  * How far the price column sits below its names (above, when negative) across
  * a level page. ML Kit reads a slight tilt or curl as every price lifted or
  * dropped alike: Giant Eagle's half a row low, ALDI's a third of a row high.
  * It is the offset most prices agree on, kept only where it pairs more prices
- * than none does.
+ * than none does. It is looked for within half a row of what the page's tilt
+ * predicts: on evenly spaced rows a column one row off agrees as well, every
+ * price beside the name above its own.
  */
-function priceColumnOffset(lines: readonly RecognizedLine[]): ColumnOffset {
-  const prices = lines.filter(line => PRICE_ONLY.test(line.text.trim()));
+function priceColumnOffset(
+  lines: readonly RecognizedLine[],
+  tilt: number,
+): ColumnOffset {
+  const isPrice = (line: RecognizedLine) => PRICE_ONLY.test(line.text.trim());
+  // The column starts a little left of where its prices do: a unit price
+  // printed mid-row (ALDI's `2@  6.19`) stays on its row.
+  const from =
+    medianOf(lines.filter(isPrice).map(line => line.x)) - PRICE_COLUMN_SLACK;
+  const prices = lines.filter(line => isPrice(line) && line.x >= from);
   if (prices.length < PRICES_AGREEING) return NO_OFFSET;
-  const from = Math.min(...prices.map(price => price.x));
-  const names = lines.filter(line => line.x + line.width <= from);
+  const names = lines.filter(line => line.x < from && !isPrice(line));
+  const predicted =
+    tilt * (medianOf(prices.map(centerXOf)) - medianOf(names.map(centerXOf)));
+  const reach = rowPitch(names) / 2;
   const agreeing = (offset: number) =>
     prices.filter(price =>
       names.some(
@@ -191,15 +226,17 @@ function priceColumnOffset(lines: readonly RecognizedLine[]): ColumnOffset {
   const candidates = prices.flatMap(price =>
     names
       .map(name => centerYOf(price) - centerYOf(name))
-      .filter(apart => Math.abs(apart) < price.height),
+      .filter(apart => Math.abs(apart - predicted) < reach),
   );
   let bestOffset = 0;
   let bestCount = agreeing(0);
   for (const offset of candidates) {
     const count = agreeing(offset);
-    // A tie goes to the smaller move, and to no move at all.
-    const smaller = bestOffset !== 0 && Math.abs(offset) < Math.abs(bestOffset);
-    if (count > bestCount || (count === bestCount && smaller)) {
+    // A tie goes to the offset nearer the tilt's, and to no move at all.
+    const nearer =
+      bestOffset !== 0 &&
+      Math.abs(offset - predicted) < Math.abs(bestOffset - predicted);
+    if (count > bestCount || (count === bestCount && nearer)) {
       bestOffset = offset;
       bestCount = count;
     }
@@ -211,8 +248,11 @@ function priceColumnOffset(lines: readonly RecognizedLine[]): ColumnOffset {
 
 // One printed row when the centres sit within half the shorter line's height,
 // the price column read back by its offset.
-function levelRows(lines: readonly RecognizedLine[]): RecognizedLine[][] {
-  const { from, offset } = priceColumnOffset(lines);
+function levelRows(
+  lines: readonly RecognizedLine[],
+  tilt: number,
+): RecognizedLine[][] {
+  const { from, offset } = priceColumnOffset(lines, tilt);
   const rowY = (line: RecognizedLine) =>
     centerYOf(line) - (line.x >= from ? offset : 0);
   const rows: RecognizedLine[][] = [];
@@ -267,7 +307,7 @@ export function assembleReceiptLines(
     const tilt = weightedMedian(slopes);
     const rows =
       Math.abs(tilt) < LEVEL
-        ? levelRows(lines)
+        ? levelRows(lines, tilt)
         : tiltedRows(lines, tilt, slopes);
     const texts = rows.map(row =>
       row
