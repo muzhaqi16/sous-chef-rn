@@ -136,9 +136,14 @@ export const ReceiptScanScreen: React.FC = () => {
   };
 
   if (status === 'saved' && draft) {
-    const itemCount = draft.parsed
-      ? receiptReviewLines(draft.parsed).length
-      : 0;
+    const lines = draft.parsed ? receiptReviewLines(draft.parsed) : [];
+    const itemCount = lines.length;
+    // Named as the user chose them, else as printed.
+    const failedNames = lines.flatMap(line =>
+      draft.failed?.[line.index]
+        ? [draft.choices?.[line.index]?.itemName ?? line.printed]
+        : [],
+    );
     // Photos the server failed to read give way to the receipt's text, so a
     // photo banner shows only for a receipt with none.
     const sentPhotos = !!draft.photoKeys;
@@ -186,6 +191,30 @@ export const ReceiptScanScreen: React.FC = () => {
             />
           )}
           {banner ? readingBanner(banner) : null}
+          {failedNames.length > 0 ? (
+            <AlertBanner
+              variant="warning"
+              icon="alert-circle-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.failedTitle', {
+                count: failedNames.length,
+              })}
+              subtitle={t('receipts.saved.failedBody', {
+                names: failedNames.slice(0, 3).join(', '),
+              })}
+              testID={receiptsTestIDs.savedFailed}
+            />
+          ) : null}
+          {draft.checkIn?.state === 'queued' ? (
+            <AlertBanner
+              variant="info"
+              icon="cloud-upload-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.queuedTitle')}
+              subtitle={t('receipts.saved.queuedBody')}
+              testID={receiptsTestIDs.savedQueued}
+            />
+          ) : null}
           <View style={styles.actions}>
             {itemCount > 0 && (
               <Button

@@ -91,6 +91,7 @@ import {
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import {
   InviteToHomeDocument,
@@ -177,6 +178,9 @@ const mockedSchema = addMocksToSchema({
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
     MoveShoppingItemToPantryResult: () => ({
       __typename: 'MoveShoppingItemToPantryPayload',
+    }),
+    CreateReceiptCheckInResult: () => ({
+      __typename: 'CreateReceiptCheckInPayload',
     }),
   },
 });
@@ -605,6 +609,34 @@ describe('optimistic entity completeness', () => {
       });
       const pantryItem = moved.moveShoppingItemToPantry.pantryItem;
       pantryItem.id = 'server-item-restocked';
+      pantryItem.pantryId = 'pantry-1';
+
+      addToPantryItemsCache(cache, 'pantry-1', pantryItem);
+
+      expectCompletePantry(readPantry(cache));
+    });
+
+    it('keeps GetPantry complete after a CreateReceiptCheckIn response lands', async () => {
+      // A checked-in line answers with the stack it recorded, the held one on a
+      // restock: the only field source for the row the reconcile links.
+      const cache = await seedPantryCache();
+      const checkedIn = await runAgainstSchema<{
+        createReceiptCheckIn: {
+          results: { pantryItem: PantryItemRef & { pantryId: string } }[];
+        };
+      }>(CreateReceiptCheckInDocument, {
+        input: {
+          id: 'checkin-1',
+          pantryId: 'pantry-1',
+          purchasedOn: '2026-10-15',
+          lines: [],
+        },
+        today: '2026-10-15',
+      });
+      const [first] = checkedIn.createReceiptCheckIn.results;
+      expect(first).toBeDefined();
+      const pantryItem = first!.pantryItem;
+      pantryItem.id = 'server-item-checked-in';
       pantryItem.pantryId = 'pantry-1';
 
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
@@ -1587,7 +1619,7 @@ describe('optimistic entity completeness', () => {
   describe('every connection-linking writer is accounted for', () => {
     const LINKING_MODULES: Record<string, string> = {
       'src/features/pantry/cache/items.ts':
-        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
+        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, CreateReceiptCheckIn, PantryItemForEvent)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':

@@ -171,10 +171,15 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'guess':
       case 'added': {
         if (!choice) return row.printed;
-        return t('receipts.review.chosenDetail', {
-          printed: row.printed,
-          amount: formatQuantityDisplay(choice.quantity, choice.unitText),
-        });
+        return t(
+          choice.notStocked
+            ? 'receipts.review.chosenDetailNotStocked'
+            : 'receipts.review.chosenDetail',
+          {
+            printed: row.printed,
+            amount: formatQuantityDisplay(choice.quantity, choice.unitText),
+          },
+        );
       }
     }
   };
@@ -215,12 +220,23 @@ export const ReceiptReviewScreen: React.FC = () => {
         leftElement: <Icon name={icon} size="md" tone={tone} />,
         rightElement:
           price === undefined || price === null ? undefined : (
-            <Text
-              role={rowType.title}
-              tone={section === 'toAdd' ? 'primary' : 'secondary'}
-            >
-              {money(price)}
-            </Text>
+            <View style={styles.price}>
+              <Text
+                role={rowType.title}
+                tone={section === 'toAdd' ? 'primary' : 'secondary'}
+              >
+                {price === 0 && row.discount
+                  ? t('receipts.review.free')
+                  : money(price)}
+              </Text>
+              {!!row.discount && (
+                <Text role="caption" tone="success">
+                  {t('receipts.review.discountOff', {
+                    amount: money(row.discount),
+                  })}
+                </Text>
+              )}
+            </View>
           ),
         ...(at === 0
           ? { sectionTitle: sectionTitle(section, inSection.length) }
@@ -229,19 +245,19 @@ export const ReceiptReviewScreen: React.FC = () => {
     });
   });
 
+  // The check-in runs on without the review: its lines are in the pantry now.
   const handleAdd = async () => {
-    const { added, failed } = await addChosen();
-    if (failed > 0) {
-      toastService.error(t('receipts.review.someFailed', { count: failed }));
-      return;
+    const { sent, held } = await addChosen();
+    if (sent > 0) {
+      toastService.success(
+        pantryName
+          ? t('receipts.review.addedTo', { count: sent, pantry: pantryName })
+          : t('receipts.review.addedCount', { count: sent }),
+      );
     }
-    toastService.success(
-      pantryName
-        ? t('receipts.review.addedTo', { count: added, pantry: pantryName })
-        : t('receipts.review.addedCount', { count: added }),
-    );
-    // Lines still waiting for a match keep the review, to add once matched.
-    if (rows.some(row => row.status === 'pending')) return;
+    // A line that still lacks something keeps the review, saying which; so do
+    // lines still waiting for a match, to add once matched.
+    if (held > 0 || rows.some(row => row.status === 'pending')) return;
     applied.current = true;
     toPantryMain();
   };
@@ -416,5 +432,9 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
+  },
+  // A price over the discount that made it.
+  price: {
+    alignItems: 'flex-end',
   },
 }));

@@ -53,6 +53,8 @@ import {
   settleMealTemplateDelete,
 } from '#features/mealPlan/offline/replayReconcilers';
 import { removeGoneNotification } from '#features/notifications/offline/replayReconcilers';
+import { reconcileReceiptCheckInReplay } from '#features/receipts/offline/receiptCheckIn';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import {
   DeleteNotificationDocument,
   MarkNotificationAsReadDocument,
@@ -81,6 +83,7 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
+  [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
   [DeletePantryItemDocument, settlePantryItemDelete],
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),

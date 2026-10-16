@@ -1,17 +1,16 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  addPantryItemLocally,
   reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
+import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import {
-  writeLocalPantryItem,
-  type LocalPantryItem,
-} from '#features/pantry/cache/writeLocalPantryItem';
+  localIntakeRow,
+  writeLocalIntake,
+} from '#features/pantry/cache/localIntake';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
-import { localQuantity } from '#domain/stockAmount';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -96,36 +95,11 @@ export function usePantryIntake(pantryId: string | undefined) {
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    // Built outside the try: a value block inside a try body bails the compiler.
-    const localRow: LocalPantryItem = {
-      pantryId,
-      itemName,
-      itemId: input.item.id ?? null,
-      quantity:
-        input.quantity ??
-        (input.amount ? localQuantity(input.amount, {}) : undefined),
-      unitId:
-        input.unit?.id ??
-        input.amount?.measured?.unitId ??
-        input.amount?.packages?.unitId,
-      storageState: input.storage?.storageState,
-      acquisitionMethod: input.purchase?.acquisitionMethod,
-      ...local,
-    };
-
-    try {
-      // Publishes the row AND counts it, so the header cannot fall behind the
-      // list offline, where no response arrives to correct it.
-      writeLocalPantryItem(client.cache, id, localRow);
-      addPantryItemLocally(client.cache, pantryId, {
-        __typename: 'PantryItem',
-        id,
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Pantry Item (optimistic)',
-      });
-    }
+    writeLocalIntake(
+      client.cache,
+      id,
+      localIntakeRow(pantryId, itemName, input, local),
+    );
 
     let result;
     let thrown: unknown;

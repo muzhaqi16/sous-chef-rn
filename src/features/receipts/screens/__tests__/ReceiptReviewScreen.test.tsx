@@ -1,0 +1,147 @@
+'use no memo';
+import React from 'react';
+import { userEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { toastService } from '#/services/toastService';
+import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
+import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { receiptsTestIDs } from '../../testIDs';
+import { ReceiptReviewScreen } from '../ReceiptReviewScreen';
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+const mockToPantryMain = jest.fn();
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toPantryMain: mockToPantryMain,
+    goBack: jest.fn(),
+  }),
+}));
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
+}));
+
+let mockRows: ReceiptReviewRow[] = [];
+const mockAddChosen = jest.fn<Promise<{ sent: number; held: number }>, []>();
+jest.mock('../../hooks/useReceiptReview', () => ({
+  useReceiptReview: () => ({
+    rows: mockRows,
+    merchant: 'giant eagle',
+    store: { id: 'store-1', name: 'Giant Eagle' },
+    proposedStoreName: null,
+    storeUnrecognized: false,
+    purchasedOn: '2026-10-15',
+    dayIsScanDay: false,
+    setPurchasedOn: jest.fn(),
+    chooseStore: jest.fn(),
+    totalsGap: null,
+    matchState: 'done',
+    retryMatching: jest.fn(),
+    pantryName: 'Kitchen Pantry',
+    pendingCount: mockRows.length,
+    applying: false,
+    listLoading: false,
+    listIncomplete: false,
+    chooseLine: jest.fn(),
+    listItemNameFor: () => undefined,
+    pickItem: jest.fn(),
+    addChosen: mockAddChosen,
+    finish: jest.fn(),
+  }),
+}));
+
+const row = (overrides: Partial<ReceiptReviewRow>): ReceiptReviewRow => ({
+  index: 0,
+  printed: 'X',
+  status: 'add',
+  candidates: [],
+  onList: false,
+  ...overrides,
+});
+
+describe('ReceiptReviewScreen rows', () => {
+  it('shows what a coupon took off beside the price paid', () => {
+    mockRows = [
+      row({
+        printed: 'MAYONNAISE AC',
+        price: 6.49,
+        discount: 1,
+        choice: lineChoice({ itemName: 'Mayonnaise', price: 6.49 }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('$6.49')).toBeTruthy();
+    expect(screen.getByText('$1.00 off')).toBeTruthy();
+  });
+
+  it('shows a line its discount made free as free', () => {
+    mockRows = [
+      row({
+        printed: 'BOGO CHIPS',
+        price: 0,
+        discount: 3.99,
+        choice: lineChoice({ itemName: 'Chips', price: 0 }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Free')).toBeTruthy();
+    expect(screen.getByText('$3.99 off')).toBeTruthy();
+  });
+
+  it('says a line is not for the pantry', () => {
+    mockRows = [
+      row({
+        printed: 'PAPER TOWELS',
+        price: 5.99,
+        choice: lineChoice({
+          itemName: 'Paper towels',
+          price: 5.99,
+          notStocked: true,
+        }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(
+      screen.getByText(/PAPER TOWELS · 1 · not for the pantry/),
+    ).toBeTruthy();
+  });
+});
+
+describe('ReceiptReviewScreen Add', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRows = [
+      row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) }),
+      row({ index: 1, printed: 'BREAD', choice: lineChoice({ price: 1.99 }) }),
+    ];
+  });
+
+  it('goes to the pantry as soon as the lines are shown there, without waiting on the API', async () => {
+    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Added 2 items to Kitchen Pantry',
+    );
+    expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays on the review while a line still lacks something', async () => {
+    mockAddChosen.mockResolvedValue({ sent: 1, held: 1 });
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(toastService.success).toHaveBeenCalledTimes(1);
+    expect(mockToPantryMain).not.toHaveBeenCalled();
+  });
+});

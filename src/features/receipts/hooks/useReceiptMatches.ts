@@ -1,18 +1,14 @@
-import { skipToken, useMutation, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   NetWeightKind,
   ReceiptMatchConfidence,
   ReceiptParser,
   type ReceiptMatchMethod,
 } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { formatNetWeightDisplay } from '#/utils/formatQuantity';
 import {
-  RecordReceiptMatchesDocument,
   ResolveReceiptLinesDocument,
   type ResolveReceiptLinesQuery,
 } from './useReceiptMatches.generated';
@@ -47,12 +43,6 @@ export interface ReceiptMatchLine {
 
 /** Whether the API has said which items the lines are, is asking, or could not be asked. */
 export type ReceiptMatchState = 'matching' | 'failed' | 'done';
-
-export interface ConfirmedReceiptLine {
-  index: number;
-  text: string;
-  itemId: string;
-}
 
 // The API's cap per call.
 const MAX_LINES = 100;
@@ -102,7 +92,6 @@ export function useReceiptMatches(
   pickedStoreId: string | undefined,
   printedStore: PrintedStore | undefined,
 ) {
-  const { t } = useTranslation();
   const { pantry, currentHome } = useCurrentPantry();
   const sent = lines.slice(0, MAX_LINES);
   // Asked once the pantry is known (or known to be none), never twice.
@@ -140,7 +129,6 @@ export function useReceiptMatches(
   // the new one lands, so the proposals stay on screen.
   const answer = usePreservedQueryData(data, undefined, JSON.stringify(sent));
   const resolved = answer?.resolveReceiptLines;
-  const storeId = pickedStoreId ?? resolved?.store?.id;
 
   const matches = new Map<number, ReceiptLineMatch>();
   for (const line of resolved?.lines ?? []) {
@@ -156,51 +144,6 @@ export function useReceiptMatches(
       ),
     });
   }
-
-  // Queued like any local-first write, so a receipt added offline still teaches
-  // the matcher once the phone is back online.
-  const [record] = useMutation(RecordReceiptMatchesDocument, {
-    context: { localFirst: true },
-  });
-
-  /** `placedStoreId` names a store added on confirm, before a pick could. */
-  const recordConfirmed = async (
-    confirmed: readonly ConfirmedReceiptLine[],
-    placedStoreId?: string,
-  ) => {
-    if (!currentHome || confirmed.length === 0) return;
-    const recordedStoreId = placedStoreId ?? storeId;
-    await settleMutation(
-      () =>
-        record({
-          variables: {
-            input: {
-              idempotencyKey: generateEntityId(),
-              homeId: currentHome.id,
-              ...(recordedStoreId
-                ? { storeId: recordedStoreId }
-                : { merchantHeader }),
-              lines: confirmed.slice(0, MAX_LINES).map(line => {
-                const match = matches.get(line.index);
-                const proposed = match?.preselect ?? match?.guess;
-                return {
-                  rawText: line.text,
-                  itemId: line.itemId,
-                  resolvedBy: proposed?.method ?? null,
-                  edited: proposed?.itemId !== line.itemId,
-                };
-              }),
-            },
-          },
-        }),
-      {
-        document: RecordReceiptMatchesDocument,
-        fallback: t('errors.generic'),
-        // The pantry has the lines either way; this only teaches the matcher.
-        present: 'none',
-      },
-    );
-  };
 
   const answered = sent.length === 0 || !!answer;
   const matchState: ReceiptMatchState = answered
@@ -223,6 +166,5 @@ export function useReceiptMatches(
     resolvedStore: pickedStoreId ? null : resolved?.store ?? null,
     /** The store the receipt names that is not on file, to add on confirm. */
     proposedStore: pickedStoreId ? null : resolved?.proposedStore ?? null,
-    recordConfirmed,
   };
 }

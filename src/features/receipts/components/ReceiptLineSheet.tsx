@@ -16,6 +16,7 @@ import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
+import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
@@ -26,6 +27,7 @@ import {
   receiptLineDefaults,
   receiptLineSchema,
   toLineChoice,
+  type ReceiptLineFormContext,
   type ReceiptLineFormValues,
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
@@ -56,8 +58,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
-  const { control, handleSubmit, setValue } = useForm<ReceiptLineFormValues>({
+  const { resolveUnitId } = useResolveUnit();
+  const { control, handleSubmit, setValue, setError } = useForm<
+    ReceiptLineFormValues,
+    ReceiptLineFormContext
+  >({
     resolver: yupResolver(receiptLineSchema),
+    context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice),
   });
 
@@ -71,8 +78,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       ? itemName
       : t('labels.nameWithDetail', { name: itemName, detail });
 
-  const save = handleSubmit(values => {
-    onSave(toLineChoice(values));
+  // A typed unit is resolved on the device first: the check-in takes a unit's
+  // id, never its name.
+  const save = handleSubmit(async values => {
+    const typedUnit = values.unitValue.trim();
+    const resolvedUnitId = await resolveUnitId(values.unitId, typedUnit);
+    if (typedUnit && !resolvedUnitId) {
+      setError('unitValue', {
+        message: t('itemForm.unknownUnit', { unit: typedUnit }),
+      });
+      return;
+    }
+    onSave(toLineChoice({ ...values, unitId: resolvedUnitId }));
     onClose();
   }, logValidationErrors);
 
@@ -179,6 +196,21 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           />
         )}
 
+        <Controller
+          control={control}
+          name="notStocked"
+          render={({ field }) => (
+            <SettingSwitch
+              title={t('receipts.review.notStockedTitle')}
+              description={t('receipts.review.notStockedBody')}
+              value={field.value}
+              onValueChange={field.onChange}
+              testID={receiptsTestIDs.lineNotStocked}
+              containerStyle={styles.listToggle}
+            />
+          )}
+        />
+
         <View style={styles.amountRow}>
           <View style={styles.quantityField}>
             <Controller
@@ -199,14 +231,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             <Controller
               control={control}
               name="unitValue"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <UnitAutocompleteField
                   variant="inline"
                   label={t('labels.unit')}
                   value={field.value}
-                  onChangeText={field.onChange}
+                  onChangeText={text => {
+                    field.onChange(text);
+                    setValue('unitId', null);
+                  }}
                   onUnitSelected={id => setValue('unitId', id)}
                   placeholder={t('labels.pcsKgEtc')}
+                  error={fieldState.error?.message}
                 />
               )}
             />

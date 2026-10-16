@@ -3,10 +3,22 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
+import { useStore } from '#store';
 import { useResolveUnit } from '../useResolveUnit';
+
+const HELD = [
+  { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+  {
+    id: 'unit-floz',
+    name: 'fluid ounce',
+    symbol: 'fl oz',
+    abbreviation: 'floz',
+  },
+];
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useStore.setState({ isOnline: true, cachedUnits: [] });
 });
 
 function unitMock(unit: { id: string } | null) {
@@ -80,5 +92,50 @@ describe('useResolveUnit', () => {
     const unitId = await result.current.resolveUnitId(null, 'xyz');
 
     expect(unitId).toBeNull();
+  });
+
+  describe('device first', () => {
+    beforeEach(() => {
+      useStore.setState({ cachedUnits: HELD });
+    });
+
+    it.each([
+      ['its symbol', 'lb', 'unit-lb'],
+      ['its name, in any case', 'Pound', 'unit-lb'],
+      ['its abbreviation', 'FLOZ', 'unit-floz'],
+      ['a plural', 'lbs', 'unit-lb'],
+    ])(
+      'resolves a held unit by %s without asking the API',
+      async (_how, text, id) => {
+        const m = unitMock({ id: 'from-api' });
+        const { result } = renderHookWithApollo(() => useResolveUnit(), {
+          operationMocks: [m.mock],
+        });
+
+        expect(await result.current.resolveUnitId(null, text)).toBe(id);
+        expect(m.fired).toEqual([]);
+      },
+    );
+
+    it('answers nothing offline for a unit the device does not hold', async () => {
+      useStore.setState({ isOnline: false });
+      const m = unitMock({ id: 'from-api' });
+      const { result } = renderHookWithApollo(() => useResolveUnit(), {
+        operationMocks: [m.mock],
+      });
+
+      expect(await result.current.resolveUnitId(null, 'tin')).toBeNull();
+      expect(m.fired).toEqual([]);
+    });
+
+    it('asks the API, online, for a unit the device does not hold', async () => {
+      const m = unitMock({ id: 'from-api' });
+      const { result } = renderHookWithApollo(() => useResolveUnit(), {
+        operationMocks: [m.mock],
+      });
+
+      expect(await result.current.resolveUnitId(null, 'tin')).toBe('from-api');
+      expect(m.fired).toContainEqual({ symbol: 'tin' });
+    });
   });
 });

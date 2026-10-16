@@ -18,7 +18,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
-import { useResolveUnit } from '#features/pantry/hooks/mutations/useResolveUnit';
+import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import {
   emptyUnitSelection,
   type UnitSelection,

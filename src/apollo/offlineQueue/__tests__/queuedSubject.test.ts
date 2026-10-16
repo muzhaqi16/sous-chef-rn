@@ -13,12 +13,36 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import {
   CreatePantryItemDocument,
   DeletePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 
 describe('queuedSubject', () => {
+  it('reads a receipt check-in as minting the stacks its stocked lines add', () => {
+    expect(
+      queuedSubject({
+        mutation: CreateReceiptCheckInDocument,
+        variables: {
+          input: {
+            id: 'checkin-1',
+            pantryId: 'pantry-1',
+            lines: [
+              { clientId: '0', purchaseId: 'pur-0', pantryItemId: 'pi-0' },
+              { clientId: '1', purchaseId: 'pur-1', stock: false },
+              { clientId: '2', purchaseId: 'pur-2', pantryItemId: 'pi-2' },
+            ],
+          },
+        },
+      }),
+    ).toEqual({
+      subjectIds: ['pi-0', 'pi-2'],
+      sourceIds: ['checkin-1'],
+      mintedIds: ['pi-0', 'pi-2'],
+    });
+  });
+
   it('reads a fork as creating the new recipe and deriving from the source', () => {
     expect(
       queuedSubject({

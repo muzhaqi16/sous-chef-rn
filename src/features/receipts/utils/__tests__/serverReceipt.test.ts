@@ -91,7 +91,13 @@ describe('fromServerReceipt', () => {
       appliesToIndex: 1,
     });
     expect(receiptReviewLines(parsed)).toEqual([
-      { index: 1, printed: 'KRO WHL MILK', code: '0001111041700', price: 2.79 },
+      {
+        index: 1,
+        printed: 'KRO WHL MILK',
+        code: '0001111041700',
+        price: 2.79,
+        discount: 0.5,
+      },
       {
         index: 3,
         printed: 'BANANAS',

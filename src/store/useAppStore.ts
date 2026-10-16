@@ -40,6 +40,7 @@ const selectIsPantryQueryComplete = (state: RootState) =>
 const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 
 const selectIsOnline = (state: RootState) => state.isOnline;
+const selectCachedUnits = (state: RootState) => state.cachedUnits;
 
 // No user means the auth navigator, in the SAME render the user disappears: the
 // stored value only catches up in RootNavigator's effect, and that one commit
@@ -135,6 +136,8 @@ export const useSelectedShoppingListId = () =>
 export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
+/** The units held on the device for offline autocomplete and lookups. */
+export const useCachedUnits = () => useAppStore(selectCachedUnits);
 export const useCanAccessDevTools = () => useAppStore(selectCanAccessDevTools);
 export const useIsHomeSelectionReady = () =>
   useAppStore(selectIsHomeSelectionReady);

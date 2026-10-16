@@ -4,6 +4,7 @@ import type {
   AddItemsToShoppingListInput,
   ConvertExpiredToWasteInput,
   CreatePantryItemUsageInput,
+  CreateReceiptCheckInInput,
   ForkRecipeInput,
   MoveShoppingItemToPantryInput,
   OpenPantryItemBatchInput,
@@ -20,6 +21,7 @@ interface SubjectInputs {
   AddItemsToShoppingListInput: AddItemsToShoppingListInput;
   ConvertExpiredToWasteInput: ConvertExpiredToWasteInput;
   CreatePantryItemUsageInput: CreatePantryItemUsageInput;
+  CreateReceiptCheckInInput: CreateReceiptCheckInInput;
   ForkRecipeInput: ForkRecipeInput;
   MoveShoppingItemToPantryInput: MoveShoppingItemToPantryInput;
   OpenPantryItemBatchInput: OpenPantryItemBatchInput;
@@ -42,6 +44,7 @@ const SUBJECT_KEYS: {
   AddItemsToShoppingListInput: 'items',
   ConvertExpiredToWasteInput: 'pantryItemId',
   CreatePantryItemUsageInput: 'pantryItemId',
+  CreateReceiptCheckInInput: 'lines',
   ForkRecipeInput: 'newRecipeId',
   MoveShoppingItemToPantryInput: 'pantryItemId',
   OpenPantryItemBatchInput: 'batchId',
@@ -63,9 +66,19 @@ export interface QueuedSubject {
 /** Inputs keyed by something other than `id` whose subject is minted by the device. */
 const MINTING_SUBJECT_INPUTS: ReadonlySet<keyof SubjectInputs> = new Set([
   'AddItemsToShoppingListInput',
+  'CreateReceiptCheckInInput',
   'ForkRecipeInput',
   'MoveShoppingItemToPantryInput',
 ]);
+
+/**
+ * The field naming each row's entity, for a subject that is a list of rows;
+ * `id` otherwise. A check-in line names the stack it adds, which a stock-free
+ * line has none of.
+ */
+const ROW_SUBJECT_KEYS: Partial<Record<keyof SubjectInputs, string>> = {
+  CreateReceiptCheckInInput: 'pantryItemId',
+};
 
 /** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */
 const MINTING_ID_INPUTS: ReadonlySet<string> = new Set([
@@ -124,17 +137,14 @@ export function queuedSubject({
   }
 
   const typeName = inputTypeNameOf(mutation);
-  const key =
-    typeName && isSubjectInput(typeName) ? SUBJECT_KEYS[typeName] : 'id';
+  const subjectInput = typeName && isSubjectInput(typeName) ? typeName : null;
+  const key = subjectInput ? SUBJECT_KEYS[subjectInput] : 'id';
+  const rowKey = (subjectInput && ROW_SUBJECT_KEYS[subjectInput]) ?? 'id';
   const value = fields[key];
 
   const subjectIds = Array.isArray(value)
     ? value
-        .map((row: unknown) =>
-          row && typeof row === 'object'
-            ? (row as { id?: unknown }).id
-            : undefined,
-        )
+        .map((row: unknown) => (isRecord(row) ? row[rowKey] : undefined))
         .filter(isId)
     : [value].filter(isId);
   const sourceIds = key !== 'id' && isId(fields.id) ? [fields.id] : [];
