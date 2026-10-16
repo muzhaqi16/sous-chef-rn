@@ -36,8 +36,8 @@ export function useMoveToPantryItem({
           // NOT the app-wide `'all'`: a field error nulls the non-null
           // `purchaseInfo` and so `shoppingListItem`, and `'all'` WRITES that
           // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
-          // reads — where it sticks and persists to MMKV. Losing the prefill
-          // costs far less.
+          // reads — where it sticks while the cache holds no such line, and
+          // persists to MMKV. Losing the prefill costs far less.
           errorPolicy: 'none',
         }
       : skipToken,

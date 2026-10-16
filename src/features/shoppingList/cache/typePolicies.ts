@@ -1,15 +1,12 @@
 import type { TypePolicies } from '@apollo/client';
-import type {
-  FieldFunctionOptions,
-  Reference,
-  StoreObject,
-} from '@apollo/client';
+import type { Reference, StoreObject } from '@apollo/client';
 import { isReference } from '@apollo/client';
 import type { FieldMergeFunctionOptions } from '@apollo/client/cache';
 import type { StoreValue } from '@apollo/client/utilities';
 import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
+  readByIdFromCache,
 } from '#/apollo/cacheFieldPolicies';
 
 /**
@@ -92,32 +89,8 @@ export const shoppingListTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      shoppingList: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'ShoppingList',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
-      shoppingListItem: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'ShoppingListItem',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
+      shoppingList: readByIdFromCache('ShoppingList'),
+      shoppingListItem: readByIdFromCache('ShoppingListItem'),
       // List-level queries (return collections of lists/homes)
       // Not keyed on page size: a picker asking for fewer lists reads the
       // collection the overview holds, offline included. `cache.modify` by

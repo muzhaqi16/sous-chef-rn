@@ -8,7 +8,11 @@
 // **No type declares `keyFields: ['id']`** — it is Apollo's default, and
 // declaring it switches the key to `PantryItem:{"id":"abc"}`, breaking every
 // consumer that reads one back. Declare it only for a genuinely different key.
-import type { FieldFunctionOptions, Reference } from '@apollo/client';
+import type {
+  FieldFunctionOptions,
+  FieldPolicy,
+  Reference,
+} from '@apollo/client';
 import { queueStore } from './offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
 
@@ -165,6 +169,22 @@ function mergeAuthoritativeFirstPage(
   };
 
   return preservePendingEdges(existing, merged, readField);
+}
+
+/**
+ * A by-id root field (`pantryItem(id)`) reads the `typename` entity the cache
+ * holds, so a row created on the device reads back before the server has it.
+ */
+export function readByIdFromCache(typename: string): FieldPolicy {
+  return {
+    read(existing: unknown, { args, toReference, canRead }) {
+      // A stored `null` stands only while no such entity is held: an add that
+      // reuses a line moved off the list writes it back under the same id.
+      if (existing !== undefined && existing !== null) return existing;
+      const ref = toReference({ __typename: typename, id: args?.id as string });
+      return canRead(ref) ? ref : existing;
+    },
+  };
 }
 
 /**

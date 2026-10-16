@@ -27,7 +27,7 @@ export function useItemPurchaseHistory(itemId: string) {
       // NOT the app-wide `'all'`: a field error inside the non-null
       // `purchasesConnection` nulls `shoppingListItem`, and `'all'` WRITES that
       // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
-      // reads — where it sticks (the redirect fires only on `undefined`) and
+      // reads — where it sticks while the cache holds no such line, and
       // persists to MMKV. The cost of `'none'` is losing a partial page.
       errorPolicy: 'none',
     },

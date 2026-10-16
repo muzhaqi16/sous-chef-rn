@@ -1,6 +1,8 @@
 import type { TypePolicies } from '@apollo/client';
-import type { FieldFunctionOptions } from '@apollo/client';
-import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
+import {
+  mergeConnectionByNodeId,
+  readByIdFromCache,
+} from '#/apollo/cacheFieldPolicies';
 
 /**
  * A recipe merges field-wise; `recipes` keys on the whole `filters` input, so each filter set keeps its own entry.
@@ -19,19 +21,7 @@ export const recipesTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      recipe: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'Recipe',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
+      recipe: readByIdFromCache('Recipe'),
       recipes: {
         ...mergeConnectionByNodeId(),
         keyArgs: ['filters'],
