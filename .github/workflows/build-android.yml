@@ -2,9 +2,12 @@ name: Build Android
 run-name: "Building ${{ github.event_name == 'workflow_dispatch' && format('{0} ({1})', inputs.build_type, inputs.environment) || github.ref_name }} triggered by @${{ github.actor }}"
 permissions:
   contents: write
+  packages: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Installs @muzhaqi16/receipt-rules from GitHub Packages (see .npmrc).
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   push:
