@@ -110,8 +110,19 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
       (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
         const size = (context.parent.packageSizeInput ?? '').trim();
         const unitId = context.parent.packageSizeUnitId;
-        return size ? !!unitId : !unitId && !value.trim();
+        return size
+          ? !!unitId || value.trim() !== ''
+          : !unitId && !value.trim();
       },
+    )
+    // A typed unit the device and the API could not name.
+    .test(
+      'package-size-unit-known',
+      lazyMessage('moveToPantry.unknownUnit'),
+      (value, context: { parent: Partial<MoveToPantryFormValues> }) =>
+        !(context.parent.packageSizeInput ?? '').trim() ||
+        !value.trim() ||
+        !!context.parent.packageSizeUnitId,
     ),
   packageSizeUnitId: string().nullable().defined(),
   packageSizeUnitType: mixed<UnitType>()

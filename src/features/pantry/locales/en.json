@@ -253,7 +253,8 @@
     "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
     "nothingLeftToMove": "Everything purchased is already in your pantry",
     "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size.",
-    "packageSizeNeedsCount": "A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g."
+    "packageSizeNeedsCount": "A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.",
+    "unknownUnit": "That isn't a unit we know. Pick one from the list, like carton or jar."
   },
   "pantryAction": {
     "useByDefault": "Use by",

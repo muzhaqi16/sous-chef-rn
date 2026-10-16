@@ -8,6 +8,7 @@ import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { MoveToPantryModal_ShoppingListItemFragmentDoc } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { UnitType } from '#/graphql/generated/schemaTypes';
+import { useStore } from '#store';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -107,11 +108,13 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
     // TEXT while reading the id, so only both writes together exercise it.
     // A field with a `testID` prefixes its controls with it.
     UnitAutocompleteField: ({
+      value,
       onChangeText,
       onUnitSelected,
       error,
       testID,
     }: {
+      value?: string;
       onChangeText: (text: string) => void;
       onUnitSelected?: (
         unitId: string | null,
@@ -125,6 +128,15 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
       return R.createElement(
         RN.View,
         { testID: `${prefix}unit-autocomplete` },
+        // Typing, as the real field does it: the text, then the pick dropped.
+        R.createElement(RN.TextInput, {
+          testID: `${prefix}unit-input`,
+          value,
+          onChangeText: (text: string) => {
+            onChangeText(text);
+            onUnitSelected?.(null);
+          },
+        }),
         R.createElement(
           RN.Pressable,
           {
@@ -135,6 +147,17 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
             },
           },
           R.createElement(RN.Text, null, 'Pick kg'),
+        ),
+        R.createElement(
+          RN.Pressable,
+          {
+            testID: `${prefix}pick-gal`,
+            onPress: () => {
+              onChangeText('gal');
+              onUnitSelected?.('u1', 'gallon', 'VOLUME');
+            },
+          },
+          R.createElement(RN.Text, null, 'Pick gal'),
         ),
         R.createElement(
           RN.Pressable,
@@ -780,6 +803,142 @@ describe('MoveToPantryModal', () => {
         expect(
           screen.getByTestId('move-to-pantry-field-Package size').props.value,
         ).toBe(''),
+      );
+    });
+
+    describe('with the units the device holds', () => {
+      beforeEach(() => {
+        useStore.setState({
+          cachedUnits: [
+            {
+              id: 'unit-carton',
+              name: 'carton',
+              symbol: 'carton',
+              type: UnitType.Count,
+            },
+          ],
+        });
+      });
+      afterEach(() => {
+        useStore.setState({ cachedUnits: [], isOnline: true });
+      });
+
+      // The shopper types the container rather than picking it, one letter
+      // wrong: "1 cartoon" beside the 5 gal bought.
+      it('reads a unit typed and not picked as the unit it names', async () => {
+        const onConfirm = openWithPurchase(5, 0.59);
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        );
+
+        fireEvent.changeText(
+          screen.getByTestId('move-to-pantry-field-Package size'),
+          '1',
+        );
+        fireEvent.changeText(
+          screen.getByTestId(
+            `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-unit-input`,
+          ),
+          'cartoon',
+        );
+        // Named as it is typed: nothing says it is unknown.
+        expect(screen.queryByText(/isn't a unit we know/)).toBeNull();
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        await waitFor(() =>
+          expect(onConfirm).toHaveBeenCalledWith(
+            expect.objectContaining({
+              amount: {
+                packages: {
+                  count: 1,
+                  size: { netWeight: 5, netWeightUnitId: 'u1' },
+                  unitId: 'unit-carton',
+                },
+              },
+              totalCost: 2.95,
+            }),
+          ),
+        );
+        expect(
+          screen.getByTestId(
+            `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-unit-input`,
+          ).props.value,
+        ).toBe('carton');
+      });
+
+      it('says a typed unit nobody can name is not one it knows', async () => {
+        useStore.setState({ isOnline: false });
+        const onConfirm = openWithPurchase(5, 0.59);
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        );
+
+        fireEvent.changeText(
+          screen.getByTestId('move-to-pantry-field-Package size'),
+          '1',
+        );
+        fireEvent.changeText(
+          screen.getByTestId(
+            `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-unit-input`,
+          ),
+          'flagon',
+        );
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        expect(
+          await screen.findByText(
+            "That isn't a unit we know. Pick one from the list, like carton or jar.",
+          ),
+        ).toBeTruthy();
+        expect(onConfirm).not.toHaveBeenCalled();
+      });
+    });
+
+    // Bought as 5 gal for $2.95, stocked as 1 box of 5 gal: the same purchase,
+    // so the same $2.95, never 1 × the price of a gallon.
+    it('keeps what was paid when the purchase is restated in another unit', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      const total = () =>
+        screen.getByTestId('move-to-pantry-field-Total paid').props.value;
+
+      fireEvent.changeText(screen.getByTestId('move-to-pantry-quantity'), '1');
+      expect(total()).toBe('0.59');
+      fireEvent.press(screen.getByTestId('pick-box'));
+      expect(total()).toBe('2.95');
+      // Back in the unit it was paid in, the price follows the quantity again.
+      fireEvent.press(screen.getByTestId('pick-gal'));
+      fireEvent.changeText(screen.getByTestId('move-to-pantry-quantity'), '2');
+      expect(total()).toBe('1.18');
+      fireEvent.press(screen.getByTestId('pick-box'));
+      expect(total()).toBe('2.95');
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '5',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
+        ),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() =>
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            amount: {
+              packages: {
+                count: 2,
+                size: { netWeight: 5, netWeightUnitId: 'unit-kg' },
+                unitId: 'unit-box',
+              },
+            },
+            totalCost: 2.95,
+          }),
+        ),
       );
     });
 

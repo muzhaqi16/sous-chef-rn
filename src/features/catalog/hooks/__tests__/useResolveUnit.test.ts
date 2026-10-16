@@ -3,17 +3,22 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useResolveUnit } from '../useResolveUnit';
 
 const HELD = [
-  { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+  { id: 'unit-lb', name: 'pound', symbol: 'lb', type: UnitType.Weight },
   {
     id: 'unit-floz',
     name: 'fluid ounce',
     symbol: 'fl oz',
     abbreviation: 'floz',
+    type: UnitType.Volume,
   },
+  { id: 'unit-carton', name: 'carton', symbol: 'carton', type: UnitType.Count },
+  { id: 'unit-can', name: 'can', symbol: 'can', type: UnitType.Count },
+  { id: 'unit-cup', name: 'cup', symbol: 'cup', type: UnitType.Volume },
 ];
 
 beforeEach(() => {
@@ -116,6 +121,36 @@ describe('useResolveUnit', () => {
         expect(m.fired).toEqual([]);
       },
     );
+
+    it('reads a longer name typed with one letter wrong, and says what kind of unit it is', async () => {
+      const m = unitMock({ id: 'from-api' });
+      const { result } = renderHookWithApollo(() => useResolveUnit(), {
+        operationMocks: [m.mock],
+      });
+
+      expect(await result.current.resolveUnit('cartoon')).toEqual({
+        id: 'unit-carton',
+        symbol: 'carton',
+        type: UnitType.Count,
+      });
+      expect(await result.current.resolveUnit('pund')).toEqual({
+        id: 'unit-lb',
+        symbol: 'lb',
+        type: UnitType.Weight,
+      });
+      expect(m.fired).toEqual([]);
+    });
+
+    it('guesses no typo in a short text, nor between two units as close', async () => {
+      useStore.setState({ isOnline: false });
+      const { result } = renderHookWithApollo(() => useResolveUnit());
+
+      // `cap` is one letter from both can and cup, and short besides.
+      expect(await result.current.resolveUnit('cap')).toBeNull();
+      expect(await result.current.resolveUnit('cups')).toEqual(
+        expect.objectContaining({ id: 'unit-cup' }),
+      );
+    });
 
     it('answers nothing offline for a unit the device does not hold', async () => {
       useStore.setState({ isOnline: false });

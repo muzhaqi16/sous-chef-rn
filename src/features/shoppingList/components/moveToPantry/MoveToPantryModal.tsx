@@ -16,10 +16,11 @@ import {
   formatQuantityForInput,
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
 import { stockAmountOf } from '#domain/stockAmount';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
+import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { PantrySelector } from './PantrySelector';
 import { StorageStateControl } from './StorageStateControl';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -84,6 +85,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     control,
     handleSubmit,
     setValue,
+    getValues,
     trigger,
     getFieldState,
     formState: { errors },
@@ -108,6 +110,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // since typed over either field. Between them they decide which of the two
   // amounts survives an edit — see `handleQuantityChange`.
   const [seededUnitPrice, setSeededUnitPrice] = useState<number | null>(null);
+  // The unit that price is per: the line's, else the purchase's.
+  const [seededUnit, setSeededUnit] = useState<{
+    id: string | null;
+    symbol: string;
+  } | null>(null);
   const [amountsTouched, setAmountsTouched] = useState(false);
   const [priceTouched, setPriceTouched] = useState(false);
 
@@ -181,6 +188,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       };
       unitIdThisPass = resolvedUnit.id;
       setSeededUnitPrice(purchasedUnitPrice);
+      setSeededUnit({ id: resolvedUnit.id, symbol: resolvedUnit.symbol });
       setAmountsTouched(false);
       setPriceTouched(false);
     }
@@ -203,6 +211,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         unitId: purchasedUnit.unit.id,
         unitType: purchasedUnit.unit.type,
       };
+      setSeededUnit({
+        id: purchasedUnit.unit.id,
+        symbol: purchasedUnit.unitSymbol,
+      });
     }
     if (!amountsTouched && purchasedQuantity != null) {
       seedThisPass = {
@@ -225,9 +237,38 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     }
   }, [pendingSeed, setValue]);
 
+  const paidInSeededUnit = (id: string | null, text: string) => {
+    if (seededUnit === null) return false;
+    if (id !== null) return id === seededUnit.id;
+    return seededUnit.id === null && text.trim() === seededUnit.symbol;
+  };
+
   // Editing the quantity holds the PER-UNIT price and re-derives the total:
-  // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. Once
-  // the shopper types a total of their own, that total wins instead.
+  // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. That
+  // price is per the unit it was paid in: in another unit (64 fl oz restated
+  // as 1 carton) the purchase cost what it cost. Once the shopper types a
+  // total of their own, that total wins instead.
+  const reprice = (quantity: string, id: string | null, unitText: string) => {
+    if (priceTouched || seededUnitPrice == null) return;
+    if (!paidInSeededUnit(id, unitText)) {
+      setValue(
+        'actualPriceInput',
+        formatNumberForInput(
+          totalFromUnitPrice(seededUnitPrice, seedQuantity ?? 1),
+        ),
+      );
+      return;
+    }
+    const parsed = parseFractionalInput(quantity);
+    const usable = parsed !== null && !isNaN(parsed) && parsed > 0;
+    setValue(
+      'actualPriceInput',
+      usable
+        ? formatNumberForInput(totalFromUnitPrice(seededUnitPrice, parsed))
+        : '',
+    );
+  };
+
   const handleQuantityChange = (value: string) => {
     setValue('quantityInput', value);
     // The size's count rule reads the quantity. Re-run only a refusal already
@@ -236,15 +277,50 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       void trigger('packageSizeInput');
     }
     setAmountsTouched(true);
-    if (priceTouched || seededUnitPrice == null) return;
-    const parsed = parseFractionalInput(value);
-    const usable = parsed !== null && !isNaN(parsed) && parsed > 0;
-    setValue(
-      'actualPriceInput',
-      usable
-        ? formatNumberForInput(totalFromUnitPrice(seededUnitPrice, parsed))
-        : '',
+    reprice(value, getValues('unitId'), getValues('unitValue'));
+  };
+
+  // A unit typed and not picked goes as the unit it names, from the units the
+  // device holds as it is typed (`cartoon` names carton), else from the API on
+  // confirm. Its text then reads as that unit.
+  const { heldUnitFor, resolveUnit } = useResolveUnit();
+  // A keystroke drops the pick: the text then names a unit the device holds,
+  // or none.
+  const pickedOrHeld = (
+    picked: string | null,
+    pickedType: UnitType | null | undefined,
+    text: string,
+  ) => {
+    const held = picked ? null : heldUnitFor(text);
+    return {
+      id: picked ?? held?.id ?? null,
+      type: pickedType ?? held?.type ?? null,
+    };
+  };
+  const unitNamed = async (text: string, id: string | null) => {
+    if (!text.trim()) return null;
+    if (!id) return resolveUnit(text);
+    const held = heldUnitFor(text);
+    return held?.id === id ? held : null;
+  };
+  const resolveTypedUnits = async () => {
+    const values = getValues();
+    const unit = await unitNamed(values.unitValue, values.unitId);
+    if (unit) {
+      setValue('unitId', unit.id);
+      setValue('unitType', unit.type);
+      setValue('unitValue', unit.symbol);
+      reprice(values.quantityInput, unit.id, unit.symbol);
+    }
+    const size = await unitNamed(
+      values.packageSizeUnitValue,
+      values.packageSizeUnitId,
     );
+    if (size) {
+      setValue('packageSizeUnitId', size.id);
+      setValue('packageSizeUnitType', size.type);
+      setValue('packageSizeUnitValue', size.symbol);
+    }
   };
 
   const handlePriceChange = (value: string) => {
@@ -353,7 +429,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         confirm={{
           accessibilityLabel: t('moveToPantry.title'),
           onPress: () => {
-            void handleSubmit(onValid, logValidationErrors)();
+            void resolveTypedUnits().then(() =>
+              handleSubmit(onValid, logValidationErrors)(),
+            );
           },
           disabled: confirmDisabled,
           loading: isMoving,
@@ -416,9 +494,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     placeholder={t('moveToPantry.unitPlaceholder')}
                     required
                     error={errors.unitValue?.message}
-                    onUnitSelected={(id, _name, type) => {
-                      setValue('unitId', id);
-                      setValue('unitType', type ?? null);
+                    onUnitSelected={(picked, _name, pickedType) => {
+                      const unit = pickedOrHeld(
+                        picked,
+                        pickedType,
+                        getValues('unitValue'),
+                      );
+                      setValue('unitId', unit.id);
+                      setValue('unitType', unit.type);
+                      reprice(
+                        getValues('quantityInput'),
+                        unit.id,
+                        getValues('unitValue'),
+                      );
                       void trigger('packageSizeInput');
                       // The rule reports on the TEXT while reading the id, and
                       // the field clears the id after writing the text — so
@@ -465,9 +553,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                         placeholder={t('labels.ozGMl')}
                         error={fieldState.error?.message}
                         testID={shoppingListTestIDs.moveToPantryPackageSizeUnit}
-                        onUnitSelected={(id, _name, type) => {
-                          setValue('packageSizeUnitId', id);
-                          setValue('packageSizeUnitType', type ?? null);
+                        onUnitSelected={(picked, _name, pickedType) => {
+                          const unit = pickedOrHeld(
+                            picked,
+                            pickedType,
+                            getValues('packageSizeUnitValue'),
+                          );
+                          setValue('packageSizeUnitId', unit.id);
+                          setValue('packageSizeUnitType', unit.type);
                           void trigger('packageSizeUnitValue');
                           // The size's count rule reads the size's unit too.
                           if (getFieldState('packageSizeInput').invalid) {
