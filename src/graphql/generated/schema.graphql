@@ -1877,9 +1877,9 @@ input CreateItemInput {
   """
   Client-minted CUID2 for the item. The created item takes it (outcome
   CREATED). A create that matched an existing item (outcome MERGED) is
-  remembered under it, so a later write naming it acts on that item. Sent
-  again, it answers the same item. An id an item the caller cannot see
-  holds is refused with a ConflictError.
+  remembered under it, with the key it matched by, so a later write naming
+  it acts on that item. Sent again, it answers what the first send did. An
+  id another user's item or create holds is refused with a ConflictError.
   """
   id: ID
   media: MediaAssetsInput
@@ -2344,9 +2344,10 @@ union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenEr
 
 input CreateReceiptCheckInInput {
   """
-  Client-minted CUID2 for the receipt. Sending the same id again returns the
-  check-in it created and attempts only the lines not yet recorded. An id
-  another user holds is refused with a ConflictError.
+  Client-minted CUID2 for the receipt. Sending the same id again, with the
+  same pantryId and shoppingListId, returns the check-in it created and
+  attempts only the lines not yet recorded. An id another user holds, or one
+  sent again naming another pantry or list, is refused with a ConflictError.
   """
   id: ID!
   """The confirmed lines, 1 to 100"""
@@ -2375,9 +2376,12 @@ input CreateReceiptCheckInInput {
   """The receipt's own number, as printed"""
   receiptNumber: String
   """
-  The caller's own receipt parse this check-in confirms. The store gets the
-  address and store number the parse read, where it has none; a parse that is
-  not the caller's, or not parsed, fills nothing and still checks in.
+  The caller's own receipt parse this check-in confirms. When the store is
+  the household's own label, the branch the parse names (its chain and
+  store number, or an address its pages print) is found or created and the
+  household's rows move onto it; the check-in then answers that branch. A
+  shared store is never changed; a parse that is not the caller's, or not
+  parsed, locates nothing and still checks in.
   """
   receiptParseId: ID
   """
@@ -2650,6 +2654,13 @@ input CreateStoreInput {
   address: String
   """The chain the store belongs to, when known"""
   chainId: ID
+  """
+  The household a store with no address and no number is for: a name alone
+  is that household's own label, which no other household sees. Without it,
+  the label belongs to the caller's only home, else to the caller. A store
+  with an address or a number is shared, whatever this says.
+  """
+  homeId: ID
   """
   Client-minted CUID2, the replay anchor: sending it again returns the same
   store and outcome. When the create merges into a store already on file,
@@ -5409,10 +5420,10 @@ input InlineItemInput {
   """
   Client-minted CUID2 for the item, so a client can name it before the
   server answers. A created item takes this id. One that matched an existing
-  item by barcode or name is remembered under it for the caller, so a later
-  write naming it acts on that item, and `item(id)` reads it. Sent again,
-  it answers the same item without matching anew. An id an item the caller
-  cannot see holds is refused with a ConflictError.
+  item by barcode or name is remembered under it, so a later write naming it
+  acts on that item, and `item(id)` reads it, for anyone who may see the
+  item. Sent again, it answers the same item without matching anew. An id
+  an item the caller cannot see holds is refused with a ConflictError.
   """
   id: ID
   name: String
@@ -8805,10 +8816,13 @@ type Mutation {
   """
   createStorageLocation(input: CreateStorageLocationInput!): CreateStorageLocationResult!
   """
-  Add a store, which every user sees at once. A store already on file (the
-  same chain and store number, else the same name and address compared by
-  their letters and digits) is returned instead, with outcome MERGED. Each
-  user has a per-minute number of store creations.
+  Add a store. One with an address or a store number is a branch every user
+  sees; one with neither is the caller's household's own label, which no
+  other household sees (see CreateStoreInput.homeId). A store already on
+  file (the same chain and store number, else the same name and address
+  compared by their letters and digits, among shared stores or the owner's
+  own) is returned instead, with outcome MERGED. Each user has a per-minute
+  number of store creations.
   """
   createStore(input: CreateStoreInput!): CreateStoreResult!
   """
@@ -13126,7 +13140,8 @@ input ReceiptCheckInLineInput {
   The line's item: an existing catalog item by id, or one described inline
   (matched by barcode, then name, else created under its client-minted id),
   as createPantryItem takes it. A scanned product record (variation) is
-  refused here. The line's result names the item it recorded.
+  refused here. A listed line names its list line's item by id, or an id
+  redirecting to it. The line's result names the item it recorded.
   """
   item: PantryItemSourceInput!
   """
@@ -13150,8 +13165,9 @@ input ReceiptCheckInLineInput {
   resolvedBy: ReceiptMatchMethod
   """
   The shopping-list line this purchase ticks. It must be on the check-in's
-  shoppingListId and name the same item; otherwise the line fails with
-  VALIDATION_FAILED and writes nothing.
+  shoppingListId, and the line's item that list line's item by id, recorded
+  whether or not the caller could read it alone; otherwise the line fails
+  with VALIDATION_FAILED and writes nothing.
   """
   shoppingListItemId: ID
   """
@@ -13711,6 +13727,10 @@ enum RecipeCaptureFailure {
   PHOTO_STORAGE
   """The capture could not be queued"""
   QUEUE_UNAVAILABLE
+  """
+  The read failed on the server on every attempt; send it again under a new capture id
+  """
+  READ_FAILED
   """The model service refused the request"""
   REQUEST_REFUSED
   SERVICE_ERROR
@@ -14946,11 +14966,11 @@ type ResolveReceiptLinesPayload {
   """The chain the merchant header names"""
   chain: StoreChain
   """
-  When no store is placed, the household's own store that proposedStore
-  would duplicate: one of the proposed name with no address or number, of
-  no other chain, that a member created or the household bought or listed
-  at. Offer it before creating a store: a check-in naming it with its
-  receiptParseId gives it this receipt's address, chain and number. Read
+  When no store is placed, the household's own label that proposedStore
+  would duplicate: its store of the proposed name with no address or
+  number, else the caller's own, of no other chain. Offer it before
+  creating a store: a check-in naming it with its receiptParseId locates
+  it, moving the household's rows onto the branch the receipt names. Read
   for the pantry's (or homeId's) household; null otherwise.
   """
   completableStore: Store
@@ -15341,7 +15361,7 @@ type ShoppingList {
   """
   A household list's invite link: it joins the list's home and lands on this
   list. Null for a personal list, while the home's join link is off, or when
-  the caller may not manage the home's sharing.
+  the caller may not invite to the home.
   """
   householdInviteLink: ShareLink
   """The list's unique identifier"""
@@ -16052,8 +16072,9 @@ input ShoppingListStoreComparisonInput {
   """Compare store branches (the default) or whole chains"""
   scope: PriceComparisonScope
   """
-  Up to five stores to compare instead of the household's own: those it
-  bought at, checked a receipt in at or targeted within the window
+  Up to five stores to compare instead of the household's own (for a
+  personal list, the caller's): those it bought at or checked a receipt in
+  at within the window, and its live lists' target stores
   """
   storeIds: [ID!]
   """How far back observations count: default 90 days, at most 365"""
@@ -17049,8 +17070,9 @@ type Subscription {
     pantryId: ID!
   ): PantryEvent!
   """
-  Subscribe to one store's changes. A store is shared reference data, so
-  anyone signed in may watch one that exists; an unknown storeId is refused.
+  Subscribe to one store's changes. A store's name and place are not
+  secret, so anyone signed in may watch one that exists; an unknown
+  storeId is refused.
   """
   storeEvents(
     """The store to watch"""
