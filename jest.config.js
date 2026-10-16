@@ -104,6 +104,8 @@ module.exports = {
       // react-navigation 8 @next pulls these in as ESM-only ("type":"module")
       // deps — Jest must transform them or they throw "Unexpected token 'export'".
       'nanoid|' +
+      // The receipt rules the API shares, published as ESM only.
+      '@muzhaqi16/receipt-rules|' +
       'escape-string-regexp|' +
       'query-string|' +
       'decode-uri-component|' +

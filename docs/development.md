@@ -26,12 +26,20 @@ organized see [`architecture.md`](architecture.md).
   (iOS requires macOS with Xcode and CocoaPods)
 - A running Sous Chef GraphQL API for anything beyond building. Without a
   backend you can still install, build, typecheck, lint, and run the unit tests.
+- **A GitHub token that can read packages**, in `NODE_AUTH_TOKEN`, for the install.
+  `@muzhaqi16/receipt-rules` (the receipt rules the API shares) comes from GitHub
+  Packages, which needs a token even to read, and `.npmrc` sends it from that
+  variable. With the GitHub CLI: `gh auth refresh -h github.com -s read:packages`
+  once, then `NODE_AUTH_TOKEN=$(gh auth token)`. Without it, an install fails with
+  `E401 ... authentication token not provided` unless npm's cache already holds the
+  package; nothing fails at runtime.
 
 ## Setup
 
 ```bash
 git clone https://github.com/muzhaqi16/sous-chef-rn.git
 cd sous-chef-rn
+export NODE_AUTH_TOKEN=$(gh auth token)   # see Prerequisites
 npm install            # runs patch-package + generates src/config/env.generated.ts
 cp .env.example .env   # fill in your values
 npm run codegen        # generate GraphQL types from the schema
