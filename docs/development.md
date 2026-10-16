@@ -31,8 +31,8 @@ organized see [`architecture.md`](architecture.md).
   Packages, which needs a token even to read, and `.npmrc` sends it from that
   variable. With the GitHub CLI: `gh auth refresh -h github.com -s read:packages`
   once, then `NODE_AUTH_TOKEN=$(gh auth token)`. Without it, an install fails with
-  `E401 ... authentication token not provided` unless npm's cache already holds the
-  package; nothing fails at runtime.
+  `E401 ... User cannot be authenticated with the token provided` unless npm's cache
+  already holds the package; nothing fails at runtime.
 
 ## Setup
 
