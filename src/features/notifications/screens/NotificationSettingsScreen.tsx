@@ -42,6 +42,7 @@ import {
 import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /**
  * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
@@ -201,39 +202,32 @@ export const NotificationSettingsScreen: React.FC = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
       t('notifications.resetConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('settings.resetSection'),
-          style: 'destructive',
-          onPress: () => {
-            void executeWriteWithFinally(
-              async () => {
-                const success = await resetToDefaults();
-                if (success) {
-                  alertService.alert(
-                    t('labels.success'),
-                    t('notifications.resetSuccess'),
-                  );
-                } else {
-                  alertService.alert(
-                    t('labels.error'),
-                    t('errors.resetSettingsFailed'),
-                  );
-                }
-              },
-              isLoading => setUpdating(isLoading ? 'reset' : null),
-              error => {
-                logger.error('Notification settings reset threw', { error });
-                alertService.alert(
-                  t('labels.error'),
-                  t('errors.resetSettingsFailed'),
-                );
-              },
+      destructiveConfirm(t('settings.resetSection'), () => {
+        void executeWriteWithFinally(
+          async () => {
+            const success = await resetToDefaults();
+            if (success) {
+              alertService.alert(
+                t('labels.success'),
+                t('notifications.resetSuccess'),
+              );
+            } else {
+              alertService.alert(
+                t('labels.error'),
+                t('errors.resetSettingsFailed'),
+              );
+            }
+          },
+          isLoading => setUpdating(isLoading ? 'reset' : null),
+          error => {
+            logger.error('Notification settings reset threw', { error });
+            alertService.alert(
+              t('labels.error'),
+              t('errors.resetSettingsFailed'),
             );
           },
-        },
-      ],
+        );
+      }),
     );
   };
 

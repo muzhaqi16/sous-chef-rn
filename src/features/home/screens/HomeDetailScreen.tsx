@@ -37,6 +37,7 @@ import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type RouteParams = {
   homeId: string;
@@ -112,16 +113,9 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     alertService.alert(
       t('homeDetail.transferOwnershipTitle'),
       t('homeDetail.transferOwnershipMessage', { name }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('homeDetail.transferOwnershipConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            void transferOwnership(memberUserId);
-          },
-        },
-      ],
+      destructiveConfirm(t('homeDetail.transferOwnershipConfirm'), () => {
+        void transferOwnership(memberUserId);
+      }),
     );
   };
 

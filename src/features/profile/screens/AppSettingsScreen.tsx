@@ -24,6 +24,7 @@ import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { useReceiptPhotoConsent } from '#features/receipts/hooks/useReceiptPhotoConsent';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -132,33 +133,26 @@ export const AppSettingsScreen: React.FC = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
       t('settings.resetConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('settings.resetSection'),
-          style: 'destructive',
-          onPress: () => {
-            setUpdating('reset');
-            void executeAsyncWithCleanup(
-              async () => {
-                const success = await resetToDefaults();
-                // Also reset feature hints/tutorials and per-user preferences
-                resetAllFeatureHints();
-                resetUserPreferences();
-                // Only the success path alerts — `resetToDefaults` already
-                // surfaces its own failure with `errors.resetSettingsFailed`.
-                if (success) {
-                  alertService.alert(
-                    t('labels.success'),
-                    t('settings.resetSuccess'),
-                  );
-                }
-              },
-              () => setUpdating(null),
-            );
+      destructiveConfirm(t('settings.resetSection'), () => {
+        setUpdating('reset');
+        void executeAsyncWithCleanup(
+          async () => {
+            const success = await resetToDefaults();
+            // Also reset feature hints/tutorials and per-user preferences
+            resetAllFeatureHints();
+            resetUserPreferences();
+            // Only the success path alerts — `resetToDefaults` already
+            // surfaces its own failure with `errors.resetSettingsFailed`.
+            if (success) {
+              alertService.alert(
+                t('labels.success'),
+                t('settings.resetSuccess'),
+              );
+            }
           },
-        },
-      ],
+          () => setUpdating(null),
+        );
+      }),
     );
   };
 

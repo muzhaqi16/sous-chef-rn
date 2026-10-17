@@ -24,6 +24,7 @@ import { emailVerificationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
 import { TOAST } from '#/constants/animations';
 import { authTestIDs } from '#features/auth/testIDs';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type CodeVerificationValues = {
   code: string;
@@ -200,16 +201,9 @@ export function CodeVerificationScreen({
     alertService.alert(
       t('auth.exitVerificationTitle'),
       t('auth.exitVerificationMessage'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('auth.exitVerificationConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            void authService.logout();
-          },
-        },
-      ],
+      destructiveConfirm(t('auth.exitVerificationConfirm'), () => {
+        void authService.logout();
+      }),
     );
   };
 

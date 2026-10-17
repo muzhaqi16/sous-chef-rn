@@ -27,6 +27,7 @@ import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /**
  * Builds the profile screen's setting rows. Takes no profile — every row here
@@ -254,16 +255,9 @@ export const useConfigurableSettings = () => {
                 alertService.alert(
                   t('biometrics.disableTitle'),
                   t('biometrics.disableBody'),
-                  [
-                    { text: t('labels.cancel'), style: 'cancel' },
-                    {
-                      text: t('biometrics.disable'),
-                      style: 'destructive',
-                      onPress: () => {
-                        void disableBiometrics();
-                      },
-                    },
-                  ],
+                  destructiveConfirm(t('biometrics.disable'), () => {
+                    void disableBiometrics();
+                  }),
                 );
               }
             },
@@ -327,14 +321,7 @@ export const useConfigurableSettings = () => {
     alertService.alert(
       t('profile.labels.logout'),
       t('confirmations.logoutWithPending', { count: pendingCount }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('profile.labels.logout'),
-          style: 'destructive',
-          onPress: signOut,
-        },
-      ],
+      destructiveConfirm(t('profile.labels.logout'), signOut),
     );
   };
 

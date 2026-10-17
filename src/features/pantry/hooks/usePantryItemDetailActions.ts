@@ -2,9 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
-// The module-level `t` takes a fallback string, not options, so an interpolated
-// key has to go through the i18next instance directly — same split as
-// src/utils/errorHandlers.ts.
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { itemIdOf, typedItemRef } from '#/utils/refInput';
@@ -26,6 +23,7 @@ import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type PantryItemForActions =
   | {
@@ -185,16 +183,9 @@ export function usePantryItemDetailActions({
     alertService.alert(
       t('pantryItemDetail.deleteTitle'),
       t('labels.areYouSureYouWantToDeleteThisItem'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void confirmDelete();
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void confirmDelete();
+      }),
     );
   };
 
@@ -316,16 +307,13 @@ export function usePantryItemDetailActions({
           unit: item.unit?.name ?? '',
         });
 
-    alertService.alert(title, body, [
-      { text: t('labels.cancel'), style: 'cancel' },
-      {
-        text: t('labels.discard'),
-        style: 'destructive',
-        onPress: () => {
-          void convertExpiredToWaste(item.id, { hasBatches });
-        },
-      },
-    ]);
+    alertService.alert(
+      title,
+      body,
+      destructiveConfirm(t('labels.discard'), () => {
+        void convertExpiredToWaste(item.id, { hasBatches });
+      }),
+    );
   };
 
   const handleConfirmAdjust = (

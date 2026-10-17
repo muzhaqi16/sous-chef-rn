@@ -21,6 +21,7 @@ import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 import type { BarAction } from '#components/molecules/BarActions';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
   _isOwner: boolean;
@@ -152,16 +153,9 @@ export function useShoppingListSelectorModal({
     alertService.alert(
       t('shoppingListSelector.deleteAlertTitle', { count }),
       t('shoppingListSelector.deleteAlertMessage', { count }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteSelected();
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteSelected();
+      }),
     );
   };
 

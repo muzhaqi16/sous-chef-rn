@@ -23,6 +23,7 @@ import { formatDateRangeWithYear } from '#/utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -133,17 +134,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: mealPlan.name,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            onDelete(mealPlan.id);
-            onClose();
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        onDelete(mealPlan.id);
+        onClose();
+      }),
     );
   };
 

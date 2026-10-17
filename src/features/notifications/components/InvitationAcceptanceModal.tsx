@@ -23,6 +23,7 @@ import { getNotificationCopy } from '#features/notifications/utils/notificationH
 import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -130,43 +131,36 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
       t('confirmations.declineInvitation', {
         entityName: invitation.entityName,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.decline'),
-          style: 'destructive',
-          onPress: () => {
-            if (!token) return;
-            setRejecting(true);
-            void executeAsyncWithCleanup(
-              async () => {
-                const outcome =
-                  invitation.type === 'HOME_INVITE'
-                    ? await declineHome(token)
-                    : await declineList(token);
+      destructiveConfirm(t('labels.decline'), () => {
+        if (!token) return;
+        setRejecting(true);
+        void executeAsyncWithCleanup(
+          async () => {
+            const outcome =
+              invitation.type === 'HOME_INVITE'
+                ? await declineHome(token)
+                : await declineList(token);
 
-                if (outcome.status === 'failed') {
-                  reportFailure(outcome.failure);
-                  return;
-                }
+            if (outcome.status === 'failed') {
+              reportFailure(outcome.failure);
+              return;
+            }
 
-                toastService.success(
-                  t('success.invitationDeclinedTo', {
-                    entityName: invitation.entityName,
-                  }),
-                );
-                onReject?.(invitation);
-                onClose();
-              },
-              () => setRejecting(false),
-              () => {
-                onClose();
-                toastService.error(t('invitationAcceptance.declineFailed'));
-              },
+            toastService.success(
+              t('success.invitationDeclinedTo', {
+                entityName: invitation.entityName,
+              }),
             );
+            onReject?.(invitation);
+            onClose();
           },
-        },
-      ],
+          () => setRejecting(false),
+          () => {
+            onClose();
+            toastService.error(t('invitationAcceptance.declineFailed'));
+          },
+        );
+      }),
     );
   };
 

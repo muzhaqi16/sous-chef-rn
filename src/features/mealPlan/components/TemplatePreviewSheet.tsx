@@ -28,6 +28,7 @@ import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { toDateKey } from '#/utils/dateUtils';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -125,14 +126,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
       t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: template.name,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => confirmDelete(template.id),
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => confirmDelete(template.id)),
     );
   };
 

@@ -34,6 +34,7 @@ import { formatNumberForInput } from '#/utils/formatters/number';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { dayAsInstant } from '#/utils/dateUtils';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
 export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
@@ -389,16 +390,9 @@ export const useListSettings = (listId: string | undefined) => {
     alertService.alert(
       t('labels.deleteList'),
       t('shoppingListScreens.deleteListConfirmMessage'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteList(listId);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteList(listId);
+      }),
     );
   };
 
@@ -553,30 +547,23 @@ export const useListSettings = (listId: string | undefined) => {
       t('shoppingListScreens.leaveListMessage', {
         name: name || t('shoppingListScreens.thisList'),
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.leaveList'),
-          style: 'destructive',
-          onPress: () => {
-            if (!currentUserCollaborator?.id) {
-              toastService.error(
-                t('shoppingListScreens.couldNotDetermineMembership'),
-              );
-              return;
-            }
+      destructiveConfirm(t('labels.leaveList'), () => {
+        if (!currentUserCollaborator?.id) {
+          toastService.error(
+            t('shoppingListScreens.couldNotDetermineMembership'),
+          );
+          return;
+        }
 
-            void leaveList(currentUserCollaborator.id, {
-              onSuccess: () => {
-                setSelectedShoppingListId(null);
-                goBack();
-              },
-              onError: () =>
-                toastService.error(t('shoppingListScreens.failedToLeave')),
-            });
+        void leaveList(currentUserCollaborator.id, {
+          onSuccess: () => {
+            setSelectedShoppingListId(null);
+            goBack();
           },
-        },
-      ],
+          onError: () =>
+            toastService.error(t('shoppingListScreens.failedToLeave')),
+        });
+      }),
     );
   };
 

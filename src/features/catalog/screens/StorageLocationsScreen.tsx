@@ -21,6 +21,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
 
@@ -179,16 +180,9 @@ export const StorageLocationsScreen: React.FC<
       t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: location.name,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteLocation(location.id);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteLocation(location.id);
+      }),
     );
   };
 

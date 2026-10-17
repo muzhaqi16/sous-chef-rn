@@ -23,6 +23,7 @@ import { ShareInviteSection } from '#features/shoppingList/components/ShareInvit
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SubScreen } from '#components/templates/SubScreen';
 import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -86,18 +87,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     alertService.alert(
       t('confirmations.removeMemberTitle'),
       t('labels.areYouSureYouWantToRemoveThisMember'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.remove'),
-          style: 'destructive',
-          // No refetch needed: the hook removes the collaborator from the
-          // cached connection in place, and alerts a refusal itself.
-          onPress: () => {
-            void removeCollaborator(memberId);
-          },
-        },
-      ],
+      // No refetch needed: the hook removes the collaborator from the
+      // cached connection in place, and alerts a refusal itself.
+      destructiveConfirm(t('labels.remove'), () => {
+        void removeCollaborator(memberId);
+      }),
     );
   };
 
@@ -117,31 +111,24 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       t('shoppingListScreens.leaveListMessage', {
         name: listName || t('shoppingListScreens.thisList'),
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.leaveList'),
-          style: 'destructive',
-          onPress: () => {
-            if (!currentUserCollaborator?.id) {
-              alertService.alert(
-                t('labels.error'),
-                t('shoppingListScreens.couldNotDetermineMembership'),
-              );
-              return;
-            }
+      destructiveConfirm(t('labels.leaveList'), () => {
+        if (!currentUserCollaborator?.id) {
+          alertService.alert(
+            t('labels.error'),
+            t('shoppingListScreens.couldNotDetermineMembership'),
+          );
+          return;
+        }
 
-            void leaveList(currentUserCollaborator.id, {
-              onSuccess: goBack,
-              onError: () =>
-                alertService.alert(
-                  t('labels.error'),
-                  t('shoppingListScreens.failedToLeave'),
-                ),
-            });
-          },
-        },
-      ],
+        void leaveList(currentUserCollaborator.id, {
+          onSuccess: goBack,
+          onError: () =>
+            alertService.alert(
+              t('labels.error'),
+              t('shoppingListScreens.failedToLeave'),
+            ),
+        });
+      }),
     );
   };
 
