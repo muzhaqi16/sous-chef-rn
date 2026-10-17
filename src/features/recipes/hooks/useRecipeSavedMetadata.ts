@@ -82,10 +82,9 @@ export function useRecipeSavedMetadata({
         document: UpdateFavoriteRecipeDocument,
         fallback: t('recipes.updateRecipeFailed'),
         onFailed: () => writeEntityFields(client.cache, entity, previous),
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
     return settled.status !== 'failed';
   };
   const [showFolderPicker, setShowFolderPicker] = useState(false);

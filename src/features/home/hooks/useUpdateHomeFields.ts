@@ -36,16 +36,15 @@ export function useUpdateHomeFields(homeId: string) {
     home: (HomeFieldUpdates & { version: number }) | null,
     fallback: string,
   ): Promise<boolean> => {
-    const { persisted } = await updateEntityFieldsLocalFirst({
+    return updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: { __typename: 'Home', id: homeId },
       updates,
       // Omits a key the read never carried, so the revert leaves that field
       // alone rather than writing a fallback over it.
       previous: snapshotFields(home, updates),
-      logLabel: 'Update Home Fields',
-      mutate: async () => {
-        const settled = await settleMutation(
+      settle: () =>
+        settleMutation(
           () =>
             updateHomeMutation({
               variables: {
@@ -53,13 +52,8 @@ export function useUpdateHomeFields(homeId: string) {
               },
             }),
           { document: UpdateHomeDocument, fallback },
-        );
-        // The settled failure stands in for the error, so the revert runs
-        // exactly when a failure was presented.
-        return { data: settled.data, error: settled.failure };
-      },
+        ),
     });
-    return persisted;
   };
 
   return { updateHomeFields };

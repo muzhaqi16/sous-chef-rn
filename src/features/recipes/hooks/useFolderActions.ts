@@ -128,17 +128,13 @@ export function useFolderActions() {
           if (previousFolders) writeFolders(client.cache, previousFolders);
           restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
         },
-        // Folder outcomes are reported as toasts, success and failure alike.
-        present: 'none',
+        present: 'toast',
       },
     );
 
     setLoading(false);
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     toastService.success(t('recipes.folderRenamed', { oldName, newName }));
     return true;
@@ -179,16 +175,13 @@ export function useFolderActions() {
           if (previousFolders) writeFolders(client.cache, previousFolders);
           restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
         },
-        present: 'none',
+        present: 'toast',
       },
     );
 
     setLoading(false);
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     toastService.success(t('recipes.folderDeleted', { folderName }));
     return true;

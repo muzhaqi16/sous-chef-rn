@@ -85,8 +85,7 @@ export function useRecipeCookingActions({
       {
         document: MarkRecipeAsCookedDocument,
         fallback: t('recipes.markCookedFailed'),
-        // Every caller reports the cook as a toast.
-        present: 'none',
+        present: 'toast',
       },
     );
 
@@ -185,10 +184,7 @@ export function useRecipeCookingActions({
             deductFromPantry: input.deductFromPantry,
             notes: input.notes,
           });
-          if (failure) {
-            toastService.error(failure.body);
-            return;
-          }
+          if (failure) return;
           deductionToast(skipped);
         }
       }, setMarkingAsCooked);
@@ -203,10 +199,7 @@ export function useRecipeCookingActions({
         deductFromPantry: input.deductFromPantry,
         notes: input.notes,
       });
-      if (failure) {
-        toastService.error(failure.body);
-        return;
-      }
+      if (failure) return;
 
       if (input.deductFromPantry) {
         deductionToast(skipped);
@@ -227,10 +220,7 @@ export function useRecipeCookingActions({
         deductFromPantry: true,
         notes: reviewedCook?.notes,
       });
-      if (failure) {
-        toastService.error(failure.body);
-        return;
-      }
+      if (failure) return;
       deductionToast(skipped);
     }, setMarkingAsCooked);
   };

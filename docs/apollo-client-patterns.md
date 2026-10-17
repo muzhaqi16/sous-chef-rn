@@ -256,6 +256,7 @@ update: (cache, { data }, { variables }) => {
 - **It is made before firing, not in `update`.** `update` runs only with a server payload, so a queued write would show nothing.
 - **It goes through `writeEntityFields`** (`src/apollo/utils/localFirstFields.ts`), a `cache.writeFragment`: `cache.modify` cannot introduce a field the cached record lacks. A field whose rules live in a merge policy takes its own writer instead ([one writer](#a-field-with-a-write-time-invariant-has-one-writer)).
 - **`queued` is not a failure.** `settleMutation` answers `applied | queued | failed`, and only `failed` reverts.
+- **The settle shows the failure.** It alerts by default; `present: 'toast'` shows the same copy as an error toast, and `present: 'none'` hands it to the caller as `failure`, for a caller that combines several writes into one message.
 - **The snapshot omits what the cache lacks.** `snapshotFields` keeps only the keys the read carried, so a revert never blanks a field it never saw. Read it from the cache, not from a query result that may not have answered yet.
 
 **Example - a field edit that states its version** (`usePublishRecipe`):
@@ -1038,17 +1039,6 @@ update: (cache, { data }) => {
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `enhanceWithVersion(currentItem, updates)` | The row a local write stores: the cached entity with the edit, `version` kept (the server moves it) and `updatedAt` stamped |
 
-### Mutation failure reporting (`src/utils/errorHandlers.ts`)
-
-What `settleMutation` shares with other callers. A write's failure is settled
-through `settleMutation` (see [Error Handling](#error-handling)), never handled
-here directly.
-
-| Utility                                   | Use Case                                                                       |
-| ----------------------------------------- | ------------------------------------------------------------------------------ |
-| `reportMutationFailure(error, operation)` | Report a failed write; a network failure during a known outage is not reported |
-| `alertVersionConflict(config)`            | The "updated elsewhere" alert with a Refresh action                            |
-
 ### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
 
 `useCrudOperations()` builds one wrapper: a remove that confirms first when
@@ -1431,7 +1421,7 @@ See `src/features/shoppingList/cache/connections.ts` for the full implementation
 - **Cache updater utilities**: `src/apollo/utils/cacheUpdaters.ts`
 - **Subscription setup**: `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
 - **Fetch policies**: global `watchQuery` defaults in `src/apollo/defaultOptions.ts` cover the common case. Override per-query only when the policy needs to differ.
-- **Error handling**: `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, `src/utils/errors/versionConflict.ts`
+- **Error handling**: `src/apollo/utils/settleMutation.ts` (it also reports a failed write, quiet for a network failure during a known outage), `src/services/errorService.ts`, `src/utils/errors/versionConflict.ts`
 
 ---
 

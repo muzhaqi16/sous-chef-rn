@@ -327,7 +327,7 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const { persisted } = await updateEntityFieldsLocalFirst({
+    return updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
@@ -338,26 +338,12 @@ export function useMealTemplateEditor() {
       // helper is what keeps that true if a field is ever added to the write
       // and not to the query.
       previous: snapshotFields(previousItem, updates),
-      logLabel: 'Update Template Item',
-      mutate: async () => {
-        const settled = await settleMutation(
-          () =>
-            updateItemMutation({
-              variables: { input },
-            }),
-          {
-            document: UpdateTemplateItemDocument,
-            fallback: t('mealTemplateBuilder.failedToSaveItem'),
-          },
-        );
-        // A failure travels as `error`, which is what makes the helper revert.
-        return settled.failure
-          ? { error: settled.failure }
-          : { data: settled.data };
-      },
+      settle: () =>
+        settleMutation(() => updateItemMutation({ variables: { input } }), {
+          document: UpdateTemplateItemDocument,
+          fallback: t('mealTemplateBuilder.failedToSaveItem'),
+        }),
     });
-
-    return persisted;
   };
 
   /**

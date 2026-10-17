@@ -18,11 +18,9 @@ import {
   type MealPlanDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
-import {
-  ErrorCode,
-  TopLevelErrorCode,
-  type CreateMealPlanInput,
-  type UpdateMealPlanInput,
+import type {
+  CreateMealPlanInput,
+  UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
@@ -218,10 +216,6 @@ export function useMealPlanActions() {
         include: [GetMealPlanDocument, GetMealPlansDocument],
       });
     };
-    const changedElsewhere = {
-      title: t('errors.changedElsewhereTitle'),
-      body: t('errors.changedElsewhereLatestShown'),
-    };
     // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
@@ -237,14 +231,7 @@ export function useMealPlanActions() {
         document: UpdateMealPlanDocument,
         fallback: t('errors.saveFailed'),
         onFailed: revertUpdate,
-        on: {
-          [ErrorCode.VersionConflict]: showServerPlan,
-          [TopLevelErrorCode.ResourceVersionConflict]: showServerPlan,
-        },
-        copy: {
-          [ErrorCode.VersionConflict]: changedElsewhere,
-          [TopLevelErrorCode.ResourceVersionConflict]: changedElsewhere,
-        },
+        onVersionConflict: showServerPlan,
       },
     );
     return settled.status !== 'failed';

@@ -7,8 +7,7 @@
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { settledStatus } from './settleMutation';
-import { errorService } from '#/services/errorService';
+import type { SettleStatus } from './settleMutation';
 
 /**
  * The normalized entity holding the fields; its GraphQL field names must match the
@@ -18,8 +17,6 @@ export type FieldsEntityRef = StoreObject & {
   __typename: string;
   id: string;
 };
-
-type MutationResultLike = { data?: unknown; error?: unknown };
 
 /** An object the cache should normalize rather than store inline. */
 function isEntityLike(value: unknown): value is Record<string, unknown> {
@@ -159,45 +156,23 @@ export interface LocalFirstFieldsOptions<TFields extends object> {
   updates: Partial<TFields>;
   /** Current values for the same keys — restored if the server refuses. */
   previous: Partial<TFields>;
-  /** Fires the mutation, whose `useMutation` sets `context: { localFirst: true }`. */
-  mutate: () => Promise<MutationResultLike>;
-  /** Operation label for error reporting. */
-  logLabel: string;
-}
-
-export interface LocalFirstFieldsResult {
-  /** True when the change landed on the server OR was queued for replay. */
-  persisted: boolean;
-  /** Raw mutation result; `undefined` when the call threw. Callers classify/report. */
-  result: MutationResultLike | undefined;
+  /** Fires and settles the write, whose `useMutation` sets `context: { localFirst: true }`. */
+  settle: () => Promise<{ status: SettleStatus }>;
 }
 
 /**
- * Apply a local-first field update, returning the outcome rather than reporting it
- * — the call sites surface a refusal differently, and deciding here double-alerts.
+ * Applies a field update at once and puts `previous` back only when the write
+ * failed. True when it landed or was queued, which replays later.
  */
 export async function updateEntityFieldsLocalFirst<TFields extends object>({
   cache,
   entity,
   updates,
   previous,
-  mutate,
-  logLabel,
-}: LocalFirstFieldsOptions<TFields>): Promise<LocalFirstFieldsResult> {
+  settle,
+}: LocalFirstFieldsOptions<TFields>): Promise<boolean> {
   writeEntityFields(cache, entity, updates);
-
-  let result;
-  try {
-    result = await mutate();
-  } catch (error) {
-    errorService.reportError(error, { operation: logLabel });
-  }
-
-  // A queued change keeps its cache write; only a failed one reverts.
-  const persisted = settledStatus(result) !== 'failed';
-  if (!persisted) {
-    writeEntityFields(cache, entity, previous);
-  }
-
-  return { persisted, result };
+  const { status } = await settle();
+  if (status === 'failed') writeEntityFields(cache, entity, previous);
+  return status !== 'failed';
 }

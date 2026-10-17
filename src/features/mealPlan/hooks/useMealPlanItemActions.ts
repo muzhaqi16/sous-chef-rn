@@ -100,15 +100,11 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         document: CreateMealPlanItemDocument,
         fallback: t('mealTemplateBuilder.failedToAddItem'),
         onFailed: revertCreate,
-        // Meal actions on the plan report failures as toasts.
-        present: 'none',
+        present: 'toast',
       },
     );
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
     // Offline / API down: the meal stays in cache and the create replays keyed
     // by the same id.
     return true;
@@ -204,18 +200,12 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         fallback: t('toasts.mealUpdateFailed'),
         onFailed: revertToggle,
         // A stale version means another member changed the meal: show theirs.
-        on: {
-          VERSION_CONFLICT: refetchPlan,
-          RESOURCE_VERSION_CONFLICT: refetchPlan,
-        },
-        present: 'none',
+        onVersionConflict: refetchPlan,
+        present: 'toast',
       },
     );
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     if (settled.status === 'applied') {
       // Clear persisted optimistic state on server confirmation; a queued
@@ -298,7 +288,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         fallback: t('mealTemplateBuilder.failedToRemoveItem'),
         removal: true,
         onFailed: restoreItem,
-        present: 'none',
+        present: 'toast',
       },
     );
 
@@ -306,10 +296,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // the delete committed, was refused, or was queued.
     subscriptionService.unregisterPendingDelete(id);
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
     return true;
   };
 

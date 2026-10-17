@@ -542,7 +542,7 @@ async function register(
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
-      present: 'none',
+      present: 'toast',
       on: {
         [ErrorCode.AuthTokenExpired]: clearAuth,
         [ErrorCode.AuthRefreshTokenInvalid]: clearAuth,
@@ -552,7 +552,6 @@ async function register(
 
   if (settled.failure) {
     store.setAuthIsLoading(false);
-    toastService.error(settled.failure.body);
     return 'failed';
   }
   if (settled.status !== 'applied') {

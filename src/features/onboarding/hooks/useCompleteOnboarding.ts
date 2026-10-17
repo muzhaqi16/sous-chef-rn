@@ -26,7 +26,7 @@ export function useCompleteOnboarding(userId: string | undefined) {
     completeOnboarding: async (): Promise<boolean> => {
       const updates = { onBoarded: true };
       const entity = userId ? { __typename: 'User', id: userId } : undefined;
-      const { persisted } = await updateEntityFieldsLocalFirst({
+      return updateEntityFieldsLocalFirst({
         cache: client.cache,
         entity,
         updates,
@@ -40,18 +40,12 @@ export function useCompleteOnboarding(userId: string | undefined) {
             }),
           updates,
         ),
-        logLabel: 'Complete Onboarding',
-        mutate: async () => {
-          const settled = await settleMutation(() => completeOnboarding(), {
+        settle: () =>
+          settleMutation(() => completeOnboarding(), {
             document: CompleteOnboardingDocument,
             fallback: t('onBoarding.completeOnboardingError'),
-          });
-          // The settled failure stands in for the error, so the revert runs
-          // exactly when a failure was presented.
-          return { data: settled.data, error: settled.failure };
-        },
+          }),
       });
-      return persisted;
     },
   };
 }

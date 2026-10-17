@@ -26,6 +26,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { t } from '#/i18n';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
@@ -542,7 +543,7 @@ describe('useMealPlanItemActions', () => {
         ]);
         expect(mockToastError).toHaveBeenCalledTimes(1);
         expect(mockToastError).toHaveBeenCalledWith(
-          getVersionConflictMessage(),
+          t('errors.changedElsewhereLatestShown'),
         );
         expect(mockToastSuccess).not.toHaveBeenCalled();
         await waitFor(() =>

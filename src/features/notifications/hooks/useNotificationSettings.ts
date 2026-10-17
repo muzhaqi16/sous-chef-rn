@@ -167,34 +167,21 @@ export async function applySettingsUpdate({
     input: UpdateNotificationPreferencesInput,
   ) => Promise<{ data?: unknown; error?: unknown }>;
 }): Promise<boolean> {
-  const { persisted } =
-    await updateEntityFieldsLocalFirst<NotificationSettings>({
-      cache,
-      entity,
-      updates,
-      previous,
-      // localFirst: an unreachable API queues the change for replay rather
-      // than failing it, so the toggle the user just flipped isn't lost.
-      mutate: async () => {
-        const settled = await settleMutation(
-          () => mutate(toNestedInput(updates)),
-          {
-            document: UpdateNotificationPreferencesDocument,
-            fallback: t('notifications.updateFailed'),
-            // The screen alerts off the returned boolean; the timezone sync logs.
-            present: 'none',
-          },
-        );
-        // A failure travels as `error`, which is what makes the helper revert.
-        return settled.failure
-          ? { error: settled.failure }
-          : { data: settled.data };
-      },
-      logLabel: 'Failed to update notification settings',
-    });
-
-  // Queued counts as persisted — it replays later.
-  return persisted;
+  return updateEntityFieldsLocalFirst<NotificationSettings>({
+    cache,
+    entity,
+    updates,
+    previous,
+    // localFirst: an unreachable API queues the change for replay rather
+    // than failing it, so the toggle the user just flipped isn't lost.
+    settle: () =>
+      settleMutation(() => mutate(toNestedInput(updates)), {
+        document: UpdateNotificationPreferencesDocument,
+        fallback: t('notifications.updateFailed'),
+        // The screen alerts off the returned boolean; the timezone sync logs.
+        present: 'none',
+      }),
+  });
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {

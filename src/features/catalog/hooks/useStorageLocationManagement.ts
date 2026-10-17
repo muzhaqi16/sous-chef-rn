@@ -287,7 +287,7 @@ export function useStorageLocationManagement(
       {
         document: UpdateStorageLocationDocument,
         fallback: t('errors.codes.genericRetry'),
-        present: 'none',
+        present: 'toast',
         onFailed: () => {
           writeEntityFields(client.cache, entity, previous);
           if (displacedDefault) {
@@ -298,10 +298,7 @@ export function useStorageLocationManagement(
         },
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
     // queue took it. The only consumer reads truthiness.
@@ -342,14 +339,11 @@ export function useStorageLocationManagement(
         document: DeleteStorageLocationDocument,
         fallback: t('errors.codes.genericRetry'),
         removal: true,
-        present: 'none',
+        present: 'toast',
         onFailed: restore,
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     toastService.success(t('success.storageLocationDeleted'));
     return true;
@@ -380,7 +374,7 @@ export function useStorageLocationManagement(
       {
         document: MarkStorageLocationAsDefaultDocument,
         fallback: t('errors.codes.genericRetry'),
-        present: 'none',
+        present: 'toast',
         onFailed: () => {
           writeEntityFields(client.cache, entity, { isDefault: false });
           if (previousDefault) {
@@ -393,10 +387,7 @@ export function useStorageLocationManagement(
         },
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
     return true;
   };
 

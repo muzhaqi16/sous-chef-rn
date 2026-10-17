@@ -8,7 +8,6 @@ import {
 import { errorService, isTransportFailure } from '#/services/errorService';
 import { isTranslationKey, t, type TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { reportMutationFailure } from '#/utils/errorHandlers';
 import {
   extractMutationPayload,
   isErrorTypename,
@@ -26,6 +25,11 @@ import {
 } from '#/utils/errors/rateLimit';
 import { Telemetry } from '#/services/telemetry';
 import { operationNameOf } from './documentOperation';
+import { toastService } from '#/services/toastService';
+import { isNetworkError } from '#/utils/isNetworkError';
+import { isOfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
+import { storeApi } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 /**
  * Settling a write: the one place a mutation's outcome is read and a failure
@@ -68,10 +72,15 @@ export interface SettleOptions {
   on?: { readonly [C in Code]?: () => void };
   /** Offered as the conflict alert's Refresh action. */
   onConflictRefresh?: () => void;
+  /** Shows the newer version a conflict lost to; the copy then says it is shown. */
+  onVersionConflict?: () => void;
   /** A removal: "not found" means the row is already gone, so it applied. */
   removal?: boolean;
-  /** `'none'` leaves presenting the failure to the caller, via `failure`. */
-  present?: 'alert' | 'none';
+  /**
+   * `'toast'` shows the failure's body as an error toast; `'none'` leaves it to
+   * the caller, via `failure`.
+   */
+  present?: 'alert' | 'toast' | 'none';
 }
 
 interface Failure {
@@ -259,7 +268,9 @@ function describe(
       code,
       field,
       title: t('errors.changedElsewhereTitle'),
-      body: getVersionConflictMessage(),
+      body: options.onVersionConflict
+        ? t('errors.changedElsewhereLatestShown')
+        : getVersionConflictMessage(),
     };
   }
   if (code === TopLevelErrorCode.UnitInvalid) {
@@ -329,6 +340,22 @@ function describe(
   };
 }
 
+/**
+ * Quiet ONLY for a network error or an offline rejection while
+ * `isApiUnavailable` holds — a validation, permission or conflict error is
+ * always reported. Per-call reports during an outage bury real failures (228
+ * from one settings session). The query side keeps its telemetry on purpose.
+ */
+function reportMutationFailure(error: unknown, operation: string): void {
+  if (
+    (isNetworkError(error) || isOfflineRejectedError(error)) &&
+    isApiUnavailable(storeApi.getState())
+  ) {
+    return;
+  }
+  errorService.reportError(error, { operation });
+}
+
 function fail(
   failure: Failure,
   error: unknown,
@@ -337,9 +364,11 @@ function fail(
   options.onFailed?.();
   const handlers: Partial<Record<string, () => void>> = options.on ?? {};
   if (failure.code) handlers[failure.code]?.();
+  if (isVersionConflictCode(failure.code)) options.onVersionConflict?.();
 
   const described = describe(failure, error, options);
-  if (options.present !== 'none') presentFailure(described, options);
+  if (options.present === 'toast') toastService.error(described.body);
+  else if (options.present !== 'none') presentFailure(described, options);
   return described;
 }
 

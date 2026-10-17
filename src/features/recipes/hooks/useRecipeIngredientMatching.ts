@@ -278,14 +278,11 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         document: MarkRecipeAsCookedDocument,
         fallback: t('recipes.markCookedFailed'),
         // The review sheet reports the cook as a toast and stays open to retry.
-        present: 'none',
+        present: 'toast',
       },
     );
     // Applied and queued both succeed; a queued cook replays later.
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return;
-    }
+    if (settled.failure) return;
 
     const data = appliedPayload(settled.data);
     // Replay diagnostics: `converged: true` means this client-minted cooking-log

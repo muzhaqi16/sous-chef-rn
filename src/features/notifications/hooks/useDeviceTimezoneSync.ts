@@ -139,8 +139,8 @@ export const useDeviceTimezoneSync = (): void => {
       entity: { __typename: 'UserSettings', id: settingsId },
       updates,
       previous: snapshotFields({ timezone: settingsTimezone }, updates),
-      mutate: async () => {
-        const settled = await settleMutation(
+      settle: () =>
+        settleMutation(
           () =>
             updateSettings({
               variables: { input: { regional: { timezone: deviceTimezone } } },
@@ -150,13 +150,8 @@ export const useDeviceTimezoneSync = (): void => {
             fallback: t('settings.updateFailed'),
             present: 'none',
           },
-        );
-        return settled.failure
-          ? { error: settled.failure }
-          : { data: settled.data };
-      },
-      logLabel: 'Settings timezone sync',
-    }).then(({ persisted }) => {
+        ),
+    }).then(persisted => {
       if (persisted) return;
       logger.warn('Settings timezone sync refused', { deviceTimezone });
     });

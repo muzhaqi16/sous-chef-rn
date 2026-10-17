@@ -102,14 +102,14 @@ export const useAppSettings = () => {
   ) => {
     const previous = snapshotFields<AppSettings>(memoizedSettings, updates);
 
-    const { persisted } = await updateEntityFieldsLocalFirst<AppSettings>({
+    return updateEntityFieldsLocalFirst<AppSettings>({
       cache: client.cache,
       entity: settingsEntity,
       updates,
       previous,
       // The settle is the ONLY alerter for this failure, so callers must not
-      // add their own. Its failure stands in for the error, driving the revert.
-      mutate: async () => {
+      // add their own.
+      settle: async () => {
         const settled = await settleMutation(
           () =>
             updateSettings({
@@ -121,11 +121,9 @@ export const useAppSettings = () => {
         if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
           dropUnitSystemAnswers(client.cache);
         }
-        return { data: settled.data, error: settled.failure };
+        return settled;
       },
-      logLabel: 'Update Settings',
     });
-    return persisted;
   };
 
   /** Single-key convenience over {@link updateMultipleSettings}. */

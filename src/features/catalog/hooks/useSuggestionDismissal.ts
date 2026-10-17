@@ -33,29 +33,25 @@ export function useSuggestionDismissal(
       {
         document: MarkSuggestionActiveDocument,
         fallback: t('addItemSheet.undoFailed'),
-        present: 'none',
+        present: 'toast',
       },
     );
     // A failed undo leaves the item dismissed server-side, so nothing refetches.
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return;
-    }
+    if (settled.failure) return;
     refetch();
   };
 
   const settleDismissal = async (itemId: string) => {
     // Success needs no refetch: the caller's optimistic removal already hid it.
-    const settled = await settleMutation(
+    await settleMutation(
       () => dismiss({ variables: { input: { itemId, surface } } }),
       {
         document: MarkSuggestionDismissedDocument,
         fallback: t('addItemSheet.dismissFailed'),
         onFailed: refetch,
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
   };
 
   const dismissSuggestion = ({ itemId, name }: DismissTarget) => {
