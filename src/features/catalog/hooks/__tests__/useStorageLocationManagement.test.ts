@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { GraphQLError } from 'graphql';
 ('use no memo');
 
@@ -76,19 +77,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () =>
   jest.requireActual('#/apollo/utils/cacheUpdaters'),
 );
 
-jest.mock('#/utils/finallyHelpers');
-
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 // ----------------------------------------------------------------------
 // Mock builders

@@ -12,8 +12,6 @@ import { RecipeDetail } from '../index';
 jest.mock('#hooks/useFeatureFlag', () => ({
   useFeatureFlag: () => false,
 }));
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#features/recipes/hooks/useRecipeDetail', () => ({

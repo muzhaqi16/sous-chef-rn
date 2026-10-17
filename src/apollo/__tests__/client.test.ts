@@ -40,16 +40,6 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   },
 }));
 
-jest.mock('../links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-
-jest.mock('../links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-  registerApolloClient: jest.fn(),
-}));
-
 describe('Apollo client', () => {
   beforeEach(() => {
     jest.clearAllMocks();

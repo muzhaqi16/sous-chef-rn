@@ -10,10 +10,6 @@ import {
 import { UseCompleteShoppingList_ListFragmentDoc } from '../useCompleteShoppingList.generated';
 import { useCompleteShoppingList } from '../useCompleteShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',

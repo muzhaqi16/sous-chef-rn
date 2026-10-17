@@ -33,8 +33,6 @@ import {
 } from '../useServerReceiptParse.generated';
 import { useServerReceiptParse } from '../useServerReceiptParse';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/services/errorService');
 
 const PAGES = ['WALMART\nGV WHOLE MILK 007874235186 F  3.48 N\nTOTAL  3.48'];

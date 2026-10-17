@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
@@ -13,8 +14,6 @@ import { CreateRecipeCaptureDocument } from '../useRecipeCapture.generated';
 import { useRecipeCapture, type CaptureStart } from '../useRecipeCapture';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#/utils/generateEntityId', () => ({
@@ -29,15 +28,7 @@ jest.mock('#/utils/backoff', () => ({
   sleep: () => Promise.resolve(),
 }));
 
-const mockToastSuccess = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
 
 beforeEach(() => {
   jest.clearAllMocks();

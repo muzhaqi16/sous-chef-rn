@@ -7,9 +7,6 @@ import {
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/useToday', () => ({
   useToday: () => '2026-10-14',
 }));

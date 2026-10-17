@@ -38,12 +38,6 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/services/errorService');
 
 /** What a stock write moves and a refusal restores. */

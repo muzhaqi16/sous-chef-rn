@@ -14,13 +14,6 @@ import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { t } from '#/i18n';
 import type { PackSizeOutcome } from '../PackSizeSheet';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -104,84 +97,19 @@ jest.mock('#store/useAppStore', () => ({
   ),
 }));
 
-// Use the real wrappers so pressing the add button actually runs the async
-// handler (the auto-mock would no-op the callbacks and never fire the mutation).
-jest.mock('#/utils/finallyHelpers', () =>
-  jest.requireActual('#/utils/finallyHelpers'),
+jest.mock('../ProductResultCard', () =>
+  require('#/test-utils/searchResultsStubs'),
 );
+jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 
-jest.mock('../ProductResultCard', () => ({
-  ProductResultCard: ({ item }: { item: { name: string } }) => {
-    const { Text } = require('react-native');
-    return require('react').createElement(Text, null, item.name);
-  },
-}));
-
-// The sheet's own form is pinned in `PackSizeSheet.test.tsx`; here it hands
-// back a size when shown, and closes as the real one does: only on `done`.
+// The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
 const mockPackSizeOutcomes: PackSizeOutcome[] = [];
 jest.mock('../PackSizeSheet', () => ({
-  PackSizeSheet: ({
-    visible,
-    onConfirm,
-    onDismiss,
-  }: {
-    visible: boolean;
-    onConfirm: (size: {
-      netWeight: number;
-      netWeightUnitId: string;
-    }) => Promise<PackSizeOutcome>;
-    onDismiss: () => void;
-  }) => {
-    if (!visible) return null;
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.Pressable,
-      {
-        testID: 'pack-size-stub',
-        onPress: async () => {
-          const outcome = await onConfirm({
-            netWeight: 32,
-            netWeightUnitId: 'unit-oz',
-          });
-          mockPackSizeOutcomes.push(outcome);
-          if (outcome.status === 'done') onDismiss();
-        },
-      },
-      R.createElement(RN.Text, null, 'size'),
-    );
-  },
-}));
-
-type MockAction = { label: string; onPress: () => void };
-jest.mock('../ActionButtons', () => ({
-  ActionButtons: ({
-    primaryAction,
-    secondaryAction,
-  }: {
-    primaryAction?: MockAction;
-    secondaryAction: MockAction;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      null,
-      primaryAction
-        ? R.createElement(
-            RN.Pressable,
-            { onPress: primaryAction.onPress, testID: 'primary-btn' },
-            R.createElement(RN.Text, null, primaryAction.label),
-          )
-        : null,
-      R.createElement(
-        RN.Pressable,
-        { onPress: secondaryAction.onPress, testID: 'secondary-btn' },
-        R.createElement(RN.Text, null, secondaryAction.label),
-      ),
-    );
-  },
+  PackSizeSheet:
+    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming(
+      { netWeight: 32, netWeightUnitId: 'unit-oz' },
+      (outcome: PackSizeOutcome) => mockPackSizeOutcomes.push(outcome),
+    ),
 }));
 
 describe('SearchResults', () => {

@@ -14,14 +14,6 @@ import { UseShoppingListTemplate_ListFragmentDoc } from '../useShoppingListTempl
 import { useShoppingListTemplate } from '../useShoppingListTemplate';
 import { useStore } from '#store';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',

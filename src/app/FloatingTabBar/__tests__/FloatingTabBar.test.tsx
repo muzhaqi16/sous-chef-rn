@@ -83,16 +83,6 @@ jest.mock('#context/TabBarActionsContext', () => ({
   })),
 }));
 
-// Mock toastService
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    info: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
 // Mock HapticService
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: {

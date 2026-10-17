@@ -29,9 +29,6 @@ jest.mock('#/apollo/client', () => ({
     return mockClientHolder.client;
   },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 
 const variables = { id: 'list-1', first: 25, isPurchased: false };
 

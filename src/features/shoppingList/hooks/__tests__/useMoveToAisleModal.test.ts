@@ -14,10 +14,6 @@ import {
 } from '../useMoveToAisleModal.generated';
 import { useMoveToAisleModal } from '../useMoveToAisleModal';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
     save: jest.fn(),

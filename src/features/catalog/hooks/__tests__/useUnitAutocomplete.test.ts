@@ -35,9 +35,6 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();

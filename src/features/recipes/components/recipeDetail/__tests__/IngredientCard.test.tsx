@@ -3,9 +3,6 @@ import { render, screen } from '@testing-library/react-native';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { IngredientCard } from '../IngredientCard';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const ingredient = (
   quantity: number,
   symbol: string | null,

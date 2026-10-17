@@ -9,16 +9,6 @@ import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
 const PLAN_ID = 'plan-1';
 const HELD_ID = 'held-meal-1';
 

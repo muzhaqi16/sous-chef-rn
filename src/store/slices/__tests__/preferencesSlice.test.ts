@@ -6,10 +6,6 @@ import {
   PantrySortDirection,
 } from '../preferenceTypes';
 
-// Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 describe('preferencesSlice', () => {
   describe('initial state', () => {
     it('starts with system theme', () => {

@@ -4,9 +4,6 @@ import { Platform } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(
     <T,>(selector: (state: RootState) => T): T =>

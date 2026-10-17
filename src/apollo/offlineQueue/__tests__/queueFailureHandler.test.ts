@@ -65,9 +65,6 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     clearEntityById: jest.fn(),
   },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),

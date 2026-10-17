@@ -6,10 +6,6 @@ import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 import type { BarcodeSource } from '#features/barcode/types';
 import { motion } from '#/theme/foundations/motion';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockRequestPermission = jest.fn();

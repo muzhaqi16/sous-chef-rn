@@ -14,13 +14,8 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ReviewCard } from '../ReviewCard';
 import { ReviewSection } from '../ReviewSection';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
-}));
-jest.mock('#services/toastService', () => ({
-  toastService: { success: jest.fn(), info: jest.fn() },
 }));
 
 const VIEWER = {

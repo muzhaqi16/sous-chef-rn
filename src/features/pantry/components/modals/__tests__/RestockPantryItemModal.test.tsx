@@ -40,8 +40,6 @@ type RestockMockPantryItem = { id: string; quantity: number } | null;
 /** Replaces the mocked shell's shared state, for a test that needs another stack. */
 let mockSharedOverride: Partial<PantryActionSharedState> = {};
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 // A labelled input that shows the error it is handed, addressed by its label.
 type MockFieldProps = {
   label: string;
@@ -68,9 +66,6 @@ jest.mock('#components/molecules/FractionInput', () => ({
 }));
 jest.mock('#components/atoms/FormInput', () => ({
   FormInput: (props: MockFieldProps) => mockField(props),
-}));
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 jest.mock('#components/molecules/DatePickerField', () => ({
   DatePickerField: ({ label }: { label: string }) => {

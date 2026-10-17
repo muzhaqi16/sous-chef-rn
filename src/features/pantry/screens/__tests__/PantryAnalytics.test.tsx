@@ -7,9 +7,6 @@ import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { PantryAnalytics } from '../PantryAnalytics';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({

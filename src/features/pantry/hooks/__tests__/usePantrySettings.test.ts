@@ -18,10 +18,6 @@ import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
 import { t } from '#/i18n';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => jest.clearAllMocks());
 
 /**

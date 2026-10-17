@@ -14,12 +14,6 @@ import {
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { usePantryRestock } from '../usePantryRestock';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const ROW_ID = 'pi-oats';
 
 const ROW = gql`

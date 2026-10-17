@@ -10,9 +10,6 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useVerifyEmail } from '../useVerifyEmail';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const verifyMock = () =>
   recordMock(VerifyEmailDocument, {
     data: {

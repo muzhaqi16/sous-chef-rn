@@ -3,8 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { FilterTabBar } from '../FilterTabBar';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

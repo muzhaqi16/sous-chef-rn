@@ -16,9 +16,6 @@ import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStor
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureReviewBanner } from '../CaptureReviewBanner';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 type Line = NonNullable<
   NonNullable<
     NonNullable<

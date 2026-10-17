@@ -11,12 +11,6 @@ import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/us
 import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const LIST_ID = 'list-1';
 
 const COUNTS = gql`

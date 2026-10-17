@@ -15,10 +15,6 @@ import {
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useExpirationNotificationSync } from '../useExpirationNotificationSync';
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn() },
-}));
-
 /** An unread generic notification and the badge that counts it. */
 function seedFeed(unreadCount: number): InMemoryCache {
   const cache = seedCache([

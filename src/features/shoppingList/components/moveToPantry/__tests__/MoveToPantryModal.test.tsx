@@ -221,10 +221,6 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));

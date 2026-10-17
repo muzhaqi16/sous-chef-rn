@@ -10,10 +10,6 @@ import {
 import { ErrorCode, SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn() },
-}));
-
 import { toastService } from '#/services/toastService';
 
 const mockSuccess = toastService.success as jest.Mock;

@@ -20,9 +20,6 @@ jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   },
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockUseCurrentHome = jest.fn();
 jest.mock('#features/pantry/hooks/useCurrentHome', () => ({
   useCurrentHome: () => mockUseCurrentHome(),

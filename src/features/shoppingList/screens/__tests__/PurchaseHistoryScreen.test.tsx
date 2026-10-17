@@ -11,8 +11,6 @@ import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/s
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

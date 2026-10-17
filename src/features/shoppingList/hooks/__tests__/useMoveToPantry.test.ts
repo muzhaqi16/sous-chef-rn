@@ -30,8 +30,6 @@ jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

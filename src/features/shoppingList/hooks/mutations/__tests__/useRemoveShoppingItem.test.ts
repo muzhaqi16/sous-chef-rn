@@ -32,9 +32,6 @@ const goneMock = () =>
 jest.mock('../utils', () => ({
   removeFromShoppingListItemsCache: jest.fn(),
 }));
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 beforeEach(() => {
   jest.clearAllMocks();

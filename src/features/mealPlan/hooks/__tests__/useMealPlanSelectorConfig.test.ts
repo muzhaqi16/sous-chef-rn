@@ -12,8 +12,6 @@ import {
 } from '#features/mealPlan/utils/mealPlanFilters';
 import { useMealPlanSelectorConfig } from '../useMealPlanSelectorConfig';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));

@@ -7,7 +7,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { ApolloClient } from '@apollo/client';
+import { ApolloClient, type DocumentNode } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { buildSchema, parse, validate } from 'graphql';
 import { storage } from '#storage/mmkv';
@@ -89,9 +89,12 @@ const WITHDRAWN = new Set(['CreateShoppingListItemFromRecipeIngredient']);
 
 const stored = Object.entries(refusedAsStored);
 
-/** The queue as the previous build left it, loaded by this one. */
-function loadedFromStorage(operationName: string, body: string) {
-  const document = parse(body, { noLocation: true });
+/** The queue as the previous build left it: one pending write of `document`. */
+function storeQueued(
+  operationName: string,
+  document: DocumentNode,
+  input: Record<string, unknown>,
+) {
   storage.set(
     'apollo-mutation-queue',
     JSON.stringify({
@@ -102,7 +105,7 @@ function loadedFromStorage(operationName: string, body: string) {
           id: 'entry-1',
           operationName,
           document: operationName,
-          variables: { input: STORED_INPUTS[operationName] ?? { id: 'row-1' } },
+          variables: { input },
           userId: USER_ID,
           status: QueueStatus.PENDING,
           timestamp: Date.now(),
@@ -110,6 +113,15 @@ function loadedFromStorage(operationName: string, body: string) {
         },
       ],
     }),
+  );
+}
+
+/** That queue, loaded by this build. */
+function loadedFromStorage(operationName: string, body: string) {
+  storeQueued(
+    operationName,
+    parse(body, { noLocation: true }),
+    STORED_INPUTS[operationName] ?? { id: 'row-1' },
   );
   const [loaded] = new QueueStore().getMutationsForUser(USER_ID);
   if (!loaded) throw new Error(`${operationName} did not load`);
@@ -228,32 +240,10 @@ describe('a list add the previous build queued with a typed name', () => {
   const addOperation = operationNameOf(AddItemToShoppingListDocument);
 
   function storedWithItemName() {
-    storage.set(
-      'apollo-mutation-queue',
-      JSON.stringify({
-        v: 2,
-        documents: {
-          [addOperation]: JSON.stringify(AddItemToShoppingListDocument),
-        },
-        entries: [
-          {
-            id: 'entry-1',
-            operationName: addOperation,
-            document: addOperation,
-            variables: {
-              input: {
-                shoppingListId: 'list-1',
-                items: [{ id: 'line-1', item: { itemName: 'Milk' } }],
-              },
-            },
-            userId: USER_ID,
-            status: QueueStatus.PENDING,
-            timestamp: Date.now(),
-            retryCount: 0,
-          },
-        ],
-      }),
-    );
+    storeQueued(addOperation, AddItemToShoppingListDocument, {
+      shoppingListId: 'list-1',
+      items: [{ id: 'line-1', item: { itemName: 'Milk' } }],
+    });
   }
 
   afterEach(() => {

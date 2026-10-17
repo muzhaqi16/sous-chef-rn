@@ -4,9 +4,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { DetailsPage } from '#features/pantry/components/modals/AddToPantrySheet/DetailsPage';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../src/apollo/links/refreshToken');
-
 jest.mock(
   '../../../../src/components/atoms/BottomSheetKeyboardAwareScrollView',
   () => ({

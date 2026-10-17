@@ -13,8 +13,6 @@ import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
 import { PhotoCaptureSheet } from '../PhotoCaptureSheet';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockStart = jest.fn();

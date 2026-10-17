@@ -19,12 +19,6 @@
 
 'use no memo';
 
-// authSlice transitively imports tokenScheduler/refreshToken which require the
-// native AppState module. Stub them at module level to keep the slice import
-// pure-JS — same pattern used by `src/store/slices/__tests__/authSlice.test.ts`.
-jest.mock('../../src/apollo/links/tokenScheduler');
-jest.mock('../../src/apollo/links/refreshToken');
-
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';

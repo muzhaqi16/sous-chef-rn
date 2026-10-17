@@ -8,9 +8,6 @@ import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { UserRole } from '#/graphql/generated/schemaTypes';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#store/useAppStore', () => {
   const mockUpdateUser = jest.fn();
   const mockUser = { id: 'u1', onBoarded: false };

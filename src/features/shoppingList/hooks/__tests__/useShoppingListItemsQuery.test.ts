@@ -4,9 +4,6 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useShoppingListItemsQuery } from '../useShoppingListItemsQuery';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));

@@ -33,12 +33,6 @@ interface TabScreenHeaderMockProps {
   actions?: BarAction[];
 }
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
     navigate: jest.fn(),
@@ -128,8 +122,6 @@ jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
     toggleIngredient: jest.fn(),
   })),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
   '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',

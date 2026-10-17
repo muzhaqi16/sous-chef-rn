@@ -1,5 +1,9 @@
 'use no memo';
 
+import {
+  captureOnData,
+  type CapturedOnData,
+} from '#/test-utils/subscriptionCapture';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
@@ -16,11 +20,6 @@ import {
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
-
-type CapturedOnData = (data: unknown, client: unknown) => void;
-
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
@@ -64,19 +63,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
     (...args: unknown[]) =>
       mockRemoveEdge(`${parent}.${field}`, ...args),
 }));
-
-/** Captures the hook's customOnData so tests can drive it with a payload. */
-function captureCustomOnData() {
-  let customOnData: CapturedOnData | undefined;
-  mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    customOnData = config.customOnData as CapturedOnData | undefined;
-    return {};
-  });
-  return (): CapturedOnData => {
-    if (!customOnData) throw new Error('customOnData was not captured');
-    return customOnData;
-  };
-}
 
 const makeClient = (
   readFragment: jest.Mock = jest.fn(),
@@ -142,7 +128,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('drops a deleted plan and clears the selection naming it', () => {
     useStore.setState({ selectedMealPlanId: 'plan-1' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -171,7 +157,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('leaves a selection that names a different plan', () => {
     useStore.setState({ selectedMealPlanId: 'plan-mine' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -189,7 +175,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('reads a plan created elsewhere back before adding it', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue({
@@ -227,7 +213,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('skips the add when the read-back leaves the list card incomplete', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue(null),
@@ -254,7 +240,7 @@ describe('useMealPlanSubscriptions', () => {
   it('skips the add when the plan cannot be read back', async () => {
     // Offline, or deleted between the event and the read. Adding an entity the
     // overview cannot render completely would blank the list.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn(),
@@ -277,7 +263,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('re-reads a plan updated elsewhere without touching the connection', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(jest.fn());
 
@@ -303,7 +289,7 @@ describe('useMealPlanSubscriptions', () => {
   it('refreshes the plan when an item is added elsewhere', () => {
     // One plan read answers both halves — array membership and the
     // server-computed totals — so an item add costs no read of its own.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -325,7 +311,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('skips an item echo while a local delete is in flight', () => {
     mockIsPendingDelete.mockReturnValue(true);
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -344,7 +330,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('removes an item deleted elsewhere', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -376,7 +362,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('removes a template item deleted elsewhere from its template, without a read', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -406,7 +392,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('ignores its own echo', () => {
     useStore.setState({ selectedMealPlanId: 'plan-1' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -428,7 +414,7 @@ describe('useMealPlanSubscriptions', () => {
     // The template browser is a sheet whose query mounts once with the screen,
     // so "it'll arrive on the next read" never happens while it stays mounted.
     const template = { __typename: 'MealTemplate', id: 'tpl-new' };
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue(template),
@@ -458,7 +444,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('skips an incomplete template rather than blanking the list', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const template = { __typename: 'MealTemplate', id: 'tpl-new' };
 
@@ -485,7 +471,7 @@ describe('useMealPlanSubscriptions', () => {
   it.each([MutationType.ItemAdded, MutationType.Updated])(
     'reads the template items back on %s rather than linking a bare id',
     async mutation => {
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
       const client = makeClient();
 
@@ -517,7 +503,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('does not read back a template item a local delete is removing', async () => {
     mockIsPendingDelete.mockReturnValue(true);
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -537,7 +523,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('drops a template deleted elsewhere', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 

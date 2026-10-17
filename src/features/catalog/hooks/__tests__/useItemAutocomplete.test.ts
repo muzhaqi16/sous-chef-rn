@@ -13,9 +13,6 @@ import {
   type ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
   __typename: 'ItemSuggestion',
   id,

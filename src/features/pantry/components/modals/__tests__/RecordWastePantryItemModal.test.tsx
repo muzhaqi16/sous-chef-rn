@@ -35,8 +35,6 @@ type MockSharedState = Pick<
 };
 type MockPantryItem = { id: string; quantity: number };
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

@@ -52,9 +52,6 @@ jest.mock('../src/apollo/offlineQueue/queueManager', () => ({
 jest.mock('../src/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
 }));
-jest.mock('../src/services/toastService', () => ({
-  toastService: { error: jest.fn() },
-}));
 jest.mock('../src/apollo/offlineQueue/queueStore', () => ({
   queueStore: { removeMutation: jest.fn() },
 }));

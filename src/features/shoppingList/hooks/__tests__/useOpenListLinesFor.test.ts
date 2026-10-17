@@ -7,9 +7,6 @@ import {
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useOpenListLinesFor } from '../useOpenListLinesFor';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const lookup = () =>
   recordMock(GetShoppingListItemsFilteredDocument, {
     dataFor: (

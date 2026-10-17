@@ -6,8 +6,6 @@ import {
 import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeTags } from '../useRecipeTags';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

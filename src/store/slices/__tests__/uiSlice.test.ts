@@ -1,10 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import type { ImageFile } from '#/types/media';
 
-// Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 const image: ImageFile = {
   uri: 'file:///cropped.jpg',
   type: 'image/jpeg',

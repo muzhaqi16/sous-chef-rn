@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
@@ -38,12 +39,7 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
+const mockAlert = jest.mocked(alertService.alert);
 
 beforeEach(() => {
   jest.clearAllMocks();

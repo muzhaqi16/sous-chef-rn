@@ -27,13 +27,6 @@ import {
   type UsePantryItemFormSubmitParams,
 } from '../usePantryItemFormSubmit';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn(
     async (

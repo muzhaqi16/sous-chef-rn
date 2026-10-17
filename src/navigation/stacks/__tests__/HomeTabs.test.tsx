@@ -1,9 +1,6 @@
 'use no memo';
 import type { ReactNode } from 'react';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // Capture the config `HomeTabs` hands to react-navigation. Without this the
 // navigator factory swallows it, and the screen options below — the reason
 // this module exists as a literal — are unobservable.

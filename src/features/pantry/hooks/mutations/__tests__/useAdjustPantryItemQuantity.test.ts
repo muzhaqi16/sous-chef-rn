@@ -11,10 +11,6 @@ import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const successMock = (variables: {
   input: AdjustPantryItemQuantityInput;
 }): MockFor<typeof AdjustPantryItemQuantityDocument> => ({

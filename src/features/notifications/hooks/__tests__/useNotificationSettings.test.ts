@@ -16,9 +16,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useNotificationSettings } from '../useNotificationSettings';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ user: { id: 'user-1' } });
   return {
@@ -62,16 +59,10 @@ const mockPreferencesData: StoredPreferences = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#/services/errorService');
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 beforeEach(() => {

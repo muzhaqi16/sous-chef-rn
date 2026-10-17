@@ -70,10 +70,6 @@ jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(),
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn() },
-}));
-
 import { authService } from '#/services/authService';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 

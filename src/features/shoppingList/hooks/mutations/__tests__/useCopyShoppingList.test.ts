@@ -15,14 +15,6 @@ import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { useCopyShoppingList } from '../useCopyShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const USER = {
   id: 'user-1',
   email: 'tani@example.com',

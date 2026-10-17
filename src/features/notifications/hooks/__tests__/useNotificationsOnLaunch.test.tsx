@@ -18,8 +18,6 @@ import {
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { useNotificationsOnLaunch } from '../useNotificationsOnLaunch';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
 }));

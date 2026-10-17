@@ -13,9 +13,6 @@ import { CategoryType, UnitType } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
 import { useDataPreloading } from '../useDataPreloading';
 
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 // Run idle-deferred work synchronously so the warming fires within the test.
 const originalRequestIdleCallback = globalThis.requestIdleCallback;
 beforeAll(() => {

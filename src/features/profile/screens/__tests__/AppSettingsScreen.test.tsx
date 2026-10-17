@@ -66,8 +66,6 @@ jest.mock('#hooks/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     loadingContainer: {},

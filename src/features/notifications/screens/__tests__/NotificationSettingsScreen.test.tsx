@@ -5,10 +5,6 @@ import { act, render } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 import NotificationSettingsScreen from '../NotificationSettingsScreen';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockAddListener = jest.fn<() => void, [string, () => void]>(() =>
   jest.fn(),
 );
@@ -86,12 +82,6 @@ jest.mock('#components/molecules/ModalPicker', () => ({
 
 jest.mock('#components/molecules/AlertBanner', () => ({
   AlertBanner: () => null,
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 describe('NotificationSettingsScreen', () => {

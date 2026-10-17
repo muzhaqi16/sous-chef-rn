@@ -6,9 +6,6 @@ import {
   shouldTreatAsOffline,
 } from '../networkSlice';
 
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 describe('networkSlice', () => {
   // Nearly every action here runs `syncOfflineBanner`, which schedules a real
   // dwell timer. Left on real timers those outlive the suite and are what force

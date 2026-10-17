@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -28,18 +29,8 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => undefined),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 // `gen-id-1`, `gen-id-2`, … in the order they are minted: a batch mints one id
 // per row, and a constant would fold every row onto one cache record.

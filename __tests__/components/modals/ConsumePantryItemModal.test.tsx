@@ -4,9 +4,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
   PantryActionModal: (
     props: React.ComponentProps<

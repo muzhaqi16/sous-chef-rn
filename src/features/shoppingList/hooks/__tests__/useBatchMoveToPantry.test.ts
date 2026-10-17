@@ -1,3 +1,5 @@
+import { toastService } from '#/services/toastService';
+import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -10,24 +12,11 @@ import {
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
+const mockToastInfo = jest.mocked(toastService.info);
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-  },
-}));
-
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
+const mockAlert = jest.mocked(alertService.alert);
 
 beforeEach(() => {
   jest.clearAllMocks();

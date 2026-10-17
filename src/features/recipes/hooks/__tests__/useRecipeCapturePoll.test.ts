@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
@@ -13,24 +14,14 @@ import {
   type CaptureEntry,
 } from '#features/recipes/store/recipeCaptureStore';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
+const mockToastInfo = jest.mocked(toastService.info);
 
 const entry = (createdAt = Date.now(), answered = true): CaptureEntry => ({
   id: 'capture-1',

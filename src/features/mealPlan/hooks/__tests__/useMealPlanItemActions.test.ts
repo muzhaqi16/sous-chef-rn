@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import type { InMemoryCache } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
@@ -192,20 +193,8 @@ function usePlanAndActions() {
   return useMealPlanItemActions(PLAN_ID);
 }
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: [message: string, opts?: Record<string, unknown>]) =>
-      mockToastSuccess(...args),
-    error: (...args: [message: string, opts?: Record<string, unknown>]) =>
-      mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
-jest.mock('#/apollo/links/tokenScheduler');
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 beforeEach(() => {
   jest.clearAllMocks();

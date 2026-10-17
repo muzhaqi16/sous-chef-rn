@@ -12,10 +12,6 @@ import { alertService } from '#/services/alertService';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 type Answer = MockDataFor<
   typeof RemoveCollaboratorDocument
 >['removeShoppingListCollaborator'];

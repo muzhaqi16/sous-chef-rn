@@ -6,10 +6,6 @@ import {
 } from '#domain/pantryItemDuplicate';
 import { alertService } from '#/services/alertService';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
 
 const makeCombinedError = (

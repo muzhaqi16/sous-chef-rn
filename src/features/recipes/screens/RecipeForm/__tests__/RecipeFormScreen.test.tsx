@@ -30,15 +30,10 @@ type RecipeFormScreenProps = StaticScreenProps<
   { recipeId?: string } | undefined
 >;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 // The three field components render their refusal so the screen test can see
 // WHERE each message landed, which an alert-based check could not tell apart.
@@ -122,10 +117,6 @@ jest.mock('#components/templates/FormScreen', () => ({
       </View>
     );
   },
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 beforeEach(() => {

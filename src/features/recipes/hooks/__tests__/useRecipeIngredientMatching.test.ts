@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   ErrorCode,
@@ -63,26 +64,14 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: jest.fn(),
-  },
-}));
-
-jest.mock('#/utils/finallyHelpers');
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
+const mockToastInfo = jest.mocked(toastService.info);
 
 // Deterministic client-minted cooking-log id so we can assert the cook sends it.
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

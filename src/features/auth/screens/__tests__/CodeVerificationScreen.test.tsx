@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -19,18 +20,8 @@ const storeModule: typeof UseAppStoreModule = require('#store/useAppStore');
 // --- Mocks ---
 
 const mockUpdateUser = jest.fn();
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-const mockToastWarning = jest.fn();
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: (...args: unknown[]) => mockToastWarning(...args),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 // Minimal prop shapes consumed by the mocked templates below.
 type MockAuthFormTemplateProps = {
@@ -74,10 +65,6 @@ jest.mock('#store/useAppStore', () => {
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/services/authService', () => ({
   authService: { logout: jest.fn() },
 }));
@@ -102,8 +89,6 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
     navigateToForgotPassword: mockNavigateToForgotPassword,
   }),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/auth/components/AuthWrapper', () => {
   const { View, Pressable, Text } = require('react-native');

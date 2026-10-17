@@ -61,9 +61,6 @@ jest.mock('#features/mealPlan/utils/mealPlanPermissions', () => ({
   ),
 }));
 
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

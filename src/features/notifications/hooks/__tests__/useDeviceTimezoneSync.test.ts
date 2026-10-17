@@ -20,9 +20,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useDeviceTimezoneSync } from '../useDeviceTimezoneSync';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/utils/finallyHelpers');
 jest.mock('#/services/errorService');
 
 jest.mock('#store/useAppStore', () => {

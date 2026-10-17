@@ -26,12 +26,6 @@ import { t } from '#/i18n';
 import { useMealPlan } from '../useMealPlan';
 import { useMealPlanActions } from '../useMealPlanActions';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 /** The actions beside the screen's own watcher of the plan, as on MealPlanMain. */
 function usePlanAndActions() {
   useMealPlan('plan-1');

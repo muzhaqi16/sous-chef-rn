@@ -22,14 +22,6 @@ import {
 } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const SOURCE = {
   __typename: 'Recipe',
   id: 'recipe-1',

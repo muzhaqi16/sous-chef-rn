@@ -29,11 +29,6 @@
  * `sessionEndClearsPersistedFeatureStores.test.ts`, which imports none of them.
  */
 
-// authSlice transitively imports tokenScheduler/refreshToken, which need
-// native AppState. Same stubbing as the other store tests.
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),

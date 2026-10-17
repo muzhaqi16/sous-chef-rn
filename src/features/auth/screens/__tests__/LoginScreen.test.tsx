@@ -5,7 +5,9 @@ import {
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
+import { toastService } from '#/services/toastService';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { LoginScreen } from '../LoginScreen';
 import { useStore } from '#store';
@@ -50,8 +52,6 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
     navigateToLogin: mockNavigateToLogin,
   }),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/auth/components/AuthWrapper', () => {
   const { View } = require('react-native');
@@ -304,16 +304,7 @@ describe('LoginScreen remembering the sign-in', () => {
     jest
       .spyOn(jest.requireActual('#/storage/deviceId'), 'ensureDeviceId')
       .mockResolvedValue(null);
-    const toastError = jest.spyOn(
-      jest.requireActual('#/services/toastService').toastService,
-      'error',
-    );
-    const { alertService } = jest.requireActual<
-      typeof import('#/services/alertService')
-    >('#/services/alertService');
-    const alert = jest
-      .spyOn(alertService, 'alert')
-      .mockImplementation(() => {});
+    const alert = jest.mocked(alertService.alert);
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });
 
     render(<LoginScreen />);
@@ -323,7 +314,7 @@ describe('LoginScreen remembering the sign-in', () => {
     buttons?.[1]?.onPress?.();
 
     await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith(
+      expect(toastService.error).toHaveBeenCalledWith(
         'Failed to save login information',
       ),
     );

@@ -30,8 +30,6 @@ type ProfileUploadResult = Awaited<
   ReturnType<ImageUploadApi['uploadProfileImage']>
 >;
 type ItemImagesResult = Awaited<ReturnType<ImageUploadApi['uploadItemImages']>>;
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
 
 // Spread the real module and stub only the two functions under control. Listing
 // exports by hand drifts: this factory predated MAX_IMAGE_SIZE and
@@ -47,12 +45,6 @@ jest.mock('#store', () => ({
   useStore: {
     getState: () => ({ isOnline: true, updateUser: jest.fn() }),
   },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 // Mock XMLHttpRequest

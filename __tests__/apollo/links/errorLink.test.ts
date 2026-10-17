@@ -9,7 +9,6 @@ import type { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // --- Mocks must be defined before imports ---
 
-jest.mock('#/apollo/links/refreshToken');
 const {
   attemptTokenRefresh: mockAttemptTokenRefresh,
   getRefreshState: mockGetRefreshState,

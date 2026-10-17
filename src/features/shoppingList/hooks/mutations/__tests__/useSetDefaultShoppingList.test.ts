@@ -7,10 +7,6 @@ import {
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useSetDefaultShoppingList } from '../useSetDefaultShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const IS_DEFAULT = gql`
   fragment testIsDefault on ShoppingList {
     id

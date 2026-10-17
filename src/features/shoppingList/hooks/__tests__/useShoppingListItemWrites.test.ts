@@ -24,12 +24,6 @@ jest.mock('#/utils/deviceLocale', () => ({
 }));
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-jest.mock('#/services/toastService', () => ({
-  toastService: { info: jest.fn() },
-}));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
     save: jest.fn(),

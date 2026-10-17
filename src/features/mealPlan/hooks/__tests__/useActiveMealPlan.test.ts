@@ -47,8 +47,6 @@ const seedPlan = (id: string) =>
     },
   ]);
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 /** A by-id miss: null data, no entry in `errors[]`. */
 function missMock(id: string) {
   const fired: Array<Record<string, unknown>> = [];

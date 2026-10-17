@@ -39,9 +39,6 @@ const mockResolveImageUrl = resolveImageUrl as jest.MockedFunction<
   typeof resolveImageUrl
 >;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 // `resolveImageUrl` is mocked so each test can drive hero resolution directly;

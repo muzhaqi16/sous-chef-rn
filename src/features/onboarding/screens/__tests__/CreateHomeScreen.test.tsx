@@ -7,9 +7,6 @@ import { CreateHomeScreen } from '../createHome/CreateHomeScreen';
 
 let mockHasUnverifiedEmail = false;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 const mockSkipToStep = jest.fn();
 jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
@@ -55,7 +52,6 @@ jest.mock('#/utils/connectionUtils', () => ({
       c?.edges?.map(e => e.node) || [],
   ),
 }));
-jest.mock('#/utils/finallyHelpers');
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn(r => r),
 }));

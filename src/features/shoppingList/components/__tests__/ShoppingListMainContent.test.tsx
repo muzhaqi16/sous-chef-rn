@@ -26,10 +26,6 @@ type ScreenData = ShoppingListMainContentProps['screenData'];
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/shoppingList/hooks/useStoreModeEnabled', () => ({
@@ -147,8 +143,6 @@ jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
     canMarkPurchased: true,
   })),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 // Opens through its imperative handle, as the real tray does, and then lists
 // the config's rows so a test can pick one.

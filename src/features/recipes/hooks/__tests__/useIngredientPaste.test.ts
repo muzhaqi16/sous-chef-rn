@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
@@ -9,15 +10,7 @@ import {
 import { ParseIngredientLinesDocument } from '#features/recipes/hooks/useIngredientPaste.generated';
 import { useIngredientPaste } from '../useIngredientPaste';
 
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    error: (...args: unknown[]) => mockToastError(...args),
-    success: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastError = jest.mocked(toastService.error);
 
 jest.mock('#/utils/deviceLocale', () => ({
   getDeviceLocale: () => 'en-AU',

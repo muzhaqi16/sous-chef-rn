@@ -28,9 +28,6 @@ import { CreateHomeScreen } from '../CreateHomeScreen';
 
 let mockHasUnverifiedEmail = false;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 const mockSetUserNavigationState = jest.fn();
 const mockSkipToStep = jest.fn();
@@ -261,10 +258,6 @@ jest.mock('react-hook-form', () => ({
 
 jest.mock('@hookform/resolvers/yup', () => ({
   yupResolver: jest.fn(() => jest.fn()),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 // --- Mock state used by tests to control query responses ---

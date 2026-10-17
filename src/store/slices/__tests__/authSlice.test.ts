@@ -3,10 +3,6 @@ import type { AuthUserInput } from '#store/slices/authSlice';
 import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
-// Mock external dependencies that authSlice imports
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 // The slice reaches the scheduler through the bridge Apollo registers at client
 // init; here the test registers it, which is also what proves the wiring.
 const schedule = jest.fn();

@@ -1,10 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useIsEffectivelyOffline } from '../useOfflineMode';
 
-// Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 let mockIsOnline = true;
 let mockOfflineModeEnabled = false;
 

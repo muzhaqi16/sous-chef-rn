@@ -11,6 +11,8 @@ import {
   waitFor,
 } from '@testing-library/react-native';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
@@ -189,23 +191,13 @@ describe('BiometricSetupModal', () => {
   // The enrolment reports nothing itself, so this alert is the only message.
   it('says setup failed exactly once when the credential cannot be saved', async () => {
     mockEnrol.mockResolvedValue('unsaved');
-    const alert = jest.spyOn(
-      jest.requireActual('#/services/alertService').alertService,
-      'alert',
-    );
-    const toastError = jest.spyOn(
-      jest.requireActual('#/services/toastService').toastService,
-      'error',
-    );
     const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} mode="settings" />);
 
     await user.press(await screen.findByText('Enable Now'));
 
-    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
-    expect(toastError).not.toHaveBeenCalled();
-    alert.mockRestore();
-    toastError.mockRestore();
+    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    expect(toastService.error).not.toHaveBeenCalled();
   });
 
   // A field that gates on non-empty and is then discarded reads as a security

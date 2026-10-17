@@ -23,10 +23,6 @@ import { settleMutation, settledStatus } from '../settleMutation';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { Telemetry } from '#/services/telemetry';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // A payload member, its typename checked against the operation's result union.
 type Member<T extends { __typename: string }> = {
   __typename: T['__typename'];

@@ -15,9 +15,6 @@ import {
 } from '#operations/home/home.generated';
 import { JoinHomeByCodeScreen } from '../JoinHomeByCodeScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGoBack = jest.fn();
 // The verification gate is exercised in its own suite; here it always allows
 // the action so these tests stay focused on their own behaviour.
@@ -60,10 +57,6 @@ jest.mock('#store', () => ({
     // on cross-test init order.
     subscribe: () => () => {},
   },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
 jest.mock('#components/organisms/Header', () => ({

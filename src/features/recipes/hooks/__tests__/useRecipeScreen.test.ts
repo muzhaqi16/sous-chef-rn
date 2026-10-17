@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { act, waitFor } from '@testing-library/react-native';
 
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -35,12 +36,7 @@ jest.mock('#/services/spoonacular/SpoonacularService', () => ({
 }));
 
 // ── Mock alert service (assertions on user-facing alerts) ──
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: {
-    alert: (...args: unknown[]) => mockAlert(...args),
-  },
-}));
+const mockAlert = jest.mocked(alertService.alert);
 
 // ── Mock useAppStore (selector + getState) ──
 const appStoreState = {

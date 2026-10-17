@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -27,12 +28,7 @@ function updateMock() {
   });
 }
 
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
+const mockAlert = jest.mocked(alertService.alert);
 
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {

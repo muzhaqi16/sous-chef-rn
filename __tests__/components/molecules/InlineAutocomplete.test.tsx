@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/components/atoms/Label', () => ({
   Label: ({ children }: { children: React.ReactNode }) => {
     const { Text: RNText } = require('react-native');

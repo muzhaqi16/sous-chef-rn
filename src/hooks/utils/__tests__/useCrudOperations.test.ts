@@ -9,10 +9,6 @@ import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useCrudOperations } from '../useCrudOperations';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/services/errorService');
 
 // These tests assert WHICH code was looked up, so the lookup has to be visible

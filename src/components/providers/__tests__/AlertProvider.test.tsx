@@ -12,6 +12,7 @@
  * queries treat as hidden, so only the newest alert is ever queryable. What
  * matters is how many dismissals it takes to clear the queue.
  */
+jest.unmock('#/services/alertService');
 import React from 'react';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';

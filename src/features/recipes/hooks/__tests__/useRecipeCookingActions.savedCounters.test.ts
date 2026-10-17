@@ -15,18 +15,6 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-jest.mock('#/apollo/links/tokenScheduler');
-
 const COOKED_AT = '2026-10-13T18:30:00.000Z';
 
 /** What the detail screen reads of the saved recipe, as the cache holds it. */

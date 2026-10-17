@@ -135,10 +135,6 @@ jest.mock('#/utils/generateId', () => ({
 // Mock the token refresh used on auth errors (dynamically imported by the
 // manager). Default: refresh fails (returns undefined) — individual tests
 // override with mockResolvedValue('new-token').
-jest.mock('../../links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
-
 jest.mock('../refreshUnitVocabulary', () => ({
   refreshUnitVocabulary: jest.fn(),
 }));

@@ -71,6 +71,15 @@ jest.mock('#/utils/environment');
 // ---------------------------------------------------------------------------
 jest.mock('#/services/telemetry');
 
+// Toasts, alerts and token refresh are auto-mocked for every suite (the token
+// modules from `src/apollo/links/__mocks__/`); a suite asserts with
+// `jest.mocked(toastService.error)`, and one that needs the real module calls
+// `jest.unmock`.
+jest.mock('#/services/toastService');
+jest.mock('#/services/alertService');
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+
 // ---------------------------------------------------------------------------
 // @react-native-firebase/messaging (FCM) — native module, absent under jest.
 // Provide a minimal mock so anything importing the native push provider (App.tsx

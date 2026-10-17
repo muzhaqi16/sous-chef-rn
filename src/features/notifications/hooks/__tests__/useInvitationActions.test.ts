@@ -16,8 +16,6 @@ import {
 import type { InvitationData } from '#features/notifications/types';
 import { useInvitationActions } from '../useInvitationActions';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 const USER_ID = 'user-1';
 const TOKEN = 'invite-token';
 

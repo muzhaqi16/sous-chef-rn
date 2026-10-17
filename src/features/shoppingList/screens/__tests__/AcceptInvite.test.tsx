@@ -35,10 +35,6 @@ import {
 // acceptance lives in InvitationAcceptanceModal and is tested there.
 const TOKEN = 'invite-token';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   // The screen goes through useAppNavigation, whose goBack guards on
@@ -53,10 +49,6 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#/services/errorService');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 jest.mock('#/utils/finallyHelpers');
 

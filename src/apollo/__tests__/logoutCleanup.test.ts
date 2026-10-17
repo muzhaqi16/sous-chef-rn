@@ -16,10 +16,6 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 
-jest.mock('../links/tokenScheduler', () => ({
-  cancelTokenRefresh: jest.fn(),
-}));
-
 jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     clear: jest.fn(),
@@ -55,10 +51,6 @@ jest.mock('../links/wsLink', () => ({
 // forget its throttle clock. What clearing actually does — zeroing
 // `lastRefreshTime` so the next account is not throttled by the previous one's
 // — is asserted against the real module in refreshToken.test.ts.
-jest.mock('../links/refreshToken', () => ({
-  clearRefreshState: jest.fn(),
-}));
-
 // ---------------------------------------------------------------------------
 // Imports – after all mocks are declared
 // ---------------------------------------------------------------------------

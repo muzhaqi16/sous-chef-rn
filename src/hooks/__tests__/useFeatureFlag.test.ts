@@ -9,8 +9,6 @@ import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated'
 import { useUser } from '#store/useAppStore';
 import { useFeatureFlag } from '../useFeatureFlag';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#store/useAppStore', () => ({
   ...jest.requireActual('#store/useAppStore'),
   useUser: jest.fn(() => ({ id: 'user-1' })),

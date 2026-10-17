@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
@@ -16,7 +17,6 @@ import {
 import { useRecipeReviews } from '../useRecipeReviews';
 import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
-import type { toastService } from '#/services/toastService';
 import type { GetRecipeReviewsQuery } from '#features/recipes/graphql/recipe.generated';
 import type { Unmasked } from '@apollo/client/masking';
 
@@ -24,21 +24,8 @@ jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: Parameters<typeof toastService.success>) =>
-      mockToastSuccess(...args),
-    error: (...args: Parameters<typeof toastService.error>) =>
-      mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 type ReviewNode = NonNullable<
   Unmasked<GetRecipeReviewsQuery>['recipe']

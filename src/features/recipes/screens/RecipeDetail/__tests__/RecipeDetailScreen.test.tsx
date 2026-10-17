@@ -11,8 +11,6 @@ import { formatMonthDayYear } from '#/utils/formatters/date';
 jest.mock('#hooks/useFeatureFlag', () => ({
   useFeatureFlag: () => false,
 }));
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({

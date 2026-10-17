@@ -6,9 +6,6 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import { SelectPantryItems } from '../SelectPantryItems';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
 jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
@@ -73,7 +70,6 @@ jest.mock('#features/onboarding/hooks/useSelectableItems', () => ({
 }));
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService');
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({

@@ -48,9 +48,6 @@ function seedPlanCache(
   );
 }
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // The device's calendar day, pinned: every plan below is dated against it.
 const TODAY = '2026-03-10';
 const YESTERDAY = '2026-03-09';

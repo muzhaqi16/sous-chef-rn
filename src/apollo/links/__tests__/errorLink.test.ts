@@ -17,10 +17,6 @@ jest.mock('../../logoutCleanup', () => ({
     isInLogoutProcess: jest.fn(() => false),
   },
 }));
-jest.mock('../refreshToken', () => ({
-  attemptTokenRefresh: jest.fn(),
-  getRefreshState: jest.fn(() => ({ isRefreshing: false })),
-}));
 jest.mock('../../clientUpgradeNotice', () => ({
   announceClientUpgradeRequired: jest.fn(),
 }));
@@ -48,7 +44,7 @@ import {
 import type { FormattedExecutionResult } from 'graphql';
 import { errorLink } from '../errorLink';
 import { LogoutCleanup } from '../../logoutCleanup';
-import { attemptTokenRefresh, getRefreshState } from '../refreshToken';
+import { attemptTokenRefresh } from '../refreshToken';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isRefreshableAuthCode } from '#/utils/authErrorCodes';
@@ -263,11 +259,6 @@ describe('errorLink middleware', () => {
     expect(typeof (LogoutCleanup.isInLogoutProcess as jest.Mock)).toBe(
       'function',
     );
-  });
-
-  it('getRefreshState returns current state', () => {
-    const state = getRefreshState();
-    expect(state).toEqual({ isRefreshing: false });
   });
 
   it('attemptTokenRefresh is callable', () => {

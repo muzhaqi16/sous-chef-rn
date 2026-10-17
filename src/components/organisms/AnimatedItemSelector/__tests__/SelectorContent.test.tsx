@@ -3,9 +3,6 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { SelectorContent } from '../SelectorContent';
 import type { SelectorConfig, SelectorPagination } from '../types';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 type Row = { id: string; name: string };
 
 const config = (pagination?: SelectorPagination): SelectorConfig<Row> => ({

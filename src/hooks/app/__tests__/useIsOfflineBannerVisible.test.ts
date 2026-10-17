@@ -2,10 +2,6 @@ import { renderHook } from '@testing-library/react-native';
 import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import type { OfflineBannerCause } from '#store/slices/networkSlice';
 
-// Break circular dependency chain (matches useOfflineMode.test.ts).
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 let mockCause: OfflineBannerCause | null = null;
 
 jest.mock('#store/useAppStore', () => {

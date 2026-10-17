@@ -14,9 +14,6 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
     save: jest.fn(),
@@ -24,7 +21,6 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     track: jest.fn(() => jest.fn()),
   },
 }));
-jest.mock('#/utils/finallyHelpers');
 
 const TOTAL = 3;
 

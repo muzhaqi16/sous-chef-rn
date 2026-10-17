@@ -29,9 +29,6 @@ import { QueueStatus } from '../types';
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 // The failure handler reads the app's client; it shares the queue's cache here.
 jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');

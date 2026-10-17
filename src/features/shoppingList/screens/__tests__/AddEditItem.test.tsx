@@ -29,12 +29,10 @@ import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { t } from '#/i18n';
 
-jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/utils/deviceLocale', () => ({
   ...jest.requireActual('#/utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = jest
@@ -83,10 +81,6 @@ jest.mock('#features/shoppingList/cache/withdraw', () => ({
 }));
 jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 jest.mock('#components/templates/FormScreen', () => ({
   FormScreen: ({

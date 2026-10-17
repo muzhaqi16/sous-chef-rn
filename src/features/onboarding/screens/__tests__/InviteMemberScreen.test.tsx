@@ -7,9 +7,6 @@ import { alertService } from '#/services/alertService';
 import type { EmailInput as EmailInputComponent } from '#components/molecules/EmailInput';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 // The verification gate is exercised in its own suite; here it always allows
 // the action so these tests stay focused on their own behaviour.
@@ -62,10 +59,6 @@ let mockOfflineBannerCause: string | null = null;
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 // The stub renders `errorMessage` the way the real `BaseInput` does, so a test
 // can see WHERE a refusal landed.

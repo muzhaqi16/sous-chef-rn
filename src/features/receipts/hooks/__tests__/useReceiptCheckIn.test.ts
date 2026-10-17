@@ -19,11 +19,6 @@ import {
   type ReceiptToCheckIn,
 } from '../useReceiptCheckIn';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
-
 const PANTRY_ID = 'pantry-1';
 
 const line = (

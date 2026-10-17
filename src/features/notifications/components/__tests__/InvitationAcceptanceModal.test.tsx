@@ -25,18 +25,6 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/utils/finallyHelpers', () => ({
   executeAsyncWithCleanup: async (
     fn: () => Promise<void>,
@@ -93,10 +81,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
-
-jest.mock('#/apollo/links/refreshToken');
 
 const homeInvitation: InvitationData = {
   type: 'HOME_INVITE',

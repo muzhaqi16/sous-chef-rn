@@ -5,9 +5,6 @@ import { SearchBrandsDocument } from '#operations/item/item.generated';
 import type { RootState } from '#store/index';
 import { useBrandAutocomplete } from '#features/catalog/hooks/useBrandAutocomplete';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ isOnline: mockIsOnline, cachedBrands: [] });

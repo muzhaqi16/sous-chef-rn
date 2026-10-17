@@ -6,10 +6,6 @@ import {
   useIsMainApp,
 } from '../useNavigationGuards';
 
-// Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 let mockNavigationState = 'auth';
 
 jest.mock('#store/useAppStore', () => ({

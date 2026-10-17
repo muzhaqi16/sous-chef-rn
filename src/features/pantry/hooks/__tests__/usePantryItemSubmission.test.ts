@@ -22,9 +22,6 @@ import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pant
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -63,12 +60,6 @@ jest.mock('#domain/pantryItemDuplicate', () => {
     ),
   };
 });
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 const mockOnSuccess = jest.fn();
 const mockHandlePageChange = jest.fn();

@@ -21,9 +21,6 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
-
 /**
  * The node on the wire: what the query selects plus what the card's fragment
  * reads, since masking keeps a fragment's fields out of the query's own type

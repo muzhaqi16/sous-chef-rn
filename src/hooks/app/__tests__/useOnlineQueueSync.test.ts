@@ -14,6 +14,7 @@
 import { renderHook } from '@testing-library/react-native';
 import { useOnlineQueueSync } from '../useOnlineQueueSync';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 
 let mockIsOnline = true;
 let mockUserId: string | undefined;
@@ -51,10 +52,9 @@ jest.mock('#/apollo/links/apiReachabilityBreaker', () => ({
 jest.mock('#/apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),
 }));
-const mockRefresh = jest.fn(() => new Promise<string | null>(() => {}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: () => mockRefresh(),
-}));
+const mockRefresh = jest
+  .mocked(proactiveTokenRefresh)
+  .mockImplementation(() => new Promise<string | null>(() => {}));
 
 describe('useOnlineQueueSync', () => {
   beforeEach(() => {

@@ -9,10 +9,6 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
   () => 'bbb',
 );
@@ -20,8 +16,6 @@ jest.mock('fractional-indexing', () => ({
   generateKeyBetween: (a: string | null, b: string | null) =>
     mockGenerateKeyBetween(a, b),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   SubscriptionService: {

@@ -24,8 +24,6 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

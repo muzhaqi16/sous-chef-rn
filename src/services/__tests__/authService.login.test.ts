@@ -47,11 +47,9 @@ jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(),
 }));
 
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: (...args: unknown[]) => mockToastError(...args) },
-}));
+const mockToastError = jest.mocked(toastService.error);
 
+import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };

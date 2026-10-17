@@ -67,14 +67,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   safeEvict: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn((role: string) => role),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 type AlertButton = { style?: string; onPress?: () => unknown };

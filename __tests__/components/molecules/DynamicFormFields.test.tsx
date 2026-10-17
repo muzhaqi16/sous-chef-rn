@@ -6,9 +6,6 @@ import { useForm } from 'react-hook-form';
 import type { FieldDef } from '../../../src/components/molecules/DynamicFormFields';
 import { DynamicFormFields } from '../../../src/components/molecules/DynamicFormFields';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
   ItemAutocompleteField: () => null,
 }));

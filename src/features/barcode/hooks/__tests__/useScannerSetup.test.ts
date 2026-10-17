@@ -22,10 +22,6 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => mockNav),
 }));
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
   capturedHandler = undefined;

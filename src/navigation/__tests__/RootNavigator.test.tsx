@@ -10,10 +10,6 @@ interface ChildrenProps {
   children?: React.ReactNode;
 }
 
-// Mock tokenScheduler and refreshToken
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 // Mock useDeepLinkRouter
 jest.mock('#hooks/deepLink/useDeepLinkRouter', () => ({
   useDeepLinkRouter: jest.fn(),

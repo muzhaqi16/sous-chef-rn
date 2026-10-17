@@ -39,12 +39,6 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    info: jest.fn(),
-  },
-}));
-
 const defaultProps = {
   visible: true,
   folders: ['Dinner', 'Lunch', 'Quick Meals'],

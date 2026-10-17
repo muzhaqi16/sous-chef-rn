@@ -11,9 +11,6 @@ import {
 import type { PaginationConfig } from '#hooks/utils/usePagination';
 import { usePaginatedShoppingItems } from '../usePaginatedShoppingItems';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));

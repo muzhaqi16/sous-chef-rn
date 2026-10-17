@@ -15,12 +15,6 @@ import {
 import type { ScannedItem } from '../../types';
 import { useAddScannedItem } from '../useAddScannedItem';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 /**
  * Offline no payload arrives, so the row is bumped locally; online the payload
  * carries the server's count and the version the restock bumped.

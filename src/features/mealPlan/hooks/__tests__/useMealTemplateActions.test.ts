@@ -1,12 +1,5 @@
 'use no memo';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {

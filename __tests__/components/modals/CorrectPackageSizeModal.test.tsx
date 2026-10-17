@@ -8,9 +8,6 @@ import {
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },

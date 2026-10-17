@@ -22,10 +22,6 @@ interface ConfigSection {
   items: SettingItem[];
 }
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // The sign-out button goes through authService, not the store's own `logout`
 // action — the store action never deregisters the device for push, hands the
 // offline queue its owner change, or removes the persisted queue/navigation
@@ -168,15 +164,9 @@ jest.mock('#features/profile/components/BiometricSetupModal', () => ({
   BiometricSetupModal: 'BiometricSetupModal',
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 const mockPendingCount = jest.fn(() => 0);
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
   queueStore: { getPendingCount: () => mockPendingCount() },
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 /**

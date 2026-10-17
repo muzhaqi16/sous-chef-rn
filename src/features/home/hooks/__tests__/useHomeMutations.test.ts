@@ -57,12 +57,6 @@ jest.mock('../homeCacheUpdaters', () => ({
   removeFromHomesCache: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const createOptions = () => ({
   refetch: jest.fn().mockResolvedValue(undefined),
   setDefaultHome: jest.fn().mockResolvedValue(true),

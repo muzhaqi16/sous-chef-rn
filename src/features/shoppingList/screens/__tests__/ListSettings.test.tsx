@@ -10,9 +10,6 @@ import { ListSettings } from '../ListSettings';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
@@ -129,16 +126,12 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn() },
-}));
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
     unregisterParentDeletion: jest.fn(),
   },
 }));
-jest.mock('#/utils/finallyHelpers');
 jest.mock('#features/shoppingList/utils/ownershipHelpers', () => ({
   isShoppingListOwner: jest.fn(() => true),
   getShoppingListRole: jest.fn(() => 'OWNER'),

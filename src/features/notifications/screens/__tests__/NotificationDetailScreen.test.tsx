@@ -20,8 +20,6 @@ import {
 } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

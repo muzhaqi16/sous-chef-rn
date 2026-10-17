@@ -3,8 +3,6 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { EmptyDayState } from '../EmptyDayState';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({
     name,

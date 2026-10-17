@@ -15,11 +15,6 @@ import {
 import { alertService } from '#/services/alertService';
 import { usePantryIntake } from '../usePantryIntake';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const PANTRY_ID = 'p-1';
 
 // Args are load-bearing: the connection is keyed on them.

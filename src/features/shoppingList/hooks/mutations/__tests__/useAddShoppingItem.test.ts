@@ -14,10 +14,6 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // The response mirrors the real batch payload the hook reads
 // (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
 // it as a success and keeps the optimistic row. `variables: () => true` because

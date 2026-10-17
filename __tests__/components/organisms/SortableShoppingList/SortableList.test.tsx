@@ -10,9 +10,6 @@ import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/
 import type { ShoppingListRowItem } from '../../../../src/features/shoppingList/components/SortableShoppingList/types';
 import type { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem.generated';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../../src/hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
 }));

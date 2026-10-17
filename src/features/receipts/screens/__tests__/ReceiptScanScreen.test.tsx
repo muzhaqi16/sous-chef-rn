@@ -11,9 +11,6 @@ import { receiptsTestIDs } from '../../testIDs';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { ReceiptScanScreen } from '../ReceiptScanScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: jest.fn(), toReceiptReview: jest.fn() }),
 }));

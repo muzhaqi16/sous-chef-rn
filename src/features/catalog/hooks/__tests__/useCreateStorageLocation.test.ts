@@ -12,9 +12,6 @@ import { makeCache } from '#/apollo/cache';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const HOME_ID = 'home-1';
 const PANTRY_ID = 'pantry-1';
 

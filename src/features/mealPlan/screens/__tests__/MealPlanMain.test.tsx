@@ -8,10 +8,6 @@ import { MealPlanMain } from '../MealPlanMain';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealType } from '#/graphql/generated/schemaTypes';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
     navigate: jest.fn(),
@@ -154,10 +150,6 @@ jest.mock('#store/useAppStore', () => ({
   // The header's OfflineStatusPill reads online status; keep it online so the
   // pill stays hidden in these tests.
   useIsOnline: jest.fn(() => true),
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({

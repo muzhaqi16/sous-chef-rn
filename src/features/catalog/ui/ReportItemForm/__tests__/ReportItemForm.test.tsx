@@ -9,10 +9,6 @@ import {
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { ReportItemForm } from '../ReportItemForm';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const REASON = 'The photo shows a completely different product.';
 
 const CANDIDATES = [

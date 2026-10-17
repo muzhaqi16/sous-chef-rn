@@ -8,17 +8,12 @@ import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { ReceiptReviewScreen } from '../ReceiptReviewScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 const mockToPantryMain = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     toPantryMain: mockToPantryMain,
     goBack: jest.fn(),
   }),
-}));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 
 let mockRows: ReceiptReviewRow[] = [];

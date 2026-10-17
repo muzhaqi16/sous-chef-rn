@@ -3,9 +3,6 @@ import { render, screen } from '@testing-library/react-native';
 import { lightTheme } from '#/theme/themes';
 import { SheetHeader } from '#components/templates/SheetHeader';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 describe('SheetHeader', () => {
   // Every form sheet's body starts clear of the divider without a spacer of its own.
   it('leaves the gap between its divider and the sheet body', () => {

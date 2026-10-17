@@ -12,9 +12,6 @@ type StyleSheetInput =
   | Record<string, unknown>
   | ((theme: Theme) => Record<string, unknown>);
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({ children }: { children: React.ReactNode }) => children,
 }));

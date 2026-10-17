@@ -30,10 +30,6 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   }),
 }));
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/services/errorService');
 
 jest.mock('#features/pantry/cache/items', () => ({

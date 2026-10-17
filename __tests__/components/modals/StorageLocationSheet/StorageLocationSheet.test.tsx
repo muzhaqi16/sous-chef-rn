@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import { StorageLocationSheet } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
 import { StorageType } from '../../../../src/graphql/generated/schemaTypes';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },

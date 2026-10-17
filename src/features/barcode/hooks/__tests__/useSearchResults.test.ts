@@ -27,10 +27,6 @@ import { isRecord } from '#/utils/isRecord';
 // storageState, …) that the hook under test never reads.
 type MockItemNode = Record<string, unknown>;
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
 
@@ -69,8 +65,6 @@ jest.mock('#/utils/finallyHelpers', () => ({
     },
   ),
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

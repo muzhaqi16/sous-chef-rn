@@ -8,8 +8,6 @@ import { GetNotificationsDocument } from '#features/notifications/graphql/notifi
 import { NotificationStatus } from '#/graphql/generated/schemaTypes';
 import { useNotificationHistory } from '../useNotificationHistory';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 describe('useNotificationHistory', () => {
   // Marking one read edits only that notification, so the feed query's result
   // stays the same object.

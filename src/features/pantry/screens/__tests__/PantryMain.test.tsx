@@ -18,10 +18,6 @@ import type {
 // --- Prop capture for PantryContent ---
 let capturedPantryContentProps: Partial<PantryContentProps> = {};
 
-// --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');

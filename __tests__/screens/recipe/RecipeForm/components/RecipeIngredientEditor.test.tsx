@@ -4,9 +4,6 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
 
-jest.mock('../../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../../src/apollo/links/refreshToken');
-
 // The real one builds a gorhom scrollable at module load, which needs
 // SCROLLABLE_TYPE from the (mocked) library. Stand it in with a plain View —
 // the same shape MarkCookedModal's suite uses.

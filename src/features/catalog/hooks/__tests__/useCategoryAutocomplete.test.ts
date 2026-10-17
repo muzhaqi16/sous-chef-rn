@@ -6,9 +6,6 @@ import { CategoryType } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 let mockIsOnline = true;
 let mockCachedCategories: RootState['cachedCategories'] = [];
 jest.mock('#store/useAppStore', () => {

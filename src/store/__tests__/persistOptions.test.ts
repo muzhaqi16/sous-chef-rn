@@ -15,12 +15,6 @@
  * (visible, one-line fix) instead of silently poisoning the blob.
  */
 
-// authSlice transitively imports tokenScheduler/refreshToken which need
-// native AppState. Stub them so the store import is pure-JS — same pattern
-// as the persistence integration tests.
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 // Keep the real MMKV module (zustandStorage, STORAGE_KEY) but make the
 // recovery-instance signal controllable so the plaintext-token guard in
 // partialize can be exercised without provoking a real device-key failure.

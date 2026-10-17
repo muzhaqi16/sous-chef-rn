@@ -62,9 +62,6 @@ jest.mock('#/apollo/client', () => ({
     return mockClient;
   },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 
 // Within the queue's 90-day horizon, in the order the writes were made.
 const NOW = Date.now();

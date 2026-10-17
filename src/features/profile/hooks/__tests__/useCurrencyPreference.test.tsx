@@ -20,10 +20,6 @@ import { useStore } from '#store';
 import { t } from '#/i18n';
 import { useCurrencyPreference } from '../useCurrencyPreference';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const ACCOUNT = {
   id: 'user-1',
   email: 'ada@example.com',

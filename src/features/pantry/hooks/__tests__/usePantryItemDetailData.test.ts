@@ -18,8 +18,6 @@ import {
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { usePantryItemDetailData } from '../usePantryItemDetailData';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 async function loadItem() {
   const cache = makeCache();
   const item = recordMock(GetPantryItemDocument, {
