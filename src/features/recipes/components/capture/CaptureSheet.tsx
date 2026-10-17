@@ -17,6 +17,7 @@ import type {
 } from '#features/recipes/hooks/useRecipeCapture';
 import type { CaptureField } from '#features/recipes/utils/recipeCaptureOutcome';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export type CaptureSheetKind = 'link' | 'text';
 
@@ -282,16 +283,7 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   sending,
   onDismiss,
 }) => {
-  // A fresh form per opening, kept while the sheet animates out.
-  const [opening, setOpening] = useState<{
-    id: number;
-    kind: CaptureSheetKind;
-  } | null>(null);
-  const [wasVisible, setWasVisible] = useState(false);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (visible) setOpening({ id: (opening?.id ?? 0) + 1, kind });
-  }
+  const opening = useOpening(visible, kind);
 
   return (
     <Sheet
@@ -301,10 +293,10 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
       snapPoints={['85%']}
       contentContainerStyle={styles.content}
     >
-      {opening ? (
+      {opening?.payload ? (
         <CaptureForm
           key={opening.id}
-          initialKind={opening.kind}
+          initialKind={opening.payload}
           textAllowed={textAllowed}
           onSend={onSend}
           sending={sending}

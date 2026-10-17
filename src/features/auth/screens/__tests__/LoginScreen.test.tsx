@@ -133,7 +133,7 @@ jest.mock('#/utils/validation/auth', () => {
     // Spread, not replace: the screen this routes to on a refusal builds its
     // own schema from the same module.
     ...jest.requireActual('#/utils/validation/auth'),
-    getLoginValidationSchema: () => yup.object({}),
+    loginSchema: yup.object({}),
   };
 });
 

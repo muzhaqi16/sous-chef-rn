@@ -21,6 +21,7 @@ import { formatDateTime } from '#/utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import type { ReceiptDraft } from '../store/receiptDraftStore';
 import { receiptsTestIDs } from '../testIDs';
+import { cappedNames } from '#/utils/cappedNames';
 
 interface BannerCopy {
   title: TranslationKey;
@@ -221,7 +222,7 @@ export const ReceiptScanScreen: React.FC = () => {
                 count: failedNames.length,
               })}
               subtitle={t('receipts.saved.failedBody', {
-                names: failedNames.slice(0, 3).join(', '),
+                names: cappedNames(failedNames).shown,
               })}
               testID={receiptsTestIDs.savedFailed}
             />

@@ -1,13 +1,7 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -17,6 +11,7 @@ import type { UnitType } from '#/graphql/generated/schemaTypes';
 import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/foundations/motion';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 export interface PickableUnitGroup {
   type: UnitType;
@@ -50,17 +45,6 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
       setExpanded(false);
     }
   }
-
-  // Chevron rotation animation
-  const chevronRotation = useSharedValue(0);
-
-  useLayoutEffect(() => {
-    chevronRotation.set(withSpring(expanded ? 180 : 0, motion.spring.EXPAND));
-  }, [expanded, chevronRotation]);
-
-  const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.get()}deg` }],
-  }));
 
   // Find selected unit for collapsed display
   const selectedUnit = groups
@@ -120,9 +104,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
               {isSelectedLowConfidence ? ' ~' : null}
             </Text>
           ) : null}
-          <Animated.View style={animatedChevronStyle}>
-            <Icon name="chevron-down" size={20} tone="textSecondary" />
-          </Animated.View>
+          <ExpandChevron expanded={expanded} />
         </View>
       </AppPressable>
       {/* Expanded chip grid */}

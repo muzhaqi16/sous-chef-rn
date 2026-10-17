@@ -14,6 +14,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { useSelectedPantryId } from '#store/useAppStore';
+import { cappedNames } from '#/utils/cappedNames';
 
 interface UseRecipeCookingActionsOptions {
   recipeId: string | undefined;
@@ -38,9 +39,6 @@ const deductingFrom = (
   deductFromPantry: boolean,
   pantryId: string | null | undefined,
 ) => (deductFromPantry && pantryId ? { pantryId } : {});
-
-/** Names shown before the rest become a count, as the expiry digest does. */
-const SKIPPED_NAME_CAP = 3;
 
 /** What the cook left undeducted, and whether one cause covers all of it. */
 interface SkippedDeductions {
@@ -142,8 +140,7 @@ export function useRecipeCookingActions({
         { count },
       );
     }
-    const shown = names.slice(0, SKIPPED_NAME_CAP).join(', ');
-    const remainder = count - Math.min(SKIPPED_NAME_CAP, names.length);
+    const { shown, remainder } = cappedNames(names, count);
     if (remainder > 0) {
       return t(
         allUnitConversion

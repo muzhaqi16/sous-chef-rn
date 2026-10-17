@@ -18,7 +18,7 @@ import {
 import { logger } from '#/utils/environment';
 import { localizedErrorMessage } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
-import { getResetPasswordValidationSchema } from '#/utils/validation/auth';
+import { resetPasswordSchema } from '#/utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
@@ -100,7 +100,7 @@ export const ResetPasswordScreen: React.FC = () => {
   );
 
   const form = useForm<ResetPasswordForm>({
-    resolver: yupResolver(getResetPasswordValidationSchema()),
+    resolver: yupResolver(resetPasswordSchema),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',

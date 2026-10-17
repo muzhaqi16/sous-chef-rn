@@ -14,6 +14,7 @@ import {
 import type { TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { formatMonthDay, formatTimeOfDay } from '#/utils/formatters/date';
+import { cappedNames } from '#/utils/cappedNames';
 
 type IconProps = React.ComponentProps<typeof Icon>;
 
@@ -249,8 +250,7 @@ const buildDigestMessage = (
   if (names.length === 0) {
     return t('notifications.copy.message.expiryDigestCount', { count });
   }
-  const shown = names.slice(0, DIGEST_NAME_CAP).join(', ');
-  const remainder = count - Math.min(DIGEST_NAME_CAP, names.length);
+  const { shown, remainder } = cappedNames(names, count);
   return remainder > 0
     ? t('notifications.copy.message.expiryDigestMore', {
         names: shown,

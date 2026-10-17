@@ -14,6 +14,7 @@ import {
   type RecipeFilterOption,
 } from '#features/recipes/utils/recipeFilterOptions';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 export type RemovableFilterKind =
   | 'diet'
@@ -108,11 +109,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
         <Text role="label" tone="secondary">
           {t('recipes.filtersActiveSummary', { count: chips.length })}
         </Text>
-        <Icon
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={14}
-          tone="textSecondary"
-        />
+        <ExpandChevron expanded={expanded} size={14} />
       </Pressable>
       {expanded ? (
         <ScrollView

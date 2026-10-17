@@ -9,6 +9,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { RadioRow } from '#components/molecules/RadioRow';
 import { FormInput } from '#components/atoms/FormInput';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { Icon } from '#utils/iconUtils';
@@ -192,23 +193,15 @@ export const GenerateShoppingListSheet: React.FC<
             </Text>
           ) : (
             shoppingLists.map(list => (
-              <Pressable
+              <RadioRow
                 key={list.id}
+                selected={selectedListId === list.id}
                 onPress={() => setSelectedListId(list.id)}
                 style={[
                   styles.listItem,
                   selectedListId === list.id && styles.listItemSelected,
                 ]}
               >
-                <Icon
-                  name={
-                    selectedListId === list.id
-                      ? 'radio-button-on'
-                      : 'radio-button-off'
-                  }
-                  size={20}
-                  tone={selectedListId === list.id ? 'primary' : 'textTertiary'}
-                />
                 <View style={styles.listItemContent}>
                   <Text role="bodyStrong">{list.name}</Text>
                   <Text role="caption" tone="secondary">
@@ -217,7 +210,7 @@ export const GenerateShoppingListSheet: React.FC<
                     })}
                   </Text>
                 </View>
-              </Pressable>
+              </RadioRow>
             ))
           )}
         </View>
@@ -304,8 +297,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.onPrimary,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,

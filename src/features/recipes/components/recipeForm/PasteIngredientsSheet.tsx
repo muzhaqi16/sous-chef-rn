@@ -13,6 +13,7 @@ import {
   type PastedIngredient,
 } from '#features/recipes/utils/pastedIngredients';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { useOpening } from '#hooks/ui/useOpening';
 
 interface PasteFormProps {
   room: number;
@@ -94,13 +95,7 @@ export const PasteIngredientsSheet: React.FC<PasteIngredientsSheetProps> = ({
   room,
   onPasted,
 }) => {
-  // A fresh field per opening, kept while the sheet animates out.
-  const [opening, setOpening] = useState(0);
-  const [wasVisible, setWasVisible] = useState(false);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (visible) setOpening(opening + 1);
-  }
+  const opening = useOpening(visible);
 
   return (
     <Sheet
@@ -110,9 +105,9 @@ export const PasteIngredientsSheet: React.FC<PasteIngredientsSheetProps> = ({
       snapPoints={['80%']}
       contentContainerStyle={styles.content}
     >
-      {opening > 0 ? (
+      {opening ? (
         <PasteForm
-          key={opening}
+          key={opening.id}
           room={room}
           onClose={onDismiss}
           onPasted={onPasted}

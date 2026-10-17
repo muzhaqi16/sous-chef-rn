@@ -18,6 +18,7 @@ import type {
   CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { useOpening } from '#hooks/ui/useOpening';
 
 const THUMBNAIL_SIZE = 88;
 
@@ -192,13 +193,7 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
   sending,
   onDismiss,
 }) => {
-  // A fresh set of pages per opening, kept while the sheet animates out.
-  const [opening, setOpening] = useState(0);
-  const [wasVisible, setWasVisible] = useState(false);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (visible) setOpening(opening + 1);
-  }
+  const opening = useOpening(visible);
 
   return (
     <Sheet
@@ -208,9 +203,9 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
       snapPoints={['70%']}
       contentContainerStyle={styles.content}
     >
-      {opening > 0 ? (
+      {opening ? (
         <PhotoForm
-          key={opening}
+          key={opening.id}
           visible={visible}
           onSend={onSend}
           sending={sending}

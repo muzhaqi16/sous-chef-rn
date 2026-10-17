@@ -13,7 +13,7 @@ import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
-import { getLoginValidationSchema } from '#/utils/validation/auth';
+import { loginSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
@@ -143,7 +143,7 @@ export function LoginScreen(): React.JSX.Element {
   }>({ isAvailable: false, biometryType: null });
 
   const form = useForm<LoginInput>({
-    resolver: yupResolver(getLoginValidationSchema()),
+    resolver: yupResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 

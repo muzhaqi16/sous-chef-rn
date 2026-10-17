@@ -11,6 +11,7 @@ import { currentOperationName } from './legacyOperations';
 import { upgradeRetiredEntry } from './legacyRetired';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { isRecord } from '#/utils/isRecord';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -25,12 +26,7 @@ const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
 /** The item a queued move targets; entries are persisted JSON, read structurally. */
 const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
   const input: unknown = mutation.variables.input;
-  return typeof input === 'object' &&
-    input !== null &&
-    'id' in input &&
-    typeof input.id === 'string'
-    ? input.id
-    : undefined;
+  return isRecord(input) && typeof input.id === 'string' ? input.id : undefined;
 };
 
 /**

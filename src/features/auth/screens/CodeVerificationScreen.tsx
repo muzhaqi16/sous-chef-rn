@@ -20,7 +20,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
-import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
+import { emailVerificationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
 import { TOAST } from '#/constants/animations';
 import { authTestIDs } from '#features/auth/testIDs';
@@ -119,7 +119,7 @@ export function CodeVerificationScreen({
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(getEmailVerificationValidationSchema()),
+    resolver: yupResolver(emailVerificationSchema),
     defaultValues: { code: '' },
   });
 

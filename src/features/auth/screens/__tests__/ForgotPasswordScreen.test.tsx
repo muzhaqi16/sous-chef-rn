@@ -32,10 +32,9 @@ jest.mock('#/services/errorService');
 jest.mock('#utils/validation/auth', () => {
   const yup = require('yup');
   return {
-    getForgotPasswordValidationSchema: () =>
-      yup.object({
-        email: yup.string().transform((value: string) => value || TEST_EMAIL),
-      }),
+    forgotPasswordSchema: yup.object({
+      email: yup.string().transform((value: string) => value || TEST_EMAIL),
+    }),
   };
 });
 

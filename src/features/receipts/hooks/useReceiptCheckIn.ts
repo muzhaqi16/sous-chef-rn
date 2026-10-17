@@ -26,12 +26,13 @@ import {
   type WrittenLine,
 } from '../offline/receiptCheckIn';
 import { CreateReceiptCheckInDocument } from './useReceiptCheckIn.generated';
+import { cappedNames } from '#/utils/cappedNames';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
 export const LINES_PER_CHECK_IN = 100;
 
-/** Names shown before the rest become a count, as other batch writes do. */
-const FAILED_NAME_CAP = 3;
+/** The error ids a failed check-in reports, for support to look up. */
+const REPORTED_ERROR_IDS = 3;
 
 /** A confirmed line, as the check-in sends it and the device shows it. */
 export interface CheckInLineToSend {
@@ -153,11 +154,9 @@ export function useReceiptCheckIn(listId: string | undefined) {
     const failed = lines.filter(line => failedIndexes.has(line.index));
     const count = failed.length;
     if (count === 0) return;
-    const names = failed
-      .map(line => line.itemName.trim())
-      .filter(name => name !== '')
-      .slice(0, FAILED_NAME_CAP)
-      .join(', ');
+    const names = cappedNames(
+      failed.map(line => line.itemName.trim()).filter(name => name !== ''),
+    ).shown;
     const codes = [
       ...new Set(
         results.flatMap(result =>
@@ -189,7 +188,7 @@ export function useReceiptCheckIn(listId: string | undefined) {
       // How support finds the server's log for a failure nobody can reproduce.
       failed_error_ids: results
         .flatMap(result => result.failure?.errorId ?? [])
-        .slice(0, FAILED_NAME_CAP)
+        .slice(0, REPORTED_ERROR_IDS)
         .join(','),
     });
   };
