@@ -153,6 +153,35 @@ describe('StoreAutocompleteField', () => {
     expect(screen.queryByText(/^Add /)).toBeNull();
   });
 
+  // A store with no address is its own label beside a branch of that name.
+  it('offers the name when only a branch of that name is listed', async () => {
+    const branch: MockDataFor<typeof SearchStoresDocument> = {
+      stores: {
+        edges: [
+          { node: { id: 'store-0', name: 'Kroger', address: '7516 Meade St' } },
+        ],
+        totalCount: 1,
+      },
+    };
+    const field = renderField('inline', searchFor('Kroger', branch));
+
+    fireEvent.changeText(screen.getByTestId('store-field'), 'Kroger');
+    fireEvent.press(await screen.findByText('Add Kroger'));
+
+    await expectAddedAndPicked('Kroger', field);
+  });
+
+  it('asks for more letters only until two are typed', async () => {
+    renderField('modal', searchFor('Corner Shop', found()));
+
+    fireEvent.changeText(screen.getByTestId('store-field'), 'Corner Shop');
+
+    expect(await screen.findByText('Add Corner Shop')).toBeTruthy();
+    expect(
+      screen.queryByText('Type at least 2 characters to search'),
+    ).toBeNull();
+  });
+
   it('offers nothing while the search for the typed name runs', async () => {
     const running = searchFor('East End', found(), Infinity);
     renderField('inline', searchFor('Ea', found('Eastgate')), running);
