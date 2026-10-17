@@ -184,9 +184,10 @@ export function useReceiptReview() {
   const receiptParseId =
     draft?.parsedBy === 'server' ? draft.parseId : undefined;
   const heldStores = useHeldStores(listId);
-  // A store with no address that this reading would locate: one the device
-  // holds named as the receipt's merchant or chain, else the API's. Offered
-  // once matching has settled whether the receipt names a store; never placed.
+  // A store with no address that this reading would locate, offered once
+  // matching has settled whether the receipt names a store; never placed. Only
+  // the API knows which such stores are the household's own, the only kind a
+  // check-in locates: the device's guess by name stands in when it was not asked.
   const deviceOffer = unlocatedStoreNamed(
     [
       draft?.parsed?.merchant,
@@ -199,10 +200,11 @@ export function useReceiptReview() {
   const apiOffer = completableStore
     ? { id: completableStore.id, name: completableStore.name }
     : null;
-  const storeOffer =
-    receiptParseId && !store && matchState !== 'matching'
-      ? deviceOffer ?? apiOffer
-      : null;
+  let storeOffer: { id: string; name: string } | null = null;
+  if (receiptParseId && !store) {
+    if (matchState === 'done') storeOffer = apiOffer;
+    else if (matchState === 'failed') storeOffer = deviceOffer;
+  }
   // Judged where it was read, by the rule its lines follow: the server's, or
   // the same rules on the phone, which know a discount never taken off.
   const totalsGap = draft?.totalsGap ?? null;

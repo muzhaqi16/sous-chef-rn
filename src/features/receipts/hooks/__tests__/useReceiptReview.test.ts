@@ -1589,12 +1589,11 @@ describe('useReceiptReview', () => {
       expect(result.current.review.proposedStoreName).toBe('Kroger');
     });
 
-    it("offers the device's own once matching settles, ahead of the API's", async () => {
+    it("offers the API's once matching settles, over the device's guess", async () => {
       readByServer();
       useStore.getState().setCachedStores([KROGER_LABEL]);
-      const { result } = await setup({
-        resolve: unplaced({ id: 'store-other', name: 'Kroger' }, 500),
-      });
+      const theirs = { id: 'store-own', name: 'Kroger' };
+      const { result } = await setup({ resolve: unplaced(theirs, 500) });
       // The API may yet place the receipt.
       expect(result.current.review.matchState).toBe('matching');
       expect(result.current.review.storeOffer).toBeNull();
@@ -1602,7 +1601,20 @@ describe('useReceiptReview', () => {
       await waitFor(() =>
         expect(result.current.review.matchState).toBe('done'),
       );
-      expect(result.current.review.storeOffer).toEqual(OFFER);
+      expect(result.current.review.storeOffer).toEqual(theirs);
+    });
+
+    // A name-only store the household does not own (a shared one older than
+    // household stores) is one a check-in never locates; the API offers none.
+    it("offers none of its own when the API answers that none is the household's", async () => {
+      readByServer();
+      useStore.getState().setCachedStores([KROGER_LABEL]);
+      const { result } = await setup({ resolve: unplaced(null) });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+
+      expect(result.current.review.storeOffer).toBeNull();
     });
 
     it('offers none when neither the device nor the API holds one', async () => {
