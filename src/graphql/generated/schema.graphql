@@ -8796,7 +8796,9 @@ type Mutation {
   
   Each source is behind its own feature: RECIPE_CAPTURE_URL, _TEXT or
   _PHOTO. A source whose feature is not ON for the caller is refused with
-  FEATURE_DISABLED or PREMIUM_REQUIRED.
+  FEATURE_DISABLED or PREMIUM_REQUIRED. A text that is little more than one
+  link is that page, so it needs RECIPE_CAPTURE_URL too; a caption's one link
+  is followed only while RECIPE_CAPTURE_URL is ON for the caller.
   """
   createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
   """Create a review for a published recipe."""
