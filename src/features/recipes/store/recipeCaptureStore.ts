@@ -24,6 +24,8 @@ export interface CaptureEntry {
   link?: string;
   createdAt: string;
   state: 'reading' | 'incomplete';
+  /** Its create has been answered; until then the server may not hold it yet. */
+  answered: boolean;
 }
 
 /** A saved capture's recipe, kept while the capture can still be read for review. */
@@ -36,7 +38,8 @@ interface HeldCapture {
 interface RecipeCaptureState {
   entries: CaptureEntry[];
   held: HeldCapture[];
-  addReading: (entry: Omit<CaptureEntry, 'state'>) => void;
+  addReading: (entry: Omit<CaptureEntry, 'state' | 'answered'>) => void;
+  markAnswered: (captureId: string) => void;
   markIncomplete: (captureId: string) => void;
   /** Its outcome is told; a saved one's recipe is held for review. */
   settle: (captureId: string, savedRecipeId?: string) => void;
@@ -62,8 +65,19 @@ export const useRecipeCaptureStore = create<RecipeCaptureState>()(
         set(({ entries }) =>
           entries.some(existing => existing.id === entry.id)
             ? {}
-            : { entries: [...entries, { ...entry, state: 'reading' }] },
+            : {
+                entries: [
+                  ...entries,
+                  { ...entry, state: 'reading', answered: false },
+                ],
+              },
         ),
+      markAnswered: captureId =>
+        set(({ entries }) => ({
+          entries: entries.map(entry =>
+            entry.id === captureId ? { ...entry, answered: true } : entry,
+          ),
+        })),
       markIncomplete: captureId =>
         set(({ entries }) => ({
           entries: entries.map(entry =>
@@ -97,8 +111,25 @@ export const useRecipeCaptureStore = create<RecipeCaptureState>()(
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
-      partialize: ({ entries, held }) => ({ entries, held }),
+      version: 2,
+      // Saved as answered: after a restart no send of it can still be in flight.
+      partialize: ({ entries, held }) => ({
+        entries: entries.map(entry => ({ ...entry, answered: true })),
+        held,
+      }),
+      // Version 1 kept an entry only once its create was answered.
+      migrate: (persisted, version) => {
+        const state = persisted as Pick<RecipeCaptureState, 'entries' | 'held'>;
+        return version < 2
+          ? {
+              ...state,
+              entries: state.entries.map(entry => ({
+                ...entry,
+                answered: true,
+              })),
+            }
+          : state;
+      },
     },
   ),
 );
@@ -126,10 +157,13 @@ export const useHeldCaptureId = (recipeId: string | undefined) =>
 /** The store's writes. Stable, so reading them never re-renders. */
 export const useRecipeCaptureActions = () =>
   useRecipeCaptureStore(
-    useShallow(({ addReading, markIncomplete, settle, prune }) => ({
-      addReading,
-      markIncomplete,
-      settle,
-      prune,
-    })),
+    useShallow(
+      ({ addReading, markAnswered, markIncomplete, settle, prune }) => ({
+        addReading,
+        markAnswered,
+        markIncomplete,
+        settle,
+        prune,
+      }),
+    ),
   );

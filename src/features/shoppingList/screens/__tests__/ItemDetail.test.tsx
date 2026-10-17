@@ -1,11 +1,32 @@
 'use no memo';
 
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react-native';
-import type { MockLink } from '@apollo/client/testing';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
+import { ApolloClient, ApolloLink } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import { MockLink } from '@apollo/client/testing';
+import {
+  completeMockedResponse,
+  recordMock,
+  renderWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { useStore } from '#store';
+import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
-import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemDocument,
+  GetShoppingListItemsFilteredDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -240,7 +261,7 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
   });
 
-  it('names who purchased the item', async () => {
+  it('names who purchased the item from their profile', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [
         buildItemMock(
@@ -256,6 +277,7 @@ describe('ShoppingListItemDetail', () => {
               purchasedBy: {
                 __typename: 'User',
                 id: 'u2',
+                displayName: null,
                 profile: {
                   __typename: 'UserProfile',
                   id: 'profile-2',
@@ -271,6 +293,38 @@ describe('ShoppingListItemDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
     expect(screen.getByText('Sam')).toBeTruthy();
+  });
+
+  // A profile without a display name, or one kept private, still names the
+  // purchaser to someone sharing the list.
+  it('names the purchaser by the name the shared list gives them', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity: 1,
+              purchasedPrice: null,
+              purchaseDate: '2026-10-16T00:00:00Z',
+              purchasedBy: {
+                __typename: 'User',
+                id: 'u3',
+                displayName: 'John',
+                profile: null,
+              },
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
+    expect(screen.getByText('John')).toBeTruthy();
+    expect(screen.queryByText('Someone')).toBeNull();
   });
 
   it('shows the total paid, with the per-unit price beneath it', async () => {
@@ -353,11 +407,11 @@ describe('ShoppingListItemDetail', () => {
     );
   });
 
-  it('shows loading text when data is undefined', () => {
+  it('shows the loading state while nothing is cached or answered', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [],
     });
-    expect(screen.getByText('Loading...')).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
   });
 
   it('shows added-by info', async () => {
@@ -462,5 +516,185 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() =>
       expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull(),
     );
+  });
+
+  it('says a line the server holds nothing for is not found', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', null)],
+    });
+    expect(await screen.findByText('Item not found')).toBeTruthy();
+  });
+
+  // The list's row caches a subset of what the detail selects, so the detail's
+  // own query is an incomplete cache read until it has answered once. Known
+  // offline, the real `offlineModeLink` answers that miss with `data: null`;
+  // before the device reports its link (or with only the breaker open) the miss
+  // goes to the network and fails there with `data: undefined`.
+  describe('when the detail query cannot be answered', () => {
+    const LIST_VARIABLES = { id: 'sl1', first: 50, isPurchased: false };
+    const initialNetwork = useStore.getState();
+
+    afterEach(() => {
+      useStore.setState({
+        isOnline: initialNetwork.isOnline,
+        apiReachable: initialNetwork.apiReachable,
+      });
+      act(() => {
+        unconfirmedCreates.confirm('si1');
+      });
+    });
+
+    const listRowMock = () =>
+      recordMock(GetShoppingListItemsFilteredDocument, {
+        data: {
+          shoppingList: {
+            id: 'sl1',
+            itemsConnection: {
+              edges: [
+                {
+                  node: {
+                    id: 'si1',
+                    itemName: 'Bread',
+                    category: 'Bakery',
+                    notes: 'Get whole wheat',
+                    item: null,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      }).mock;
+
+    const detailMock = () =>
+      recordMock(GetShoppingListItemDocument, {
+        data: {
+          shoppingListItem: {
+            id: 'si1',
+            itemName: 'Bread',
+            category: 'Bakery',
+            item: null,
+            storeInfo: { preferredStore: { id: 'store-1', name: 'Costco' } },
+          },
+        },
+      }).mock;
+
+    const failingDetailMock = () =>
+      recordMock(GetShoppingListItemDocument, {
+        error: new Error('Network request failed'),
+      }).mock;
+
+    /**
+     * The production cache and offline link, in front of a mocked API.
+     * `offline`: the device has reported no link. `failing`: it has not, and
+     * the request fails in transport.
+     */
+    async function renderDetail({
+      listCached,
+      network,
+      detail = network === 'failing' ? failingDetailMock() : detailMock(),
+    }: {
+      listCached: boolean;
+      network: 'online' | 'offline' | 'failing';
+      detail?: MockLink.MockedResponse;
+    }) {
+      const client = new ApolloClient({
+        cache: makeCache(),
+        link: ApolloLink.from([
+          createOfflineModeLink(),
+          new MockLink([listRowMock(), detail].map(completeMockedResponse)),
+        ]),
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      });
+      if (listCached) {
+        await client.query({
+          query: GetShoppingListItemsFilteredDocument,
+          variables: LIST_VARIABLES,
+        });
+      }
+      if (network === 'offline') {
+        act(() => {
+          useStore.setState({ isOnline: false, apiReachable: null });
+        });
+      }
+      return render(
+        <ApolloProvider client={client}>
+          <ShoppingListItemDetail route={route} />
+        </ApolloProvider>,
+      );
+    }
+
+    it.each(['offline', 'failing'] as const)(
+      'renders the cached row (%s) instead of loading or not-found',
+      async network => {
+        await renderDetail({ listCached: true, network });
+
+        expect(await screen.findByText('Bakery')).toBeTruthy();
+        expect(screen.getAllByText('Bread')[0]).toBeTruthy();
+        expect(screen.getByText('Get whole wheat')).toBeTruthy();
+        expect(screen.queryByTestId(kitTestIDs.stateLoading)).toBeNull();
+        expect(screen.queryByText('Item not found')).toBeNull();
+      },
+    );
+
+    it('claims nothing the row does not hold', async () => {
+      await renderDetail({ listCached: true, network: 'offline' });
+
+      await screen.findByText('Bakery');
+      // Never fetched, so neither "no history" nor "added: never" is known.
+      expect(screen.queryByText('No purchase history available')).toBeNull();
+      expect(screen.queryByText('Additional Details')).toBeNull();
+      expect(screen.queryByText('Added On')).toBeNull();
+      expect(screen.queryByText('Never')).toBeNull();
+    });
+
+    it('renders a line created here without asking the server for it', async () => {
+      unconfirmedCreates.mark('si1');
+      const noSuchLine = recordMock(GetShoppingListItemDocument, {
+        data: { shoppingListItem: null },
+      });
+      await renderDetail({
+        listCached: true,
+        network: 'online',
+        detail: noSuchLine.mock,
+      });
+
+      expect(await screen.findByText('Bakery')).toBeTruthy();
+      expect(screen.queryByText('Item not found')).toBeNull();
+      expect(noSuchLine.fired).toHaveLength(0);
+    });
+
+    it('fills in the detail-only fields when the network answers', async () => {
+      await renderDetail({ listCached: true, network: 'online' });
+
+      expect(await screen.findByText('Costco')).toBeTruthy();
+      expect(screen.getByText('Bakery')).toBeTruthy();
+    });
+
+    it('reports an offline cache miss as offline', async () => {
+      await renderDetail({ listCached: false, network: 'offline' });
+
+      expect(await screen.findByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+      expect(screen.queryByText('Item not found')).toBeNull();
+    });
+
+    it('loads the detail on retry once the connection is back', async () => {
+      await renderDetail({ listCached: false, network: 'offline' });
+      await screen.findByTestId(kitTestIDs.stateOffline);
+
+      act(() => {
+        useStore.setState({ isOnline: true, apiReachable: true });
+      });
+      fireEvent.press(screen.getByText('Try again'));
+
+      expect(await screen.findByText('Costco')).toBeTruthy();
+    });
+
+    it('reports a failed fetch with nothing cached, not a spinner', async () => {
+      await renderDetail({ listCached: false, network: 'failing' });
+
+      expect(await screen.findByTestId(kitTestIDs.stateError)).toBeTruthy();
+      expect(screen.queryByTestId(kitTestIDs.stateLoading)).toBeNull();
+    });
   });
 });

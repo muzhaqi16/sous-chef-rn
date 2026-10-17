@@ -151,6 +151,20 @@ describe('classifyCaptureCreate', () => {
     ).toEqual({ kind: 'disabled' });
   });
 
+  it('stops at a feature that needs a plan this user does not hold', () => {
+    expect(
+      classifyCaptureCreate({
+        accepted: false,
+        capture: null,
+        refusedField: null,
+        error: refusedWith(TopLevelErrorCode.PremiumRequired, {
+          feature: 'RECIPE_CAPTURE_PHOTO',
+          plan: 'PREMIUM',
+        }),
+      }),
+    ).toEqual({ kind: 'premium' });
+  });
+
   it('sends again when no answer arrived', () => {
     expect(
       classifyCaptureCreate({

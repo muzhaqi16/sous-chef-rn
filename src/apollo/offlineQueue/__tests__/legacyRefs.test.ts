@@ -140,7 +140,7 @@ describe('withRefInputs', () => {
           items: [
             {
               id: 's1',
-              item: { itemName: 'Milk' },
+              item: { itemId: 'cat1' },
               unit: { unitId: 'u1', unitName: 'cartons' },
               brand: { brandId: 'b1', brandName: 'Acme' },
             },
@@ -152,13 +152,57 @@ describe('withRefInputs', () => {
       items: [
         {
           id: 's1',
-          item: { itemName: 'Milk' },
+          item: { itemId: 'cat1' },
           unit: { id: 'u1' },
           unitLabel: 'cartons',
           brand: { id: 'b1' },
         },
       ],
     });
+  });
+
+  // The API removes `itemName`; a line queued with it would be refused.
+  it('sends a shopping line’s typed name inline, under an item id minted for it', () => {
+    const { input } = withRefInputs(AddItemToShoppingListDocument, {
+      input: {
+        shoppingListId: 'l1',
+        items: [
+          { id: 's1', item: { itemName: 'Milk' } },
+          { id: 's2', item: { itemName: 'Eggs' } },
+        ],
+      },
+    });
+
+    expect(input).toEqual({
+      shoppingListId: 'l1',
+      items: [
+        {
+          id: 's1',
+          item: { inline: { id: expect.any(String), name: 'Milk' } },
+        },
+        {
+          id: 's2',
+          item: { inline: { id: expect.any(String), name: 'Eggs' } },
+        },
+      ],
+    });
+    const [milk, eggs] = (
+      input as { items: { item: { inline: { id: string } } }[] }
+    ).items;
+    expect(milk?.item.inline.id).not.toBe(eggs?.item.inline.id);
+  });
+
+  it('leaves a shopping line already sending its item inline as it is', () => {
+    const variables = {
+      input: {
+        shoppingListId: 'l1',
+        items: [{ id: 's1', item: { inline: { id: 'item-1', name: 'Milk' } } }],
+      },
+    };
+
+    expect(withRefInputs(AddItemToShoppingListDocument, variables)).toEqual(
+      variables,
+    );
   });
 
   it('clears a shopping line’s unit an edit emptied', () => {

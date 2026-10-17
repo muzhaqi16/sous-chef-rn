@@ -7,7 +7,10 @@ import {
 
 const NOW = Date.parse('2026-10-14T12:00:00.000Z');
 
-const reading = (id: string, createdAt = NOW): Omit<CaptureEntry, 'state'> => ({
+const reading = (
+  id: string,
+  createdAt = NOW,
+): Omit<CaptureEntry, 'state' | 'answered'> => ({
   id,
   source: 'url',
   label: 'example-cooking.com',
@@ -19,6 +22,50 @@ beforeEach(() => {
 });
 
 describe('recipeCaptureStore', () => {
+  it('keeps a capture unanswered until its create is answered', () => {
+    const store = useRecipeCaptureStore.getState();
+    store.addReading(reading('c-1'));
+    expect(useRecipeCaptureStore.getState().entries).toEqual([
+      expect.objectContaining({ id: 'c-1', answered: false }),
+    ]);
+
+    store.markAnswered('c-1');
+
+    expect(useRecipeCaptureStore.getState().entries).toEqual([
+      expect.objectContaining({ id: 'c-1', answered: true }),
+    ]);
+  });
+
+  it('saves every capture as answered: a restart leaves no send in flight', () => {
+    const store = useRecipeCaptureStore.getState();
+    store.addReading(reading('c-1'));
+    const { partialize } = useRecipeCaptureStore.persist.getOptions();
+
+    expect(partialize?.(useRecipeCaptureStore.getState())).toEqual({
+      entries: [expect.objectContaining({ id: 'c-1', answered: true })],
+      held: [],
+    });
+  });
+
+  // Version 1 remembered a capture only after its create was answered.
+  it('reads a capture a version 1 build kept as answered', () => {
+    const { migrate } = useRecipeCaptureStore.persist.getOptions();
+    const { createdAt } = reading('c-1');
+
+    expect(
+      migrate?.(
+        {
+          entries: [{ ...reading('c-1'), createdAt, state: 'reading' }],
+          held: [],
+        },
+        1,
+      ),
+    ).toEqual({
+      entries: [expect.objectContaining({ id: 'c-1', answered: true })],
+      held: [],
+    });
+  });
+
   it('keeps one entry per capture, however often it is asked for', () => {
     const store = useRecipeCaptureStore.getState();
     store.addReading(reading('c-1'));

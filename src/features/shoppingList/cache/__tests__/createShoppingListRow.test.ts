@@ -45,6 +45,9 @@ const rowIds = (cache: ReturnType<typeof makeCache>) =>
     key.startsWith('ShoppingListItem:'),
   );
 
+// A typed name, under the item id its door minted.
+const TYPED_MILK = { inline: { id: 'item-minted', name: 'Milk' } };
+
 function create(
   cache: ReturnType<typeof makeCache>,
   answer: { data?: unknown; error?: unknown } | Error,
@@ -55,7 +58,7 @@ function create(
   const created = createShoppingListRow(cache, {
     listId: 'list-1',
     row: { itemName: 'Milk' },
-    line: { item: { itemName: 'Milk' } },
+    line: { item: TYPED_MILK },
     send,
     document: AddItemToShoppingListDocument,
     fallback: 'Could not add it',
@@ -79,11 +82,24 @@ describe('createShoppingListRow', () => {
       variables: {
         input: {
           shoppingListId: 'list-1',
-          items: [{ item: { itemName: 'Milk' }, id: minted?.split(':')[1] }],
+          items: [{ item: TYPED_MILK, id: minted?.split(':')[1] }],
         },
       },
       context: { localFirst: true },
     });
+  });
+
+  it('names the typed item on the row before the API answers', async () => {
+    const cache = seededCache();
+
+    const { created } = create(cache, {
+      data: { addItemsToShoppingList: null },
+    });
+    const [minted] = rowIds(cache);
+    const named = cache.extract()[minted ?? '']?.item;
+    await created;
+
+    expect(named).toEqual({ __ref: 'Item:item-minted' });
   });
 
   it('keeps a queued create and counts it', async () => {

@@ -104,6 +104,8 @@ describe('useRecipeCapture', () => {
         source: 'url',
         label: 'example-cooking.com',
         state: 'reading',
+        // The create was answered, so a poll that finds nothing is a loss.
+        answered: true,
       }),
     ]);
   });

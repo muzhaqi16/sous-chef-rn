@@ -120,6 +120,24 @@ export const deletesItsSubject = ({
   );
 };
 
+/** The API's name for a write of one entity: `Create|Update|Delete<Type>Input`. */
+const ENTITY_WRITE_INPUT = /^(?:Create|Update|Delete)([A-Z][A-Za-z]*)Input$/;
+
+/**
+ * The type of the entity a write's `id` names, read off its input type: what to
+ * call the write when the cache does not hold the row. Null for an input whose
+ * subject is another field, or whose name states no type.
+ */
+export function subjectTypeOf({
+  mutation,
+}: {
+  mutation: DocumentNode;
+}): string | null {
+  const typeName = inputTypeNameOf(mutation);
+  if (!typeName || isSubjectInput(typeName)) return null;
+  return ENTITY_WRITE_INPUT.exec(typeName)?.[1] ?? null;
+}
+
 /**
  * Reads a queued write's subject from the input type its document declares.
  * `variables` is optional because an entry is read back from persisted JSON.

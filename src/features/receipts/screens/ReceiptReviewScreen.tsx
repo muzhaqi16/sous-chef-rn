@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
+import { ItemCard } from '#components/organisms/ItemCard';
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { Reveal } from '#components/atoms/Reveal';
@@ -100,6 +101,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     merchant,
     store,
     proposedStoreName,
+    storeOffer,
     storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
@@ -319,6 +321,22 @@ export const ReceiptReviewScreen: React.FC = () => {
                     />
                   </View>
                 </Reveal>
+                {storeOffer ? (
+                  <ItemCard
+                    id={storeOffer.id}
+                    title={storeOffer.name}
+                    subtitle={t('receipts.review.addsAddress')}
+                    leftElement={
+                      <Icon
+                        name="storefront-outline"
+                        size="md"
+                        tone="primary"
+                      />
+                    }
+                    onPress={() => chooseStore(storeOffer)}
+                    testID={receiptsTestIDs.reviewStoreOffer}
+                  />
+                ) : null}
                 {dayIsScanDay ? (
                   <View>
                     <DatePickerField

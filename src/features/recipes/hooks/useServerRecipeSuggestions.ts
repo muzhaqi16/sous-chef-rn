@@ -16,9 +16,16 @@ type Suggestion = RecipeSuggestionsQuery['recipeSuggestions']['edges'][number];
 /** A suggestion as its card: the stock it uses up first, its coverage as the badge. */
 function toItem(edge: Suggestion, translate: Translate): DisplayItem {
   const { node, coverage } = edge;
+  // One name per item: two stacks of milk are still "Uses milk".
+  const named = new Set<string>();
   const expiring = edge.expiringStacks
-    .map(stack => stack.itemName)
-    .filter(name => name.trim() !== '');
+    .map(stack => stack.itemName.trim())
+    .filter(name => {
+      const key = name.toLocaleLowerCase();
+      if (name === '' || named.has(key)) return false;
+      named.add(key);
+      return true;
+    });
   const subtitleParts: string[] = [];
   if (expiring.length > 0) {
     subtitleParts.push(

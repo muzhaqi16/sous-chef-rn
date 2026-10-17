@@ -83,7 +83,7 @@ export function useAddToShoppingList({
     if (!shoppingListId) return 'reverted';
     const { outcome } = await createShoppingListRow(client.cache, {
       listId: shoppingListId,
-      row: { itemName, itemId, unitId },
+      row: { itemName, unitId },
       line: {
         item: { itemId },
         quantity: null,

@@ -99,7 +99,12 @@ describe('SearchBar, debounced mode', () => {
       <SearchBar
         {...defaultProps}
         rightActions={[
-          { icon: 'barcode-outline', onPress: onAction, testID: 'scan-btn' },
+          {
+            icon: 'barcode-outline',
+            onPress: onAction,
+            testID: 'scan-btn',
+            accessibilityLabel: 'Scan barcode',
+          },
         ]}
       />,
     );
@@ -114,8 +119,18 @@ describe('SearchBar, debounced mode', () => {
       <SearchBar
         {...defaultProps}
         rightActions={[
-          { icon: 'barcode-outline', onPress: jest.fn(), testID: 'action-1' },
-          { icon: 'camera-outline', onPress: jest.fn(), testID: 'action-2' },
+          {
+            icon: 'barcode-outline',
+            onPress: jest.fn(),
+            testID: 'action-1',
+            accessibilityLabel: 'Scan barcode',
+          },
+          {
+            icon: 'camera-outline',
+            onPress: jest.fn(),
+            testID: 'action-2',
+            accessibilityLabel: 'Take a photo',
+          },
         ]}
       />,
     );

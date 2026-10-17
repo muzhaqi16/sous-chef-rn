@@ -22,18 +22,21 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 let mockRows: ReceiptReviewRow[] = [];
+let mockStoreOffer: { id: string; name: string } | null = null;
+const mockChooseStore = jest.fn();
 const mockAddChosen = jest.fn<Promise<{ sent: number; held: number }>, []>();
 jest.mock('../../hooks/useReceiptReview', () => ({
   useReceiptReview: () => ({
     rows: mockRows,
     merchant: 'giant eagle',
-    store: { id: 'store-1', name: 'Giant Eagle' },
-    proposedStoreName: null,
+    store: mockStoreOffer ? null : { id: 'store-1', name: 'Giant Eagle' },
+    proposedStoreName: mockStoreOffer ? 'Giant Eagle' : null,
+    storeOffer: mockStoreOffer,
     storeUnrecognized: false,
     purchasedOn: '2026-10-15',
     dayIsScanDay: false,
     setPurchasedOn: jest.fn(),
-    chooseStore: jest.fn(),
+    chooseStore: mockChooseStore,
     totalsGap: null,
     matchState: 'done',
     retryMatching: jest.fn(),
@@ -143,5 +146,39 @@ describe('ReceiptReviewScreen Add', () => {
 
     expect(toastService.success).toHaveBeenCalledTimes(1);
     expect(mockToPantryMain).not.toHaveBeenCalled();
+  });
+});
+
+describe('ReceiptReviewScreen store', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRows = [row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) })];
+  });
+  afterEach(() => {
+    mockStoreOffer = null;
+  });
+
+  it("offers the unlocated store, saying it takes the receipt's address, and picks it on a tap", async () => {
+    mockStoreOffer = { id: 'store-label', name: 'Giant Eagle (home)' };
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    const offer = screen.getByTestId(receiptsTestIDs.reviewStoreOffer);
+    expect(offer).toHaveTextContent(/Giant Eagle \(home\)/);
+    expect(offer).toHaveTextContent(/Adds this receipt's address/);
+    expect(mockChooseStore).not.toHaveBeenCalled();
+
+    await userEvent.setup().press(screen.getByText('Giant Eagle (home)'));
+
+    expect(mockChooseStore).toHaveBeenCalledWith({
+      id: 'store-label',
+      name: 'Giant Eagle (home)',
+    });
+  });
+
+  it('offers no store when there is none to complete', () => {
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByTestId(receiptsTestIDs.reviewStoreOffer)).toBeNull();
+    expect(screen.queryByText("Adds this receipt's address")).toBeNull();
   });
 });

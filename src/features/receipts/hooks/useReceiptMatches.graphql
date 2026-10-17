@@ -14,7 +14,14 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
       storeNumber
       chain {
         id
+        name
       }
+    }
+    # No store is placed: the household's unlocated store of the proposed
+    # name, which a check-in with this receipt's parse locates. Offered only.
+    completableStore {
+      id
+      name
     }
     lines {
       clientId

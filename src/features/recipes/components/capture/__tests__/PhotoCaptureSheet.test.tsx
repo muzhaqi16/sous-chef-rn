@@ -5,8 +5,17 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
+import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
 import { PhotoCaptureSheet } from '../PhotoCaptureSheet';
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockStart = jest.fn();
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
@@ -46,6 +55,19 @@ const renderSheet = () => {
   return onDismiss;
 };
 const sendButton = () => screen.getByTestId(recipesTestIDs.captureSend);
+
+// Wired as the screen wires it: the sheet sends through the capture hook.
+const SheetSendingACapture = ({ onDismiss }: { onDismiss: () => void }) => {
+  const { start, sending } = useRecipeCapture();
+  return (
+    <PhotoCaptureSheet
+      visible
+      onSend={start}
+      sending={sending}
+      onDismiss={onDismiss}
+    />
+  );
+};
 
 describe('PhotoCaptureSheet', () => {
   it('sends nothing before a page is added', () => {
@@ -95,5 +117,34 @@ describe('PhotoCaptureSheet', () => {
       screen.getByTestId(recipesTestIDs.captureChoosePhotos).props
         .accessibilityState,
     ).toMatchObject({ disabled: true });
+  });
+
+  it('says a plan is needed when the server refuses for one, staying open', async () => {
+    mockPhotos.pages = ['p1'];
+    mockPhotos.upload.mockResolvedValueOnce(['key-1']);
+    const refused = recordMock(CreateRecipeCaptureDocument, {
+      error: new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'refused',
+            extensions: {
+              code: TopLevelErrorCode.PremiumRequired,
+              feature: 'RECIPE_CAPTURE_PHOTO',
+              plan: 'PREMIUM',
+            },
+          },
+        ],
+      }),
+    });
+    const onDismiss = jest.fn();
+    renderWithApollo(<SheetSendingACapture onDismiss={onDismiss} />, {
+      operationMocks: [refused.mock],
+    });
+
+    fireEvent.press(sendButton());
+
+    expect(await screen.findByText('This needs a Premium plan.')).toBeTruthy();
+    expect(refused.fired).toHaveLength(1);
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 });

@@ -26,6 +26,7 @@ export interface CachedStore {
   id: string;
   name: string;
   address?: string | null;
+  storeNumber?: string | null;
 }
 
 /**

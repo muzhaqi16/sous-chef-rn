@@ -34,6 +34,8 @@ import {
   type CheckInLineToSend,
 } from './useReceiptCheckIn';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import { useHeldStores } from './useHeldStores';
+import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { toDateKey } from '#/utils/dateUtils';
 
@@ -111,18 +113,24 @@ export function useReceiptReview() {
   const merchantHeader =
     firstPage.split('\n').slice(0, HEADER_LINES).join('\n') ||
     draft?.parsed?.merchant;
-  const { matchFor, matchState, retryMatching, resolvedStore, proposedStore } =
-    useReceiptMatches(
-      lines.map(line => ({
-        index: line.index,
-        text: line.printed,
-        code: line.code,
-      })),
-      merchantHeader,
-      draft?.parsedBy,
-      draft?.store?.id,
-      draft?.printedStore,
-    );
+  const {
+    matchFor,
+    matchState,
+    retryMatching,
+    resolvedStore,
+    proposedStore,
+    completableStore,
+  } = useReceiptMatches(
+    lines.map(line => ({
+      index: line.index,
+      text: line.printed,
+      code: line.code,
+    })),
+    merchantHeader,
+    draft?.parsedBy,
+    draft?.store?.id,
+    draft?.printedStore,
+  );
   const chosen = lines.map(line => {
     const explicit = draft?.choices?.[line.index];
     const match = matchFor(line.index);
@@ -172,6 +180,29 @@ export function useReceiptReview() {
   const store =
     draft?.store ??
     (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
+  // The server's reading, which the check-in locates an unlocated store from.
+  const receiptParseId =
+    draft?.parsedBy === 'server' ? draft.parseId : undefined;
+  const heldStores = useHeldStores(listId);
+  // A store with no address that this reading would locate: one the device
+  // holds named as the receipt's merchant or chain, else the API's. Offered
+  // once matching has settled whether the receipt names a store; never placed.
+  const deviceOffer = unlocatedStoreNamed(
+    [
+      draft?.parsed?.merchant,
+      draft?.printedStore?.name,
+      proposedStore?.name,
+      proposedStore?.chain?.name,
+    ],
+    heldStores,
+  );
+  const apiOffer = completableStore
+    ? { id: completableStore.id, name: completableStore.name }
+    : null;
+  const storeOffer =
+    receiptParseId && !store && matchState !== 'matching'
+      ? deviceOffer ?? apiOffer
+      : null;
   // Judged where it was read, by the rule its lines follow: the server's, or
   // the same rules on the phone, which know a discount never taken off.
   const totalsGap = draft?.totalsGap ?? null;
@@ -313,8 +344,6 @@ export function useReceiptReview() {
     setNeeds(lacking);
 
     if (toSend.length > 0) {
-      const receiptParseId =
-        draft?.parsedBy === 'server' ? draft.parseId : undefined;
       checkIn(
         {
           checkInIds: minted.ids,
@@ -344,6 +373,11 @@ export function useReceiptReview() {
     store,
     /** The shop the receipt names that is not on file; added on confirm. */
     proposedStoreName: proposedStore?.name ?? null,
+    /**
+     * A store on file with no address that this receipt's address would
+     * complete, offered before adding a new one; picked with `chooseStore`.
+     */
+    storeOffer,
     /** Neither the receipt nor the API names the shop, so the user is asked for it. */
     storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */

@@ -174,7 +174,7 @@ describe('RecipeIngredientEditor', () => {
             { itemId: 'item-onion', name: 'Onion' },
           ]
         : [];
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId, getByRole } = render(
       <RecipeIngredientEditor
         ref={ref}
         onSave={save}
@@ -194,6 +194,9 @@ describe('RecipeIngredientEditor', () => {
       });
     });
     fireEvent.press(getByText('Green onion'));
+
+    expect(getByRole('button', { name: 'Green onion' })).toBeSelected();
+    expect(getByRole('button', { name: 'Onion' })).not.toBeSelected();
     fireEvent.press(getByTestId('header-right-0'));
 
     expect(save).toHaveBeenCalledWith(

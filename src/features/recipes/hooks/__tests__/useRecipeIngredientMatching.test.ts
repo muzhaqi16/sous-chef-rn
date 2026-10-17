@@ -251,6 +251,42 @@ describe('useRecipeIngredientMatching', () => {
     expect(result.current.isSheetVisible).toBe(true);
   });
 
+  it('says a recipe has nothing to match only when the server answers so', async () => {
+    const m = matchesMock([]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
+  });
+
+  // Offline the read fails; the cook goes ahead without the review.
+  it('reports nothing of its own when the match read fails', async () => {
+    const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).not.toHaveBeenCalled();
+    expect(result.current.isSheetVisible).toBe(false);
+  });
+
   // `$servings` is a Float: two and a half servings is asked for as it is.
   it('asks for the matches of a fractional number of servings, unrounded', async () => {
     const m = matchesMock([]);

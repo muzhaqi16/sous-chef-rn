@@ -60,6 +60,7 @@
       "dateLabel": "Data di acquisto",
       "dateScanned": "Non è stampata sullo scontrino, quindi è il giorno in cui l'hai scansionato.",
       "storePlaceholder": "Scegli il negozio",
+      "addsAddress": "Aggiunge l'indirizzo di questo scontrino",
       "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
       "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
       "choose": "Nessuna corrispondenza. Tocca per scegliere il prodotto.",

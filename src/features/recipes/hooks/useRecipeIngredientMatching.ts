@@ -131,7 +131,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     if (!result) return false;
 
     const matches = result.data?.matchRecipeIngredientsToPantry;
-    if (!matches || matches.length === 0) {
+    // A read that failed (offline) is not an empty answer: the caller cooks
+    // without the review instead.
+    if (!matches) return false;
+    if (matches.length === 0) {
       toastService.info(t('recipes.noIngredientsToMatch'));
       return false;
     }

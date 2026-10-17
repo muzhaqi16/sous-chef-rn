@@ -32,12 +32,13 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-const entry = (createdAt = Date.now()): CaptureEntry => ({
+const entry = (createdAt = Date.now(), answered = true): CaptureEntry => ({
   id: 'capture-1',
   source: 'url',
   label: 'example-cooking.com',
   createdAt: new Date(createdAt).toISOString(),
   state: 'reading',
+  answered,
 });
 
 const answering = (
@@ -93,6 +94,19 @@ describe('useRecipeCapturePoll', () => {
     expect(useRecipeCaptureStore.getState().entries).toEqual([
       expect.objectContaining({ id: 'capture-1', state: 'incomplete' }),
     ]);
+  });
+
+  // The entry is kept before its create is sent, so a poll beside it could
+  // reach the server first and be told there is no such capture.
+  it('asks nothing before its create is answered', () => {
+    const poll = answering(null);
+
+    renderHookWithApollo(() => useRecipeCapturePoll(entry(Date.now(), false)), {
+      operationMocks: [poll.mock],
+    });
+
+    expect(poll.fired).toEqual([]);
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('says a capture the server does not know could not be read', async () => {

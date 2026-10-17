@@ -18,7 +18,9 @@ import {
   TransferHomeOwnershipDocument,
   UpdateMembershipDocument,
   RemoveMemberDocument,
+  LeaveHomeDocument,
 } from '#operations/home/home.generated';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { alertService } from '#/services/alertService';
 import type { RootState } from '#store/index';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
@@ -58,10 +60,6 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedQueryData: jest.fn(
     <T>(data: T | undefined, fallback: T): T => data ?? fallback,
   ),
-}));
-
-jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHome: jest.fn(<T>(home: T): T => home),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -756,6 +754,104 @@ describe('useHomeDetailManagement', () => {
         expect.stringContaining('Test Home'),
         expect.any(Array),
       );
+    });
+
+    describe('once confirmed', () => {
+      // The eviction runs for real, so each case reads the cache it leaves.
+      beforeEach(() => {
+        const actual: typeof import('#/apollo/utils/cacheUpdaters') =
+          jest.requireActual('#/apollo/utils/cacheUpdaters');
+        jest.mocked(safeEvict).mockImplementation(actual.safeEvict);
+      });
+      afterEach(() => jest.mocked(safeEvict).mockReset());
+
+      /** Leaves the loaded home, the server answering `leaveHome` with `answer`. */
+      const leaveAnswered = async (
+        answer: MockDataFor<typeof LeaveHomeDocument>['leaveHome'],
+      ) => {
+        const leave = recordMock(LeaveHomeDocument, {
+          data: { leaveHome: answer },
+        });
+        const cache = makeCache();
+        const { result } = renderHookWithApollo(
+          () => useHomeDetailManagement('home-1'),
+          { operationMocks: [getHomeMock(), leave.mock], cache },
+        );
+        await waitFor(() => expect(result.current.home).toBeTruthy());
+
+        let leaving: Promise<boolean> | undefined;
+        act(() => {
+          leaving = result.current.leaveHome('Test Home');
+        });
+        await act(async () => {
+          await confirmLastAlert();
+        });
+        const left = await leaving;
+        return { left, fired: leave.fired, cache };
+      };
+
+      const holdsHome = (cache: ReturnType<typeof makeCache>) =>
+        'Home:home-1' in cache.extract();
+
+      it('takes the home out and moves the selection on', async () => {
+        const { left, fired, cache } = await leaveAnswered({
+          __typename: 'LeaveHomePayload',
+          converged: false,
+          membership: { __typename: 'Membership', id: 'm-1' },
+        });
+
+        expect(fired).toEqual([{ input: { homeId: 'home-1' } }]);
+        expect(left).toBe(true);
+        expect(holdsHome(cache)).toBe(false);
+        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+        expect(mockStoreState.setSelectedShoppingListId).toHaveBeenCalledWith(
+          null,
+        );
+      });
+
+      // Leaving twice: the server reads the ended membership as the leave it
+      // asked for, so the second answer is a success that names nobody.
+      it('treats a repeat the server answers as converged as left, with no error', async () => {
+        const { left, cache } = await leaveAnswered({
+          __typename: 'LeaveHomePayload',
+          converged: true,
+          membership: null,
+        });
+
+        expect(left).toBe(true);
+        expect(holdsHome(cache)).toBe(false);
+        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+        // The confirmation only.
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+      });
+
+      // No membership row at all — the home was deleted meanwhile — is not
+      // found; the server holds nothing for the device to show either way.
+      it('treats a repeat the server answers as not found as left, with no error', async () => {
+        const { left, cache } = await leaveAnswered({
+          __typename: 'NotFoundError',
+          code: ErrorCode.NotFound,
+          resource: 'Membership',
+        });
+
+        expect(left).toBe(true);
+        expect(holdsHome(cache)).toBe(false);
+        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps the home and shows a refusal that is not a removal', async () => {
+        const { left, cache } = await leaveAnswered({
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+        });
+
+        expect(left).toBe(false);
+        expect(holdsHome(cache)).toBe(true);
+        expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
+        // The confirmation, then the refusal.
+        expect(alertService.alert).toHaveBeenCalledTimes(2);
+      });
     });
   });
 

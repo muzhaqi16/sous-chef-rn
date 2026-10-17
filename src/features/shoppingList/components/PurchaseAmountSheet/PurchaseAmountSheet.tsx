@@ -154,7 +154,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             loading,
           }}
         />
-        <View style={styles.headerSpacer} />
         <View style={styles.sections}>
           <Text role="heading" style={styles.itemName}>
             {item?.itemName ?? ''}
@@ -256,9 +255,6 @@ const styles = StyleSheet.create(theme => ({
   // On the inner view, so the header still spans the sheet's full width.
   sections: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  headerSpacer: {
-    height: theme.spacing.md,
   },
   itemName: {
     textAlign: 'center',

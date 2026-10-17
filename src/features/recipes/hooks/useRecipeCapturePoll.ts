@@ -52,7 +52,9 @@ export function useRecipeCapturePoll(entry: CaptureEntry): void {
     return () => clearTimeout(timer);
   }, [reading, entry.id, startedAt]);
 
-  const polled = reading && !unavailable;
+  // Asked for only once its create is answered: a poll sent beside the create
+  // can reach the server first and be told no such capture exists.
+  const polled = reading && entry.answered && !unavailable;
   const { data } = useQuery(
     RecipeCaptureDocument,
     polled

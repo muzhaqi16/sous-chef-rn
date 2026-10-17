@@ -6,13 +6,37 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
+import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
 import { CaptureSheet, MAX_CAPTURE_TEXT } from '../CaptureSheet';
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockStart = jest.fn();
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => false,
 }));
+
+// Wired as the screen wires it: the sheet sends through the capture hook.
+const SheetSendingACapture = ({ onDismiss }: { onDismiss: () => void }) => {
+  const { start, sending } = useRecipeCapture();
+  return (
+    <CaptureSheet
+      visible
+      kind="link"
+      textAllowed
+      onSend={start}
+      sending={sending}
+      onDismiss={onDismiss}
+    />
+  );
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -133,6 +157,34 @@ describe('CaptureSheet: from a link', () => {
         ),
       ).toBeTruthy(),
     );
+  });
+
+  it('says a plan is needed when the server refuses for one, staying open', async () => {
+    const refused = recordMock(CreateRecipeCaptureDocument, {
+      error: new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'refused',
+            extensions: {
+              code: TopLevelErrorCode.PremiumRequired,
+              feature: 'RECIPE_CAPTURE_URL',
+              plan: 'PREMIUM',
+            },
+          },
+        ],
+      }),
+    });
+    const onDismiss = jest.fn();
+    renderWithApollo(<SheetSendingACapture onDismiss={onDismiss} />, {
+      operationMocks: [refused.mock],
+    });
+
+    type(recipesTestIDs.captureUrlInput, 'https://example-cooking.com/miso');
+    send();
+
+    expect(await screen.findByText('This needs a Premium plan.')).toBeTruthy();
+    expect(refused.fired).toHaveLength(1);
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 });
 

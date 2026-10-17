@@ -128,6 +128,7 @@
       "Notification": "la notificación"
     },
     "queuedChangeRejected": "No se pudo guardar un cambio y se ha deshecho.",
+    "queuedChangeRejectedResource": "Tu cambio en {{resource}} no se pudo guardar y se ha deshecho.",
     "offlineNoMorePages": "Estás sin conexión, así que por ahora no hay nada más que cargar.",
     "offlineSearchUnavailable": "La búsqueda de recetas necesita conexión. Tus recetas guardadas siguen aquí.",
     "queuedChangeOverwrittenResource": "Tu cambio en {{resource}} se sustituyó por uno más reciente y se ha deshecho.",
@@ -153,6 +154,7 @@
     "wasteBatchFailed": "No se pudo marcar como desperdiciado.",
     "updateShoppingItemFailed": "No se pudo actualizar el artículo.",
     "changedElsewhereTitle": "Modificado en otro lugar",
+    "changedElsewhereLatestShown": "Esto se modificó en otro lugar después de que lo abrieras, así que tu cambio no se guardó. Ahora se muestra la versión más reciente.",
     "entityHome": "Hogar",
     "entityMember": "Miembro",
     "entityInvite": "Invitación",
@@ -607,8 +609,7 @@
     "placeholder": "Selecciona una opción"
   },
   "searchBar": {
-    "placeholder": "Buscar…",
-    "actionFallback": "Botón {{icon}}"
+    "placeholder": "Buscar…"
   },
   "settingRow": {
     "enabled": "activado",
@@ -706,7 +707,6 @@
     "year": "Año"
   },
   "a11y": {
-    "actionButton": "Botón {{name}}",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "Valor de {{label}}",
     "quantityValue": "Valor de cantidad",

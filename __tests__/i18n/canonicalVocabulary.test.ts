@@ -112,7 +112,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
     {
       keys: [
         'loading.loading',
-        'shoppingListScreens.loading',
         'pantrySettings.loading',
         'listTemplate.loading',
       ],

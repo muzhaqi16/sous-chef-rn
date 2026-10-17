@@ -12,13 +12,26 @@ import {
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
+import type {
+  CreatePantryItemInput,
+  PantryItemSourceInput,
+} from '#/graphql/generated/schemaTypes';
+
+/**
+ * A typed item goes under an id minted here, which the row names at once: the
+ * server creates the item under it, or remembers it for the item it matched.
+ */
+const withMintedItemId = (item: PantryItemSourceInput): PantryItemSourceInput =>
+  item.inline && !item.inline.id
+    ? { inline: { ...item.inline, id: generateEntityId() } }
+    : item;
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -60,9 +73,12 @@ export function usePantryIntake(pantryId: string | undefined) {
         // Read outside the try: `?.` is a value block, and one inside a try
         // body bails the React Compiler out of the whole function.
         const clientId = variables?.input.id;
+        const mintedItemId = variables?.input.item.inline?.id;
 
         try {
           reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
+          // A typed item the API matched: the row names the one it holds.
+          adoptServerEntityId(cache, 'Item', pantryItem.item.id, mintedItemId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for createPantryItem:',
@@ -91,6 +107,7 @@ export function usePantryIntake(pantryId: string | undefined) {
     }
 
     const id = generateEntityId();
+    const sent = { ...input, item: withMintedItemId(input.item) };
     // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
@@ -98,7 +115,7 @@ export function usePantryIntake(pantryId: string | undefined) {
     writeLocalIntake(
       client.cache,
       id,
-      localIntakeRow(pantryId, itemName, input, local),
+      localIntakeRow(pantryId, itemName, sent, local),
     );
 
     let result;
@@ -106,7 +123,7 @@ export function usePantryIntake(pantryId: string | undefined) {
     const today = todayKey();
     try {
       result = await createPantryItem({
-        variables: { input: { ...input, id, pantryId, today }, today },
+        variables: { input: { ...sent, id, pantryId, today }, today },
       });
     } catch (error) {
       thrown = error;

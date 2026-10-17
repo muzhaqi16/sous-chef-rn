@@ -43,6 +43,10 @@ import { useReceiptReview } from '../useReceiptReview';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
+import {
+  UseHeldStores_ListFragmentDoc,
+  UseHeldStores_StoreFragmentDoc,
+} from '../useHeldStores.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -1444,6 +1448,239 @@ describe('useReceiptReview', () => {
       await waitFor(() => expect(checkIn.fired).toHaveLength(1));
       expect(storeCreate.fired).toHaveLength(1);
     });
+  });
+
+  describe('offering a store the receipt would locate', () => {
+    // The household's "Kroger", added before any receipt located it, and a
+    // branch of that name, which has its address.
+    const KROGER_LABEL = {
+      id: 'store-label',
+      name: 'Kroger',
+      address: null,
+      storeNumber: null,
+    };
+    const KROGER_BRANCH = {
+      id: 'store-27',
+      name: 'Kroger',
+      address: '412 Main St',
+    };
+    const OFFER = { id: 'store-label', name: 'Kroger' };
+
+    // Read by the server: the check-in sends the parse that locates a store.
+    const readByServer = (readBy: Partial<ReceiptDraft> = {}) => {
+      const draft = useReceiptDraftStore.getState().draft!;
+      useReceiptDraftStore.setState({
+        draft: { ...draft, parsedBy: 'server', parseId: 'parse-1', ...readBy },
+      });
+    };
+    // Offline: the lookup cannot be asked.
+    const offline = () =>
+      recordMock(ResolveReceiptLinesDocument, {
+        error: new Error('Network request failed'),
+      });
+    // The API places no store, proposes the receipt's, and names `completable`.
+    const unplaced = (
+      completable: { id: string; name: string } | null,
+      delay?: number,
+    ) =>
+      recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: null,
+            proposedStore: {
+              name: 'Kroger',
+              address: '412 Main St',
+              storeNumber: null,
+              chain: null,
+            },
+            completableStore: completable,
+          },
+        },
+        ...(delay === undefined ? {} : { delay }),
+      });
+
+    afterEach(() => {
+      useStore.getState().setCachedStores([]);
+      useStore.getState().setSelectedShoppingListId(null);
+    });
+
+    it('offers the unlocated store the device holds, offline, and checks in there once picked', async () => {
+      readByServer();
+      useStore.getState().setCachedStores([KROGER_BRANCH, KROGER_LABEL]);
+      const { result, checkIn, addChosen } = await setup({
+        resolve: offline(),
+      });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('failed'),
+      );
+
+      expect(result.current.review.storeOffer).toEqual(OFFER);
+      // Offered, never placed.
+      expect(result.current.review.store).toBeNull();
+
+      await act(async () => {
+        result.current.review.chooseStore(result.current.review.storeOffer!);
+        result.current.review.chooseLine(1, MILK);
+      });
+      expect(result.current.review.store).toEqual(OFFER);
+      expect(result.current.review.storeOffer).toBeNull();
+
+      await addChosen();
+
+      expect(fired(checkIn)).toEqual([
+        expect.objectContaining({
+          storeId: 'store-label',
+          receiptParseId: 'parse-1',
+        }),
+      ]);
+    });
+
+    it("offers the active list's shop when the cache knows it has no address", async () => {
+      readByServer();
+      useStore.getState().setSelectedShoppingListId('list-1');
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: UseHeldStores_ListFragmentDoc,
+        fragmentName: 'useHeldStores_list',
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        data: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          targetStore: {
+            __typename: 'Store',
+            id: 'store-label',
+            name: 'Kroger',
+          },
+        },
+      });
+      const known = await setup({ resolve: offline(), cache });
+      await waitFor(() =>
+        expect(known.result.current.review.matchState).toBe('failed'),
+      );
+      // Its name alone: an address the cache never held is not none.
+      expect(known.result.current.review.storeOffer).toBeNull();
+      known.unmount();
+
+      cache.writeFragment({
+        fragment: UseHeldStores_StoreFragmentDoc,
+        fragmentName: 'useHeldStores_store',
+        id: cache.identify({ __typename: 'Store', id: 'store-label' }),
+        data: { __typename: 'Store', ...KROGER_LABEL },
+      });
+      const { result } = await setup({ resolve: offline(), cache });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('failed'),
+      );
+
+      expect(result.current.review.storeOffer).toEqual(OFFER);
+    });
+
+    it("offers the API's unlocated store when the device holds none, and never places it", async () => {
+      readByServer();
+      const { result } = await setup({ resolve: unplaced(OFFER) });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+
+      expect(result.current.review.storeOffer).toEqual(OFFER);
+      expect(result.current.review.store).toBeNull();
+      expect(useReceiptDraftStore.getState().draft?.store).toBeUndefined();
+      expect(result.current.review.proposedStoreName).toBe('Kroger');
+    });
+
+    it("offers the device's own once matching settles, ahead of the API's", async () => {
+      readByServer();
+      useStore.getState().setCachedStores([KROGER_LABEL]);
+      const { result } = await setup({
+        resolve: unplaced({ id: 'store-other', name: 'Kroger' }, 500),
+      });
+      // The API may yet place the receipt.
+      expect(result.current.review.matchState).toBe('matching');
+      expect(result.current.review.storeOffer).toBeNull();
+
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(result.current.review.storeOffer).toEqual(OFFER);
+    });
+
+    it('offers none when neither the device nor the API holds one', async () => {
+      readByServer();
+      useStore.getState().setCachedStores([KROGER_BRANCH]);
+      const { result } = await setup({ resolve: unplaced(null) });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+
+      expect(result.current.review.storeOffer).toBeNull();
+    });
+
+    it('offers none when the device holds two stores of the name', async () => {
+      readByServer();
+      useStore
+        .getState()
+        .setCachedStores([
+          KROGER_LABEL,
+          { id: 'store-label-2', name: 'KROGER', address: null },
+        ]);
+      const { result } = await setup({ resolve: offline() });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('failed'),
+      );
+
+      expect(result.current.review.storeOffer).toBeNull();
+    });
+
+    it('offers none once the receipt names its store, or the user picks one', async () => {
+      readByServer();
+      useStore.getState().setCachedStores([KROGER_LABEL]);
+      const placed = await setup({
+        resolve: recordMock(ResolveReceiptLinesDocument, {
+          data: {
+            resolveReceiptLines: {
+              ...RESOLVED.resolveReceiptLines,
+              completableStore: OFFER,
+            },
+          },
+        }),
+      });
+      await waitFor(() =>
+        expect(placed.result.current.review.store?.id).toBe('store-27'),
+      );
+      expect(placed.result.current.review.storeOffer).toBeNull();
+      placed.unmount();
+
+      const { result } = await setup({ resolve: offline() });
+      await waitFor(() =>
+        expect(result.current.review.storeOffer).toEqual(OFFER),
+      );
+      await act(async () => {
+        result.current.review.chooseStore({
+          id: 'store-99',
+          name: 'Kroger #87',
+        });
+      });
+
+      expect(result.current.review.storeOffer).toBeNull();
+    });
+
+    it.each<[string, Partial<ReceiptDraft>]>([
+      ['read on the phone', { parsedBy: 'device' }],
+      ['read by the server with no parse to send', { parseId: undefined }],
+    ])(
+      'offers none for a receipt %s: nothing would locate it',
+      async (_name, readBy) => {
+        readByServer(readBy);
+        useStore.getState().setCachedStores([KROGER_LABEL]);
+        const { result } = await setup({ resolve: unplaced(OFFER) });
+        await waitFor(() =>
+          expect(result.current.review.matchState).toBe('done'),
+        );
+
+        expect(result.current.review.storeOffer).toBeNull();
+      },
+    );
   });
 
   describe('with the milk open on the shopping list', () => {

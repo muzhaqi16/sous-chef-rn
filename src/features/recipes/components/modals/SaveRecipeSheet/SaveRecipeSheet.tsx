@@ -156,7 +156,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xl,
   },
   recipeName: {
-    marginTop: theme.spacing.xs,
     marginBottom: theme.spacing.md,
   },
   sectionLabel: {

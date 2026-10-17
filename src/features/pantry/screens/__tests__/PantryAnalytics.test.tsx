@@ -259,7 +259,7 @@ describe('PantryAnalytics', () => {
     expect(screen.getByText('40')).toBeTruthy();
   });
 
-  describe('ledger cost analytics', () => {
+  describe('cost figures', () => {
     type CostAnalytics = NonNullable<
       NonNullable<
         ReturnType<typeof usePantryAnalytics>['ledgerData']
@@ -393,6 +393,14 @@ describe('PantryAnalytics', () => {
       expect(cardTexts(totalSpent)).toEqual([totalSpent, UNKNOWN_AMOUNT]);
       // No average to show either: neither the card nor the breakdown.
       expect(screen.queryByText(avgCostPerUnit)).toBeNull();
+    });
+
+    // The waste fixture carries no value: no wasted batch had a cost.
+    it('shows an unknown value lost, never zero, when no wasted stock was costed', () => {
+      renderWithCosts(null);
+
+      const valueLost = t('pantryAnalytics.estValueLost');
+      expect(cardTexts(valueLost)).toEqual([valueLost, UNKNOWN_AMOUNT]);
     });
 
     it('shows the one average on a card that names its unit', () => {

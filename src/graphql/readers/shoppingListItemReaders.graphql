@@ -110,6 +110,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     purchaseDate
     purchasedBy {
       id
+      displayName
       profile {
         id
         avatar

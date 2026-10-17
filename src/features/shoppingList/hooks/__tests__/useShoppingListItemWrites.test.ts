@@ -230,7 +230,7 @@ describe('useShoppingListItemWrites.createItem', () => {
       await result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
         {
-          item: { itemName: 'Pasta sauce' },
+          item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
           quantity: '1',
           netWeight: { netWeight: 22, netWeightUnitId: 'u-oz' },
         },
@@ -248,10 +248,97 @@ describe('useShoppingListItemWrites.createItem', () => {
     await act(async () => {
       await result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
-        { item: { itemName: 'Pasta sauce' }, quantity: '1' },
+        {
+          item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
+          quantity: '1',
+        },
       );
     });
 
     expect(toastService.info).not.toHaveBeenCalled();
+  });
+});
+
+describe('useShoppingListItemWrites.createItem, for a typed name', () => {
+  const typed = { inline: { id: 'item-minted', name: 'Cubanelle pepper' } };
+
+  /** An add answered with its line naming `servedItemId`. */
+  function answeredWith(servedItemId: string) {
+    const cache = seedCache([]);
+    const add = recordMock(AddItemToShoppingListDocument, {
+      dataFor: (vars): MockDataFor<typeof AddItemToShoppingListDocument> => {
+        const [row] = (vars as AddItemToShoppingListMutationVariables).input
+          .items;
+        return {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                success: true,
+                item: {
+                  __typename: 'ShoppingListItem',
+                  id: row?.id ?? '',
+                  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+                  item: { __typename: 'Item', id: servedItemId },
+                },
+              },
+            ],
+          },
+        };
+      },
+    });
+    const rendered = renderHookWithApollo(
+      () => useShoppingListItemWrites('list-1', undefined),
+      { cache, operationMocks: [add.mock] },
+    );
+    return { cache, add, ...rendered };
+  }
+
+  const lineOf = (cache: ReturnType<typeof seedCache>) => {
+    const [key] = Object.keys(cache.extract()).filter(id =>
+      id.startsWith('ShoppingListItem:'),
+    );
+    return key ? cache.extract()[key] : undefined;
+  };
+
+  it('re-points a typed item the API matched to one it holds', async () => {
+    const { cache, add, result } = answeredWith('item-held');
+
+    let namedBefore: unknown;
+    await act(async () => {
+      const adding = result.current.createItem(
+        { itemName: 'Cubanelle pepper', quantity: 1 },
+        { item: typed, quantity: '1' },
+      );
+      namedBefore = lineOf(cache)?.item;
+      await adding;
+    });
+
+    expect(add.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({
+          items: [expect.objectContaining({ item: typed })],
+        }),
+      }),
+    ]);
+    expect(namedBefore).toEqual({ __ref: 'Item:item-minted' });
+    expect(lineOf(cache)?.item).toEqual({ __ref: 'Item:item-held' });
+    expect(cache.extract()['Item:item-minted']).toBeUndefined();
+  });
+
+  it('keeps the item the API created under the minted id', async () => {
+    const { cache, result } = answeredWith('item-minted');
+
+    await act(async () => {
+      await result.current.createItem(
+        { itemName: 'Cubanelle pepper', quantity: 1 },
+        { item: typed, quantity: '1' },
+      );
+    });
+
+    expect(lineOf(cache)?.item).toEqual({ __ref: 'Item:item-minted' });
+    expect(cache.extract()['Item:item-minted']).toBeDefined();
   });
 });

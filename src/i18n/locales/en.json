@@ -128,6 +128,7 @@
       "Notification": "notification"
     },
     "queuedChangeRejected": "A change couldn't be saved and has been undone.",
+    "queuedChangeRejectedResource": "Your change to the {{resource}} couldn't be saved and has been undone.",
     "offlineNoMorePages": "You're offline, so there's nothing more to load yet.",
     "offlineSearchUnavailable": "Recipe search needs a connection. Your saved recipes are still here.",
     "queuedChangeOverwrittenResource": "Your change to the {{resource}} was overwritten by a newer one and has been undone.",
@@ -153,6 +154,7 @@
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
     "changedElsewhereTitle": "Changed Elsewhere",
+    "changedElsewhereLatestShown": "This changed somewhere else after you opened it, so your change wasn't saved. The latest version is shown now.",
     "entityHome": "Home",
     "entityMember": "Member",
     "entityInvite": "Invite",
@@ -607,8 +609,7 @@
     "placeholder": "Select an option"
   },
   "searchBar": {
-    "placeholder": "Search…",
-    "actionFallback": "{{icon}} button"
+    "placeholder": "Search…"
   },
   "settingRow": {
     "enabled": "enabled",
@@ -706,7 +707,6 @@
     "year": "Year"
   },
   "a11y": {
-    "actionButton": "{{name}} button",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "{{label}} value",
     "quantityValue": "Quantity value",

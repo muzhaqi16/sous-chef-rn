@@ -159,6 +159,7 @@ export function useDataPreloading() {
           id: edge.node.id,
           name: edge.node.name,
           address: edge.node.address,
+          storeNumber: edge.node.storeNumber,
         })),
         store.setCachedStores,
         store.setLastStoresFetchedAt,

@@ -1,9 +1,8 @@
 import { generateEntityId } from '#/utils/generateEntityId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import {
-  AddedContext,
-  type BatchAddShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
+import { itemIdOf, typedItemRef } from '#/utils/refInput';
+import { AddedContext } from '#/graphql/generated/schemaTypes';
+import type { ShoppingRowLine } from '#features/shoppingList/cache/createShoppingListRow';
 
 /** A recipe ingredient, as the recipe detail caches it. */
 export interface RecipeIngredientLine {
@@ -18,7 +17,7 @@ export interface RecipeIngredientLine {
 
 export interface RecipeShoppingRow {
   /** The batch entry; `input.id` is the row's client-minted id. */
-  input: BatchAddShoppingListItemInput & { id: string };
+  input: ShoppingRowLine & { id: string };
   recipeIngredientId: string;
   /** What the list shows before the server answers. */
   display: {
@@ -53,7 +52,9 @@ export function recipeShoppingRows(
     .map(ingredient => {
       const id = mintId();
       const itemName = firstNonBlank(ingredient.name) ?? unnamed;
-      const itemId = ingredient.item?.id;
+      const item = ingredient.item
+        ? { itemId: ingredient.item.id }
+        : typedItemRef(itemName, mintId);
       // An unstated amount is a line with none. A legacy zero states nothing
       // either, and the API refuses a quantity that is not above it.
       const stated = ingredient.quantity;
@@ -65,11 +66,11 @@ export function recipeShoppingRows(
           itemName,
           quantity,
           unitName: firstNonBlank(unit?.symbol, unit?.name) ?? null,
-          itemId,
+          itemId: itemIdOf(item),
         },
         input: {
           id,
-          item: itemId ? { itemId } : { itemName },
+          item,
           ...(quantity !== null && { quantity }),
           ...(unit && { unit: { id: unit.id } }),
           recipeContext: {

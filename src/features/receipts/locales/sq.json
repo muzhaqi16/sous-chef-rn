@@ -60,6 +60,7 @@
       "dateLabel": "Data e blerjes",
       "dateScanned": "Nuk është shtypur në faturë, ndaj është dita kur e skanove.",
       "storePlaceholder": "Zgjidh dyqanin",
+      "addsAddress": "Shton adresën e kësaj fature",
       "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
       "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
       "choose": "Pa përputhje. Prek për të zgjedhur produktin.",

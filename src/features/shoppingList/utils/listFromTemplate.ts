@@ -1,8 +1,7 @@
 import { generateEntityId } from '#/utils/generateEntityId';
-import type {
-  BatchAddShoppingListItemInput,
-  CreateShoppingListInput,
-} from '#/graphql/generated/schemaTypes';
+import { itemIdOf, typedItemRef } from '#/utils/refInput';
+import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
+import type { ShoppingRowLine } from '../cache/createShoppingListRow';
 import { lineUnitFields } from './lineUnit';
 
 /** One line of the list being copied, as `CopyableShoppingListFragment` caches it. */
@@ -46,7 +45,7 @@ export type CopySkipReason = 'line-names-nothing';
 export interface DerivedList {
   /** No `id`: the create hook mints the list's own key. */
   list: CreateShoppingListInput;
-  items: BatchAddShoppingListItemInput[];
+  items: (ShoppingRowLine & { id: string })[];
   /** Minted line id to what the optimistic row renders. */
   display: Map<string, CopiedLineDisplay>;
   skipped: Array<{ sourceId: string; reason: CopySkipReason }>;
@@ -70,16 +69,16 @@ export function listFromTemplate(
 ): DerivedList {
   const mint = options.mintId ?? generateEntityId;
   const skipped: DerivedList['skipped'] = [];
-  const items: BatchAddShoppingListItemInput[] = [];
+  const items: DerivedList['items'] = [];
   const display = new Map<string, CopiedLineDisplay>();
 
   for (const line of source.lines) {
-    // `ItemRefInput` is one of a catalog id or a name; a line carrying neither
-    // cannot be expressed, so it is reported rather than sent blank.
+    // A line names a catalog item, else its typed name under a minted item
+    // id; one carrying neither is reported rather than sent blank.
     const item = line.itemId
       ? { itemId: line.itemId }
       : line.itemName
-      ? { itemName: line.itemName }
+      ? typedItemRef(line.itemName, mint)
       : null;
     if (!item) {
       skipped.push({ sourceId: line.id, reason: 'line-names-nothing' });
@@ -93,7 +92,7 @@ export function listFromTemplate(
       quantityInput: line.quantityInput,
       unitName: line.unitName,
       category: line.category,
-      itemId: line.itemId,
+      itemId: itemIdOf(item),
       unitId: line.unitId,
     });
     items.push({

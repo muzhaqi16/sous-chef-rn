@@ -111,6 +111,31 @@ describe('useAddShoppingItem', () => {
     expect(created.fired).toHaveLength(1);
   });
 
+  it('sends the typed name inline under a minted item id, which the row names at once', async () => {
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
+    );
+
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Oat milk', quantity: 1 });
+    });
+
+    const [fired] = created.fired;
+    const [line] = (
+      fired?.input as { items: { item: { inline?: { id: string } } }[] }
+    ).items;
+    const mintedItemId = line?.item.inline?.id;
+    expect(line?.item).toEqual({
+      inline: { id: expect.any(String), name: 'Oat milk' },
+    });
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ itemId: mintedItemId }),
+    );
+  });
+
   it('gives the optimistic row the fraction the form typed, not its leading number', async () => {
     const created = addItemMock();
     const { result } = renderHookWithApollo(

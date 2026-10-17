@@ -39,6 +39,8 @@ import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '#features/types';
 import { useStore } from '#store';
 import { TAB_BAR_HEIGHT } from '#constants/layout';
+import { withTiming } from 'react-native-reanimated';
+import { SHEET } from '#/constants/animations';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -102,7 +104,11 @@ jest.mock('#services/haptic/HapticService', () => ({
 
 // Mock animations constants
 jest.mock('#/constants/animations', () => ({
-  SHEET: { BACKDROP_OPACITY: 0.5 },
+  SHEET: {
+    BACKDROP_OPACITY: 0.5,
+    BACKDROP_FADE_IN: 100,
+    BACKDROP_FADE_OUT: 300,
+  },
 }));
 
 // Mock iconUtils
@@ -329,6 +335,18 @@ describe('FloatingTabBar', () => {
 
       expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
       expect(link.onPress).toHaveBeenCalledTimes(1);
+    });
+
+    // The `+` rotates on an under-damped spring; a scrim on that spring would
+    // swing past open and back, flickering until it settled.
+    it('fades its scrim in on a timing, never the spring the + turns on', () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      renderTabBar();
+
+      expect(withTiming).toHaveBeenCalledWith(1, {
+        duration: SHEET.BACKDROP_FADE_IN,
+      });
     });
 
     it('runs a menu of one directly', async () => {

@@ -60,6 +60,7 @@
       "dateLabel": "Fecha de compra",
       "dateScanned": "No figura en el recibo, así que es el día en que lo escaneaste.",
       "storePlaceholder": "Elige la tienda",
+      "addsAddress": "Añade la dirección de este recibo",
       "intro": "Revisa el producto de cada línea. Solo se añaden a tu despensa las líneas con un producto.",
       "introTo": "Revisa el producto de cada línea. Solo se añaden a {{pantry}} las líneas con un producto.",
       "choose": "Sin coincidencia. Toca para elegir el producto.",

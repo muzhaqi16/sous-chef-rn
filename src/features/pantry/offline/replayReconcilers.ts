@@ -9,7 +9,7 @@ import {
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { adoptServerEntityId, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
 import type { ApolloCache } from '@apollo/client';
@@ -80,14 +80,31 @@ export const reconcileMoveToPantryReplay = adoptServerRow(
   removePantryItemLocally,
 );
 
+const adoptCreatedRow = adoptServerRow('id', revertOptimisticPantryItem);
+
+const idOf = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
+
 /**
  * A queued create replays with `forceAdd`, so a stack for the same item and
- * unit that another member added meanwhile absorbs it under its own id.
+ * unit that another member added meanwhile absorbs it under its own id. A
+ * typed item the server matched takes over from the one minted for it.
  */
-export const reconcileCreatePantryItemReplay = adoptServerRow(
-  'id',
-  revertOptimisticPantryItem,
-);
+export const reconcileCreatePantryItemReplay: ReplayReconcilerTable[string] = (
+  cache,
+  variables,
+  data,
+  adopt,
+) => {
+  adoptCreatedRow(cache, variables, data, adopt);
+  const input: unknown = variables.input;
+  const payload: unknown = extractMutationPayload(data);
+  const pantryItem = isRecord(payload) ? payload.pantryItem : undefined;
+  const servedItemId = isRecord(pantryItem) ? idOf(pantryItem.item) : undefined;
+  const sent =
+    isRecord(input) && isRecord(input.item) ? idOf(input.item.inline) : null;
+  if (servedItemId) adoptServerEntityId(cache, 'Item', servedItemId, sent);
+};
 
 /**
  * An applied delete answers with its row's `{ id }`, which re-creates the entity

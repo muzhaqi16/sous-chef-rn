@@ -1,6 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { queuedSubject } from '../queuedSubject';
+import { queuedSubject, subjectTypeOf } from '../queuedSubject';
+import type {
+  PantryItem,
+  ShoppingListItem,
+} from '#/graphql/generated/schemaTypes';
 import {
   AddRecipeToFavoritesDocument,
   ForkRecipeDocument,
@@ -181,5 +185,26 @@ describe('which subjects the server has never seen', () => {
       variables: { input: { id: 'pi-owned' } },
     });
     expect(subject.mintedIds).toEqual([]);
+  });
+});
+
+describe('subjectTypeOf', () => {
+  const PANTRY_ITEM: NonNullable<PantryItem['__typename']> = 'PantryItem';
+  const LINE: NonNullable<ShoppingListItem['__typename']> = 'ShoppingListItem';
+
+  it.each([
+    ['a create', CreatePantryItemDocument, PANTRY_ITEM],
+    ['a removal', DeletePantryItemDocument, PANTRY_ITEM],
+    ['an update', UpdateShoppingListItemDocument, LINE],
+  ])('reads the type %s writes off its input', (_label, mutation, expected) => {
+    expect(subjectTypeOf({ mutation })).toBe(expected);
+  });
+
+  it.each([
+    ['a subject another field names', UpdatePantryItemQuantityDocument],
+    ['a batch of rows', AddItemToShoppingListDocument],
+    ['an input named by no entity verb', MoveShoppingListItemDocument],
+  ])('names no type for %s', (_label, mutation) => {
+    expect(subjectTypeOf({ mutation })).toBeNull();
   });
 });

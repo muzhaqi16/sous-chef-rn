@@ -45,6 +45,7 @@ export const RecipeSearchInput = forwardRef<
     {
       icon: 'search',
       onPress: () => onSearch(inputQuery),
+      accessibilityLabel: t('labels.search'),
       color: theme.colors.primary,
       backgroundColor: theme.colors.surface,
       testID: recipesTestIDs.searchSubmit,

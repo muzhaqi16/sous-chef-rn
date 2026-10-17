@@ -183,14 +183,40 @@ jest.mock('@gorhom/bottom-sheet', () => ({
 // The screen reads its params through `useRecipeDetail`, which is mocked here.
 const route = { params: {} };
 
+// The offline predicate `useOfflineAwareError` consults.
+const mockApiUnavailable = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockApiUnavailable(),
+}));
+
 describe('RecipeDetail', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockApiUnavailable.mockReturnValue(false);
   });
 
   it('renders error state when error exists', () => {
     const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe not found')).toBeTruthy();
+  });
+
+  // A recipe never opened before has nothing cached to show offline; that is
+  // not a failure, and the screen says so rather than "Couldn't load".
+  it('shows the offline state for a recipe it has not downloaded', () => {
+    mockApiUnavailable.mockReturnValue(true);
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
+    useRecipeDetail.mockReturnValue({
+      ...useRecipeDetail(),
+      recipeId: 'r-1',
+      error: "Couldn't load this recipe",
+    });
+
+    const tree = render(<RecipeDetail route={route} />);
+
+    expect(tree.getByTestId('state-offline')).toBeTruthy();
+    expect(tree.queryByText("Couldn't load this recipe")).toBeNull();
   });
 
   it('renders loading state when loading', () => {

@@ -18,7 +18,7 @@ import {
 } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { errorService } from '#/services/errorService';
-import { refByIdOrName } from '#/utils/refInput';
+import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {
@@ -72,7 +72,7 @@ export function useAddShoppingItem({
 
     // `shoppingListId` rides on the batch input, not on the line.
     const line = {
-      item: { itemName: input.itemName },
+      item: typedItemRef(input.itemName),
       quantity: apiQuantityText ?? input.quantity ?? 1,
       ...lineUnitFields(input.unitId, input.unitName),
       ...(input.notes && { notes: input.notes }),

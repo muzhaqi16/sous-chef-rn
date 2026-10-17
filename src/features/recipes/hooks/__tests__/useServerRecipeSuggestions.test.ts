@@ -108,6 +108,25 @@ describe('useServerRecipeSuggestions', () => {
     );
   });
 
+  it('names an item once however many of its stacks are expiring', async () => {
+    const { result } = renderHookWithApollo(
+      () => useServerRecipeSuggestions(true),
+      {
+        operationMocks: [
+          suggestionsMock([
+            edge('r-1', 'Pancakes', 75, ['milk', 'Milk ', 'eggs']),
+          ]).mock,
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+    expect(result.current.items[0]?.subtitle).toContain(
+      'Uses milk, eggs before they expire',
+    );
+  });
+
   it('asks the server again on refresh', async () => {
     const suggestions = suggestionsMock([edge('r-1', 'Soup', 50)]);
     const { result } = renderHookWithApollo(

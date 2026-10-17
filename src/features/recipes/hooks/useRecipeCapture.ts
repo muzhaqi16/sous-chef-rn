@@ -94,7 +94,7 @@ export function useRecipeCapture() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const [create] = useMutation(CreateRecipeCaptureDocument);
-  const { addReading, settle } = useRecipeCaptureActions();
+  const { addReading, markAnswered, settle } = useRecipeCaptureActions();
   const report = useCaptureOutcomeReporter();
   const [sending, setSending] = useState(false);
 
@@ -154,6 +154,7 @@ export function useRecipeCapture() {
       // Unanswered after every resend: the poll finds whether it arrived.
       case 'resend':
       case 'poll':
+        markAnswered(id);
         return { kind: 'started' };
       case 'settle':
         report(id, result.outcome);

@@ -183,42 +183,38 @@ export function useHomeDetailManagement(homeId: string) {
 
   const { markAsDefault } = useMarkHomeAsDefault();
 
-  const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
-    useMutation(LeaveHomeDocument, {
-      update(cache, { data }) {
-        if (!appliedPayload(data)) return;
+  const [leaveHomeMutation, { loading: leaving }] =
+    useMutation(LeaveHomeDocument);
 
-        try {
-          safeEvict(cache, 'Home', homeId);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for leaveHome:',
-          });
-        }
-      },
-      onCompleted: data => {
-        if (!appliedPayload(data) || homeId !== selectedHomeId) return;
+  /**
+   * Takes the left home out of the cache and moves the selection on. Run for
+   * every leave that did not fail — a repeat the server answers as converged or
+   * as not found included, which carries no membership for an `update` to read.
+   */
+  const removeLeftHome = () => {
+    try {
+      safeEvict(client.cache, 'Home', homeId);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Cache update failed for leaveHome:',
+      });
+    }
+    if (homeId !== selectedHomeId) return;
 
-        // Read remaining homes from cache
-        const cachedData = leaveClient.cache.readQuery({
-          query: GetHomesDocument,
-        });
-        const remainingHomes = extractNodes(cachedData?.homes);
-
-        const [newDefaultHome] = remainingHomes;
-        if (newDefaultHome) {
-          setSelectedHomeId(newDefaultHome.id);
-          setSelectedPantryId(null);
-          // Background sync: a refusal is reported where it is written.
-          void markAsDefault(newDefaultHome.id);
-        } else {
-          setSelectedHomeId(null);
-          setSelectedPantryId(null);
-        }
-        // Clear shopping list selection (may have belonged to left home)
-        setSelectedShoppingListId(null);
-      },
-    });
+    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const [newDefaultHome] = extractNodes(cachedData?.homes);
+    if (newDefaultHome) {
+      setSelectedHomeId(newDefaultHome.id);
+      setSelectedPantryId(null);
+      // Background sync: a refusal is reported where it is written.
+      void markAsDefault(newDefaultHome.id);
+    } else {
+      setSelectedHomeId(null);
+      setSelectedPantryId(null);
+    }
+    // Clear shopping list selection (may have belonged to left home)
+    setSelectedShoppingListId(null);
+  };
 
   // Preserve the last good data, since `errorPolicy: 'ignore'` yields undefined
   // on error, then unmask. `useFragment` reads from `{ __typename, id }` rather
@@ -371,8 +367,13 @@ export function useHomeDetailManagement(homeId: string) {
                 {
                   document: LeaveHomeDocument,
                   fallback: t('errors.codes.genericRetry'),
+                  removal: true,
                 },
-              ).then(settled => resolve(settled.status !== 'failed'));
+              ).then(settled => {
+                const left = settled.status !== 'failed';
+                if (left) removeLeftHome();
+                resolve(left);
+              });
             },
           },
         ],

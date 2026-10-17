@@ -1,4 +1,6 @@
 import { act } from '@testing-library/react-native';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -98,5 +100,33 @@ describe('useIngredientPaste', () => {
     expect(mockToastError).toHaveBeenCalledWith(
       "Couldn't read those ingredients. Try again.",
     );
+  });
+
+  it('says a plan is needed, and adds nothing, when the server refuses for one', async () => {
+    const parse = recordMock(ParseIngredientLinesDocument, {
+      error: new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'refused',
+            extensions: {
+              code: TopLevelErrorCode.PremiumRequired,
+              feature: 'INGREDIENT_PASTE',
+              plan: 'PREMIUM',
+            },
+          },
+        ],
+      }),
+    });
+    const { result } = renderHookWithApollo(() => useIngredientPaste(), {
+      operationMocks: [parse.mock],
+    });
+
+    let rows: Awaited<ReturnType<typeof result.current.parseLines>> = [];
+    await act(async () => {
+      rows = await result.current.parseLines(['2 cups flour']);
+    });
+
+    expect(rows).toBeNull();
+    expect(mockToastError).toHaveBeenCalledWith('This needs a Premium plan.');
   });
 });

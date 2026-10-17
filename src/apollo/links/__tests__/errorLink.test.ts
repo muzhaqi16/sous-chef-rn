@@ -54,7 +54,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { isRefreshableAuthCode } from '#/utils/authErrorCodes';
 import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 // ---- Pure helper function tests (replicated logic) ----
 
@@ -300,10 +300,7 @@ describe('errorLink middleware', () => {
   });
 });
 
-// A build below the server's minimum version is refused permanently. Refreshing
-// the token succeeds and then fails identically, so the link must not start a
-// refresh cycle over it.
-describe('errorLink — FEATURE_DISABLED', () => {
+describe('errorLink — FEATURE_DISABLED and PREMIUM_REQUIRED', () => {
   const query = gql`
     query TestOp {
       me {
@@ -312,56 +309,67 @@ describe('errorLink — FEATURE_DISABLED', () => {
     }
   `;
 
-  // A refusal for a feature switched off for this user asks for their flags
-  // again, so every screen stops offering it; nothing tries to recover.
-  it('asks for the flags again, and neither refreshes nor signs out', async () => {
-    const client = new ApolloClient({
-      cache: new InMemoryCache(),
-      link: ApolloLink.empty(),
-      defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    });
-    const refetch = jest.spyOn(client, 'refetchQueries').mockReturnValue(
-      Object.assign(Promise.resolve([]), {
-        queries: [],
-        results: [],
-      }),
-    );
-    const failing = new ApolloLink(
-      () =>
-        new Observable(observer => {
-          observer.error(
-            new CombinedGraphQLErrors({
-              errors: [
-                {
-                  message: 'Feature disabled',
-                  extensions: {
-                    code: 'FEATURE_DISABLED',
-                    feature: 'RECIPE_CAPTURE',
-                  },
-                },
-              ],
-            }),
-          );
-        }),
-    );
-
-    await expect(
-      new Promise((resolve, reject) => {
-        ApolloLink.execute(
-          ApolloLink.from([errorLink, failing]),
-          { query, variables: {} },
-          { client },
-        ).subscribe({ next: resolve, error: reject });
-      }),
-    ).rejects.toBeDefined();
-
-    expect(refetch).toHaveBeenCalledWith({
-      include: [MyFeatureFlagsDocument],
-    });
-    expect(attemptTokenRefresh).not.toHaveBeenCalled();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
+
+  // A feature switched off for this user, or one needing a plan they do not
+  // hold, asks for their flags again, so every screen stops offering it.
+  it.each([
+    TopLevelErrorCode.FeatureDisabled,
+    TopLevelErrorCode.PremiumRequired,
+  ])(
+    '%s asks for the flags again, and neither refreshes nor signs out',
+    async code => {
+      const client = new ApolloClient({
+        cache: new InMemoryCache(),
+        link: ApolloLink.empty(),
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      });
+      const refetch = jest.spyOn(client, 'refetchQueries').mockReturnValue(
+        Object.assign(Promise.resolve([]), {
+          queries: [],
+          results: [],
+        }),
+      );
+      const failing = new ApolloLink(
+        () =>
+          new Observable(observer => {
+            observer.error(
+              new CombinedGraphQLErrors({
+                errors: [
+                  {
+                    message: 'Refused',
+                    extensions: { code, feature: 'RECIPE_CAPTURE_PHOTO' },
+                  },
+                ],
+              }),
+            );
+          }),
+      );
+
+      await expect(
+        new Promise((resolve, reject) => {
+          ApolloLink.execute(
+            ApolloLink.from([errorLink, failing]),
+            { query, variables: {} },
+            { client },
+          ).subscribe({ next: resolve, error: reject });
+        }),
+      ).rejects.toBeDefined();
+
+      expect(refetch).toHaveBeenCalledWith({
+        include: [MyFeatureFlagsDocument],
+      });
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+      expect(mockEndSession).not.toHaveBeenCalled();
+    },
+  );
 });
 
+// A build below the server's minimum version is refused permanently. Refreshing
+// the token succeeds and then fails identically, so the link must not start a
+// refresh cycle over it.
 describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
   const query = gql`
     query TestOp {

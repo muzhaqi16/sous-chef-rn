@@ -52,6 +52,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -174,6 +176,7 @@ const RecipeDetailScreen: React.FC = () => {
     lastCookedAt,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
+  const loadFailure = useOfflineAwareError(error ?? undefined, !!displayData);
 
   // Scroll component for FlashList instances rendered inside bottom sheets.
 
@@ -415,12 +418,16 @@ const RecipeDetailScreen: React.FC = () => {
         onRefresh={handleRefresh}
       >
         <View style={styles.centerContainer}>
-          <EmptyState
-            icon="alert-circle-outline"
-            title={errorMessage}
-            description={t('errors.codes.genericRetry')}
-            action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
-          />
+          {loadFailure.offline ? (
+            <DataStateView state="offline" onRetry={handleRefresh} />
+          ) : (
+            <EmptyState
+              icon="alert-circle-outline"
+              title={errorMessage}
+              description={t('errors.codes.genericRetry')}
+              action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
+            />
+          )}
         </View>
       </CollapsingHeroDetail>
     );

@@ -125,6 +125,7 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
   purchaseDate
   purchasedBy {
     id
+    displayName
     profile {
       id
       displayName

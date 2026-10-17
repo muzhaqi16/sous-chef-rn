@@ -14,6 +14,7 @@ import {
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
 } from './shoppingListItemRowNeutral.generated';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import {
   DisplayFormat,
   StoreDepartment,
@@ -74,6 +75,20 @@ export function reconcileShoppingItemCreateUpdate(
   return addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
+/**
+ * A typed name the API matched to an item it holds: the line names that item,
+ * and the one written under the minted id goes. A created item kept the id.
+ */
+export function adoptMatchedItem(
+  cache: ApolloCache,
+  mintedItemId: string | null | undefined,
+  servedItemId: string | null | undefined,
+): void {
+  if (servedItemId) {
+    adoptServerEntityId(cache, 'Item', servedItemId, mintedItemId);
+  }
+}
+
 // Structural slices the builder below reads, kept loose so every
 // add-to-shopping-list mutation document satisfies the shape.
 interface AddItemsReconcilePayloadLike {
@@ -83,7 +98,7 @@ interface AddItemsReconcilePayloadLike {
     | readonly ({
         index?: number | null;
         success?: boolean | null;
-        item?: { id: string } | null;
+        item?: { id: string; item?: { id: string } | null } | null;
       } | null)[]
     | null;
 }
@@ -94,7 +109,12 @@ interface AddItemsReconcileDataLike {
 
 interface AddItemsReconcileVariablesLike {
   input: {
-    items?: readonly ({ id?: string | null } | null)[] | null;
+    items?:
+      | readonly ({
+          id?: string | null;
+          item?: { inline?: { id?: string | null } | null } | null;
+        } | null)[]
+      | null;
     shoppingListId?: string | null;
   };
 }
@@ -160,8 +180,8 @@ export function buildAddItemsReconcileUpdate({
         // that field is a response-matching token a call site picks freely (the
         // recipe add sends a Spoonacular ingredient id), never this row's
         // minted cuid. Array position is the fallback.
-        const clientId =
-          variables.input.items?.[result.index ?? position]?.id ?? undefined;
+        const sent = variables.input.items?.[result.index ?? position];
+        const clientId = sent?.id ?? undefined;
         const { item } = result;
         if (item && result.success !== false) {
           const listedBefore = reconcileShoppingItemCreateUpdate(
@@ -171,6 +191,7 @@ export function buildAddItemsReconcileUpdate({
             clientId,
             { countsSettled },
           );
+          adoptMatchedItem(cache, sent?.item?.inline?.id, item.item?.id);
           onLine?.({ position, clientId, refused: false, listedBefore });
         } else {
           if (clientId) refused.push(clientId);

@@ -313,6 +313,7 @@ export function AddItemSheet<
                 {
                   icon: 'barcode-outline',
                   onPress: onScanPress,
+                  accessibilityLabel: t('labels.scanBarcode'),
                 },
                 ...(receiptAction
                   ? [

@@ -32,7 +32,7 @@ import {
 } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { refByIdOrName } from '#/utils/refInput';
+import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 
 type RouteParams = {
   listId: string;
@@ -195,7 +195,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             unitId: unitData.unit?.id ?? undefined,
           },
           {
-            item: { itemName },
+            item: typedItemRef(itemName),
             // FlexibleQuantity text: "1/3", "1 1/4", "0.5".
             quantity: apiQuantityText,
             ...unitData,

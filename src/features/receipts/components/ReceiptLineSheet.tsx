@@ -334,7 +334,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   printed: {
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
     padding: theme.spacing.md,
     gap: theme.spacing.xs,

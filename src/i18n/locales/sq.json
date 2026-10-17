@@ -128,6 +128,7 @@
       "Notification": "Njoftimi"
     },
     "queuedChangeRejected": "Një ndryshim nuk u ruajt dhe u zhbë.",
+    "queuedChangeRejectedResource": "{{resource}}: ndryshimi juaj nuk u ruajt dhe u zhbë.",
     "offlineNoMorePages": "Je pa lidhje, prandaj për momentin nuk ka më çfarë të ngarkohet.",
     "offlineSearchUnavailable": "Kërkimi i recetave kërkon lidhje. Recetat e tua të ruajtura janë ende këtu.",
     "queuedChangeOverwrittenResource": "{{resource}}: ndryshimi juaj u zëvendësua nga një më i ri dhe u zhbë.",
@@ -153,6 +154,7 @@
     "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
     "changedElsewhereTitle": "U ndryshua diku tjetër",
+    "changedElsewhereLatestShown": "Kjo u ndryshua diku tjetër pasi e hapët, prandaj ndryshimi juaj nuk u ruajt. Tani shfaqet versioni më i fundit.",
     "entityHome": "Shtëpia",
     "entityMember": "Anëtar",
     "entityInvite": "Ftesë",
@@ -607,8 +609,7 @@
     "placeholder": "Zgjidh një opsion"
   },
   "searchBar": {
-    "placeholder": "Kërko…",
-    "actionFallback": "Butoni {{icon}}"
+    "placeholder": "Kërko…"
   },
   "settingRow": {
     "enabled": "aktivizuar",
@@ -706,7 +707,6 @@
     "year": "Vit"
   },
   "a11y": {
-    "actionButton": "Butoni {{name}}",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "Vlera e {{label}}",
     "quantityValue": "Vlera e sasisë",

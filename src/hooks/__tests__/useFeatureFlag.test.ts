@@ -70,6 +70,25 @@ describe('useFeatureFlag', () => {
     expect(result.current).toBe(false);
   });
 
+  // The query selects no `state`: an UPGRADE_REQUIRED feature arrives as
+  // `enabled: false`, so it stays hidden until there is a paywall to offer.
+  it('hides a feature that needs a plan the user does not hold', async () => {
+    const answer = flags([
+      { flag: FeatureFlagName.RecipeCaptureUrl, enabled: true },
+      { flag: FeatureFlagName.RecipeCapturePhoto, enabled: false },
+    ]);
+    const { result } = renderHookWithApollo(
+      () => ({
+        url: useFeatureFlag('recipeCaptureUrl'),
+        photo: useFeatureFlag('recipeCapturePhoto'),
+      }),
+      { operationMocks: [answer.mock] },
+    );
+
+    await waitFor(() => expect(result.current.url).toBe(true));
+    expect(result.current.photo).toBe(false);
+  });
+
   it('keeps its last answer through a re-read that fails', async () => {
     const answered = flags([
       { flag: FeatureFlagName.RecipeCaptureUrl, enabled: true },

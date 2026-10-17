@@ -29,12 +29,12 @@ const Menu = ({
   open?: boolean;
   onClose: () => void;
 }) => {
-  const progress = useSharedValue(open ? 1 : 0);
+  const fade = useSharedValue(open ? 1 : 0);
   return (
     <AddMenu
       actions={actions}
       open={open}
-      progress={progress}
+      fade={fade}
       buttonBottom={100}
       onClose={onClose}
     />

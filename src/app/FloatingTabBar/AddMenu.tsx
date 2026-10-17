@@ -19,8 +19,8 @@ import { kitTestIDs } from '#components/testIDs';
 interface AddMenuProps {
   actions: readonly TabBarAddAction[];
   open: boolean;
-  /** 0 closed → 1 open, shared with the `+` it rotates. */
-  progress: SharedValue<number>;
+  /** 0 closed → 1 open, eased: the scrim's opacity. */
+  fade: SharedValue<number>;
   /** Distance from the window's bottom to the `+`. */
   buttonBottom: number;
   onClose: () => void;
@@ -37,7 +37,7 @@ const STAGGER_MS = 30;
 export const AddMenu: React.FC<AddMenuProps> = ({
   actions,
   open,
-  progress,
+  fade,
   buttonBottom,
   onClose,
 }) => {
@@ -61,7 +61,7 @@ export const AddMenu: React.FC<AddMenuProps> = ({
   // down; the bar's layer, so the scrim covers the bar and not the `+`.
   const animatedTheme = useAnimatedTheme();
   const scrimStyle = useAnimatedStyle(() => ({
-    opacity: progress.get() * SHEET.BACKDROP_OPACITY,
+    opacity: fade.get() * SHEET.BACKDROP_OPACITY,
     zIndex: animatedTheme.get().zIndex.overlay,
   }));
 

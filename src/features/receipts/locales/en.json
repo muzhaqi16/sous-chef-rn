@@ -60,6 +60,7 @@
       "dateLabel": "Purchase date",
       "dateScanned": "Not printed on the receipt, so it's the day you scanned it.",
       "storePlaceholder": "Choose the store",
+      "addsAddress": "Adds this receipt's address",
       "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
       "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
       "choose": "No match. Tap to choose the product.",

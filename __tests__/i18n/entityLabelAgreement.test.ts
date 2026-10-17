@@ -49,6 +49,8 @@ const REVIEWED_SLOTS: Record<string, string> = {
   // es puts the label after the non-contracting `en`; it/sq lead with it and a
   // colon, so their participles agree with `modifica` / nothing.
   'errors.queuedChangeOverwrittenResource': 'colon frame or `en`; no agreement',
+  // The same frames: es `cambio`, it `modifica`, sq `ndryshimi` take the verbs.
+  'errors.queuedChangeRejectedResource': 'colon frame or `en`; no agreement',
   // Same frames; es/it/sq participles agree with `eliminación` / `voce` / `hyrja`.
   'errors.queuedRemovalKeptResource': 'colon frame or `en`; no agreement',
 };

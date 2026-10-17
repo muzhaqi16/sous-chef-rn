@@ -166,5 +166,14 @@ export function useReceiptMatches(
     resolvedStore: pickedStoreId ? null : resolved?.store ?? null,
     /** The store the receipt names that is not on file, to add on confirm. */
     proposedStore: pickedStoreId ? null : resolved?.proposedStore ?? null,
+    /**
+     * The household's unlocated store of the proposed name, which a check-in
+     * with the receipt's parse locates: offered, never placed. None once a
+     * store is picked or the receipt names one.
+     */
+    completableStore:
+      pickedStoreId || resolved?.store
+        ? null
+        : resolved?.completableStore ?? null,
   };
 }

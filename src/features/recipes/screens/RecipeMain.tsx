@@ -261,6 +261,7 @@ const RecipeMainInner: React.FC = () => {
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
+          accessibilityLabel: t('recipes.cookWithPantry'),
           color: hasIngredientSelection
             ? theme.colors.onPrimary
             : theme.colors.primary,

@@ -19,6 +19,11 @@ type IconProps = React.ComponentProps<typeof Icon>;
 
 export const getNotificationAction = (
   type: NotificationType,
+  /**
+   * The stack the server names for the notification now. Null offers no stack
+   * action, since there is nothing for it to act on; absent predates the field.
+   */
+  pantryItemId?: string | null,
 ): { requiresAction: boolean; actionType?: string } => {
   switch (type) {
     case NotificationType.HomeInvitation:
@@ -30,7 +35,9 @@ export const getNotificationAction = (
         actionType: 'ACCEPT_SHOPPING_LIST_INVITE',
       };
     case NotificationType.ExpiryReminder:
-      return { requiresAction: true, actionType: 'VIEW_EXPIRING_ITEMS' };
+      return pantryItemId === null
+        ? { requiresAction: false }
+        : { requiresAction: true, actionType: 'VIEW_EXPIRING_ITEMS' };
     case NotificationType.CollaborationAccepted:
     case NotificationType.CollaborationDeclined:
     case NotificationType.CollaboratorPermissionsUpdated:

@@ -14,7 +14,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
-import { Button } from '#components/molecules/Button';
+import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
@@ -176,18 +176,16 @@ export const RecipeIngredientEditor = forwardRef<
                 {t('recipes.captureMatchTo')}
               </Text>
               {candidates.map(candidate => (
-                <Button
+                <AnimatedChip
                   key={candidate.itemId}
-                  size="small"
-                  variant={itemId === candidate.itemId ? 'primary' : 'outline'}
+                  label={candidate.name}
+                  selected={itemId === candidate.itemId}
                   onPress={() =>
                     setItemId(
                       itemId === candidate.itemId ? null : candidate.itemId,
                     )
                   }
-                >
-                  {candidate.name}
-                </Button>
+                />
               ))}
             </View>
           ) : null}
@@ -270,7 +268,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     overflow: 'visible',

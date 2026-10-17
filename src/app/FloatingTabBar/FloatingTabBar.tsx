@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedReaction,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
@@ -69,11 +70,18 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const [onlyAction] = addMenu ?? [];
   const hasMenu = !!addMenu && addMenu.length > 1;
   const menuProgress = useSharedValue(0);
+  // The scrim fades on its own: the `+`'s under-damped spring would swing its
+  // opacity past open and back several times before it settles.
+  const menuFade = useSharedValue(0);
   useEffect(() => {
-    menuProgress.set(
-      withSpring(hasMenu && isAddMenuOpen ? 1 : 0, motion.spring.SNAPPY),
+    const opening = hasMenu && isAddMenuOpen;
+    menuProgress.set(withSpring(opening ? 1 : 0, motion.spring.SNAPPY));
+    menuFade.set(
+      withTiming(opening ? 1 : 0, {
+        duration: opening ? SHEET.BACKDROP_FADE_IN : SHEET.BACKDROP_FADE_OUT,
+      }),
     );
-  }, [hasMenu, isAddMenuOpen, menuProgress]);
+  }, [hasMenu, isAddMenuOpen, menuProgress, menuFade]);
   const closeAddMenu = () => setAddMenuOpen(false);
 
   const handleAddPress = () => {
@@ -273,7 +281,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       <AddMenu
         actions={addMenu}
         open={isAddMenuOpen}
-        progress={menuProgress}
+        fade={menuFade}
         buttonBottom={floatingButtonStyle.bottom}
         onClose={closeAddMenu}
       />

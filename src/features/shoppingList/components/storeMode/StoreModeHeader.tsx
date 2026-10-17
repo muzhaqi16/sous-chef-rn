@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
-import { Icon } from '#utils/iconUtils';
+import { Icon, type IconName } from '#utils/iconUtils';
 import { useTranslation } from '#/i18n';
 import type { AisleHeaderRow } from '#features/shoppingList/components/SortableShoppingList/types';
 import type { AisleRouteNote } from '#features/shoppingList/hooks/useAisleView';
@@ -77,7 +77,7 @@ export const StoreModeHeader: React.FC<StoreModeHeaderProps> = ({
 
   return (
     <View style={styles.header}>
-      <View style={styles.summary}>
+      <View style={styles.progress}>
         <Text role="label">
           {t('shoppingListScreens.storeMode.inCart', {
             done: cartCount,
@@ -85,69 +85,99 @@ export const StoreModeHeader: React.FC<StoreModeHeaderProps> = ({
           })}
         </Text>
         <ProgressBar value={totalCount > 0 ? cartCount / totalCount : 0} />
-        {estimateText ? (
-          <Text role="footnote" tone="secondary">
-            {estimateText}
-          </Text>
-        ) : null}
+      </View>
+      <View style={styles.details}>
         {storeName ? (
-          <Text role="footnote" tone="secondary">
+          <DetailLine icon="storefront-outline">
             {t('shoppingListScreens.storeMode.atStore', { store: storeName })}
-          </Text>
+          </DetailLine>
         ) : (
           <AppPressable
             onPress={onChooseStore}
             accessibilityRole="button"
             testID={shoppingListTestIDs.storeModeChooseStore}
           >
-            <Text role="footnote" tone="accent">
+            <DetailLine icon="storefront-outline" accent>
               {t('shoppingListScreens.storeMode.chooseStore')}
-            </Text>
+            </DetailLine>
           </AppPressable>
         )}
+        {estimateText ? (
+          <DetailLine icon="pricetag-outline">{estimateText}</DetailLine>
+        ) : null}
         {routeNote ? (
-          <View
-            style={styles.routeNote}
+          <DetailLine
+            icon="walk-outline"
             testID={shoppingListTestIDs.aisleRouteNote}
           >
-            <Icon name="walk-outline" size={16} tone="textSecondary" />
-            <Text role="footnote" tone="secondary" style={styles.routeNoteText}>
-              {routeNote.ownTrips
-                ? t('shoppingListScreens.aisles.yourRoute', {
-                    store: routeNote.storeName,
-                  })
-                : t('shoppingListScreens.aisles.shoppersRoute', {
-                    store: routeNote.storeName,
-                  })}
-            </Text>
-          </View>
+            {t(
+              routeNote.ownTrips
+                ? 'shoppingListScreens.aisles.yourRoute'
+                : 'shoppingListScreens.aisles.shoppersRoute',
+              { store: routeNote.storeName },
+            )}
+          </DetailLine>
         ) : null}
       </View>
-      <FilterTabs<StoreModeTab>
-        tabs={tabs}
-        activeTabId={tab}
-        onTabChange={onTabChange}
-        counts={counts}
-        testIDPrefix={shoppingListTestIDs.aisleTabPrefix}
-      />
+      <View style={styles.tabs}>
+        <FilterTabs<StoreModeTab>
+          tabs={tabs}
+          activeTabId={tab}
+          onTabChange={onTabChange}
+          counts={counts}
+          testIDPrefix={shoppingListTestIDs.aisleTabPrefix}
+        />
+      </View>
     </View>
   );
 };
 
+/** One fact about the trip, behind the icon that names its kind. */
+const DetailLine: React.FC<{
+  icon: IconName;
+  accent?: boolean;
+  testID?: string;
+  children: string;
+}> = ({ icon, accent = false, testID, children }) => (
+  <View style={styles.detailLine} testID={testID}>
+    <Icon
+      name={icon}
+      size={DETAIL_ICON_SIZE}
+      tone={accent ? 'primary' : 'textSecondary'}
+    />
+    <Text
+      role="footnote"
+      tone={accent ? 'accent' : 'secondary'}
+      style={styles.detailText}
+    >
+      {children}
+    </Text>
+  </View>
+);
+
+const DETAIL_ICON_SIZE = 16;
+
 const styles = StyleSheet.create(theme => ({
   header: {
     paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.base,
   },
-  summary: {
-    gap: theme.spacing.xs,
-    paddingTop: theme.spacing.sm,
+  progress: {
+    gap: theme.spacing.sm,
   },
-  routeNote: {
+  details: {
+    gap: theme.spacing.xsPlus,
+    marginTop: theme.spacing.base,
+  },
+  detailLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xsPlus,
   },
-  routeNoteText: {
+  detailText: {
     flexShrink: 1,
+  },
+  tabs: {
+    marginTop: theme.spacing.md,
   },
 }));

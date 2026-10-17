@@ -2,7 +2,10 @@
  * Settling a shopping-list replay the server accepted in part, or answered
  * with a row other than the one minted.
  */
-import { carriesListTotals } from '#features/shoppingList/cache/items';
+import {
+  adoptMatchedItem,
+  carriesListTotals,
+} from '#features/shoppingList/cache/items';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
@@ -21,12 +24,16 @@ const serverRow = (value: unknown): { id: string; version?: number } | null =>
       }
     : null;
 
+const idOf = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
+
 /**
  * Every batch-add copy replays as itself and can apply while refusing rows
  * inside `results`. Each result is paired to its row by the `index` the server
  * echoes; a refused row is withdrawn. A row the server merged into the list's
  * existing one (`outcome: MERGED`) goes too: the kept row is linked uncounted
- * (the minted one was counted already) and later writes move to it.
+ * (the minted one was counted already) and later writes move to it. A typed
+ * item the server matched takes over from the one minted for it.
  */
 export const reconcileShoppingAddReplay: Reconciler = (
   cache,
@@ -68,6 +75,10 @@ export const reconcileShoppingAddReplay: Reconciler = (
     } else if (item && item.id !== row.id) {
       withdrawn.push(row.id);
       merged.push({ mintedId: row.id, item });
+    }
+    if (result.success !== false && isRecord(result.item)) {
+      const sent = isRecord(row.item) ? idOf(row.item.inline) : undefined;
+      adoptMatchedItem(cache, sent, idOf(result.item.item));
     }
   });
   withdrawShoppingListItems(cache, shoppingListId, withdrawn, {

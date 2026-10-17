@@ -184,6 +184,83 @@ describe('a single row merged into an existing line', () => {
   });
 });
 
+describe('a typed name the service matched to an item it holds', () => {
+  const variables = {
+    input: {
+      shoppingListId: 'list-1',
+      items: [
+        {
+          id: 'minted-pepper',
+          item: { inline: { id: 'item-minted', name: 'Cubanelle pepper' } },
+        },
+      ],
+    },
+  };
+  const LINE_ITEM = gql`
+    fragment ReplayReconcilersProbeLineItem on ShoppingListItem {
+      id
+      item {
+        id
+      }
+    }
+  `;
+  /** The answer's line, naming `itemId`, as Apollo writes it before the reconciler. */
+  const answered = (cache: InMemoryCache, itemId: string) => {
+    const line = {
+      __typename: 'ShoppingListItem',
+      id: 'minted-pepper',
+      item: { __typename: 'Item', id: itemId },
+    };
+    cache.writeFragment({ fragment: LINE_ITEM, data: line });
+    return {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ index: 0, success: true, item: line }],
+      },
+    };
+  };
+  const lineItem = (cache: InMemoryCache) =>
+    cache.extract()['ShoppingListItem:minted-pepper']?.item;
+
+  function mintedTyped() {
+    const cache = seedList([]);
+    addLocalShoppingListItem(
+      cache,
+      'list-1',
+      createLocalShoppingListItem('minted-pepper', {
+        shoppingListId: 'list-1',
+        itemName: 'Cubanelle pepper',
+        itemId: 'item-minted',
+      }),
+    );
+    return cache;
+  }
+
+  it('names the held item, and the minted one goes', () => {
+    const cache = mintedTyped();
+    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-minted' });
+
+    reconcileShoppingAddReplay(cache, variables, answered(cache, 'item-held'));
+
+    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-held' });
+    expect(cache.extract()).not.toHaveProperty('Item:item-minted');
+    expect(readList(cache)?.rows).toEqual([['minted-pepper', 1]]);
+  });
+
+  it('keeps the item the service created under the minted id', () => {
+    const cache = mintedTyped();
+
+    reconcileShoppingAddReplay(
+      cache,
+      variables,
+      answered(cache, 'item-minted'),
+    );
+
+    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-minted' });
+    expect(cache.extract()).toHaveProperty('Item:item-minted');
+  });
+});
+
 describe('a replayed batch the service accepted in part', () => {
   const variables = {
     input: {

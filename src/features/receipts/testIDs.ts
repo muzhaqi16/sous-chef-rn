@@ -22,6 +22,8 @@ export const receiptsTestIDs = {
   reviewListIncomplete: 'receipt-review-list-incomplete',
   /** The review's store field. */
   reviewStore: 'receipt-review-store',
+  /** A store on file with no address, offered to take the receipt's. */
+  reviewStoreOffer: 'receipt-review-store-offer',
   /** The purchase date field; its calendar is the kit's `datePickerCalendar`. */
   reviewDate: 'receipt-review-date',
   /** The banner that asks the API again after a failed match. */
