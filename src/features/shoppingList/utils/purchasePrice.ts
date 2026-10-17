@@ -4,6 +4,10 @@
  * for the TOTAL paid. The conversion between the two lives here.
  */
 
+import type { DeepPartial } from '@apollo/client/utilities';
+import type { PriceSuggestion } from '#/graphql/generated/schemaTypes';
+import { formatCurrency } from '#/utils/formatters/number';
+
 /**
  * Deliberately NOT rounded to cents: the server rounds the product, not the
  * factor, so 10/3 × 3 records 10.00 where a rounded 3.33 × 3 records 9.99.
@@ -28,3 +32,25 @@ export const totalFromUnitPrice = (
   unitPrice: number | null,
   quantity: number,
 ): number | null => (unitPrice == null ? null : lineTotal(unitPrice, quantity));
+
+/** A typed total's per-unit split, or null where it is the total (quantity 1). */
+export const shownUnitPrice = (
+  total: number | null | undefined,
+  quantity: number | null,
+): number | null =>
+  total != null && quantity != null && quantity > 0 && quantity !== 1
+    ? unitPriceFromTotal(total, quantity)
+    : null;
+
+/** What a line still to buy costs at its suggestion, which is per one unit. */
+export const suggestedLineCost = (
+  suggestion: DeepPartial<PriceSuggestion> | null | undefined,
+  quantity: number,
+): string | null =>
+  suggestion?.amount != null && suggestion.currency?.code
+    ? formatCurrency(
+        lineTotal(suggestion.amount, quantity),
+        suggestion.currency.code,
+        suggestion.currency.decimalPlaces,
+      )
+    : null;

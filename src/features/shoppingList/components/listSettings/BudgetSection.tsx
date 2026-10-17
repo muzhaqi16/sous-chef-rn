@@ -54,18 +54,18 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
         label={t('shoppingListScreens.estimatedTotalLabel')}
         value={estimate}
       >
-        {unpricedItems > 0 ? (
-          <View style={styles.estimate}>
-            <Text role="bodyStrong" tone="secondary" align="right">
-              {estimate}
-            </Text>
+        <View style={styles.estimate}>
+          <Text role="bodyStrong" tone="secondary" align="right">
+            {estimate}
+          </Text>
+          {unpricedItems > 0 ? (
             <Text role="caption" tone="secondary" align="right">
               {t('shoppingListScreens.unpricedItemsNote', {
                 count: unpricedItems,
               })}
             </Text>
-          </View>
-        ) : undefined}
+          ) : null}
+        </View>
       </InfoRow>
 
       <BaseInput

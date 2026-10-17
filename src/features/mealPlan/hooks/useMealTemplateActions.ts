@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateMealTemplateDocument,
@@ -19,6 +20,7 @@ import {
 import {
   MealPlanType,
   type CreateMealTemplateInput,
+  type MealTemplate,
   type TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -41,10 +43,25 @@ import { errorService } from '#/services/errorService';
 import { removeFromMealTemplates } from '#features/mealPlan/cache/removals';
 import { settleMealTemplateDelete } from '#features/mealPlan/offline/replayReconcilers';
 
-const addToMealTemplates = createAddToQueryConnectionUpdater(
+const addTemplateEdge = createAddToQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
 );
+
+/**
+ * First in each cached `mealTemplates` variant the template belongs to: the
+ * browser sheet caches one per category or search, and a modify fans out to all.
+ */
+const addToMealTemplates = (
+  cache: ApolloCache,
+  template: Pick<MealTemplate, 'id' | 'category'>,
+) =>
+  addTemplateEdge(cache, template, {
+    position: 'start',
+    skipStoreField: skipUnmatchedFilterVariants({
+      category: template.category,
+    }),
+  });
 
 /** What a plan made from a template states; its meals come from the cache. */
 export interface PlanFromTemplateInput {
@@ -78,17 +95,7 @@ export function useMealTemplateActions() {
       context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
-        if (payload) {
-          addToMealTemplates(cache, payload.mealTemplate, {
-            position: 'start',
-            // Scope the write to variants this template belongs to: the browser
-            // sheet caches one `mealTemplates` entry per category/search the
-            // user has visited, and cache.modify fans out across all of them.
-            skipStoreField: skipUnmatchedFilterVariants({
-              category: payload.mealTemplate.category,
-            }),
-          });
-        }
+        if (payload) addToMealTemplates(cache, payload.mealTemplate);
       },
     },
   );
@@ -127,12 +134,7 @@ export function useMealTemplateActions() {
           input,
           ownerId,
         );
-        addToMealTemplates(client.cache, template, {
-          position: 'start',
-          skipStoreField: skipUnmatchedFilterVariants({
-            category: template.category,
-          }),
-        });
+        addToMealTemplates(client.cache, template);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Create Meal Template (optimistic)',
@@ -276,12 +278,7 @@ export function useMealTemplateActions() {
           fragmentName: 'MealTemplateDisplay',
           data: snapshot,
         });
-        addToMealTemplates(client.cache, snapshot, {
-          position: 'start',
-          skipStoreField: skipUnmatchedFilterVariants({
-            category: snapshot.category,
-          }),
-        });
+        addToMealTemplates(client.cache, snapshot);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Restore refused Template delete',

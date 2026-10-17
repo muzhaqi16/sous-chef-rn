@@ -103,7 +103,7 @@ export const reconcileCreatePantryItemReplay: ReplayReconcilerTable[string] = (
   const servedItemId = isRecord(pantryItem) ? idOf(pantryItem.item) : undefined;
   const sent =
     isRecord(input) && isRecord(input.item) ? idOf(input.item.inline) : null;
-  if (servedItemId) adoptServerEntityId(cache, 'Item', servedItemId, sent);
+  adoptServerEntityId(cache, 'Item', servedItemId, sent);
 };
 
 /**

@@ -92,34 +92,24 @@ export function useCorrectPackageSize() {
     // A batch's size is recorded in the stack's net-weight unit; a size stated
     // in another unit is converted by the server, so only its answer is shown.
     const sameUnit = item.netWeightUnit?.id === netWeightUnitId;
-    const cleanups: Array<() => void> = [];
+    const corrected =
+      batch && sameUnit
+        ? { netWeight, remainingNetWeight: scaledRemaining(batch, netWeight) }
+        : {};
     if (batch && sameUnit) {
-      const remainingNetWeight = scaledRemaining(batch, netWeight);
       try {
-        writeBatch({ ...batch, netWeight, remainingNetWeight });
+        writeBatch({ ...batch, ...corrected });
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Correct package size (optimistic)',
         });
       }
-      cleanups.push(
-        optimisticDataPersistence.track(
-          'PantryItemBatch',
-          batchId,
-          'netWeight',
-          netWeight,
-        ),
-        optimisticDataPersistence.track(
-          'PantryItemBatch',
-          batchId,
-          'remainingNetWeight',
-          remainingNetWeight,
-        ),
-      );
     }
-    const clearPersisted = () => {
-      cleanups.forEach(cleanup => cleanup());
-    };
+    const clearPersisted = optimisticDataPersistence.trackFields(
+      'PantryItemBatch',
+      batchId,
+      corrected,
+    );
 
     const revert = () => {
       if (batch && sameUnit) {

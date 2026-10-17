@@ -29,11 +29,12 @@ import { withdrawShoppingListItems } from './withdraw';
 
 /**
  * What a new row shows until the server answers; its list is the create's, and
- * its item the one the line names.
+ * its item the one the line names unless the row states its own (a line naming
+ * a product record still names the item that record is of).
  */
 export type ShoppingRowFields = Omit<
   OptimisticShoppingListItemFields,
-  'shoppingListId' | 'itemId'
+  'shoppingListId'
 >;
 
 /** The line as sent, less the id the create mints. */
@@ -90,7 +91,7 @@ export async function createShoppingListRow<TData>(
   };
   const local = createLocalShoppingListItem(id, {
     ...row,
-    itemId: itemIdOf(line.item),
+    itemId: row.itemId ?? itemIdOf(line.item),
     shoppingListId: listId,
   });
   try {

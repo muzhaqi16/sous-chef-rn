@@ -89,29 +89,11 @@ export function useConvertExpiredToWaste({
     };
 
     // Permanent optimistic write before firing — survives an offline/queued convert.
-    const clearQuantityPersistence = optimisticDataPersistence.track(
+    const clearPersistence = optimisticDataPersistence.trackFields(
       'PantryItem',
       pantryItemId,
-      'quantity',
-      0,
+      { quantity: 0, heldQuantity: 0, condition: ItemCondition.Spoiled },
     );
-    const clearHeldPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'heldQuantity',
-      0,
-    );
-    const clearConditionPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'condition',
-      ItemCondition.Spoiled,
-    );
-    const clearPersistence = () => {
-      clearQuantityPersistence();
-      clearHeldPersistence();
-      clearConditionPersistence();
-    };
     try {
       writeState(0, 0, ItemCondition.Spoiled);
     } catch (cacheError) {

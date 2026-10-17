@@ -1,6 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -23,13 +23,6 @@ export type NewStore = Omit<CreateStoreInput, 'id'>;
 export interface CreatedStore {
   id: string;
   name: string;
-}
-
-function forgetLocalStore(cache: ApolloCache, id: string): void {
-  const cacheId = cache.identify({ __typename: 'Store', id });
-  if (!cacheId) return;
-  cache.evict({ id: cacheId });
-  cache.gc();
 }
 
 /**
@@ -68,7 +61,7 @@ export function useCreateStore() {
       {
         document: CreateStoreDocument,
         fallback: t('errors.generic'),
-        onFailed: () => forgetLocalStore(client.cache, id),
+        onFailed: () => safeEvict(client.cache, 'Store', id),
       },
     );
     if (settled.status === 'failed') return null;

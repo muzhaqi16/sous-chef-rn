@@ -15,7 +15,6 @@ import {
 import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { unitPriceFromTotal } from '../utils/purchasePrice';
 import type { ShoppingListItemDisplayFragment } from '../graphql/shoppingListFragments.generated';
-import { UseMoveToPantry_WasPurchasedFragmentDoc } from '../hooks/useMoveToPantry.generated';
 import type { ListCounterChange } from './connections';
 import {
   removeItemFromShoppingListForMoveToPantry,
@@ -24,25 +23,7 @@ import {
   unstampItemKeptOnListAfterMoveToPantry,
   type KeptOnListStamp,
 } from './moveToPantry';
-
-/**
- * Which filtered variant of the list's connection the row sits in. Both the
- * eager removal and the response's update have to agree on this, or the
- * removal lands on the wrong tab and its `totalCount` decrements the wrong one.
- */
-function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
-  const itemCacheId = cache.identify({
-    __typename: 'ShoppingListItem',
-    id: itemId,
-  });
-  if (!itemCacheId) return false;
-  return (
-    cache.readFragment({
-      id: itemCacheId,
-      fragment: UseMoveToPantry_WasPurchasedFragmentDoc,
-    })?.purchaseInfo.isPurchased ?? false
-  );
-}
+import { readIsPurchased } from './purchase';
 
 export interface LocalMoveArgs {
   item: ShoppingListItemDisplayFragment;
@@ -99,7 +80,9 @@ export function writeLocalMove(
       ? unitPriceFromTotal(totalCost ?? null, measured.quantity)
       : null,
   };
-  const wasPurchased = readWasPurchased(cache, item.id);
+  // The eager removal and the response's update must agree on the variant, or
+  // the removal lands on the wrong tab and decrements the wrong `totalCount`.
+  const wasPurchased = readIsPurchased(cache, item.id);
   const written: LocalMove = {};
   try {
     writeLocalPantryItem(cache, pantryItemId, localRow);
@@ -202,7 +185,7 @@ export function applyMoveToPantryCacheUpdate(
       cache,
       currentListId,
       shoppingListItemId,
-      readWasPurchased(cache, shoppingListItemId),
+      readIsPurchased(cache, shoppingListItemId),
     );
     return;
   }

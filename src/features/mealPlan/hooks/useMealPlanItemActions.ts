@@ -103,11 +103,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         present: 'toast',
       },
     );
-
-    if (settled.failure) return false;
-    // Offline / API down: the meal stays in cache and the create replays keyed
-    // by the same id.
-    return true;
+    // Queued, the meal stays in cache and the create replays under its id.
+    return !settled.failure;
   };
 
   const toggleCompleted = async (
@@ -128,8 +125,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     const deductFromPantry = options?.deductFromPantry;
     const completedAt = markingComplete ? new Date().toISOString() : null;
 
-    // Persist optimistic completion state to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save(
+    // Persisted, so the completion survives a cache-and-network refetch offline.
+    const clearPersisted = optimisticDataPersistence.track(
       'MealPlanItem',
       fullItem.id,
       'isCompleted',
@@ -175,11 +172,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           operation: 'Revert rejected Meal toggle',
         });
       }
-      optimisticDataPersistence.clear(
-        'MealPlanItem',
-        fullItem.id,
-        'isCompleted',
-      );
+      clearPersisted();
     };
 
     const refetchPlan = () => {
@@ -207,22 +200,17 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     if (settled.failure) return false;
 
-    if (settled.status === 'applied') {
-      // Clear persisted optimistic state on server confirmation; a queued
-      // toggle keeps it until the replay confirms.
-      optimisticDataPersistence.clear(
-        'MealPlanItem',
-        fullItem.id,
-        'isCompleted',
-      );
-    }
+    // A queued toggle keeps its persisted state until the replay confirms.
+    if (settled.status === 'applied') clearPersisted();
 
     if (markingComplete) {
-      if (hasRecipe && deductFromPantry) {
-        toastService.success(t('toasts.mealCompletedDeducted'));
-      } else {
-        toastService.success(t('toasts.mealCompleted'));
-      }
+      toastService.success(
+        t(
+          hasRecipe && deductFromPantry
+            ? 'toasts.mealCompletedDeducted'
+            : 'toasts.mealCompleted',
+        ),
+      );
     }
 
     return true;
@@ -235,24 +223,19 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // Local-first: remove from the cache BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
     // answers `converged`, which settles as applied).
-    try {
-      if (mealPlanId) {
+    if (mealPlanId) {
+      try {
         removeFromMealPlanItems(client.cache, mealPlanId, id, {
           evictItem: true,
         });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Delete Meal (optimistic)',
+        });
       }
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Meal (optimistic)',
-      });
-    }
-
-    // Claim the row for the duration of the mutation. A meal-plan event for
-    // this same id — another member's earlier ITEM_ADDED still in flight, or
-    // the server's own echo — would otherwise re-add it to the plan's meals
-    // after the optimistic removal above, and the meal would reappear.
-    // `useMealPlanSubscriptions` checks this before applying anything.
-    if (mealPlanId) {
+      // Claimed for the mutation's duration: a meal-plan event for this id
+      // (another member's earlier ITEM_ADDED, or the server's echo) would
+      // re-add it. `useMealPlanSubscriptions` checks this before applying.
       subscriptionService.registerPendingDelete(
         id,
         mealPlanId,
@@ -295,9 +278,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // Released on every outcome — settling never throws, so this runs whether
     // the delete committed, was refused, or was queued.
     subscriptionService.unregisterPendingDelete(id);
-
-    if (settled.failure) return false;
-    return true;
+    return !settled.failure;
   };
 
   return {

@@ -162,28 +162,11 @@ export function useQuantityEditModal(
     };
     const entity = { __typename: 'ShoppingListItem', id: itemId };
     writeEntityFields(client.cache, entity, next);
-    optimisticDataPersistence.save(
+    const clearPersisted = optimisticDataPersistence.trackFields(
       'ShoppingListItem',
       itemId,
-      'quantityInput',
-      quantityInput,
+      next,
     );
-    if (parsed !== null) {
-      optimisticDataPersistence.save(
-        'ShoppingListItem',
-        itemId,
-        'quantity',
-        parsed,
-      );
-    }
-    const clearPersisted = () => {
-      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
-      optimisticDataPersistence.clear(
-        'ShoppingListItem',
-        itemId,
-        'quantityInput',
-      );
-    };
 
     const settled = await settleMutation(
       () =>

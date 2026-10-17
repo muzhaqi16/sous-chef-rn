@@ -55,17 +55,12 @@ export function useMealPlan(id: string | null) {
     cursorVariableName: 'mealsAfter',
     refetch,
   });
-  const remainingMeals = useLoadRemainingPages(
-    !!mealPlan,
-    loading,
-    meals,
-    id ?? '',
-  );
-  const items = meals.items;
+  const { incomplete: mealsIncomplete, retry: retryRemainingMeals } =
+    useLoadRemainingPages(!!mealPlan, loading, meals, id ?? '');
   const itemDetails = useFragmentList({
     fragment: MealPlanMain_ItemFragmentDoc,
     fragmentName: 'MealPlanMain_item',
-    from: items,
+    from: meals.items,
   }).filter((item): item is MealPlanMain_ItemFragment => item !== null);
 
   // The server answered with an explicit null for this id: there is no such
@@ -77,13 +72,13 @@ export function useMealPlan(id: string | null) {
 
   return {
     mealPlan,
-    items,
+    items: meals.items,
     itemDetails,
     nutritionSummary: mealPlan?.nutritionSummary ?? null,
     mealPlanRef: data?.mealPlan ?? null,
     /** Pages of meals remain that could not be read: the plan is partial. */
-    mealsIncomplete: remainingMeals.incomplete,
-    retryRemainingMeals: remainingMeals.retry,
+    mealsIncomplete,
+    retryRemainingMeals,
     planNotFound,
     loading,
     error,

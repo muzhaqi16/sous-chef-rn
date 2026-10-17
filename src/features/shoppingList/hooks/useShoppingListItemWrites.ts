@@ -31,27 +31,18 @@ import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
 
-type LocalItemField = keyof Pick<
-  ShoppingListItem,
-  | 'itemName'
-  | 'notes'
-  | 'category'
-  | 'priority'
-  | 'sortOrder'
-  | 'quantity'
-  | 'quantityInput'
+type LocalItemFields = Partial<
+  Pick<
+    ShoppingListItem,
+    | 'itemName'
+    | 'notes'
+    | 'category'
+    | 'priority'
+    | 'sortOrder'
+    | 'quantity'
+    | 'quantityInput'
+  >
 >;
-type LocalItemFields = Partial<Pick<ShoppingListItem, LocalItemField>>;
-
-const LOCAL_ITEM_FIELDS = [
-  'itemName',
-  'notes',
-  'category',
-  'priority',
-  'sortOrder',
-  'quantity',
-  'quantityInput',
-] satisfies LocalItemField[];
 
 /**
  * The edited fields a cached `ShoppingListItem` holds in the input's own shape.
@@ -149,27 +140,16 @@ export function useShoppingListItemWrites(
   ): Promise<boolean> => {
     // Local-first: the edit shows at once and survives a restart while queued.
     const fields = localItemFields(input);
-    const persisted = LOCAL_ITEM_FIELDS.filter(
-      field => fields[field] !== undefined,
-    );
     writeEntityFields(
       client.cache,
       { __typename: 'ShoppingListItem', id: input.id },
       fields,
     );
-    for (const field of persisted) {
-      optimisticDataPersistence.save(
-        'ShoppingListItem',
-        input.id,
-        field,
-        fields[field],
-      );
-    }
-    const clearPersisted = () => {
-      for (const field of persisted) {
-        optimisticDataPersistence.clear('ShoppingListItem', input.id, field);
-      }
-    };
+    const clearPersisted = optimisticDataPersistence.trackFields(
+      'ShoppingListItem',
+      input.id,
+      fields,
+    );
 
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.

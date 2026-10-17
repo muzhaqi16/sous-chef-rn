@@ -18,9 +18,10 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import {
+  shownUnitPrice,
   totalFromUnitPrice,
-  unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { parseMoneyInput } from '#/utils/validation/common';
@@ -113,12 +114,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
   const parsedQty = parseQuantityInput(quantityInput);
   const parsedTotal = parseMoneyInput(priceInput);
-  // Shown only when the split is not trivial — at quantity 1 the per-unit
-  // price IS the total.
-  const perUnitPrice =
-    parsedQty != null && parsedQty > 0 && parsedQty !== 1 && parsedTotal != null
-      ? unitPriceFromTotal(parsedTotal, parsedQty)
-      : null;
+  const perUnitPrice = shownUnitPrice(parsedTotal, parsedQty);
 
   // An empty or unparseable field is NOT a quantity of zero: defaulting it
   // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
@@ -229,17 +225,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               </Text>
             ) : null}
             {perUnitPrice != null ? (
-              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
-                {t(
-                  item?.unitName
-                    ? 'purchaseAmountSheet.perUnitOfHint'
-                    : 'purchaseAmountSheet.perUnitHint',
-                  {
-                    price: money(perUnitPrice),
-                    unit: item?.unitName,
-                  },
-                )}
-              </Text>
+              <PerUnitHint
+                price={money(perUnitPrice)}
+                unit={item?.unitName}
+                style={styles.perUnitHint}
+              />
             ) : null}
           </View>
         </View>

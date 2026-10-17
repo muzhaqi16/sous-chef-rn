@@ -11,10 +11,8 @@ import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
-import {
-  createLocalShoppingListItem,
-  revertOptimisticShoppingListItem,
-} from '#features/shoppingList/cache/items';
+import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
 const mockNavigateTo = {
@@ -41,30 +39,18 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#features/shoppingList/cache/items', () => {
-  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
-  const revert = jest.fn();
-  return {
-    revertOptimisticShoppingListItem: revert,
-    addLocalShoppingListItem: jest.fn(),
-    buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
-    createLocalShoppingListItem: jest.fn((id: string) => ({
-      __typename: 'ShoppingListItem',
-      id,
-    })),
-    // Mirror the real reconciler (real classify + mocked revert) so the
-    // keep/revert decision under test matches production.
-    reconcileShoppingCreate: jest.fn(
-      (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (settledStatus(result) === 'failed') {
-          revert(cache, listId, id);
-          return 'reverted';
-        }
-        return 'kept';
-      },
-    ),
-  };
-});
+jest.mock('#features/shoppingList/cache/items', () => ({
+  addLocalShoppingListItem: jest.fn(),
+  buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
+  createLocalShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    id,
+  })),
+}));
+
+jest.mock('#features/shoppingList/cache/withdraw', () => ({
+  withdrawShoppingListItems: jest.fn(),
+}));
 
 const mockConvertExpiredToWaste = jest.fn();
 const mockAdjustQuantity = jest.fn();
@@ -634,10 +620,10 @@ describe('usePantryItemDetailActions', () => {
         await result.current.handleAddToShoppingList();
       });
 
-      expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      expect(withdrawShoppingListItems).toHaveBeenCalledWith(
         expect.anything(),
         'list-1',
-        expect.any(String),
+        [expect.any(String)],
       );
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -674,7 +660,7 @@ describe('usePantryItemDetailActions', () => {
         await result.current.handleAddToShoppingList();
       });
 
-      expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+      expect(withdrawShoppingListItems).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.addToListStatus).toBe('success');
     });

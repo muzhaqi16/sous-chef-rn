@@ -59,21 +59,11 @@ export function useMoveToAisleModal() {
       storeDepartmentOverride: department,
     };
     writeEntityFields(client.cache, entity, next);
-    const persisted = [
-      optimisticDataPersistence.track(
-        'ShoppingListItem',
-        current.id,
-        'storeDepartment',
-        next.storeDepartment,
-      ),
-      optimisticDataPersistence.track(
-        'ShoppingListItem',
-        current.id,
-        'storeDepartmentOverride',
-        next.storeDepartmentOverride,
-      ),
-    ];
-    const clearPersisted = () => persisted.forEach(clear => clear());
+    const clearPersisted = optimisticDataPersistence.trackFields(
+      'ShoppingListItem',
+      current.id,
+      next,
+    );
 
     await settleMutation(
       () =>

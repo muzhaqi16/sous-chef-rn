@@ -3,17 +3,11 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { itemIdOf, typedItemRef } from '#/utils/refInput';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { typedItemRef } from '#/utils/refInput';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  addLocalShoppingListItem,
-  createLocalShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-} from '#features/shoppingList/cache/items';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
@@ -202,86 +196,32 @@ export function usePantryItemDetailActions({
     setAddToListStatus('loading');
 
     const catalogItemId = item?.item?.id ?? '';
+    const itemName = item?.itemName ?? '';
     // An out-of-stock item (quantity 0) still adds one to the list.
     const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
-    const unitInput = item?.unit?.id ? { id: item.unit.id } : undefined;
-    const itemName = item?.itemName ?? '';
-    // Generate the new item's id so a create that gets queued (offline / API
-    // down) replays idempotently, keyed by this id.
-    const id = generateEntityId();
-    const lineItem = catalogItemId
-      ? { itemId: catalogItemId }
-      : typedItemRef(itemName);
-
-    // Write the item into the cache before firing so it's on the list when it
-    // comes into view — and survives a queued (offline / API-down) create that
-    // replays later.
-    // Built before the try: the `??`/`?.` below are value blocks, and the React
-    // Compiler bails out of a hook when one appears inside a try body.
-    const optimisticListItem = createLocalShoppingListItem(id, {
-      shoppingListId: selectedShoppingListId,
-      itemName,
-      quantity,
-      itemId: itemIdOf(lineItem),
-      unitId: item?.unit?.id,
-      unitName: item?.unit?.name,
-    });
-    try {
-      addLocalShoppingListItem(
-        client.cache,
-        selectedShoppingListId,
-        optimisticListItem,
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    const settled = await settleMutation(
-      () =>
-        addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [
-                {
-                  id,
-                  item: lineItem,
-                  quantity,
-                  unit: unitInput,
-                },
-              ],
-            },
-          },
-        }),
-      {
-        document: AddItemToShoppingListFromPantryItemDocument,
-        fallback: t('errors.addItemFailed'),
-        onFailed: () => {
-          reconcileShoppingCreate(
-            client.cache,
-            selectedShoppingListId,
-            id,
-            undefined,
-          );
-        },
+    const created = await createShoppingListRow(client.cache, {
+      listId: selectedShoppingListId,
+      row: {
+        itemName,
+        quantity,
+        unitId: item?.unit?.id,
+        unitName: item?.unit?.name,
       },
-    );
-
-    let reverted = settled.status === 'failed';
-    // The batch can apply while refusing its only item; that refusal carries no
-    // code to classify, so it takes the caller's copy.
-    if (
-      !reverted &&
-      reconcileShoppingCreate(client.cache, selectedShoppingListId, id, {
-        data: settled.data,
-      }) === 'reverted'
-    ) {
-      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      reverted = true;
+      line: {
+        item: catalogItemId
+          ? { itemId: catalogItemId }
+          : typedItemRef(itemName),
+        quantity,
+        unit: item?.unit?.id ? { id: item.unit.id } : undefined,
+      },
+      send: addToShoppingList,
+      document: AddItemToShoppingListFromPantryItemDocument,
+      fallback: t('errors.addItemFailed'),
+    });
+    if (created.failure) {
+      alertService.alert(created.failure.title, created.failure.body);
     }
-    setAddToListStatus(reverted ? 'error' : 'success');
+    setAddToListStatus(created.outcome === 'reverted' ? 'error' : 'success');
     statusTimeoutRef.current = setTimeout(
       () => setAddToListStatus('idle'),
       3000,

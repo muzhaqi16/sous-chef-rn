@@ -27,18 +27,21 @@ export function readMovedToPantryAt(
   cache: ApolloCache,
   itemId: string,
 ): string | null {
-  const cacheId = cache.identify({
-    __typename: 'ShoppingListItem',
-    id: itemId,
-  });
-  if (!cacheId) return null;
-  return readHeldPurchaseInfo(cache, cacheId)?.movedToPantryAt ?? null;
+  return readHeldPurchaseInfo(cache, itemId)?.movedToPantryAt ?? null;
+}
+
+/**
+ * Whether the cached line is purchased, which names the filtered variant of
+ * its list's connection it sits in; false for a line the cache lacks.
+ */
+export function readIsPurchased(cache: ApolloCache, itemId: string): boolean {
+  return readHeldPurchaseInfo(cache, itemId)?.isPurchased ?? false;
 }
 
 /** What the record holds, partial by contract: a line may lack either field. */
-function readHeldPurchaseInfo(cache: ApolloCache, cacheId: string) {
+function readHeldPurchaseInfo(cache: ApolloCache, itemId: string) {
   const held: DeepPartial<Purchase_WriteFragment> | null = cache.readFragment({
-    id: cacheId,
+    from: { __typename: 'ShoppingListItem', id: itemId },
     fragment: Purchase_WriteFragmentDoc,
     returnPartialData: true,
   });
@@ -70,7 +73,7 @@ export function writePurchaseInfo(
   });
   if (!cacheId) return;
 
-  const cached = readHeldPurchaseInfo(cache, cacheId);
+  const cached = readHeldPurchaseInfo(cache, itemId);
 
   const wasPurchased = cached?.isPurchased ?? false;
   // Only a caller that names the flag may change it. Everything else leaves it

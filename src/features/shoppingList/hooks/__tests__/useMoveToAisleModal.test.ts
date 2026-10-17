@@ -14,14 +14,6 @@ import {
 } from '../useMoveToAisleModal.generated';
 import { useMoveToAisleModal } from '../useMoveToAisleModal';
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
-
 const LINE: UseMoveToAisleModal_ItemFragment = {
   __typename: 'ShoppingListItem',
   id: 'line-1',
@@ -60,14 +52,21 @@ function setup(
       fragment: UseMoveToAisleModal_ItemFragmentDoc,
       fragmentName: 'useMoveToAisleModal_item',
     });
-  return { result, update, moveTo, readLine };
+  const readPersisted = () => {
+    optimisticDataPersistence.flush();
+    return optimisticDataPersistence.get('ShoppingListItem', 'line-1');
+  };
+  return { result, update, moveTo, readLine, readPersisted };
 }
 
 const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
   updateShoppingListItem: null,
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
+});
 
 describe('useMoveToAisleModal', () => {
   it('opens on the aisle a line is in', () => {
@@ -82,7 +81,7 @@ describe('useMoveToAisleModal', () => {
 
   // Queued offline, the line must stay in its new aisle through a restart.
   it('moves the line at once, and sends its own aisle on the line update', async () => {
-    const { result, update, moveTo, readLine } = setup(queued);
+    const { result, update, moveTo, readLine, readPersisted } = setup(queued);
 
     await moveTo(StoreDepartment.Frozen);
 
@@ -91,12 +90,10 @@ describe('useMoveToAisleModal', () => {
       storeDepartment: StoreDepartment.Frozen,
       storeDepartmentOverride: StoreDepartment.Frozen,
     });
-    expect(optimisticDataPersistence.track).toHaveBeenCalledWith(
-      'ShoppingListItem',
-      'line-1',
-      'storeDepartment',
-      StoreDepartment.Frozen,
-    );
+    expect(readPersisted()).toEqual({
+      storeDepartment: StoreDepartment.Frozen,
+      storeDepartmentOverride: StoreDepartment.Frozen,
+    });
     expect(update.fired).toEqual([
       {
         input: {
@@ -138,7 +135,7 @@ describe('useMoveToAisleModal', () => {
   });
 
   it('returns the line to its aisle when the server refuses the move', async () => {
-    const { moveTo, readLine } = setup({
+    const { moveTo, readLine, readPersisted } = setup({
       updateShoppingListItem: { __typename: 'ValidationError' },
     });
 
@@ -149,9 +146,6 @@ describe('useMoveToAisleModal', () => {
       storeDepartmentOverride: null,
     });
     // Both fields it kept for a restart are let go.
-    for (const { value } of jest.mocked(optimisticDataPersistence.track).mock
-      .results) {
-      expect(value).toHaveBeenCalled();
-    }
+    expect(readPersisted()).toEqual({});
   });
 });

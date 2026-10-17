@@ -24,13 +24,6 @@ jest.mock('#/utils/deviceLocale', () => ({
 }));
 
 jest.mock('#/services/errorService');
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
 
 const ITEM = gql`
   fragment ItemWritesProbe on ShoppingListItem {
@@ -50,6 +43,11 @@ type Item = {
 };
 
 const EDIT = { itemName: 'Oat milk', notes: 'organic' };
+
+const readPersisted = () => {
+  optimisticDataPersistence.flush();
+  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
+};
 
 function setup(outcome: 'applied' | 'refused') {
   const cache = seedCache([
@@ -100,6 +98,7 @@ function setup(outcome: 'applied' | 'refused') {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
   jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
@@ -110,6 +109,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     await waitFor(() => expect(result.current.itemData).not.toBeNull());
 
     let written: Item | null = null;
+    let persisted: Record<string, unknown> = {};
     await act(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1 1/2', ...EDIT },
@@ -117,6 +117,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
       );
       // Offline nothing else lands: the queue resolves the write with no payload.
       written = readItem();
+      persisted = readPersisted();
       await pending;
     });
 
@@ -125,14 +126,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
       quantity: 1.5,
       quantityInput: '1 1/2',
     });
-    for (const [field, value] of Object.entries(EDIT)) {
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        expect.anything(),
-        'item-1',
-        field,
-        value,
-      );
-    }
+    expect(persisted).toMatchObject(EDIT);
   });
 
   it('reads the API text it sends as API text on a comma device', async () => {
@@ -168,13 +162,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     });
 
     expect(updated).toBe(false);
-    for (const field of Object.keys(EDIT)) {
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        expect.anything(),
-        'item-1',
-        field,
-      );
-    }
+    expect(readPersisted()).toEqual({});
     await waitFor(
       () => expect(itemQuery.fired.length).toBeGreaterThan(readsBefore),
       { timeout: 3000 },

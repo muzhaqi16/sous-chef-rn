@@ -21,7 +21,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import {
   settleMutation,
-  settledStatus,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -73,20 +72,6 @@ export function reconcileShoppingItemCreateUpdate(
     });
   }
   return addNewItemToShoppingListCache(cache, listId, serverItem, false);
-}
-
-/**
- * A typed name the API matched to an item it holds: the line names that item,
- * and the one written under the minted id goes. A created item kept the id.
- */
-export function adoptMatchedItem(
-  cache: ApolloCache,
-  mintedItemId: string | null | undefined,
-  servedItemId: string | null | undefined,
-): void {
-  if (servedItemId) {
-    adoptServerEntityId(cache, 'Item', servedItemId, mintedItemId);
-  }
 }
 
 // Structural slices the builder below reads, kept loose so every
@@ -191,7 +176,14 @@ export function buildAddItemsReconcileUpdate({
             clientId,
             { countsSettled },
           );
-          adoptMatchedItem(cache, sent?.item?.inline?.id, item.item?.id);
+          // A typed name the API matched to an item it holds: the line names
+          // that item, and the one written under the minted id goes.
+          adoptServerEntityId(
+            cache,
+            'Item',
+            item.item?.id,
+            sent?.item?.inline?.id,
+          );
           onLine?.({ position, clientId, refused: false, listedBefore });
         } else {
           if (clientId) refused.push(clientId);
@@ -334,51 +326,6 @@ export function carriesListTotals(list: unknown, listId: string): boolean {
   return (
     isRecord(list) && list.id === listId && typeof list.totalItems === 'number'
   );
-}
-
-/**
- * Reconcile a local-first item create once the mutation resolves: `'failed'`
- * discards the optimistic row, `'applied'` / `'queued'` keep it — a queued create
- * replays later, keyed by the same `id`. Returns which happened, so the caller can
- * drive its own success / error UX.
- */
-export function reconcileShoppingCreate(
-  cache: ApolloCache,
-  listId: string,
-  optimisticId: string,
-  result: { data?: unknown; error?: unknown } | null | undefined,
-): 'kept' | 'reverted' {
-  const failed = settledStatus(result ?? undefined) === 'failed';
-  // The batch can resolve successfully while its single item fails
-  // (`results[0].success === false` — a per-item validation error reported inside
-  // the batch rather than as a top-level error member). Revert that too.
-  const applied = appliedPayload(
-    (
-      result as
-        | {
-            data?: {
-              addItemsToShoppingList?: {
-                __typename?: string;
-                results?: Array<{ success: boolean }>;
-              };
-            };
-          }
-        | null
-        | undefined
-    )?.data,
-  );
-  const itemFailed = applied?.results?.[0]?.success === false;
-  if (failed || itemFailed) {
-    try {
-      revertOptimisticShoppingListItem(cache, listId, optimisticId);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Shopping List Item',
-      });
-    }
-    return 'reverted';
-  }
-  return 'kept';
 }
 
 /** The API refuses a batch add of more lines than this. */

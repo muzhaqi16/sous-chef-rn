@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { AppState } from 'react-native';
 import {
   skipToken,
@@ -27,6 +27,27 @@ import {
   applySettingsUpdate,
   type NotificationSettings,
 } from './useNotificationSettings';
+
+/**
+ * Writes the device's zone over `held` once per mount and zone: a refusal
+ * reverts the field, which re-arms the effect, so retrying within the mount
+ * loops. The next launch retries it.
+ */
+function writeZoneOnce(
+  attemptedFor: RefObject<string | null>,
+  deviceTimezone: string,
+  held: string | null | undefined,
+  refusal: string,
+  write: () => Promise<boolean>,
+): void {
+  if (held === deviceTimezone || attemptedFor.current === deviceTimezone) {
+    return;
+  }
+  attemptedFor.current = deviceTimezone;
+  void write().then(persisted => {
+    if (!persisted) logger.warn(refusal, { deviceTimezone });
+  });
+}
 
 /**
  * Points the account's two zones at the device's, each "UTC" until written.
@@ -65,10 +86,6 @@ export const useDeviceTimezoneSync = (): void => {
   const settingsId = settings?.id;
   const settingsTimezone = settings?.timezone;
 
-  // The zone a write was attempted for this mount, per field. Never cleared:
-  // the local-first write reverts the cached field on a refusal, which moves
-  // the effect's dependency back to the value that triggered it, so retrying
-  // within the mount is an unbounded loop. A refusal is retried next launch.
   const attemptedFor = useRef<string | null>(null);
   const settingsAttemptedFor = useRef<string | null>(null);
 
@@ -84,33 +101,24 @@ export const useDeviceTimezoneSync = (): void => {
   }, []);
 
   useEffect(() => {
-    if (
-      !deviceTimezone ||
-      !preferencesId ||
-      quietHoursTimezone === deviceTimezone ||
-      attemptedFor.current === deviceTimezone
-    ) {
-      return;
-    }
-
-    attemptedFor.current = deviceTimezone;
+    if (!deviceTimezone || !preferencesId) return;
     const updates: Partial<NotificationSettings> = {
       quietHoursTimezone: deviceTimezone,
     };
-
-    void applySettingsUpdate({
-      cache: client.cache,
-      entity: { __typename: 'NotificationPreferences', id: preferencesId },
-      updates,
-      previous: snapshotFields({ quietHoursTimezone }, updates),
-      mutate: input =>
-        updatePreferences({
-          variables: { input },
+    writeZoneOnce(
+      attemptedFor,
+      deviceTimezone,
+      quietHoursTimezone,
+      'Quiet-hours timezone sync refused',
+      () =>
+        applySettingsUpdate({
+          cache: client.cache,
+          entity: { __typename: 'NotificationPreferences', id: preferencesId },
+          updates,
+          previous: snapshotFields({ quietHoursTimezone }, updates),
+          mutate: input => updatePreferences({ variables: { input } }),
         }),
-    }).then(persisted => {
-      if (persisted) return;
-      logger.warn('Quiet-hours timezone sync refused', { deviceTimezone });
-    });
+    );
   }, [
     client,
     deviceTimezone,
@@ -122,38 +130,34 @@ export const useDeviceTimezoneSync = (): void => {
   useEffect(() => {
     // No settings row yet: the first settings write creates one, and the
     // region-currency default reads "no row" as a currency never chosen.
-    if (
-      !deviceTimezone ||
-      !settingsId ||
-      settingsTimezone === deviceTimezone ||
-      settingsAttemptedFor.current === deviceTimezone
-    ) {
-      return;
-    }
-
-    settingsAttemptedFor.current = deviceTimezone;
+    if (!deviceTimezone || !settingsId) return;
     const updates = { timezone: deviceTimezone };
-
-    void updateEntityFieldsLocalFirst({
-      cache: client.cache,
-      entity: { __typename: 'UserSettings', id: settingsId },
-      updates,
-      previous: snapshotFields({ timezone: settingsTimezone }, updates),
-      settle: () =>
-        settleMutation(
-          () =>
-            updateSettings({
-              variables: { input: { regional: { timezone: deviceTimezone } } },
-            }),
-          {
-            document: UpdateUserPreferencesDocument,
-            fallback: t('settings.updateFailed'),
-            present: 'none',
-          },
-        ),
-    }).then(persisted => {
-      if (persisted) return;
-      logger.warn('Settings timezone sync refused', { deviceTimezone });
-    });
+    writeZoneOnce(
+      settingsAttemptedFor,
+      deviceTimezone,
+      settingsTimezone,
+      'Settings timezone sync refused',
+      () =>
+        updateEntityFieldsLocalFirst({
+          cache: client.cache,
+          entity: { __typename: 'UserSettings', id: settingsId },
+          updates,
+          previous: snapshotFields({ timezone: settingsTimezone }, updates),
+          settle: () =>
+            settleMutation(
+              () =>
+                updateSettings({
+                  variables: {
+                    input: { regional: { timezone: deviceTimezone } },
+                  },
+                }),
+              {
+                document: UpdateUserPreferencesDocument,
+                fallback: t('settings.updateFailed'),
+                present: 'none',
+              },
+            ),
+        }),
+    );
   }, [client, deviceTimezone, settingsId, settingsTimezone, updateSettings]);
 };

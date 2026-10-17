@@ -37,30 +37,16 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const { buildAddItemsReconcileUpdate } = jest.requireActual(
     '#features/shoppingList/cache/items',
   );
-  const revertOptimisticShoppingListItem = jest.fn();
   return {
     buildAddItemsReconcileUpdate,
-    revertOptimisticShoppingListItem,
     addLocalShoppingListItem: jest.fn(),
     createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
       id,
     })),
-    // Mirror the real reconciler (real classify + mocked revert) so the
-    // keep/revert decision under test matches production.
-    reconcileShoppingCreate: jest.fn(
-      (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (settledStatus(result) === 'failed') {
-          revertOptimisticShoppingListItem(cache, listId, id);
-          return 'reverted';
-        }
-        return 'kept';
-      },
-    ),
   };
 });
 

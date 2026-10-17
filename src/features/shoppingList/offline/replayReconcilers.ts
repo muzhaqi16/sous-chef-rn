@@ -2,14 +2,11 @@
  * Settling a shopping-list replay the server accepted in part, or answered
  * with a row other than the one minted.
  */
-import {
-  adoptMatchedItem,
-  carriesListTotals,
-} from '#features/shoppingList/cache/items';
+import { carriesListTotals } from '#features/shoppingList/cache/items';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { adoptServerEntityId, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
 
@@ -78,7 +75,7 @@ export const reconcileShoppingAddReplay: Reconciler = (
     }
     if (result.success !== false && isRecord(result.item)) {
       const sent = isRecord(row.item) ? idOf(row.item.inline) : undefined;
-      adoptMatchedItem(cache, sent, idOf(result.item.item));
+      adoptServerEntityId(cache, 'Item', idOf(result.item.item), sent);
     }
   });
   withdrawShoppingListItems(cache, shoppingListId, withdrawn, {

@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { invitationRefusalCopy } from '#/domain/invitationRefusal';
@@ -17,6 +18,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import {
   settleMutation,
+  type Settled,
   type SettledFailure,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
@@ -47,6 +49,11 @@ export type InvitationFailure = SettledFailure;
 export type InvitationWriteResult =
   | { status: 'done'; acceptedHomeId?: string }
   | { status: 'failed'; failure: InvitationFailure };
+
+const writeResult = ({
+  failure,
+}: Pick<Settled<unknown>, 'failure'>): InvitationWriteResult =>
+  failure ? { status: 'failed', failure } : { status: 'done' };
 
 /**
  * The invite is not pending any more: the server refused the write as a plain
@@ -84,17 +91,23 @@ export function useInvitationActions(
   const { t } = useTranslation();
   const inviteId = firstNonBlank(invitation?.payload.inviteId, invitation?.id);
 
+  /**
+   * A refusal is a completed mutation, so `update` runs for one too. An invite
+   * refused as a CONFLICT is spent (accepted, declined or revoked) and leaves
+   * the pending list; any other refusal leaves it PENDING, and evicting it
+   * would leave nothing to accept later.
+   */
+  const dropSpentHomeInvite = (cache: ApolloCache, data: unknown) => {
+    if (isSpentInvite(data) && inviteId && userId) {
+      removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+    }
+  };
+
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
-      // A refusal is a completed mutation, so this runs for one too. An invite
-      // refused as a CONFLICT is spent (accepted, declined or revoked) and
-      // leaves the pending list; any other refusal leaves it PENDING, and
-      // evicting it here would leave nothing to accept later.
       const payload = appliedPayload(data);
       if (!payload) {
-        if (isSpentInvite(data) && inviteId && userId) {
-          removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
-        }
+        dropSpentHomeInvite(cache, data);
         return;
       }
       addToHomes(cache, payload.membership.home, { position: 'end' });
@@ -123,9 +136,7 @@ export function useInvitationActions(
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
       if (!payload) {
-        if (isSpentInvite(data) && inviteId && userId) {
-          removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
-        }
+        dropSpentHomeInvite(cache, data);
         return;
       }
       const id = payload.homeInvite.id;
@@ -187,9 +198,7 @@ export function useInvitationActions(
         t('invitationAcceptance.acceptFailed'),
       ),
     );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
+    return writeResult(settled);
   };
 
   const declineHome = async (
@@ -202,9 +211,7 @@ export function useInvitationActions(
         t('invitationAcceptance.declineFailed'),
       ),
     );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
+    return writeResult(settled);
   };
 
   const declineList = async (
@@ -220,9 +227,7 @@ export function useInvitationActions(
         t('invitationAcceptance.declineFailed'),
       ),
     );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
+    return writeResult(settled);
   };
 
   return { token, acceptHome, acceptList, declineHome, declineList };

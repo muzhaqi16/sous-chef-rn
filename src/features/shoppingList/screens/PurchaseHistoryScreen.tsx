@@ -23,6 +23,7 @@ import {
 import { formatDateTime } from '#/utils/formatters/date';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -153,14 +154,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
               <View style={styles.purchasePriceCell}>
                 <Text role="label">{priceText}</Text>
                 {!!perUnitText && (
-                  <Text role="caption" tone="secondary">
-                    {t(
-                      purchase.unitSymbol
-                        ? 'purchaseAmountSheet.perUnitOfHint'
-                        : 'purchaseAmountSheet.perUnitHint',
-                      { price: perUnitText, unit: purchase.unitSymbol },
-                    )}
-                  </Text>
+                  <PerUnitHint price={perUnitText} unit={purchase.unitSymbol} />
                 )}
               </View>
             </View>

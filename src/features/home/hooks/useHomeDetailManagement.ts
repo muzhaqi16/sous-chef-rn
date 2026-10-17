@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import type { DocumentNode } from 'graphql';
 import { alertService } from '#/services/alertService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
@@ -39,7 +40,10 @@ import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  settleMutation,
+  type SettleStatus,
+} from '#/apollo/utils/settleMutation';
 import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
@@ -51,7 +55,21 @@ import {
   useSelectedHomeId,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
-import { errorService } from '#/services/errorService';
+
+const removeFromMembers = createRemoveFromParentConnectionUpdater(
+  'Home',
+  'membersConnection',
+  'Membership',
+);
+const removeFromInvites = createRemoveFromParentConnectionUpdater(
+  'Home',
+  'invitesConnection',
+  'HomeInvite',
+);
+
+/** A removal landed, or the server says its row is already gone. */
+const removalLanded = <TData>(data: TData | null | undefined) =>
+  !!appliedPayload(data) || isAlreadyGone(data);
 
 export interface RolePickerState {
   visible: boolean;
@@ -123,61 +141,48 @@ export function useHomeDetailManagement(homeId: string) {
   // DELETES the field, blanking the card.
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
+  /** Whether a write landed or queued; a refusal has been alerted. */
+  const settleWrite = async (
+    document: DocumentNode,
+    run: () => Promise<{ data?: unknown; error?: unknown }>,
+    fallback = t('errors.updateHomeFailed'),
+  ) => {
+    const settled = await settleMutation(run, { document, fallback });
+    return settled.status !== 'failed';
+  };
+
   /** One membership edit, stating the version the cache holds for that row. */
-  const sendMembershipUpdate = (
+  const updateMembership = (
     membershipId: string,
     fields: Omit<UpdateMembershipInput, 'id' | 'version'>,
   ) =>
-    chainVersionedWrite(
-      client.cache,
-      { __typename: 'Membership', id: membershipId },
-      version =>
-        updateMembershipMutation({
-          variables: { input: { id: membershipId, ...fields, version } },
-        }),
+    settleWrite(
+      UpdateMembershipDocument,
+      () =>
+        chainVersionedWrite(
+          client.cache,
+          { __typename: 'Membership', id: membershipId },
+          version =>
+            updateMembershipMutation({
+              variables: { input: { id: membershipId, ...fields, version } },
+            }),
+        ),
+      t('errors.updateMemberRoleFailed'),
     );
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
-      // A member the server says is already gone converges too.
-      if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) return;
-
-      try {
-        const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
-          'Home',
-          'membersConnection',
-          'Membership',
-        );
-        removeFromMembersCache(cache, homeId, variables.input.membershipId, {
-          evictItem: true,
-        });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Cache update failed for removeMember:',
-        });
-      }
+      if (!variables || !removalLanded(data)) return;
+      removeFromMembers(cache, homeId, variables.input.membershipId, {
+        evictItem: true,
+      });
     },
   });
 
   const [revokeInviteMutation] = useMutation(DeleteHomeInviteDocument, {
     update(cache, { data }, { variables }) {
-      // An invite the server says is already gone converges too.
-      if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) return;
-
-      try {
-        const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
-          'Home',
-          'invitesConnection',
-          'HomeInvite',
-        );
-        removeFromInvitesCache(cache, homeId, variables.input.id, {
-          evictItem: true,
-        });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Cache update failed for revokeInvite:',
-        });
-      }
+      if (!variables || !removalLanded(data)) return;
+      removeFromInvites(cache, homeId, variables.input.id, { evictItem: true });
     },
   });
 
@@ -192,13 +197,7 @@ export function useHomeDetailManagement(homeId: string) {
    * as not found included, which carries no membership for an `update` to read.
    */
   const removeLeftHome = () => {
-    try {
-      safeEvict(client.cache, 'Home', homeId);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Cache update failed for leaveHome:',
-      });
-    }
+    safeEvict(client.cache, 'Home', homeId);
     if (homeId !== selectedHomeId) return;
 
     const cachedData = client.cache.readQuery({ query: GetHomesDocument });
@@ -268,70 +267,63 @@ export function useHomeDetailManagement(homeId: string) {
     const { membershipId, currentRole } = rolePickerState;
     closeRolePicker();
     if (value === currentRole) return;
-
-    await settleMutation(
-      () => sendMembershipUpdate(membershipId, { role: value }),
-      {
-        document: UpdateMembershipDocument,
-        fallback: t('errors.updateMemberRoleFailed'),
-      },
-    );
+    await updateMembership(membershipId, { role: value });
   };
 
   // Toggle a single membership permission override. updateMembership returns the
   // updated member (HomeMemberCard_member), so Apollo normalizes it and the
   // toggle reflects the server state.
-  const updateMemberPermission = async (
+  const updateMemberPermission = (
     membershipId: string,
     permission: MembershipPermissionKey,
     value: boolean,
-  ) => {
-    const settled = await settleMutation(
-      () => sendMembershipUpdate(membershipId, { [permission]: value }),
-      {
-        document: UpdateMembershipDocument,
-        fallback: t('errors.updateMemberRoleFailed'),
-      },
-    );
-    return settled.status !== 'failed';
-  };
+  ) => updateMembership(membershipId, { [permission]: value });
+
+  /** Asks first; resolves whether the removal landed or queued, false on Cancel. */
+  const confirmRemoval = (
+    title: string,
+    body: string,
+    action: string,
+    remove: () => Promise<{ status: SettleStatus }>,
+  ) =>
+    new Promise<boolean>(resolve => {
+      alertService.alert(title, body, [
+        {
+          text: t('labels.cancel'),
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: action,
+          style: 'destructive',
+          onPress: () => {
+            void remove().then(settled => resolve(settled.status !== 'failed'));
+          },
+        },
+      ]);
+    });
 
   // Not `createRemoveOperation`: it sends `{ id }`, and this input's key is
   // `membershipId`.
   const removeMember = (membershipId: string, memberName: string) =>
-    new Promise<boolean>(resolve => {
-      alertService.alert(
-        t('confirmations.removeMemberTitle'),
-        t('confirmations.removeMemberNamed', { name: memberName }),
-        [
+    confirmRemoval(
+      t('confirmations.removeMemberTitle'),
+      t('confirmations.removeMemberNamed', { name: memberName }),
+      t('labels.remove'),
+      () =>
+        settleMutation(
+          () =>
+            removeMemberMutation({ variables: { input: { membershipId } } }),
           {
-            text: t('labels.cancel'),
-            style: 'cancel',
-            onPress: () => resolve(false),
-          },
-          {
-            text: t('labels.remove'),
-            style: 'destructive',
-            onPress: () => {
-              void settleMutation(
-                () =>
-                  removeMemberMutation({
-                    variables: { input: { membershipId } },
-                  }),
-                {
-                  document: RemoveMemberDocument,
-                  fallback: t('errors.removeMemberFailed'),
-                  removal: true,
-                  onConflictRefresh: () => {
-                    void refetch();
-                  },
-                },
-              ).then(settled => resolve(settled.status !== 'failed'));
+            document: RemoveMemberDocument,
+            fallback: t('errors.removeMemberFailed'),
+            removal: true,
+            onConflictRefresh: () => {
+              void refetch();
             },
           },
-        ],
-      );
-    });
+        ),
+    );
 
   const revokeInvite = (inviteId: string, inviteEmail: string) => {
     const operation = createRemoveOperation({
@@ -347,38 +339,23 @@ export function useHomeDetailManagement(homeId: string) {
     return operation();
   };
 
-  const leaveHome = (homeName: string): Promise<boolean> => {
-    return new Promise(resolve => {
-      alertService.alert(
-        t('labels.leaveHome'),
-        t('home.leaveBody', { name: homeName }),
-        [
+  const leaveHome = async (homeName: string): Promise<boolean> => {
+    const left = await confirmRemoval(
+      t('labels.leaveHome'),
+      t('home.leaveBody', { name: homeName }),
+      t('labels.leave'),
+      () =>
+        settleMutation(
+          () => leaveHomeMutation({ variables: { input: { homeId } } }),
           {
-            text: t('labels.cancel'),
-            style: 'cancel',
-            onPress: () => resolve(false),
+            document: LeaveHomeDocument,
+            fallback: t('errors.codes.genericRetry'),
+            removal: true,
           },
-          {
-            text: t('labels.leave'),
-            style: 'destructive',
-            onPress: () => {
-              void settleMutation(
-                () => leaveHomeMutation({ variables: { input: { homeId } } }),
-                {
-                  document: LeaveHomeDocument,
-                  fallback: t('errors.codes.genericRetry'),
-                  removal: true,
-                },
-              ).then(settled => {
-                const left = settled.status !== 'failed';
-                if (left) removeLeftHome();
-                resolve(left);
-              });
-            },
-          },
-        ],
-      );
-    });
+        ),
+    );
+    if (left) removeLeftHome();
+    return left;
   };
 
   const toggleJoinCode = async (enabled: boolean) => {
@@ -388,12 +365,8 @@ export function useHomeDetailManagement(homeId: string) {
 
     if (enabled) {
       // Dedicated mutation: mints a joinCode + join link server-side.
-      await settleMutation(
-        () => enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
-        {
-          document: EnableHomeJoinLinkDocument,
-          fallback: t('errors.updateHomeFailed'),
-        },
+      await settleWrite(EnableHomeJoinLinkDocument, () =>
+        enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
       );
       return;
     }
@@ -411,31 +384,20 @@ export function useHomeDetailManagement(homeId: string) {
   const transferOwnership = async (newOwnerId: string) => {
     if (transferInFlight.current) return false;
     transferInFlight.current = true;
-    const settled = await settleMutation(
-      () =>
-        transferOwnershipMutation({
-          variables: { input: { homeId, newOwnerId } },
-        }),
-      {
-        document: TransferHomeOwnershipDocument,
-        fallback: t('errors.updateHomeFailed'),
-      },
+    const transferred = await settleWrite(TransferHomeOwnershipDocument, () =>
+      transferOwnershipMutation({
+        variables: { input: { homeId, newOwnerId } },
+      }),
     );
     transferInFlight.current = false;
-    return settled.status !== 'failed';
+    return transferred;
   };
 
   // Rotate the join code to invalidate a leaked link.
-  const rotateJoinCode = async () => {
-    const settled = await settleMutation(
-      () => rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
-      {
-        document: UpdateHomeJoinCodeDocument,
-        fallback: t('errors.updateHomeFailed'),
-      },
+  const rotateJoinCode = () =>
+    settleWrite(UpdateHomeJoinCodeDocument, () =>
+      rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
     );
-    return settled.status !== 'failed';
-  };
 
   return {
     // Data

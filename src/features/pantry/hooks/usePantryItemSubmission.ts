@@ -1,10 +1,7 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import type {
-  StorageState,
-  ItemCondition,
-} from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
+import type { AddPantryItemFormData } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import {
@@ -18,40 +15,20 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
 import { toDateKey } from '#/utils/dateUtils';
 
-export interface PantryItemSubmissionParams {
+export function usePantryItemSubmission({
+  pantryId,
+  onSuccess,
+}: {
   pantryId: string | undefined;
-  itemName: string;
-  quantityInput: string;
-  unit: string;
-  unitId: string | null;
-  storageState: StorageState;
-  showPackageDetails: boolean;
-  packageSize: string;
-  contentUnit: string;
-  contentUnitId: string | null;
-  itemNetWeight: string;
-  weightUnitId: string | null;
-  pantryNetWeight: string;
-  pantryNetWeightUnitId: string | null;
-  expirationDate: Date | null;
-  selectedStorageLocationId: string | null;
-  storageLocation: string;
-  storageNotes: string;
-  condition: ItemCondition;
-  tags: string;
-  brand: string;
-  category: string;
-  minQuantity: string;
-  restockQuantity: string;
-  storeId: string | null;
-  costPerUnit: string;
-  acquisitionMethod: AcquisitionMethod;
   onSuccess: () => void;
-}
+}) {
+  const { t } = useTranslation();
+  const client = useApolloClient();
 
-export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
-  const {
-    pantryId,
+  const { addItem, adding } = usePantryIntake(pantryId);
+  const { restock } = usePantryRestock(pantryId);
+
+  const handleConfirm = async ({
     itemName,
     quantityInput,
     unit,
@@ -78,16 +55,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     storeId,
     costPerUnit,
     acquisitionMethod,
-    onSuccess,
-  } = params;
-
-  const { t } = useTranslation();
-  const client = useApolloClient();
-
-  const { addItem, adding } = usePantryIntake(pantryId);
-  const { restock } = usePantryRestock(pantryId);
-
-  const handleConfirm = async () => {
+  }: AddPantryItemFormData) => {
     if (!pantryId) return;
 
     // No validation here. The sheet's yup schema owns it and reports on the

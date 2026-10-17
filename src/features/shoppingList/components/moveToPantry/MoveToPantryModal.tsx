@@ -29,9 +29,10 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import {
+  shownUnitPrice,
   totalFromUnitPrice,
-  unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -328,18 +329,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // The same resolution the fields use, so this cannot render an empty unit.
   const lineUnitLabel = resolvedUnit.symbol;
 
-  // Shown only when the split is not trivial — at quantity 1 the per-unit price
-  // IS the total. Mirrors PurchaseAmountSheet.
-  const enteredQuantity = parseFractionalInput(quantityInput);
-  const enteredTotal = parseMoneyInput(actualPriceInput);
-  const perUnitPrice =
-    enteredQuantity !== null &&
-    !isNaN(enteredQuantity) &&
-    enteredQuantity > 0 &&
-    enteredQuantity !== 1 &&
-    enteredTotal != null
-      ? unitPriceFromTotal(enteredTotal, enteredQuantity)
-      : null;
+  const perUnitPrice = shownUnitPrice(
+    parseMoneyInput(actualPriceInput),
+    parseFractionalInput(quantityInput),
+  );
 
   // Reaching here means the schema passed, so every field rule has already
   // reported itself ON its own field.
@@ -601,21 +594,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 error={errors.actualPriceInput?.message}
               />
               {perUnitPrice != null ? (
-                <Text
-                  role="caption"
-                  tone="secondary"
+                <PerUnitHint
+                  price={money(perUnitPrice)}
+                  unit={lineUnitLabel}
                   style={styles.perUnitHint}
-                >
-                  {t(
-                    lineUnitLabel
-                      ? 'purchaseAmountSheet.perUnitOfHint'
-                      : 'purchaseAmountSheet.perUnitHint',
-                    {
-                      price: money(perUnitPrice),
-                      unit: lineUnitLabel,
-                    },
-                  )}
-                </Text>
+                />
               ) : null}
             </View>
 

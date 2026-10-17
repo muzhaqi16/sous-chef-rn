@@ -30,6 +30,7 @@ import {
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -325,17 +326,10 @@ export const ShoppingListItemDetail: React.FC<
               <View style={styles.paidCell}>
                 <Text role="label">{money(purchasedTotal)}</Text>
                 {perUnitSubline != null && (
-                  <Text role="caption" tone="secondary">
-                    {t(
-                      unitSymbol
-                        ? 'purchaseAmountSheet.perUnitOfHint'
-                        : 'purchaseAmountSheet.perUnitHint',
-                      {
-                        price: money(perUnitSubline),
-                        unit: unitSymbol,
-                      },
-                    )}
-                  </Text>
+                  <PerUnitHint
+                    price={money(perUnitSubline)}
+                    unit={unitSymbol}
+                  />
                 )}
               </View>
             </DetailRow>

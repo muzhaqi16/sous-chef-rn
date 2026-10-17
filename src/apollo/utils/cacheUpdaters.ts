@@ -414,14 +414,15 @@ export function safeEvict(
  * resolves to an EXISTING row, evict the stale client-id entity so its dangling
  * edge is dropped and one row stands. `clientId` MUST come off the mutation's own
  * `variables` at the call site, never a shared ref, so overlapping creates hold.
+ * An answer naming no row adopts nothing.
  */
 export function adoptServerEntityId(
   cache: ApolloCache,
   typename: string,
-  serverId: string,
+  serverId: string | null | undefined,
   clientId: string | null | undefined,
 ): void {
-  if (clientId && serverId !== clientId) {
+  if (serverId && clientId && serverId !== clientId) {
     safeEvict(cache, typename, clientId);
   }
 }
