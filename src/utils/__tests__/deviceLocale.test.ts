@@ -1,5 +1,4 @@
 import {
-  getDeviceDateOrder,
   getDeviceDecimalSeparator,
   resetDeviceLocaleCache,
 } from '../deviceLocale';
@@ -33,27 +32,8 @@ function withoutIntl() {
   }) as unknown as typeof Intl.NumberFormat);
 }
 
-const realDateTimeFormat = Intl.DateTimeFormat;
-
-function setDateTimeFormat(impl: typeof Intl.DateTimeFormat) {
-  (Intl as { DateTimeFormat: typeof Intl.DateTimeFormat }).DateTimeFormat =
-    impl;
-}
-
-/** As {@link onLocale}, for the device's date conventions. */
-function onDateLocale(locale: string) {
-  resetDeviceLocaleCache();
-  setDateTimeFormat(function DateTimeFormatShim(
-    _requested?: unknown,
-    options?: Intl.DateTimeFormatOptions,
-  ) {
-    return new realDateTimeFormat(locale, options);
-  } as unknown as typeof Intl.DateTimeFormat);
-}
-
 afterEach(() => {
   setNumberFormat(realNumberFormat);
-  setDateTimeFormat(realDateTimeFormat);
   resetDeviceLocaleCache();
 });
 
@@ -83,27 +63,5 @@ describe('getDeviceDecimalSeparator', () => {
     // is the point: this must not re-resolve on every keystroke.
     setNumberFormat(realNumberFormat);
     expect(getDeviceDecimalSeparator()).toBe(',');
-  });
-});
-
-describe('getDeviceDateOrder', () => {
-  it.each([
-    ['en-US', 'monthFirst'],
-    ['en-GB', 'dayFirst'],
-    ['es-ES', 'dayFirst'],
-    ['it-IT', 'dayFirst'],
-    ['sq-AL', 'dayFirst'],
-    ['de-DE', 'dayFirst'],
-  ])('%s writes the date %s', (locale, expected) => {
-    onDateLocale(locale);
-    expect(getDeviceDateOrder()).toBe(expected);
-  });
-
-  it('falls back to month-first when Intl is unavailable', () => {
-    resetDeviceLocaleCache();
-    setDateTimeFormat((() => {
-      throw new Error('Intl.DateTimeFormat is not available');
-    }) as unknown as typeof Intl.DateTimeFormat);
-    expect(getDeviceDateOrder()).toBe('monthFirst');
   });
 });

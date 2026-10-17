@@ -39,6 +39,7 @@ interface ReceiptLineFormProps {
   candidates: readonly ReceiptCandidate[];
   /** The shopping list line the product and unit being picked would tick off. */
   listItemNameFor: (key: ListMatchKey) => string | undefined;
+  /** A product picked before it is saved, so its list line is asked for. */
   onPickItem: (itemId: string) => void;
   onClose: () => void;
   onSave: (choice: ReceiptLineChoice) => void;
@@ -276,55 +277,29 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   );
 };
 
-interface ReceiptLineSheetProps {
+interface ReceiptLineSheetProps extends Omit<ReceiptLineFormProps, 'line'> {
   visible: boolean;
   /** The line being edited, kept after closing so the sheet animates out full. */
   line: ReceiptReviewLine | null;
-  choice: ReceiptLineChoice | undefined;
-  candidates: readonly ReceiptCandidate[];
-  listItemNameFor: (key: ListMatchKey) => string | undefined;
-  /** A product picked before it is saved, so its list line is asked for. */
-  onPickItem: (itemId: string) => void;
   /** Changes on every opening, so each one starts from the saved choice. */
   opening: number;
-  onClose: () => void;
-  onSave: (choice: ReceiptLineChoice) => void;
-  onRemove: () => void;
 }
 
 /** Picks the product a receipt line is, with its amount and price. */
 export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
   visible,
   line,
-  choice,
-  candidates,
-  listItemNameFor,
-  onPickItem,
   opening,
-  onClose,
-  onSave,
-  onRemove,
+  ...form
 }) => (
   <Sheet
     mode="form"
     visible={visible ? !!line : false}
-    onDismiss={onClose}
+    onDismiss={form.onClose}
     snapPoints={['85%']}
     contentContainerStyle={styles.content}
   >
-    {!!line && (
-      <ReceiptLineForm
-        key={opening}
-        line={line}
-        choice={choice}
-        candidates={candidates}
-        listItemNameFor={listItemNameFor}
-        onPickItem={onPickItem}
-        onClose={onClose}
-        onSave={onSave}
-        onRemove={onRemove}
-      />
-    )}
+    {!!line && <ReceiptLineForm key={opening} line={line} {...form} />}
   </Sheet>
 );
 

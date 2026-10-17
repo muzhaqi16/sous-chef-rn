@@ -3,7 +3,6 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import { isRecord } from '#/utils/isRecord';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ParsedReceipt, ReceiptTotalsGap } from '../utils/parsedReceipt';
@@ -138,53 +137,30 @@ export interface ReceiptDraft {
 interface ReceiptDraftState {
   draft: ReceiptDraft | null;
   saveDraft: (draft: ReceiptDraft) => void;
-  /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
-  /**
-   * Mints the ids these lines and `sends` check-ins need, keeping every id
-   * already minted.
-   */
+  /** Keeps every id already minted. */
   ensureCheckInIds: (indexes: readonly number[], sends: number) => void;
   setCheckInState: (state: ReceiptCheckIn['state']) => void;
-  /**
-   * What the API made of check-in `checkInId`'s lines: those it recorded are
-   * added, the rest failed with their codes. Ignored once the draft has moved on.
-   */
+  /** Ignored for a check-in the draft does not hold. */
   settleCheckIn: (
     checkInId: string,
     results: readonly CheckInLineOutcome[],
   ) => void;
-  /**
-   * Replaces a check-in id another user holds. Its lines keep their purchase
-   * ids, which are what a resend is recognised by.
-   */
+  /** For an id another user holds: a resend is known by its purchase ids. */
   remintCheckInId: (id: string) => string;
   /**
-   * The review is done with the receipt. One still sending or queued is kept
-   * until it lands, and one with a refused line for its retry; else it goes.
+   * Keeps a receipt still sending or queued until it lands, and one with a
+   * refused line for its retry; else the draft goes.
    */
   closeReceipt: () => void;
-  /** The day of the shop, as the user corrected it (YYYY-MM-DD). */
   setPurchasedOn: (day: string) => void;
-  /** The store, as the user corrected it. */
   chooseStore: (store: { id: string; name: string }) => void;
-  /**
-   * The upload keys of the photos of the draft scanned at `scannedAt`, before
-   * it is asked for, and whether every one was masked. An upload that outlives
-   * its draft records nothing.
-   */
+  /** Ignored once its draft is gone, read or asked: an upload outlives it. */
   recordPhotoKeys: (scannedAt: string, keys: string[], masked: boolean) => void;
-  /**
-   * Records that server parse `id` was asked for, of the photos or the text, if
-   * nothing read the draft yet, or asked again after the daily allowance
-   * turned it away.
-   */
+  /** Ignored once the draft is read or asked, unless a limit turned it away. */
   askServerParse: (id: string, via: ServerReceiptParse['via']) => void;
-  /**
-   * Records what became of server parse `id`, or when the daily allowance lets
-   * it be asked again. Ignored once the draft has moved on.
-   */
+  /** Ignored once the draft has moved on from parse `id`. */
   settleServerParse: (
     id: string,
     outcome: ServerParseOutcome | { retryAt: string },
@@ -193,20 +169,6 @@ interface ReceiptDraftState {
 }
 
 const PERSIST_KEY = 'sous-chef-receipt-draft';
-
-// v1 parses carry no `via`: a draft with photo keys sent them.
-const migrateDraft = (persisted: unknown, version: number): unknown => {
-  if (version >= 2 || !isRecord(persisted) || !isRecord(persisted.draft)) {
-    return persisted;
-  }
-  const { draft } = persisted;
-  if (!isRecord(draft.serverParse)) return persisted;
-  const via = Array.isArray(draft.photoKeys) ? 'photos' : 'text';
-  return {
-    ...persisted,
-    draft: { ...draft, serverParse: { ...draft.serverParse, via } },
-  };
-};
 
 const withCheckInIds = (
   checkIn: ReceiptCheckIn | undefined,
@@ -239,198 +201,169 @@ const withoutIndexes = <Value>(
 /** The one receipt waiting to be matched; persisted so a scan made offline survives a restart. */
 export const useReceiptDraftStore = create<ReceiptDraftState>()(
   persist(
-    set => ({
-      draft: null,
-      saveDraft: draft => set({ draft }),
-      chooseLine: (index, choice) =>
-        set(({ draft }) =>
-          draft
-            ? {
-                draft: {
-                  ...draft,
-                  choices: { ...draft.choices, [index]: choice },
-                },
-              }
-            : {},
-        ),
-      markAdded: indexes =>
-        set(({ draft }) =>
-          draft
-            ? {
-                draft: {
-                  ...draft,
-                  added: [...new Set([...(draft.added ?? []), ...indexes])],
-                  failed: withoutIndexes(draft.failed, indexes),
-                },
-              }
-            : {},
-        ),
-      ensureCheckInIds: (indexes, sends) =>
-        set(({ draft }) =>
-          draft
-            ? {
-                draft: {
-                  ...draft,
-                  checkIn: withCheckInIds(draft.checkIn, indexes, sends),
-                },
-              }
-            : {},
-        ),
-      setCheckInState: state =>
-        set(({ draft }) =>
-          draft?.checkIn
-            ? { draft: { ...draft, checkIn: { ...draft.checkIn, state } } }
-            : {},
-        ),
-      settleCheckIn: (checkInId, results) =>
+    set => {
+      // Merges what `change` returns into the draft; null keeps it as it is.
+      const patchDraft = (
+        change: (draft: ReceiptDraft) => Partial<ReceiptDraft> | null,
+      ) =>
         set(({ draft }) => {
-          if (!draft?.checkIn?.ids.includes(checkInId)) return {};
-          const refused = new Set(
-            results
-              .filter(result => !result.success)
-              .map(result => result.index),
-          );
-          // A line counts as added once sent; one refused goes back out.
-          const added = [
-            ...new Set([
-              ...(draft.added ?? []),
-              ...results
-                .filter(result => result.success)
+          const fields = draft ? change(draft) : null;
+          return draft && fields ? { draft: { ...draft, ...fields } } : {};
+        });
+      return {
+        draft: null,
+        saveDraft: draft => set({ draft }),
+        chooseLine: (index, choice) =>
+          patchDraft(({ choices }) => ({
+            choices: { ...choices, [index]: choice },
+          })),
+        markAdded: indexes =>
+          patchDraft(({ added, failed }) => ({
+            added: [...new Set([...(added ?? []), ...indexes])],
+            failed: withoutIndexes(failed, indexes),
+          })),
+        ensureCheckInIds: (indexes, sends) =>
+          patchDraft(({ checkIn }) => ({
+            checkIn: withCheckInIds(checkIn, indexes, sends),
+          })),
+        setCheckInState: state =>
+          patchDraft(({ checkIn }) =>
+            checkIn ? { checkIn: { ...checkIn, state } } : null,
+          ),
+        settleCheckIn: (checkInId, results) =>
+          set(({ draft }) => {
+            if (!draft?.checkIn?.ids.includes(checkInId)) return {};
+            const refused = new Set(
+              results
+                .filter(result => !result.success)
                 .map(result => result.index),
-            ]),
-          ].filter(index => !refused.has(index));
-          const failed: Partial<Record<number, ErrorCode>> = {};
-          for (const { index, success, failure } of results) {
-            if (!success && failure && isErrorCode(failure.code)) {
-              failed[index] = failure.code;
+            );
+            // A line counts as added once sent; one refused goes back out.
+            const added = [
+              ...new Set([
+                ...(draft.added ?? []),
+                ...results
+                  .filter(result => result.success)
+                  .map(result => result.index),
+              ]),
+            ].filter(index => !refused.has(index));
+            const failed: Partial<Record<number, ErrorCode>> = {};
+            for (const { index, success, failure } of results) {
+              if (!success && failure && isErrorCode(failure.code)) {
+                failed[index] = failure.code;
+              }
             }
-          }
-          const stillFailed = {
-            ...withoutIndexes(draft.failed, added),
-            ...failed,
-          };
-          if (draft.checkIn.closed && Object.keys(stillFailed).length === 0) {
-            return { draft: null };
-          }
-          return {
-            draft: {
-              ...draft,
-              added,
-              failed: stillFailed,
-              checkIn: { ...draft.checkIn, state: 'idle' },
-            },
-          };
-        }),
-      closeReceipt: () =>
-        set(({ draft }) => {
-          if (!draft) return {};
-          if (draft.checkIn && draft.checkIn.state !== 'idle') {
-            return {
-              draft: { ...draft, checkIn: { ...draft.checkIn, closed: true } },
+            const stillFailed = {
+              ...withoutIndexes(draft.failed, added),
+              ...failed,
             };
-          }
-          if (Object.keys(draft.failed ?? {}).length > 0) return {};
-          return { draft: null };
-        }),
-      remintCheckInId: id => {
-        const reminted = generateEntityId();
-        set(({ draft }) =>
-          draft?.checkIn
-            ? {
+            if (draft.checkIn.closed && Object.keys(stillFailed).length === 0) {
+              return { draft: null };
+            }
+            return {
+              draft: {
+                ...draft,
+                added,
+                failed: stillFailed,
+                checkIn: { ...draft.checkIn, state: 'idle' },
+              },
+            };
+          }),
+        closeReceipt: () =>
+          set(({ draft }) => {
+            if (!draft) return {};
+            if (draft.checkIn && draft.checkIn.state !== 'idle') {
+              return {
                 draft: {
                   ...draft,
+                  checkIn: { ...draft.checkIn, closed: true },
+                },
+              };
+            }
+            if (Object.keys(draft.failed ?? {}).length > 0) return {};
+            return { draft: null };
+          }),
+        remintCheckInId: id => {
+          const reminted = generateEntityId();
+          patchDraft(({ checkIn }) =>
+            checkIn
+              ? {
                   checkIn: {
-                    ...draft.checkIn,
-                    ids: draft.checkIn.ids.map(held =>
+                    ...checkIn,
+                    ids: checkIn.ids.map(held =>
                       held === id ? reminted : held,
                     ),
                   },
-                },
-              }
-            : {},
-        );
-        return reminted;
-      },
-      setPurchasedOn: day =>
-        set(({ draft }) =>
-          draft ? { draft: { ...draft, purchasedOn: day } } : {},
-        ),
-      chooseStore: store =>
-        set(({ draft }) => (draft ? { draft: { ...draft, store } } : {})),
-      recordPhotoKeys: (scannedAt, keys, masked) =>
-        set(({ draft }) =>
-          draft?.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
-            ? {
+                }
+              : null,
+          );
+          return reminted;
+        },
+        setPurchasedOn: day => patchDraft(() => ({ purchasedOn: day })),
+        chooseStore: store => patchDraft(() => ({ store })),
+        recordPhotoKeys: (scannedAt, keys, masked) =>
+          patchDraft(draft =>
+            draft.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
+              ? { photoKeys: keys, ...(masked ? { photosMasked: true } : {}) }
+              : null,
+          ),
+        askServerParse: (id, via) =>
+          patchDraft(({ parsed, serverParse }) =>
+            !parsed && (!serverParse || serverParse.state === 'limited')
+              ? { serverParse: { id, via, state: 'pending' } }
+              : null,
+          ),
+        settleServerParse: (id, outcome) =>
+          set(({ draft }) => {
+            if (draft?.serverParse?.id !== id) return {};
+            const { via } = draft.serverParse;
+            if (typeof outcome === 'object' && 'parsed' in outcome) {
+              const { serverParse: _asked, ...rest } = draft;
+              // The day read on the phone, before redaction, stands.
+              const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
+              return {
                 draft: {
-                  ...draft,
-                  photoKeys: keys,
-                  ...(masked ? { photosMasked: true } : {}),
+                  ...rest,
+                  parsed: outcome.parsed,
+                  parsedBy: 'server',
+                  parseId: id,
+                  ...(purchasedOn ? { purchasedOn } : {}),
+                  ...(outcome.totalsGap
+                    ? { totalsGap: outcome.totalsGap }
+                    : {}),
+                  ...(outcome.printedStore
+                    ? { printedStore: outcome.printedStore }
+                    : {}),
                 },
-              }
-            : {},
-        ),
-      askServerParse: (id, via) =>
-        set(({ draft }) =>
-          draft &&
-          !draft.parsed &&
-          (!draft.serverParse || draft.serverParse.state === 'limited')
-            ? {
-                draft: {
-                  ...draft,
-                  serverParse: { id, via, state: 'pending' },
-                },
-              }
-            : {},
-        ),
-      settleServerParse: (id, outcome) =>
-        set(({ draft }) => {
-          if (draft?.serverParse?.id !== id) return {};
-          const { via } = draft.serverParse;
-          if (typeof outcome === 'object' && 'parsed' in outcome) {
-            const { serverParse: _asked, ...rest } = draft;
-            // The day read on the phone, before redaction, stands.
-            const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
-            return {
-              draft: {
-                ...rest,
-                parsed: outcome.parsed,
-                parsedBy: 'server',
-                parseId: id,
-                ...(purchasedOn ? { purchasedOn } : {}),
-                ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
-                ...(outcome.printedStore
-                  ? { printedStore: outcome.printedStore }
-                  : {}),
-              },
-            };
-          }
-          // A photo parse that read nothing spent its photos, a limit's refusal
-          // too (the API counts photo parses against a smaller allowance of
-          // their own): a receipt with text is read from it at once.
-          if (via === 'photos' && draft.pages.length > 0) {
-            const {
-              photoKeys: _spent,
-              photosMasked: _masked,
-              serverParse: _photoParse,
-              ...text
-            } = draft;
-            return { draft: text };
-          }
-          const serverParse: ServerReceiptParse =
-            typeof outcome === 'string'
-              ? { id, via, state: outcome }
-              : { id, via, state: 'limited', retryAt: outcome.retryAt };
-          return { draft: { ...draft, serverParse } };
-        }),
-      clearDraft: () => set({ draft: null }),
-    }),
+              };
+            }
+            // A photo parse that read nothing spent its photos, a limit's
+            // refusal too (the API counts photo parses against a smaller
+            // allowance of their own): a receipt with text is read from it
+            // at once.
+            if (via === 'photos' && draft.pages.length > 0) {
+              const {
+                photoKeys: _spent,
+                photosMasked: _masked,
+                serverParse: _photoParse,
+                ...text
+              } = draft;
+              return { draft: text };
+            }
+            const serverParse: ServerReceiptParse =
+              typeof outcome === 'string'
+                ? { id, via, state: outcome }
+                : { id, via, state: 'limited', retryAt: outcome.retryAt };
+            return { draft: { ...draft, serverParse } };
+          }),
+        clearDraft: () => set({ draft: null }),
+      };
+    },
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
-      // v3 adds `checkIn` and `failed`, both optional: a v2 draft reads as is.
       version: 3,
       partialize: state => ({ draft: state.draft }),
-      migrate: migrateDraft,
     },
   ),
 );

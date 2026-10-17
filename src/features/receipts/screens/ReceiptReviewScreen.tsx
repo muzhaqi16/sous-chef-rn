@@ -264,6 +264,21 @@ export const ReceiptReviewScreen: React.FC = () => {
     toPantryMain();
   };
 
+  // A day read from the receipt shows as text that opens the calendar.
+  const dateField = (
+    <DatePickerField
+      presentation={dayIsScanDay ? 'field' : 'row'}
+      label={t('receipts.review.dateLabel')}
+      value={fromDateKey(purchasedOn)}
+      onChange={date => {
+        if (date) setPurchasedOn(toDateKey(date));
+      }}
+      minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
+      maximumDate={fromDateKey(today)}
+      testID={receiptsTestIDs.reviewDate}
+    />
+  );
+
   const footer =
     rows.length > 0 ? (
       <Button
@@ -339,32 +354,13 @@ export const ReceiptReviewScreen: React.FC = () => {
                 ) : null}
                 {dayIsScanDay ? (
                   <View>
-                    <DatePickerField
-                      label={t('receipts.review.dateLabel')}
-                      value={fromDateKey(purchasedOn)}
-                      onChange={date => {
-                        if (date) setPurchasedOn(toDateKey(date));
-                      }}
-                      minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
-                      maximumDate={fromDateKey(today)}
-                      testID={receiptsTestIDs.reviewDate}
-                    />
+                    {dateField}
                     <Text role="caption" tone="tertiary">
                       {t('receipts.review.dateScanned')}
                     </Text>
                   </View>
                 ) : (
-                  <DatePickerField
-                    presentation="row"
-                    label={t('receipts.review.dateLabel')}
-                    value={fromDateKey(purchasedOn)}
-                    onChange={date => {
-                      if (date) setPurchasedOn(toDateKey(date));
-                    }}
-                    minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
-                    maximumDate={fromDateKey(today)}
-                    testID={receiptsTestIDs.reviewDate}
-                  />
+                  dateField
                 )}
               </View>
               <Text role="body" tone="secondary">

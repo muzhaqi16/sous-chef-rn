@@ -494,7 +494,7 @@ those repos.
 **Receipt reading.** The phone reads a receipt first, by the rules the server reads with (`@muzhaqi16/receipt-rules`, pinned to an exact version), and the server reads only what they refuse. Every reading is in the API's shape, and `fromServerReceipt` copies its lines and adds none of its own.
 
 - The rules read the redacted pages (`readOnPhone`), the text their corpus holds. The day is read before redaction, by the package's `readReceiptDate`, because tills print it below the payment block.
-- Where the platform's switch is on (`onDeviceStructuring`) and its model is available, the phone's model reads at the same time. Its reading is held to the same check (`checkOnPhone`, the package's `checkReading`).
+- Where the `deviceReceiptModel` flag is on (off by default) and the phone's model is available, the model reads at the same time. Its reading is held to the same check (`checkOnPhone`, the package's `checkReading`).
 - The first reading that adds up is the receipt's (`parsedBy: 'device'`), its store taken from the reading's merchant. The draft is then parsed, so no server parse is asked, and any photos prepared for it are deleted unsent. The rules answer in milliseconds, so the model is waited for only once they refuse.
 - A reading's verdict is stored with it (`draft.totalsGap`): the server's `TOTALS_MISMATCH`, or the rules' refusal. The review shows it and never adds up the lines itself. With the server's reading off (`receiptParsing`), a reading the rules refused is kept anyway, with its gap.
 - `deviceReceiptReading` turns reading on the phone off, and every receipt then goes to the server.

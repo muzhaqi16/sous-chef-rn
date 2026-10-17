@@ -1,5 +1,10 @@
 import type { PhotoMask, RecognizedLine } from '#/native/TextRecognition';
-import type { ReceiptRow, ReceiptRowsPage } from './assembleReceiptRows';
+import {
+  measuredSlopeOf,
+  textHeightOf,
+  type ReceiptRow,
+  type ReceiptRowsPage,
+} from './assembleReceiptRows';
 import { isItemLine } from './hasItemLines';
 import { holdsDate } from './receiptDate';
 import { rowRedactions, type RowRedaction } from './redactReceiptText';
@@ -15,18 +20,13 @@ const NUMBERED_FIELD = /#\s*\d/;
 // How far a mask reaches past its text, as a share of the text's height.
 const MARGIN = 0.3;
 
-// The widest line's slope stands for its row's, as in assembly: a short line's
-// own is noise, and a steeper one runs down the margin.
-const SLOPED_LINE = 0.07;
-const MAX_SLOPE = 0.5;
-
 // Far enough past a page's edge for any tilt to clear it.
 const PAST_EDGE = 2;
 
 type Point = readonly [x: number, y: number];
 
-const textHeightOf = ({ height, width, slope = 0 }: RecognizedLine) =>
-  Math.max(height - Math.abs(slope) * width, height / 3);
+const ownTextHeight = (line: RecognizedLine) =>
+  textHeightOf(line, line.slope ?? 0);
 
 interface TextEdges {
   top: [left: Point, right: Point];
@@ -80,17 +80,13 @@ const lower = (a: Edge, b: Edge): Edge => [
   Math.max(a[1], b[1]),
 ];
 
-// A curled receipt's rows tilt more than its page: each edge follows its row.
+// A curled receipt's rows tilt more than its page: each edge follows its row,
+// along its widest line, as in assembly.
 const slopeOf = (lines: readonly RecognizedLine[], tilt: number) => {
   const widest = lines.reduce((wide, line) =>
     line.width > wide.width ? line : wide,
   );
-  const { slope } = widest;
-  return slope !== undefined &&
-    widest.width >= SLOPED_LINE &&
-    Math.abs(slope) <= MAX_SLOPE
-    ? slope
-    : tilt;
+  return measuredSlopeOf(widest) ?? tilt;
 };
 
 // The edge along `slope` that clears every point, on the side `pick` chooses.
@@ -133,7 +129,7 @@ const boxOf = (line: RecognizedLine): PhotoMask => {
   } = edgesOf(line);
   return {
     points: [...topLeft, ...topRight, ...bottomRight, ...bottomLeft],
-    margin: textHeightOf(line) * MARGIN,
+    margin: ownTextHeight(line) * MARGIN,
   };
 };
 
@@ -148,7 +144,7 @@ const regionTopOf = (
   tilt: number,
 ): Edge => {
   const [left, right] = topOf(first.lines, tilt);
-  const reach = Math.max(...first.lines.map(textHeightOf)) * MARGIN;
+  const reach = Math.max(...first.lines.map(ownTextHeight)) * MARGIN;
   const [limitLeft, limitRight] = above
     ? bottomOf(above.lines, tilt)
     : PAGE_TOP;

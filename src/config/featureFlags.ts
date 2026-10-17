@@ -4,6 +4,7 @@
  * without them. A whole feature is switched by `appConfig.features` instead.
  */
 export type FeatureFlag =
+  | 'deviceReceiptModel'
   | 'deviceReceiptReading'
   | 'ingredientPaste'
   | 'pantrySuggestions'
@@ -19,6 +20,8 @@ export type FeatureFlag =
  * flag the server owns is on only where the server also says so for the user.
  */
 const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
+  // The phone's own model reads a receipt beside the rules; off, rules alone.
+  deviceReceiptModel: false,
   // A receipt read on the phone by `@muzhaqi16/receipt-rules` first, kept when it
   // adds up; off, every receipt is read as `receiptParsing` says.
   deviceReceiptReading: true,

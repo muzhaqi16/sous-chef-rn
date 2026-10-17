@@ -4,8 +4,9 @@ import { isServerOwned, serverFlagsOf } from '#/config/serverFeatureFlags';
 
 describe('resolveFeatureFlags', () => {
   // The server decides per user; the build only allows.
-  it('allows every capability by default', () => {
+  it('allows every capability but the phone model by default', () => {
     expect(resolveFeatureFlags({}, undefined)).toEqual({
+      deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,
       pantrySuggestions: true,
@@ -49,6 +50,7 @@ describe('resolveFeatureFlags', () => {
     expect(
       resolveFeatureFlags({}, 'retiredFlag=off,ingredientPaste=maybe,,='),
     ).toEqual({
+      deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,
       pantrySuggestions: true,

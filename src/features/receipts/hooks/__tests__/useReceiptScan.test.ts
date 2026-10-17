@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react-native';
 import {
   checkReading as rulesCheckReading,
+  dateOrderOf,
   readReceipt as rulesReadReceipt,
   type RulesReading,
 } from '@muzhaqi16/receipt-rules';
@@ -13,16 +14,13 @@ import {
   ReceiptStructuring,
   type ReceiptLineLabels,
 } from '#/native/ReceiptStructuring';
-import {
-  LABELLING_TIMEOUT_MS,
-  onDeviceStructuring,
-} from '../../utils/onDeviceStructuring';
+import { LABELLING_TIMEOUT_MS } from '../../utils/onDeviceStructuring';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { toDateKey } from '#/utils/dateUtils';
-import * as deviceLocale from '#/utils/deviceLocale';
 import { useStore } from '#store';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptPhotoConsentStore } from '../../store/receiptPhotoConsentStore';
@@ -57,7 +55,10 @@ jest.mock('@muzhaqi16/receipt-rules', () => ({
   ...jest.requireActual('@muzhaqi16/receipt-rules'),
   readReceipt: jest.fn(),
   checkReading: jest.fn(),
+  dateOrderOf: jest.fn(),
 }));
+// `deviceReceiptModel`, the only flag the hook reads.
+jest.mock('#hooks/useFeatureFlag', () => ({ useFeatureFlag: jest.fn() }));
 
 const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
@@ -69,6 +70,8 @@ const availability = jest.mocked(ReceiptStructuring.availability);
 const labelLines = jest.mocked(ReceiptStructuring.labelLines);
 const readReceipt = jest.mocked(rulesReadReceipt);
 const checkReading = jest.mocked(rulesCheckReading);
+const dateOrder = jest.mocked(dateOrderOf);
+const modelFlag = jest.mocked(useFeatureFlag);
 
 const line = (text: string, y: number) => ({
   text,
@@ -98,13 +101,12 @@ const renderScan = (serverParsing = true, deviceReading = false) => {
   return { ...view, onCancel };
 };
 
-const dateOrder = jest.spyOn(deviceLocale, 'getDeviceDateOrder');
-
 beforeEach(() => {
   jest.clearAllMocks();
   useReceiptDraftStore.getState().clearDraft();
   availability.mockResolvedValue('unavailable');
   dateOrder.mockReturnValue('monthFirst');
+  modelFlag.mockReturnValue(false);
   deletePhotos.mockResolvedValue(undefined);
   // A build that cannot mask, unless a test says otherwise.
   maskPhotos.mockResolvedValue(null);
@@ -212,6 +214,8 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft?.purchasedOn).toBe(
       toDateKey(today),
     );
+    // The device's region, not the app's language.
+    expect(dateOrder).toHaveBeenCalledWith(null);
   });
 
   it('says whether a photo sent to be read is masked first', () => {
@@ -586,7 +590,7 @@ describe('useReceiptScan', () => {
     });
 
     it('sends the photos and keeps the text, with no on-device parse', async () => {
-      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+      modelFlag.mockReturnValue(true);
       scannedPages(2);
       preparePhotos.mockResolvedValue(prepared(2));
       recognizeAndDelete.mockResolvedValue(RECEIPT);
@@ -621,7 +625,6 @@ describe('useReceiptScan', () => {
         expect.any(Number),
         { route: 'photos', pages: '2' },
       );
-      turnedOn.restore();
     });
 
     it('reads more pages than the server takes as photos from their text', async () => {
@@ -1103,17 +1106,13 @@ describe('useReceiptScan', () => {
           { line: 1, label: 'item', product: 'GV WHOLE MILK' },
         ],
       };
-      let turnedOn: jest.ReplaceProperty<boolean | undefined>;
       beforeEach(() => {
-        turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+        modelFlag.mockReturnValue(true);
         scannedOnePage();
         availability.mockResolvedValue('available');
         labelLines.mockResolvedValue(MODEL_LABELS);
         readReceipt.mockReturnValue(missesItsTotal);
         checkReading.mockReturnValue(missesItsTotal);
-      });
-      afterEach(() => {
-        turnedOn.restore();
       });
 
       it("saves the rules' reading without waiting for the model", async () => {
@@ -1205,8 +1204,8 @@ describe('useReceiptScan', () => {
         jest.useRealTimers();
       });
 
-      it('reads by the rules alone where the platform turns the model off', async () => {
-        turnedOn.replaceValue(false);
+      it('reads by the rules alone with `deviceReceiptModel` off', async () => {
+        modelFlag.mockReturnValue(false);
         const { result } = renderScan(true, true);
 
         await act(() => result.current.scan());

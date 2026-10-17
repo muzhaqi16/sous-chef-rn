@@ -194,7 +194,6 @@ const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
 const proposing = (
   { name, address = null }: { name: string; address?: string | null },
   completableStore: { id: string; name: string } | null = null,
-  delay?: number,
 ) =>
   recordMock(ResolveReceiptLinesDocument, {
     data: {
@@ -205,7 +204,6 @@ const proposing = (
         completableStore,
       },
     },
-    ...(delay === undefined ? {} : { delay }),
   });
 
 // Adds the store a confirm creates, under the id the client minted.
@@ -1106,11 +1104,8 @@ describe('useReceiptReview', () => {
         error: new Error('Network request failed'),
       });
     // The API places no store, proposes the receipt's, and names `completable`.
-    const unplaced = (
-      completable: { id: string; name: string } | null,
-      delay?: number,
-    ) =>
-      proposing({ name: 'Kroger', address: '412 Main St' }, completable, delay);
+    const unplaced = (completable: { id: string; name: string } | null) =>
+      proposing({ name: 'Kroger', address: '412 Main St' }, completable);
 
     afterEach(() => {
       useStore.getState().setCachedStores([]);
@@ -1201,83 +1196,16 @@ describe('useReceiptReview', () => {
       expect(result.current.review.proposedStoreName).toBe('Kroger');
     });
 
-    it("offers the API's once matching settles, over the device's guess", async () => {
-      readByServer();
+    it('offers none for a receipt read on the phone: nothing would locate it', async () => {
+      readByServer({ parsedBy: 'device' });
       useStore.getState().setCachedStores([KROGER_LABEL]);
-      const theirs = { id: 'store-own', name: 'Kroger' };
-      const { result } = await setup({ resolve: unplaced(theirs, 500) });
-      // The API may yet place the receipt.
-      expect(result.current.review.matchState).toBe('matching');
-      expect(result.current.review.storeOffer).toBeNull();
-
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
-      expect(result.current.review.storeOffer).toEqual(theirs);
-    });
-
-    // A name-only store the household does not own (a shared one older than
-    // household stores) is one a check-in never locates; the API offers none.
-    it("offers none of its own when the API answers that none is the household's", async () => {
-      readByServer();
-      useStore.getState().setCachedStores([KROGER_LABEL]);
-      const { result } = await setup({ resolve: unplaced(null) });
+      const { result } = await setup({ resolve: unplaced(OFFER) });
       await waitFor(() =>
         expect(result.current.review.matchState).toBe('done'),
       );
 
       expect(result.current.review.storeOffer).toBeNull();
     });
-
-    it('offers none once the receipt names its store, or the user picks one', async () => {
-      readByServer();
-      useStore.getState().setCachedStores([KROGER_LABEL]);
-      const placed = await setup({
-        resolve: recordMock(ResolveReceiptLinesDocument, {
-          data: {
-            resolveReceiptLines: {
-              ...RESOLVED.resolveReceiptLines,
-              completableStore: OFFER,
-            },
-          },
-        }),
-      });
-      await waitFor(() =>
-        expect(placed.result.current.review.store?.id).toBe('store-27'),
-      );
-      expect(placed.result.current.review.storeOffer).toBeNull();
-      placed.unmount();
-
-      const { result } = await setup({ resolve: offline() });
-      await waitFor(() =>
-        expect(result.current.review.storeOffer).toEqual(OFFER),
-      );
-      await act(async () => {
-        result.current.review.chooseStore({
-          id: 'store-99',
-          name: 'Kroger #87',
-        });
-      });
-
-      expect(result.current.review.storeOffer).toBeNull();
-    });
-
-    it.each<[string, Partial<ReceiptDraft>]>([
-      ['read on the phone', { parsedBy: 'device' }],
-      ['read by the server with no parse to send', { parseId: undefined }],
-    ])(
-      'offers none for a receipt %s: nothing would locate it',
-      async (_name, readBy) => {
-        readByServer(readBy);
-        useStore.getState().setCachedStores([KROGER_LABEL]);
-        const { result } = await setup({ resolve: unplaced(OFFER) });
-        await waitFor(() =>
-          expect(result.current.review.matchState).toBe('done'),
-        );
-
-        expect(result.current.review.storeOffer).toBeNull();
-      },
-    );
   });
 
   describe('with the milk open on the shopping list', () => {

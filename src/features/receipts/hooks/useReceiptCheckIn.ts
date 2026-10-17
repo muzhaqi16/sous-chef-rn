@@ -3,6 +3,7 @@ import type { ApolloCache } from '@apollo/client';
 import {
   AcquisitionMethod,
   ErrorCode,
+  type CreateReceiptCheckInInput,
   type ReceiptCheckInLineInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
@@ -44,25 +45,32 @@ export interface CheckInLineToSend {
   listLine?: ShoppingListItemNode;
 }
 
-/** What every line was bought on. */
-export interface ReceiptToCheckIn {
+/**
+ * What every line was bought on, sent as given: the caller leaves out a field
+ * it has no value for.
+ */
+export interface ReceiptToCheckIn
+  extends Pick<
+    CreateReceiptCheckInInput,
+    | 'pantryId'
+    | 'purchasedOn'
+    | 'shoppingListId'
+    | 'receiptParseId'
+    | 'merchantHeader'
+    | 'orderDiscount'
+  > {
   /** One per send: a receipt over the API's cap goes as several. */
   checkInIds: readonly string[];
-  pantryId: string;
-  purchasedOn: string;
   /**
    * The receipt's store, or the create placing it: online, the check-in is
    * sent once the store exists, while its lines already show.
    */
   storeId?: string | Promise<string | undefined>;
-  shoppingListId?: string;
-  receiptParseId?: string;
-  merchantHeader?: string;
-  /** A saving the receipt took off the whole order. */
-  orderDiscount?: number;
 }
 
-type PlacedReceipt = Omit<ReceiptToCheckIn, 'storeId'> & { storeId?: string };
+type PlacedReceipt = Omit<ReceiptToCheckIn, 'checkInIds' | 'storeId'> & {
+  storeId?: string;
+};
 
 export type ReceiptCheckInOutcome =
   /** Every send was answered; `failed` names the lines the API refused. */
@@ -201,23 +209,9 @@ export function useReceiptCheckIn(listId: string | undefined) {
   ) => {
     const today = todayKey();
     const input = {
+      ...receipt,
       id: checkInId,
-      pantryId: receipt.pantryId,
-      purchasedOn: receipt.purchasedOn,
       today,
-      ...(receipt.storeId ? { storeId: receipt.storeId } : {}),
-      ...(receipt.shoppingListId
-        ? { shoppingListId: receipt.shoppingListId }
-        : {}),
-      ...(receipt.receiptParseId
-        ? { receiptParseId: receipt.receiptParseId }
-        : {}),
-      ...(receipt.merchantHeader
-        ? { merchantHeader: receipt.merchantHeader }
-        : {}),
-      ...(receipt.orderDiscount
-        ? { orderDiscount: receipt.orderDiscount }
-        : {}),
       lines: lines.map(line => line.input),
     };
     // A whole refusal withdraws every line it showed.
@@ -277,15 +271,17 @@ export function useReceiptCheckIn(listId: string | undefined) {
     }));
     // Shown, so added: a second Add must not send them again.
     markAdded(lines.map(line => line.index));
+    const { checkInIds, storeId: placing, ...fields } = receipt;
+    const storeId = await placing;
     const placed: PlacedReceipt = {
-      ...receipt,
-      storeId: await receipt.storeId,
+      ...fields,
+      ...(storeId ? { storeId } : {}),
     };
     const added: number[] = [];
     const failed: number[] = [];
     let queued = false;
     for (const [at, prepared] of chunks.entries()) {
-      const checkInId = receipt.checkInIds[at];
+      const checkInId = checkInIds[at];
       if (!checkInId) continue;
       const { chunk } = prepared;
       const { input, settled, written } = await sendChunk(
@@ -314,17 +310,8 @@ export function useReceiptCheckIn(listId: string | undefined) {
         return { status: 'refused', reason };
       }
       // Results index the send; the draft and the message name receipt lines.
-      const sentResults: CheckInLineResult[] = (
-        appliedPayload(settled.data)?.results ?? []
-      ).map(result => ({
-        index: result.index,
-        success: result.success,
-        failure: result.failure
-          ? { code: result.failure.code, errorId: result.failure.errorId }
-          : null,
-        item: result.item ? { id: result.item.id } : null,
-        pantryItem: result.pantryItem ? { id: result.pantryItem.id } : null,
-      }));
+      const sentResults: readonly CheckInLineResult[] =
+        appliedPayload(settled.data)?.results ?? [];
       try {
         const { exact } = applyReceiptCheckIn(
           client.cache,

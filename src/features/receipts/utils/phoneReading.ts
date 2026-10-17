@@ -1,11 +1,11 @@
 import {
   checkReading,
   readReceipt,
+  type DateOrder,
   type ReceiptLine,
   type ReceiptRead,
   type RulesReading,
 } from '@muzhaqi16/receipt-rules';
-import type { DateOrder } from '#/utils/deviceLocale';
 import type { PrintedStore } from '../store/receiptDraftStore';
 import { fromServerReceipt, printedStoreOf } from './fromServerReceipt';
 import type {

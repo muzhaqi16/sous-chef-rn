@@ -18,15 +18,27 @@ interface MeasuredSlope {
 
 const centerYOf = (line: RecognizedLine) => line.y + line.height / 2;
 
+/** A line's own slope, where it is long enough to measure. */
+export const measuredSlopeOf = (line: RecognizedLine): number | undefined => {
+  const { slope } = line;
+  return line.width >= SLOPED_LINE &&
+    slope !== undefined &&
+    Math.abs(slope) <= MAX_SLOPE
+    ? slope
+    : undefined;
+};
+
+/** The text's own height: a line's box is taller by its rise along `slope`. */
+export const textHeightOf = (line: RecognizedLine, slope: number) =>
+  Math.max(line.height - Math.abs(slope) * line.width, line.height / 3);
+
 /** The slopes of the lines long enough to measure, by height on the page. */
 function measuredSlopes(lines: readonly RecognizedLine[]): MeasuredSlope[] {
   return lines.flatMap(line => {
-    const { slope } = line;
-    return line.width >= SLOPED_LINE &&
-      slope !== undefined &&
-      Math.abs(slope) <= MAX_SLOPE
-      ? [{ centerY: centerYOf(line), slope, width: line.width }]
-      : [];
+    const slope = measuredSlopeOf(line);
+    return slope === undefined
+      ? []
+      : [{ centerY: centerYOf(line), slope, width: line.width }];
   });
 }
 
@@ -77,10 +89,7 @@ const place = (
     centerY,
     row: centerY - tilt * centerX,
     slope,
-    textHeight: Math.max(
-      line.height - Math.abs(slope) * line.width,
-      line.height / 3,
-    ),
+    textHeight: textHeightOf(line, slope),
   };
 };
 
