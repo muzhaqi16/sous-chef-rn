@@ -56,19 +56,10 @@ export const dailyAllowanceWait = (error: unknown): number | null => {
   return typeof retryAfter === 'number' && retryAfter > 0 ? retryAfter : null;
 };
 
-const refusedWith =
-  (code: TopLevelErrorCode) =>
-  (error: unknown): boolean =>
-    CombinedGraphQLErrors.is(error) &&
-    error.errors.some(({ extensions }) => extensions?.code === code);
-
 /** The API wants this build updated before it answers. */
-export const isUpgradeRequired = refusedWith(
-  TopLevelErrorCode.ClientUpgradeRequired,
-);
-
-/** The feature is off for this user: no resend changes that. */
-export const isFeatureDisabled = refusedWith(TopLevelErrorCode.FeatureDisabled);
-
-/** The feature needs a plan this user does not hold: no resend changes that. */
-export const isPremiumRequired = refusedWith(TopLevelErrorCode.PremiumRequired);
+export const isUpgradeRequired = (error: unknown): boolean =>
+  CombinedGraphQLErrors.is(error) &&
+  error.errors.some(
+    ({ extensions }) =>
+      extensions?.code === TopLevelErrorCode.ClientUpgradeRequired,
+  );

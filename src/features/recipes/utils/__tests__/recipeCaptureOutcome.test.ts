@@ -67,17 +67,17 @@ describe('captureOutcomeOf', () => {
         status: RecipeCaptureStatus.Unavailable,
         failure: 'A_CODE_FROM_A_NEWER_SERVER' as RecipeCaptureFailure,
       }),
-      outcome: { kind: 'failed', copy: 'unavailable' },
+      outcome: { kind: 'failed', copy: 'recipes.captureFailedUnavailable' },
     },
   ])('$name', ({ read, outcome }) => {
     expect(captureOutcomeOf(read)).toEqual(outcome);
   });
 
   it.each([
-    [RecipeCaptureFailure.UnreachableUrl, 'unreachable'],
-    [RecipeCaptureFailure.NoRecipe, 'noRecipe'],
-    [RecipeCaptureFailure.PhotoRefused, 'photoRefused'],
-    [RecipeCaptureFailure.ServiceTimeout, 'unavailable'],
+    [RecipeCaptureFailure.UnreachableUrl, 'recipes.captureFailedUnreachable'],
+    [RecipeCaptureFailure.NoRecipe, 'recipes.captureFailedNoRecipe'],
+    [RecipeCaptureFailure.PhotoRefused, 'recipes.captureFailedPhotoRefused'],
+    [RecipeCaptureFailure.ServiceTimeout, 'recipes.captureFailedUnavailable'],
   ])('says why %s failed in its own words', (failure, copy) => {
     expect(
       captureOutcomeOf(
@@ -88,7 +88,10 @@ describe('captureOutcomeOf', () => {
 });
 
 describe('classifyCaptureCreate', () => {
-  const NOW = Date.parse('2026-10-14T12:00:00.000Z');
+  const premium = refusedWith(TopLevelErrorCode.PremiumRequired, {
+    feature: 'RECIPE_CAPTURE_PHOTO',
+    plan: 'PREMIUM',
+  });
 
   it.each([
     {
@@ -110,39 +113,18 @@ describe('classifyCaptureCreate', () => {
       classified: { kind: 'refused', field: 'url' },
     },
     {
-      name: 'waits out the daily allowance until the server says',
+      name: 'waits out the daily allowance',
       create: created({
         error: refusedWith(TopLevelErrorCode.RateLimitExceeded, {
           retryAfter: 3600,
         }),
       }),
-      classified: { kind: 'limited', retryAt: '2026-10-14T13:00:00.000Z' },
+      classified: { kind: 'limited' },
     },
     {
-      name: 'asks for an update the API wants',
-      create: created({
-        error: refusedWith(TopLevelErrorCode.ClientUpgradeRequired),
-      }),
-      classified: { kind: 'upgrade' },
-    },
-    {
-      name: 'stops at a feature switched off for this user',
-      create: created({
-        error: refusedWith(TopLevelErrorCode.FeatureDisabled, {
-          feature: 'RECIPE_CAPTURE',
-        }),
-      }),
-      classified: { kind: 'disabled' },
-    },
-    {
-      name: 'stops at a feature that needs a plan this user does not hold',
-      create: created({
-        error: refusedWith(TopLevelErrorCode.PremiumRequired, {
-          feature: 'RECIPE_CAPTURE_PHOTO',
-          plan: 'PREMIUM',
-        }),
-      }),
-      classified: { kind: 'premium' },
+      name: 'hands over a refusal that names no field with its error',
+      create: created({ error: premium }),
+      classified: { kind: 'refused', field: null, error: premium },
     },
     {
       name: 'sends again when no answer arrived',
@@ -150,6 +132,6 @@ describe('classifyCaptureCreate', () => {
       classified: { kind: 'resend' },
     },
   ])('$name', ({ create, classified }) => {
-    expect(classifyCaptureCreate(create, NOW)).toEqual(classified);
+    expect(classifyCaptureCreate(create)).toEqual(classified);
   });
 });

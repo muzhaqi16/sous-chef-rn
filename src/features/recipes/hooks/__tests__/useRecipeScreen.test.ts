@@ -97,7 +97,7 @@ function makeDiscovery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// Sample discovery item shape — mirrors DiscoveryItem
+// Sample discovery item shape — a DisplayItem
 const sampleDiscoveryItem = {
   id: 'disc-1',
   title: 'Sample Random Recipe',

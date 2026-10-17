@@ -117,19 +117,6 @@ export const useRecipeCaptureStore = create<RecipeCaptureState>()(
         entries: entries.map(entry => ({ ...entry, answered: true })),
         held,
       }),
-      // Version 1 kept an entry only once its create was answered.
-      migrate: (persisted, version) => {
-        const state = persisted as Pick<RecipeCaptureState, 'entries' | 'held'>;
-        return version < 2
-          ? {
-              ...state,
-              entries: state.entries.map(entry => ({
-                ...entry,
-                answered: true,
-              })),
-            }
-          : state;
-      },
     },
   ),
 );

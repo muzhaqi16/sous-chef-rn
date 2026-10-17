@@ -24,7 +24,7 @@ import {
   SPOONACULAR_TO_MEAL_TYPE_CATEGORY,
 } from '#features/recipes/utils/recipeFilterMaps';
 import {
-  type RecipeSearchRow,
+  type RecipeRow,
   type LocalRecipeNode,
   type SpoonacularRecipe,
   spoonacularRows,
@@ -199,7 +199,7 @@ export async function fetchSpoonacularTextPage(
 // One combined page of results plus the advanced cursor state — the shared
 // unit of work for both the initial search and load-more.
 export interface SearchPageResult {
-  rows: RecipeSearchRow[];
+  rows: RecipeRow[];
   localEndCursor: string | null;
   localHasNextPage: boolean;
   // How many rows this page actually fetched (advances the offset).
@@ -343,7 +343,7 @@ export async function executeRecipeTextSearch(
   client: ApolloClient,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setRows: (rows: RecipeSearchRow[]) => void,
+  setRows: (rows: RecipeRow[]) => void,
   setPagination: (p: SearchPagination) => void,
   shouldCommit: () => boolean,
 ): Promise<void> {
@@ -407,7 +407,7 @@ export async function executeRecipeLoadMore(
   pagination: SearchPagination,
   client: ApolloClient,
 ): Promise<{
-  rows: RecipeSearchRow[];
+  rows: RecipeRow[];
   nextPagination: SearchPagination;
 } | null> {
   const { query, filters, seen } = pagination;
@@ -471,7 +471,7 @@ export async function executeRecipeIngredientSearch(
   ingredientString: string,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setRows: (rows: RecipeSearchRow[]) => void,
+  setRows: (rows: RecipeRow[]) => void,
   shouldCommit: () => boolean,
 ): Promise<void> {
   setLoading(true);

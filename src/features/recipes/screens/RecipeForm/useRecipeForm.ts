@@ -9,6 +9,7 @@ import type {
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeCaptureQuery } from '#features/recipes/hooks/useRecipeCapture.generated';
 import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
 import type {
   IngredientFormState,
@@ -21,6 +22,7 @@ import {
   parseCommaTags,
 } from './recipeFormConfig';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
+import { toPastedIngredient } from '#features/recipes/utils/pastedIngredients';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
@@ -66,21 +68,9 @@ function attributionOf(
     : undefined;
 }
 
-/** What an incomplete capture read, as the form takes it. */
-export interface CaptureDraftFill {
-  name: string | null;
-  description: string | null;
-  servings: number | null;
-  prepTimeMinutes: number | null;
-  cookTimeMinutes: number | null;
-  imageUrl: string | null;
-  author: string | null;
-  sourceName: string | null;
-  /** The link the capture read, as this device sent it. */
-  sourceUrl: string | null;
-  ingredients: Omit<IngredientFormState, 'id' | 'sortOrder'>[];
-  steps: string[];
-}
+type CaptureDraft = NonNullable<
+  NonNullable<RecipeCaptureQuery['recipeCapture']>['draft']
+>;
 
 const minutesText = (minutes: number | null) =>
   minutes ? String(minutes) : '';
@@ -393,36 +383,42 @@ export function useRecipeForm() {
   };
 
   /**
-   * A new recipe filled with what a capture read. Nothing is saved until the
-   * user saves; a section the capture found nothing for is marked as needed.
+   * A new recipe filled with what a capture read, and the link this device sent
+   * it. Nothing is saved until the user saves; a section the capture found
+   * nothing for is marked as needed.
    */
-  const populateFromCapture = (fill: CaptureDraftFill) => {
+  const populateFromCapture = (
+    draft: CaptureDraft,
+    sourceUrl: string | null,
+  ) => {
     const defaults = recipeFormDefaults();
     reset({
       ...defaults,
-      name: fill.name ?? '',
-      description: fill.description ?? '',
-      imageUrl: fill.imageUrl ?? '',
-      servings: fill.servings ? String(fill.servings) : defaults.servings,
-      prepTimeMinutes: minutesText(fill.prepTimeMinutes),
-      cookTimeMinutes: minutesText(fill.cookTimeMinutes),
-      originalAuthor: fill.author ?? '',
-      capturedFrom: { source: fill.sourceName, sourceUrl: fill.sourceUrl },
-      ingredients: fill.ingredients.map((row, index) => ({
-        ...row,
+      name: draft.name ?? '',
+      description: draft.description ?? '',
+      imageUrl: draft.imageUrl ?? '',
+      servings: draft.servings ? String(draft.servings) : defaults.servings,
+      prepTimeMinutes: minutesText(draft.prepTimeMinutes),
+      cookTimeMinutes: minutesText(draft.cookTimeMinutes),
+      originalAuthor: draft.author ?? '',
+      capturedFrom: { source: draft.sourceName, sourceUrl },
+      // A line is linked only where the server was confident; the rest keep
+      // their line as written for the user to match.
+      ingredients: draft.lines.map((line, index) => ({
+        ...toPastedIngredient(line),
         id: generateTempId(),
         sortOrder: index,
       })),
-      steps: fill.steps.map((instruction, index) => ({
+      steps: draft.steps.map((step, index) => ({
         id: generateTempId(),
-        instruction,
+        instruction: step.text,
         sortOrder: index,
       })),
     });
-    if (fill.ingredients.length === 0) {
+    if (draft.lines.length === 0) {
       void form.trigger('ingredients');
     }
-    if (fill.steps.length === 0) {
+    if (draft.steps.length === 0) {
       void form.trigger('steps');
     }
   };

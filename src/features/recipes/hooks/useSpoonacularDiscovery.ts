@@ -13,71 +13,45 @@ import { useFocusEffect } from '@react-navigation/native';
 import { defaultPantryOf } from '#domain/homePantries';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import type { BadgeContent } from '#components/atoms/Badge';
-import type { DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
+import {
+  toDisplayItems,
+  type DisplayItem,
+  type RecipeRow,
+} from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   useRecipeCacheStore,
   ingredientCacheKey,
   randomCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
 
-export type DiscoveryMode = 'pantry' | 'random' | 'none';
-
-export interface DiscoveryItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  badge?: BadgeContent;
-  imageUrl?: string;
-  spoonacularId: number;
-}
+type DiscoveryMode = 'pantry' | 'random' | 'none';
 
 const DISCOVERY_PAGE_SIZE = 15;
 const DISCOVERY_FETCH_SIZE = 25;
 
+type InfoMap = ReadonlyMap<number, RecipeInformation>;
+
 /**
- * A suggestion as it is kept: the recipe a source returned, with no copy
- * written. The hook writes the copy while rendering, so a suggestion reads in
- * the language it is shown in, not the one it was fetched in.
+ * What discovery found: random recipes for an empty pantry, or what the pantry
+ * can make with the enrichment fetched so far.
  */
-type DiscoveryRow =
-  | { kind: 'random'; recipe: RecipeInformation }
-  | {
-      kind: 'pantry';
-      recipe: RecipeSearchResult;
-      info: RecipeInformation | undefined;
-    };
+type Found =
+  | { mode: 'random'; recipes: RecipeInformation[] }
+  | { mode: 'pantry'; recipes: RecipeSearchResult[]; info: InfoMap };
 
-const randomRows = (recipes: readonly RecipeInformation[]): DiscoveryRow[] =>
-  recipes.map((recipe): DiscoveryRow => ({ kind: 'random', recipe }));
-
-const pantryRows = (
-  results: readonly RecipeSearchResult[],
-  infoMap: ReadonlyMap<number, RecipeInformation>,
-): DiscoveryRow[] =>
-  results.map(
-    (recipe): DiscoveryRow => ({
-      kind: 'pantry',
-      recipe,
-      info: infoMap.get(recipe.id),
-    }),
-  );
-
-// Combined state to avoid multiple separate renders
 interface DiscoveryState {
-  rows: DiscoveryRow[];
+  found: Found | null;
   visibleCount: number;
-  totalResults: number;
-  mode: DiscoveryMode;
   loading: boolean;
 }
 
+type SetDiscoveryState = (
+  update: (prev: DiscoveryState) => DiscoveryState,
+) => void;
+
 const INITIAL_DISCOVERY_STATE: DiscoveryState = {
-  rows: [],
+  found: null,
   visibleCount: DISCOVERY_PAGE_SIZE,
-  totalResults: 0,
-  mode: 'none',
   loading: true,
 };
 
@@ -96,97 +70,29 @@ export interface SpoonacularDiscoveryResult {
   loadMoreDiscovery: () => void;
 }
 
-/** Transforms a RecipeInformation (random recipe) into a DiscoveryItem */
-function transformRandomRecipe(
-  recipe: RecipeInformation,
-  translate: Translate,
-): DiscoveryItem {
-  const subtitleParts: string[] = [];
-  if (recipe.servings) {
-    subtitleParts.push(
-      translate('recipes.servingsCount', { count: recipe.servings }),
-    );
+/** The first `count` recipes found, as rows that write their copy when shown. */
+function rowsOf(found: Found | null, count: number): RecipeRow[] {
+  if (!found) return [];
+  if (found.mode === 'random') {
+    return found.recipes
+      .slice(0, count)
+      .map((recipe): RecipeRow => ({ source: 'random', recipe }));
   }
-  const totalTime =
-    recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
-  if (totalTime) {
-    subtitleParts.push(translate('labels.min', { count: totalTime }));
-  }
-
-  return {
-    id: String(recipe.id),
-    title: recipe.title,
-    subtitle: subtitleParts.join(' \u2022 '),
-    badge: { text: translate('labels.suggested') },
-    imageUrl: recipe.image,
-    spoonacularId: recipe.id,
-  };
-}
-
-/** Transforms a pantry search result into a DiscoveryItem, enriched with bulk info */
-function transformPantryResult(
-  recipe: RecipeSearchResult,
-  info: RecipeInformation | undefined,
-  translate: Translate,
-): DiscoveryItem {
-  const totalIngredients =
-    recipe.usedIngredientCount + recipe.missedIngredientCount;
-
-  const subtitleParts: string[] = [];
-  if (recipe.likes) {
-    subtitleParts.push(`❤️ ${recipe.likes}`);
-  }
-  if (info?.servings) {
-    subtitleParts.push(
-      translate('recipes.servingsCount', { count: info.servings }),
-    );
-  }
-  // Spoonacular reports an unknown duration as 0, so a zero falls through.
-  const totalTime = [
-    info?.readyInMinutes,
-    info?.preparationMinutes,
-    info?.cookingMinutes,
-  ].find(minutes => minutes !== undefined && minutes !== 0);
-  if (totalTime) {
-    subtitleParts.push(translate('labels.min', { count: totalTime }));
-  }
-
-  return {
-    id: String(recipe.id),
-    title: recipe.title,
-    subtitle:
-      subtitleParts.join(' • ') ||
-      translate('recipes.ingredientCount', { count: totalIngredients }),
-    badge: {
-      text: translate('recipes.pantryMatchLabel', {
-        used: recipe.usedIngredientCount,
-        count: totalIngredients,
-        missing: recipe.missedIngredientCount,
-      }),
-      lines: [
-        {
-          icon: 'checkmark-circle',
-          text: String(recipe.usedIngredientCount),
-          variant: 'success',
-        },
-        {
-          icon: 'cart-outline',
-          text: String(recipe.missedIngredientCount),
-          variant: 'warning',
-        },
-      ],
-    },
-    imageUrl: recipe.image,
-    spoonacularId: recipe.id,
-  };
+  return found.recipes.slice(0, count).map(
+    (recipe): RecipeRow => ({
+      source: 'pantry',
+      recipe,
+      info: found.info.get(recipe.id),
+    }),
+  );
 }
 
 /** Enrich a batch of search results with bulk recipe info (cook time, servings) */
 async function enrichBatch(
   results: RecipeSearchResult[],
-  infoMap: Map<number, RecipeInformation>,
+  infoMap: InfoMap,
   signal?: AbortSignal,
-): Promise<Map<number, RecipeInformation>> {
+): Promise<InfoMap> {
   const idsToFetch = results.map(r => r.id).filter(id => !infoMap.has(id));
 
   if (idsToFetch.length === 0) return infoMap;
@@ -202,30 +108,8 @@ async function enrichBatch(
   return updated;
 }
 
-function ingredientQueryOf(pantryItems: PantryListItemNode[]): string {
-  return pantryItems
-    .map(item => item.itemName)
-    .filter(Boolean)
-    .slice(0, 20)
-    .join(',');
-}
-
-function searchPantryRecipes(
-  cacheKey: string,
-  ingredientNames: string,
-): Promise<RecipeSearchResult[]> {
-  return useRecipeCacheStore.getState().getOrFetchResults(cacheKey, () =>
-    spoonacularService.searchRecipesByIngredients({
-      ingredients: ingredientNames,
-      number: DISCOVERY_FETCH_SIZE,
-      ranking: 1,
-      ignorePantry: true,
-    }),
-  );
-}
-
 function enrichmentRecordOf(
-  infoMap: Map<number, RecipeInformation>,
+  infoMap: InfoMap,
 ): Record<number, RecipeInformation> {
   const record: Record<number, RecipeInformation> = {};
   infoMap.forEach((info, id) => {
@@ -234,151 +118,166 @@ function enrichmentRecordOf(
   return record;
 }
 
-type PantryResultsHandler = (
-  cacheKey: string,
-  results: RecipeSearchResult[],
-  cachedEnrichment?: Map<number, RecipeInformation>,
-) => void;
+/**
+ * Enriches `batch` in the background and shows it once the JS thread idles:
+ * enrichment is supplementary. With `cacheKey`, the cache keeps it too.
+ */
+function enrichInBackground(
+  batch: RecipeSearchResult[],
+  known: InfoMap,
+  setState: SetDiscoveryState,
+  cacheKey?: string,
+): void {
+  if (batch.length === 0) return;
+  enrichBatch(batch, known)
+    .then(info => {
+      if (cacheKey) {
+        useRecipeCacheStore
+          .getState()
+          .updateEnrichment(cacheKey, enrichmentRecordOf(info));
+      }
+      requestIdleCallback(() => {
+        setState(prev =>
+          prev.found?.mode === 'pantry'
+            ? {
+                ...prev,
+                found: {
+                  ...prev.found,
+                  info: new Map([...prev.found.info, ...info]),
+                },
+              }
+            : prev,
+        );
+      });
+    })
+    .catch(() => {
+      // Enrichment failed — keep showing basic results
+    });
+}
+
+/** Shows the first page of what was found, enriching it unless it already is. */
+function show(found: Found, cacheKey: string, setState: SetDiscoveryState) {
+  setState(() => ({
+    found,
+    visibleCount: DISCOVERY_PAGE_SIZE,
+    loading: false,
+  }));
+  if (found.mode === 'pantry' && found.info.size === 0) {
+    enrichInBackground(
+      found.recipes.slice(0, DISCOVERY_PAGE_SIZE),
+      found.info,
+      setState,
+      cacheKey,
+    );
+  }
+}
+
+function ingredientQueryOf(pantryItems: PantryListItemNode[]): string {
+  return pantryItems
+    .map(item => item.itemName)
+    .filter(Boolean)
+    .slice(0, 20)
+    .join(',');
+}
+
+const cacheKeyOf = (ingredientNames: string, dietaryTags?: string) =>
+  ingredientNames
+    ? ingredientCacheKey(ingredientNames)
+    : randomCacheKey(dietaryTags);
+
+/** What the cache holds for this pantry, or for no pantry; null on a miss. */
+function cachedFound(
+  ingredientNames: string,
+  dietaryTags?: string,
+): Found | null {
+  const cached = useRecipeCacheStore
+    .getState()
+    .getCached(cacheKeyOf(ingredientNames, dietaryTags));
+  if (!cached) return null;
+  return ingredientNames
+    ? {
+        mode: 'pantry',
+        recipes: cached.results as RecipeSearchResult[],
+        info: new Map(
+          Object.entries(cached.enrichment).map(([k, v]) => [Number(k), v]),
+        ),
+      }
+    : { mode: 'random', recipes: cached.results as RecipeInformation[] };
+}
 
 /**
- * A refresh bypasses the cache and resolves only once the new first page is
- * enriched, so the rows on screen stay until complete replacements exist.
- * Enrichment already held for a returning recipe is reused, not re-billed.
+ * Recipes the pantry can make, else random ones. Run to completion (no abort
+ * signal) and de-duped against a request in flight for the key: a client-side
+ * abort refunds no Spoonacular quota, and a remount fires no duplicate.
  */
-async function refetchPantryDiscovery(
+async function fetchFound(
   ingredientNames: string,
-  knownInfo: Map<number, RecipeInformation>,
-): Promise<{
-  cacheKey: string;
-  results: RecipeSearchResult[];
-  enrichment: Map<number, RecipeInformation>;
-}> {
-  const cacheKey = ingredientCacheKey(ingredientNames);
-  const results = await searchPantryRecipes(cacheKey, ingredientNames);
-  const enrichment = await enrichBatch(
-    results.slice(0, DISCOVERY_PAGE_SIZE),
-    knownInfo,
-  ).catch(() => knownInfo);
-  useRecipeCacheStore
-    .getState()
-    .setCached(cacheKey, results, enrichmentRecordOf(enrichment));
-  return { cacheKey, results, enrichment };
-}
-
-/** Module-level helper: fetch pantry-based recipes (with cache) */
-async function fetchPantryDiscovery(
-  ingredientNames: string,
-  onResults: PantryResultsHandler,
-  updateState: (partial: Partial<DiscoveryState>) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  const guardedSetLoading = (v: boolean) => {
-    if (!v && signal?.aborted) return;
-    updateState({ loading: v });
-  };
-
-  const cacheKey = ingredientCacheKey(ingredientNames);
-  const cacheStore = useRecipeCacheStore.getState();
-  const cached = cacheStore.getCached(cacheKey);
-
-  if (cached) {
-    // Cache hit — use cached results + enrichment
-    const cachedResults = cached.results as RecipeSearchResult[];
-    const enrichmentMap = new Map(
-      Object.entries(cached.enrichment).map(([k, v]) => [Number(k), v]),
-    );
-    onResults(cacheKey, cachedResults, enrichmentMap);
-    updateState({ loading: false, mode: 'pantry' });
-    return;
-  }
-
-  await executeWithLoadingState(
-    async () => {
-      // Run to completion (no abort signal) and de-dupe against any request
-      // already in flight for this key, so navigating away mid-fetch neither
-      // wastes the in-flight request nor lets a remount fire a duplicate.
-      const results = await searchPantryRecipes(cacheKey, ingredientNames);
-
-      // Warm the shared cache before the abort guard: the result is valid for
-      // this key regardless of whether this mount still needs it, so a later
-      // visit gets a cache hit (enrichment added later via updateEnrichment).
-      cacheStore.setCached(cacheKey, results);
-
-      // Only the on-screen state updates are gated on the signal — a late
-      // response must not overwrite what the current mount is showing.
-      if (signal?.aborted) return;
-      onResults(cacheKey, results);
-      updateState({ mode: 'pantry' });
-    },
-    guardedSetLoading,
-    (error: unknown) => {
-      if (signal?.aborted) return;
-      errorService.reportError(error, {
-        operation: 'fetchPantryBasedRecipes',
-      });
-    },
-  );
-}
-
-function fetchRandomRecipes(
-  cacheKey: string,
   dietaryTags?: string,
-): Promise<RecipeInformation[]> {
-  return useRecipeCacheStore.getState().getOrFetchResults(cacheKey, () =>
+): Promise<Found> {
+  const cacheKey = cacheKeyOf(ingredientNames, dietaryTags);
+  const { getOrFetchResults } = useRecipeCacheStore.getState();
+  if (ingredientNames) {
+    const recipes = await getOrFetchResults(cacheKey, () =>
+      spoonacularService.searchRecipesByIngredients({
+        ingredients: ingredientNames,
+        number: DISCOVERY_FETCH_SIZE,
+        ranking: 1,
+        ignorePantry: true,
+      }),
+    );
+    return { mode: 'pantry', recipes, info: new Map() };
+  }
+  const recipes = await getOrFetchResults(cacheKey, () =>
     spoonacularService.getRandomRecipes({
       number: DISCOVERY_FETCH_SIZE,
       tags: dietaryTags,
     }),
   );
+  return { mode: 'random', recipes };
 }
 
-/** Module-level helper: fetch random recipes (with cache) */
-async function fetchRandomDiscovery(
-  onResults: (results: RecipeInformation[]) => void,
-  updateState: (partial: Partial<DiscoveryState>) => void,
-  signal?: AbortSignal,
-  dietaryTags?: string,
+/** A cached discovery at once, else a fetch that warms the cache. */
+async function loadDiscovery(
+  ingredientNames: string,
+  dietaryTags: string | undefined,
+  setState: SetDiscoveryState,
+  signal: AbortSignal,
 ): Promise<void> {
-  const guardedSetLoading = (v: boolean) => {
-    if (!v && signal?.aborted) return;
-    updateState({ loading: v });
-  };
-
-  const cacheKey = randomCacheKey(dietaryTags);
-  const cacheStore = useRecipeCacheStore.getState();
-  const cached = cacheStore.getCached(cacheKey);
-
+  const cacheKey = cacheKeyOf(ingredientNames, dietaryTags);
+  const cached = cachedFound(ingredientNames, dietaryTags);
   if (cached) {
-    const cachedResults = cached.results as RecipeInformation[];
-    onResults(cachedResults);
-    updateState({ loading: false, mode: 'random' });
+    show(cached, cacheKey, setState);
     return;
   }
 
   await executeWithLoadingState(
     async () => {
-      // Complete in the background + de-dupe concurrent callers (see
-      // fetchPantryDiscovery). No abort signal: a client-side abort can't
-      // refund the Spoonacular quota already spent on the in-flight request,
-      // so discarding it would only pay a second unit on the next visit.
-      const results = await fetchRandomRecipes(cacheKey, dietaryTags);
-
-      cacheStore.setCached(cacheKey, results);
-      if (signal?.aborted) return;
-      onResults(results);
-      updateState({ mode: 'random' });
+      const found = await fetchFound(ingredientNames, dietaryTags);
+      // Warmed before the abort guard: the result is valid for this key
+      // whether or not this mount still shows it.
+      useRecipeCacheStore.getState().setCached(cacheKey, found.recipes);
+      // A late response must not overwrite what the current mount shows.
+      if (signal.aborted) return;
+      show(found, cacheKey, setState);
     },
-    guardedSetLoading,
+    loading => {
+      if (!loading && signal.aborted) return;
+      setState(prev => ({ ...prev, loading }));
+    },
     (error: unknown) => {
-      if (signal?.aborted) return;
-      errorService.reportError(error, { operation: 'fetchRandomRecipes' });
+      if (signal.aborted) return;
+      errorService.reportError(error, {
+        operation: ingredientNames
+          ? 'fetchPantryBasedRecipes'
+          : 'fetchRandomRecipes',
+      });
     },
   );
 }
 
 /**
  * Pantry-based ingredient search where the user has pantry items, random
- * suggestions otherwise. Up to 50 recipes in one call (cached 24h), paginated
+ * suggestions otherwise. Up to 25 recipes in one call (cached 24h), paginated
  * client-side 15 at a time; enrichment is fetched per batch, deferred to idle.
  * Not `enabled`, it fetches no recipes; the pantry watch the ingredient picker
  * reads still runs.
@@ -420,164 +319,30 @@ export function useSpoonacularDiscovery(
 
   const hasPantryItems = pantryItems.length > 0;
 
-  // All raw results from the API (pantry mode only)
-  const allResultsRef = useRef<RecipeSearchResult[]>([]);
-  // All raw results from the API (random mode only)
-  const allRandomResultsRef = useRef<RecipeInformation[]>([]);
-  // Enrichment info map — accumulated across batches
-  const infoMapRef = useRef<Map<number, RecipeInformation>>(new Map());
-
   // Combined state — single setState = single render
   const [discoveryState, setDiscoveryState] = useState<DiscoveryState>(
     INITIAL_DISCOVERY_STATE,
   );
+  const { found, visibleCount } = discoveryState;
 
-  // Partial updater for module-level helpers (avoids passing multiple setters)
-  const updateState = (partial: Partial<DiscoveryState>) => {
-    setDiscoveryState(prev => ({ ...prev, ...partial }));
-  };
-
-  // Handle raw results: store them, show first page, enrich it
-  const handlePantryResults: PantryResultsHandler = (
-    cacheKey,
-    results,
-    cachedEnrichment,
-  ) => {
-    allResultsRef.current = results;
-    const enrichment = cachedEnrichment ?? new Map<number, RecipeInformation>();
-    infoMapRef.current = enrichment;
-
-    const firstPage = results.slice(0, DISCOVERY_PAGE_SIZE);
-
-    // Single state update — 1 render instead of 3
-    setDiscoveryState({
-      rows: pantryRows(firstPage, enrichment),
-      visibleCount: DISCOVERY_PAGE_SIZE,
-      totalResults: results.length,
-      mode: 'pantry',
-      loading: false,
-    });
-
-    // Skip enrichment if we already have cached enrichment
-    if (cachedEnrichment && cachedEnrichment.size > 0) return;
-
-    // Enrich first page in background, deferred to idle
-    if (firstPage.length > 0) {
-      enrichBatch(firstPage, enrichment)
-        .then(updatedMap => {
-          infoMapRef.current = updatedMap;
-
-          // Store enrichment in cache for future visits
-          useRecipeCacheStore
-            .getState()
-            .updateEnrichment(cacheKey, enrichmentRecordOf(updatedMap));
-
-          // Defer the UI update to idle time — enrichment is supplementary
-          requestIdleCallback(() => {
-            const visible = results.slice(0, DISCOVERY_PAGE_SIZE);
-            setDiscoveryState(prev => ({
-              ...prev,
-              rows: pantryRows(visible, updatedMap),
-            }));
-          });
-        })
-        .catch(() => {
-          // Enrichment failed — keep showing basic results
-        });
-    }
-  };
-
-  // Stabilize handlePantryResults via ref (avoids effect re-fires)
-  const handlePantryResultsRef = useRef(handlePantryResults);
-  useEffect(() => {
-    handlePantryResultsRef.current = handlePantryResults;
-  });
-
-  // Handle raw random results: store them, show first page
-  const handleRandomResults = (results: RecipeInformation[]) => {
-    allRandomResultsRef.current = results;
-    const firstPage = results.slice(0, DISCOVERY_PAGE_SIZE);
-    setDiscoveryState({
-      rows: randomRows(firstPage),
-      visibleCount: DISCOVERY_PAGE_SIZE,
-      totalResults: results.length,
-      mode: 'random',
-      loading: false,
-    });
-  };
-
-  const handleRandomResultsRef = useRef(handleRandomResults);
-  useEffect(() => {
-    handleRandomResultsRef.current = handleRandomResults;
-  });
-
-  // Load more: increase visible count and enrich the new batch
   const loadMoreDiscovery = () => {
-    const { visibleCount } = discoveryState;
-
-    if (discoveryState.mode === 'random') {
-      const allResults = allRandomResultsRef.current;
-      if (visibleCount >= allResults.length) return;
-
-      const newCount = Math.min(
-        visibleCount + DISCOVERY_PAGE_SIZE,
-        allResults.length,
-      );
-      const visible = allResults.slice(0, newCount);
-
-      setDiscoveryState(prev => ({
-        ...prev,
-        visibleCount: newCount,
-        rows: randomRows(visible),
-      }));
-      return;
-    }
-
-    // Pantry mode
-    const allResults = allResultsRef.current;
-    if (visibleCount >= allResults.length) return;
-
-    const newCount = Math.min(
+    if (!found || visibleCount >= found.recipes.length) return;
+    const nextCount = Math.min(
       visibleCount + DISCOVERY_PAGE_SIZE,
-      allResults.length,
+      found.recipes.length,
     );
-
-    const currentInfoMap = infoMapRef.current;
-    const visible = allResults.slice(0, newCount);
-
-    // Single state update
-    setDiscoveryState(prev => ({
-      ...prev,
-      visibleCount: newCount,
-      rows: pantryRows(visible, currentInfoMap),
-    }));
-
-    // Enrich the new batch, deferred to idle
-    const newBatch = allResults.slice(visibleCount, newCount);
-    enrichBatch(newBatch, currentInfoMap)
-      .then(updatedMap => {
-        infoMapRef.current = updatedMap;
-        requestIdleCallback(() => {
-          setDiscoveryState(prev => ({
-            ...prev,
-            rows: pantryRows(allResults.slice(0, newCount), updatedMap),
-          }));
-        });
-      })
-      .catch(() => {
-        // Enrichment failed — keep showing basic results
-      });
+    setDiscoveryState(prev => ({ ...prev, visibleCount: nextCount }));
+    if (found.mode === 'pantry') {
+      enrichInBackground(
+        found.recipes.slice(visibleCount, nextCount),
+        found.info,
+        setDiscoveryState,
+      );
+    }
   };
 
-  const discoveryHasMore =
-    discoveryState.mode !== 'none' &&
-    discoveryState.visibleCount < discoveryState.totalResults;
-
-  const items = discoveryState.rows.map(row =>
-    row.kind === 'random'
-      ? transformRandomRecipe(row.recipe, t)
-      : transformPantryResult(row.recipe, row.info, t),
-  );
+  const discoveryHasMore = !!found && visibleCount < found.recipes.length;
+  const items = toDisplayItems(rowsOf(found, visibleCount), t);
 
   // Fetch-key pattern: compute a stable key that changes when we should re-fetch.
   const [fetchKey, setFetchKey] = useState('');
@@ -601,83 +366,67 @@ export function useSpoonacularDiscovery(
     pantryItemsRef.current = pantryItems;
   });
 
-  // Effect depends only on stable values — no function deps
   useEffect(() => {
     if (!fetchKey || !enabled) return;
-
     const controller = new AbortController();
-
-    const ingredientNames = ingredientQueryOf(pantryItemsRef.current);
-
-    if (ingredientNames) {
-      void fetchPantryDiscovery(
-        ingredientNames,
-        handlePantryResultsRef.current,
-        updateState,
-        controller.signal,
-      );
-    } else {
-      void fetchRandomDiscovery(
-        handleRandomResultsRef.current,
-        updateState,
-        controller.signal,
-        dietaryTags,
-      );
-    }
-
+    void loadDiscovery(
+      ingredientQueryOf(pantryItemsRef.current),
+      dietaryTags,
+      setDiscoveryState,
+      controller.signal,
+    );
     return () => controller.abort();
   }, [fetchKey, dietaryTags, enabled]);
 
   // Bypasses the cache without clearing it: the rows on screen and the cached
   // entry both stay until a non-empty result replaces them, and the promise
   // settles only then so a pull-to-refresh spinner spans the whole fetch.
+  // Enrichment already held for a returning recipe is reused, not re-billed.
   const refresh = async () => {
     if (!enabled || discoveryState.loading) return;
 
     const ingredientNames = ingredientQueryOf(pantryItems);
-    const setLoading = (loading: boolean) => updateState({ loading });
-
-    if (ingredientNames) {
-      await executeWithLoadingState(
-        async () => {
-          const fresh = await refetchPantryDiscovery(
-            ingredientNames,
-            infoMapRef.current,
-          );
-          if (fresh.results.length === 0) return;
-          handlePantryResultsRef.current(
-            fresh.cacheKey,
-            fresh.results,
-            fresh.enrichment,
-          );
-        },
-        setLoading,
-        (error: unknown) => {
-          errorService.reportError(error, {
-            operation: 'refreshPantryBasedRecipes',
-          });
-        },
-      );
-      return;
-    }
+    const cacheKey = cacheKeyOf(ingredientNames, dietaryTags);
+    const known: InfoMap = found?.mode === 'pantry' ? found.info : new Map();
 
     await executeWithLoadingState(
       async () => {
-        const cacheKey = randomCacheKey(dietaryTags);
-        const results = await fetchRandomRecipes(cacheKey, dietaryTags);
-        if (results.length === 0) return;
-        useRecipeCacheStore.getState().setCached(cacheKey, results);
-        handleRandomResultsRef.current(results);
+        const fresh = await fetchFound(ingredientNames, dietaryTags);
+        if (fresh.recipes.length === 0) return;
+        const enriched: Found =
+          fresh.mode === 'pantry'
+            ? {
+                ...fresh,
+                info: await enrichBatch(
+                  fresh.recipes.slice(0, DISCOVERY_PAGE_SIZE),
+                  known,
+                ).catch(() => known),
+              }
+            : fresh;
+        useRecipeCacheStore
+          .getState()
+          .setCached(
+            cacheKey,
+            enriched.recipes,
+            enriched.mode === 'pantry'
+              ? enrichmentRecordOf(enriched.info)
+              : undefined,
+          );
+        show(enriched, cacheKey, setDiscoveryState);
       },
-      setLoading,
+      loading => setDiscoveryState(prev => ({ ...prev, loading })),
       (error: unknown) => {
-        errorService.reportError(error, { operation: 'refreshRandomRecipes' });
+        errorService.reportError(error, {
+          operation: ingredientNames
+            ? 'refreshPantryBasedRecipes'
+            : 'refreshRandomRecipes',
+        });
       },
     );
   };
 
   return {
-    mode: discoveryState.mode,
+    mode: found?.mode ?? 'none',
     items,
     loading: discoveryState.loading,
     refresh,

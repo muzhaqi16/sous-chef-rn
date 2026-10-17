@@ -4,10 +4,7 @@ import { toastService } from '#/services/toastService';
 import { TOAST } from '#constants/animations';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { forgetMyRecipesLists } from '#features/recipes/utils/recipeCacheWriters';
-import {
-  CAPTURE_FAILURE_KEY,
-  type CaptureOutcome,
-} from '#features/recipes/utils/recipeCaptureOutcome';
+import type { CaptureOutcome } from '#features/recipes/utils/recipeCaptureOutcome';
 import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
 
 /**
@@ -57,7 +54,7 @@ export function useCaptureOutcomeReporter() {
         return;
       case 'failed':
         settle(captureId);
-        toastService.error(t(CAPTURE_FAILURE_KEY[outcome.copy]), {
+        toastService.error(t(outcome.copy), {
           duration: TOAST.AUTO_DISMISS_LONG,
         });
     }

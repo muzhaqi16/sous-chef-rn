@@ -125,7 +125,6 @@ describe('useSpoonacularDiscovery', () => {
     expect(result.current.items[0]).toEqual(
       expect.objectContaining({
         title: 'Random Recipe 1',
-        spoonacularId: 100,
         badge: { text: 'Suggested' },
       }),
     );
@@ -172,7 +171,6 @@ describe('useSpoonacularDiscovery', () => {
     expect(result.current.items[0]).toEqual(
       expect.objectContaining({
         title: 'Tomato Pasta',
-        spoonacularId: 200,
         badge: {
           text: '2 of 3 ingredients in your pantry, 1 to buy',
           lines: [

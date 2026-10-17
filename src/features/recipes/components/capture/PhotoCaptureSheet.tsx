@@ -2,23 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Sheet } from '#components/templates/Sheet';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { errorCopy } from '#/services/errorService';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Icon } from '#utils/iconUtils';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useCapturePhotos } from '#features/recipes/hooks/useCapturePhotos';
 import type {
   CaptureRequest,
   CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { useOpening } from '#hooks/ui/useOpening';
+import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
 
 const THUMBNAIL_SIZE = 88;
 
@@ -37,7 +34,6 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const photos = useCapturePhotos();
-  const unavailable = useIsApiUnavailable();
   const [failure, setFailure] = useState<string | null>(null);
 
   // A dismissed sheet takes its pages off the phone.
@@ -67,33 +63,30 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
       case 'limited':
         setFailure(t('recipes.captureLimited'));
         return;
-      case 'upgrade':
-        setFailure(t('errors.codes.clientUpgradeRequired'));
-        return;
-      case 'disabled':
-        setFailure(t('errors.codes.featureDisabled'));
-        return;
-      case 'premium':
-        setFailure(t('errors.codes.premiumRequired'));
-        return;
       case 'refused':
         setFailure(
-          t(
-            outcome.field === 'photos'
-              ? 'recipes.capturePhotosRefused'
-              : 'recipes.captureFailedUnavailable',
-          ),
+          outcome.field === 'photos'
+            ? t('recipes.capturePhotosRefused')
+            : errorCopy(
+                outcome.error,
+                t,
+                t('recipes.captureFailedUnavailable'),
+              ),
         );
     }
   };
 
   return (
-    <>
-      <SheetHeader
-        contentPadding="md"
-        title={t('recipes.capturePhotoTitle')}
-        onClose={onClose}
-      />
+    <CaptureFormFrame
+      title={t('recipes.capturePhotoTitle')}
+      onClose={onClose}
+      failure={failure}
+      sending={busy}
+      canSend={photos.pages.length > 0}
+      onSend={() => {
+        void send();
+      }}
+    >
       <Text role="body" tone="secondary" style={styles.hint}>
         {t('recipes.capturePhotoHint')}
       </Text>
@@ -152,29 +145,7 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
           {t('recipes.captureChoosePhotos')}
         </Button>
       </View>
-      {unavailable ? (
-        <Text role="caption" tone="warning" style={styles.note}>
-          {t('recipes.captureNeedsConnection')}
-        </Text>
-      ) : null}
-      {failure ? (
-        <AlertBanner
-          title={failure}
-          icon="alert-circle-outline"
-          iconLibrary="Ionicons"
-        />
-      ) : null}
-      <Button
-        onPress={() => {
-          void send();
-        }}
-        loading={busy}
-        disabled={unavailable || photos.pages.length === 0}
-        testID={recipesTestIDs.captureSend}
-      >
-        {t('recipes.captureImport')}
-      </Button>
-    </>
+    </CaptureFormFrame>
   );
 };
 
@@ -192,35 +163,20 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
   onSend,
   sending,
   onDismiss,
-}) => {
-  const opening = useOpening(visible);
-
-  return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onDismiss}
-      snapPoints={['70%']}
-      contentContainerStyle={styles.content}
-    >
-      {opening ? (
-        <PhotoForm
-          key={opening.id}
-          visible={visible}
-          onSend={onSend}
-          sending={sending}
-          onClose={onDismiss}
-        />
-      ) : null}
-    </Sheet>
-  );
-};
+}) => (
+  <CaptureSheetShell visible={visible} snapPoint="70%" onDismiss={onDismiss}>
+    {() => (
+      <PhotoForm
+        visible={visible}
+        onSend={onSend}
+        sending={sending}
+        onClose={onDismiss}
+      />
+    )}
+  </CaptureSheetShell>
+);
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-  },
   hint: {
     marginBottom: theme.spacing.md,
   },
@@ -247,9 +203,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  note: {
     marginBottom: theme.spacing.md,
   },
 }));

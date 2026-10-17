@@ -47,25 +47,6 @@ describe('recipeCaptureStore', () => {
     });
   });
 
-  // Version 1 remembered a capture only after its create was answered.
-  it('reads a capture a version 1 build kept as answered', () => {
-    const { migrate } = useRecipeCaptureStore.persist.getOptions();
-    const { createdAt } = reading('c-1');
-
-    expect(
-      migrate?.(
-        {
-          entries: [{ ...reading('c-1'), createdAt, state: 'reading' }],
-          held: [],
-        },
-        1,
-      ),
-    ).toEqual({
-      entries: [expect.objectContaining({ id: 'c-1', answered: true })],
-      held: [],
-    });
-  });
-
   it('keeps one entry per capture, however often it is asked for', () => {
     const store = useRecipeCaptureStore.getState();
     store.addReading(reading('c-1'));

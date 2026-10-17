@@ -87,14 +87,14 @@ export const RecipeFormScreen: React.FC<
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
   // An incomplete capture fills a new recipe once, when its draft is read.
-  const { draft: captureDraft } = useCaptureDraft(captureId);
+  const { draft: captureDraft, link: captureLink } = useCaptureDraft(captureId);
   const { populateFromCapture } = form;
   const filledFrom = useRef<string | null>(null);
   useEffect(() => {
     if (!captureId || !captureDraft || filledFrom.current === captureId) return;
     filledFrom.current = captureId;
-    populateFromCapture(captureDraft);
-  }, [captureId, captureDraft, populateFromCapture]);
+    populateFromCapture(captureDraft, captureLink);
+  }, [captureId, captureDraft, captureLink, populateFromCapture]);
   const { settle: settleCapture } = useRecipeCaptureActions();
 
   // A refusal naming a field the form renders a message for lands on it. An

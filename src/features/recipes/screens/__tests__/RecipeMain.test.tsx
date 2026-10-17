@@ -56,7 +56,7 @@ jest.mock('#features/recipes/components/capture/CaptureSheet', () => ({
 jest.mock('#features/recipes/components/capture/PhotoCaptureSheet', () => ({
   PhotoCaptureSheet: () => null,
 }));
-// The screen starts captures for its sheets, which render outside the navigator.
+// The capture host starts captures for its sheets, which render outside the navigator.
 jest.mock('#features/recipes/hooks/useRecipeCapture', () => ({
   useRecipeCapture: () => ({ start: jest.fn(), sending: false }),
 }));
@@ -73,7 +73,6 @@ jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
     scrollTabBarHidden: { value: false, set: jest.fn() },
     setScannerProps: jest.fn(),
-    setAddProps: jest.fn(),
     setActiveTab: jest.fn(),
     setOverlayOpen: jest.fn(),
     setAddButtonRect: jest.fn(),

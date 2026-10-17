@@ -16,10 +16,10 @@ import { useCaptureOutcomeReporter } from './useCaptureOutcomeReporter';
 import {
   classifyCaptureCreate,
   type CaptureCreateResult,
-  type CaptureField,
 } from '#features/recipes/utils/recipeCaptureOutcome';
 import {
   useRecipeCaptureActions,
+  type CaptureEntry,
   type CaptureSource,
 } from '#features/recipes/store/recipeCaptureStore';
 
@@ -28,60 +28,44 @@ export type CaptureRequest =
   | { source: Extract<CaptureSource, 'text'>; text: string; sourceUrl?: string }
   | { source: Extract<CaptureSource, 'photo'>; photoKeys: string[] };
 
-/** How a send ended for the sheet that made it. */
+/** How a send ended for the sheet that made it: started, or why it did not. */
 export type CaptureStart =
   | { kind: 'started' }
-  | { kind: 'refused'; field: CaptureField | null }
-  | { kind: 'limited' }
-  | { kind: 'upgrade' }
-  | { kind: 'disabled' }
-  | { kind: 'premium' };
+  | Extract<CaptureCreateResult, { kind: 'refused' | 'limited' }>;
 
 const RESENDS = 3;
 const RESEND_BASE_MS = 2000;
 const LABEL_LENGTH = 40;
 
-/** What the pending row names: the page's host, or the text's first line. */
-function labelOf(request: CaptureRequest): string | null {
+/**
+ * What the server is sent, what the pending row names (the page's host, or
+ * the text's first line), and the page it reads or the post its text came from.
+ */
+function describeRequest(request: CaptureRequest): {
+  input: Omit<CreateRecipeCaptureInput, 'id' | 'locale'>;
+} & Pick<CaptureEntry, 'label' | 'link'> {
   switch (request.source) {
     case 'url': {
       const host = /^https?:\/\/([^/?#]+)/i.exec(request.url)?.[1];
-      return host ? host.replace(/^www\./i, '') : null;
+      return {
+        input: { url: request.url },
+        label: host ? host.replace(/^www\./i, '') : null,
+        link: request.url,
+      };
     }
     case 'text': {
       const [firstLine = ''] = request.text.trim().split('\n');
-      return firstLine.slice(0, LABEL_LENGTH) || null;
+      return {
+        input: {
+          text: request.text,
+          ...(request.sourceUrl ? { sourceUrl: request.sourceUrl } : {}),
+        },
+        label: firstLine.slice(0, LABEL_LENGTH) || null,
+        link: request.sourceUrl,
+      };
     }
     case 'photo':
-      return null;
-  }
-}
-
-/** The page a capture reads, or the post its text came from. */
-function linkOf(request: CaptureRequest): string | undefined {
-  switch (request.source) {
-    case 'url':
-      return request.url;
-    case 'text':
-      return request.sourceUrl;
-    case 'photo':
-      return undefined;
-  }
-}
-
-function sourceInput(
-  request: CaptureRequest,
-): Omit<CreateRecipeCaptureInput, 'id' | 'locale'> {
-  switch (request.source) {
-    case 'url':
-      return { url: request.url };
-    case 'text':
-      return {
-        text: request.text,
-        ...(request.sourceUrl ? { sourceUrl: request.sourceUrl } : {}),
-      };
-    case 'photo':
-      return { photos: request.photoKeys };
+      return { input: { photos: request.photoKeys }, label: null };
   }
 }
 
@@ -126,16 +110,17 @@ export function useRecipeCapture() {
   const start = async (request: CaptureRequest): Promise<CaptureStart> => {
     const id = generateEntityId();
     const locale = getDeviceLocale();
+    const { input: source, label, link } = describeRequest(request);
     const input: CreateRecipeCaptureInput = {
       id,
-      ...sourceInput(request),
+      ...source,
       ...(locale ? { locale } : {}),
     };
     addReading({
       id,
       source: request.source,
-      label: labelOf(request),
-      link: linkOf(request),
+      label,
+      link,
       createdAt: new Date().toISOString(),
     });
     setSending(true);
@@ -160,20 +145,9 @@ export function useRecipeCapture() {
         report(id, result.outcome);
         return { kind: 'started' };
       case 'refused':
-        settle(id);
-        return { kind: 'refused', field: result.field };
       case 'limited':
         settle(id);
-        return { kind: 'limited' };
-      case 'upgrade':
-        settle(id);
-        return { kind: 'upgrade' };
-      case 'disabled':
-        settle(id);
-        return { kind: 'disabled' };
-      case 'premium':
-        settle(id);
-        return { kind: 'premium' };
+        return result;
     }
   };
 

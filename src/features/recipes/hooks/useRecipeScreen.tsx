@@ -24,7 +24,7 @@ import { isLifestyleDiet } from '#domain/dietary';
 import {
   toDisplayItems,
   type DisplayItem,
-  type RecipeSearchRow,
+  type RecipeRow,
 } from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   EMPTY_PAGINATION,
@@ -99,7 +99,7 @@ export function useRecipeScreen() {
   // what tells it a new search replaced the state mid-flight, so the stale page
   // is dropped instead of corrupting the new list.
   const [searchData, setSearchData] = useState<{
-    rows: RecipeSearchRow[];
+    rows: RecipeRow[];
     pagination: SearchPagination;
   }>({ rows: [], pagination: EMPTY_PAGINATION });
   // Written here, not when a page arrives, so the list follows a language change.
@@ -127,7 +127,7 @@ export function useRecipeScreen() {
 
   // A fresh search replaces the list and resets pagination (the cursors come
   // from executeRecipeTextSearch via setSearchPagination).
-  const setSearchRows = (rows: RecipeSearchRow[]) => {
+  const setSearchRows = (rows: RecipeRow[]) => {
     setSearchData(prev => ({ ...prev, rows }));
   };
 
@@ -225,7 +225,6 @@ export function useRecipeScreen() {
     }, setSearchLoadingMore);
   };
 
-  // DiscoveryItem already satisfies DisplayItem — no mapping needed
   const items: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery

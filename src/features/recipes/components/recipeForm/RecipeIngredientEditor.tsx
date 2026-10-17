@@ -37,23 +37,58 @@ interface RecipeIngredientEditorProps {
   ) => CaptureCandidate[];
 }
 
+/** The sheet's fields, as typed; a new ingredient starts from `EMPTY_DRAFT`. */
+interface IngredientDraft {
+  editingId: string | null;
+  name: string;
+  itemId: string | null;
+  quantity: string;
+  unit: string;
+  unitId: string | null;
+  preparation: string;
+  section: string;
+  notes: string;
+  isOptional: boolean;
+  originalText: string | null;
+}
+
+const EMPTY_DRAFT: IngredientDraft = {
+  editingId: null,
+  name: '',
+  itemId: null,
+  quantity: '1',
+  unit: '',
+  unitId: null,
+  preparation: '',
+  section: '',
+  notes: '',
+  isOptional: false,
+  originalText: null,
+};
+
+const draftOf = (ingredient: IngredientFormState): IngredientDraft => ({
+  editingId: ingredient.id,
+  name: ingredient.name,
+  itemId: ingredient.itemId ?? null,
+  quantity: formatQuantityForInput(ingredient.quantity),
+  unit: ingredient.unitLabel ?? '',
+  unitId: ingredient.unitId ?? null,
+  preparation: ingredient.preparation ?? '',
+  section: ingredient.section ?? '',
+  notes: ingredient.notes ?? '',
+  isOptional: ingredient.isOptional,
+  originalText: ingredient.originalText ?? null,
+});
+
 export const RecipeIngredientEditor = forwardRef<
   RecipeIngredientEditorRef,
   RecipeIngredientEditorProps
 >(({ onSave, candidatesFor }, ref) => {
   const { t } = useTranslation();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [itemId, setItemId] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState('1');
-  const [unit, setUnit] = useState('');
-  const [unitId, setUnitId] = useState<string | null>(null);
-  const [preparation, setPreparation] = useState('');
-  const [section, setSection] = useState('');
-  const [notes, setNotes] = useState('');
-  const [isOptional, setIsOptional] = useState(false);
-  const [originalText, setOriginalText] = useState<string | null>(null);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [visible, setVisible] = useState(false);
+  const update = (changes: Partial<IngredientDraft>) =>
+    setDraft(prev => ({ ...prev, ...changes }));
 
   // State-driven presentation: the hook auto-presents/dismisses off `visible`
   // via its guarded path (immune to gorhom 5.2.14's dismiss-before-present
@@ -69,77 +104,42 @@ export const RecipeIngredientEditor = forwardRef<
 
   useImperativeHandle(ref, () => ({
     open: (ingredient?: IngredientFormState) => {
-      if (ingredient) {
-        setEditingId(ingredient.id);
-        setName(ingredient.name);
-        setItemId(ingredient.itemId ?? null);
-        setQuantity(formatQuantityForInput(ingredient.quantity));
-        setUnit(ingredient.unitLabel ?? '');
-        setUnitId(ingredient.unitId ?? null);
-        setPreparation(ingredient.preparation ?? '');
-        setSection(ingredient.section ?? '');
-        setNotes(ingredient.notes ?? '');
-        setIsOptional(ingredient.isOptional);
-        setOriginalText(ingredient.originalText ?? null);
-      } else {
-        setEditingId(null);
-        setName('');
-        setItemId(null);
-        setQuantity('1');
-        setUnit('');
-        setUnitId(null);
-        setPreparation('');
-        setSection('');
-        setNotes('');
-        setIsOptional(false);
-        setOriginalText(null);
-      }
+      setDraft(ingredient ? draftOf(ingredient) : EMPTY_DRAFT);
       setVisible(true);
     },
     close: () => setVisible(false),
   }));
 
   // Offered only while the line is unlinked as the capture left it.
-  const candidates = candidatesFor ? candidatesFor(originalText) : [];
+  const candidates = candidatesFor ? candidatesFor(draft.originalText) : [];
 
-  const handleNameChange = (text: string) => {
-    setName(text);
-    setItemId(null);
-  };
-
-  const handleItemSelect = (item: ItemSuggestion) => {
-    setItemId(item.id);
-    if (item.defaultUnit?.symbol) {
-      setUnit(item.defaultUnit.symbol);
-    }
-    if (item.defaultUnit?.id) {
-      setUnitId(item.defaultUnit.id);
-    }
-  };
-
-  const handleUnitSelect = (selectedUnitId: string | null) => {
-    setUnitId(selectedUnitId);
+  const handleItemSelect = ({ id, defaultUnit }: ItemSuggestion) => {
+    const changes: Partial<IngredientDraft> = { itemId: id };
+    if (defaultUnit?.symbol) changes.unit = defaultUnit.symbol;
+    if (defaultUnit?.id) changes.unitId = defaultUnit.id;
+    update(changes);
   };
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    const name = draft.name.trim();
+    if (!name) return;
     // The counter reads and steps fractions ("1 1/4"), so the save does too.
     // No amount above zero is a line stating none ("salt, to taste"), never an
     // invented 1: the API deducts, prices and converts only a stated amount.
-    const parsedQuantity = parseFractionalInput(quantity);
+    const parsedQuantity = parseFractionalInput(draft.quantity);
     onSave({
-      id: editingId ?? `temp-ing-${generateId()}`,
-      name: name.trim(),
+      id: draft.editingId ?? `temp-ing-${generateId()}`,
+      name,
       quantity:
         parsedQuantity !== null && parsedQuantity > 0 ? parsedQuantity : null,
-      itemId,
-      unitId,
-      unitLabel: unit.trim(),
-      originalText,
-      preparation: preparation.trim(),
-      section: section.trim(),
-      notes: notes.trim(),
-      isOptional,
+      itemId: draft.itemId,
+      unitId: draft.unitId,
+      unitLabel: draft.unit.trim(),
+      originalText: draft.originalText,
+      preparation: draft.preparation.trim(),
+      section: draft.section.trim(),
+      notes: draft.notes.trim(),
+      isOptional: draft.isOptional,
       sortOrder: 0,
     });
     setVisible(false);
@@ -154,7 +154,9 @@ export const RecipeIngredientEditor = forwardRef<
     >
       <SheetHeader
         title={
-          editingId ? t('recipes.editIngredient') : t('recipes.addIngredient')
+          draft.editingId
+            ? t('recipes.editIngredient')
+            : t('recipes.addIngredient')
         }
         onClose={() => setVisible(false)}
         confirm={{ onPress: handleSave }}
@@ -165,9 +167,9 @@ export const RecipeIngredientEditor = forwardRef<
         keyboardShouldPersistTaps="handled"
       >
         <DropdownStack>
-          {originalText ? (
+          {draft.originalText ? (
             <Text role="caption" tone="secondary">
-              {t('recipes.ingredientAsWritten', { line: originalText })}
+              {t('recipes.ingredientAsWritten', { line: draft.originalText })}
             </Text>
           ) : null}
           {candidates.length > 0 ? (
@@ -179,11 +181,14 @@ export const RecipeIngredientEditor = forwardRef<
                 <AnimatedChip
                   key={candidate.itemId}
                   label={candidate.name}
-                  selected={itemId === candidate.itemId}
+                  selected={draft.itemId === candidate.itemId}
                   onPress={() =>
-                    setItemId(
-                      itemId === candidate.itemId ? null : candidate.itemId,
-                    )
+                    update({
+                      itemId:
+                        draft.itemId === candidate.itemId
+                          ? null
+                          : candidate.itemId,
+                    })
                   }
                 />
               ))}
@@ -193,8 +198,8 @@ export const RecipeIngredientEditor = forwardRef<
             <ItemAutocompleteField
               variant="inline"
               label={t('recipes.ingredientName')}
-              value={name}
-              onChangeText={handleNameChange}
+              value={draft.name}
+              onChangeText={name => update({ name, itemId: null })}
               onSelectItem={handleItemSelect}
               placeholder={t('recipes.ingredientNamePlaceholder')}
               required
@@ -204,8 +209,8 @@ export const RecipeIngredientEditor = forwardRef<
           <FieldRow>
             <EditableCounter
               label={t('labels.quantity')}
-              value={quantity}
-              onChangeText={setQuantity}
+              value={draft.quantity}
+              onChangeText={quantity => update({ quantity })}
               placeholder={t('recipes.quantityNoAmountPlaceholder')}
               min={0}
               step={0.25}
@@ -213,33 +218,33 @@ export const RecipeIngredientEditor = forwardRef<
             <UnitAutocompleteField
               variant="modal"
               label={t('labels.unit')}
-              value={unit}
-              onChangeText={setUnit}
-              onUnitSelected={handleUnitSelect}
+              value={draft.unit}
+              onChangeText={unit => update({ unit })}
+              onUnitSelected={unitId => update({ unitId })}
               placeholder={t('labels.pcsKgEtc')}
             />
           </FieldRow>
 
           <FormInput
             label={t('recipes.preparation')}
-            value={preparation}
-            onChangeText={setPreparation}
+            value={draft.preparation}
+            onChangeText={preparation => update({ preparation })}
             placeholder={t('recipes.preparationPlaceholder')}
             useBottomSheetInput
           />
 
           <FormInput
             label={t('recipes.section')}
-            value={section}
-            onChangeText={setSection}
+            value={draft.section}
+            onChangeText={section => update({ section })}
             placeholder={t('recipes.sectionPlaceholder')}
             useBottomSheetInput
           />
 
           <FormInput
             label={t('recipes.notes')}
-            value={notes}
-            onChangeText={setNotes}
+            value={draft.notes}
+            onChangeText={notes => update({ notes })}
             placeholder={t('labels.anyAdditionalNotes')}
             useBottomSheetInput
           />
@@ -248,8 +253,8 @@ export const RecipeIngredientEditor = forwardRef<
             <Text role="body">{t('recipes.optional')}</Text>
             <BaseSwitch
               accessibilityLabel={t('recipes.optional')}
-              value={isOptional}
-              onValueChange={setIsOptional}
+              value={draft.isOptional}
+              onValueChange={isOptional => update({ isOptional })}
             />
           </View>
         </DropdownStack>

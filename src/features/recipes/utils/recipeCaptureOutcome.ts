@@ -3,15 +3,10 @@ import {
   RecipeCaptureFailure,
   RecipeCaptureStatus,
   RecipeCaptureWarningCode,
+  type CreateRecipeCaptureInput,
 } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';
-import {
-  dailyAllowanceWait,
-  isFeatureDisabled,
-  isPremiumRequired,
-  isUpgradeRequired,
-  isVerdict,
-} from '#domain/serverJobRefusals';
+import { dailyAllowanceWait, isVerdict } from '#domain/serverJobRefusals';
 import type { RecipeCaptureReadersFragment } from '#/graphql/readers/recipeCaptureReaders.generated';
 
 type Capture = Pick<
@@ -19,50 +14,33 @@ type Capture = Pick<
   'status' | 'alreadySaved' | 'failure' | 'recipe'
 >;
 
-/** What the user is told about a capture that read no recipe. */
-type FailureCopy =
-  | 'unreachable'
-  | 'unsupportedPage'
-  | 'noRecipe'
-  | 'unreadable'
-  | 'photoRefused'
-  | 'photoStorage'
-  | 'unavailable';
+const UNAVAILABLE: TranslationKey = 'recipes.captureFailedUnavailable';
 
 // Exhaustive, so a code the schema adds fails to compile until it is placed.
-const FAILURE_COPY: Record<RecipeCaptureFailure, FailureCopy> = {
-  [RecipeCaptureFailure.UnreachableUrl]: 'unreachable',
-  [RecipeCaptureFailure.UnsupportedPage]: 'unsupportedPage',
-  [RecipeCaptureFailure.NoRecipe]: 'noRecipe',
-  [RecipeCaptureFailure.Truncated]: 'unreadable',
-  [RecipeCaptureFailure.InvalidAnswer]: 'unreadable',
-  [RecipeCaptureFailure.ReadFailed]: 'unreadable',
-  [RecipeCaptureFailure.PhotoRefused]: 'photoRefused',
-  [RecipeCaptureFailure.PhotoStorage]: 'photoStorage',
-  [RecipeCaptureFailure.CallerGone]: 'unavailable',
-  [RecipeCaptureFailure.DeadlinePassed]: 'unavailable',
-  [RecipeCaptureFailure.ModelDown]: 'unavailable',
-  [RecipeCaptureFailure.NoModel]: 'unavailable',
-  [RecipeCaptureFailure.NoService]: 'unavailable',
-  [RecipeCaptureFailure.NoWorker]: 'unavailable',
-  [RecipeCaptureFailure.QueueUnavailable]: 'unavailable',
-  [RecipeCaptureFailure.RequestRefused]: 'unavailable',
-  [RecipeCaptureFailure.ServiceError]: 'unavailable',
-  [RecipeCaptureFailure.ServiceLacksRecipes]: 'unavailable',
-  [RecipeCaptureFailure.ServiceRefusedToken]: 'unavailable',
-  [RecipeCaptureFailure.ServiceTimeout]: 'unavailable',
-  [RecipeCaptureFailure.ServiceUnreachable]: 'unavailable',
-  [RecipeCaptureFailure.Unknown]: 'unavailable',
-};
-
-export const CAPTURE_FAILURE_KEY: Record<FailureCopy, TranslationKey> = {
-  unreachable: 'recipes.captureFailedUnreachable',
-  unsupportedPage: 'recipes.captureFailedUnsupportedPage',
-  noRecipe: 'recipes.captureFailedNoRecipe',
-  unreadable: 'recipes.captureFailedUnreadable',
-  photoRefused: 'recipes.captureFailedPhotoRefused',
-  photoStorage: 'recipes.captureFailedPhotoStorage',
-  unavailable: 'recipes.captureFailedUnavailable',
+const FAILURE_KEY: Record<RecipeCaptureFailure, TranslationKey> = {
+  [RecipeCaptureFailure.UnreachableUrl]: 'recipes.captureFailedUnreachable',
+  [RecipeCaptureFailure.UnsupportedPage]:
+    'recipes.captureFailedUnsupportedPage',
+  [RecipeCaptureFailure.NoRecipe]: 'recipes.captureFailedNoRecipe',
+  [RecipeCaptureFailure.Truncated]: 'recipes.captureFailedUnreadable',
+  [RecipeCaptureFailure.InvalidAnswer]: 'recipes.captureFailedUnreadable',
+  [RecipeCaptureFailure.ReadFailed]: 'recipes.captureFailedUnreadable',
+  [RecipeCaptureFailure.PhotoRefused]: 'recipes.captureFailedPhotoRefused',
+  [RecipeCaptureFailure.PhotoStorage]: 'recipes.captureFailedPhotoStorage',
+  [RecipeCaptureFailure.CallerGone]: UNAVAILABLE,
+  [RecipeCaptureFailure.DeadlinePassed]: UNAVAILABLE,
+  [RecipeCaptureFailure.ModelDown]: UNAVAILABLE,
+  [RecipeCaptureFailure.NoModel]: UNAVAILABLE,
+  [RecipeCaptureFailure.NoService]: UNAVAILABLE,
+  [RecipeCaptureFailure.NoWorker]: UNAVAILABLE,
+  [RecipeCaptureFailure.QueueUnavailable]: UNAVAILABLE,
+  [RecipeCaptureFailure.RequestRefused]: UNAVAILABLE,
+  [RecipeCaptureFailure.ServiceError]: UNAVAILABLE,
+  [RecipeCaptureFailure.ServiceLacksRecipes]: UNAVAILABLE,
+  [RecipeCaptureFailure.ServiceRefusedToken]: UNAVAILABLE,
+  [RecipeCaptureFailure.ServiceTimeout]: UNAVAILABLE,
+  [RecipeCaptureFailure.ServiceUnreachable]: UNAVAILABLE,
+  [RecipeCaptureFailure.Unknown]: UNAVAILABLE,
 };
 
 export const CAPTURE_WARNING_KEY: Record<
@@ -87,14 +65,7 @@ export const MEASUREMENT_BASIS_KEY: Record<
 
 // A newer server can send a code this build was compiled without.
 const isKnownFailure = (code: string): code is RecipeCaptureFailure =>
-  Object.hasOwn(FAILURE_COPY, code);
-
-/** A failure code's copy; one this build does not know reads as unavailable. */
-function failureCopyOf(failure: string | null): FailureCopy {
-  return failure && isKnownFailure(failure)
-    ? FAILURE_COPY[failure]
-    : 'unavailable';
-}
+  Object.hasOwn(FAILURE_KEY, code);
 
 export type CaptureOutcome =
   | {
@@ -104,12 +75,12 @@ export type CaptureOutcome =
       alreadySaved: boolean;
     }
   | { kind: 'incomplete' }
-  | { kind: 'failed'; copy: FailureCopy };
+  | { kind: 'failed'; copy: TranslationKey };
 
 /** A capture the server never answered for, or past its deadline. */
 export const UNANSWERED_CAPTURE: CaptureOutcome = {
   kind: 'failed',
-  copy: 'unavailable',
+  copy: UNAVAILABLE,
 };
 
 /** How a capture ended; undefined while it is still reading. */
@@ -126,74 +97,72 @@ export function captureOutcomeOf(capture: Capture): CaptureOutcome | undefined {
     case RecipeCaptureStatus.Incomplete:
       return { kind: 'incomplete' };
     case RecipeCaptureStatus.Failed:
-    case RecipeCaptureStatus.Unavailable:
-      return { kind: 'failed', copy: failureCopyOf(capture.failure) };
+    case RecipeCaptureStatus.Unavailable: {
+      const { failure } = capture;
+      return {
+        kind: 'failed',
+        copy:
+          failure && isKnownFailure(failure)
+            ? FAILURE_KEY[failure]
+            : UNAVAILABLE,
+      };
+    }
   }
 }
 
 /** The inputs a refusal can name, as the sheets show them. */
-export type CaptureField = 'url' | 'text' | 'photos' | 'sourceUrl';
+export type CaptureField = Exclude<
+  keyof CreateRecipeCaptureInput,
+  'id' | 'locale'
+>;
 
-function captureFieldOf(field: string | null): CaptureField | null {
-  if (field === null) return null;
-  switch (field) {
-    case 'url':
-    case 'text':
-    case 'photos':
-    case 'sourceUrl':
-      return field;
-    default:
-      return null;
-  }
-}
+// Keyed by the input's fields, so one the schema adds fails to compile until placed.
+const CAPTURE_FIELDS: Record<CaptureField, true> = {
+  url: true,
+  text: true,
+  photos: true,
+  sourceUrl: true,
+};
+
+const isCaptureField = (field: string): field is CaptureField =>
+  Object.hasOwn(CAPTURE_FIELDS, field);
 
 /**
  * What to do with the answer to a create: poll a capture still reading, settle
- * one a replay or a fast worker already finished, report a refusal on its
- * field, wait out the daily allowance, ask for an update, or send again.
+ * one a replay or a fast worker already finished, report a refusal (on its
+ * field where it names one), wait out the daily allowance, or send again.
  */
 export type CaptureCreateResult =
   | { kind: 'poll' }
   | { kind: 'settle'; outcome: CaptureOutcome }
-  | { kind: 'refused'; field: CaptureField | null }
-  | { kind: 'limited'; retryAt: string }
-  | { kind: 'upgrade' }
-  | { kind: 'disabled' }
-  | { kind: 'premium' }
+  | { kind: 'refused'; field: CaptureField | null; error: unknown }
+  | { kind: 'limited' }
   | { kind: 'resend' };
 
-export function classifyCaptureCreate(
-  {
-    accepted,
-    capture,
-    refusedField,
-    error,
-  }: {
-    accepted: boolean;
-    /** The capture the payload wrote to the cache, if it did. */
-    capture: Capture | null;
-    refusedField: string | null;
-    error: unknown;
-  },
-  now = Date.now(),
-): CaptureCreateResult {
+export function classifyCaptureCreate({
+  accepted,
+  capture,
+  refusedField,
+  error,
+}: {
+  accepted: boolean;
+  /** The capture the payload wrote to the cache, if it did. */
+  capture: Capture | null;
+  refusedField: string | null;
+  error: unknown;
+}): CaptureCreateResult {
   if (accepted) {
     const outcome = capture ? captureOutcomeOf(capture) : undefined;
     return outcome ? { kind: 'settle', outcome } : { kind: 'poll' };
   }
-  const retryAfter = dailyAllowanceWait(error);
-  if (retryAfter !== null) {
-    return {
-      kind: 'limited',
-      retryAt: new Date(now + retryAfter * 1000).toISOString(),
-    };
-  }
-  if (isUpgradeRequired(error)) return { kind: 'upgrade' };
-  if (isFeatureDisabled(error)) return { kind: 'disabled' };
-  if (isPremiumRequired(error)) return { kind: 'premium' };
+  if (dailyAllowanceWait(error) !== null) return { kind: 'limited' };
   // A refusal, in the payload or not, stands; one that never arrived does not.
   if (error === undefined || isVerdict(error)) {
-    return { kind: 'refused', field: captureFieldOf(refusedField) };
+    const field =
+      refusedField !== null && isCaptureField(refusedField)
+        ? refusedField
+        : null;
+    return { kind: 'refused', field, error };
   }
   return { kind: 'resend' };
 }

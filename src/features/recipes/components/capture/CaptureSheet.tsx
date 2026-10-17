@@ -1,30 +1,56 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { object, string, type ObjectSchema } from 'yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Sheet } from '#components/templates/Sheet';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { errorCopy } from '#/services/errorService';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { AlertBanner } from '#components/molecules/AlertBanner';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { logValidationErrors } from '#/utils/validation/common';
 import type {
   CaptureRequest,
   CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
-import type { CaptureField } from '#features/recipes/utils/recipeCaptureOutcome';
+import { httpUrl } from '#features/recipes/screens/RecipeForm/recipeFormConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { useOpening } from '#hooks/ui/useOpening';
+import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
 
 export type CaptureSheetKind = 'link' | 'text';
 
 /** What the server reads at most from shared text (`RECIPE_CAPTURE_MAX_CHARS`). */
 export const MAX_CAPTURE_TEXT = 24_000;
 
-const isWebLink = (value: string) => /^https?:\/\/\S+\.\S+$/i.test(value);
+interface CaptureFormValues {
+  url: string;
+  text: string;
+  sourceUrl: string;
+}
+
+const captureFormDefaults: CaptureFormValues = {
+  url: '',
+  text: '',
+  sourceUrl: '',
+};
+
+// A blank field passes: the send button waits for the one the sheet shows.
+const captureFormSchema: ObjectSchema<CaptureFormValues> = object({
+  url: httpUrl('recipes.captureLinkInvalid'),
+  text: string().defined().trim(),
+  sourceUrl: httpUrl('recipes.captureLinkInvalid'),
+});
+
+/** The error type of a refusal the server made, as against a rule the form holds. */
+const REFUSED = 'refused';
+
+const pasteLink = async (onChange: (value: string) => void) => {
+  const pasted = (await Clipboard.getString()).trim();
+  if (pasted) onChange(pasted);
+};
 
 interface CaptureFormProps {
   initialKind: CaptureSheetKind;
@@ -42,60 +68,62 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const unavailable = useIsApiUnavailable();
   const [kind, setKind] = useState(initialKind);
-  const [url, setUrl] = useState('');
-  const [text, setText] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
-  // A refusal the server made, shown where the user can fix it.
-  const [urlError, setUrlError] = useState<string | null>(null);
-  const [linkRefused, setLinkRefused] = useState(false);
-  const [textError, setTextError] = useState<string | null>(null);
-  const [sourceError, setSourceError] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-
-  const trimmedUrl = url.trim();
-  const trimmedText = text.trim();
-  const trimmedSource = sourceUrl.trim();
-  const ready =
-    !unavailable && (kind === 'link' ? trimmedUrl !== '' : trimmedText !== '');
-
-  const pasteLink = async () => {
-    const pasted = (await Clipboard.getString()).trim();
-    if (pasted) setUrl(pasted);
-  };
+  const { control, handleSubmit, getValues, setValue, setError } =
+    useForm<CaptureFormValues>({
+      resolver: yupResolver(captureFormSchema),
+      defaultValues: captureFormDefaults,
+    });
+  const [url, text] = useWatch({ control, name: ['url', 'text'] });
+  const canSend = (kind === 'link' ? url : text).trim() !== '';
 
   const switchToText = () => {
     setKind('text');
-    setSourceUrl(trimmedUrl);
-    setUrlError(null);
-    setLinkRefused(false);
+    setValue('sourceUrl', getValues('url').trim());
   };
 
   // A refusal lands on the field that caused it, where the user can fix it.
-  const showRefusal = (field: CaptureField | null) => {
-    switch (field) {
+  const showRefusal = (refusal: Extract<CaptureStart, { kind: 'refused' }>) => {
+    switch (refusal.field) {
       case 'url':
-        setUrlError(
-          textAllowed
+        setError('url', {
+          type: REFUSED,
+          message: textAllowed
             ? t('recipes.captureLinkRefused')
             : t('recipes.captureLinkUnreadable'),
-        );
-        setLinkRefused(true);
+        });
         return;
       case 'text':
-        setTextError(t('recipes.captureTextTooLong'));
+        setError('text', {
+          type: REFUSED,
+          message: t('recipes.captureTextTooLong'),
+        });
         return;
       case 'sourceUrl':
-        setSourceError(t('recipes.captureLinkInvalid'));
+        setError('sourceUrl', {
+          type: REFUSED,
+          message: t('recipes.captureLinkInvalid'),
+        });
         return;
       case 'photos':
       case null:
-        setFailure(t('recipes.captureFailedUnavailable'));
+        setFailure(
+          errorCopy(refusal.error, t, t('recipes.captureFailedUnavailable')),
+        );
     }
   };
 
-  const show = (outcome: CaptureStart) => {
+  const send = handleSubmit(async values => {
+    const outcome = await onSend(
+      kind === 'link'
+        ? { source: 'url', url: values.url }
+        : {
+            source: 'text',
+            text: values.text,
+            ...(values.sourceUrl ? { sourceUrl: values.sourceUrl } : {}),
+          },
+    );
     switch (outcome.kind) {
       case 'started':
         onClose();
@@ -103,112 +131,92 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
       case 'limited':
         setFailure(t('recipes.captureLimited'));
         return;
-      case 'upgrade':
-        setFailure(t('errors.codes.clientUpgradeRequired'));
-        return;
-      case 'disabled':
-        setFailure(t('errors.codes.featureDisabled'));
-        return;
-      case 'premium':
-        setFailure(t('errors.codes.premiumRequired'));
-        return;
       case 'refused':
-        showRefusal(outcome.field);
+        showRefusal(outcome);
     }
-  };
-
-  const send = async () => {
-    setFailure(null);
-    if (kind === 'link') {
-      if (!isWebLink(trimmedUrl)) {
-        setUrlError(t('recipes.captureLinkInvalid'));
-        return;
-      }
-      show(await onSend({ source: 'url', url: trimmedUrl }));
-      return;
-    }
-    if (trimmedSource && !isWebLink(trimmedSource)) {
-      setSourceError(t('recipes.captureLinkInvalid'));
-      return;
-    }
-    show(
-      await onSend({
-        source: 'text',
-        text: trimmedText,
-        ...(trimmedSource ? { sourceUrl: trimmedSource } : {}),
-      }),
-    );
-  };
+  }, logValidationErrors);
 
   return (
-    <>
-      <SheetHeader
-        contentPadding="md"
-        title={
-          kind === 'link'
-            ? t('recipes.captureLinkTitle')
-            : t('recipes.captureTextTitle')
-        }
-        onClose={onClose}
-      />
+    <CaptureFormFrame
+      title={
+        kind === 'link'
+          ? t('recipes.captureLinkTitle')
+          : t('recipes.captureTextTitle')
+      }
+      onClose={onClose}
+      failure={failure}
+      sending={sending}
+      canSend={canSend}
+      onSend={() => {
+        setFailure(null);
+        void send();
+      }}
+    >
       {kind === 'link' ? (
-        <>
-          <FormInput
-            label={t('recipes.captureLinkLabel')}
-            value={url}
-            onChangeText={next => {
-              setUrl(next);
-              setUrlError(null);
-              setLinkRefused(false);
-            }}
-            placeholder={t('recipes.captureLinkPlaceholder')}
-            keyboardType="url"
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={urlError ?? undefined}
-            editable={!sending}
-            useBottomSheetInput
-            testID={recipesTestIDs.captureUrlInput}
-          />
-          <View style={styles.actions}>
-            {linkRefused && textAllowed ? (
-              <Button
-                variant="outline"
-                size="small"
-                onPress={switchToText}
-                testID={recipesTestIDs.captureUseText}
-              >
-                {t('recipes.captureUseTextInstead')}
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="small"
-                icon="clipboard-outline"
-                onPress={() => {
-                  void pasteLink();
-                }}
-              >
-                {t('recipes.capturePasteLink')}
-              </Button>
-            )}
-          </View>
-        </>
+        <Controller
+          control={control}
+          name="url"
+          render={({ field, fieldState }) => (
+            <>
+              <FormInput
+                label={t('recipes.captureLinkLabel')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder={t('recipes.captureLinkPlaceholder')}
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={fieldState.error?.message}
+                editable={!sending}
+                useBottomSheetInput
+                testID={recipesTestIDs.captureUrlInput}
+              />
+              <View style={styles.actions}>
+                {textAllowed && fieldState.error?.type === REFUSED ? (
+                  <Button
+                    variant="outline"
+                    size="small"
+                    onPress={switchToText}
+                    testID={recipesTestIDs.captureUseText}
+                  >
+                    {t('recipes.captureUseTextInstead')}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    icon="clipboard-outline"
+                    onPress={() => {
+                      void pasteLink(field.onChange);
+                    }}
+                  >
+                    {t('recipes.capturePasteLink')}
+                  </Button>
+                )}
+              </View>
+            </>
+          )}
+        />
       ) : (
         <>
-          <FormTextArea
-            label={t('recipes.captureTextLabel')}
-            value={text}
-            onChangeText={next => {
-              setText(next);
-              setTextError(null);
-            }}
-            placeholder={t('recipes.captureTextPlaceholder')}
-            maxLength={MAX_CAPTURE_TEXT}
-            numberOfLines={8}
-            error={textError ?? undefined}
-            editable={!sending}
-            testID={recipesTestIDs.captureTextInput}
+          <Controller
+            control={control}
+            name="text"
+            render={({ field, fieldState }) => (
+              <FormTextArea
+                label={t('recipes.captureTextLabel')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder={t('recipes.captureTextPlaceholder')}
+                maxLength={MAX_CAPTURE_TEXT}
+                numberOfLines={8}
+                error={fieldState.error?.message}
+                editable={!sending}
+                testID={recipesTestIDs.captureTextInput}
+              />
+            )}
           />
           <Text role="footnote" tone="tertiary" style={styles.count}>
             {t('recipes.captureTextCount', {
@@ -216,47 +224,29 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
               max: MAX_CAPTURE_TEXT,
             })}
           </Text>
-          <FormInput
-            label={t('recipes.captureSourceLabel')}
-            value={sourceUrl}
-            onChangeText={next => {
-              setSourceUrl(next);
-              setSourceError(null);
-            }}
-            placeholder={t('recipes.captureLinkPlaceholder')}
-            keyboardType="url"
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={sourceError ?? undefined}
-            editable={!sending}
-            useBottomSheetInput
-            testID={recipesTestIDs.captureSourceInput}
+          <Controller
+            control={control}
+            name="sourceUrl"
+            render={({ field, fieldState }) => (
+              <FormInput
+                label={t('recipes.captureSourceLabel')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder={t('recipes.captureLinkPlaceholder')}
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={fieldState.error?.message}
+                editable={!sending}
+                useBottomSheetInput
+                testID={recipesTestIDs.captureSourceInput}
+              />
+            )}
           />
         </>
       )}
-      {unavailable ? (
-        <Text role="caption" tone="warning" style={styles.note}>
-          {t('recipes.captureNeedsConnection')}
-        </Text>
-      ) : null}
-      {failure ? (
-        <AlertBanner
-          title={failure}
-          icon="alert-circle-outline"
-          iconLibrary="Ionicons"
-        />
-      ) : null}
-      <Button
-        onPress={() => {
-          void send();
-        }}
-        loading={sending}
-        disabled={!ready}
-        testID={recipesTestIDs.captureSend}
-      >
-        {t('recipes.captureImport')}
-      </Button>
-    </>
+    </CaptureFormFrame>
   );
 };
 
@@ -282,45 +272,34 @@ export const CaptureSheet: React.FC<CaptureSheetProps> = ({
   onSend,
   sending,
   onDismiss,
-}) => {
-  const opening = useOpening(visible, kind);
-
-  return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onDismiss}
-      snapPoints={['85%']}
-      contentContainerStyle={styles.content}
-    >
-      {opening?.payload ? (
+}) => (
+  <CaptureSheetShell
+    visible={visible}
+    payload={kind}
+    snapPoint="85%"
+    onDismiss={onDismiss}
+  >
+    {initialKind =>
+      initialKind ? (
         <CaptureForm
-          key={opening.id}
-          initialKind={opening.payload}
+          initialKind={initialKind}
           textAllowed={textAllowed}
           onSend={onSend}
           sending={sending}
           onClose={onDismiss}
         />
-      ) : null}
-    </Sheet>
-  );
-};
+      ) : null
+    }
+  </CaptureSheetShell>
+);
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-  },
   actions: {
     flexDirection: 'row',
     marginBottom: theme.spacing.md,
   },
   count: {
     alignSelf: 'flex-end',
-    marginBottom: theme.spacing.md,
-  },
-  note: {
     marginBottom: theme.spacing.md,
   },
 }));

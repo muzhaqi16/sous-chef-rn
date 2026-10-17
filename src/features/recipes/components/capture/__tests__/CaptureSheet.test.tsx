@@ -9,6 +9,7 @@ import {
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { appConfig } from '#/config/appConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
@@ -75,14 +76,20 @@ describe('CaptureSheet: from a link', () => {
     });
   });
 
-  it('says on the field what a full link looks like, sending nothing', () => {
+  it.each([
+    { name: 'without its scheme', link: 'example-cooking.com/miso' },
+    {
+      name: 'longer than the API reads',
+      link: `https://example-cooking.com/${'a'.repeat(2049 - 28)}`,
+    },
+  ])('refuses a link $name on the field, sending nothing', async ({ link }) => {
     renderSheet('link');
 
-    type(recipesTestIDs.captureUrlInput, 'example-cooking.com/miso');
+    type(recipesTestIDs.captureUrlInput, link);
     send();
 
     expect(
-      screen.getByText(
+      await screen.findByText(
         'Enter the full link, starting with http:// or https://',
       ),
     ).toBeTruthy();
@@ -157,33 +164,44 @@ describe('CaptureSheet: from a link', () => {
     );
   });
 
-  it('says a plan is needed when the server refuses for one, staying open', async () => {
-    const refused = recordMock(CreateRecipeCaptureDocument, {
-      error: new CombinedGraphQLErrors({
-        errors: [
-          {
-            message: 'refused',
-            extensions: {
-              code: TopLevelErrorCode.PremiumRequired,
-              feature: 'RECIPE_CAPTURE_URL',
-              plan: 'PREMIUM',
-            },
-          },
-        ],
-      }),
-    });
-    const onDismiss = jest.fn();
-    renderWithApollo(<SheetSendingACapture onDismiss={onDismiss} />, {
-      operationMocks: [refused.mock],
-    });
+  // The server's refusals read in the copy their codes have everywhere.
+  it.each([
+    {
+      code: TopLevelErrorCode.ClientUpgradeRequired,
+      extensions: {},
+      copy: `This version of ${appConfig.identity.displayName} is out of date. Please update to continue.`,
+    },
+    {
+      code: TopLevelErrorCode.FeatureDisabled,
+      extensions: { feature: 'RECIPE_CAPTURE_URL' },
+      copy: "This isn't available on your account right now.",
+    },
+    {
+      code: TopLevelErrorCode.PremiumRequired,
+      extensions: { feature: 'RECIPE_CAPTURE_URL', plan: 'PREMIUM' },
+      copy: 'This needs a Premium plan.',
+    },
+  ])(
+    'says $code in its own words, staying open',
+    async ({ code, extensions, copy }) => {
+      const refused = recordMock(CreateRecipeCaptureDocument, {
+        error: new CombinedGraphQLErrors({
+          errors: [{ message: 'refused', extensions: { code, ...extensions } }],
+        }),
+      });
+      const onDismiss = jest.fn();
+      renderWithApollo(<SheetSendingACapture onDismiss={onDismiss} />, {
+        operationMocks: [refused.mock],
+      });
 
-    type(recipesTestIDs.captureUrlInput, 'https://example-cooking.com/miso');
-    send();
+      type(recipesTestIDs.captureUrlInput, 'https://example-cooking.com/miso');
+      send();
 
-    expect(await screen.findByText('This needs a Premium plan.')).toBeTruthy();
-    expect(refused.fired).toHaveLength(1);
-    expect(onDismiss).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByText(copy)).toBeTruthy();
+      expect(refused.fired).toHaveLength(1);
+      expect(onDismiss).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('CaptureSheet: from text', () => {

@@ -1,4 +1,3 @@
-import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MeasurementRegionBasis } from '#/graphql/generated/schemaTypes';
 import { useHeldCaptureId } from '#features/recipes/store/recipeCaptureStore';
@@ -6,7 +5,7 @@ import {
   CAPTURE_WARNING_KEY,
   MEASUREMENT_BASIS_KEY,
 } from '#features/recipes/utils/recipeCaptureOutcome';
-import { RecipeCaptureDocument } from './useRecipeCapture.generated';
+import { useFinishedCapture } from './useFinishedCapture';
 
 /** A catalog item the capture proposed for a line it did not link. */
 export interface CaptureCandidate {
@@ -32,19 +31,7 @@ function regionName(code: string, language: string): string {
  */
 export function useCaptureReview(recipeId: string | undefined) {
   const { t, i18n } = useTranslation();
-  const captureId = useHeldCaptureId(recipeId);
-  const { data } = useQuery(
-    RecipeCaptureDocument,
-    captureId
-      ? {
-          variables: { id: captureId },
-          fetchPolicy: 'cache-first',
-          // A finished capture does not change.
-          refetchOn: false,
-        }
-      : skipToken,
-  );
-  const capture = data?.recipeCapture;
+  const capture = useFinishedCapture(useHeldCaptureId(recipeId));
   if (!capture) return { review: null };
 
   const region = capture.measurementRegion;
