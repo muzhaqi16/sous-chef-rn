@@ -356,10 +356,9 @@ export const StorageLocationForm = forwardRef<
                 </Text>
               </AppPressable>
               {COLOR_PRESETS.map(preset => {
-                // Hoist the hex out of the inline style object so the literal
-                // doesn't contain a `.value` member access — Reanimated's babel
-                // plugin syntactically wraps any `{ x: foo.value }` inside a
-                // `style={...}` in a (false-positive) shared-value warning.
+                // Hoisted: Reanimated's babel plugin wraps any
+                // `{ x: foo.value }` in a `style={...}` in a false-positive
+                // shared-value warning.
                 const swatchColor = preset.value;
                 return (
                   <AppPressable

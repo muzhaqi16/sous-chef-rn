@@ -14,10 +14,9 @@ interface DismissTarget {
 }
 
 /**
- * Dismiss/undismiss catalog items from a suggestion surface. The caller owns
- * the optimistic removal, so the success path does NOT refetch — that would
- * replace the cache arrays and cut the exit animation short. Refetch runs only
- * to restore the item on failure or on Undo.
+ * Dismiss/undismiss catalog items from a suggestion surface. The caller owns the
+ * optimistic removal, so success does NOT refetch (it would cut the exit
+ * animation short); a refetch restores the item on failure or Undo.
  */
 export function useSuggestionDismissal(
   surface: SuggestionSurface,

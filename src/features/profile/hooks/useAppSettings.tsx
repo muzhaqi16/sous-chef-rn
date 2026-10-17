@@ -164,9 +164,8 @@ export const useAppSettings = () => {
     settings: memoizedSettings,
     loading,
     // `settings` is never empty (`getAppSettings()` fills every field), so it
-    // cannot answer "has the server replied yet" — and a screen gating on
-    // `loading` blanks itself on every mount, since `cache-and-network` reports
-    // `loading: true` for the whole network leg whatever the cache holds.
+    // cannot say whether the server replied; gating on `loading` blanks the
+    // screen on every mount, since Apollo reports it true on each one.
     hasLoadedSettings: !!settings,
     // Failures RESOLVE under the global `errorPolicy: 'all'`.
     error,

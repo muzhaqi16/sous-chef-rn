@@ -2,10 +2,9 @@ import type { ApolloCache } from '@apollo/client';
 import { isRecord } from '#/utils/isRecord';
 
 /**
- * Drops an ended receipt's parse, line lookups and the list lines it asked for
- * by item, which nothing else reads and the persisted cache would otherwise
- * carry until sign-out. On idle, so a screen still watching them has let go
- * first and does not ask for them again.
+ * Drops an ended receipt's parse, line lookups and by-item list lines, which
+ * nothing else reads and the persisted cache would carry until sign-out. On
+ * idle, so a screen still watching them lets go first and asks for none again.
  */
 export function forgetReceipt(
   cache: ApolloCache,

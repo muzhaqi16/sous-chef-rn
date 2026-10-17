@@ -16,10 +16,9 @@ const LETTER_FOLDS = {
 };
 
 /**
- * A store's name as the API keys it (`storeNameKey`, sous-chef-api
- * `utils/storeMatchKey.ts`): its letters and digits, accents and case folded,
- * so "Giant Eagle" meets "GIANT EAGLE" and "East End Food Co-Op" "east end
- * food coop". Empty for a name with no letter or digit.
+ * A store's name as the API keys it (sous-chef-api `utils/storeMatchKey.ts`):
+ * its letters and digits, accents and case folded, so "Co-Op" meets "coop".
+ * Empty for a name with no letter or digit.
  */
 export function storeNameKey(name: string): string {
   return name

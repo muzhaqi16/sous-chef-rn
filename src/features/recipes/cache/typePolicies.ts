@@ -5,12 +5,9 @@ import {
 } from '#/apollo/cacheFieldPolicies';
 
 /**
- * A recipe merges field-wise; `recipes` keys on the whole `filters` input, so each filter set keeps its own entry.
- * A recipe's ingredients are ONE list whatever arguments read it: a selection
- * that names a page size and a local writer that names none hold the same rows.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * A recipe merges field-wise; `recipes` keys on the whole `filters` input.
+ * Ingredients are ONE list whatever arguments read them: a paged selection and
+ * a local writer naming none hold the same rows.
  */
 export const recipesTypePolicies: TypePolicies = {
   Recipe: {

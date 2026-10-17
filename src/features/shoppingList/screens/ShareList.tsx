@@ -57,17 +57,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   // `collaborators` from useShoppingListDetails are already materialized
   // ShoppingListCollaboratorFragments (with invitedAt) and null-filtered.
 
-  // Ownership is a separate ShoppingListOwnership record, not the collaborator
-  // `role` field — the list creator's collaborator row is not necessarily role
-  // OWNER. Read ownership from `ownerships` (the same signal ListSettings uses)
-  // so both screens agree on who the owner is.
+  // Ownership is a ShoppingListOwnership record, not the collaborator `role`
+  // (the creator's row need not be OWNER); `ownerships` is the signal
+  // ListSettings reads too, so both screens agree.
   const isOwner = isShoppingListOwner({ ownerships }, currentUser?.id);
   const ownerUserIds = new Set(ownerships.map(o => o.userId));
 
-  // Still needed for the leave flow, which removes the current user's own
-  // collaborator entry by id.
-  // The email arm is guarded: both sides are nullable, and a null-to-null
-  // comparison would match an arbitrary collaborator as "me".
+  // The leave flow removes this entry by id. The email arm is guarded, as a
+  // null-to-null comparison would match an arbitrary collaborator as "me".
   const currentUserCollaborator = collaborators.find(
     c =>
       (!!currentUser?.email && c.email === currentUser.email) ||

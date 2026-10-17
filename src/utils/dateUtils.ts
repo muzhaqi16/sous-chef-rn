@@ -59,10 +59,8 @@ export const extractDateString = (value: unknown): string => {
 };
 
 /**
- * A calendar day as the MACHINE key `2026-09-03` — a map key, a query variable,
- * an id. Deliberately not localized: it is compared and stored, never read, so
- * the locale-aware formatters must stay away from it. Local time, so the key
- * matches the day the user is looking at.
+ * A calendar day as the MACHINE key `2026-09-03`: compared and stored, never
+ * read, so never localized. Local time, so it matches the day the user sees.
  */
 export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 

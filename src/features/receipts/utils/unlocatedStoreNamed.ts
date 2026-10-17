@@ -9,10 +9,9 @@ export interface HeldStore {
 }
 
 /**
- * The one store held on the device that a receipt's reading can locate: it has
- * no address and no number, and its name is one of `names` (the receipt's merchant, its
- * chain) as the API keys a name. Two such stores are none, as the API judges
- * its own candidate.
+ * The one held store a receipt's reading can locate: no address or number, and
+ * named one of `names` (merchant, chain) as the API keys a name. Two such stores
+ * are none, as the API judges its own candidate.
  */
 export function unlocatedStoreNamed(
   names: readonly (string | null | undefined)[],

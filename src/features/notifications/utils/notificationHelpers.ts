@@ -160,10 +160,9 @@ export const readExpiryReminderFields = (
   };
 };
 
-// Only qualify the item name when more than one active batch exists — otherwise
-// the name alone is unambiguous. The qualifier uses the batch's opened date (or
-// added date as a fallback), parsed and formatted in the device's local time so
-// it isn't off by a day like the server's UTC-formatted plain-text message.
+// Qualified only when more than one batch is active, by the batch's opened
+// (else added) date in device-local time: the server's UTC-formatted message
+// can be off by a day.
 const buildExpiryName = (
   fields: ExpiryReminderFields,
   t: Translate,

@@ -29,8 +29,7 @@ interface AddMenuProps {
 const STAGGER_MS = 30;
 
 /**
- * The `+`'s menu: a scrim over the screen and the bar, the entries stacked
- * above the `+`, which stays on top as the close control. It paints its own
+ * The `+`'s menu, with the `+` on top as its close control. It paints its own
  * scrim because the global backdrop renders above the whole navigation tree,
  * and so above the `+`.
  */

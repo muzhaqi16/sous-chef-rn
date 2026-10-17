@@ -191,11 +191,9 @@ export const ShoppingListMainContent: React.FC<
     refetchItems,
   });
 
-  // A plain checkbox tap marks the item purchased with default values (or
-  // un-purchases) — no sheet. A long-press ({ withDetails: true }) opens the
-  // pre-filled purchase-amount sheet so the user can record the actual
-  // qty/price (Confirm records them; Cancel leaves it unpurchased). The sheet
-  // only applies to unpurchased items; long-press is a no-op otherwise.
+  // A tap toggles purchased with default values, no sheet; a long-press
+  // (`withDetails`) on an unpurchased item opens the pre-filled amount sheet,
+  // where Cancel leaves it unpurchased, and is a no-op otherwise.
   const handleTogglePurchaseAction = (
     itemId: string,
     opts?: { withDetails?: boolean },
@@ -334,10 +332,7 @@ export const ShoppingListMainContent: React.FC<
     onMoveToPantry: openMoveToPantry,
     onQuantityPress: openQuantityEdit,
     onSortOrderUpdate: handleSortOrderUpdate,
-    // `onRefresh` is NOT here: the template injects it from its own prop, which
-    // this screen already sets to the same handler. Passing it twice collided
-    // with the template's wiring — harmless while the values matched, and the
-    // kind of thing the type now refuses outright.
+    // `onRefresh` is NOT here: the template injects it from its own prop.
     onClearAllPurchased: handleClearAllPurchased,
     onClearAllShopping: handleClearAllShopping,
     onSwipeableWillOpen: handleSwipeableWillOpen,
@@ -367,11 +362,8 @@ export const ShoppingListMainContent: React.FC<
     onEndReachedPurchased: loadMorePurchased,
     hasMorePurchased,
     isLoadingMorePurchased,
-    // Permissions do NOT travel here: `customListProps` is
-    // `Record<string, unknown>`, so they would arrive as `boolean | undefined`
-    // and every layer below would declare what the `undefined` means. They come
-    // from `ShoppingListPermissionsProvider` instead.
-    // Search query for search-aware empty states
+    // Permissions come from `ShoppingListPermissionsProvider`, not here: through
+    // `Record<string, unknown>` they would arrive as `boolean | undefined`.
     searchQuery,
     // Scroll direction tracking — threaded to FlashList via data context
     onScroll: scrollHandler,
@@ -459,12 +451,9 @@ export const ShoppingListMainContent: React.FC<
     );
   }
 
-  // A list is on screen but the app cannot say what this person may do with it:
-  // the detail request failed, or the cache never held it. Rendering the list
-  // read-only claims a refusal the app has not been told about, and shows the
-  // owner their own list as a viewer's, so this offers the retry instead.
-  // Gated on the DETAIL query's own loading flag — the item flags settle first,
-  // and reading them instead puts this screen up for a frame on every visit.
+  // With permissions unknown (the detail request failed, or was never cached)
+  // this offers a retry: read-only would claim a refusal never sent. Gated on the
+  // DETAIL query's loading; the item flags settle first and would flash this.
   if (
     !detailsLoading &&
     !isLoadingInitial &&
@@ -569,12 +558,9 @@ export const ShoppingListMainContent: React.FC<
         if (!tutorial?.isActive) return null;
         if (!isScreenFocused || isOverlayOpen) return null;
 
-        // Hide the spotlight whenever any modal sheet on this screen is
-        // open — most importantly the purchase-amount sheet the long-press
-        // step itself opens (it stays on SPOTLIGHT_LONG_PRESS_PRICE until
-        // that sheet closes, see ShoppingListModalsContext), but this also
-        // covers the user accidentally opening an unrelated sheet (e.g. Add
-        // Item) mid-tutorial. The spotlight resumes once every sheet closes.
+        // Any open sheet hides the spotlight, including the amount sheet the
+        // long-press step opens (the step holds until it closes, see
+        // ShoppingListModalsContext); it resumes once every sheet closes.
         if (anySheetVisible) return null;
 
         const isSwipeStep =
@@ -589,12 +575,9 @@ export const ShoppingListMainContent: React.FC<
           tutorial.currentStep ===
           ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY;
 
-        // Every spotlight step that targets a specific row (swipe, checkbox,
-        // long-press-price target an unpurchased row; move-to-pantry targets
-        // a purchased row) needs at least one matching item to point at.
-        // Without this, a step reached via "Next"/skip on an empty list — or
-        // one whose only qualifying item was purchased/removed/moved out
-        // from under it — would fall through to a stale or absent rect.
+        // A row-targeting step needs a matching row: one skipped onto an empty
+        // list, or whose row moved out from under it, would point at a stale or
+        // absent rect.
         const needsUnpurchasedItem =
           isSwipeStep || isCheckboxStep || isLongPressStep;
         const needsPurchasedItem = isMoveToPantryStep;
@@ -605,10 +588,8 @@ export const ShoppingListMainContent: React.FC<
         const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
         if (!stepConfig) return null;
 
-        // Belt-and-suspenders: SortableItem clears its rect on unmount/
-        // no-longer-target, so this should already be null whenever the
-        // item check above didn't catch it — but never render on a rect
-        // that hasn't been (re)measured yet either way.
+        // SortableItem clears its rect when it stops being the target, but a
+        // rect not yet (re)measured is null too: never render on one.
         const targetRect = tutorial.rects[stepConfig.rectKey];
         if (!targetRect) return null;
 

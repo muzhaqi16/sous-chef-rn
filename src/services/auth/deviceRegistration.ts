@@ -37,10 +37,9 @@ import { holdsSessionTokens } from '#store/slices/authSlice';
 import { backoffDelay, sleep } from '#/utils/backoff';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
-// Registering THIS device with the server. Fire-and-forget: a failure here must
-// never block a sign-in. A session end leaves the push token in place: the
-// server pushes only to a live session bound to the device, so revoking the
-// refresh token (`refreshTokenRevocation.ts`) is what stops delivery.
+// Fire-and-forget: a failure never blocks a sign-in. A session end leaves the
+// push token: the server pushes only to a live session bound to the device, so
+// revoking the refresh token (`refreshTokenRevocation.ts`) stops delivery.
 
 /**
  * `undefined` leaves the server's stored push token alone; `null` clears it.
@@ -242,10 +241,9 @@ registerSessionTeardown('devicePushToken', () => {
 });
 
 /**
- * Retire the row a superseded identifier registered: its push token is live and
- * no other client path reaches it. Runs after a confirmed registration, so the
- * account is never left with no row at all, and leaves the key in place on a
- * failure so the next launch retries.
+ * Retires a superseded identifier's row, whose push token is live and reachable
+ * by no other path. After a confirmed registration, so a row always remains;
+ * a failure keeps the key so the next launch retries.
  */
 async function retireLegacyDeviceRow(): Promise<void> {
   const legacy = readLegacyDeviceFingerprint();
@@ -309,10 +307,8 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
       return 'retry';
     }
 
-    // Acquire the push token only when OS notification permission is already
-    // granted, so login never triggers the permission prompt. The prompt happens
-    // in-context when the user enables push in settings, which then re-runs
-    // registration to deliver the token.
+    // Only with permission already granted, so login never prompts; enabling
+    // push in settings prompts and re-runs registration.
     const notificationStatus = await PermissionService.check('notifications');
     const permissionGranted = notificationStatus === 'granted';
     const acquiredToken = permissionGranted ? await acquirePushToken() : null;
@@ -347,11 +343,9 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
         if (token) void pushRotatedTokenToServer(serverDeviceId, token);
       });
 
-      // Close the getToken-timeout dead window: the OS can deliver a token after
-      // acquirePushToken's timeout resolved null but before the refresh listener
-      // subscribed just above — that token is cached yet was pushed to nobody.
-      // Re-check now (after subscribing, so any later arrival still hits the
-      // listener) and update the device if a token has since materialized.
+      // A token can land after acquirePushToken timed out but before the refresh
+      // listener subscribed, reaching nobody; re-checked after subscribing, so a
+      // later one still hits the listener.
       if (permissionGranted) {
         const laterToken = await getPushTokenProvider().getToken();
         if (laterToken && laterToken !== acquiredToken) {

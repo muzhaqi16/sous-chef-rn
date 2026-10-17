@@ -22,10 +22,9 @@ import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 // Shared withUnistyles wrappers for third-party components taking theme-derived
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
 
-// Import Pressable from here. It is RN's, auto-bound to the Unistyles ShadowTree
-// by the babel plugin; `withUnistyles` over RNGH's drops StyleSheet.create proxy
-// values inside `({pressed}) => [...]` callbacks (unistyles#1109). For gesture
-// composition, import RNGH's Pressable at the call site.
+// RN's Pressable, which the babel plugin binds to the ShadowTree; `withUnistyles`
+// over RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
+// composition, import RNGH's at the call site.
 export const Pressable = RNPressable;
 
 // Import Modal from here. RN's mounts its children only while visible, so they
@@ -36,10 +35,9 @@ export const Modal = ({ children, ...props }: ModalProps) => (
   </RNModal>
 );
 
-// `inputPlaceholder` is the palette's placeholder tone (~3.6:1); a body-text tone
-// here renders an empty field as dark as a filled one. `keyboardAppearance` reads
-// `rt.themeName`, not `rt.colorScheme`: an explicit theme preference calls
-// `setAdaptiveThemes(false)`, so the OS scheme is the wrong answer.
+// A body-text placeholder tone renders an empty field as dark as a filled one.
+// `keyboardAppearance` reads `rt.themeName`: an explicit theme preference calls
+// `setAdaptiveThemes(false)`, so `rt.colorScheme` is the OS's, not the app's.
 const inputProps = (
   theme: Theme,
   themeName?: string,
@@ -166,11 +164,9 @@ export const SuccessActivityIndicator = withUnistyles(
  *  by the host's top edge; iOS shifts the control's frame and needs none. */
 const REFRESH_SPINNER_OFFSET = Platform.OS === 'android' ? 40 : 0;
 
-// RNGH's ScrollView injects its scroll gesture as
-// `cloneElement(refreshControl, { block })`, and only a `createNativeWrapper`
-// control routes `block` into `useNativeGesture` — RN's own drops it silently.
-// The three color props are one set: Android arc, iOS spinner, and the disc the
-// arc is drawn on, which defaults to white in every theme.
+// RNGH's ScrollView clones `block` into its refreshControl, and only a
+// `createNativeWrapper` control routes it to `useNativeGesture`; RN's drops it.
+// Android draws the arc on a disc that defaults to white in every theme.
 export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,

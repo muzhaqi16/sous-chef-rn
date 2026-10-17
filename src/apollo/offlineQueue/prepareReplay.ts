@@ -1,8 +1,7 @@
 /**
- * A queued write replays as the canonical mutation it was queued as, each safe
- * to send again (sous-chef-api `docs/api/offline-sync.md` § Replaying through
- * the canonical mutations). The registered operations restate what the device
- * knows better at replay; every replay counts totals on the day it runs.
+ * A queued write replays as its canonical mutation, safe to send again
+ * (sous-chef-api `docs/api/offline-sync.md`); registered operations restate what
+ * the device knows better at replay, and totals count on the day it runs.
  */
 import { Kind } from 'graphql';
 import type { ApolloCache, OperationVariables } from '@apollo/client';

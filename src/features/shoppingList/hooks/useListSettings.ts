@@ -132,11 +132,9 @@ export const useListSettings = (listId: string | undefined) => {
       }
     : null;
 
-  // Three answers, not two. Creating a list: nobody else's ownership to
-  // respect, so the owner-only controls are the author's. For an EXISTING one,
-  // `unknown` is neither — defaulting it to owner offers Save, budget,
-  // recurring, template, archive and delete to a non-owner, and defaulting it
-  // to `other` hides them from the owner with no way to tell why.
+  // A new list is the author's. For an existing one `unknown` is neither: owner
+  // would offer the owner-only controls to a non-owner, and `other` would hide
+  // them from the owner with no way to tell why.
   const ownership: OwnershipAnswer = !listId
     ? 'owner'
     : !ownershipSnapshot
@@ -260,10 +258,9 @@ export const useListSettings = (listId: string | undefined) => {
     );
   }, [shoppingList, listId]);
 
-  // A non-owner reaches a home-linked list through their home membership, and
-  // leaving the home evicts only the Home from cache — the ShoppingList entity
-  // stays. So on focus with every access path gone, pop back and clear the
-  // selection, or the user lands on a list they cannot open.
+  // Leaving a home evicts only the Home, not a home-linked ShoppingList a
+  // non-owner reached through it, so with every access path gone this pops back
+  // and clears the selection rather than land on a list they cannot open.
   const hasLostListAccess =
     !!listId &&
     !!shoppingList &&

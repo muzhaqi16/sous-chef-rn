@@ -317,12 +317,8 @@ export class SubscriptionService {
         return;
       }
 
-      // Socket-closed / network-transition errors are expected during network
-      // churn and auto-recover — debug level: one WS drop interrupts EVERY
-      // active subscription at once, so a warn here multiplies into a wall of
-      // identical lines per disconnect (wsLink already warns once per socket
-      // event). Uses the shared predicate so the "expected transition" rule
-      // stays in one place.
+      // Debug, not warn: one WS drop interrupts EVERY active subscription, and
+      // wsLink already warns once per socket event.
       if (isNetworkError(error)) {
         this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
@@ -589,10 +585,8 @@ export class SubscriptionService {
   }
 
   /**
-   * Extract the entity (`item` or `node`) from a subscription payload.
-   * Returns the entity as a `StoreObject` (so it can be passed to
-   * `toReference`) carrying an optional `id`, or `undefined` when neither
-   * field holds an object.
+   * The payload's `item` or `node` as a `StoreObject` for `toReference`, or
+   * `undefined` when neither holds an object.
    */
   private getPayloadEntity<TData>(
     payload: SubscriptionPayload<TData>,

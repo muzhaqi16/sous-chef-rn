@@ -25,12 +25,9 @@ const idOf = (value: unknown): string | undefined =>
   isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
 
 /**
- * Every batch-add copy replays as itself and can apply while refusing rows
- * inside `results`. Each result is paired to its row by the `index` the server
- * echoes; a refused row is withdrawn. A row the server merged into the list's
- * existing one (`outcome: MERGED`) goes too: the kept row is linked uncounted
- * (the minted one was counted already) and later writes move to it. A typed
- * item the server matched takes over from the one minted for it.
+ * A batch-add replay can apply while refusing rows (paired by echoed `index`):
+ * a refused row is withdrawn; a MERGED one too, its kept row linked uncounted and
+ * taking later writes; a matched typed item takes over from the one minted for it.
  */
 export const reconcileShoppingAddReplay: Reconciler = (
   cache,

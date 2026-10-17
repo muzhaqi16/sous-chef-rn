@@ -135,10 +135,9 @@ export function useHomeDetailManagement(homeId: string) {
   // started still holds that render's `transferringOwnership`.
   const transferInFlight = useRef(false);
 
-  // No update callback: the response spreads HomeMemberCard_member, so Apollo
-  // normalizes by Membership id. A manual `cache.modify` would also run for
-  // permission-only toggles, where `role` is undefined — and writing undefined
-  // DELETES the field, blanking the card.
+  // No update callback: the response normalizes by Membership id. A manual
+  // `cache.modify` on a permission-only toggle writes `role: undefined`, which
+  // DELETES the field and blanks the card.
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
   /** Whether a write landed or queued; a refusal has been alerted. */
@@ -215,11 +214,9 @@ export function useHomeDetailManagement(homeId: string) {
     setSelectedShoppingListId(null);
   };
 
-  // Preserve the last good data, since `errorPolicy: 'ignore'` yields undefined
-  // on error, then unmask. `useFragment` reads from `{ __typename, id }` rather
-  // than the masked ref so it resolves by key; on `!complete` we fall back to
-  // null and show the loader, because partial data would render an owner as a
-  // non-owner while `myMembership.role` is still absent.
+  // `errorPolicy: 'ignore'` yields undefined on error, so the last good data is
+  // kept. `!complete` shows the loader: partial data renders an owner as a
+  // non-owner while `myMembership.role` is absent.
   const homeRef = usePreservedQueryData(data?.home, null, homeId);
   const { data: unmaskedData, complete: unmaskedComplete } = useFragment({
     fragment: HomeDetailScreen_HomeFragmentDoc,

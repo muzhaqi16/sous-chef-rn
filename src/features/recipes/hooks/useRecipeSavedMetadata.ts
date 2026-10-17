@@ -143,11 +143,9 @@ export function useRecipeSavedMetadata({
     },
   );
 
-  // The cache work (drop the MySavedRecipes edge + clear Recipe.savedDetails)
-  // runs optimistically BEFORE the mutation fires in handleUnfavoriteRecipe, so
-  // the un-save sticks even fully offline (the queue replays the idempotent
-  // unfavorite). A rejected result reverts from a snapshot — so no update/onError
-  // callback here.
+  // `handleUnfavoriteRecipe` drops the MySavedRecipes edge and
+  // `Recipe.savedDetails` BEFORE firing, so the un-save sticks offline, and
+  // reverts a refusal from a snapshot; hence no update or onError here.
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
     { context: { localFirst: true } },
@@ -158,12 +156,9 @@ export function useRecipeSavedMetadata({
 
     setShowFolderPicker(false);
     return executeWithLoadingState(async () => {
-      // `folder` explicitly, NOT `folder ?? undefined`: an undefined value is
-      // dropped when the variables are serialized, and an absent key means
-      // "leave unchanged" to the server. Clearing a folder wrote null into the
-      // cache, sent nothing, and the mutation's own `update` then wrote the
-      // server's unchanged folder back over the row — so it snapped back
-      // seconds later under a success toast, and offline never converged.
+      // `folder` as given, NOT `folder ?? undefined`: serializing drops an
+      // undefined value, and an absent key means "leave unchanged", so a
+      // cleared folder would snap back.
       const persisted = await applyMetadataUpdate({ folder }, { folder });
       if (!persisted) return;
       toastService.success(

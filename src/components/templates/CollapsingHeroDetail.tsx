@@ -49,10 +49,9 @@ const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
 const BAR_FADE_END = COLLAPSE_POINT;
 const BAR_FADE_START = COLLAPSE_POINT - 24;
 
-// The inline bar title must not appear until the in-content `DetailTitleRow` has
-// scrolled fully under the opaque bar, or both show at once. The clearing
-// distance is inset-independent: the title's line box plus the card/row top
-// paddings, measured from where the variant places it.
+// The bar title waits until `DetailTitleRow` has scrolled fully under the
+// opaque bar, or both show at once. The distance is inset-independent: the
+// title's line box plus the card/row top paddings.
 const TITLE_FADE_START = COLLAPSE_POINT + 12;
 const TITLE_FADE_END = COLLAPSE_POINT + 48;
 
@@ -97,12 +96,9 @@ interface CollapsingHeroDetailProps {
   testID?: string;
 }
 
-// Edge-to-edge hero collapsing into a pinned action bar, with the content riding
-// up over it in a rounded card. With no hero the bar is solid from the start.
-//
-// The screen must NOT apply a top safe-area inset (omit `topInsetScreenLayout` in
-// its stack registration) — this layout draws behind the status bar and insets
-// itself.
+// An edge-to-edge hero collapsing into a pinned bar. It draws behind the status
+// bar and insets itself, so its screen must NOT apply a top inset (omit
+// `topInsetScreenLayout` in its stack registration).
 export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   onBack,
   actions = [],

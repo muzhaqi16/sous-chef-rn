@@ -32,10 +32,9 @@ export const classifyTransportTermination = (
 };
 
 /**
- * The SERVER ended the subscription with a fault a later attempt can get past:
- * `SUBSCRIPTION_ERROR`, which the schema documents as retryable, or an internal
- * error the API tags `category: "infrastructure"` (a database or pool it could
- * not reach, as while it restarts). Any other server error repeats as it is.
+ * A server end a later attempt can get past: `SUBSCRIPTION_ERROR` (documented
+ * retryable), or an internal error tagged `category: "infrastructure"`, as while
+ * the API restarts. Any other server error repeats as it is.
  */
 export const isRetryableServerEnd = (error: unknown): boolean => {
   const top = getTopLevelGraphQLError(error);
@@ -47,10 +46,8 @@ export const isRetryableServerEnd = (error: unknown): boolean => {
 };
 
 /**
- * Codes meaning "this document will never be accepted". Narrow on purpose, since
- * a permanent rejection disables a stream for the session:
- * `SUBSCRIPTION_LIMIT_EXCEEDED` frees up and `SUBSCRIPTION_ERROR` is documented
- * retryable, so neither belongs here.
+ * Narrow, since a permanent rejection disables a stream for the session:
+ * `SUBSCRIPTION_LIMIT_EXCEEDED` frees up and `SUBSCRIPTION_ERROR` is retryable.
  */
 const PERMANENT_REJECTION_CODES = new Set([
   'BAD_USER_INPUT',
@@ -61,10 +58,9 @@ const PERMANENT_REJECTION_CODES = new Set([
 ]);
 
 /**
- * True when the server refused the DOCUMENT, not the request. Subscriptions are
- * validated against depth 5 / cost 500, and a document over that is refused
- * identically every time — "fix the document", never "retry". The code an
- * armor rejection maps to varies, so it is recognised on its own as well.
+ * The server refused the DOCUMENT (over depth 5 or cost 500) and will every
+ * time, so never retry. An armor rejection's code varies, so it is recognised
+ * on its own.
  */
 export const isPermanentSubscriptionRejection = (
   error: SubscriptionError,

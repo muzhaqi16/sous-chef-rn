@@ -74,10 +74,8 @@ function toValidationErrors(
 
 export class ErrorService {
   /**
-   * Error code → i18n key SUFFIX, composed as `errors.codes.<suffix>` by
-   * {@link getUserFriendlyMessage}. Suffixes, not resolved strings: this is a
-   * static field, so calling `t()` here would freeze the language active at
-   * module load. Codes warranting the same sentence share a suffix.
+   * Error code → `errors.codes.<suffix>`. Suffixes, not strings: `t()` in a
+   * static field would freeze the language active at module load.
    */
   private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<
     string,
@@ -166,12 +164,9 @@ export class ErrorService {
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
 
-    // Every member of `ErrorCode` and `TopLevelErrorCode` must appear in this
-    // table, or its message falls through to `errors.codes.unexpected` while
-    // localized copy for the case sits unreachable;
-    // `__tests__/i18n/errorCodeCoverage.test.ts` fails on a gap. The table is
-    // deliberately WIDER than the enums — client-raised codes have no SDL to be
-    // declared in — so only the missing direction is an error.
+    // Every `ErrorCode` and `TopLevelErrorCode` member appears here, or it falls
+    // to `errors.codes.unexpected` (errorCodeCoverage.test.ts); the table is
+    // WIDER than the enums, since client-raised codes have no SDL.
     NOT_FOUND: 'resourceNotFound',
     CONFLICT: 'resourceConflict',
     UNIT_INVALID: 'unitInvalid',
@@ -219,10 +214,9 @@ export class ErrorService {
     HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
   };
 
-  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are in the API's internal registry
-  // but absent from the published TopLevelErrorCode enum, which admits a code
-  // only once something emits it — so they stay literals, kept defensively.
-  // Codes arrive as plain strings; these compare against them as strings.
+  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are absent from the published
+  // TopLevelErrorCode enum until something emits them, so they stay literals.
+  // Codes arrive as plain strings, so these are typed `string`.
   private static readonly UNAUTHENTICATED: string =
     TopLevelErrorCode.Unauthenticated;
   private static readonly VALIDATION_FAILED: string =
@@ -237,10 +231,9 @@ export class ErrorService {
     TopLevelErrorCode.AuthRefreshTokenSuperseded,
   ];
 
-  // Expected user-input outcomes: logged at warn and kept out of
-  // app_errors_total. Any VALIDATION_* code counts too (see
-  // isExpectedUserError). Both code channels appear because this is asked of
-  // whatever was parsed out; the SHOPPING_*/HOME_* literals are in neither enum.
+  // Logged at warn and kept out of app_errors_total, as is any VALIDATION_*
+  // code. Both code channels appear; the SHOPPING_*/HOME_* literals are in
+  // neither enum.
   private static readonly EXPECTED_USER_ERRORS = new Set<string>([
     ErrorCode.EmailAlreadyExists,
     ErrorCode.VersionConflict,
@@ -581,10 +574,9 @@ export class ErrorService {
 export const errorService = new ErrorService();
 
 /**
- * What to SHOW a user when a mutation fails: resolved from the error CODE
- * through `errors.codes.*`, never the server's message (unlocalizable English).
- * An unmapped code lands on the caller's localized `fallback`. A TRANSPORT code
- * also yields to it — that copy is written for a read, and on a write is untrue.
+ * A mutation failure shows copy from its CODE, never the server's English; an
+ * unmapped code takes the caller's `fallback`, and so does a TRANSPORT code,
+ * whose copy is written for a read and untrue for a write.
  */
 const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
 

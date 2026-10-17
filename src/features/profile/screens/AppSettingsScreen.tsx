@@ -50,12 +50,9 @@ export const AppSettingsScreen: React.FC = () => {
     isEmpty: false,
   });
 
-  // Offline mode renders from the STORE, not from `settings`. The store is what
-  // actually drives the policy (`offlineModeLink` reads it, and it's the value
-  // mirrored to MMKV) — the server copy is a cross-device mirror. Binding the
-  // switch to the store makes the flip synchronous and independent of an Apollo
-  // broadcast, which matters most in exactly the case where the server can't be
-  // reached.
+  // Offline mode renders from the STORE, which `offlineModeLink` reads; the
+  // server copy is a cross-device mirror. So the flip is synchronous and needs
+  // no Apollo broadcast, exactly when the server can't be reached.
   const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
   const setOfflineModeEnabled = useAppStore(
     state => state.setOfflineModeEnabled,
@@ -97,9 +94,8 @@ export const AppSettingsScreen: React.FC = () => {
 
   /**
    * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`,
-   * which kills the control for a frame and drops the taps landing there.
-   * Nothing waits on the request — the change is cached before firing and
-   * queues for replay. `updating` is kept for the reset row, a one-shot command.
+   * dropping taps for a frame, and the change is cached before it fires.
+   * `updating` is kept for the reset row, a one-shot command.
    */
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
@@ -115,10 +111,9 @@ export const AppSettingsScreen: React.FC = () => {
   };
 
   /**
-   * The LOCAL write is the one that matters — it drives the link policy and
-   * persists to MMKV, and cannot depend on a round-trip unavailable exactly
-   * when this switch is reached for. `immediate` because this is the one caller
-   * that IS a user gesture: a switch is not flapping, so no dwell is needed.
+   * The LOCAL write drives the link policy and cannot wait on a round trip.
+   * `immediate`: the one caller that IS a user gesture, so not flapping, needs
+   * no dwell.
    */
   const handleOfflineModeChange = (value: boolean) => {
     setOfflineModeEnabled(value, true);
@@ -156,10 +151,9 @@ export const AppSettingsScreen: React.FC = () => {
     );
   };
 
-  // In-app `ModalPicker`, NOT `@react-native-picker/picker`: on Android that
-  // one's dropdown is a DIALOG themed from the Activity theme, so it follows
-  // the OS `uiMode` and ignores the app's light/dark preference, unreachable
-  // from RN. `Alert.alert` and the date pickers share the limit.
+  // `ModalPicker`, NOT `@react-native-picker/picker`: on Android its dropdown is
+  // an Activity-themed DIALOG that follows the OS `uiMode`, not the app's theme
+  // (so do `Alert.alert` and the date pickers).
   const unitSystemOptions = [
     { label: t('settings.unitMetric'), value: UnitSystem.Metric },
     { label: t('settings.unitImperial'), value: UnitSystem.Imperial },

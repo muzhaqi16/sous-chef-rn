@@ -17,10 +17,9 @@ import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisle
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 /**
- * The sheets are opened from all over the screen and read back in exactly
- * one place, so they are two contexts: stable commands, and the single boolean
- * that place needs. Handing out the hook results instead gave a tab scene a
- * value whose identity changed every time any sheet opened.
+ * The sheets open from all over the screen and are read back in one place, so
+ * two contexts: stable commands, and the one boolean that place needs; a single
+ * value would change identity for every tab scene whenever a sheet opened.
  */
 interface ShoppingListModalActions {
   openAddItemSheet: () => void;

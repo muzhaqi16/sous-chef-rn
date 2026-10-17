@@ -3,10 +3,9 @@ import type { Translate } from '#/i18n/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 
-// The ONLY bound on how many cells FlashList mounts, and mounted-cell count
-// sets the sustained frame time (Yoga layout + draw over ~43 views per row).
-// 0.5x measured least janky on device and survives hard flings without blanks;
-// the residual over-budget median is per-row view count, not this constant.
+// The ONLY bound on how many cells FlashList mounts, and the mounted count sets
+// the sustained frame time. 0.5x is the least janky on device that still
+// survives hard flings without blanks.
 export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.5);
 
 // Minimum height for structural empty states (no home / no home selected)

@@ -1,10 +1,8 @@
 import type { RecognizedLine, RecognizedPage } from '#/native/TextRecognition';
 
-// A photo held at an angle tilts every printed row, and a curled receipt tilts
-// each row differently: the name and its price sit at different heights on
-// the page. A line reads its rows along the slope of the lines nearest it,
-// weighted by width: a short line's own slope is noise (Giant Eagle's prices
-// read three times the tilt of their names; `126817šę` a third less).
+// A tilted photo or curled receipt puts a name and its price at different
+// heights, so a line reads its rows along the slope of its nearest lines,
+// weighted by width: a short line's own slope is noise.
 const SLOPED_LINE = 0.07;
 const NEIGHBOURS = 5;
 // Steeper than this is text running down the margin (Costco's tax flags).
@@ -201,13 +199,9 @@ function rowPitch(names: readonly RecognizedLine[]): number {
 }
 
 /**
- * How far the price column sits below its names (above, when negative) across
- * a level page. ML Kit reads a slight tilt or curl as every price lifted or
- * dropped alike: Giant Eagle's half a row low, ALDI's a third of a row high.
- * It is the offset most prices agree on, kept only where it pairs more prices
- * than none does. It is looked for within half a row of what the page's tilt
- * predicts: on evenly spaced rows a column one row off agrees as well, every
- * price beside the name above its own.
+ * How far the price column sits below its names (above if negative) once the
+ * page is levelled: the offset most prices agree on within half a row of the
+ * tilt's, as even rows agree one off too; kept if it pairs more than none does.
  */
 function priceColumnOffset(
   lines: readonly RecognizedLine[],

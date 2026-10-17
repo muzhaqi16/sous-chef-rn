@@ -16,10 +16,9 @@ interface UseAddToPantryArgs {
 }
 
 /**
- * Every cache write and mutation the add-to-pantry sheet performs. What the
- * sheet keeps is the toast, the exit animation and the in-flight set; the
- * create itself is `usePantryIntake`, so the sheet's two entry points cannot
- * drift apart.
+ * Every cache write and mutation the add-to-pantry sheet performs; the sheet
+ * keeps the toast, exit animation and in-flight set. The create is
+ * `usePantryIntake`, so the sheet's two entry points cannot drift.
  */
 export function useAddToPantry({
   pantryId,

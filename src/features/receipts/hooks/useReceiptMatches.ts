@@ -80,10 +80,9 @@ const toCandidate = (
 };
 
 /**
- * The catalog items the API proposes for a receipt's item lines, and the step
- * that tells it which ones the household confirmed, so the same printed line at
- * the same store resolves to them next time. A store the user picked wins over
- * the one the receipt names, for the matches and for what is remembered.
+ * The catalog items the API proposes for a receipt's lines, and the step that
+ * confirms them, so the same printed line at the same store resolves to them
+ * next time. A store the user picked beats the receipt's, for both.
  */
 export function useReceiptMatches(
   lines: readonly ReceiptMatchLine[],

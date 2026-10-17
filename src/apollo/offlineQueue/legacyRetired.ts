@@ -13,11 +13,9 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import { text, type Input } from './legacyRefs';
 
 /**
- * A write queued by a build that sent an operation the API has since removed.
- * Its stored document fails validation, so the write the user already saw
- * applied would be refused for its shape and withdrawn. Each entry is rewritten
- * once, on load, into the operation that replaced it, carrying the same
- * subject, ids and amounts.
+ * A queued write whose operation the API has since removed fails validation and
+ * would be withdrawn, though the user saw it applied; each is rewritten once, on
+ * load, into its replacement with the same subject, ids and amounts.
  */
 
 export interface UpgradedEntry {

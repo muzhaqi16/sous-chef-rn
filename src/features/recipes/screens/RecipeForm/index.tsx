@@ -124,10 +124,9 @@ export const RecipeFormScreen: React.FC<
   };
 
   const onValid = async () => {
-    // The save body is held in a local runner so the try below contains a
-    // single plain call: the React Compiler bails out of this component when a
-    // `?.`/`??`/ternary appears inside a try body, and this flow is full of
-    // them. The catch still covers the whole body.
+    // The save body is a local runner so the try holds one plain call: a
+    // `?.`/`??`/ternary inside a try body bails the component out of the React
+    // Compiler.
     const runSave = async () => {
       if (isEditMode && recipeId) {
         const outcome = await updateRecipe(recipeId, form.buildUpdateInput());

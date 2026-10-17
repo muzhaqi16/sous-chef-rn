@@ -73,10 +73,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     }).catch(error => logger.warn('Item autocomplete failed', error));
   };
 
-  // Fall back to semantic search when the tsvector autocomplete returns no
-  // results — handles typos, OCR noise, and natural-language prompts that
-  // exact-match search misses. Auth-gated and embedding-priced server-side,
-  // so we only fire after autocomplete has finished returning empty.
+  // Semantic search catches typos, OCR noise and natural language the tsvector
+  // autocomplete misses; it is auth-gated and embedding-priced, so it fires only
+  // once autocomplete has finished empty.
   const autocompleteSuggestions = data?.autocompleteItems.suggestions ?? [];
   const hasAutocompleteResults = autocompleteSuggestions.length > 0;
   useEffect(() => {
@@ -95,11 +94,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     ? autocompleteSuggestions
     : semanticSuggestions;
 
-  // Deliberately NOT `useDeferredValue(items)`: this array becomes a FlashList
-  // `data` prop in BottomSheetAutocompleteInput, and a deferred render is
-  // interruptible — the window that produces `index out of bounds, not enough
-  // layouts` (docs/flashlist-layout-index-race.md). `items` already only
-  // changes when a query resolves, which is an ordinary-priority update.
+  // Never `useDeferredValue(items)`: this is a FlashList `data` in
+  // BottomSheetAutocompleteInput, and an interruptible render is the `not enough
+  // layouts` window (docs/flashlist-layout-index-race.md).
   const getResults = (): ItemSuggestion[] => items;
 
   // The catalog is far too large to cache, so we keep the items the user has

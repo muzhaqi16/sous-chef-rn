@@ -1,8 +1,7 @@
 /**
- * Meal plan item create / toggle-completed / delete, local-first: each writes the
- * cache PERMANENTLY before firing, since an `optimisticResponse` rolls back when
- * the queue completes with a null result. A replayed create collides with the
- * (mealPlanId, date, mealType, recipeId) unique key, so it is idempotent.
+ * Item create, toggle and delete write the cache PERMANENTLY before firing: an
+ * `optimisticResponse` rolls back on the queue's null result. A replayed create
+ * meets the (mealPlanId, date, mealType, recipeId) unique key.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

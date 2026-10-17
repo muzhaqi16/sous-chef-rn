@@ -58,10 +58,9 @@ export const MyRecipes: React.FC = () => {
     filterKey: searchTerm,
   });
 
-  // Filtered at the parent, never inside the cell: a virtualized list cannot
-  // absorb rows that return null — the cell, its layout slot and its fragment
-  // subscription all survive. `name`/`description` are selected on the query's
-  // node for exactly this (see recipe.graphql).
+  // Filtered here, never in the cell: a cell returning null keeps its layout
+  // slot and fragment subscription. `name`/`description` are selected on the
+  // query's node for this (recipe.graphql).
   const filteredRecipes = useLocalSearch(myRecipes, searchQuery, [
     r => r.name,
     r => r.description,
@@ -90,11 +89,9 @@ export const MyRecipes: React.FC = () => {
     isEmpty: myRecipes.length === 0,
   });
 
-  // A search that matches nothing is not an empty library. `isEmpty` above
-  // reads the UNFILTERED list, so without this branch a non-matching query left
-  // `dataState` at 'ready' and the list rendered an empty array — a blank
-  // screen with no explanation. Offering "create your first recipe" to someone
-  // who has ten would be the other half of the same mistake.
+  // A search matching nothing is not an empty library: `isEmpty` reads the
+  // UNFILTERED list, so this branch keeps a non-matching query off both a blank
+  // list and "create your first recipe".
   const emptyProps = isSearchIncomplete
     ? {
         icon: 'warning-outline',

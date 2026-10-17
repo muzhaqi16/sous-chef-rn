@@ -276,11 +276,9 @@ async function loadDiscovery(
 }
 
 /**
- * Pantry-based ingredient search where the user has pantry items, random
- * suggestions otherwise. Up to 25 recipes in one call (cached 24h), paginated
- * client-side 15 at a time; enrichment is fetched per batch, deferred to idle.
- * Not `enabled`, it fetches no recipes; the pantry watch the ingredient picker
- * reads still runs.
+ * Pantry-based ingredient search, or random suggestions with an empty pantry:
+ * one cached call, paged client-side, enriched per batch at idle. Not
+ * `enabled`, only the ingredient picker's pantry watch runs.
  */
 export function useSpoonacularDiscovery(
   dietaryTags?: string,
@@ -291,12 +289,9 @@ export function useSpoonacularDiscovery(
   const { currentHome } = useCurrentHome();
   const defaultPantry = defaultPantryOf(currentHome);
 
-  // Focus gate for the pantry watch: the Recipes tab stays mounted while hidden
-  // (`inactiveBehavior: 'none'`), so a live watcher re-renders on every pantry
-  // write and calls the recipe API from a hidden tab. Blurred, the watch is
-  // skipped and `usePreservedConnection` holds the last result; on focus it
-  // resumes `cache-first`. Starts FOCUSED — tabs are lazy, and a blurred first
-  // render would fire a throwaway random-mode fetch.
+  // The Recipes tab stays mounted hidden, so blurred the pantry watch is
+  // skipped and `usePreservedConnection` holds it. Starts FOCUSED: tabs are
+  // lazy, and a blurred first render fires a throwaway random-mode fetch.
   const [isFocused, setIsFocused] = useState(true);
   const [onFocusChange] = useState(() => () => {
     setIsFocused(true);
@@ -356,11 +351,9 @@ export function useSpoonacularDiscovery(
     setFetchKey(currentKey);
   }
 
-  // Read through a ref so the fetch effect depends only on the stable
-  // `fetchKey`, which already encodes the item count. `pantryItems` in the dep
-  // array re-runs on every reference change, and each cleanup aborts the
-  // in-flight request — leaving the skeleton up, since the abort path does not
-  // clear `loading`.
+  // Read through a ref so the fetch effect depends only on `fetchKey`: a
+  // `pantryItems` dep re-runs on every new reference, and each cleanup aborts
+  // the request, leaving the skeleton up.
   const pantryItemsRef = useRef(pantryItems);
   useEffect(() => {
     pantryItemsRef.current = pantryItems;
@@ -378,10 +371,9 @@ export function useSpoonacularDiscovery(
     return () => controller.abort();
   }, [fetchKey, dietaryTags, enabled]);
 
-  // Bypasses the cache without clearing it: the rows on screen and the cached
-  // entry both stay until a non-empty result replaces them, and the promise
-  // settles only then so a pull-to-refresh spinner spans the whole fetch.
-  // Enrichment already held for a returning recipe is reused, not re-billed.
+  // Bypasses the cache without clearing it: rows and entry stay until a
+  // non-empty result replaces them, and the promise settles then, so the
+  // refresh spinner spans the fetch. Held enrichment is reused, not re-billed.
   const refresh = async () => {
     if (!enabled || discoveryState.loading) return;
 

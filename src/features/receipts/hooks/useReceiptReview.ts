@@ -51,9 +51,8 @@ const NEED_COPY: Record<CheckInLineNeed, TranslationKey> = {
 
 /**
  * What adding does with a line: `add` it, add the API's unsure `guess` unless
- * the user picks another, or retry it after it `failed`; it is `added` already;
- * it waits for the API's match (`pending`); or it stays out as a line with no
- * match (`unmatched`) or one the user left out (`skipped`).
+ * the user picks another, retry it once `failed`; or nothing: `added` already,
+ * `pending` the API's match, `unmatched`, or `skipped` by the user.
  */
 export type ReceiptRowStatus =
   | 'add'

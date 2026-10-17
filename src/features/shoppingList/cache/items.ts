@@ -161,10 +161,9 @@ export function buildAddItemsReconcileUpdate({
       const refused: string[] = [];
       results.forEach((result, position) => {
         if (!result) return;
-        // Paired by the input INDEX the server echoes, not by `result.clientId`:
-        // that field is a response-matching token a call site picks freely (the
-        // recipe add sends a Spoonacular ingredient id), never this row's
-        // minted cuid. Array position is the fallback.
+        // Paired by the input INDEX the server echoes, not `result.clientId`: a
+        // call site picks that token freely (the recipe add sends a Spoonacular
+        // id), never this row's minted cuid. Array position is the fallback.
         const sent = variables.input.items?.[result.index ?? position];
         const clientId = sent?.id ?? undefined;
         const { item } = result;
@@ -221,10 +220,9 @@ function heldItemDepartment(
 }
 
 /**
- * Local-first optimistic add: writes the FULL display entity, the connection edge
- * and recomputed stats PERMANENTLY before the create fires, so it survives a
- * fully-offline create (the queue replays the batch add under the same id).
- * `item.id` MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
+ * Writes the FULL display entity, its edge and recomputed stats PERMANENTLY
+ * before the create fires, so an offline create survives to replay. `item.id`
+ * MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
  */
 export function addLocalShoppingListItem(
   cache: ApolloCache,
@@ -303,11 +301,9 @@ export function addLocalShoppingListItem(
 }
 
 /**
- * Reverse {@link addLocalShoppingListItem} on a rejected create. Evicting the
- * entity alone is NOT enough: the optimistic add also bumped `totalItems` /
- * `remainingItems` / `completionRate`, and the self-healing `itemsConnection` read
- * repairs only its own `totalCount`. That read drops the dangling edge. One line
- * of {@link withdrawShoppingListItems}, so a second run changes nothing.
+ * Reverse {@link addLocalShoppingListItem} on a rejected create: evicting alone
+ * would leave the bumped list stats, which the self-healing `itemsConnection`
+ * read does not repair. Withdrawn as one line, so a second run changes nothing.
  */
 export function revertOptimisticShoppingListItem(
   cache: ApolloCache,

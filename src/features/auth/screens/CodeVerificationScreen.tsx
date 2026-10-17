@@ -30,11 +30,9 @@ type CodeVerificationValues = {
   code: string;
 };
 
-// Where this screen was opened from, deciding the exit, whether a skip link
-// shows, and where success lands. `gate` is the root navigator's conditional
-// group with no app behind it; `inApp` is pushed over an existing session, so
-// backing out IS the skip; `signup` has NO session, because the password was
-// refused at sign-up or sign-in — `verifyEmail` is public, so the code still works.
+// Decides the exit, the skip link and where success lands. `gate`: the root's
+// conditional group, no app behind it; `inApp`: pushed over a session, so backing
+// out IS the skip; `signup`: NO session, but the public `verifyEmail` still works.
 export type VerificationContext = 'gate' | 'inApp' | 'signup';
 
 interface CodeVerificationScreenProps {
@@ -99,10 +97,9 @@ export function CodeVerificationScreen({
   const { navigateToLogin, navigateToForgotPassword } = useAuthNavigation();
   const { verifyEmail, resendVerificationEmail } = useVerifyEmail();
 
-  // Manual code entry is the ONLY verification this screen performs: a
-  // `verify-email` link routes to EmailVerificationDeepLinkScreen, which owns
-  // spending the token, and verifying here too would double-spend the hourly
-  // `verifyEmail` budget.
+  // Only manual code entry verifies here: a `verify-email` link belongs to
+  // EmailVerificationDeepLinkScreen, and verifying here too double-spends the
+  // hourly `verifyEmail` budget.
 
   // Registration has just dispatched the activation mail, so the sign-up path
   // opens inside the first cooldown rather than offering an immediate resend.

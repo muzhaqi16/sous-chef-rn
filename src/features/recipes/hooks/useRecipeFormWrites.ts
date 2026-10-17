@@ -38,11 +38,9 @@ import {
 } from '#domain/recipeIngredientsPaging';
 
 /**
- * An edit's fields with what the FORM read: an edit is judged against what the
- * editor was looking at, not against whatever the cache holds by the time they
- * save. `version` is null until the recipe has loaded into the form;
- * `ingredientsUnread` says the recipe is over the ingredient limit, so the form
- * holds only the first page of its ingredients.
+ * An edit's fields with what the FORM read, against which it is judged, not the
+ * cache at save time. `version` is null until the recipe loads;
+ * `ingredientsUnread` means the form holds only the first page of ingredients.
  */
 export type RecipeUpdateFields = Omit<UpdateRecipeInput, 'id' | 'version'> & {
   version: number | null;

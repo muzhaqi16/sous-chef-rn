@@ -22,22 +22,18 @@ export function useMoveToPantryItem({
       : null,
   });
 
-  // A query rather than a field on the fragment above: that one gates the whole
-  // sheet on `complete`, and the list query caches only
-  // `{ isPurchased movedToPantryAt }` — so on a cold start the missing amounts
-  // would blank the sheet instead of just the prefill. `cache-first` means no
-  // network leg once they are cached.
+  // A query, not the fragment above: that gates the whole sheet on `complete`,
+  // and on a cold start the list query holds only `{ isPurchased movedToPantryAt }`,
+  // so missing amounts would blank the sheet rather than just the prefill.
   const { data: purchaseData } = useQuery(
     MoveToPantryPurchaseInfoDocument,
     !skip && shoppingListItemId
       ? {
           variables: { id: shoppingListItemId },
           fetchPolicy: 'cache-first',
-          // NOT the app-wide `'all'`: a field error nulls the non-null
-          // `purchaseInfo` and so `shoppingListItem`, and `'all'` WRITES that
-          // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
-          // reads — where it sticks while the cache holds no such line, and
-          // persists to MMKV. Losing the prefill costs far less.
+          // NOT `'all'`: a field error nulls the non-null `purchaseInfo` and so
+          // `shoppingListItem`, which `'all'` WRITES onto the root field
+          // ItemDetail reads, where it sticks and persists.
           errorPolicy: 'none',
         }
       : skipToken,

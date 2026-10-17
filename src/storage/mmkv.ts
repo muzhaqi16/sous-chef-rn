@@ -9,11 +9,9 @@ import {
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
-// Separate instance id used when the device encryption key is unavailable.
-// The primary encrypted file must never be opened without its key (MMKV
-// discards the file contents on a decrypt/CRC mismatch), so a keychain outage
-// quarantines the session here and leaves the encrypted file intact for the
-// next launch.
+// Used when the device key is unavailable: MMKV discards a file it cannot
+// decrypt, so a keychain outage quarantines the session here and leaves the
+// encrypted file intact for the next launch.
 export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
 
 /** Keys a removed store persisted under, still on disk for older installs. */
@@ -127,10 +125,9 @@ const scheduleStartupCleanup = (instance: MMKV): void => {
 };
 
 /**
- * Initialize the encrypted MMKV instance; idempotent. Must run from index.js
- * before App renders. Fail-closed: the primary file is only ever opened WITH
- * its key, so a key outage runs the session on a separate unencrypted recovery
- * instance rather than risking MMKV discarding the encrypted file.
+ * Opens the encrypted MMKV instance; idempotent, and run from index.js before
+ * App renders. The primary file opens only WITH its key: a key outage runs the
+ * session on the unencrypted recovery instance.
  */
 export const initializeSecureStorage = async (): Promise<MMKV> => {
   if (secureStorageInstance) return secureStorageInstance;
@@ -139,10 +136,9 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
   initPromise = (async () => {
     let instance: MMKV;
     try {
-      // The cipher travels with the key: a key minted before the app chose one
-      // encrypted its file under MMKV's AES-128 default, and MMKV DISCARDS a
-      // file it cannot decrypt — so opening a legacy file under AES-256 would
-      // wipe it. Fresh installs get AES-256. See DeviceKeyManager.
+      // The cipher travels with the key: an older key's file is under MMKV's
+      // AES-128 default, and opening it as AES-256 would wipe it. See
+      // DeviceKeyManager.
       const { key, encryptionType } = await getEncryptionKeyWithRetry();
       instance = createMMKV({
         id: STORAGE_KEY,
@@ -163,11 +159,9 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
       usingRecoveryInstance = true;
     }
 
-    // An empty encrypted store means no local state stands behind whatever the
-    // keychain holds — a reinstall, or cleared app data. A launch quarantined
-    // on the recovery instance also leaves it empty with a live session behind
-    // it, so state in the recovery file is what tells the two apart. Read
-    // before the purge is scheduled, and during hydration for the keychain.
+    // A quarantined launch also leaves the encrypted store empty, with a live
+    // session behind it, so state in the recovery file tells it from a
+    // reinstall. Read before the purge is scheduled.
     if (!usingRecoveryInstance) {
       openedEmptyStore =
         instance.getAllKeys().length === 0 && !recoveryStorageHasState();
@@ -241,10 +235,9 @@ export function isRecoveryStorage(): boolean {
 }
 
 /**
- * Whether the encrypted store opened empty — a reinstall, or cleared app data.
- * A keychain item outlives the app on iOS, so session tokens can still be there
- * with no local state behind them; hydration reads this and refuses to resume
- * a session the device has no other trace of.
+ * Whether the encrypted store opened empty (a reinstall, or cleared app data):
+ * an iOS keychain item outlives the app, so hydration refuses to resume a
+ * session the device has no other trace of.
  */
 export function openedWithEmptyStore(): boolean {
   return openedEmptyStore;

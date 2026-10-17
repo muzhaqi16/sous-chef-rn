@@ -31,10 +31,8 @@ interface ShoppingListPickerSheetProps {
 }
 
 /**
- * Pick the shopping list something lands on, or name a new one. Built on the
- * kit's `AnimatedItemSelector` like every other list-in-a-tray in the app, so
- * the title inset, the top-right action and the tray chrome come from one
- * place rather than being re-solved here.
+ * Pick the shopping list something lands on, or name a new one. The kit's
+ * `AnimatedItemSelector` supplies the tray chrome, as for every list-in-a-tray.
  */
 export const ShoppingListPickerSheet: React.FC<
   ShoppingListPickerSheetProps

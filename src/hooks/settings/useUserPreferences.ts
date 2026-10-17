@@ -5,10 +5,7 @@ import {
 } from '#/store/slices/preferencesSlice';
 
 /**
- * Hook for accessing and updating the current user's per-user preferences.
- *
- * Preferences are keyed by userId so each user has independent settings.
- * Falls back to defaults when not logged in or when no preferences have been set.
+ * Per-user preferences, keyed by userId; the defaults when signed out or unset.
  */
 export const useUserPreferences = () => {
   const userId = useUserId();

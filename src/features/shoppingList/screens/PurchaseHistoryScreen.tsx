@@ -39,10 +39,9 @@ const formatDate = (dateString: string) => {
   return formatDateTime(date);
 };
 
-// null for a missing/zero amount, so the row is omitted rather than showing
-// "$0.00" — a purchase auto-recorded at check-off carries no price. Formatted
-// from the ISO code, not by prefixing `currencySymbol`, so the symbol and
-// separator land where the locale puts them.
+// null for a missing/zero amount, so an auto-recorded purchase omits the row
+// rather than show "$0.00". Formatted from the ISO code, not `currencySymbol`,
+// so the symbol and separator land where the locale puts them.
 const formatPrice = (
   amount: number | null | undefined,
   currency: FigureCurrency,
@@ -56,10 +55,9 @@ const formatPrice = (
 };
 
 /**
- * Spend and the average purchase per currency, in the order the history first
- * shows each: amounts paid in different currencies are never added together.
- * Priced purchases only — a NULL price was never observed, which is unknown,
- * not zero; a price RECORDED as zero is one somebody entered and counts.
+ * Spend and the average purchase per currency (never summed across), in order
+ * of first appearance. Priced purchases only: a NULL price is unknown, not zero,
+ * while a RECORDED zero was entered and counts.
  */
 const spendByCurrency = (
   purchases: readonly PurchaseItem[],

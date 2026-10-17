@@ -81,10 +81,9 @@ export interface SortableShoppingListProps
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
   /**
-   * Whether this list offers drag-to-reorder — unpurchased items only. A tab
-   * affordance, not a permission: the permissions come from
-   * `ShoppingListPermissionsProvider`, so no layer between here and the
-   * resolver has to say what an absent one means.
+   * Whether this list offers drag-to-reorder (unpurchased items only). A tab
+   * affordance, not a permission: those come from
+   * `ShoppingListPermissionsProvider`.
    */
   reorderable: boolean;
   ListEmptyComponent?: FlashListProps<ShoppingListEntry>['ListEmptyComponent'];

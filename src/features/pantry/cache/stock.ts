@@ -43,10 +43,9 @@ function shownAmount(
 }
 
 /**
- * The ONE writer of what a stack holds before the server answers: `heldQuantity`
- * and, with it, `displayAmount` by the server's rule (`shownStock`), so a screen
- * never shows "1 doz" over a stack that now holds 11 pc. `shown` restores the
- * server's own display together with the amount it described. Returns the undo.
+ * The ONE pre-answer writer of a stack's `heldQuantity`, with `displayAmount`
+ * by the server's rule (`shownStock`): "1 doz" never shows over 11 pc. `shown`
+ * restores the server's display with its amount. Returns the undo.
  */
 export function writeHeldStock(
   cache: ApolloCache,

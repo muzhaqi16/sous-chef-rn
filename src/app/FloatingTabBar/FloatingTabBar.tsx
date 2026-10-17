@@ -91,11 +91,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     activeTabIndex.set(state.index);
   }, [state.index, activeTabIndex]);
 
-  // Visibility is the max of two 0…1 hide sources: overlay coverage (the global
-  // dim opacity, so the bar moves in lockstep with the sheet's own
-  // `animatedIndex` rather than waiting on a settled-closed callback) and the
-  // scroll-hide spring. Detail screens are siblings of the tab navigator, so they
-  // cover the bar outright and never factor in.
+  // Hidden by the max of the global dim opacity, which moves the bar in
+  // lockstep with a sheet's `animatedIndex`, and the scroll-hide spring.
+  // Detail screens cover the bar outright as the tab navigator's siblings.
   const overlayOpacity = useOverlayBackdropOpacity();
   const scrollHide = useSharedValue(0);
 

@@ -234,10 +234,9 @@ export function useRecipeReviews({
     );
   };
 
-  // Server-computed per requesting user — never derive it from
-  // `review.helpfulVotes`, which is windowed, so a vote past the window reads
-  // as un-voted. The `userId` guard is separate: the field is false for an
-  // anonymous viewer, and a null id also means there is no vote to toggle.
+  // Server-computed per viewer; never derive it from the windowed
+  // `review.helpfulVotes`, where a vote past the window reads as un-voted. The
+  // `userId` guard is separate: a null id has no vote to toggle.
   const hasVotedHelpful = (review: RecipeReviewFragment) =>
     !!userId && review.viewerHasVotedHelpful;
 

@@ -28,10 +28,9 @@ const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
 };
 
 /**
- * Terminal = the queue will not replay it as things stand. AUTH_ERROR counts
- * as terminal for bookkeeping only ({@link QueueStore.revivePendingAuthErrors}
- * returns it on sign-in), but it must stay evictable or accumulated auth
- * failures wedge the queue at capacity.
+ * Not replayed as things stand. AUTH_ERROR is terminal for bookkeeping only
+ * ({@link QueueStore.revivePendingAuthErrors} revives it on sign-in), but must
+ * stay evictable or accumulated auth failures wedge the queue at capacity.
  */
 function isTerminal(status: QueueStatus): boolean {
   return (
@@ -271,11 +270,9 @@ export class QueueStore {
   }
 
   /**
-   * Repeated MoveShoppingListItem ops for one item coalesce into the last
-   * position, so a drag only ever replays where the item finally landed. The
-   * merged move keeps the first one's age in `agedFrom` — not in `createdAt`,
-   * which orders the drain: an older stamp there would sort the surviving move
-   * ahead of a row created between the two moves, and the move names that row.
+   * Repeated MoveShoppingListItem ops for one item coalesce into the last. Its
+   * age goes in `agedFrom`, not the drain-ordering `createdAt`, so it never
+   * sorts ahead of a row created between the two moves that it names.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
@@ -317,12 +314,9 @@ export class QueueStore {
       return;
     }
 
-    // Enforce the cap without ever dropping a PENDING op: that would break a
-    // create→update chain, replaying the update against a create that never
-    // happened. Prefer an entry already reconciled (SUCCESS replayed, FAILED
-    // withdrawn); an AUTH_ERROR still has its change on screen, so it goes only
-    // when it is all that is left. Nothing terminal at all means the queue is
-    // full of un-synced work and the enqueue is refused.
+    // Never drop a PENDING op: it would break a create→update chain. Evict a
+    // reconciled entry first; an AUTH_ERROR still has its change on screen, so
+    // it goes only when nothing else can. With none terminal, enqueue refuses.
     if (queue.length >= MAX_QUEUE_SIZE) {
       const reconciled = (m: QueuedMutation): boolean =>
         m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED;
@@ -444,10 +438,9 @@ export class QueueStore {
   }
 
   /**
-   * Drains are serialized, so a PROCESSING entry seen at drain start is debris
-   * from a process killed mid-replay: left alone it is never replayed, never
-   * failed, and loses its pending-client-id merge protection. Re-replaying a
-   * possibly-committed op is safe — replays are idempotent by design.
+   * Drains are serialized, so a PROCESSING entry at drain start is debris from
+   * a process killed mid-replay. Re-replaying a possibly-committed op is safe,
+   * as replays are idempotent.
    */
   resetProcessingToPending(userId: string): number {
     const queue = this.loadQueue();
@@ -468,10 +461,9 @@ export class QueueStore {
   }
 
   /**
-   * PENDING entries past the 90-day dedup horizon become FAILED so they surface
-   * through the normal failure UX instead of double-applying. Expiry is
-   * age-based, so a FIFO queue can only expire a prefix, never punch a hole
-   * mid dependency chain. Returns the expired entries for withdrawal.
+   * PENDING entries past the dedup horizon become FAILED, surfacing through the
+   * failure UX instead of double-applying. Age-based, so a FIFO queue expires
+   * only a prefix, never a hole mid dependency chain.
    */
   expireStalePending(
     userId: string,
@@ -517,10 +509,7 @@ export class QueueStore {
   }
 
   /**
-   * Client ids with a still-PENDING mutation. The cache merge uses this so a
-   * first-page background refetch landing before replay does not drop an
-   * un-replayed optimistic item; a server-deleted item has no pending op and is
-   * correctly dropped. Empty when no user is set.
+   * Client ids with a still-PENDING mutation; empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
     if (this.pendingClientIds) return this.pendingClientIds;
@@ -537,12 +526,9 @@ export class QueueStore {
   }
 
   /**
-   * Ids the device minted for a create still PENDING or PROCESSING — rows the
-   * server has not confirmed. A replay in flight counts: a first page landing
-   * before its answer would otherwise drop the row. Narrower than
-   * {@link getPendingClientIds}: a pending usage or update names a row the
-   * server owns, and treating it as unconfirmed skips that row's detail
-   * queries and pins it into lists it has left.
+   * Ids minted for a create still PENDING or PROCESSING, which a first page
+   * would drop. Narrower than {@link getPendingClientIds}: an update names a row
+   * the server owns, and counting it pins it into lists it left.
    */
   getUnconfirmedCreateIds(): Set<string> {
     if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;

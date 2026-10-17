@@ -13,9 +13,8 @@ export interface HomeFieldUpdates {
 }
 
 /**
- * Local-first: an absolute field set keyed by the home id, written to the cache
- * before firing and idempotent on a queued replay. Its own module because
- * `localFirstReplaySafety` reads a FILE for `localFirst` and then holds every
+ * Local-first and idempotent on a queued replay. Its own module because
+ * `localFirstReplaySafety` reads a FILE for `localFirst` and holds every
  * operation that file names.
  */
 export function useUpdateHomeFields(homeId: string) {
@@ -26,9 +25,8 @@ export function useUpdateHomeFields(homeId: string) {
   });
 
   /**
-   * `home` is the CACHED ROW, not a stub: the revert reads its previous values
-   * off it, and a key the row lacks is a field the revert leaves alone.
-   * `fallback` is the copy a failure shows when its code has none. True when
+   * `home` is the CACHED ROW, not a stub: the revert reads previous values off
+   * it. `fallback` is the copy a failure shows when its code has none. True when
    * the change landed or is queued.
    */
   const updateHomeFields = async (

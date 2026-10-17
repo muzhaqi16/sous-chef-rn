@@ -45,11 +45,9 @@ export interface LocalMove {
 }
 
 /**
- * A move-to-pantry's local side, written before the move fires: the pantry row
- * under the minted id, and the list line unlinked or stamped as moved. BOTH are
- * written eagerly: offline no response arrives, and a replay runs no `update`.
- * The removal UNLINKS without evicting, so a refusal can re-link the entity.
- * The caller claims the minted id (`unconfirmedCreates.mark`) before calling.
+ * A move-to-pantry's local side, written eagerly (offline nothing answers, and a
+ * replay runs no `update`): the pantry row under a minted id the caller claimed
+ * (`unconfirmedCreates.mark`); the list line UNLINKED, not evicted, for a re-link.
  */
 export function writeLocalMove(
   cache: ApolloCache,

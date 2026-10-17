@@ -17,10 +17,9 @@ const capPages = (pages: string[]) =>
     : [...pages.slice(0, MAX_PAGES - 1), pages.slice(MAX_PAGES - 1).join('\n')];
 
 /**
- * A scan's recognised pages as the app keeps and sends them: rows rebuilt,
- * payment details removed, no more pages than the API reads, and what to cover
- * on each page's photo. The stages come too: the day is read before redaction
- * cuts it, and the corpus scorer measures each.
+ * A scan's pages as the app keeps and sends them: rows rebuilt, payment details
+ * removed, capped at the API's page limit, with each photo's masks. Stages too:
+ * the day is read before redaction cuts it, and the corpus scorer measures each.
  */
 export function receiptText(recognized: readonly RecognizedPage[]) {
   const rows = assembleReceiptRows(recognized);

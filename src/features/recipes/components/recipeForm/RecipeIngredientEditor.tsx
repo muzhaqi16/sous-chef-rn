@@ -90,11 +90,9 @@ export const RecipeIngredientEditor = forwardRef<
   const update = (changes: Partial<IngredientDraft>) =>
     setDraft(prev => ({ ...prev, ...changes }));
 
-  // State-driven presentation: the hook auto-presents/dismisses off `visible`
-  // via its guarded path (immune to gorhom 5.2.14's dismiss-before-present
-  // wedge) and owns the back handler, animation configs, focus-aware
-  // dismiss-on-blur, theme styles, and backdrop claim wiring. The imperative
-  // `open` / `close` ref API is preserved — it just toggles `visible`.
+  // The hook presents and dismisses off `visible` through its guarded path,
+  // immune to gorhom 5.2.14's dismiss-before-present wedge. The imperative
+  // `open` / `close` ref API just toggles `visible`.
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     visible,
     onDismiss: () => setVisible(false),

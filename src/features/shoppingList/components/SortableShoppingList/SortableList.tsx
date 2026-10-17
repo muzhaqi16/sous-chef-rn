@@ -208,10 +208,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
                   onScrollEndDrag={onScrollEndDrag}
                   onMomentumScrollEnd={onMomentumScrollEnd}
                   scrollEventThrottle={scrollEventThrottle}
-                  // An explicit RNGH control, NOT a bare `onRefresh`/`refreshing`
-                  // pair: given those, FlashList builds RN's RefreshControl, which
-                  // drops the `block` scroll gesture RNGH's ScrollView hands it —
-                  // the indicator then hangs mid-list and never retracts.
+                  // An explicit RNGH control: given a bare `onRefresh`, FlashList
+                  // builds RN's RefreshControl, which drops RNGH's `block` gesture
+                  // and leaves the indicator hanging mid-list.
                   refreshControl={
                     onRefresh ? (
                       <ThemedRefreshControl

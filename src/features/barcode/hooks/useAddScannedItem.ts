@@ -58,10 +58,9 @@ export function useAddScannedItem({
     },
   );
 
-  // No `unit`, and `netWeight` only when the record states no pack size and the
-  // user entered one: the scan's own figure is the record's to store, and one
-  // sent here is kept as the user's. A refusal of an add carrying that size is
-  // left to the caller, whose prompt can show it on the size.
+  // No `unit`, and `netWeight` only for a size the user entered where the record
+  // states none: one sent here is kept as the user's, not the record's. A refusal
+  // of an add carrying it is left to the caller, whose prompt shows it on the size.
   const addToPantry = (item: ScannedItem, packageSize?: PackageSizeInput) =>
     addItem(
       item.name,
@@ -81,10 +80,9 @@ export function useAddScannedItem({
     );
 
   /**
-   * Restock the row the duplicate check named by one container, of the size
-   * the user entered when the record states none; with no size at all it goes
-   * as a forced add (`usePantryRestock`). Resolves whether it stands, having
-   * told the user when it does not.
+   * Restock the duplicate check's row by one container, of the user's size
+   * when the record states none; with no size at all it goes as a forced add
+   * (`usePantryRestock`). Resolves whether it stands, the user told if not.
    */
   const restockDuplicate = async (
     item: ScannedItem,

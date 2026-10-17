@@ -115,13 +115,9 @@ interface UseReceiptScanOptions {
 }
 
 /**
- * Scan (or, where the phone has no document scanner, photograph) → recognise
- * and redact on the phone → read on the phone, by the rules the server reads
- * with and, under `deviceReceiptModel`, its model → keep as the draft. A
- * reading that adds up is the receipt's, and nothing is sent to read it.
- * Otherwise, with the user's consent and a connection, the photos go to the
- * server to be read, the text kept beside them as the fallback; else the
- * server reads the text. No photo stays on the phone.
+ * Scan → recognise, redact and read on the phone (server rules, plus its model
+ * under `deviceReceiptModel`). A reading that adds up stands; else the server
+ * reads photos if consented and online, or the text. The phone keeps no photo.
  */
 export function useReceiptScan({
   onCancel,
@@ -218,10 +214,9 @@ export function useReceiptScan({
       return parsed ? checkOnPhone(parsed, pages) : null;
     }, 'Label receipt lines on device');
 
-  // The rules and the phone's model read the pages at once, and the first
-  // reading that adds up is the receipt's. The rules answer in milliseconds,
-  // so the model is waited for only once they refuse, the text kept meanwhile.
-  // Their reading comes back too, for a receipt nothing else will read.
+  // Rules and model read the pages at once; the first reading that adds up is
+  // the receipt's. The model is awaited only once the rules refuse, the text
+  // kept meanwhile; the rules' reading returns too, for a receipt nothing reads.
   const readOnDevice = async (next: ReceiptDraft) => {
     if (!deviceReading) {
       saveText(next);

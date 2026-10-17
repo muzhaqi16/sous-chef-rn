@@ -33,10 +33,8 @@ interface UsePantryItemActionsOptions {
   };
 }
 
-// Discriminated union: only one modal can be open at a time.
-// Stores only the entity id — the modal materializes the entity from the
-// Apollo cache via `useFragment`, so mutations to the pantry item are
-// reflected in the open modal without a re-snapshot.
+// One modal at a time, holding only the id: the modal reads the item through
+// `useFragment`, so a write to it shows in the open modal.
 type ModalType = 'consume' | 'waste' | 'restock';
 type ActiveModal = { type: null } | { type: ModalType; itemId: string };
 

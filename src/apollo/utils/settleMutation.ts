@@ -300,11 +300,9 @@ function describe(
       body: getNotFoundMessage(resource),
     };
   }
-  // Before the field branch: a mapped code names what the server refused, while
-  // the field only names where the refusal landed. Over-consuming reports both,
-  // and `errors.field.quantity` would call a perfectly valid number invalid
-  // when the pantry simply holds less than it asked for. VALIDATION_FAILED is
-  // the exception, being the umbrella the field exists to refine.
+  // Before the field branch: a mapped code names what was refused, the field
+  // only where. Over-consuming reports both, and the field would call a valid
+  // quantity invalid. VALIDATION_FAILED is the umbrella the field refines.
   if (
     code &&
     code !== VALIDATION_UMBRELLA &&
@@ -341,10 +339,8 @@ function describe(
 }
 
 /**
- * Quiet ONLY for a network error or an offline rejection while
- * `isApiUnavailable` holds — a validation, permission or conflict error is
- * always reported. Per-call reports during an outage bury real failures (228
- * from one settings session). The query side keeps its telemetry on purpose.
+ * Quiet ONLY for a network error or offline rejection while `isApiUnavailable`
+ * holds: per-call reports during an outage bury real failures.
  */
 function reportMutationFailure(error: unknown, operation: string): void {
   if (

@@ -11,9 +11,7 @@ import {
 } from '#features/pantry/utils/itemEnumLabels';
 
 // Shape, defaults and validation for the four-page Add-to-Pantry sheet.
-// Validation lives here and renders ON the field; `usePantryItemSubmission`
-// only submits. An alert covers the form, and once dismissed it cannot say
-// which of the four pages the offending input is on.
+// Validation renders ON the field; `usePantryItemSubmission` only submits.
 
 // yup types a test's sibling values as `any`; these are the ones the rules read.
 type NetWeightSiblings = Partial<
@@ -136,10 +134,9 @@ export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
         return Boolean(context.parent.pantryNetWeightUnitId);
       },
     ),
-  // The same all-or-nothing rule one level down, on the per-container weight
-  // that feeds `item.netWeight` + `item.displayUnitId`: without it a unitless
-  // weight is silently dropped. Scoped to `showPackageDetails` so a collapsed
-  // section can never block Save.
+  // The all-or-nothing rule on the per-container weight (`item.netWeight` +
+  // `item.displayUnitId`), where a unitless weight is silently dropped. Scoped
+  // to `showPackageDetails` so a collapsed section never blocks Save.
   itemNetWeight: string()
     .test(
       'item-net-weight-needs-value',

@@ -27,19 +27,11 @@ import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 
-// Which auth refusals a refresh can clear (and which it can't) lives in
-// #/utils/authErrorCodes, so this link, the refresh path and the offline queue
-// all classify from one list. Classification is by code only — the message
-// substring matching this replaced was both too wide and too narrow, buying a
-// pointless refresh for any refusal whose prose contained "unauthorized" while
-// missing AUTH_TOKEN_INVALID entirely.
+// What a refresh can clear is #/utils/authErrorCodes: this link, the refresh
+// path and the offline queue classify from that one list, by code only.
 
-// FORBIDDEN means the user doesn't have access to the resource — not an auth
-// issue, and refreshing a perfectly good token can't grant access the user
-// doesn't have, so it is deliberately absent from the refreshable set. It is
-// the single authorization code, emitted on both channels: as a mutation
-// result-union member (errors-as-data) and as the top-level `extensions.code`
-// on rejected reads.
+// FORBIDDEN is a missing permission, not an auth fault: no refresh can grant
+// it, so it stays out of the refreshable set.
 // Codes compared below are widened to `string`: `extensions.code` arrives untyped.
 const FORBIDDEN: string = ErrorCode.Forbidden;
 const ACCOUNT_SUSPENDED: string = ErrorCode.AuthAccountSuspended;
@@ -50,10 +42,8 @@ const PREMIUM_REQUIRED: string = TopLevelErrorCode.PremiumRequired;
 const isResourceAccessError = (code: string) => code === FORBIDDEN;
 
 // A suspended, banned or deleted account has valid credentials but may not
-// transact, so it gets its own code rather than a resource-access denial.
-// Matched on the code alone: a reworded refusal must not fall through to the
-// auth branch, and prose that happens to read as a suspension must not end a
-// live session.
+// transact. Matched on the code alone: prose that reads as a suspension must
+// not end a live session, nor a reworded refusal fall to the auth branch.
 const isAccountInactiveError = (code: string) => code === ACCOUNT_SUSPENDED;
 
 // An extension value is unvalidated JSON; only a scalar reads as text.
@@ -62,10 +52,9 @@ const extensionText = (value: unknown, fallback: string): string =>
     ? String(value)
     : fallback;
 
-// The key is baked into the build, so every code here is a build fault, not a
-// recoverable session state. Matched on the exact codes — never message text,
-// which would let a differently-worded refusal fall through to the auth branch
-// and trigger a pointless token refresh.
+// The key is baked into the build, so each code here is a build fault, not a
+// recoverable session state. Matched on exact codes: message text would let a
+// reworded refusal fall through to a pointless token refresh.
 const API_KEY_ERROR_CODES: string[] = [
   TopLevelErrorCode.ApiKeyMissing,
   TopLevelErrorCode.ApiKeyInvalid,
@@ -75,10 +64,9 @@ const API_KEY_ERROR_CODES: string[] = [
 
 const isApiKeyError = (code: string) => API_KEY_ERROR_CODES.includes(code);
 
-// Deliberately distinct from API_KEY_INVALID: the key is valid but was issued
-// without the permission this operation needs, so the fix is re-provisioning
-// the key, not re-authenticating. `requiredPermission` names what was missing
-// and is never masked, so it stays readable in production.
+// Not API_KEY_INVALID: the key is valid but lacks this operation's permission,
+// so the fix is re-provisioning it, not re-authenticating. `requiredPermission`
+// is never masked, so it stays readable in production.
 const API_KEY_INSUFFICIENT_PERMISSIONS: string =
   TopLevelErrorCode.ApiKeyInsufficientPermissions;
 
@@ -120,10 +108,8 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         return;
       }
 
-      // The build is below the server's minimum version. Terminal by
-      // definition — a retry sends the same version, and a token refresh
-      // succeeds and then fails identically — so bail out of the whole handler
-      // before anything downstream tries to recover from it.
+      // Terminal: a retry sends the same version and a refresh succeeds then
+      // fails identically, so bail out before anything downstream recovers.
       if (code === CLIENT_UPGRADE_REQUIRED) {
         logger.error(
           `App version ${CLIENT_VERSION} is below the server minimum (${extensionText(
@@ -138,11 +124,8 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         return;
       }
 
-      // Terminal for the same reason CLIENT_UPGRADE_REQUIRED is: the credential
-      // is fixed for this build, so a retry sends the same key and a refresh
-      // succeeds and then fails identically. Signing out would be worse — the
-      // user's session is perfectly valid, and this is a provisioning fault.
-      // Bail out of the whole handler so nothing downstream tries to recover.
+      // Terminal like CLIENT_UPGRADE_REQUIRED, as the key is fixed for this
+      // build. Never sign out: the session is valid; the key is misprovisioned.
       if (code === API_KEY_INSUFFICIENT_PERMISSIONS) {
         logger.error(
           `API key lacks ${extensionText(
@@ -170,12 +153,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         return;
       }
 
-      // The refresh token is gone or rejected, so the refresh branch below has
-      // nothing left to exchange. Ending the session here rather than letting it
-      // try keeps a dead session from spending a doomed round trip per failing
-      // operation, and lands the user on sign-in instead of stranding them on
-      // cached data. Reached only when an ordinary operation carries the code —
-      // the refresh mutation's own rejection is handled in refreshToken.ts.
+      // The refresh token is gone or rejected, so a refresh has nothing to
+      // exchange: ending here spares a doomed round trip per failing operation.
+      // The refresh mutation's own rejection is handled in refreshToken.ts.
       if (isDeadRefreshTokenCode(code)) {
         logger.error(
           `Refresh token rejected (${operation.operationName}) — ending session`,
@@ -212,11 +192,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // Network errors are neither logged (networkStatusLink sits above retryLink
-    // and logs once per operation; this sits below and would log every attempt)
-    // nor re-forwarded (retryLink owns retry policy, so forwarding would double
-    // query retries and RE-SEND mutations — a duplicate-write risk). An offline
-    // rejection never left the device, and its hook surfaces it.
+    // networkStatusLink, above retryLink, logs network errors once per
+    // operation, and retryLink owns retries: forwarding would RE-SEND mutations.
+    // An offline rejection never left the device; its hook surfaces it.
     if (isNetworkError(error) || isOfflineRejectedError(error)) {
       return;
     }

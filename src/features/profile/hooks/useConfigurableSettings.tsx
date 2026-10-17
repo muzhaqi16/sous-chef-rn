@@ -159,11 +159,9 @@ export const useConfigurableSettings = () => {
   };
 
   const updateUserPreferences = async (input: UpdateSettingsInput) => {
-    // No optimisticResponse here (UserSettings input is nested and doesn't map
-    // 1:1 onto the flat cached entity), so there's nothing to tear down —
-    // queueing it offline is safe and the change applies on replay (idempotent,
-    // keyed by userId). The individual preference setters drive the local UI.
-    // A queued write is not a failure, so only a refusal or error is alerted.
+    // No optimisticResponse (the nested input doesn't map onto the flat cached
+    // entity), so a queued write has nothing to tear down and replays
+    // idempotently; the preference setters drive the local UI.
     await settleMutation(
       () =>
         updateSettingsMutation({
@@ -224,10 +222,9 @@ export const useConfigurableSettings = () => {
           const wasDeclined = navState?.biometricDeclinedPermanently;
 
           let subtitle: string;
-          // The device-reported name is only trustworthy where the platform
-          // has one sensor; elsewhere it names a reader that may not be the one
-          // the prompt accepts. It stays untranslated — the sentence around it
-          // carries the locale.
+          // The device's sensor name is trusted only where the platform has
+          // one sensor, else it may not name the reader the prompt accepts. It
+          // stays untranslated: the sentence around it carries the locale.
           const method =
             authoritativeBiometryName(biometricType) ??
             t('biometrics.genericMethod');
@@ -295,12 +292,8 @@ export const useConfigurableSettings = () => {
   };
 
   const logout = () => {
-    // `authService.logout` and not the store's own `logout` action:
-    // the store action resets state but never revokes the session
-    // server-side (which ends push delivery), hands the offline queue its owner change, or removes
-    // the persisted queue/navigation keys. Two sign-out paths that
-    // each clear a different subset is how the shared-device residue
-    // got there; this is the only one.
+    // `authService.logout`, never the store's `logout`, which only resets
+    // state: no server revoke, no queue owner change, no persisted keys removed.
     const signOut = () => {
       // Keeps the biometric credential: signing back in after a
       // deliberate sign-out is exactly what it exists for, and the

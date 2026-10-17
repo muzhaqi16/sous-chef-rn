@@ -19,11 +19,9 @@ import {
 } from './mealTemplateItemRowNeutral.generated';
 
 /**
- * Local-first writes for a template's items: an item mutation returns the item
- * and its template's own fields, never the template's `itemsConnection`, so the
- * edge is written here, online and offline alike.
- * Module scope, not inside the hook — a value block inside a try/catch bails
- * the whole function out of the React Compiler.
+ * Local-first writes for a template's items. An item mutation never returns the
+ * template's `itemsConnection`, so the edge is written here. Module scope: a
+ * value block in a try bails the hook out of the React Compiler.
  */
 
 /** The template field its meals hang off. */
@@ -134,10 +132,9 @@ export function removeTemplateItemFromCache(
 }
 
 /**
- * Reads an item back so a rejected update or remove can restore it.
- * `returnPartialData` is load-bearing: the fragment selects `recipe`, the
- * editor's query does not, and `readFragment` is all-or-nothing. The result is
- * partial BY CONTRACT — a missing key means the cache never knew the value.
+ * Reads an item back so a refused update or remove can restore it.
+ * `returnPartialData` is load-bearing: the fragment selects `recipe` and the
+ * editor's query does not, so a missing key means the cache never held it.
  */
 export function readTemplateItem(
   cache: ApolloCache,

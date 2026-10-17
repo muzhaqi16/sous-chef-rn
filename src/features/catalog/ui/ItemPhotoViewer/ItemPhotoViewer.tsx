@@ -51,10 +51,9 @@ const DOUBLE_TAP_SCALE = 2.5;
 const ZOOM_EPSILON = 0.01;
 
 /**
- * Keeps a magnified photo's translation inside its own bounds — at scale s the
- * content overflows by `extent * (s - 1)`, half per side. Unclamped, a drag
- * walks the photo off screen and `savedX/Y` persist an unrecoverable black
- * modal, since paging is disabled while zoomed.
+ * At scale s the content overflows by `extent * (s - 1)`, half per side.
+ * Unclamped, a drag walks the photo off screen and `savedX/Y` persist a black
+ * modal, unrecoverable since paging is disabled while zoomed.
  */
 function clampPan(value: number, extent: number, scaleValue: number): number {
   'worklet';
@@ -356,10 +355,9 @@ const ZoomablePhoto: React.FC<{
         <Animated.View style={animatedStyle}>
           <CachedImage
             /*
-             * 'xlarge' is the one PreferredSize with no rendition mapping, so it
-             * resolves to the original upload. Anything else here would hand the
-             * zoom the 512px variant and a nutrition panel would still be
-             * unreadable at 4x — which is the whole reason this viewer exists.
+             * 'xlarge' is the one PreferredSize with no rendition, so it is the
+             * original upload; anything else hands the zoom the 512px variant,
+             * where a nutrition panel is unreadable even at 4x.
              */
             uri={photoDisplayUrl(photo, 'xlarge')}
             style={{ width, height }}

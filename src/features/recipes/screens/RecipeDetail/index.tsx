@@ -381,10 +381,8 @@ const RecipeDetailScreen: React.FC = () => {
       : []),
   ];
 
-  // Only block on the full-screen loader during a true cold load. On a
-  // cache-and-network refetch `loading` is true while `displayData` is already
-  // materialized from cache — showing the loader there wipes the rendered
-  // recipe and pops it back, which is the most-felt skeleton↔content flicker.
+  // The full-screen loader only on a cold load: on a refetch `loading` is true
+  // while `displayData` is already drawn from cache.
   if (loading && !displayData) {
     // Cold load renders inside the template shell so the pinned back chip
     // stays available during a slow fetch, matching the loaded state.

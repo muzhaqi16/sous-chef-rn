@@ -120,8 +120,6 @@ export const ShoppingListItemDetail: React.FC<
     return formatMonthDayYear(date);
   };
 
-  // Images and nutrition from catalog item
-  // Must be called before early return to follow rules of hooks
   // The shared formatter, not a local template: it upscales g→kg and ml→L, so a
   // 1500 g package reads the same here as it does in the pantry.
   const netWeightDisplay = formatNetWeightDisplay(
@@ -250,10 +248,8 @@ export const ShoppingListItemDetail: React.FC<
                     fallbackImageUrl={imageUrl}
                     height={heroHeight}
                     onPhotoPress={setViewerIndex}
-                    // Re-arms the collapse guard on the gallery branch: before
-                    // photos existed every item took the CachedImage path below,
-                    // so a dead CDN url always collapsed the hero rather than
-                    // leaving a 280pt placeholder band.
+                    // The collapse guard for the gallery branch: a dead CDN url
+                    // collapses the hero, as on the CachedImage path below.
                     onUnrenderable={() => setFailedHeroUri(imageUrl)}
                   />
                 ) : (

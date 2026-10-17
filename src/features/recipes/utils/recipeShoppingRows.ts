@@ -37,10 +37,9 @@ interface RowOptions {
 }
 
 /**
- * The shopping-list lines a recipe's ingredients become. The API adds what it
- * is sent: leaving out an optional ingredient ("salt to taste") and naming one
- * that has no catalog item are the device's to decide. Amounts are the recipe's
- * own, which is the whole recipe.
+ * The shopping-list lines a recipe's ingredients become, at the whole recipe's
+ * amounts. The API adds what it is sent, so dropping an optional ingredient and
+ * naming one with no catalog item are the device's call.
  */
 export function recipeShoppingRows(
   recipeId: string,

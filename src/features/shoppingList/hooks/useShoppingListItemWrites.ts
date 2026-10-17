@@ -71,10 +71,9 @@ function localItemFields(input: UpdateShoppingListItemInput): LocalItemFields {
 }
 
 /**
- * The item an edit form loads, and the two writes it can make. The create
- * writes the row into the cache before firing and leaves it there, so it shows
- * immediately and survives being queued offline. Each write resolves `true`
- * unless refused, and a refusal has already been alerted.
+ * The item an edit form loads, and its two writes. The create caches the row
+ * before firing and leaves it, so it shows at once and survives an offline
+ * queue. Each resolves `true` unless refused, the refusal already alerted.
  */
 export function useShoppingListItemWrites(
   listId: string,

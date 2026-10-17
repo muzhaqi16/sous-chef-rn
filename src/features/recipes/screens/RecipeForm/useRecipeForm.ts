@@ -205,10 +205,8 @@ export function useRecipeForm() {
     setValue('intolerances', intolerances, { shouldDirty: true });
   };
 
-  // Build ingredient input array (shared by create and update).
-  // Names are sanitized at the API boundary: a backend ingredient name loaded
-  // into the form may carry a legacy " $X.XX" token, and the API stores names
-  // verbatim — strip it so we never re-persist a price baked into the name.
+  // A loaded ingredient name may carry a legacy " $X.XX" token, and the API
+  // stores names verbatim, so it is stripped here rather than re-persisted.
   const buildIngredientsInput = (): RecipeIngredientInput[] => {
     return state.ingredients.map((ing, index) => ({
       name: stripPriceFromName(ing.name),

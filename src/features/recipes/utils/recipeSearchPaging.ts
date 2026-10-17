@@ -32,10 +32,9 @@ import {
 } from '#features/recipes/utils/recipeDisplayTransforms';
 
 /**
- * One page of recipe search, from two sources at once. The local connection
- * pages by cursor and Spoonacular by offset, so a combined page has to advance
- * both and dedupe what the two return — which is why the cursor state travels
- * as one value rather than as separate pieces of hook state.
+ * One page of recipe search from both sources: the local connection pages by
+ * cursor and Spoonacular by offset, so a page advances both and dedupes across
+ * them, and the cursor state travels as one value.
  */
 export function handleSearchError(error: unknown, label: string): void {
   const err = error as {
@@ -73,11 +72,9 @@ export const SEARCH_FETCH_SIZE = 25;
 export const normalizeTitle = (title: string) =>
   title.trim().toLowerCase().replace(/\s+/g, ' ');
 
-// Identity keys for the cross-source / cross-page dedupe. `spoonacularIds` are
-// the external ids the backend has linked (its rows win), and `titles` are the
-// normalized titles already shown. Both initial search and load-more feed the
-// same set so a recipe surfaced on an earlier page is never shown twice on a
-// later one.
+// Dedupe keys across sources and pages: `spoonacularIds` are external ids the
+// backend has linked (its rows win), `titles` the normalized titles shown.
+// Initial search and load-more share one set.
 export interface SeenKeys {
   spoonacularIds: Set<string>;
   titles: Set<string>;
@@ -87,10 +84,9 @@ export function createSeenKeys(): SeenKeys {
   return { spoonacularIds: new Set(), titles: new Set() };
 }
 
-// Drops rows colliding with something already shown, across BOTH sources and
-// pages: by Spoonacular id where a backend recipe is linked, and by normalized
-// title for the rest. Local rows render first, so a backend copy wins a title
-// collision. `seen` is mutated in place so the next page sees these keys.
+// Drops rows already shown: by Spoonacular id where a backend recipe is linked,
+// else by normalized title, where the first-rendered local row wins. Mutates
+// `seen` so the next page sees these keys.
 export function dedupePageAgainstSeen(
   localNodes: LocalRecipeNode[],
   spoonacularResults: SpoonacularRecipe[],
@@ -160,10 +156,9 @@ interface SpoonacularPage {
 const EMPTY_SPOONACULAR_PAGE: SpoonacularPage = { results: [], total: null };
 
 /**
- * One Spoonacular text-search page, served from the 24h cache when it holds
- * one. Every text search goes through here: the cache key names the query,
- * filters and offset but not the page size, so a second writer with another
- * size would hand this one a short page. Throws on a failed fetch.
+ * One Spoonacular text-search page, from the cache when held. Every text search
+ * comes here: the key omits the page size, so a writer with another size would
+ * hand this one a short page. Throws on a failed fetch.
  */
 export async function fetchSpoonacularTextPage(
   query: string,
@@ -211,12 +206,9 @@ export interface SearchPageResult {
   spoonacularError: unknown;
 }
 
-// Fetch ONE page from both sources, combine + dedupe (against `seen`, which is
-// mutated), and return the new rows + advanced source cursors. Shared
-// by the initial search (offset 0, no cursor) and load-more (next offset +
-// cursor). Local failures resolve to null and degrade silently; Spoonacular
-// errors are captured, not thrown, so a one-source failure still returns the
-// other source's page.
+// ONE page from both sources, deduped against `seen` (mutated), with advanced
+// cursors; initial search and load-more share it. A local failure degrades to
+// null and a Spoonacular error is captured, so either source alone still pages.
 export async function fetchRecipeSearchPage(
   query: string,
   filters: RecipeFilters,
@@ -227,10 +219,9 @@ export async function fetchRecipeSearchPage(
   fetchSpoonacular: boolean,
   seen: SeenKeys,
 ): Promise<SearchPageResult> {
-  // `activeFilters` holds Spoonacular strings; map them back to the
-  // Diet/Intolerance/RecipeCategory enums the GraphQL API takes (unmapped
-  // values drop), so both sources filter alike. Skipped when local has no more pages — a null
-  // cursor re-fetches page 1 and double-appends it.
+  // `activeFilters` map back to the API's enums (unmapped values drop), so both
+  // sources filter alike. Skipped once local has no more pages: a null cursor
+  // re-fetches page 1 and double-appends it.
   const localDiets = filters.diet
     .map(d => SPOONACULAR_TO_DIET_ENUM[d])
     .filter((d): d is Diet => Boolean(d));
@@ -362,10 +353,8 @@ export async function executeRecipeTextSearch(
     seen,
   );
 
-  // A newer search was fired while this one was in flight — discard this
-  // response entirely so it can't clobber the fresher results, commit stale
-  // pagination cursors, surface an irrelevant error, or clear the loading flag
-  // the newer search now owns. Mirrors the load-more path's mid-flight guard.
+  // A newer search fired mid-flight: discard this response whole, so it cannot
+  // clobber the newer results, cursors, error or loading flag.
   if (!shouldCommit()) return;
 
   setRows(page.rows);
@@ -374,11 +363,9 @@ export async function executeRecipeTextSearch(
     filters,
     localEndCursor: page.localEndCursor,
     localHasNextPage: page.localHasNextPage,
-    // The next page starts where this one ended. The total drives the
-    // "is there more Spoonacular?" check (offset < total). Cache hits carry
-    // the fetch-time total; a null total only remains for entries persisted
-    // before the total was cached — treat the count we got as the total then
-    // (paging recovers on the next uncached search).
+    // A null total comes only from an entry persisted before totals were
+    // cached; the count received stands in, and paging recovers on the next
+    // uncached search.
     spoonacularOffset: page.spoonacularResultCount,
     spoonacularTotal: page.spoonacularTotal ?? page.spoonacularResultCount,
     seen,
@@ -398,11 +385,9 @@ export async function executeRecipeTextSearch(
   setLoading(false);
 }
 
-// Fetches the next page from whichever source still has results, dedupes
-// against `pagination`'s shared `seen` keys, and returns rows plus advanced
-// cursors — the CALLER commits them, and only if the search was not replaced
-// mid-flight. An exhausted source is skipped so its rows are not re-appended.
-// Failures never wipe already-shown results.
+// The next page from each source with results left, deduped against
+// `pagination.seen`; the CALLER commits it, only if the search was not replaced
+// mid-flight. Failures never wipe shown results.
 export async function executeRecipeLoadMore(
   pagination: SearchPagination,
   client: ApolloClient,
@@ -431,11 +416,9 @@ export async function executeRecipeLoadMore(
     seen,
   );
 
-  // A Spoonacular page we asked for that came back empty means we've hit the
-  // plan's paging cap (or a 402) even though `total` still advertises more
-  // results. Freeze `total` at the current offset so `offset < total` flips
-  // false — otherwise the offset can't advance (it grows by the row count,
-  // which is 0 here) and the footer re-fires the same empty page forever.
+  // An empty Spoonacular page is the plan's paging cap (or a 402) though
+  // `total` advertises more: freezing `total` at the offset stops the footer
+  // re-firing the same empty page, since the offset grows by row count.
   const spoonacularExhausted =
     spoonacularHasMore && page.spoonacularResultCount === 0;
 

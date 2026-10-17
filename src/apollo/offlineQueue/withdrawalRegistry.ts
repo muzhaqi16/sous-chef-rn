@@ -1,8 +1,6 @@
 /**
- * Every feature that has something to withdraw when a queued write is
- * permanently rejected, keyed by the operation its document declares. Its own
- * list rather than a manifest field, for the same reason as
- * {@link REPLAY_PREPARATIONS}.
+ * What each feature withdraws when a queued write is permanently rejected; its
+ * own list, not a manifest field, as {@link REPLAY_PREPARATIONS} explains.
  */
 import { byOperation } from '#/apollo/utils/documentOperation';
 import {

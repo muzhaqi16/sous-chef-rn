@@ -86,12 +86,9 @@ export function usePantryItemSubmission({
           ];
         }
       }
-      // Per-container net weight, and it is all-or-nothing here too: a bare
-      // `item.netWeight` with no `displayUnitId` is a number the server cannot
-      // interpret, and it fed a pantry-level `NetWeightInput` that the
-      // both-or-neither guard below then dropped. The form's
-      // `item-net-weight-needs-unit` rule reports the missing unit on the
-      // field; this is the second line of defence, matching the guard below.
+      // Per-container net weight is all-or-nothing too: `item.netWeight`
+      // without `displayUnitId` means nothing to the server. The form's
+      // `item-net-weight-needs-unit` rule reports it on the field first.
       if (itemNetWeight && weightUnitId) {
         const nw = parseDecimalInput(itemNetWeight);
         if (!isNaN(nw) && nw > 0) {
@@ -110,10 +107,9 @@ export function usePantryItemSubmission({
       pantryNetWeightUnitId ??
       (totalPackageNetWeight ? displayUnitId : undefined);
 
-    // Purchase info — send only when the user provided something. `storeId`
-    // comes from picking an existing store (PurchaseInfoInput has no free-text
-    // store name). acquisitionMethod is always meaningful, so include it
-    // whenever any purchase field is set (or the method isn't the default).
+    // Sent only when the user gave some: `storeId` comes from a picked store
+    // (no free-text store name), and `acquisitionMethod` rides along with any
+    // purchase field or a non-default method.
     const parsedCost = costPerUnit.trim()
       ? parseDecimalInput(costPerUnit)
       : undefined;
@@ -242,11 +238,9 @@ export function usePantryItemSubmission({
       });
     };
 
-    // Offline-first: the pantry answers "do I already stock this?" itself, so
-    // nothing is published and no doomed create is queued. The server refuses
-    // only the item IN THAT UNIT, so the match is name plus unit id. A blank
-    // unit resolves server-side to the item's tracking unit, which a held stack
-    // almost always is, so it matches any held unit; free text is the server's.
+    // The pantry answers "do I stock this?" itself, so no doomed create queues.
+    // The server refuses only the item IN THAT UNIT: name plus unit id, where a
+    // blank unit (the tracking unit) matches any; free text is the server's.
     const cachedDuplicate =
       unitId || !unit.trim()
         ? findCachedPantryItemDuplicate(client.cache, pantryId, {

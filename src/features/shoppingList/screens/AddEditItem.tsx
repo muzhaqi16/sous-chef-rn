@@ -134,19 +134,16 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     if (name) setFieldValue('brand', name);
   };
 
-  // Only the id. `UnitAutocompleteField` writes the SYMBOL through
-  // `onChangeText` before it calls this, so writing the unit's `name` back here
-  // would replace "g" with "gram" — which is neither what `setFromItem`
-  // repopulates the field with nor what the item detail renders. Same shape as
-  // `handleUnitSelect` above.
+  // Only the id: `UnitAutocompleteField` has already written the SYMBOL through
+  // `onChangeText`, and writing the `name` here would turn "g" into "gram",
+  // unlike what `setFromItem` repopulates or the item detail renders.
   const handleNetWeightUnitSelect = (id: string | null) => {
     setFieldValue('netWeightUnitId', id);
   };
 
-  // Wrapped in `handleSubmit` at the call site, not here: this body reads
+  // Wrapped in `handleSubmit` at the call site, not here: this reads
   // `itemVersionRef.current`, and calling `handleSubmit` during render makes
-  // that a render-time ref read (react-hooks/refs). Same shape as
-  // `PantryItemForm`'s `handleSubmit(handleSave, logValidationErrors)`.
+  // that a render-time ref read (react-hooks/refs).
   const handleSave = () => {
     // Skip mutation if no fields changed (edit mode only)
     if (isEdit && !hasDirtyFields) {

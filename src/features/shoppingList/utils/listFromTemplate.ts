@@ -58,10 +58,9 @@ interface CopyOptions {
 }
 
 /**
- * A cached list as the create-plus-lines it implies. Mirrors the server's copy:
- * settings and every line, purchased ones included, each landing unpurchased.
- * `basedOnTemplateId`, a line's `priority` and its price estimates have no
- * client expression and are left for the server, as is `shareCount`.
+ * A cached list as the create-plus-lines it implies, mirroring the server's copy:
+ * settings and every line, purchased included, landing unpurchased. The server
+ * fills `basedOnTemplateId`, `shareCount`, line `priority` and price estimates.
  */
 export function listFromTemplate(
   source: CopyableList,

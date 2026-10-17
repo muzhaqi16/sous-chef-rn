@@ -34,10 +34,9 @@ type FlatStorageLocationNode =
   GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
 
 /**
- * Superset node the render/edit/delete handlers accept — flat rows and the
- * client-derived tree share one `GetStorageLocations` node, so `childLocations`
- * is optional. Field types are inherited, which keeps the StorageType/
- * StorageState enums intact when spread into `StorageLocationInitialData`.
+ * What the render/edit/delete handlers take: flat rows and the derived tree
+ * share one `GetStorageLocations` node, so `childLocations` is optional, and
+ * inherited field types keep enums intact into `StorageLocationInitialData`.
  */
 type StorageNode = Partial<FlatStorageLocationNode> &
   Pick<FlatStorageLocationNode, 'id' | 'name' | 'type'> & {

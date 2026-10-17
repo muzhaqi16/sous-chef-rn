@@ -1,9 +1,7 @@
 /**
- * Opens `mealPlanEvents(homeId)` and applies other members' changes; a personal
- * plan (`homeId: null`) emits none. The payload is an envelope plus an id —
- * subscriptions validate against depth 5, which no fragment spread fits — so
- * creates and template-item changes read the entity back, and plan-item changes
- * ride `refreshPlanAggregates`.
+ * Applies other members' `mealPlanEvents(homeId)`. The payload is only an id
+ * (depth 5 fits no fragment), so creates and template-item changes read the
+ * entity back; plan-item changes ride `refreshPlanAggregates`.
  */
 
 import { useSubscription } from '@apollo/client/react';
@@ -49,11 +47,9 @@ import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscri
 type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
 
 /**
- * The add updaters take an id, NEVER a read-back object: `toReference(item,
- * true)` merges what it is handed over the stored entity, so a denormalized
- * result would replace nested references with inline snapshots and un-normalize
- * them. The `readFragment`s below read what the read-back normalized, which
- * masking hides on the query result.
+ * The add updaters take an id, never a read-back object: `toReference(x, true)`
+ * merges it over the stored entity and inlines its nested references. The
+ * `readFragment`s below read what the read-back normalized; masking hides it.
  */
 type EntityRef = { __typename: string; id: string };
 
@@ -155,9 +151,8 @@ let aggregateRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Re-reads the plan so its server-computed nutrition totals catch up; evicting
- * them instead makes `MealPlanMain_mealPlan` incomplete and blanks the screen.
- * Debounced (a 7-day template pushes ~21 events) and held off while a delete is
- * pending — a refetch landing mid-delete writes the removed row back in.
+ * them instead blanks `MealPlanMain_mealPlan`. Debounced, and held while a
+ * delete is pending: a refetch landing mid-delete writes the removed row back.
  */
 function refreshPlanAggregates(
   client: SubscriptionApolloClient,
@@ -203,11 +198,9 @@ function handlePlanItemChanged(
         itemId,
       );
     }
-    // The echo is dropped, but the plan's totals still moved. Scheduling here
-    // is what makes the user's own delete — the common case, where the echo
-    // almost always arrives while the mutation is still in flight — update the
-    // calories/protein/carbs/fat in the header. The scheduler waits out the
-    // pending delete before it reads.
+    // The echo is dropped, but the plan's totals moved: the user's own delete,
+    // whose echo usually lands mid-flight, updates the header's nutrition only
+    // through this. The scheduler waits out the pending delete before it reads.
     refreshPlanAggregates(client);
     return;
   }
@@ -263,12 +256,9 @@ async function handleTemplateChanged(
   });
   if (!template) return;
 
-  // The id, not the read-back object — see handlePlanChanged.
-  //
-  // Scoped to the variants this template belongs to: `Query.mealTemplates` is
-  // keyed on `filters`, so the browser sheet accumulates one entry per
-  // category/search the user has visited and a bare cache.modify would drop a
-  // remotely-created DINNER template into the BREAKFAST list.
+  // The id, not the read-back object (see EntityRef). Scoped to this template's
+  // variants: `Query.mealTemplates` keys on `filters`, and a bare
+  // `cache.modify` would put a DINNER template in a BREAKFAST list.
   addToMealTemplates(
     client.cache,
     { __typename: 'MealTemplate', id: templateId },
@@ -372,11 +362,9 @@ export function useMealPlanSubscriptions(userId?: string) {
     // `skip` holds while there is no home, so the empty id is never sent.
     variables: { homeId: selectedHomeId ?? '' },
     skip: mealPlanSkip,
-    // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
-    // `id` only, and `MealPlanForEvent` / `GetMealPlan` read the entity back
-    // over HTTP. Cached, a DELETE event re-creates the MealPlanItem it just
-    // announced was gone as a bare `{ id }`, and the incomplete `GetMealPlan`
-    // result costs a full-page refetch per delete.
+    // The envelope's `node` is only `__typename` + `id`; cached, a DELETE event
+    // re-creates the item it announces gone as a bare `{ id }`, leaving
+    // `GetMealPlan` incomplete and refetching per delete.
     fetchPolicy: 'no-cache',
     ...eventHandlers,
   });

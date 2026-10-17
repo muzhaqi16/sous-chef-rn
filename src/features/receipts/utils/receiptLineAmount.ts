@@ -13,15 +13,9 @@ export interface ListLineAmount {
 }
 
 /**
- * What a receipt line bought, as stated: the API owns the package arithmetic.
- * - A line in a unit is that amount; a typed unit names the list line's, the
- *   only line it links to.
- * - A count with no unit, 1 included, is that many as its stack counts them,
- *   never one of the item's tracking unit (1 g of cheese).
- * - A bare 1 against a list line in a unit says only that it was bought, so the
- *   list's amount stands.
- *
- * Null for a part of something no unit names, or a typed unit with no line.
+ * What a receipt line bought, as stated; the API does the package arithmetic.
+ * A typed unit is the list line's, the only one it links to. A unitless count is
+ * as its stack counts (never 1 g of cheese); a bare 1 keeps a unit list line's.
  */
 export function receiptLineAmount(
   choice: Pick<ReceiptLineChoice, 'quantity' | 'unitId' | 'unitText'>,

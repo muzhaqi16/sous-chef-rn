@@ -9,10 +9,9 @@ const asPath = (value: unknown): string | null =>
   typeof value === 'string' ? value : null;
 
 /**
- * Tells the PLATFORM the app is fully drawn — distinct from our own
- * `app_fully_drawn_ms`. Android calls `Activity.reportFullyDrawn()`, feeding
- * Play vitals and Macrobenchmark. iOS deliberately does nothing: no API accepts
- * an app-declared signal, and a signpost needs an XCUITest target to read it.
+ * Tells the PLATFORM the app is fully drawn (Play vitals, Macrobenchmark),
+ * distinct from our `app_fully_drawn_ms`. iOS has no API that accepts an
+ * app-declared signal, so it does nothing.
  */
 export const StartupMark = {
   reportFullyDrawn() {
@@ -22,10 +21,9 @@ export const StartupMark = {
   },
 
   /**
-   * Arm Hermes' sampling profiler from `index.js` — startup is over before the
-   * dev menu opens. Returns whether sampling actually STARTED, which decides
-   * whether timings are too perturbed to emit `app_fully_drawn_ms`; the method
-   * merely existing proves nothing, since arming can fail.
+   * Arms Hermes' sampling profiler from `index.js`, as startup is over before
+   * the dev menu opens. Returns whether sampling STARTED, which decides whether
+   * timings are too perturbed to emit `app_fully_drawn_ms`; arming can fail.
    */
   startProfiling(): boolean {
     return nativeMethod(MODULE, 'startProfiling')?.() === true;
@@ -41,10 +39,9 @@ export const StartupMark = {
   },
 
   /**
-   * Stop profiling and write the trace. REJECTS when the native cannot stop,
-   * rather than resolving `null` — a build that can start but not stop would
-   * otherwise clear the fallback timer, leave the sampler running all session,
-   * and report success while producing no trace.
+   * REJECTS, not `null`, when the native cannot stop: a build that starts but
+   * cannot stop would otherwise clear the fallback timer and leave the sampler
+   * running all session, reporting success with no trace.
    */
   async stopProfiling(filename: string): Promise<string | null> {
     const stop = nativeMethod(MODULE, 'stopProfiling');

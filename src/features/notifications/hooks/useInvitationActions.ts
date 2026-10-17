@@ -79,10 +79,9 @@ const refusalOptions = (
 });
 
 /**
- * The four invite writes and the token they need. Each `update`
- * prefers the payload's `inviteId` and falls back to the canonical
- * `invitation.id` (the server's `sourceId` correlation), so a notification
- * carrying only a sourceId still evicts its pending record.
+ * Each `update` prefers the payload's `inviteId`, else `invitation.id` (the
+ * server's `sourceId`), so a notification carrying only a sourceId still evicts
+ * its pending record.
  */
 export function useInvitationActions(
   invitation: InvitationData | null,
@@ -92,10 +91,9 @@ export function useInvitationActions(
   const inviteId = firstNonBlank(invitation?.payload.inviteId, invitation?.id);
 
   /**
-   * A refusal is a completed mutation, so `update` runs for one too. An invite
-   * refused as a CONFLICT is spent (accepted, declined or revoked) and leaves
-   * the pending list; any other refusal leaves it PENDING, and evicting it
-   * would leave nothing to accept later.
+   * `update` runs for a refusal too. Only a CONFLICT means spent (accepted,
+   * declined or revoked); any other refusal leaves the invite PENDING, so
+   * evicting it would leave nothing to accept later.
    */
   const dropSpentHomeInvite = (cache: ApolloCache, data: unknown) => {
     if (isSpentInvite(data) && inviteId && userId) {
@@ -163,10 +161,9 @@ export function useInvitationActions(
   );
 
   /**
-   * The invite's bearer token, which rides in the notification that delivered
-   * it. There is no lookup behind it: the API discloses the raw token once, to
-   * the inviter, and stores only a digest, so no list can hand one back. Read
-   * at render so a surface holding none can decline to offer the action at all.
+   * The bearer token rides only in the notification that delivered it: the API
+   * stores a digest, so no lookup can hand one back. Read at render so a
+   * surface holding none can decline to offer the action.
    */
   const token = invitation?.token;
 

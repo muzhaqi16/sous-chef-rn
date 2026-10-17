@@ -1,10 +1,7 @@
 /**
- * Wastes a stack's expired stock as one WASTE usage record. A stack with no
- * batches is wasted whole: `condition` SPOILED + `quantity` 0, written to the
- * cache PERMANENTLY before firing (an `optimisticResponse` rolls back on the
- * queue's null result). A stack held in batches loses only the expired ones,
- * which the server recomputes, so nothing is written ahead of its answer.
- * `input.idempotencyKey` keeps a queued replay from double-counting the ledger.
+ * One WASTE record for a stack's expired stock: a batchless stack is wasted
+ * whole (SPOILED, `quantity` 0) PERMANENTLY before firing, a batched one on the
+ * server's recompute. `idempotencyKey` stops a replay double-counting.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

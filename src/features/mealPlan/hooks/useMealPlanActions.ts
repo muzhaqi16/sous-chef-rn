@@ -1,8 +1,7 @@
 /**
- * Meal plan create / update / delete, local-first: each writes the cache
- * PERMANENTLY before firing, since an `optimisticResponse` rolls back when the
- * queue completes with a null result. Create mints the cuid PK the replay
- * re-sends under; update and delete snapshot and restore on a failure.
+ * Create, update and delete write the cache PERMANENTLY before firing: an
+ * `optimisticResponse` rolls back on the queue's null result. Create mints the
+ * id its replay re-sends; update and delete restore a snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

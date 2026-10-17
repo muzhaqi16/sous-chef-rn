@@ -1,8 +1,7 @@
 /**
- * Local-first: the changed fields are written to the cache PERMANENTLY before
- * firing, so the update survives an offline queue — the replay re-sends absolute
- * field sets keyed by the list id, idempotent. A rejection restores the pre-edit
- * snapshot and throws, leaving the one message to the caller's toast.
+ * Local-first: the changed fields are cached PERMANENTLY before firing, and a
+ * replay re-sends absolute sets keyed by the list id. A rejection restores the
+ * pre-edit snapshot and throws, leaving the one message to the caller's toast.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

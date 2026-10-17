@@ -28,10 +28,9 @@ type MyRecipesEdgeNode = NonNullable<
 >['edges'][number]['node'];
 
 /**
- * The created-by identity a recipe entity is materialized with. `email` is
- * nullable to match the schema — the API withholds `User.email` from callers
- * other than the user themselves, so a cached `Recipe.createdBy` read back for
- * someone else's recipe carries null there.
+ * The created-by identity a recipe is materialized with. `email` is nullable:
+ * the API withholds `User.email` from anyone but its owner, so another's cached
+ * `Recipe.createdBy` carries null.
  */
 export type RecipeCreatedBy = {
   __typename: 'User';
@@ -131,10 +130,9 @@ function writeRecipeRow(
 }
 
 /**
- * Insert-or-replace a recipe edge in MyRecipes. Shared by the local-first
- * pre-fire write (insert) and the mutation's update callback (replace — the
- * server row carries the same client-minted id, so the optimistic node is
- * upgraded in place instead of duplicated).
+ * Insert-or-replace a recipe edge in MyRecipes: the pre-fire write inserts, and
+ * the update callback replaces it in place, since the server row carries the
+ * same minted id.
  */
 export function upsertMyRecipesEdge(
   cache: ApolloCache,

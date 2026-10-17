@@ -105,11 +105,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const pantryId = useWatch({ control, name: 'pantryId' });
   const expirationDate = useWatch({ control, name: 'expirationDate' });
 
-  // Interaction state, not fields: which of the two amounts the shopper has
-  // typed over.
-  // The per-unit price the total was seeded from, and whether the shopper has
-  // since typed over either field. Between them they decide which of the two
-  // amounts survives an edit — see `handleQuantityChange`.
+  // Interaction state, not fields: the per-unit price the total was seeded
+  // from, and whether the shopper has typed over either amount, decide which
+  // survives an edit (`handleQuantityChange`).
   const [seededUnitPrice, setSeededUnitPrice] = useState<number | null>(null);
   // The unit that price is per: the line's, else the purchase's.
   const [seededUnit, setSeededUnit] = useState<{
@@ -237,11 +235,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     return seededUnit.id === null && text.trim() === seededUnit.symbol;
   };
 
-  // Editing the quantity holds the PER-UNIT price and re-derives the total:
-  // stocking 3 of 5 bought at $0.59 records $1.77, not the whole $2.95. That
-  // price is per the unit it was paid in: in another unit (64 fl oz restated
-  // as 1 carton) the purchase cost what it cost. Once the shopper types a
-  // total of their own, that total wins instead.
+  // A quantity edit holds the PER-UNIT price and re-derives the total (3 of 5
+  // at $0.59 records $1.77), but only in the unit it was paid in; in another,
+  // the purchase cost what it cost. A total the shopper typed wins.
   const reprice = (quantity: string, id: string | null, unitText: string) => {
     if (priceTouched || seededUnitPrice == null) return;
     if (!paidInSeededUnit(id, unitText)) {

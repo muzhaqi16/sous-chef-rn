@@ -3,18 +3,15 @@ import type { FeatureFlag } from './featureFlags';
 import logo from '../assets/images/logo.png';
 
 /**
- * Single source of truth for brand identity, and the first file to edit when
- * forking. Does NOT replace `app.json` or the native project names, which still
- * drive bundle ids and OS-level display names. Design tokens stay in
- * `src/theme/foundations/`.
+ * The first file to edit when forking. `app.json` and the native project names
+ * still drive bundle ids and OS display names.
  */
 export interface AppConfig {
   identity: {
-    /** Must match `app.json` → `name`. Used for bundle/keychain naming contexts. */
+    /** Must match `app.json` → `name`. */
     name: string;
-    /** Must match `app.json` → `displayName`. Shown to users. */
+    /** Must match `app.json` → `displayName`. */
     displayName: string;
-    /** Default base URL for external web links (privacy, terms, marketing). */
     webAppUrl: string;
     deepLink: {
       /** Custom URL scheme, without `://`. */
@@ -23,10 +20,8 @@ export interface AppConfig {
       hosts: string[];
     };
     /**
-     * Reverse-DNS namespace for keychain entries. **Changing it on a shipped
-     * app orphans every user's stored credentials and session** — the keychain
-     * is keyed by service name, so everyone is silently signed out with
-     * biometrics unenrolled. Set once, when forking; a test pins the strings.
+     * Changing it on a shipped app signs everyone out, biometrics unenrolled:
+     * the keychain is keyed by service name. A test pins the strings.
      */
     keychainNamespace: string;
     /**
@@ -36,7 +31,6 @@ export interface AppConfig {
     lastBiometricEmailKey: string;
   };
   assets: {
-    /** Primary app logo used on landing/auth screens. */
     logo: ImageSourcePropType;
   };
   /**
@@ -50,16 +44,12 @@ export interface AppConfig {
    * the default there. A build's `FEATURE_FLAGS` overrides this.
    */
   featureFlags: Partial<Record<FeatureFlag, boolean>>;
-  /**
-   * Locales this app bundles, in menu order. Must match the JSON files
-   * registered in `src/i18n/config.ts`.
-   */
+  /** In menu order; must match the JSON files `src/i18n/config.ts` registers. */
   locales: string[];
   branding: {
     /**
-     * Brand primary in hex. `src/theme/foundations/brand.ts` derives the full
-     * 11-stop palette from it (using the hand-tuned `jaffa` palette verbatim
-     * when it matches the default), so a rebrand is one line here.
+     * Hex; `src/theme/foundations/brand.ts` derives the 11-stop palette from it,
+     * using the hand-tuned `jaffa` palette verbatim for the default.
      */
     primaryColor: string;
   };

@@ -8,26 +8,23 @@ import type { DataAttributionValue } from '#components/molecules/DataAttribution
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';
 
 /**
- * Where a scan was started from, and so what a result does: stock a pantry item
- * or add a shopping list line. It travels as a route param, so it is a string
- * rather than a callback — and it names the two features barcode serves, which
- * is why it lives HERE rather than in the shared navigation types.
+ * Where a scan started, and so what a result does: stock a pantry item or add a
+ * shopping list line. A route param, so a string not a callback; it names the
+ * features barcode serves, so it lives here, not in the shared navigation types.
  */
 export type BarcodeSource = 'pantry' | 'shoppingList';
 
 type LookupNode = ItemByLookupQuery['items']['edges'][number]['node'];
 
-/** A unit as the result names it. */
 type UnitRef = Pick<
   NonNullable<LookupNode['displayUnit']>,
   'id' | 'name' | 'symbol'
 >;
 
 /**
- * A scan's result: the item a lookup found, or the one the scan's new-item form
- * created. `canEdit` and `canSuggest` decide the edit action's wording
- * (`writesItemDirectly`), or that there is none: both false is read-only. The
- * edit sheet re-reads both from the item's snapshot before it writes.
+ * A scan's result: the item a lookup found or the scan's new-item form created.
+ * `canEdit`/`canSuggest` pick the edit action's wording (`writesItemDirectly`),
+ * none if both are false; the edit sheet re-reads both from the item's snapshot.
  */
 export interface ScannedItem
   extends Pick<LookupNode, 'id' | 'name' | 'canEdit' | 'canSuggest'> {

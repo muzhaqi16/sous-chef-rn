@@ -62,12 +62,9 @@ const hasLiveSession = (): boolean =>
 const canCatchUp = (): boolean =>
   hasLiveSession() && !isApiUnavailable(useStore.getState());
 
-// Catalog names come in the request's language (`languageLink`), so a switch
-// re-reads what is on screen. A screen paused at the switch is not active, so
-// no refetch reaches it, and on resume it reads the cache: after a switch,
-// every navigation catches up on what has not been asked since.
-// Only a real change counts: i18next also reports a switch to the same
-// language, and rehydration applies the saved one before any query exists.
+// Catalog names come in the request's language, so a switch re-reads the
+// screen and each later navigation catches up a paused one. Only a real
+// change counts: i18next repeats the language, and rehydration precedes queries.
 const languageChanged =
   (client: ApolloClient, onNavigation?: NavigationSubscribe) => () =>
     new Observable<RefetchEvents['languageChanged']>(observer => {
@@ -146,11 +143,9 @@ async function refetchActive(
 }
 
 /**
- * The client's resync. Triggers until a settle window passes quietly are one
- * resync, and so is a trigger arriving while it waits on the queue; one
- * arriving while it re-requests starts exactly one more after it, never a
- * parallel run. A transient query (a search, a preview, analytics) opts out
- * with `refetchOn: false`.
+ * Triggers until a settle window passes quietly are one resync, as is one
+ * arriving while it waits on the queue; one arriving while it re-requests
+ * starts one more after it. A transient query opts out with `refetchOn: false`.
  */
 export const createRefetchEventManager = (): RefetchEventManager => {
   let pending: PendingResync | null = null;
@@ -212,10 +207,9 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 };
 
 /**
- * Starts the triggers. Called once at app start rather than from
- * `client.ts`: a source subscribes as it is set, and importing the client must
- * not subscribe to the store, AppState and the socket. `onNavigation` comes
- * from the composition root, which owns navigation.
+ * Called once at app start, not from `client.ts`: a source subscribes as it is
+ * set, and importing the client must not subscribe to the store, AppState and
+ * the socket.
  */
 export const connectResyncSources = (
   client: ApolloClient,

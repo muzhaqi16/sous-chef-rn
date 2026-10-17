@@ -91,10 +91,9 @@ export function LoginScreen(): React.JSX.Element {
   );
   const setNavigationState = useAppStore(state => state.setNavigationState);
 
-  // RememberMe: on an eligible login, authService stashes the credentials and
-  // keeps us on the auth screen (rather than routing to main_app). Surface the
-  // modal here; on a response we save credentials (accept) or not (decline),
-  // then clear the stash and enter the app.
+  // On an eligible login authService stashes the credentials and stays on the
+  // auth screen; the RememberMe modal's answer saves them or not, then clears
+  // the stash and enters the app.
   const finishRememberMe = () => {
     setPostLoginCredentials(null);
     setNavigationState('main_app');
@@ -165,10 +164,9 @@ export function LoginScreen(): React.JSX.Element {
 
     // `login` reports its own failures and resolves false; it does not throw.
     const signedIn = await authService.login(input, {
-      // A 403 that leaves the credentials valid: the mailbox is unproven, and
-      // the emailed code clears it. Sending the reader to enter that code is
-      // the only action available, so the screen offers it rather than
-      // leaving a toast on a form they can only re-submit.
+      // A 403 with valid credentials: the mailbox is unproven and the emailed
+      // code clears it, so the screen offers code entry rather than a toast on
+      // a form the reader can only re-submit.
       onRefusal: code => {
         if (code === EMAIL_NOT_VERIFIED) {
           setUnverifiedEmail(input.email);
@@ -250,10 +248,9 @@ export function LoginScreen(): React.JSX.Element {
     return t('auth.useBiometric');
   };
 
-  // Rendered in place, as SignUpScreen does: `verifyEmail` is public and needs
-  // no session, and there is no signed-out verification ROUTE to navigate to.
-  // `onExit` is what takes it away again — navigating to Login from here lands
-  // on the route already focused and changes nothing.
+  // Rendered in place: there is no signed-out verification ROUTE. `onExit`
+  // takes it away; navigating to Login lands on the focused route and changes
+  // nothing.
   if (unverifiedEmail !== null) {
     return (
       <CodeVerificationScreen

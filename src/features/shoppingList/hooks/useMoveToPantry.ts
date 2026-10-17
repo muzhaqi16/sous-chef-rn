@@ -84,10 +84,9 @@ export function useMoveToPantry({
   const { t } = useTranslation();
 
   /**
-   * Move a shopping list item to the pantry (local-first). The pantry row's id is
-   * minted here and sent as `input.pantryItemId`, so the cached row and the
-   * server's are the SAME entity. A permanent write, never `optimisticResponse`:
-   * the queue completes a queued mutation with null and would tear that down.
+   * Move a shopping list item to the pantry (local-first) under a pantry row id
+   * minted here as `input.pantryItemId`, so cache and server share one entity;
+   * a permanent write, as the queue's null result tears down `optimisticResponse`.
    */
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,

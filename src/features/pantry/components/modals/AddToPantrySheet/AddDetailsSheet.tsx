@@ -61,10 +61,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   // Page state
   const [currentPage, setCurrentPage] = useState(0);
 
-  // ALL form state lives in react-hook-form: one source of truth, one schema,
-  // and validation that renders on the field instead of in a modal. Mounted
-  // fresh by the parent sheet each time the user enters the details step, so
-  // the defaults initialize straight from props — no reset needed.
+  // Mounted fresh each time the user enters the details step, so the defaults
+  // come straight from props with no `reset`.
   const {
     control,
     handleSubmit,
@@ -120,10 +118,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     value: PathValue<AddPantryItemFormData, K>,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
-    // `shouldValidate` re-runs the rule on THIS field only, and the
-    // all-or-nothing net-weight rule spans `pantryNetWeight`,
-    // `pantryNetWeightUnit` and `pantryNetWeightUnitId` — each direction
-    // reporting on a different field, so both halves are re-run.
+    // `shouldValidate` re-runs only THIS field, but the net-weight rule reports
+    // each direction on a different field, so both halves are re-run.
     if (field === 'pantryNetWeight' || field === 'pantryNetWeightUnitId') {
       void trigger(['pantryNetWeightUnit', 'pantryNetWeight']);
     }
@@ -227,10 +223,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         cancelLabel={t('labels.cancel')}
         confirmLabel={loading ? t('labels.adding') : t('labels.add')}
         onCancel={onClose}
-        // `handleSubmit` runs the schema first: an invalid form renders its
-        // message on the offending field and jumps to that field's page, so
-        // the message is on screen rather than behind a tab the user has to
-        // find. Only a valid form reaches `handleConfirm`.
+        // `handleSubmit` validates first: an invalid form shows its message on
+        // the field and jumps to that field's page. Only a valid form reaches
+        // `handleConfirm`.
         onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
             logValidationErrors(formErrors);

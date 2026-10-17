@@ -100,10 +100,8 @@ const AlertCard: React.FC<AlertCardProps> = ({
 
   return (
     <Animated.View
-      // This is an in-app modal, so Detox's system-alert matchers can't reach it.
       // Only the TOP card claims the stable id: `AlertStack` renders up to
-      // ALERT.MAX_VISIBLE at once, and two matches fail a bare `by.id` with a
-      // multiple-match error. The card behind is inert anyway.
+      // ALERT.MAX_VISIBLE cards, and two matches fail a bare Detox `by.id`.
       testID={isTop ? kitTestIDs.alertModal : kitTestIDs.alertModalBehind}
       style={[
         styles.card,

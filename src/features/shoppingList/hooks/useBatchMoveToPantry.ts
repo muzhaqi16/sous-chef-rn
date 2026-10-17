@@ -16,10 +16,9 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 
 /**
- * Mark moved lines as stocked so their rows stop offering a no-op action.
- * `writePurchaseInfo` owns the write-time rules (never asserts a flag it was not
- * given; clears the stamp on a flip). The stamp is a local placeholder, so it is
- * written only onto a line with none — the payload lists earlier moves too.
+ * Mark moved lines as stocked so their rows stop offering a no-op action. The
+ * stamp is a local placeholder, so it goes only onto a line with none: the
+ * payload lists earlier moves too.
  */
 function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
   const stampedAt = new Date().toISOString();
@@ -32,10 +31,9 @@ function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
   /**
-   * The purchased rows the screen already renders. Passed in rather than re-read
-   * from cache: minting a client id per line needs the exact set on screen, and
-   * matching the filtered connection's cached field key wrong yields silently NO
-   * hints offline rather than a visible failure.
+   * The purchased rows the screen renders, passed in rather than re-read: a
+   * client id is minted per line on screen, and a wrong match on the filtered
+   * connection's field key silently yields NO hints offline.
    */
   purchasedItems: readonly { id: string }[];
   onSuccess?: () => void;

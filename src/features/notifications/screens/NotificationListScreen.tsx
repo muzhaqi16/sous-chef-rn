@@ -185,10 +185,9 @@ export const NotificationListScreen: React.FC = () => {
               getItemType={row => row.kind}
               renderScrollComponent={SwipeAwareScrollComponent}
               ListEmptyComponent={
-                // The feed renders from the store, so an empty store looks
-                // exactly like a failed fetch unless the query is asked — and
-                // "You're all caught up" is the wrong thing to tell someone
-                // whose notifications simply did not load.
+                // An empty feed looks like a failed fetch unless the query is
+                // asked, and "all caught up" is wrong for a feed that never
+                // loaded.
                 historyState === 'error' || historyState === 'offline' ? (
                   <DataStateView
                     state={historyState}

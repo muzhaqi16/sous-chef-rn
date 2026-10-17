@@ -1,8 +1,7 @@
 /**
- * Local-first field updates for settings-shaped mutations: write the cached entity
- * PERMANENTLY, fire with `context: { localFirst: true }`, treat "queued" as
- * success, revert from a snapshot only on refusal. An `optimisticResponse` cannot:
- * Apollo tears its layer down on the queue's null result, reverting while queued.
+ * Writes the cached entity PERMANENTLY and reverts from a snapshot only on
+ * refusal: an `optimisticResponse` cannot, as Apollo tears its layer down on
+ * the queue's null result, reverting while queued.
  */
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
@@ -77,11 +76,9 @@ export function writeEntityFields<TFields extends object>(
     .map(([field, value]) => `${field}${selectionFor(value)}`)
     .join('\n    ');
 
-  // `writeFragment`, not `cache.modify`: modify cannot INTRODUCE a field the cached
-  // record lacks (silently dropped, no error — and which fields it carries depends
-  // on whichever query loaded it), and it stores a nested entity as a private copy
-  // rather than a reference. Verified vs `@apollo/client@4.2.12`:
-  // `docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field`.
+  // `writeFragment`, not `cache.modify`: modify silently drops a field the
+  // record lacks and stores a nested entity as a private copy. Verified vs
+  // `@apollo/client@4.2.12`: `docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field`.
   cache.writeFragment({
     id: cacheId,
     fragment: localFirstFragment(entity.__typename, selections),
@@ -129,10 +126,9 @@ function shapeHash(input: string): string {
 }
 
 /**
- * The pre-write values for exactly the keys an update will write. A key the source
- * does not CARRY is OMITTED, not null — `writeEntityFields` skips `undefined`, so
- * the revert leaves it alone; a key carried AS null IS recorded. Absent from the
- * read is not the same fact as empty in the store, and one `??` collapses them.
+ * The pre-write values of the keys an update writes. A key the source does not
+ * CARRY is OMITTED, so the revert leaves it alone; one carried AS null is
+ * recorded. Absent from the read is not empty in the store.
  */
 export function snapshotFields<TFields extends object>(
   // `object`, not `Record<string, unknown>`: an interface without an index

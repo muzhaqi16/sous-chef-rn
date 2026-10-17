@@ -111,10 +111,9 @@ export const MealTemplateBuilderScreen: React.FC<
     name: ['itemRecipeId', 'itemRecipeName', 'itemMealType'],
   });
 
-  // An effect, not a render-body adjustment: `reset` notifies every mounted
-  // `Controller` synchronously, and a torn-up concurrent render drops it.
-  // Keyed on the id, not the loaded object — a cache write emits a new object
-  // for the same template, and rehydrating there discards unsaved edits.
+  // An effect, not a render-time adjustment: `reset` notifies every mounted
+  // `Controller` synchronously. Keyed on the id: a cache write emits a new
+  // object for the same template, and rehydrating on it discards unsaved edits.
   const hydratedTemplateId = useRef<string | null>(null);
   useEffect(() => {
     if (!loaded || hydratedTemplateId.current === loaded.id) return;

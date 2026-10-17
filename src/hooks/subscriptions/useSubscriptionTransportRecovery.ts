@@ -14,12 +14,9 @@ import {
 } from '#/utils/subscriptionErrorHandler';
 
 /**
- * Re-subscribes when the TRANSPORT ends a subscription — Apollo has no automatic
- * restart and the client is `lazy`, so an errored sink stays dark. Covers only
- * the closes graphql-ws refuses to re-dial, never one that latched reconnection
- * off; {@link classifyTransportTermination} is the table the socket reads too.
- * A server end a retry can get past ({@link isRetryableServerEnd}) is restarted
- * the same way: the socket stays up, so nothing else would.
+ * Re-subscribes when the TRANSPORT ends a subscription: Apollo never restarts an
+ * errored sink. Covers a close graphql-ws won't re-dial, per
+ * {@link classifyTransportTermination}, and an {@link isRetryableServerEnd}.
  */
 
 /**
@@ -31,10 +28,9 @@ export const MAX_RESTART_ATTEMPTS = 6;
 const RESTART_BACKOFF = { baseMs: 1000, maxMs: 30_000, jitter: 0.25 };
 
 /**
- * Error-free time before the attempt count returns to zero. Counterpart of
- * `CONNECTION_STABLE_MS` in `wsLink.ts`: a counter that only goes up measures
- * "faults this session", not consecutive failures, so separately-recovered
- * faults would accumulate until the subscription goes dark.
+ * Error-free time before the attempt count resets (as `CONNECTION_STABLE_MS` in
+ * `wsLink.ts`): a count that only rises would add up separately-recovered
+ * faults until the subscription goes dark.
  */
 export const RESTART_STABLE_MS = 10_000;
 
@@ -87,10 +83,9 @@ export function useSubscriptionTransportRecovery(
     return () => clearTimeout(timeoutId);
   }, [shouldRecover, exhausted, isOnline, attempt, restart, subscriptionName]);
 
-  // The count is spent on an EPISODE, not on the session: Apollo clears `error`
-  // when `restart()` swaps in a fresh observable, so a working restart ends the
-  // episode here. Event DELIVERY cannot be the signal — a healthy subscription
-  // can sit idle for hours, so "no events yet" is not "the restart failed".
+  // Apollo clears `error` when `restart()` swaps in a fresh observable, so a
+  // working restart ends the episode here. Event DELIVERY cannot be the signal:
+  // a healthy subscription can sit idle for hours.
   useEffect(() => {
     if (shouldRecover || attempt === 0) return;
 
@@ -98,10 +93,9 @@ export function useSubscriptionTransportRecovery(
     return () => clearTimeout(timeoutId);
   }, [shouldRecover, attempt]);
 
-  // A connected socket is evidence this can work now: restart at once and re-arm
-  // the counter, PAST the cap, so a long outage cannot leave a subscription dark
-  // for the session. This is the only way out of exhaustion, and it stays
-  // reachable because the error persists, keeping `shouldRecover` true.
+  // A connected socket restarts at once and re-arms the counter PAST the cap:
+  // the only way out of exhaustion, reachable because the persisting error
+  // keeps `shouldRecover` true.
   useEffect(() => {
     if (!shouldRecover) return;
 
@@ -111,11 +105,9 @@ export function useSubscriptionTransportRecovery(
     });
   }, [shouldRecover, restart]);
 
-  // Latched, because `exhausted` is not a one-way door: `restart()` clears
-  // Apollo's `error`, so each clear-and-return at the cap would file the report
-  // again. The latch is the PAYLOAD, cleared by the same count-reset that re-arms
-  // recovery — so "fires once per episode" is a property of the deps, not a
-  // guard, and a later exhaustion does report again.
+  // Latched: `restart()` clears Apollo's `error`, so each return to the cap would
+  // report again. The latch is the PAYLOAD, cleared by the count-reset that
+  // re-arms recovery, so a later exhaustion reports again.
   const errorMessage = error?.message;
   const [exhaustionReport, setExhaustionReport] = useState<string | null>(null);
 

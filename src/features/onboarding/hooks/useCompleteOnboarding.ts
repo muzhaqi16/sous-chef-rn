@@ -10,9 +10,8 @@ import { UseCompleteOnboarding_UserFragmentDoc } from './useCompleteOnboarding.g
 
 /**
  * Local-first: `onBoarded` is written to the cached user PERMANENTLY before
- * firing, so onboarding finishes with no network. An absolute set on the
- * caller's own row, so a replay lands the same state. A refusal is alerted
- * here and reverts the flag.
+ * firing, so onboarding finishes offline; an absolute set, so a replay lands
+ * the same state. A refusal is alerted here and reverts the flag.
  */
 export function useCompleteOnboarding(userId: string | undefined) {
   const { t } = useTranslation();

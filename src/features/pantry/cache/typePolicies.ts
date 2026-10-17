@@ -9,10 +9,9 @@ import type { CachedConnection, CachedEdge } from '#/apollo/cacheFieldPolicies';
 import { isRecord } from '#/utils/isRecord';
 
 /**
- * The pantry's cache shape: windowed item connections keyed on what actually partitions them, and by-id redirects so a locally-created row is readable before the server has it.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * The pantry's cache shape: windowed item connections keyed on what partitions
+ * them, and by-id redirects so a locally-created row reads before the server
+ * has it.
  */
 export const pantryTypePolicies: TypePolicies = {
   Pantry: {
@@ -71,12 +70,9 @@ export const pantryTypePolicies: TypePolicies = {
   Query: {
     fields: {
       pantry: readByIdFromCache('Pantry'),
-      // The redirect is all-or-nothing: `canRead` only checks that the
-      // entity EXISTS, so a `PantryItem` missing one field of
-      // `PantryItemDetail_pantryItem` still reads incomplete and Apollo
-      // goes to the network. It therefore only pays off paired with a
-      // detail-complete optimistic write —
-      // `optimisticEntityCompleteness.test.ts` is what keeps that true.
+      // `canRead` checks only that the entity exists: a `PantryItem` short one
+      // `PantryItemDetail_pantryItem` field still goes to the network, so this
+      // needs a detail-complete optimistic write.
       pantryItem: readByIdFromCache('PantryItem'),
       // Batches for a pantry item are a Relay connection keyed by the item
       // (and optional status filter), so each item — and each active/all
@@ -88,10 +84,9 @@ export const pantryTypePolicies: TypePolicies = {
       storageLocations: {
         // Different homes have different storage locations - cache separately
         keyArgs: ['homeId'],
-        // A connection, not a list, so Apollo's broken-ref filtering never
-        // reaches `edge.node`. Without this read an optimistic delete's
-        // evict leaves a dangling node, the query goes incomplete, and
-        // offline `usePreservedNodes` freezes the PRE-delete list.
+        // Apollo's dangling-ref filtering skips `edge.node` in a connection:
+        // without this read an evicted node leaves the query incomplete, and
+        // offline `usePreservedNodes` freezes the pre-delete list.
         read(
           existing: CachedConnection | undefined,
           { canRead }: FieldFunctionOptions,

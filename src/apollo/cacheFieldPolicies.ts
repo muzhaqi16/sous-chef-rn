@@ -1,8 +1,6 @@
 /**
- * The field-policy primitives a feature's type policies are built from: cursor
- * connections keyed on the arguments that partition a list, and array merging
- * by entity id. Their own module so a policy needing one does not close a cycle
- * with `cache.ts`, which assembles them.
+ * Field-policy primitives the feature type policies build on, in their own
+ * module so a policy needing one closes no import cycle with `cache.ts`.
  */
 
 // **No type declares `keyFields: ['id']`** — it is Apollo's default, and
@@ -55,10 +53,8 @@ function readEdgeNodeId(
 }
 
 /**
- * Preserve un-replayed local creates when an authoritative first page replaces a
- * connection: keeps only edges whose `node.id` still has a PENDING queue
- * mutation and is absent from the incoming page. Falls straight through once
- * the queue drains. Shared so the guard is encoded in one place.
+ * Keeps un-replayed local creates through an authoritative first page: the
+ * edges whose `node.id` still has a PENDING queue mutation and the page omits.
  */
 function preservePendingEdges(
   existing: CachedConnection,
@@ -90,9 +86,8 @@ function preservePendingEdges(
 }
 
 /**
- * The cached edges an authoritative first page leaves standing: those after the
- * cached position of the page's last already-held entry, minus any it restates.
- * A page sharing no entry with the cache cannot be placed, so it keeps none and
+ * The cached edges past the page's last already-held entry, minus any it
+ * restates. A page sharing no entry cannot be placed, so it keeps none and
  * `fetchMore` reloads from the page's own cursor.
  */
 function edgesPastFirstPage(
@@ -120,10 +115,9 @@ function edgesPastFirstPage(
 }
 
 /**
- * Merge a cursorless first page as authoritative for the window it covers.
- * `hasNextPage` decides how much it restates: `false` replaces the whole
- * connection, `true` replaces the cached entries up to the page's last one and
- * keeps the rest. Only `totalCount === 0` may empty a populated list.
+ * A cursorless first page is authoritative for its window: with no next page it
+ * replaces the whole connection, else the cached entries up to its last one.
+ * Only `totalCount === 0` may empty a populated list.
  */
 function mergeAuthoritativeFirstPage(
   existing: CachedConnection,
@@ -188,10 +182,9 @@ export function readByIdFromCache(typename: string): FieldPolicy {
 }
 
 /**
- * Connection merge where fresh server data wins on duplicate node ids
- * (last-write-wins), for connections with no paginated window. Append-only
- * paginated lists use {@link itemsConnectionFieldPolicy} instead, which keeps
- * existing edge positions and bounds the window.
+ * Connection merge where fresh data wins on duplicate node ids, for a
+ * connection with no paginated window; an append-only paginated list uses
+ * {@link itemsConnectionFieldPolicy}.
  */
 export function mergeConnectionByNodeId(
   // `false` is one store field whatever arguments read it. An empty array is
@@ -231,10 +224,9 @@ export function mergeConnectionByNodeId(
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after) {
-        // No cursor means a refresh, not a page: the response re-states the
-        // window it covers, so it replaces those edges rather than merging in.
-        // Gating on `!hasNextPage` would hide every removal and reorder in a
-        // list long enough to paginate.
+        // No cursor means a refresh, not a page: it replaces the window it
+        // covers. Gating on `!hasNextPage` would hide every removal and reorder
+        // in a list long enough to paginate.
         return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 
@@ -271,18 +263,15 @@ export function mergeConnectionByNodeId(
 }
 
 /**
- * Paginated append-only merge with a bounded window: existing edges keep their
- * positions, only new node ids are appended, and the result is capped at
- * MAX_WINDOW_EDGES so memory stays bounded. Use
+ * Paginated append-only merge: existing edges keep their positions, only new
+ * node ids are appended, and the window is capped at MAX_WINDOW_EDGES. Use
  * {@link mergeConnectionByNodeId} where fresh data should overwrite duplicates.
  */
 export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
     keyArgs,
-    // Self-heal dangling refs: Apollo's broken-ref filter handles plain lists,
-    // never a nested `edge.node`, so an evicted entity leaves a truthy
-    // Reference that renders as a phantom row with a stale totalCount.
-    // `canRead` drops those edges and decrements the count.
+    // Apollo's broken-ref filter handles plain lists, never a nested
+    // `edge.node`: an evicted entity would render as a phantom row.
     read(
       existing: CachedConnection | undefined,
       { canRead }: FieldFunctionOptions,
@@ -315,10 +304,8 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after) {
-        // No cursor means a refresh, not a page. See
-        // `mergeAuthoritativeFirstPage` for why this must not also require
-        // `!hasNextPage`, and for the empty-response and pending-create guards
-        // it carries.
+        // No cursor means a refresh: gating on `!hasNextPage` too would hide
+        // every removal and reorder in a list long enough to paginate.
         return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 

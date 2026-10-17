@@ -204,12 +204,9 @@ function regionMasks(
 }
 
 /**
- * What to paint over each page's photo before it leaves the phone. The payment
- * block is covered as a region, full width from its first payment row after an
- * item to the receipt's end, so a card digit recognition missed is covered
- * too; only its date rows stay open. Above it, each row the redaction drops or
- * masks is covered line by line. Null when no payment block was read: a
- * misread one shows, and so may a name misread with it.
+ * What to paint over each photo before it leaves the phone: the payment block as
+ * one region (full width, to the end, date rows open) so a missed card digit is
+ * covered, and each redacted row above. Null with no block read: a misread shows.
  */
 export function receiptPhotoMasks(
   pages: readonly ReceiptRowsPage[],

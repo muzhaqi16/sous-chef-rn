@@ -22,10 +22,9 @@ type Withdraw = (
 ) => void;
 
 /**
- * A replay whose payload names a different row than the one minted locally
- * (`outcome: MERGED`): the ghost is withdrawn AND the server's row linked, since
- * withdrawing alone leaves neither, and later writes move to it. Both helpers
- * are membership-gated, so a re-drain is a no-op.
+ * A replay answering with another row than the minted one (`outcome: MERGED`):
+ * the ghost is withdrawn AND the server's row linked, and later writes move to
+ * it. Both helpers are membership-gated, so a re-drain is a no-op.
  */
 const adoptServerRow =
   (

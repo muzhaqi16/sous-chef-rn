@@ -55,11 +55,9 @@ type PurchaseInfoWrite = Omit<
 > & { updatedAt?: string };
 
 /**
- * The ONLY writer of `ShoppingListItem.purchaseInfo`. Its type policy CLEARS every
- * field a server write omits whenever `isPurchased` changes; this write is marked
- * `extensions.local`, which the policy merges field-wise instead, so the amounts
- * the server recorded survive a local flip. `movedToPantryAt` is derived from the
- * flag, so a local flip clears the stamp. Callers say only what they change.
+ * The ONLY writer of `ShoppingListItem.purchaseInfo`. Its `extensions.local`
+ * makes the type policy merge field-wise, so the server's amounts survive a
+ * local flip, which clears `movedToPantryAt`. Callers say only what they change.
  */
 export function writePurchaseInfo(
   cache: ApolloCache,
@@ -113,10 +111,9 @@ export function writePurchaseInfo(
 }
 
 /**
- * The stamp a write should leave behind. Restoring is not flipping: a revert
- * re-asserts the flag the row had before the user touched it, which looks like a
- * flip from the cache's side. The server never saw the change, so it still holds
- * the stamp, and clearing it would re-offer a move-to-pantry already done.
+ * The stamp a write leaves. A revert re-asserts the row's earlier flag, which
+ * looks like a flip to the cache, but the server still holds the stamp: clearing
+ * it would re-offer a move-to-pantry already done.
  */
 function resolveStamp({
   patch,

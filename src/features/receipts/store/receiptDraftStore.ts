@@ -337,10 +337,9 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
                 },
               };
             }
-            // A photo parse that read nothing spent its photos, a limit's
-            // refusal too (the API counts photo parses against a smaller
-            // allowance of their own): a receipt with text is read from it
-            // at once.
+            // A photo parse that read nothing spent its photos, as does a limit's
+            // refusal (photo parses have a smaller allowance of their own): a
+            // receipt with text is read from it at once.
             if (via === 'photos' && draft.pages.length > 0) {
               const {
                 photoKeys: _spent,

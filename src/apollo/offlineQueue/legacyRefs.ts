@@ -8,11 +8,9 @@ import { isOwnKey } from '#/utils/isOwnKey';
 import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 
 /**
- * A write queued by an earlier build whose input the API has since reshaped:
- * `@oneOf` references for `*Id`/`*Name` pairs, calendar days for instants,
- * moved and renamed fields. The API refuses the old shape before any resolver
- * runs, so each entry is rewritten once, on load, by its input type, into the
- * shape this build sends.
+ * Rewrites a write queued by an earlier build, once on load and by input type,
+ * into the shape this build sends: the API refuses a reshaped input (`@oneOf`
+ * refs, calendar days, moved fields) before any resolver runs.
  */
 
 export type Input = Record<string, unknown>;
@@ -25,10 +23,9 @@ export const text = (value: unknown): string | undefined =>
 const ref = (id: unknown, name: unknown) => refByIdOrName(text(id), text(name));
 
 /**
- * An `expiresAt` sent as the picked day's local midnight through
- * `toISOString()`. The API stores that as its UTC date, a day early east of
- * UTC; read back on this device, the instant is the day the user picked, so it
- * replays as `expiresOn`.
+ * An `expiresAt` was the picked day's local midnight via `toISOString()`, which
+ * the API stored a day early east of UTC; read back on this device the instant
+ * is the picked day, so it replays as `expiresOn`.
  */
 const expiresOn = (input: Input): Input => {
   if (!('expiresAt' in input) || 'expiresOn' in input) return input;

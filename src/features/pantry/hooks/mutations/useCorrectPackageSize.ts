@@ -1,8 +1,7 @@
 /**
- * Corrects one batch's package size when it was misread. The same fraction of
- * the package remains, so the batch's remaining weight scales with its size.
- * Local-first: the cache is written PERMANENTLY before firing, and
- * `input.idempotencyKey` keeps a queued replay from writing the history twice.
+ * Corrects a misread batch package size; the same fraction remains, so the
+ * remaining weight scales. Written PERMANENTLY before firing;
+ * `input.idempotencyKey` keeps a replay from writing the history twice.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

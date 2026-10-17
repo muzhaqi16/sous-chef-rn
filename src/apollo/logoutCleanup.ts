@@ -220,11 +220,9 @@ export class LogoutCleanup {
   }
 }
 
-// A session the server ended gets the same teardown a deliberate sign-out does:
-// the difference is who decided, not how much of the session is still usable.
-//
-// The gate belongs to whoever started the session end (`whileSessionEnds`), not
-// to this step: it must stay closed for the store reset that follows.
+// A server-ended session gets the same teardown as a sign-out. The gate belongs
+// to whoever started the session end (`whileSessionEnds`), not to this step: it
+// must stay closed for the store reset that follows.
 registerSessionTeardown('apollo', async () => {
   await LogoutCleanup.performLogoutCleanup();
 });

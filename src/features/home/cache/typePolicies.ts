@@ -5,10 +5,8 @@ import {
 } from '#/apollo/cacheFieldPolicies';
 
 /**
- * A home's connections merge by node id, so `fetchMore` appends instead of replacing the page.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * A home's connections merge by node id, so `fetchMore` appends. `makeCache()`
+ * throws rather than let two features overwrite each other on one field.
  */
 export const homeTypePolicies: TypePolicies = {
   Home: {

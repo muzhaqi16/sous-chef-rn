@@ -32,10 +32,9 @@ export const removeFromPantryItemsCache =
   );
 
 /**
- * Reconcile a local-first create with its answer: the server's row takes the
- * edge the eager write counted. A create the server resolved onto a held row (a
- * restock) answers with that row's id, so the row written under the client's id
- * goes with its edge and local seeds, but not the count, which the payload states.
+ * Reconciles a local-first create with its answer: the server's row takes the
+ * counted edge. A create resolved onto a held row (a restock) answers with that
+ * row's id; the minted row goes with its edge and seeds, not the count.
  */
 export function reconcileCreatedPantryItem(
   cache: ApolloCache,
@@ -55,10 +54,9 @@ export function reconcileCreatedPantryItem(
 }
 
 /**
- * Adjust `Pantry.stats.totalItems` by `delta`: the responses carry no parent
- * aggregate and `Pantry.stats` merges rather than recomputes, so the header
- * otherwise contradicts the list. Only `totalItems` — the rest need item state;
- * the write's own subscription echo re-reads them (`usePantrySubscriptions`).
+ * Moves `Pantry.stats.totalItems` by `delta`: responses carry no parent
+ * aggregate and `Pantry.stats` merges, so the header would contradict the list.
+ * The write's echo re-reads the rest (`usePantrySubscriptions`).
  */
 export function adjustPantryItemCount(
   cache: ApolloCache,
@@ -101,10 +99,9 @@ export function carriesPantryCount(pantry: unknown, pantryId: string): boolean {
 }
 
 /**
- * Publish a locally-created row AND count it, as one operation. Every path must do
- * both: a count contradicting the rows is visible immediately, and
- * `usePantryScreen` branches on it to pick server-side against client-side
- * sorting. Pairing them here means a call site cannot do one and forget the other.
+ * Publishes a locally-created row AND counts it, as one operation: a count
+ * contradicting the rows shows at once, and `usePantryScreen` picks server- or
+ * client-side sorting from it.
  */
 export function addPantryItemLocally(
   cache: ApolloCache,

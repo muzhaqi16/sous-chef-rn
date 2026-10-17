@@ -8,10 +8,9 @@ import { useTranslation } from '#/i18n';
 export type AddToListOutcome = 'kept' | 'reverted';
 
 /**
- * Put one pantry item on a shopping list. The row is written before firing so it
- * survives a queued create, and withdrawn on a refusal. The list is a per-call
- * argument because one screen adds a row to the list already selected and adds
- * every row to a list picked in the moment.
+ * Puts one pantry item on a shopping list: written before firing, withdrawn on
+ * a refusal. The list is per call, since one screen adds a row to the selected
+ * list and every row to a list picked in the moment.
  */
 export function useAddPantryItemToShoppingList() {
   const client = useApolloClient();

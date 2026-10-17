@@ -1,8 +1,7 @@
 /**
  * What a plan copy, a template cut from a plan, or a plan laid from a template
- * reads out of the cache: the parent with EVERY one of its meals. A parent
- * whose later pages are still unread is not a source — deriving from a first
- * page would silently drop the rest.
+ * reads from the cache: the parent with EVERY meal. A parent with unread later
+ * pages is not a source — deriving from its first page drops the rest.
  */
 import type { ApolloCache, TypedDocumentNode } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';

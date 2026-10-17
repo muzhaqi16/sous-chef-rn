@@ -46,10 +46,9 @@ function buildIndex(rows: readonly PantryRow[]): ExistingPantryIndex {
 }
 
 /**
- * Which catalog items a pantry already holds, and the two writes that change
- * that. Public because onboarding's picker needs it before any pantry screen
- * has mounted, and both the pantry's documents and the shape of its item rows
- * are the pantry feature's to know.
+ * Which catalog items a pantry holds, and the two writes that change that.
+ * Public: onboarding's picker needs it before any pantry screen mounts, and the
+ * pantry's documents and row shape are this feature's to know.
  */
 export function usePantryItemSelection(pantryId: string | null | undefined) {
   const today = useToday();

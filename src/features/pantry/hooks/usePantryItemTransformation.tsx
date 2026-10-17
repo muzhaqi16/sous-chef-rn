@@ -209,10 +209,9 @@ export const formatAcquisitionMethod = (
   t: Translate,
 ): string | null => (method ? t(acquisitionMethodLabelKey(method)) : null);
 
-// A cost, or null when the server recorded none — callers omit the row rather
-// than render an em dash beside populated ones. A cost recorded AS zero is a
-// fact somebody entered (a gift, a comped line) and is shown. Distinct from
-// `formatCurrency`, which always returns a string.
+// A cost, or null when none was recorded, so callers omit the row instead of an
+// em dash. A cost recorded AS zero is a fact (a gift) and is shown.
+// `formatCurrency` always returns a string.
 export const formatCostOrNull = (
   amount: number | null | undefined,
   currency: string,

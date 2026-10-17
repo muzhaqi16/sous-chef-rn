@@ -67,10 +67,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
     onEntriesChanged(updated);
   };
 
-  /** Sets the typed name and drops any selected id in ONE write. Splitting the
-   *  two across the text and selection callbacks would build two arrays from
-   *  the same pre-write `entries` in one tick, and the second would clobber
-   *  the typed name. */
+  /** Sets the typed name and drops any selected id in ONE write: two writes
+   *  would build two arrays from the same pre-write `entries` in one tick, the
+   *  second clobbering the typed name. */
   const handleUnitTextChange = (
     index: number,
     field: 'unitName' | 'contentUnitName',

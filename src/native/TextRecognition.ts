@@ -92,9 +92,8 @@ export const TextRecognition = {
 
   /**
    * Rewrites each image for the server to read, then deletes the originals
-   * whatever the outcome, unless `keepPages` leaves them to be read. Calls run
-   * in order, so pages prepared and then read are never deleted under the
-   * preparation.
+   * whatever the outcome unless `keepPages` keeps them for a read. Calls run in
+   * order, so pages prepared then read are never deleted under the preparation.
    */
   async preparePhotos(
     imageUris: readonly string[],

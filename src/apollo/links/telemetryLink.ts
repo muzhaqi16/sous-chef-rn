@@ -15,9 +15,8 @@ interface GraphQLTiming {
   startTime: number;
 }
 
-// Fraction of non-dev operations carrying telemetry, from
-// `GRAPHQL_TELEMETRY_SAMPLE_RATE`. Defaults to FULL capture — an unset or
-// unparseable value must not silently discard production telemetry. Clamped to
+// `GRAPHQL_TELEMETRY_SAMPLE_RATE`, defaulting to FULL capture so an unset or
+// unparseable value never silently discards production telemetry. Clamped to
 // (0, 1] because `sampleWeight` divides by it.
 const parseSampleRate = (raw: string | undefined): number => {
   // `Number`, not a decimal parser: this is build-env config, so it must not
@@ -61,39 +60,29 @@ export const createTelemetryLink = () => {
       firstDefinition?.kind === Kind.OPERATION_DEFINITION
         ? firstDefinition.operation
         : 'unknown';
-    // A subscription stays open for the life of the screen, so the elapsed
-    // time at its first server push is a session length, not a request
-    // latency. Keep those observations out of the latency metrics entirely —
-    // a single PantryEvents socket has reported 194s, which alone drags every
-    // percentile in graphql_request_duration_ms past the top bucket.
+    // A subscription's elapsed time at its first push is a session length, not
+    // a request latency, so it stays out of the latency metrics.
     const isSubscription = operationType === OperationTypeNode.SUBSCRIPTION;
 
-    // Only a `CONFIGURED_SAMPLE_RATE` share of operations reach this point (see
-    // the gate above), so each one stands in for 1/rate real operations. Weight
-    // counter increments accordingly so totals estimate true volume regardless
-    // of the rate. At the current rate of 1 the weight is 1 and the counters
-    // are exact counts — note that makes them NOT comparable with series
-    // recorded while the rate was 0.1, which were 10× estimates.
+    // Each sampled operation stands in for 1/rate real ones, so counters are
+    // weighted to estimate true volume whatever the rate.
     const sampleWeight = Environment.isDevelopment()
       ? 1
       : Math.round(1 / CONFIGURED_SAMPLE_RATE);
 
     const operationId = `${operationName}_${startTime}`;
 
-    // Deliberately no `performance.mark`/`measure` pair: nothing reads a `gql:*`
-    // measure, and it makes instrumentation QUADRATIC in session length —
-    // `clearMarks` is a full-array filter and every `measure` appends an entry
-    // that is never cleared. `duration` comes from `startTime` below.
+    // No `performance.mark`/`measure` pair: nothing reads a `gql:*` measure,
+    // and each appends an entry `clearMarks` must filter, making
+    // instrumentation QUADRATIC in session length.
     timings.set(operationId, {
       operationName,
       operationType,
       startTime,
     });
 
-    // Guarded: production's log floor is `warn`, so unguarded this walked
-    // `operation.variables` and built a payload for every operation only for
-    // `log()` to discard it — cheap per call, but now on every operation
-    // rather than one in ten.
+    // Production's log floor is `warn`: unguarded, every operation builds a
+    // payload only for `log()` to discard it.
     if (Telemetry.isLevelEnabled('debug')) {
       Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
         operation_type: operationType,
@@ -111,11 +100,9 @@ export const createTelemetryLink = () => {
       const duration = performance.now() - timing.startTime;
       timings.delete(operationId);
 
-      // Report directly with full labels (central observer skips gql:* measures).
-      // Intentionally NOT sample-weighted: latency quantiles are scale-invariant,
-      // so one observation per sampled op is correct. Its _count/_sum therefore
-      // under-report by the sample rate in prod — read request VOLUME from the
-      // weighted graphql_requests_total counter, not from this histogram.
+      // NOT sample-weighted: latency quantiles are scale-invariant. Its
+      // _count/_sum under-report by the sample rate, so read VOLUME from the
+      // weighted graphql_requests_total counter.
       if (!isSubscription) {
         Telemetry.histogram('graphql_request_duration_ms', duration, {
           type: operationType,
@@ -210,10 +197,9 @@ export const createTelemetryLink = () => {
             // Serialize error to avoid circular reference issues from WebSocket timers
             const serializedError = serializeError(error);
 
-            // Subscriptions drop their socket on every app background / network
-            // change and auto-reconnect — that's expected churn, not a fault.
-            // Log it at warn and keep it out of graphql_network_errors_total so
-            // the error dashboards stay meaningful.
+            // A subscription drops its socket on every background or network
+            // change and reconnects: churn, kept out of
+            // graphql_network_errors_total.
             const isExpectedSubscriptionDrop =
               operationType === OperationTypeNode.SUBSCRIPTION &&
               isNetworkError(error);
@@ -227,10 +213,8 @@ export const createTelemetryLink = () => {
                 network_error: true,
               });
             } else if (isOfflineRejectedError(error)) {
-              // A preemptive offline rejection — a real user-facing failure, but
-              // it never touched the network. Keep it out of
-              // graphql_network_errors_total so the error dashboards reflect
-              // actual API failures, not offline UX.
+              // A preemptive offline rejection never touched the network, so
+              // it stays out of graphql_network_errors_total.
               Telemetry.warn(`${operationName} rejected: device offline`, {
                 operation_name: operationName,
                 operation_type: operationType,

@@ -26,10 +26,9 @@ export interface CreatedStore {
 }
 
 /**
- * Adds a store local-first: the id is minted here and the store written to
- * the cache before the create fires, so a pick names it at once and a queued
- * create replays under it. A shop already on file merges, and the minted id
- * goes on naming it wherever a store id is taken.
+ * Adds a store local-first: its id is minted and the store cached before the
+ * create fires, so a pick names it at once and a queued create replays under it.
+ * A shop on file merges; the minted id still works wherever a store id goes.
  */
 export function useCreateStore() {
   const { t } = useTranslation();

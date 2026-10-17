@@ -115,11 +115,9 @@ const RecipeMainInner: React.FC = () => {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // State-driven sheet presentation. Each sheet receives `visible` and
-  // auto-presents/dismisses via useStandardBottomSheet's guarded `visible`
-  // path — which also dismisses on navigation blur (releasing the global
-  // backdrop) and re-presents on refocus. No manual present/dismiss effects,
-  // and immune to gorhom 5.2.14's dismiss-before-present wedge.
+  // Each sheet takes `visible`; `useStandardBottomSheet` presents and dismisses
+  // off it, releasing the backdrop on blur. No manual present or dismiss: those
+  // hit gorhom 5.2.14's dismiss-before-present wedge.
   const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
 
@@ -320,10 +318,8 @@ const RecipeMainInner: React.FC = () => {
   const recipeListHeader = (
     <>
       {capture.enabled ? <CaptureRows /> : null}
-      {/* Filters only apply to text search (discovery + ingredient search
-          can't take them) — only surface the active-filter row when a text
-          search drives what's on screen. The header badge stays as the
-          always-on indicator. */}
+      {/* Only text search takes filters, so the active-filter row shows only
+          while one drives the screen; the header badge is always on. */}
       {screen.searchPerformed && screen.searchQuery.trim() !== '' ? (
         <ActiveFilterChipsRow
           filters={screen.activeFilters}

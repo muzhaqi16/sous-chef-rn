@@ -58,11 +58,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     }
   }
 
-  // Empty means "as many as the recipe makes" — the field opens pre-filled and
-  // the placeholder says so. A value the user TYPED that is not a positive
-  // number is a different thing: the server refuses it on `servingsMade`, and
-  // silently cooking a different number of servings than was entered is worse
-  // than saying so. `null` = use the default, `undefined` = unusable.
+  // Empty means "as many as the recipe makes". A TYPED value that is not a
+  // positive number is refused on `servingsMade`, so it is reported, not
+  // swapped for the default. `null` = use the default, `undefined` = unusable.
   const typedServings = servingsInput.trim();
   const parsedServings = typedServings
     ? parseFractionalInput(typedServings)

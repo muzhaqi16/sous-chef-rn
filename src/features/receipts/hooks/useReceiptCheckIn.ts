@@ -86,9 +86,8 @@ const chunked = <T>(rows: readonly T[], size: number): T[][] =>
   );
 
 // Every line's rows, written before its check-in fires: the pantry row under
-// its minted id and, for a listed line, its list line stamped as moved. Keyed
-// by the line's place in the send, as its result is. A line that stocks
-// nothing writes nothing; its response settles it.
+// its minted id and a listed line's list line stamped as moved, keyed by its
+// place in the send as its result is. A line stocking nothing writes nothing.
 const writeLines = (
   cache: ApolloCache,
   pantryId: string,
@@ -136,10 +135,9 @@ const releaseLines = (lines: readonly CheckInLineToSend[]) => {
 };
 
 /**
- * Records a confirmed receipt in one call per 100 lines. Every line shows in
- * the pantry and on the list before its call fires, and stays there while the
- * call is queued; a line the API refuses is withdrawn alone. Its ids are the
- * draft's, minted once, so a retry, a restart or a replay records nothing twice.
+ * Records a confirmed receipt in one call per 100 lines. Each line shows in the
+ * pantry and list before its call fires and while it is queued; a refused line
+ * is withdrawn alone. The draft mints its ids once, so nothing records twice.
  */
 export function useReceiptCheckIn(listId: string | undefined) {
   const { t } = useTranslation();

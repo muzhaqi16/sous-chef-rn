@@ -76,10 +76,9 @@ interface Aggregate extends Source {
 const keyOf = (itemId: string, unitId: string) => `${itemId}:${unitId}`;
 
 /**
- * Turn a cached meal plan into the shopping-list lines it implies, so the action
- * runs with the API unreachable. An optional ingredient is left out and not
- * reported, as the server does. An unstated amount is wanted once per item, with
- * no quantity, and only when neither the pantry nor a stated line covers it.
+ * The shopping-list lines a cached meal plan implies, derived offline. Optional
+ * ingredients drop silently, as on the server; an unstated amount is one line
+ * with no quantity, only when neither the pantry nor a stated line covers it.
  */
 export function deriveShoppingListFromMealPlan(
   meals: PlannedMeal[],
@@ -221,9 +220,8 @@ function holdsAny(rows: PantryStock[], itemId: string): boolean {
 
 /**
  * Rows of the same catalog item in the SAME unit. The server matches the unit's
- * TYPE and converts, which the client cannot do — no selectable field carries a
- * unit's type. Matching the exact unit is a subset of what the server deducts,
- * so a derived list can over-buy but never under-buy.
+ * TYPE and converts, but no selectable field carries it; an exact match deducts
+ * less, so a list may over-buy, never under-buy.
  */
 function stockFor(rows: PantryStock[], itemId: string, unitId: string): number {
   let total = 0;

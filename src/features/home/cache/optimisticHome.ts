@@ -36,10 +36,9 @@ export interface HomeCreator {
 export const placeholderMembershipId = (homeId: string) => `${homeId}:owner`;
 
 /**
- * Write the home and its creator's membership permanently, then link the home
- * into the homes connection. False when that link could not be made —
- * `cache.modify` reports rather than throws when `Query.homes` is not cached —
- * so the caller can refetch. The entity stands either way.
+ * Writes the home and its creator's membership, then links it into the homes
+ * connection. False when `Query.homes` is not cached (`cache.modify` reports
+ * rather than throws), so the caller can refetch; the entity stands either way.
  */
 export function writeLocalHome(
   cache: ApolloCache,
@@ -116,10 +115,9 @@ export function writeLocalHome(
 }
 
 /**
- * The membership row is the one thing the client cannot key, so the server's
- * REPLACES the placeholder: fields carried over, member edge repointed,
- * placeholder evicted. Runs from the create's `update` online and from the
- * queue's replay reconciler after reconnect; idempotent across a re-drain.
+ * The client cannot key the membership row, so the server's REPLACES the
+ * placeholder (fields carried over, edge repointed, placeholder evicted). Runs
+ * from the create's `update` and the replay reconciler; idempotent on re-drain.
  */
 export function adoptServerMembership(
   cache: ApolloCache,

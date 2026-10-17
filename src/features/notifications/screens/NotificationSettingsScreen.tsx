@@ -45,10 +45,9 @@ import { notificationsTestIDs } from '#features/notifications/testIDs';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /**
- * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
- * landing while the mutation is in flight. Nothing waits on it — the change is
- * cached before firing and queued for replay. The action rows keep `loading`,
- * where it debounces a one-shot command.
+ * No `loading` prop: `SettingSwitch` forwards it to `disabled`, dropping taps
+ * while the mutation is in flight, and the change is cached before it fires.
+ * The action rows keep `loading`, where it debounces a one-shot command.
  */
 const renderSettings = (
   defs: SettingDef[],
@@ -176,10 +175,8 @@ export const NotificationSettingsScreen: React.FC = () => {
       return;
     }
 
-    // Default handling for all other settings. The `!success` branch covers a
-    // resolved refusal; `onError` covers a throw, which the finalizer would
-    // otherwise swallow — same copy, so one failure produces one message
-    // whichever route it took.
+    // `!success` covers a resolved refusal and `onError` a throw, which the
+    // finalizer would otherwise swallow; one copy, so a failure shows once.
     void executeWriteWithFinally(
       async () => {
         const success = await updateNotificationSetting(key, value);

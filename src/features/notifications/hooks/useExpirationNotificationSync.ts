@@ -1,8 +1,7 @@
 /**
- * The server-synced action on an expiration notification. Same shape as
- * `useNotificationSync`: optimistic Zustand write, then the mutation under
- * `context: { localFirst: true }` so an offline action queues and replays
- * (idempotent server-side). Rolled back on a failure, never while queued.
+ * The server-synced action on an expiration notification, shaped as
+ * `useNotificationSync`: a Zustand write, then a `localFirst` mutation that
+ * queues offline. Rolled back on a failure, never while queued.
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';

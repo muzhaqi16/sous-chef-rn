@@ -81,10 +81,9 @@ const spoonacularDisplayItem = (
   };
 };
 
-/** Spoonacular's popularity count — `likes` on ingredient-search results,
- * `aggregateLikes` on text-search results. `usedIngredientCount` is the
- * required field that distinguishes the two shapes (same discriminant as
- * recipeTransform). */
+/** Spoonacular's popularity: `likes` on ingredient-search results,
+ * `aggregateLikes` on text-search ones, told apart by the required
+ * `usedIngredientCount` (as in recipeTransform). */
 function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
   return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
 }
@@ -114,10 +113,9 @@ const localDisplayItem = (
     );
   }
 
-  // Saved recipes keep the green "Saved" badge; otherwise borrow the live
-  // Spoonacular like count so the row carries the same ❤️ as its twin.
-  // Backend search results are the app's recipe corpus, not the user's own,
-  // so an unconditional "My recipe" badge would mislabel them.
+  // A saved recipe keeps its "Saved" badge, else borrows its Spoonacular twin's
+  // like count. Backend results are the app's corpus, not the user's, so no "My
+  // recipe" badge.
   const badge: DisplayItem['badge'] = node.isSaved
     ? { text: translate('recipes.savedBadge'), variant: 'success' }
     : matchLikes && matchLikes > 0

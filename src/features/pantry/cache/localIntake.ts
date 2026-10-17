@@ -43,10 +43,9 @@ export function localIntakeRow(
 }
 
 /**
- * An add's local side, written before it fires: the row is written, published
- * AND counted, so the header cannot fall behind the list offline, where no
- * response arrives to correct it. The caller claims the minted id
- * (`unconfirmedCreates.mark`) before calling.
+ * An add's local side, before it fires: the row is written, published AND
+ * counted, so offline the header cannot fall behind the list. The caller claims
+ * the minted id (`unconfirmedCreates.mark`) first.
  */
 export function writeLocalIntake(
   cache: ApolloCache,

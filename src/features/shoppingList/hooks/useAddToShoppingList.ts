@@ -24,9 +24,8 @@ interface UseAddToShoppingListArgs {
 
 /**
  * Every cache write the add-to-list sheet performs. The row is written before
- * the mutation fires and left there, so it survives being queued offline. An
- * `optimisticResponse` cannot: Apollo tears it down the moment the queue
- * completes the request with a null result.
+ * the mutation fires and left, so it survives an offline queue, which an
+ * `optimisticResponse` cannot: Apollo drops it on the queue's null result.
  */
 export function useAddToShoppingList({
   shoppingListId,

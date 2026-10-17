@@ -32,11 +32,9 @@ interface SubjectInputs {
 }
 
 /**
- * The field naming the entity a write creates or changes, per input type;
- * anything unlisted is `id`. Typed over the codegen inputs, so a field the API
- * renames fails typecheck. `ForkRecipeInput.id` is the SOURCE recipe.
- * `UpdateFavoriteRecipeInput` stays unlisted: its edit lands on a SavedRecipe
- * the input never names, and `recipeId` is only the recipe it hangs off.
+ * The field naming a write's subject, per input type; unlisted is `id`.
+ * `ForkRecipeInput.id` is the SOURCE recipe. `UpdateFavoriteRecipeInput` stays
+ * unlisted: it edits a SavedRecipe the input never names.
  */
 const SUBJECT_KEYS: {
   readonly [K in keyof SubjectInputs]: keyof SubjectInputs[K] & string;

@@ -142,10 +142,8 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     const editable: EditableMatch[] = matches
       .map((match): EditableMatch | null => {
         // The match query spreads RecipeIngredientFragment on `ingredient`, so
-        // the cache is normally complete here (and Apollo merges writes — it
-        // never shrinks an entity). A null therefore means the server returned
-        // an ingredient missing a fragment field; surface it rather than
-        // silently dropping the ingredient from the matching sheet.
+        // a null means the server returned an ingredient missing a fragment
+        // field: surfaced, not silently dropped from the sheet.
         const ingredient = client.cache.readFragment<RecipeIngredientFragment>({
           fragment: RecipeIngredientFragmentDoc,
           fragmentName: 'RecipeIngredientFragment',

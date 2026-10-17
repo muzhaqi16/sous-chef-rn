@@ -57,10 +57,9 @@ export const SignUpScreen = (): React.JSX.Element => {
     }
   };
 
-  // The activation mail carries BOTH a 6-digit code and a link, and
-  // `verifyEmail` is public — it takes either one and needs no session. So the
-  // confirmation offers the code straight away rather than sending the user out
-  // to their mail client and back; the link still works untouched.
+  // The activation mail carries BOTH a code and a link, and the public
+  // `verifyEmail` takes either without a session, so the confirmation offers
+  // the code at once; the link still works.
   if (sentToEmail !== null) {
     return <CodeVerificationScreen context="signup" email={sentToEmail} />;
   }

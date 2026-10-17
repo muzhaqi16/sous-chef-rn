@@ -1,9 +1,7 @@
 /**
- * Submit for review, withdraw, or unpublish via `updateRecipe(status)` — an
- * absolute status set keyed by the recipe id, so local-first and idempotent on
- * replay. Submitting lands in PENDING_REVIEW until a moderator approves, never
- * straight in PUBLISHED, so that is what the cache shows before firing; a
- * failure reverts from a snapshot, a queued write keeps it.
+ * Submit, withdraw or unpublish via `updateRecipe(status)`, an absolute set, so
+ * idempotent on replay. Submitting lands in PENDING_REVIEW until a moderator
+ * approves, which the cache shows before firing; a failure reverts it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

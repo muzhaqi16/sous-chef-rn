@@ -96,10 +96,9 @@ export interface AddItemFieldRefusal {
 }
 
 /**
- * Editor rows → the shape `createItemSchema` validates. An entirely empty row
- * is the one "Add" just created and is dropped; a half-filled one is KEPT so
- * the schema can refuse it rather than the submit path discarding what the user
- * typed. A blank weight becomes `NaN`, which the number rule reports.
+ * Editor rows → the shape `createItemSchema` validates. An empty row (the one
+ * "Add" just made) is dropped; a half-filled one is KEPT for the schema to
+ * refuse, and a blank weight becomes `NaN`, which the number rule reports.
  */
 const toNetWeightInputs = (
   entries: NetWeightEntry[],
@@ -112,10 +111,9 @@ const toNetWeightInputs = (
       ...(entry.unitId ? { unitId: entry.unitId } : {}),
     }));
 
-/** The rows an edit opens with. Seeds the editor AND the form field: a value
- *  only the editor holds is dropped from the payload by an untouched save.
- *  Seeded in the DEVICE separator — `parseDecimalInput` reads it back with
- *  that separator, and on a comma device a "." is a thousands group. */
+/** An edit's opening rows, seeding the editor AND the form field: an untouched
+ *  save drops a value only the editor holds. In the DEVICE separator, which
+ *  `parseDecimalInput` reads back; on a comma device a "." groups thousands. */
 const seedNetWeightRows = (
   initialData: AddItemFormInitialData | undefined,
 ): NetWeightEntry[] =>
@@ -173,10 +171,9 @@ interface AddItemFormProps {
   enableAutocomplete?: boolean;
   mode?: AddItemFormMode;
   initialData?: AddItemFormInitialData;
-  /** Optional: when provided, UPC field renders a barcode icon that invokes this.
-   *  The caller is responsible for navigating to a scanner and pushing the result
-   *  back via `initialData.upc` — this component will `setValue('upc', ...)` in
-   *  response to changes on that prop. */
+  /** Shows a barcode icon on the UPC field that calls this. The caller opens a
+   *  scanner and hands the code back through `initialData.upc`, which the form
+   *  sets on change. */
   onScanUpc?: () => void;
 }
 
@@ -280,10 +277,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  // Seed the brand exactly once per incoming brandId. Re-seeding on every
-  // render would undo the null that BrandAutocompleteField sets when the user
-  // starts typing a different brand, silently pinning the original brand id to
-  // the new name.
+  // Once per incoming brandId: re-seeding would undo the null
+  // BrandAutocompleteField sets when the user types a different brand, pinning
+  // the original brand id to the new name.
   if (initialData?.brandId && seededBrandId !== initialData.brandId) {
     setSeededBrandId(initialData.brandId);
     setSelectedBrandId(initialData.brandId);
@@ -483,11 +479,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 errorService.reportError(error, { operation: 'selectImage' });
               }}
               disabled={loading}
-              /* Every mode but `edit` writes through as the item's owner, so
-                 the photos land APPROVED and `makePrimary` is honoured. On the
-                 suggestion path they land PENDING and the server ignores it —
-                 offering the star there would promise a hero that review may
-                 never grant. */
+              /* Every mode but `edit` writes as the owner: photos land APPROVED
+                 and `makePrimary` holds. On a suggestion they land PENDING and
+                 the server ignores it; a star would promise an ungranted hero. */
               allowPrimarySelection={!requiresEditNote(mode)}
             />
             {!!editing && (

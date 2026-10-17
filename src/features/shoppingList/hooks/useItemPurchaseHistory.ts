@@ -24,11 +24,9 @@ export function useItemPurchaseHistory(itemId: string) {
     GetItemPurchaseHistoryDocument,
     {
       variables: { itemId, first: PAGE_SIZE },
-      // NOT the app-wide `'all'`: a field error inside the non-null
-      // `purchasesConnection` nulls `shoppingListItem`, and `'all'` WRITES that
-      // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
-      // reads — where it sticks while the cache holds no such line, and
-      // persists to MMKV. The cost of `'none'` is losing a partial page.
+      // NOT `'all'`: a field error in the non-null `purchasesConnection` nulls
+      // `shoppingListItem`, which `'all'` WRITES onto the root field ItemDetail
+      // reads, where it sticks and persists. `'none'` loses only a partial page.
       errorPolicy: 'none',
     },
   );

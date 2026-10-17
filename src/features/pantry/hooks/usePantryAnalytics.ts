@@ -144,10 +144,9 @@ export function usePantryAnalytics({
   const waste = useOfflineAwareError(wasteError, wasteAnalytics !== null);
   const ledger = useOfflineAwareError(ledgerError, ledgerAnalytics !== null);
 
-  // `loading && !data`, never bare `loading`: under `cache-and-network` Apollo
-  // reports `loading` for the whole network leg on EVERY mount, which would
-  // replace already-drawn charts with a spinner on each visit. A filter change
-  // still spins — each dateRange/granularity is its own cache entry, so null.
+  // `loading && !data`, never `loading`, which is true on EVERY mount and would
+  // spin over drawn charts. A filter change still spins: each
+  // dateRange/granularity is its own cache entry.
   const usageIsBlank = usageLoading && usageAnalytics === null;
   const wasteIsBlank = wasteLoading && wasteAnalytics === null;
   const ledgerIsBlank = ledgerLoading && ledgerAnalytics === null;

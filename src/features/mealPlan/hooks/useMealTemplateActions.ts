@@ -257,10 +257,9 @@ export function useMealTemplateActions() {
         })
       : null;
 
-    // Local-first: remove from the cache BEFORE firing, so the deletion shows
-    // immediately and survives an offline queue. Replaying the delete for an
-    // already-deleted template is idempotent on the API, and a NotFound counts
-    // as deleted too. Mirrors deleteMealPlan.
+    // Removed from the cache BEFORE firing, so the delete survives an offline
+    // queue. A replay against an already-deleted template is idempotent, and a
+    // NotFound counts as deleted.
     try {
       removeFromMealTemplates(client.cache, id, { evictItem: true });
     } catch (cacheError) {

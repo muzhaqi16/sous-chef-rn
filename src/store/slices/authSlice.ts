@@ -1,9 +1,3 @@
-// ============================================
-// store/slices/authSlice.ts
-// Updated to work with your existing store structure
-// Implements proactive token refresh (best practice)
-// ============================================
-
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import {
@@ -18,20 +12,13 @@ import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 import type { UserRole } from '#/graphql/generated/schemaTypes';
 
-// ============================================
-// AppState Token Refresh
-// Handles token refresh when app resumes from background
-// (setTimeout doesn't fire reliably when backgrounded)
-// ============================================
-
 // A resume is worth a refresh only when the token is about to stop working.
 const RESUME_REFRESH_BUFFER_MS = 60 * 1000;
 
 /**
- * Refresh the access token if it's expired or expiring. Call this on
- * background → active transitions from the single AppState listener
- * owned by useAppStateLifecycle. Module-scope so the try-catch is safe
- * — React Compiler doesn't apply outside hook bodies.
+ * Called on background → active by useAppStateLifecycle's one AppState
+ * listener, as a backgrounded setTimeout does not fire reliably. Module-scope,
+ * so the React Compiler never sees its try-catch.
  */
 export const handleTokenRefreshOnResume = async (
   getAccessToken: () => string | null,
@@ -57,9 +44,8 @@ export const handleTokenRefreshOnResume = async (
 
 /**
  * The signed-in user as persisted. `email` / `emailVerified` / `role` are
- * API-gated (null unless the caller is that user or an admin), so they stay
- * nullable — read defensively, never assert: `user?.email ?? fallback`, or
- * `firstNonBlank(user?.email) ?? fallback` where a blank string must fall through.
+ * API-gated, null unless the caller is that user or an admin: read them with a
+ * fallback, never assert (`firstNonBlank` where a blank must fall through).
  */
 export interface User {
   id: string;
@@ -177,10 +163,9 @@ export const createAuthSlice: StateCreator<
   AuthState
 > = (set, get) => {
   /**
-   * Write-through token persistence: session tokens live in the keychain
-   * (saveSessionTokens skips identical pairs). The result drives
-   * `sessionTokensInKeychain` — while false, partialize keeps the pair in
-   * the MMKV blob as a fallback so a failed write can't lose the session.
+   * Session tokens live in the keychain; while `sessionTokensInKeychain` is
+   * false, partialize keeps the pair in the MMKV blob so a failed write can't
+   * lose the session.
    */
   const persistSessionTokens = (
     accessToken: string | null,
@@ -240,10 +225,8 @@ export const createAuthSlice: StateCreator<
         if (currency) {
           state.preferredCurrency = currency;
         }
-        // Seeded here, not from `useAppSettings` — that hook mounts only on the
-        // App Settings screen, while a session end resets this to `true`. The
-        // gap between the two showed a never-seen coach mark to someone who
-        // had turned tutorials off, and marked it seen.
+        // Seeded here, not from `useAppSettings`, which mounts only on the App
+        // Settings screen while a session end resets this to `true`.
         if (typeof user.settings?.showTutorials === 'boolean') {
           state.showTutorials = user.settings.showTutorials;
         }

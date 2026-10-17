@@ -27,10 +27,8 @@ interface Options {
 }
 
 /**
- * Adds low-stock rows to a shopping list the person picks, one queued create
- * per row, so the whole thing works offline — `addToList` is already
- * local-first. Replaces `addLowStockItemsToShoppingList`, which asked the
- * server to choose both the rows and the list.
+ * Adds low-stock rows to a shopping list the person picks, one local-first
+ * `addToList` per row, so it works offline.
  */
 export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
   // One state, not a visible flag beside a pending row: the two were only ever

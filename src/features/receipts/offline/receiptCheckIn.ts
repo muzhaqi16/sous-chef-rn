@@ -83,10 +83,9 @@ const withdrawLine = (
 };
 
 /**
- * A recorded check-in's cache side, line by line. A line the API recorded, now
- * or before, adopts the stack it names; one it refused withdraws only what it
- * wrote. Returns whether every withdrawal was exact (else the caller re-reads
- * the lists) and the stacks a minted id merged into.
+ * A recorded check-in's cache side: a line the API recorded, now or before,
+ * adopts its stack; a refused one withdraws only what it wrote. Returns whether
+ * all withdrawals were exact (else re-read the lists) and where minted ids merged.
  */
 export function applyReceiptCheckIn(
   cache: ApolloCache,

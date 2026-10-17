@@ -29,10 +29,9 @@ export const AcceptInvite: React.FC = () => {
 
   const [processing, setProcessing] = useState(false);
 
-  // This screen is the deep-link acceptance surface: the invite is resolved
-  // straight from the URL token (accept-invitation?token=…), since it may not be
-  // in the user's cached pending list on a fresh device. In-app acceptance from
-  // a notification is handled by InvitationAcceptanceModal.
+  // The deep-link surface resolves the invite from the URL token, as a fresh
+  // device's cached pending list may not hold it; in-app acceptance is
+  // InvitationAcceptanceModal's.
   const {
     invitationType,
     hasInvite,

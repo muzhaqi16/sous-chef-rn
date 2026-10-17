@@ -32,20 +32,18 @@ function writeFolders(cache: ApolloCache, folders: string[]): void {
 }
 
 /**
- * Moves every cached `SavedRecipe` from `from` to `to`, returning the ids it
- * changed so a refusal can restore them. The folder LIST and each recipe's own
- * `folder` are separate cache state and the screen filters on the second, so
- * rewriting only the list leaves the renamed folder rendering empty.
+ * Moves every cached `SavedRecipe` from `from` to `to`, returning the changed
+ * ids for a refusal to restore. The screen filters on each recipe's `folder`,
+ * so rewriting only the folder LIST empties the renamed folder.
  */
 function rewriteSavedRecipeFolders(
   cache: ApolloCache,
   from: string,
   to: string | null,
 ): string[] {
-  // `extract()` is `unknown` on the base ApolloCache but is a flat map keyed by
-  // `TypeName:id`. Serializing the whole store is the cost of the only correct
-  // question — which `SavedRecipe` entities carry this folder, whichever query
-  // cached them — and this runs on a rename or delete, not a render path.
+  // `extract()` is `unknown` on the base ApolloCache but a flat `TypeName:id`
+  // map. Only the whole store finds every `SavedRecipe` carrying this folder,
+  // whichever query cached it; this runs on a rename or delete.
   const snapshot = cache.extract();
   const changed: string[] = [];
   if (!isRecord(snapshot)) return changed;
@@ -73,10 +71,8 @@ function restoreSavedRecipeFolders(
 }
 
 /**
- * Hook for folder management actions (rename, delete)
- * Uses the deleteRecipeFolder mutation which handles both operations:
- * - Delete: deleteRecipeFolder(folder) - recipes become unfoldered
- * - Rename: deleteRecipeFolder(folder, moveTo) - recipes move to new folder
+ * Rename and delete both go through `deleteRecipeFolder`: without `moveTo` its
+ * recipes become unfoldered, with it they move to the new folder.
  */
 export function useFolderActions() {
   const { t } = useTranslation();

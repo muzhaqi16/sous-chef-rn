@@ -106,9 +106,8 @@ export function BottomSheetAutocompleteInput<T>({
 }: BottomSheetAutocompleteInputProps<T>) {
   const { t } = useTranslation();
   // Only `BottomSheetTextInput` sets `animatedKeyboardState.target`; without it
-  // gorhom discards the keyboard-shown event and the host sheet never moves out
-  // from under the keyboard. It can't be unconditional — that component reads
-  // the sheet context and throws on the full screens this field also serves.
+  // gorhom drops the keyboard-shown event and the sheet stays under the keyboard.
+  // It throws outside a sheet, and this field also serves full screens.
   const InputComponent = useIsBottomSheetInput()
     ? ThemedBottomSheetTextInput
     : ThemedTextInput;

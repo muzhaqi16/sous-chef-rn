@@ -64,10 +64,9 @@ export function useRecipeCookingActions({
   });
 
   /**
-   * Fires the cook-log mutation with a client-minted id, so a queued replay
-   * converges on the same log instead of re-deducting the pantry. `failure` is
-   * the message a refused or failed write shows; `skipped` describes the
-   * ingredients NOT deducted, which a bare success toast would hide.
+   * Logs the cook under a minted id, so a replay cannot re-deduct the pantry.
+   * `failure` is shown for a refused or failed write; `skipped` names
+   * ingredients NOT deducted, which a bare success toast hides.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();

@@ -1,12 +1,9 @@
 import { isItemLine } from './hasItemLines';
 
 /**
- * Payment and loyalty details never leave the phone: a line carrying one is
- * dropped whole, and everything after the payment block's change or balance
- * line is cut. A staff member's or card member's name is masked, and so are an
- * email and a phone below the store's header. A deny-list, so what survives
- * is predictable and tested per chain (`__tests__/redactReceiptText.test.ts`);
- * the API re-applies it as defence in depth.
+ * Payment and loyalty details never leave the phone: their lines drop whole and
+ * all after the change or balance line is cut; staff and member names, and an
+ * email or phone below the header, are masked. The API re-applies it.
  */
 
 // Some tills print dots for spaces (Giant Eagle's duplicate receipt prints
@@ -113,10 +110,9 @@ const CHIP_DATA = /^\W*(?:[A-Z]{1,4}\s*[:#]\s*)?[0-9A-F]{16,}\W*$/;
 const MEMBER_NUMBER =
   /\b(?:ME(?:M|N|RN)BER(?:SHIP)?|LOYALTY|REWARDS?|CLUB|PLUS\s*CARD|ACCOUNT|ACCT|CARD)\s*(?:#|NO\.?|NUM(?:BER)?|ID)?\s*[:#-]?\s*[\d*Xx#•][\d*Xx#•|Il! -]{3,}/i;
 
-// The change or balance line of the payment block. Only one carrying an amount
-// ends the receipt, so a header such as `BALANCE REWARDS` cannot cut the items.
-// Recognition can read margin noise before it (Walmart's `801  CHANGE DUE`) and
-// drop the amount's last digit (Giant Eagle's `154.7`).
+// The payment block's change or balance line, with an amount so `BALANCE
+// REWARDS` cannot cut the items; recognition may prefix margin noise
+// (`801  CHANGE DUE`) and drop the amount's last digit (`154.7`).
 const PAYMENT_BLOCK_END =
   /^\W*(?:\d{1,4}\s+)?(?:CHANGE|BALANCE)(?:\s+DUE)?\b[^A-Za-z]*\d+[.,]\d{1,2}\W*$/i;
 

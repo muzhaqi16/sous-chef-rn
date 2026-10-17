@@ -23,10 +23,9 @@ type PantryItemForActions =
   | {
       id: string;
       /**
-       * The item's OWN pantry, selected by `PantryItemDetail_pantryItem`. It is
-       * authoritative regardless of which pantry the user currently has
-       * selected — `selectedPantryId` is genuinely nullable (navigationSlice
-       * starts it null and a deep link can land here before it resolves).
+       * The item's OWN pantry, from `PantryItemDetail_pantryItem`,
+       * authoritative whatever pantry is selected: `selectedPantryId` starts
+       * null, and a deep link can land here before it resolves.
        */
       pantryId?: string | null;
       // `PantryItem.version` is `Int!`, and the server now requires it on every
@@ -106,21 +105,16 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  // The shared `removeItem`, not a local delete: it evicts before firing (an
-  // `update:` callback never runs on a queued offline delete) and registers the
-  // pending-delete that stops a subscription echo resurrecting the row.
-  // The item's OWN pantry drives the cache surgery. `selectedPantryId` is only a
-  // navigation detail — nullable, and a deep link can land outside it; passing
-  // '' makes `removeItem` early-return while the screen still navigates back.
+  // The shared `removeItem` evicts before firing (no `update:` runs on a queued
+  // delete) and registers the pending delete that stops an echo resurrecting
+  // the row. The item's OWN pantry drives it; '' makes it return early.
   const resolvedPantryId = item?.pantryId ?? selectedPantryId ?? null;
 
   const { removeItem } = usePantryItemMutations({
     pantryId: resolvedPantryId ?? '',
-    // `removeItem` evicts the row and drops the count BEFORE firing, and calls
-    // this to put both back on a refusal — never a no-op, since on failure the
-    // screen stays. A refusal resolves as DATA under `errorPolicy: 'all'`, so the
-    // check sits on the resolved result; `onError` sees only transport failures,
-    // which must NOT restore because the delete is queued for replay.
+    // `removeItem` drops the row and count before firing and calls this to
+    // restore them on a refusal (DATA under `errorPolicy: 'all'`). A transport
+    // failure must NOT restore: the delete is queued.
     refetch: () => {
       void client.refetchQueries({ include: [GetPantryDocument] });
     },
@@ -158,10 +152,8 @@ export function usePantryItemDetailActions({
       return;
     }
     try {
-      // Only leave the screen if the item is actually gone. A refusal resolves
-      // normally (it is DATA, not an error), and `removeItem` has already told
-      // the user and restored the row — navigating away here would report a
-      // success that did not happen.
+      // Leaves only once the item is gone: a refusal resolves as DATA, and
+      // `removeItem` has already told the user and restored the row.
       if (await removeItem(itemId)) {
         goBack();
       }

@@ -17,10 +17,8 @@ export type DailyMealsItem = FragmentType<typeof DailyMeals_ItemFragmentDoc> & {
   id: string;
 };
 
-// Core daily slots always shown (even empty) once a day has any meal planned,
-// so the day reads as a structured plan with per-slot "add" affordances instead
-// of collapsing to a single section above a large dead space. Brunch/Dessert
-// stay hidden unless they actually hold a meal, to avoid clutter.
+// Shown, even empty, once a day has any meal, so each slot offers its own add;
+// Brunch and Dessert appear only when they hold a meal.
 const CORE_MEAL_TYPES: MealType[] = [
   MealType.Breakfast,
   MealType.Lunch,
