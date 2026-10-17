@@ -265,6 +265,7 @@ export const SavedRecipes: React.FC = () => {
         counts={filterCounts}
         actionButton={{
           icon: 'close',
+          accessibilityLabel: t('recipeFilters.clearAllA11y'),
           onPress: handleClearFilters,
           testID: recipesTestIDs.savedRecipesClearFilters,
           disabled: !hasActiveFilters,

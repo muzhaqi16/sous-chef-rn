@@ -47,7 +47,12 @@ describe('FilterTabBar', () => {
 
   it('renders action buttons when provided', () => {
     const actionButtons = [
-      { icon: 'filter', onPress: jest.fn(), testID: 'filter-btn' },
+      {
+        icon: 'filter',
+        accessibilityLabel: 'Filter',
+        onPress: jest.fn(),
+        testID: 'filter-btn',
+      },
     ];
     render(
       <FilterTabBar
