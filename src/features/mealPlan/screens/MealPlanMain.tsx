@@ -24,7 +24,7 @@ import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSum
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
@@ -244,14 +244,21 @@ const MealPlanMainInner: React.FC = () => {
     }
   };
 
-  // Register add button - opens add meal sheet (only if user can edit)
-  useTabBarAddButton(
+  // A viewer who cannot edit gets no add action.
+  useTabBarAddMenu(
     permissions.canEdit
-      ? () => {
-          setAddMealType(undefined);
-          setAddMealVisible(true);
-        }
-      : undefined,
+      ? [
+          {
+            key: 'meal',
+            label: t('mealTemplateBuilder.addMeal'),
+            icon: 'add',
+            onPress: () => {
+              setAddMealType(undefined);
+              setAddMealVisible(true);
+            },
+          },
+        ]
+      : [],
   );
 
   const handleToggleCompleted = (

@@ -19,8 +19,8 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 
 jest.mock('#/context/TabBarActionsContext', () => ({

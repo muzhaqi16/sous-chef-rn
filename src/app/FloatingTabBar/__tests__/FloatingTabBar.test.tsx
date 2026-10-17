@@ -45,7 +45,6 @@ import { SHEET } from '#/constants/animations';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
-const mockOnAddPress = jest.fn();
 const mockSetAddMenuOpen = jest.fn();
 interface MockMenuEntry {
   key: string;
@@ -56,20 +55,14 @@ interface MockMenuEntry {
   disabledReason?: string;
 }
 let mockTabBarState: {
-  onAddPress: () => void;
   showAddButton: boolean;
   addButtonConfig: { icon: string; iconLibrary: string };
-  isAddButtonDisabled: boolean;
-  addButtonDisabledMessage: string;
   isOverlayOpen: boolean;
   addMenu?: MockMenuEntry[];
   isAddMenuOpen: boolean;
 } = {
-  onAddPress: mockOnAddPress,
   showAddButton: true,
   addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-  isAddButtonDisabled: false,
-  addButtonDisabledMessage: '',
   isOverlayOpen: false,
   isAddMenuOpen: false,
 };
@@ -79,7 +72,6 @@ jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
     setActiveTab: mockSetActiveTab,
     setScannerProps: jest.fn(),
-    setAddProps: jest.fn(),
     setOverlayOpen: jest.fn(),
     setAddMenuOpen: mockSetAddMenuOpen,
   })),
@@ -244,11 +236,8 @@ describe('FloatingTabBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTabBarState = {
-      onAddPress: mockOnAddPress,
       showAddButton: true,
       addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-      isAddButtonDisabled: false,
-      addButtonDisabledMessage: '',
       isOverlayOpen: false,
       isAddMenuOpen: false,
     };
@@ -278,13 +267,6 @@ describe('FloatingTabBar', () => {
     expect(screen.queryByTestId('add-button')).toBeNull();
   });
 
-  it('calls onAddPress when add button is pressed', async () => {
-    const user = userEvent.setup();
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(mockOnAddPress).toHaveBeenCalled();
-  });
-
   describe('with an add menu', () => {
     const entry = (key: string): MockMenuEntry => ({
       key,
@@ -302,7 +284,6 @@ describe('FloatingTabBar', () => {
       await user.press(screen.getByTestId('add-button'));
 
       expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
-      expect(mockOnAddPress).not.toHaveBeenCalled();
     });
 
     it('closes the open menu from the +', async () => {
@@ -364,29 +345,6 @@ describe('FloatingTabBar', () => {
       expect(toastService.info).toHaveBeenCalledWith('Needs a connection');
       expect(only.onPress).not.toHaveBeenCalled();
     });
-  });
-
-  it('shows toast when add button is disabled', async () => {
-    const user = userEvent.setup();
-    mockTabBarState.isAddButtonDisabled = true;
-    mockTabBarState.addButtonDisabledMessage = 'No permission';
-
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(toastService.info).toHaveBeenCalledWith('No permission');
-    expect(mockOnAddPress).not.toHaveBeenCalled();
-  });
-
-  it('shows default message when add button is disabled without custom message', async () => {
-    const user = userEvent.setup();
-    mockTabBarState.isAddButtonDisabled = true;
-    mockTabBarState.addButtonDisabledMessage = '';
-
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(toastService.info).toHaveBeenCalledWith(
-      "You don't have permission to perform this action",
-    );
   });
 
   it('navigates to the tab on press', async () => {

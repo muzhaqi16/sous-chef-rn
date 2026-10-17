@@ -602,10 +602,10 @@ tab's query are explained in [`architecture.md`](architecture.md) § Navigation:
 
 ### The tab bar's `+`
 
-A tab gives its `+` one handler with `useTabBarAddButton`, or several with
-`useTabBarAddMenu(actions)`. With two or more actions the `+` opens `AddMenu`
-(`src/app/FloatingTabBar/`): labelled entries above the `+`, which turns into
-the close control. One action runs on press, as a handler does.
+A tab gives its `+` its add actions with `useTabBarAddMenu(actions)`. With two
+or more the `+` opens `AddMenu` (`src/app/FloatingTabBar/`): labelled entries
+above the `+`, which turns into the close control. One action runs on press;
+one that cannot run dims the `+`, and the press shows its reason.
 
 - **Per tab, not per focus.** A menu is keyed by the tab the hook finds at
   focus: the focused route of the nearest tab navigator. It is removed on

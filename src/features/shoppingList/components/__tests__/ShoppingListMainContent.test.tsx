@@ -1,5 +1,6 @@
 'use no memo';
 
+import { t } from '#/i18n';
 import React from 'react';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -11,7 +12,7 @@ import {
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingListSelectorModal';
@@ -35,8 +36,8 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
 
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 
 jest.mock('#hooks/useFeatureHint', () => ({
@@ -592,9 +593,10 @@ describe('ShoppingListMainContent', () => {
     it('does not tell the person they lack permission', () => {
       render(<ShoppingListMainContent screenData={withoutDetails()} />);
 
-      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
-        .calls[0];
-      expect(disabledCopy).toBeUndefined();
+      const [[entry]] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entry?.disabledReason).not.toBe(
+        t('shoppingListScreen.noAddPermission'),
+      );
     });
 
     it('waits rather than offering a retry while the answer is still coming', () => {
@@ -621,9 +623,10 @@ describe('ShoppingListMainContent', () => {
 
       render(<ShoppingListMainContent screenData={makeScreenData()} />);
 
-      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
-        .calls[0];
-      expect(disabledCopy).toBeTruthy();
+      const [[entry]] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entry?.disabledReason).toBe(
+        t('shoppingListScreen.noAddPermission'),
+      );
     });
   });
 });

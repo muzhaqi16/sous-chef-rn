@@ -19,8 +19,6 @@ import {
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { AddMenu } from './AddMenu';
@@ -44,16 +42,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   navigation,
   tabs,
 }) => {
-  const { t } = useTranslation();
-  const {
-    onAddPress,
-    showAddButton,
-    addButtonConfig,
-    isAddButtonDisabled,
-    addButtonDisabledMessage,
-    addMenu,
-    isAddMenuOpen,
-  } = useTabBarState();
+  const { showAddButton, addButtonConfig, addMenu, isAddMenuOpen } =
+    useTabBarState();
 
   // True for every backdrop claim, sheets and selectors alike, from the global
   // backdrop's slot count — broader than the selector-only `isOverlayOpen`.
@@ -85,25 +75,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const closeAddMenu = () => setAddMenuOpen(false);
 
   const handleAddPress = () => {
-    if (isAddButtonDisabled) {
-      toastService.info(
-        firstNonBlank(addButtonDisabledMessage) ?? t('errors.codes.forbidden'),
-      );
-      return;
-    }
     if (hasMenu) {
       setAddMenuOpen(!isAddMenuOpen);
-      return;
-    }
-    if (onlyAction?.disabledReason) {
+    } else if (onlyAction?.disabledReason) {
       toastService.info(onlyAction.disabledReason);
-      return;
+    } else {
+      onlyAction?.onPress();
     }
-    if (onlyAction) {
-      onlyAction.onPress();
-      return;
-    }
-    onAddPress?.();
   };
   const { bottom: safeBottom } = useSafeAreaInsets();
 
@@ -273,7 +251,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         onPress={handleAddPress}
         icon={addButtonConfig.icon}
         iconLibrary={addButtonConfig.iconLibrary}
-        disabled={isAddButtonDisabled}
+        disabled={!hasMenu && !!onlyAction?.disabledReason}
         {...(hasMenu && { menuOpen: isAddMenuOpen, menuProgress })}
       />
     </Animated.View>

@@ -19,7 +19,7 @@ import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/Spo
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import type { useShoppingListScreen } from '#features/shoppingList/hooks/useShoppingListScreen';
 import { useShoppingListActions } from '#features/shoppingList/hooks/useShoppingListActions';
 import { useBatchMoveToPantry } from '#features/shoppingList/hooks/useBatchMoveToPantry';
@@ -401,23 +401,25 @@ export const ShoppingListMainContent: React.FC<
     };
   }, [setScannerProps, toBarcode, currentListId]);
 
-  // Register add button action
-  // Button visibility is automatic on allowed tabs; we just register handler and disabled state
-  useTabBarAddButton(
-    () => {
-      Telemetry.trackEvent('add_item_from_tab_bar', {
-        list_id: currentListId,
-      });
-      openAddItemSheet();
+  // Only a KNOWN refusal says there is no permission: while the answer is
+  // unresolved that is a claim the app cannot make yet, even to the list's owner.
+  const addRefusal = permissions.resolved
+    ? t('shoppingListScreen.noAddPermission')
+    : t('labels.loading');
+  useTabBarAddMenu([
+    {
+      key: 'item',
+      label: t('labels.addItem'),
+      icon: 'add',
+      onPress: () => {
+        Telemetry.trackEvent('add_item_from_tab_bar', {
+          list_id: currentListId,
+        });
+        openAddItemSheet();
+      },
+      disabledReason: permissions.canAddItems ? undefined : addRefusal,
     },
-    !permissions.canAddItems,
-    // Only a KNOWN refusal names one. While the answer is unresolved the button
-    // is disabled with no copy, because "you have no permission" is a claim the
-    // app cannot make yet — and would make to the list's own owner.
-    permissions.resolved && !permissions.canAddItems
-      ? t('shoppingListScreen.noAddPermission')
-      : undefined,
-  );
+  ]);
 
   // Every screen whose header carries the switch-list button mounts this.
   const listSelector = (

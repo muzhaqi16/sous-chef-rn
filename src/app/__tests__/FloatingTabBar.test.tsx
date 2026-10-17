@@ -7,11 +7,8 @@ import { TabItem } from '../FloatingTabBar/TabItem';
 // Mock all external dependencies
 jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarState: jest.fn(() => ({
-    onAddPress: jest.fn(),
     showAddButton: true,
     addButtonConfig: { icon: 'add', iconLibrary: undefined },
-    isAddButtonDisabled: false,
-    addButtonDisabledMessage: '',
     isOverlayOpen: false,
   })),
   useTabBarSetters: jest.fn(() => ({

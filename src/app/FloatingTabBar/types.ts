@@ -12,6 +12,7 @@ export interface AddButtonProps {
   isActive?: boolean;
   icon?: string;
   iconLibrary?: IconLibrary;
+  /** Dims the button; a press still runs, so a disabled action can say why. */
   disabled?: boolean;
   /** Set when the `+` opens a menu: whether it is open. */
   menuOpen?: boolean;

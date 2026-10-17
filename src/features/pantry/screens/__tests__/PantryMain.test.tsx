@@ -31,8 +31,8 @@ jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setOverlayOpen: jest.fn() }),
   useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
 }));
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 
 // --- Store (useStore for getState in focus handler) ---

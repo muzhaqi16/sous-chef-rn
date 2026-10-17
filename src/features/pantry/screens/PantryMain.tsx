@@ -10,7 +10,7 @@ import { useTranslation } from '#/i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/hooks/usePantrySelectorConfig';
 import { useScannerSetup } from '#features/barcode/hooks/useScannerSetup';
@@ -350,14 +350,19 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Always registered, gated by `disabled` rather than passed as `undefined`:
-  // add-button visibility is per-tab (TabBarActionsContext's `shouldShowAdd`), so
-  // an undefined handler leaves a live-looking button that silently does nothing.
-  // `disabled` routes the press through FloatingTabBar's toast instead.
-  useTabBarAddButton(() => {
-    Telemetry.trackEvent('add_pantry_item_clicked');
-    setAddSheetVisible(true);
-  }, !canAdd);
+  // Always registered, so the `+` says why it cannot add rather than doing nothing.
+  useTabBarAddMenu([
+    {
+      key: 'item',
+      label: t('labels.addItem'),
+      icon: 'add',
+      onPress: () => {
+        Telemetry.trackEvent('add_pantry_item_clicked');
+        setAddSheetVisible(true);
+      },
+      disabledReason: canAdd ? undefined : t('errors.codes.forbidden'),
+    },
+  ]);
 
   const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
 

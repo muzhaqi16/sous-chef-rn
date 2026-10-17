@@ -41,7 +41,6 @@ export const AddButton: React.FC<AddButtonProps> = ({
         disabled,
         ...(hasMenu && { expanded: menuOpen }),
       }}
-      disabled={disabled}
     >
       <Animated.View style={glyphStyle}>
         <Icon name={icon} size={28} tone="onPrimary" library={iconLibrary} />

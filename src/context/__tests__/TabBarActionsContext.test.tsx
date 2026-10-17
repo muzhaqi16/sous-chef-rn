@@ -39,7 +39,6 @@ describe('TabBarActionsContext', () => {
     it('returns setter functions', () => {
       const { result } = renderHook(() => useTabBarSetters(), { wrapper });
       expect(typeof result.current.setScannerProps).toBe('function');
-      expect(typeof result.current.setAddProps).toBe('function');
       expect(typeof result.current.setActiveTab).toBe('function');
       expect(typeof result.current.setOverlayOpen).toBe('function');
     });
@@ -58,7 +57,6 @@ describe('TabBarActionsContext', () => {
       expect(result.current.showAddButton).toBe(false);
       expect(result.current.activeTab).toBe('');
       expect(result.current.isOverlayOpen).toBe(false);
-      expect(result.current.isAddButtonDisabled).toBe(false);
     });
   });
 
@@ -131,22 +129,6 @@ describe('TabBarActionsContext', () => {
       });
 
       expect(result.current.showScannerButton).toBe(false);
-    });
-  });
-
-  describe('setAddProps', () => {
-    it('sets add handler and disabled state', () => {
-      const { result } = renderHook(() => useTabBarActions(), { wrapper });
-      const onAdd = jest.fn();
-
-      act(() => {
-        result.current.setActiveTab('ShoppingList');
-        result.current.setAddProps(onAdd, true, 'No list selected');
-      });
-
-      expect(result.current.onAddPress).toBe(onAdd);
-      expect(result.current.isAddButtonDisabled).toBe(true);
-      expect(result.current.addButtonDisabledMessage).toBe('No list selected');
     });
   });
 
