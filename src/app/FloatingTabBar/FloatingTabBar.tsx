@@ -95,6 +95,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       setAddMenuOpen(!isAddMenuOpen);
       return;
     }
+    if (onlyAction?.disabledReason) {
+      toastService.info(onlyAction.disabledReason);
+      return;
+    }
     if (onlyAction) {
       onlyAction.onPress();
       return;

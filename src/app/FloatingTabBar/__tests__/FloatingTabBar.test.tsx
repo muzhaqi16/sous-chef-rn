@@ -20,6 +20,7 @@ jest.mock(
 );
 
 import React from 'react';
+import { toastService } from '#/services/toastService';
 import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -52,6 +53,7 @@ interface MockMenuEntry {
   icon: string;
   onPress: () => void;
   testID?: string;
+  disabledReason?: string;
 }
 let mockTabBarState: {
   onAddPress: () => void;
@@ -350,13 +352,24 @@ describe('FloatingTabBar', () => {
       expect(only.onPress).toHaveBeenCalledTimes(1);
       expect(mockSetAddMenuOpen).not.toHaveBeenCalled();
     });
+
+    it('says why a menu of one cannot run, and runs nothing', async () => {
+      const only = { ...entry('Link'), disabledReason: 'Needs a connection' };
+      mockTabBarState.addMenu = [only];
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(toastService.info).toHaveBeenCalledWith('Needs a connection');
+      expect(only.onPress).not.toHaveBeenCalled();
+    });
   });
 
   it('shows toast when add button is disabled', async () => {
     const user = userEvent.setup();
     mockTabBarState.isAddButtonDisabled = true;
     mockTabBarState.addButtonDisabledMessage = 'No permission';
-    const { toastService } = require('#/services/toastService');
 
     renderTabBar();
     await user.press(screen.getByTestId('add-button'));
@@ -368,7 +381,6 @@ describe('FloatingTabBar', () => {
     const user = userEvent.setup();
     mockTabBarState.isAddButtonDisabled = true;
     mockTabBarState.addButtonDisabledMessage = '';
-    const { toastService } = require('#/services/toastService');
 
     renderTabBar();
     await user.press(screen.getByTestId('add-button'));
