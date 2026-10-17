@@ -38,6 +38,7 @@ import {
   useReceiptDraftActions,
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
+import { uploadTogether } from '#/utils/uploadTogether';
 
 const dropPhotos = (uris: readonly string[]) => {
   if (uris.length === 0) return;
@@ -263,33 +264,17 @@ export function useReceiptScan({
   // so the first failure, or the time limit, stops the rest.
   const uploadAll = async (photos: readonly PreparedPhoto[]) => {
     if (!open.current) return null;
-    const sending = new AbortController();
-    const limit = setTimeout(() => {
-      Telemetry.increment('receipt_photo_send_timeouts_total');
-      sending.abort();
-    }, PHOTO_SEND_LIMIT_MS);
-    const keys = await Promise.all(
-      photos.map(async photo => {
-        let key: string | null = null;
-        try {
-          key = await uploadUnconfirmed(
-            toUpload(photo),
-            ImageUploadPurpose.ReceiptPhoto,
-            { signal: sending.signal },
-          );
-        } catch (error) {
-          if (!sending.signal.aborted) {
-            errorService.reportError(error, {
-              operation: 'Upload receipt photo',
-            });
-          }
-        }
-        if (!key) sending.abort();
-        return key;
-      }),
+    return uploadTogether(
+      photos.map(toUpload),
+      (file, signal) =>
+        uploadUnconfirmed(file, ImageUploadPurpose.ReceiptPhoto, { signal }),
+      {
+        limitMs: PHOTO_SEND_LIMIT_MS,
+        operation: 'Upload receipt photo',
+        onTimeout: () =>
+          Telemetry.increment('receipt_photo_send_timeouts_total'),
+      },
     );
-    clearTimeout(limit);
-    return keys.every(key => key !== null) ? keys : null;
   };
 
   // The prepared files go whatever the outcome.

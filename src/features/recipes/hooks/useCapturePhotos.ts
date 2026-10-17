@@ -9,6 +9,7 @@ import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { TextRecognition, type PreparedPhoto } from '#/native/TextRecognition';
+import { uploadTogether } from '#/utils/uploadTogether';
 
 /** The pages one capture reads, as `createRecipeCapture` takes them. */
 export const MAX_CAPTURE_PHOTOS = 3;
@@ -80,30 +81,13 @@ export function useCapturePhotos() {
   };
 
   /** The pages' upload keys, or null when one did not go up. */
-  const uploadPages = async (
-    photos: readonly PreparedPhoto[],
-  ): Promise<string[] | null> => {
-    const sending = new AbortController();
-    const limit = setTimeout(() => sending.abort(), PHOTO_SEND_LIMIT_MS);
-    const keys = await Promise.all(
-      photos.map(async photo => {
-        let key: string | null = null;
-        try {
-          key = await uploadUnconfirmed(
-            toUpload(photo),
-            ImageUploadPurpose.RecipePhoto,
-            { signal: sending.signal },
-          );
-        } catch (error) {
-          errorService.reportError(error, { operation: 'Upload recipe photo' });
-        }
-        if (!key) sending.abort();
-        return key;
-      }),
+  const uploadPages = (photos: readonly PreparedPhoto[]) =>
+    uploadTogether(
+      photos.map(toUpload),
+      (file, signal) =>
+        uploadUnconfirmed(file, ImageUploadPurpose.RecipePhoto, { signal }),
+      { limitMs: PHOTO_SEND_LIMIT_MS, operation: 'Upload recipe photo' },
     );
-    clearTimeout(limit);
-    return keys.every(key => key !== null) ? keys : null;
-  };
 
   /** Prepares and uploads every page; the prepared files go whatever happens. */
   const upload = async (): Promise<string[] | null> => {
