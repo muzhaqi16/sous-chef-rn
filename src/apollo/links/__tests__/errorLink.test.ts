@@ -2,9 +2,6 @@
 
 // --- Mocks (must be before imports) ---
 
-jest.mock('#utils/subscriptionErrorHandler', () => ({
-  isKnownServerError: jest.fn(() => false),
-}));
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
@@ -39,7 +36,6 @@ import type { FormattedExecutionResult } from 'graphql';
 import { errorLink } from '../errorLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh } from '../refreshToken';
-import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
@@ -232,26 +228,24 @@ describe('errorLink — an error that is not a GraphQL refusal', () => {
     }
   `;
 
-  it('warns on a known server error over a subscription', async () => {
-    jest.mocked(isKnownServerError).mockReturnValueOnce(true);
+  const noStream = 'Subscription field must return Async Iterable.';
 
-    await runLink(new Error('stream reset'), subscription).catch(settle);
+  it('warns on a known server error over a subscription', async () => {
+    await runLink(new Error(noStream), subscription).catch(settle);
 
     expect(logger.warn).toHaveBeenCalledWith(
       'Known server error for TestSub:',
-      'stream reset',
+      noStream,
     );
     expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('logs the same error over a query as unexpected', async () => {
-    jest.mocked(isKnownServerError).mockReturnValueOnce(true);
-
-    await runLink(new Error('stream reset')).catch(settle);
+    await runLink(new Error(noStream)).catch(settle);
 
     expect(logger.error).toHaveBeenCalledWith(
       'Unexpected error [TestOp]:',
-      'stream reset',
+      noStream,
     );
   });
 

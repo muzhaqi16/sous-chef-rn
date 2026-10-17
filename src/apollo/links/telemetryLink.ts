@@ -5,9 +5,9 @@ import { env as buildEnv } from '#/config/env';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { isExpectedTransportError } from '#/utils/subscriptionErrorHandler';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 interface GraphQLTiming {
   operationName: string;
@@ -216,7 +216,7 @@ export const createTelemetryLink = () => {
             // the error dashboards stay meaningful.
             const isExpectedSubscriptionDrop =
               operationType === OperationTypeNode.SUBSCRIPTION &&
-              isExpectedTransportError(error);
+              isNetworkError(error);
 
             if (isExpectedSubscriptionDrop) {
               Telemetry.warn(`Subscription ${operationName} disconnected`, {

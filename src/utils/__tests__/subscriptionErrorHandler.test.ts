@@ -1,11 +1,8 @@
 import {
   classifyTransportTermination,
-  isExpectedTransportError,
-  isKnownServerError,
   isPermanentSubscriptionRejection,
   reportSubscriptionError,
 } from '../subscriptionErrorHandler';
-import { TimeoutError } from '../errors/timeoutError';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { errorService } from '#/services/errorService';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
@@ -139,16 +136,6 @@ describe('subscriptionErrorHandler', () => {
     });
   });
 
-  describe('isKnownServerError', () => {
-    it('detects a non-iterable subscription resolver', () => {
-      expect(isKnownServerError(resolverError)).toBe(true);
-    });
-
-    it('returns false for other errors', () => {
-      expect(isKnownServerError(new Error('Unknown error'))).toBe(false);
-    });
-  });
-
   describe('classifyTransportTermination', () => {
     it('restarts after a socket failure with no close event', () => {
       expect(classifyTransportTermination(new Error('Socket closed'))).toEqual(
@@ -178,23 +165,6 @@ describe('subscriptionErrorHandler', () => {
           new NetworkRequestError('Network request failed'),
         ),
       ).toBeNull();
-    });
-  });
-
-  describe('isExpectedTransportError', () => {
-    it.each([
-      new Error('Socket closed with event 1006 '),
-      new NetworkRequestError('Network request failed'),
-      new TimeoutError('Request timeout after 10000ms'),
-    ])('is true for %p', error => {
-      expect(isExpectedTransportError(error)).toBe(true);
-    });
-
-    it('is false for a server error that mentions a websocket', () => {
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'WebSocket network connection refused upstream' }],
-      });
-      expect(isExpectedTransportError(error)).toBe(false);
     });
   });
 });

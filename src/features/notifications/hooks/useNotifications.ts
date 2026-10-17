@@ -33,10 +33,7 @@ import {
   isNotificationPayload,
   type NotificationPayload,
 } from '#features/notifications/types';
-import {
-  isExpectedTransportError,
-  reportSubscriptionError,
-} from '#utils/subscriptionErrorHandler';
+import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import {
   addNotificationToFeed,
   evictNotification,
@@ -48,6 +45,7 @@ import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubsc
 import { logger } from '#/utils/environment';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 // The listener needs the signed-in user and nothing else from the store; the
@@ -296,7 +294,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // Transport churn auto-reconnects; only other failures are warned about.
   const handleError = (error: Error) => {
     const subscriptionName = operationNameOf(NotificationEventsDocument);
-    if (!isExpectedTransportError(error)) {
+    if (!isNetworkError(error)) {
       logger.warn(`${subscriptionName} subscription error:`, error.message);
     }
     reportSubscriptionError(subscriptionName, error);

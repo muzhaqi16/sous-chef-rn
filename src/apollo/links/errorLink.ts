@@ -6,7 +6,7 @@ import {
 } from '@apollo/client/errors';
 import { Kind, OperationTypeNode, type DefinitionNode } from 'graphql';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { isKnownServerError } from '#utils/subscriptionErrorHandler';
+import { isNonIterableSubscriptionResolver } from '#utils/errors/libraryErrorMessages';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
   isRefreshableAuthCode,
@@ -65,14 +65,12 @@ const extensionText = (value: unknown, fallback: string): string =>
 // The key is baked into the build, so every code here is a build fault, not a
 // recoverable session state. Matched on the exact codes — never message text,
 // which would let a differently-worded refusal fall through to the auth branch
-// and trigger a pointless token refresh. API_KEY_RATE_LIMITED stays a literal:
-// it has no emitter, so it is absent from the published enum.
+// and trigger a pointless token refresh.
 const API_KEY_ERROR_CODES: string[] = [
   TopLevelErrorCode.ApiKeyMissing,
   TopLevelErrorCode.ApiKeyInvalid,
   TopLevelErrorCode.ApiKeyExpired,
   TopLevelErrorCode.ApiKeyRevoked,
-  'API_KEY_RATE_LIMITED',
 ];
 
 const isApiKeyError = (code: string) => API_KEY_ERROR_CODES.includes(code);
@@ -206,7 +204,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     }
   } else if (!CombinedProtocolErrors.is(error)) {
     // Check for known server errors first
-    if (isSubscription(operation) && isKnownServerError(error)) {
+    if (isSubscription(operation) && isNonIterableSubscriptionResolver(error)) {
       logger.warn(
         `Known server error for ${operation.operationName}:`,
         error.message,

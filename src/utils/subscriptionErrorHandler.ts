@@ -15,14 +15,6 @@ interface SubscriptionError {
 }
 
 /**
- * True for a transport failure that auto-recovers (app backgrounding, network
- * change, WebSocket churn). Callers downgrade it to warn/debug; it picks a LOG
- * LEVEL, never whether to re-subscribe.
- */
-export const isExpectedTransportError = (error: unknown): boolean =>
-  isNetworkError(error);
-
-/**
  * Did the transport end this subscription, and can re-subscribing work? The
  * verdict comes from {@link isRetryableWebSocketClose}, the table the socket
  * itself reads, so a code that latched reconnection off is never restarted.
@@ -93,10 +85,7 @@ export const reportSubscriptionError = (
   operationName: string,
   error: SubscriptionError,
 ): void => {
-  if (
-    isExpectedTransportError(error) ||
-    isNonIterableSubscriptionResolver(error)
-  ) {
+  if (isNetworkError(error) || isNonIterableSubscriptionResolver(error)) {
     return;
   }
   errorService.reportError(
@@ -108,7 +97,3 @@ export const reportSubscriptionError = (
     },
   );
 };
-
-/** A subscription resolver that returned no event stream. */
-export const isKnownServerError = (error: SubscriptionError): boolean =>
-  isNonIterableSubscriptionResolver(error);

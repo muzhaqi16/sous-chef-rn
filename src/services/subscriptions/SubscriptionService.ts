@@ -23,15 +23,13 @@ import { MutationType } from '#/graphql/generated/schemaTypes';
 import { serializeError } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
-  isExpectedTransportError,
-  isPermanentSubscriptionRejection,
-} from '#/utils/subscriptionErrorHandler';
+import { isPermanentSubscriptionRejection } from '#/utils/subscriptionErrorHandler';
 import { markSubscriptionRejected } from './rejectedSubscriptions';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { SubscriptionSuppression } from './SubscriptionSuppression';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };
@@ -325,7 +323,7 @@ export class SubscriptionService {
       // identical lines per disconnect (wsLink already warns once per socket
       // event). Uses the shared predicate so the "expected transition" rule
       // stays in one place.
-      if (isExpectedTransportError(error)) {
+      if (isNetworkError(error)) {
         this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',
