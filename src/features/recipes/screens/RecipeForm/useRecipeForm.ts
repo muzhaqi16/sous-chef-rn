@@ -2,6 +2,7 @@ import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type {
   CreateRecipeInput,
+  RecipeAttributionInput,
   RecipeIngredientInput,
   Diet,
   HealthGoal,
@@ -46,6 +47,43 @@ function stepInstruction(step: unknown): string {
     ? String(text)
     : '';
 }
+
+/** The unit as a row shows it. Module scope: an optional chain inside `??`
+ * stops the compiler lowering the hook. */
+const unitLabelOf = (
+  unit: { symbol: string; name: string } | null | undefined,
+): string => firstNonBlank(unit?.symbol, unit?.name) ?? '';
+
+/** Who wrote the recipe and where a capture read it; undefined when neither is known. */
+function attributionOf(
+  state: RecipeFormState,
+): RecipeAttributionInput | undefined {
+  const originalAuthor = state.originalAuthor.trim() || undefined;
+  const source = state.capturedFrom?.source ?? undefined;
+  const sourceUrl = state.capturedFrom?.sourceUrl ?? undefined;
+  return originalAuthor || source || sourceUrl
+    ? { originalAuthor, source, sourceUrl }
+    : undefined;
+}
+
+/** What an incomplete capture read, as the form takes it. */
+export interface CaptureDraftFill {
+  name: string | null;
+  description: string | null;
+  servings: number | null;
+  prepTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
+  imageUrl: string | null;
+  author: string | null;
+  sourceName: string | null;
+  /** The link the capture read, as this device sent it. */
+  sourceUrl: string | null;
+  ingredients: Omit<IngredientFormState, 'id' | 'sortOrder'>[];
+  steps: string[];
+}
+
+const minutesText = (minutes: number | null) =>
+  minutes ? String(minutes) : '';
 
 export function useRecipeForm() {
   const form = useForm<RecipeFormState>({
@@ -98,6 +136,21 @@ export function useRecipeForm() {
         sortOrder: current.length,
         ...ingredient,
       },
+    ]);
+  };
+
+  /** Rows read from pasted lines, after the ones the form holds. */
+  const appendIngredients = (
+    rows: readonly Omit<IngredientFormState, 'id' | 'sortOrder'>[],
+  ) => {
+    const current = getValues('ingredients');
+    setIngredients([
+      ...current,
+      ...rows.map((row, index) => ({
+        ...row,
+        id: generateTempId(),
+        sortOrder: current.length + index,
+      })),
     ]);
   };
 
@@ -170,6 +223,7 @@ export function useRecipeForm() {
     return state.ingredients.map((ing, index) => ({
       name: stripPriceFromName(ing.name),
       quantity: ing.quantity,
+      ...(ing.originalText && { originalText: ing.originalText }),
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,
       preparation: firstNonBlank(ing.preparation)?.trim(),
@@ -196,9 +250,7 @@ export function useRecipeForm() {
       notes: state.notes.trim() || undefined,
       tips: state.tips.trim() || undefined,
       tags: parseCommaTags(state.tags),
-      attribution: state.originalAuthor.trim()
-        ? { originalAuthor: state.originalAuthor.trim() }
-        : undefined,
+      attribution: attributionOf(state),
       ingredients,
       instructions,
       media: {
@@ -307,6 +359,9 @@ export function useRecipeForm() {
         name: ing.name,
         quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
+        unitLabel: unitLabelOf(ing.unit),
+        // A proposed revision's lines carry no line as written.
+        originalText: 'originalText' in ing ? ing.originalText : null,
         itemId: ing.item?.id ?? null,
         preparation: ing.preparation ?? '',
         section: ing.section ?? '',
@@ -324,6 +379,7 @@ export function useRecipeForm() {
       notes: content.notes ?? '',
       tips: content.tips ?? '',
       originalAuthor: content.originalAuthor ?? '',
+      capturedFrom: null,
       tags: content.tags.join(', '),
       version: recipe.version,
       // A proposed edit carries its whole list; the live one is one page, and
@@ -336,6 +392,41 @@ export function useRecipeForm() {
     reset(formState);
   };
 
+  /**
+   * A new recipe filled with what a capture read. Nothing is saved until the
+   * user saves; a section the capture found nothing for is marked as needed.
+   */
+  const populateFromCapture = (fill: CaptureDraftFill) => {
+    const defaults = recipeFormDefaults();
+    reset({
+      ...defaults,
+      name: fill.name ?? '',
+      description: fill.description ?? '',
+      imageUrl: fill.imageUrl ?? '',
+      servings: fill.servings ? String(fill.servings) : defaults.servings,
+      prepTimeMinutes: minutesText(fill.prepTimeMinutes),
+      cookTimeMinutes: minutesText(fill.cookTimeMinutes),
+      originalAuthor: fill.author ?? '',
+      capturedFrom: { source: fill.sourceName, sourceUrl: fill.sourceUrl },
+      ingredients: fill.ingredients.map((row, index) => ({
+        ...row,
+        id: generateTempId(),
+        sortOrder: index,
+      })),
+      steps: fill.steps.map((instruction, index) => ({
+        id: generateTempId(),
+        instruction,
+        sortOrder: index,
+      })),
+    });
+    if (fill.ingredients.length === 0) {
+      void form.trigger('ingredients');
+    }
+    if (fill.steps.length === 0) {
+      void form.trigger('steps');
+    }
+  };
+
   return {
     state,
     errors: form.formState.errors,
@@ -343,6 +434,7 @@ export function useRecipeForm() {
     setError: form.setError,
     updateField,
     addIngredient,
+    appendIngredients,
     updateIngredient,
     removeIngredient,
     addStep,
@@ -355,5 +447,6 @@ export function useRecipeForm() {
     buildCreateInput,
     buildUpdateInput,
     populateFromRecipe,
+    populateFromCapture,
   };
 }

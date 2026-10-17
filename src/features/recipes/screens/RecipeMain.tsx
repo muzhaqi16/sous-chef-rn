@@ -5,8 +5,21 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import {
+  useTabBarSetters,
+  type TabBarAddAction,
+} from '#/context/TabBarActionsContext';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import {
+  CaptureSheet,
+  type CaptureSheetKind,
+} from '#features/recipes/components/capture/CaptureSheet';
+import { PhotoCaptureSheet } from '#features/recipes/components/capture/PhotoCaptureSheet';
+import { CapturePollers } from '#features/recipes/components/capture/CapturePollers';
+import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
+import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
@@ -144,7 +157,67 @@ const RecipeMainInner: React.FC = () => {
     }),
   });
 
-  useTabBarAddButton(() => toRecipeCreate());
+  // Capture is a seam: off, its entries, sheets and rows are not rendered and
+  // the `+` writes a recipe at once, as it always has.
+  const captureSources = useCaptureSources();
+  // Here, not in the sheets: they render outside the navigator, and a
+  // capture's outcome toast navigates.
+  const capture = useRecipeCapture();
+  const apiUnavailable = useIsApiUnavailable();
+  const [captureSheet, setCaptureSheet] = useState<
+    CaptureSheetKind | 'photo' | null
+  >(null);
+  const [captureKind, setCaptureKind] = useState<CaptureSheetKind>('link');
+  const openCapture = (kind: CaptureSheetKind | 'photo') => {
+    if (kind !== 'photo') setCaptureKind(kind);
+    setCaptureSheet(kind);
+  };
+  const captureUnavailable = apiUnavailable
+    ? t('recipes.captureNeedsConnection')
+    : undefined;
+  const captureActions: TabBarAddAction[] = [];
+  if (captureSources.url) {
+    captureActions.push({
+      key: 'link',
+      label: t('recipes.addFromLink'),
+      icon: 'link-outline',
+      onPress: () => openCapture('link'),
+      disabledReason: captureUnavailable,
+      testID: recipesTestIDs.addFromLink,
+    });
+  }
+  if (captureSources.photo) {
+    captureActions.push({
+      key: 'photo',
+      label: t('recipes.addFromPhotos'),
+      icon: 'camera-outline',
+      onPress: () => openCapture('photo'),
+      disabledReason: captureUnavailable,
+      testID: recipesTestIDs.addFromPhotos,
+    });
+  }
+  if (captureSources.text) {
+    captureActions.push({
+      key: 'text',
+      label: t('recipes.addFromText'),
+      icon: 'document-text-outline',
+      onPress: () => openCapture('text'),
+      disabledReason: captureUnavailable,
+      testID: recipesTestIDs.addFromText,
+    });
+  }
+
+  // The ways to add a recipe, nearest the `+` first; one entry runs at once.
+  useTabBarAddMenu([
+    ...captureActions,
+    {
+      key: 'manual',
+      label: t('recipes.writeItMyself'),
+      icon: 'create-outline',
+      onPress: () => toRecipeCreate(),
+      testID: recipesTestIDs.addManually,
+    },
+  ]);
 
   const openIngredientSelector = () => {
     setIngredientSheetVisible(true);
@@ -188,6 +261,7 @@ const RecipeMainInner: React.FC = () => {
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
+          accessibilityLabel: t('recipes.cookWithPantry'),
           color: hasIngredientSelection
             ? theme.colors.onPrimary
             : theme.colors.primary,
@@ -301,6 +375,7 @@ const RecipeMainInner: React.FC = () => {
 
   const recipeListHeader = (
     <>
+      {captureSources.any ? <CaptureRows /> : null}
       {/* Filters only apply to text search (discovery + ingredient search
           can't take them) — only surface the active-filter row when a text
           search drives what's on screen. The header badge stays as the
@@ -393,6 +468,26 @@ const RecipeMainInner: React.FC = () => {
           }
         }}
       />
+
+      {captureSources.any ? (
+        <>
+          <CapturePollers />
+          <CaptureSheet
+            visible={captureSheet === 'link' || captureSheet === 'text'}
+            kind={captureKind}
+            textAllowed={captureSources.text}
+            onSend={capture.start}
+            sending={capture.sending}
+            onDismiss={() => setCaptureSheet(null)}
+          />
+          <PhotoCaptureSheet
+            visible={captureSheet === 'photo'}
+            onSend={capture.start}
+            sending={capture.sending}
+            onDismiss={() => setCaptureSheet(null)}
+          />
+        </>
+      ) : null}
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}
       <RecipeFilterSheet

@@ -7,6 +7,7 @@ import { t } from '#/i18n';
 // src/utils/errorHandlers.ts.
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { itemIdOf, typedItemRef } from '#/utils/refInput';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -217,6 +218,9 @@ export function usePantryItemDetailActions({
     // Generate the new item's id so a create that gets queued (offline / API
     // down) replays idempotently, keyed by this id.
     const id = generateEntityId();
+    const lineItem = catalogItemId
+      ? { itemId: catalogItemId }
+      : typedItemRef(itemName);
 
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create that
@@ -227,7 +231,7 @@ export function usePantryItemDetailActions({
       shoppingListId: selectedShoppingListId,
       itemName,
       quantity,
-      itemId: catalogItemId || undefined,
+      itemId: itemIdOf(lineItem),
       unitId: item?.unit?.id,
       unitName: item?.unit?.name,
     });
@@ -252,9 +256,7 @@ export function usePantryItemDetailActions({
               items: [
                 {
                   id,
-                  item: catalogItemId
-                    ? { itemId: catalogItemId }
-                    : { itemName },
+                  item: lineItem,
                   quantity,
                   unit: unitInput,
                 },

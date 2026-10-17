@@ -12,6 +12,7 @@ import {
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type {
+  CapturedFrom,
   IngredientFormState,
   RecipeFormState,
   StepFormState,
@@ -69,8 +70,10 @@ function utf8ByteLength(value: string): number {
 const ingredientSchema: ObjectSchema<IngredientFormState> = object({
   id: string().defined(),
   name: string().trim().required(lazyMessage('recipes.ingredientNameRequired')),
-  quantity: number().defined(),
+  quantity: number().nullable().defined(),
   unitId: string().nullable().optional(),
+  unitLabel: string().optional(),
+  originalText: string().nullable().optional(),
   itemId: string().nullable().optional(),
   preparation: string().optional(),
   section: string().optional(),
@@ -136,6 +139,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       lazyMessage('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
     ),
   originalAuthor: string().defined(),
+  capturedFrom: mixed<CapturedFrom>().nullable().defined(),
   tags: string()
     .defined()
     .test(
@@ -173,6 +177,7 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   notes: '',
   tips: '',
   originalAuthor: '',
+  capturedFrom: null,
   tags: '',
   version: null,
   ingredientsUnread: false,

@@ -641,6 +641,7 @@ const MealPlanMainInner: React.FC = () => {
         visible={markCookedVisible}
         recipeName={pendingCook?.recipeName ?? ''}
         defaultServings={pendingCook?.defaultServings ?? 1}
+        wholeServings
         onClose={() => {
           setMarkCookedVisible(false);
           setPendingCook(null);

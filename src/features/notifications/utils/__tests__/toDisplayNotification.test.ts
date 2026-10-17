@@ -69,6 +69,20 @@ describe('toDisplayNotification', () => {
     },
   );
 
+  // A null stack leaves an action nothing to act on: offering one would aim it
+  // at a stack the server does not name.
+  it.each([
+    ['item-9', true, 'VIEW_EXPIRING_ITEMS'],
+    [null, false, undefined],
+  ])(
+    'offers the stack action on an expiry reminder naming %s: %s',
+    (pantryItemId, requiresAction, actionType) => {
+      const item = toDisplayNotification({ ...base, pantryItemId });
+      expect(item.requiresAction).toBe(requiresAction);
+      expect(item.actionType).toBe(actionType);
+    },
+  );
+
   it('marks an authored row as authored', () => {
     const item = toDisplayNotification({ ...base, isAuthoredContent: true });
     expect(item.isAuthoredContent).toBe(true);

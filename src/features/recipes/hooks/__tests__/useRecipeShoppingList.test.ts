@@ -41,8 +41,8 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-// `gen-id-1`, `gen-id-2`, … in the order the rows are derived: a batch mints one
-// id per row, and a constant would fold every row onto one cache record.
+// `gen-id-1`, `gen-id-2`, … in the order they are minted: a batch mints one id
+// per row, and a constant would fold every row onto one cache record.
 let mockMinted = 0;
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => {
@@ -101,6 +101,7 @@ const ingredient = (
   id: 'ing-1',
   name: 'Flour',
   quantity: 2,
+  originalText: null,
   estimatedPrice: null,
   item: null,
   unit: { __typename: 'Unit', id: 'unit-cup', name: 'cup', symbol: 'cup' },
@@ -187,10 +188,17 @@ type AddPayload = Extract<
 >;
 type AddResult = NonNullable<NonNullable<AddPayload['results']>[number]>;
 
-/** The row as the batch input carries it, for an ingredient with no catalog item. */
-const sentRow = (id: string, recipeIngredientId: string) => ({
-  id,
-  item: { itemName: 'Flour' },
+/**
+ * The id the `n`th ingredient with no catalog item is added under: each mints
+ * its row's id, then the id its typed name is sent under.
+ */
+const rowId = (n: number) => `gen-id-${2 * n - 1}`;
+const typedItemId = (n: number) => `gen-id-${2 * n}`;
+
+/** The `n`th row as the batch input carries it, for an ingredient with no catalog item. */
+const sentRow = (n: number, recipeIngredientId: string) => ({
+  id: rowId(n),
+  item: { inline: { id: typedItemId(n), name: 'Flour' } },
   quantity: 2,
   unit: { id: 'unit-cup' },
   recipeContext: {
@@ -293,7 +301,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-7')],
+          items: [sentRow(1, 'ing-7')],
         },
       },
     ]);
@@ -357,11 +365,13 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       );
     });
 
-    expect(cachedRow(cache, 'gen-id-1')).toEqual(
+    expect(cachedRow(cache, rowId(1))).toEqual(
       expect.objectContaining({
         itemName: 'Flour',
         quantity: 2,
         unitName: 'cup',
+        // The item the request sends the typed name under.
+        item: { __ref: `Item:${typedItemId(1)}` },
       }),
     );
     expect(cachedTotal(cache)).toBe(1);
@@ -374,7 +384,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     // The optimistic add counts the row; the reconcile only re-wires the edge.
     const cache = makeCache();
     const { result } = await renderShopping({
-      operationMocks: [appliedAdd([accepted(0, 'gen-id-1')]).mock],
+      operationMocks: [appliedAdd([accepted(0, rowId(1))]).mock],
       cache,
     });
 
@@ -385,7 +395,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     });
 
     expect(result.current.addedIngredients.has('ing-11')).toBe(true);
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedTotal(cache)).toBe(1);
   });
 
@@ -407,7 +417,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     });
 
     expect(result.current.addedIngredients.has('ing-12')).toBe(true);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedRow(cache, 'sli-server')).toBeDefined();
     expect(cachedTotal(cache)).toBe(0);
   });
@@ -429,7 +439,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
@@ -445,7 +455,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       await result.current.handleAddSingleIngredient(ingredient());
     });
 
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
@@ -483,7 +493,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
   });
 
   it('asks for a list first when there is none to add to', async () => {
@@ -626,7 +636,7 @@ describe('useRecipeShoppingList — Add All', () => {
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-1'), sentRow('gen-id-2', 'ing-3')],
+          items: [sentRow(1, 'ing-1'), sentRow(2, 'ing-3')],
         },
       },
     ]);
@@ -639,9 +649,9 @@ describe('useRecipeShoppingList — Add All', () => {
     const { result } = await renderShopping({
       operationMocks: [
         appliedAdd([
-          accepted(0, 'gen-id-1'),
+          accepted(0, rowId(1)),
           accepted(1, 'sli-live', CreateOutcome.Merged),
-          accepted(2, 'gen-id-3'),
+          accepted(2, rowId(3)),
         ]).mock,
       ],
       cache,
@@ -669,7 +679,7 @@ describe('useRecipeShoppingList — Add All', () => {
   /** One created, one merged onto a listed line, one onto a bought line. */
   const mixedOutcomes = () =>
     appliedAdd([
-      accepted(0, 'gen-id-1'),
+      accepted(0, rowId(1)),
       accepted(1, 'sli-live', CreateOutcome.Merged),
       accepted(2, 'sli-bought', CreateOutcome.Merged),
     ]);
@@ -693,12 +703,12 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
     // The two merged rows never came to exist under their minted ids.
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
-    expect(cachedRow(cache, 'gen-id-3')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
+    expect(cachedRow(cache, rowId(3))).toBeUndefined();
     // The bought line the server reused is back among the lines to buy.
     expect(listedIds(cache)).toEqual({
-      active: ['gen-id-1', 'sli-bought', 'sli-live'],
+      active: [rowId(1), 'sli-bought', 'sli-live'],
       bought: [],
     });
   });
@@ -727,7 +737,7 @@ describe('useRecipeShoppingList — Add All', () => {
     const cache = makeCache();
     const { result } = await renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), accepted(1, 'gen-id-2')]).mock,
+        appliedAdd([accepted(0, rowId(1)), accepted(1, rowId(2))]).mock,
       ],
       cache,
       backendRecipe: recipeWith([
@@ -750,7 +760,7 @@ describe('useRecipeShoppingList — Add All', () => {
     const cache = makeCache();
     const { result } = await renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), accepted(1, 'gen-id-2')], {
+        appliedAdd([accepted(0, rowId(1)), accepted(1, rowId(2))], {
           __typename: 'ShoppingList',
           id: 'sl-1',
           totalItems: 7,
@@ -789,8 +799,8 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Added 3 items to "My List"');
     expect(mockToastError).not.toHaveBeenCalled();
     expect(
-      ['gen-id-1', 'gen-id-2', 'gen-id-3'].map(
-        id => (cachedRow(cache, id) as { itemName: string }).itemName,
+      [1, 2, 3].map(
+        n => (cachedRow(cache, rowId(n)) as { itemName: string }).itemName,
       ),
     ).toEqual(['Flour', 'Sugar', 'Butter']);
     expect(cachedTotal(cache)).toBe(3);
@@ -830,9 +840,9 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
     expect(addAll.fired.map(vars => itemsOf(vars).length)).toEqual([50, 1]);
-    expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe('gen-id-1');
-    expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe('gen-id-50');
-    expect(itemsOf(addAll.fired[1]!)).toEqual([sentRow('gen-id-51', 'ing-51')]);
+    expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe(rowId(1));
+    expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe(rowId(50));
+    expect(itemsOf(addAll.fired[1]!)).toEqual([sentRow(51, 'ing-51')]);
     expect(addAll.fired.map(vars => inputOf(vars).shoppingListId)).toEqual([
       'sl-1',
       'sl-1',
@@ -869,7 +879,7 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(addAll.fired).toHaveLength(0);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
@@ -919,7 +929,7 @@ describe('useRecipeShoppingList — Add All', () => {
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-1')],
+          items: [sentRow(1, 'ing-1')],
         },
       },
     ]);
@@ -970,7 +980,7 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
     // The 50 that landed are on the list and marked; the refused one is neither.
     expect(cachedTotal(cache)).toBe(50);
-    expect(cachedRow(cache, 'gen-id-51')).toBeUndefined();
+    expect(cachedRow(cache, rowId(51))).toBeUndefined();
     expect(result.current.addedIngredients.size).toBe(50);
     expect(result.current.addedIngredients.has('ing-51')).toBe(false);
   });
@@ -979,7 +989,7 @@ describe('useRecipeShoppingList — Add All', () => {
   const renderPartlyRefused = (cache?: InMemoryCache) =>
     renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), refusedEntry(1)]).mock,
+        appliedAdd([accepted(0, rowId(1)), refusedEntry(1)]).mock,
       ],
       cache,
       backendRecipe: recipeWith([
@@ -999,8 +1009,8 @@ describe('useRecipeShoppingList — Add All', () => {
         'Added 1 items to "My List"',
       ),
     );
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(1);
   });
 
@@ -1030,8 +1040,8 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 

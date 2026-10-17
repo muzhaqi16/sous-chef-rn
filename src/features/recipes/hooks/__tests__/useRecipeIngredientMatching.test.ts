@@ -251,6 +251,42 @@ describe('useRecipeIngredientMatching', () => {
     expect(result.current.isSheetVisible).toBe(true);
   });
 
+  it('says a recipe has nothing to match only when the server answers so', async () => {
+    const m = matchesMock([]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
+  });
+
+  // Offline the read fails; the cook goes ahead without the review.
+  it('reports nothing of its own when the match read fails', async () => {
+    const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).not.toHaveBeenCalled();
+    expect(result.current.isSheetVisible).toBe(false);
+  });
+
   // `$servings` is a Float: two and a half servings is asked for as it is.
   it('asks for the matches of a fractional number of servings, unrounded', async () => {
     const m = matchesMock([]);
@@ -650,6 +686,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
             },
           ],
         },
+        stacksFirst: 100,
       },
     ]);
     // Success path: toast + sheet closed + matches cleared.
@@ -677,6 +714,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(cook.fired).toEqual([
       {
         input: expect.objectContaining({ servings: 2.5, notes: 'Halved it' }),
+        stacksFirst: 100,
       },
     ]);
   });
@@ -786,6 +824,28 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       expect.objectContaining({ pantryItemId: 'pi-1' }),
+    ]);
+  });
+
+  // "Salt, to taste": held, but the recipe states no amount to deduct.
+  it('holds back a line stating no amount until the cook states one', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, suggestedQuantity: null }, secondMatch],
+      cook,
+    );
+
+    expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
+
+    act(() => {
+      result.current.updateMatch(0, { isIncluded: true });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ recipeIngredientId: 'ing-2' }),
     ]);
   });
 

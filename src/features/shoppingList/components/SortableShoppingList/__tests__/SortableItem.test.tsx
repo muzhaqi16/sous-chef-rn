@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
@@ -234,6 +235,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
       isPurchased: false,
       movedToPantryAt: null,
     },
+    suggestedPrice: null,
     item: null,
     ...overrides,
   };
@@ -256,6 +258,7 @@ function rowItem(
     id: entry.id,
     isPurchased,
     sortOrder: 'a',
+    storeDepartment: StoreDepartment.Other,
     // The masked ref is structurally a normalized ref: __typename + id is
     // enough for useFragment's cache lookup.
     itemRef: { __typename: entry.__typename, id: entry.id } as FragmentType<
@@ -310,6 +313,64 @@ describe('SwipeableListItem (SortableItem)', () => {
       },
     );
     expect(screen.getByText('2 liters')).toBeTruthy();
+  });
+
+  describe('the price recorded prices suggest', () => {
+    const suggestedPrice = {
+      __typename: 'PriceSuggestion',
+      amount: 1.25,
+      substitute: false,
+      currency: {
+        __typename: 'Currency',
+        id: 'cur-usd',
+        code: 'USD',
+        decimalPlaces: 2,
+      },
+    };
+
+    // Per one of the line's unit, so the line costs that times its quantity.
+    it('shows what the line would cost beside its category', () => {
+      const entry = seedItem({ quantity: 2, suggestedPrice });
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+      expect(screen.getByText(/^2 liters · ≈ .*2\.50/)).toBeTruthy();
+    });
+
+    it("says when it is similar products' price, not the line's own", () => {
+      const entry = seedItem({
+        suggestedPrice: { ...suggestedPrice, substitute: true },
+      });
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+      expect(
+        screen.getByText(/^2 liters · ≈ .*1\.25, similar products$/),
+      ).toBeTruthy();
+    });
+
+    it('shows none on a bought line', () => {
+      const entry = seedItem({
+        suggestedPrice,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+        },
+      });
+      renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedRow(entry) },
+      );
+      expect(screen.getByText('2 liters')).toBeTruthy();
+      expect(screen.queryByText(/≈/)).toBeNull();
+    });
   });
 
   it('renders a swipeable wrapper', () => {

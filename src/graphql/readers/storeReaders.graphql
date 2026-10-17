@@ -3,4 +3,5 @@ fragment StoreReaders on Store {
   id
   address
   name
+  storeNumber
 }

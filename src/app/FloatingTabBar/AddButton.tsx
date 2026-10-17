@@ -1,4 +1,5 @@
 import React from 'react';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -11,9 +12,16 @@ export const AddButton: React.FC<AddButtonProps> = ({
   icon = 'add',
   iconLibrary,
   disabled = false,
+  menuOpen,
+  menuProgress,
 }) => {
   const { t } = useTranslation();
   styles.useVariants({ disabled });
+
+  const glyphStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${(menuProgress?.get() ?? 0) * 45}deg` }],
+  }));
+  const hasMenu = menuOpen !== undefined;
 
   return (
     <PressableScale
@@ -23,12 +31,21 @@ export const AddButton: React.FC<AddButtonProps> = ({
       haptic="medium"
       style={styles.addButton}
       accessibilityRole="button"
-      accessibilityLabel={t('tabBar.actionButton')}
-      accessibilityHint={t('tabBar.actionButtonHint')}
-      accessibilityState={{ disabled }}
+      accessibilityLabel={
+        menuOpen ? t('labels.close') : t('tabBar.actionButton')
+      }
+      accessibilityHint={
+        hasMenu ? t('tabBar.addMenuHint') : t('tabBar.actionButtonHint')
+      }
+      accessibilityState={{
+        disabled,
+        ...(hasMenu && { expanded: menuOpen }),
+      }}
       disabled={disabled}
     >
-      <Icon name={icon} size={28} tone="onPrimary" library={iconLibrary} />
+      <Animated.View style={glyphStyle}>
+        <Icon name={icon} size={28} tone="onPrimary" library={iconLibrary} />
+      </Animated.View>
     </PressableScale>
   );
 };

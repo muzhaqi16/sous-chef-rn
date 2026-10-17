@@ -143,6 +143,8 @@ export function useAppNavigation() {
       navigation.navigate('ShareList', params),
     toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>
       navigation.navigate('PurchaseHistory', params),
+    toStoreMode: (params: RootStackParamList['StoreMode']) =>
+      navigation.navigate('StoreMode', params),
 
     // ─── Recipe detail/sub screens ────────────────────────────────────────
     // One RecipeDetail serves all three tabs that open it (Pantry, Recipe,
@@ -153,7 +155,9 @@ export function useAppNavigation() {
     /** A recipe link's resolver hands off to the detail screen and leaves the stack. */
     replaceWithRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.dispatch(replaceAction('RecipeDetail', params)),
-    toRecipeCreate: () => navigation.navigate('RecipeCreate'),
+    /** With `captureId`, the form opens filled with what that capture read. */
+    toRecipeCreate: (params?: RootStackParamList['RecipeCreate']) =>
+      navigation.navigate('RecipeCreate', params),
     toRecipeEdit: (params: RootStackParamList['RecipeEdit']) =>
       navigation.navigate('RecipeEdit', params),
     toSavedRecipes: () => navigation.navigate('SavedRecipes'),

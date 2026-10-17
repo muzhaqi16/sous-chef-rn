@@ -14,12 +14,14 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
+import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 
 export interface RecipeIngredientEditorRef {
@@ -29,12 +31,16 @@ export interface RecipeIngredientEditorRef {
 
 interface RecipeIngredientEditorProps {
   onSave: (ingredient: IngredientFormState) => void;
+  /** Items a capture proposed for a line it did not link, by the line as written. */
+  candidatesFor?: (
+    originalText: string | null | undefined,
+  ) => CaptureCandidate[];
 }
 
 export const RecipeIngredientEditor = forwardRef<
   RecipeIngredientEditorRef,
   RecipeIngredientEditorProps
->(({ onSave }, ref) => {
+>(({ onSave, candidatesFor }, ref) => {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -46,6 +52,7 @@ export const RecipeIngredientEditor = forwardRef<
   const [section, setSection] = useState('');
   const [notes, setNotes] = useState('');
   const [isOptional, setIsOptional] = useState(false);
+  const [originalText, setOriginalText] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
   // State-driven presentation: the hook auto-presents/dismisses off `visible`
@@ -67,12 +74,13 @@ export const RecipeIngredientEditor = forwardRef<
         setName(ingredient.name);
         setItemId(ingredient.itemId ?? null);
         setQuantity(formatQuantityForInput(ingredient.quantity));
-        setUnit(''); // Unit display text not stored - user can re-select
+        setUnit(ingredient.unitLabel ?? '');
         setUnitId(ingredient.unitId ?? null);
         setPreparation(ingredient.preparation ?? '');
         setSection(ingredient.section ?? '');
         setNotes(ingredient.notes ?? '');
         setIsOptional(ingredient.isOptional);
+        setOriginalText(ingredient.originalText ?? null);
       } else {
         setEditingId(null);
         setName('');
@@ -84,11 +92,15 @@ export const RecipeIngredientEditor = forwardRef<
         setSection('');
         setNotes('');
         setIsOptional(false);
+        setOriginalText(null);
       }
       setVisible(true);
     },
     close: () => setVisible(false),
   }));
+
+  // Offered only while the line is unlinked as the capture left it.
+  const candidates = candidatesFor ? candidatesFor(originalText) : [];
 
   const handleNameChange = (text: string) => {
     setName(text);
@@ -112,14 +124,18 @@ export const RecipeIngredientEditor = forwardRef<
   const handleSave = () => {
     if (!name.trim()) return;
     // The counter reads and steps fractions ("1 1/4"), so the save does too.
+    // No amount above zero is a line stating none ("salt, to taste"), never an
+    // invented 1: the API deducts, prices and converts only a stated amount.
     const parsedQuantity = parseFractionalInput(quantity);
     onSave({
       id: editingId ?? `temp-ing-${generateId()}`,
       name: name.trim(),
       quantity:
-        parsedQuantity !== null && parsedQuantity > 0 ? parsedQuantity : 1,
+        parsedQuantity !== null && parsedQuantity > 0 ? parsedQuantity : null,
       itemId,
       unitId,
+      unitLabel: unit.trim(),
+      originalText,
       preparation: preparation.trim(),
       section: section.trim(),
       notes: notes.trim(),
@@ -149,6 +165,30 @@ export const RecipeIngredientEditor = forwardRef<
         keyboardShouldPersistTaps="handled"
       >
         <DropdownStack>
+          {originalText ? (
+            <Text role="caption" tone="secondary">
+              {t('recipes.ingredientAsWritten', { line: originalText })}
+            </Text>
+          ) : null}
+          {candidates.length > 0 ? (
+            <View style={styles.candidates}>
+              <Text role="caption" tone="secondary">
+                {t('recipes.captureMatchTo')}
+              </Text>
+              {candidates.map(candidate => (
+                <AnimatedChip
+                  key={candidate.itemId}
+                  label={candidate.name}
+                  selected={itemId === candidate.itemId}
+                  onPress={() =>
+                    setItemId(
+                      itemId === candidate.itemId ? null : candidate.itemId,
+                    )
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
           <View style={styles.autocompleteWrapper}>
             <ItemAutocompleteField
               variant="inline"
@@ -166,6 +206,7 @@ export const RecipeIngredientEditor = forwardRef<
               label={t('labels.quantity')}
               value={quantity}
               onChangeText={setQuantity}
+              placeholder={t('recipes.quantityNoAmountPlaceholder')}
               min={0}
               step={0.25}
             />
@@ -227,10 +268,15 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     overflow: 'visible',
+  },
+  candidates: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
   },
   autocompleteWrapper: {
     marginBottom: theme.spacing.md,

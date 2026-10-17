@@ -54,6 +54,7 @@ describe('RecipeCategoryFields', () => {
     notes: '',
     tips: '',
     originalAuthor: '',
+    capturedFrom: null,
     tags: '',
     version: null,
     ingredientsUnread: false,

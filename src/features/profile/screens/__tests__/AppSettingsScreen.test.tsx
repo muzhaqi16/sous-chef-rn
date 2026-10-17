@@ -2,6 +2,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { profileTestIDs } from '#features/profile/testIDs';
 
 // --- Mocks ---
 
@@ -18,7 +20,6 @@ const mockAppSettings = jest.fn(() => ({
     autoSync: true,
     offlineMode: false,
     showTutorials: true,
-    betaFeatures: [],
   },
   loading: false,
   hasLoadedSettings: true,
@@ -48,12 +49,17 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
+const mockUpdatePreference = jest.fn();
 jest.mock('#hooks/settings/useUserPreferences', () => ({
   useUserPreferences: () => ({
     preferences: { showShoppingListImages: true },
-    updatePreference: jest.fn(),
+    updatePreference: mockUpdatePreference,
     resetPreferences: jest.fn(),
   }),
+}));
+
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: jest.fn(() => true),
 }));
 
 jest.mock('#hooks/useFeatureHint', () => ({
@@ -191,7 +197,6 @@ describe('AppSettingsScreen', () => {
         autoSync: true,
         offlineMode: false,
         showTutorials: true,
-        betaFeatures: [],
       },
       loading: false,
       hasLoadedSettings: false,
@@ -208,6 +213,28 @@ describe('AppSettingsScreen', () => {
   it('renders the settings screen', () => {
     render(<AppSettingsScreen />);
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
+  });
+
+  // Opt-in, and saved per user on the device.
+  it('turns store mode on for this user', () => {
+    render(<AppSettingsScreen />);
+
+    expect(
+      screen.getByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeTruthy();
+    fireEvent.press(screen.getByTestId('toggle-Store mode'));
+
+    expect(mockUpdatePreference).toHaveBeenCalledWith({ storeMode: true });
+  });
+
+  it('offers no store mode switch where the build leaves it out', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+    render(<AppSettingsScreen />);
+
+    expect(
+      screen.queryByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeNull();
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
   it('renders the screen title', () => {
@@ -306,7 +333,6 @@ describe('AppSettingsScreen - loading state', () => {
           autoSync: true,
           offlineMode: false,
           showTutorials: true,
-          betaFeatures: [],
         },
         loading: true,
         hasLoadedSettings: false,
@@ -342,7 +368,6 @@ describe('AppSettingsScreen - loading state', () => {
           autoSync: true,
           offlineMode: false,
           showTutorials: true,
-          betaFeatures: [],
         },
         loading: true,
         hasLoadedSettings: true,

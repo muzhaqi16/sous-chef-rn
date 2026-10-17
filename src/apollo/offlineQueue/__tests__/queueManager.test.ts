@@ -13,7 +13,11 @@ import {
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
-import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  ErrorCode,
+  type MealPlanItem,
+} from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
@@ -26,7 +30,10 @@ import {
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  CreateMealPlanItemDocument,
+  UpdateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   AddItemToShoppingListDocument,
@@ -2561,6 +2568,34 @@ describe('QueueManager', () => {
       invokeFailureHandler(mutation, error);
 
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ error }));
+    });
+
+    // A queued meal edit whose row the cache does not hold is still named.
+    it('passes the type the input names when the cache does not hold the row', () => {
+      const MEAL: NonNullable<MealPlanItem['__typename']> = 'MealPlanItem';
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+
+      invokeFailureHandler(
+        makeMutation({
+          ...queuedMutationFor(UpdateMealPlanItemDocument),
+          variables: { input: { id: 'meal-gone', isCompleted: true } },
+        }),
+        {
+          type: 'server',
+          message: 'refused',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      );
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: null,
+          entityId: 'meal-gone',
+          subjectType: MEAL,
+        }),
+      );
     });
 
     // --- extractEntityInfo: the subject each input type names ---

@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import {
   render as rtlRender,
   screen,
@@ -170,6 +171,7 @@ const makeItem = (id: string, title: string, isPurchased: boolean) => ({
   isPurchased,
   sortKey: id,
   sortOrder: id,
+  storeDepartment: StoreDepartment.Other,
   itemRef: {} as RowItem['itemRef'],
 });
 

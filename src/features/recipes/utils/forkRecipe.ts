@@ -102,7 +102,7 @@ const toIngredientInput = (
   ingredient: ForkableIngredient,
 ): RecipeIngredientInput => ({
   name: ingredient.name,
-  quantity: ingredient.quantity ?? 0,
+  ...(ingredient.quantity != null && { quantity: ingredient.quantity }),
   ...(ingredient.item && { itemId: ingredient.item.id }),
   ...(ingredient.unit && { unitId: ingredient.unit.id }),
   ...(ingredient.isOptional != null && { isOptional: ingredient.isOptional }),

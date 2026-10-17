@@ -7,6 +7,7 @@ import type {
   SwipeableRef,
   SwipeAction,
 } from '#components/organisms/SwipeableItem/types';
+import type { StoreDepartment } from '#/graphql/generated/schemaTypes';
 
 export type Positions = Record<number, number>;
 
@@ -28,12 +29,29 @@ export interface ShoppingListRowItem {
    * propagates through the cache. */
   isPurchased: boolean;
   sortOrder: string | null;
+  /** The aisle Store mode groups it under. */
+  storeDepartment: StoreDepartment;
   itemRef: FragmentType<typeof SortableItem_ItemFragmentDoc>;
 }
 
+/** The heading over one aisle's lines in Store mode. */
+export interface AisleHeaderRow {
+  id: string;
+  department: StoreDepartment;
+  /** How many lines the aisle holds. */
+  count: number;
+}
+
+/** One cell of the shopping list: a line, or an aisle's heading. */
+export type ShoppingListEntry = ShoppingListRowItem | AisleHeaderRow;
+
+export const isAisleHeader = (
+  entry: ShoppingListEntry,
+): entry is AisleHeaderRow => 'department' in entry;
+
 export interface SortableShoppingListProps
   extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
-  items: ShoppingListRowItem[];
+  items: ShoppingListEntry[];
   onItemPress: (id: string) => void;
   /** Swipe actions for one row, published via `ItemSwipeActionsProvider`. */
   itemSwipeActions?: (id: string) =>
@@ -55,7 +73,7 @@ export interface SortableShoppingListProps
   disabled?: boolean;
   groupByPurchased?: boolean;
   ListHeaderComponent?: ReactElement | null;
-  ListFooterComponent?: FlashListProps<ShoppingListRowItem>['ListFooterComponent'];
+  ListFooterComponent?: FlashListProps<ShoppingListEntry>['ListFooterComponent'];
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   onRefresh?: () => void | Promise<void>;
@@ -69,7 +87,7 @@ export interface SortableShoppingListProps
    * resolver has to say what an absent one means.
    */
   reorderable: boolean;
-  ListEmptyComponent?: FlashListProps<ShoppingListRowItem>['ListEmptyComponent'];
+  ListEmptyComponent?: FlashListProps<ShoppingListEntry>['ListEmptyComponent'];
   /** Defaults to true. Threaded through context to keep one list-level
    * subscription on the user preference. */
   showImages?: boolean;
@@ -79,6 +97,8 @@ export interface SortableShoppingListProps
    * until then). The skeleton overlay releases on this, not on data arriving.
    */
   onFirstContentLayout?: () => void;
+  /** The name its render and scroll measurements report under. */
+  perfName?: string;
 }
 
 export interface SortOrderUpdate {

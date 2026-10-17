@@ -15,6 +15,7 @@ const ingredient = (
   id: 'ingredient-1',
   name: 'monk fruit extract',
   quantity,
+  originalText: null,
   estimatedPrice: null,
   image: null,
   isOptional: false,

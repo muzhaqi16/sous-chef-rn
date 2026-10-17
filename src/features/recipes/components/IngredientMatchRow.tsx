@@ -142,6 +142,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
             <ThemedTextInput
               style={styles.quantityInput}
               value={quantityText}
+              placeholder={t('recipes.quantityNoAmountPlaceholder')}
               onChangeText={text => {
                 setQuantityText(text);
                 const parsed = parseDecimalInput(text);

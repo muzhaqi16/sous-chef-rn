@@ -20,7 +20,14 @@ import type {
  * back from the server. An unidentifiable entity is skipped and heals the same way.
  */
 export function handleQueueFailure(info: FailedMutationInfo): void {
-  const { mutationId, entityType, entityId, operationName, error } = info;
+  const {
+    mutationId,
+    entityType,
+    entityId,
+    subjectType,
+    operationName,
+    error,
+  } = info;
 
   logger.warn(
     `Queue: withdrawing locally-applied ${operationName} after permanent failure`,
@@ -64,7 +71,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   // developers and can carry operation names and identifiers. A conflict gets
   // its own sentence — "someone got there first" is a different thing for the
   // user to know than "this failed".
-  toastService.error(withdrawalMessage(error.type, entityType));
+  toastService.error(withdrawalMessage(error.type, entityType ?? subjectType));
 
   // Withdrawn, so it records nothing; left in place it would pad every drain
   // scan and persisted write until `cleanupTerminal` ages it out 24h later.
@@ -132,14 +139,18 @@ function withdrawalMessage(
   type: QueueError['type'],
   entityType: string | null,
 ): string {
-  if (type !== 'conflict') return t('errors.queuedChangeRejected');
-  if (!entityType) return t('errors.queuedChangeOverwritten');
-
   // A persisted entry's typename; only the loaded copy knows which have a name.
-  const resourceKey = `errors.resourceNames.${entityType}`;
-  return isTranslationKey(resourceKey)
-    ? t('errors.queuedChangeOverwrittenResource', { resource: t(resourceKey) })
-    : t('errors.queuedChangeOverwritten');
+  const resourceKey = `errors.resourceNames.${entityType ?? ''}`;
+  const resource = isTranslationKey(resourceKey) ? t(resourceKey) : null;
+
+  if (type === 'conflict') {
+    return resource
+      ? t('errors.queuedChangeOverwrittenResource', { resource })
+      : t('errors.queuedChangeOverwritten');
+  }
+  return resource
+    ? t('errors.queuedChangeRejectedResource', { resource })
+    : t('errors.queuedChangeRejected');
 }
 
 /**

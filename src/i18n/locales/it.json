@@ -11,7 +11,7 @@
       "emailAlreadyExists": "Esiste già un account con questa email.",
       "emailAlreadyVerified": "Questo indirizzo email è già verificato.",
       "emailNotVerified": "Verifica la tua email prima di continuare",
-      "featureDisabled": "Questa funzione è attualmente disattivata",
+      "featureDisabled": "Questa funzione non è disponibile sul tuo account al momento.",
       "fieldInvalid": "Valore del campo non valido",
       "fieldRequired": "Manca un campo obbligatorio",
       "forbidden": "Non hai i permessi per eseguire questa azione",
@@ -55,6 +55,8 @@
       "unexpected": "Si è verificato un errore imprevisto",
       "uniqueConstraint": "Questo valore esiste già",
       "unitInvalid": "Questa unità non può essere usata qui.",
+      "unstatedAmount": "La ricetta non indica una quantità per questo ingrediente, quindi non è stato scalato nulla.",
+      "premiumRequired": "Serve un piano Premium.",
       "validationFailed": "Controlla i dati inseriti e riprova",
       "versionConflict": "È stato modificato altrove dopo che l'hai aperto. Aggiorna e riprova.",
       "unitChangeNeedsResolution": "Questo cambio di unità è solo una stima. Scegli se usare la stima o inserire tu la quantità."
@@ -126,6 +128,7 @@
       "Notification": "La notifica"
     },
     "queuedChangeRejected": "Una modifica non è stata salvata ed è stata annullata.",
+    "queuedChangeRejectedResource": "{{resource}}: la tua modifica non è stata salvata ed è stata annullata.",
     "offlineNoMorePages": "Sei offline, quindi per ora non c'è altro da caricare.",
     "offlineSearchUnavailable": "La ricerca delle ricette richiede una connessione. Le tue ricette salvate sono ancora qui.",
     "queuedChangeOverwrittenResource": "{{resource}}: la tua modifica è stata sostituita da una più recente ed è stata annullata.",
@@ -151,6 +154,7 @@
     "wasteBatchFailed": "Impossibile contrassegnare come sprecato.",
     "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
     "changedElsewhereTitle": "Modificato altrove",
+    "changedElsewhereLatestShown": "È stato modificato altrove dopo che l'hai aperto, quindi la tua modifica non è stata salvata. Ora viene mostrata la versione più recente.",
     "entityHome": "Casa",
     "entityMember": "Membro",
     "entityInvite": "Invito",
@@ -180,6 +184,7 @@
       "newPassword": "Quella password non rispetta le regole: da 8 a 72 caratteri, con una maiuscola, una minuscola e un numero.",
       "currentPassword": "La password attuale non è corretta. Controllala e riprova.",
       "servingsMade": "Inserisci un numero intero di porzioni maggiore di zero",
+      "servings": "Inserisci un numero di porzioni maggiore di zero",
       "key": "Non è stato possibile confermare quell'immagine. Selezionala di nuovo e riprova.",
       "imageUrl": "Inserisci l'URL completo dell'immagine, che inizi con http:// o https://",
       "videoUrl": "Inserisci l'URL completo del video, che inizi con http:// o https://",
@@ -303,6 +308,7 @@
     "clearInput": "Cancella campo",
     "clearRead": "Cancella lette",
     "close": "Chiudi",
+    "open": "Apri",
     "commaSeparated": "Separati da virgole",
     "condition": "Condizione",
     "confirm": "Conferma",
@@ -575,7 +581,6 @@
     "features": "Funzionalità",
     "showTutorials": "Mostra tutorial",
     "showTutorialsDesc": "Mostra suggerimenti e tutorial utili",
-    "betaFeaturesEnabled": "Funzioni beta attive",
     "experience": "Esperienza",
     "hapticFeedback": "Feedback aptico",
     "hapticFeedbackDesc": "Vibrazione per interazioni e avvisi",
@@ -583,6 +588,8 @@
     "navigationLabelsDesc": "Mostra le etichette sotto le icone di navigazione",
     "shoppingListImages": "Immagini lista della spesa",
     "shoppingListImagesDesc": "Mostra le immagini dei prodotti nelle liste",
+    "storeMode": "Modalità negozio",
+    "storeModeDesc": "Fai la spesa corsia per corsia dall'icona del negozio nella lista della spesa",
     "shareUsageData": "Condividi dati di utilizzo",
     "shareUsageDataDesc": "Aiuta a migliorare {{appName}} condividendo statistiche anonime",
     "resetSection": "Ripristina",
@@ -602,8 +609,7 @@
     "placeholder": "Seleziona un'opzione"
   },
   "searchBar": {
-    "placeholder": "Cerca…",
-    "actionFallback": "Pulsante {{icon}}"
+    "placeholder": "Cerca…"
   },
   "settingRow": {
     "enabled": "attivato",
@@ -685,7 +691,8 @@
   },
   "tabBar": {
     "actionButton": "Pulsante azione",
-    "actionButtonHint": "Apre l'azione della scheda corrente"
+    "actionButtonHint": "Apre l'azione della scheda corrente",
+    "addMenuHint": "Apre i modi per aggiungere"
   },
   "swipeActions": {
     "markUnpurchased": "Segna come non acquistato",
@@ -700,7 +707,6 @@
     "year": "Anno"
   },
   "a11y": {
-    "actionButton": "Pulsante {{name}}",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "Valore di {{label}}",
     "quantityValue": "Valore quantità",

@@ -22,7 +22,11 @@ import {
   reconcileReplaySuccess,
   settleGoneReplay,
 } from './queueReplayReconcilers';
-import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import {
+  deletesItsSubject,
+  queuedSubject,
+  subjectTypeOf,
+} from './queuedSubject';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -1081,6 +1085,7 @@ export class QueueManager {
       operationName: mutation.operationName,
       entityType,
       entityId,
+      subjectType: subjectTypeOf(mutation),
       variables: mutation.variables,
       error,
     };

@@ -18,6 +18,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useListSettings } from '#features/shoppingList/hooks/useListSettings';
 import { listSettingsStyles as styles } from '#features/shoppingList/components/listSettings/styles';
 import { BudgetSection } from '#features/shoppingList/components/listSettings/BudgetSection';
+import { StoreSection } from '#features/shoppingList/components/listSettings/StoreSection';
+import { StoreComparisonSection } from '#features/shoppingList/components/listSettings/StoreComparisonSection';
 import { ListStatusSection } from '#features/shoppingList/components/listSettings/ListStatusSection';
 import { RecurringSection } from '#features/shoppingList/components/listSettings/RecurringSection';
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
@@ -60,6 +62,7 @@ export const ListSettings: React.FC<
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
+    handleStoreSelected,
     handleToggleComplete,
     handleTogglePriceTracking,
     homes,
@@ -98,11 +101,13 @@ export const ListSettings: React.FC<
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
+    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
+    storeInput,
     templateName,
     templates,
     totalCost,
@@ -391,6 +396,16 @@ export const ListSettings: React.FC<
         name={name}
         templateName={templateName}
       />
+
+      <StoreSection
+        isOwner={isOwner}
+        listId={listId}
+        storeInput={storeInput}
+        setStoreInput={setStoreInput}
+        handleStoreSelected={handleStoreSelected}
+      />
+
+      <StoreComparisonSection listId={listId} />
 
       <BudgetSection
         budgetInput={budgetInput}

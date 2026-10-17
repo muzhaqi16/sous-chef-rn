@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { useMoney } from '#/domain/money';
+import { moneyByCurrency } from '#/domain/money';
+import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import { useTranslation } from '#/i18n';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
@@ -11,7 +12,6 @@ import {
   TopItemsBarChart,
   TrendLineChart,
   formatReason,
-  moneyByCurrency,
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
@@ -33,7 +33,6 @@ export const WasteTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
-  const money = useMoney();
 
   const wasteReasonData =
     wasteData?.wasteByReason.map(item => ({
@@ -84,7 +83,10 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={moneyByCurrency(wasteData?.valueByCurrency ?? []) ?? money(0)}
+          // No costed batch among the waste is an unknown value, never zero.
+          value={
+            moneyByCurrency(wasteData?.valueByCurrency ?? []) ?? UNKNOWN_AMOUNT
+          }
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />

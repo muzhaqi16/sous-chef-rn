@@ -1,0 +1,73 @@
+# One receipt recorded in one call: each line's purchase, its stock and the
+# list line it ticks. Each result names what the line wrote, its item after
+# matching included, so the device re-points the rows it wrote under its ids.
+mutation CreateReceiptCheckIn(
+  $input: CreateReceiptCheckInInput!
+  $today: LocalDate!
+) {
+  createReceiptCheckIn(input: $input) {
+    __typename
+    ... on CreateReceiptCheckInPayload {
+      receiptCheckIn {
+        id
+      }
+      pantry {
+        id
+        ...PantryReaders
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
+      results {
+        index
+        clientId
+        success
+        alreadyRecorded
+        # `code` decides what the user is told; `errorId` goes to diagnostics.
+        # `reason` is a server string never shown.
+        failure {
+          code
+          errorId
+        }
+        item {
+          id
+          ...ItemReaders
+        }
+        purchase {
+          id
+          ...PurchaseReaders
+        }
+        pantryItem {
+          id
+          ...PantryItemReaders
+          storageLocation {
+            id
+            ...StorageLocationReaders
+          }
+        }
+        shoppingListItem {
+          id
+          ...ShoppingListItemReaders
+        }
+      }
+      summary {
+        total
+        succeeded
+        failed
+        skipped
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

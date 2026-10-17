@@ -304,17 +304,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     ...theme.type.bodyStrong,
   },
 
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.chipBackground,
-    marginRight: theme.spacing.sm,
-  },
-  chipText: {
-    ...theme.type.label,
-    color: theme.colors.chipText,
-  },
   caption: {
     ...theme.type.caption,
     color: theme.colors.textSecondary,

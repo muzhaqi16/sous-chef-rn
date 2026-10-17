@@ -53,6 +53,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   notificationId: 'minted by the server, never by a queued write',
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',
+  receiptParseId: 'a receipt parse is created online only, never queued',
 };
 
 function unwrap(type: GraphQLInputType): GraphQLInputType {

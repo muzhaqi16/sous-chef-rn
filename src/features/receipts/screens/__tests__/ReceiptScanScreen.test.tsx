@@ -3,8 +3,12 @@
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ReceiptDraft } from '../../store/receiptDraftStore';
 import type { ReceiptScanStatus } from '../../hooks/useReceiptScan';
+import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { receiptsTestIDs } from '../../testIDs';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { ReceiptScanScreen } from '../ReceiptScanScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -14,14 +18,20 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: jest.fn(), toReceiptReview: jest.fn() }),
 }));
 
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: jest.fn(() => true),
+}));
+
 const mockAnswerConsent = jest.fn();
 let mockScan: { status: ReceiptScanStatus; draft: ReceiptDraft | null };
+let mockMasksPhotos = true;
 jest.mock('../../hooks/useReceiptScan', () => ({
   useReceiptScan: () => ({
     ...mockScan,
     answerConsent: mockAnswerConsent,
     pickedFromLibrary: false,
     canSendPhotos: true,
+    masksPhotos: mockMasksPhotos,
     scan: jest.fn(),
     takePhoto: jest.fn(),
     pickPhoto: jest.fn(),
@@ -41,16 +51,24 @@ const SCANNED_AT = '2026-10-07T10:00:00.000Z';
 beforeEach(() => {
   jest.clearAllMocks();
   mockReading = { readingStatus: 'none', slowPhotoRead: false };
+  mockMasksPhotos = true;
+  jest.mocked(useFeatureFlag).mockReturnValue(true);
 });
 
 describe('ReceiptScanScreen', () => {
-  it('asks whether photos may be sent, and passes the answer on', async () => {
+  it('asks whether to send a photo of a receipt the phone cannot read, and passes the answer on', async () => {
     mockScan = { status: 'consent', draft: null };
     const screen = renderWithApollo(<ReceiptScanScreen />);
     const user = userEvent.setup();
 
-    expect(screen.getByText('Read receipts from their photos?')).toBeTruthy();
-    expect(screen.getByText(/the server sees the whole receipt/)).toBeTruthy();
+    expect(
+      screen.getByText("Send a photo when your phone can't read a receipt?"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Your phone reads most receipts itself/),
+    ).toBeTruthy();
+    expect(screen.getByText(/names your phone finds are covered/)).toBeTruthy();
+    expect(screen.queryByText(/the server sees the whole receipt/)).toBeNull();
 
     await user.press(screen.getByText('Send photos'));
     expect(mockAnswerConsent).toHaveBeenLastCalledWith('granted');
@@ -58,7 +76,20 @@ describe('ReceiptScanScreen', () => {
     expect(mockAnswerConsent).toHaveBeenLastCalledWith('declined');
   });
 
-  it('says a receipt read from its photos keeps only its text, and that photos take a while', () => {
+  it('says the server sees the whole photo where the build cannot mask it', () => {
+    mockScan = { status: 'consent', draft: null };
+    mockMasksPhotos = false;
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(
+      screen.getByText(
+        /While the photo is read, the server sees the whole receipt/,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/names your phone finds are covered/)).toBeNull();
+  });
+
+  it('says a photo went as it was, and that photos take a while', () => {
     mockScan = {
       status: 'saved',
       draft: { pages: ['MILK 3.48'], photoKeys: ['k1'], scannedAt: SCANNED_AT },
@@ -67,14 +98,85 @@ describe('ReceiptScanScreen', () => {
     const screen = renderWithApollo(<ReceiptScanScreen />);
 
     expect(
-      screen.getByText(/The photo was sent to be read and is deleted/),
+      screen.getByText(
+        "Your phone couldn't read this receipt on its own, so its photo was sent to be read as it is. The photo is deleted once read.",
+      ),
     ).toBeTruthy();
     expect(
       screen.getByText('Reading the photos can take up to a minute…'),
     ).toBeTruthy();
   });
 
-  it('says a receipt read from its text keeps only its text', () => {
+  it('names the lines the API refused, to fix in the review and add again', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        parsed: {
+          lines: [
+            { index: 0, rawText: 'MILK 3.48', kind: 'item', product: 'MILK' },
+            {
+              index: 1,
+              rawText: 'CUBANELLE 1.20',
+              kind: 'item',
+              product: 'CUBANELLE',
+            },
+          ],
+        },
+        choices: {
+          1: lineChoice({ itemId: null, itemName: 'Cubanelle pepper' }),
+        },
+        added: [0],
+        failed: { 1: ErrorCode.ValidationFailed },
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(screen.getByText("1 line wasn't added")).toBeTruthy();
+    expect(
+      screen.getByText(/^Cubanelle pepper\. Open the review/),
+    ).toBeTruthy();
+    expect(screen.getByTestId(receiptsTestIDs.savedReview)).toBeTruthy();
+    expect(screen.queryByTestId(receiptsTestIDs.savedQueued)).toBeNull();
+  });
+
+  it('says a check-in waiting for a connection lands once the phone is back online', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        added: [0],
+        checkIn: { ids: ['c1'], lines: {}, state: 'queued', closed: true },
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(screen.getByText("Adding when you're back online")).toBeTruthy();
+    expect(screen.queryByTestId(receiptsTestIDs.savedFailed)).toBeNull();
+  });
+
+  it('says a masked photo went with the personal details covered', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        photoKeys: ['k1'],
+        photosMasked: true,
+        scannedAt: SCANNED_AT,
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(
+      screen.getByText(
+        "Your phone couldn't read this receipt on its own, so its photo was sent to be read, with card numbers, member numbers and names covered. The photo is deleted once read.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it('says the text of a receipt the phone could not read is sent to be read', () => {
     mockScan = {
       status: 'saved',
       draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
@@ -84,9 +186,58 @@ describe('ReceiptScanScreen', () => {
 
     expect(
       screen.getByText(
-        "Only the receipt's text is kept, with card and loyalty numbers removed.",
+        "Your phone couldn't read this receipt on its own, so its text is sent to be read, without card and loyalty numbers.",
       ),
     ).toBeTruthy();
     expect(screen.getByText('Picking out the items…')).toBeTruthy();
+  });
+
+  it('says only the text is kept where the server reads no receipts', () => {
+    jest
+      .mocked(useFeatureFlag)
+      .mockImplementation(flag => flag !== 'receiptParsing');
+    mockScan = {
+      status: 'saved',
+      draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(
+      screen.getByText(
+        "Only the receipt's text is kept, with card and loyalty numbers removed.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/is sent to be read/)).toBeNull();
+  });
+
+  it('says a receipt read on the phone sent nothing', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        parsedBy: 'device',
+        parsed: {
+          lines: [
+            {
+              index: 0,
+              rawText: 'MILK 3.48',
+              kind: 'item',
+              product: 'MILK',
+              lineTotal: 3.48,
+            },
+          ],
+        },
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(
+      screen.getByText(
+        "Read on your phone, so nothing was sent. Card and loyalty numbers are removed from what's kept.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Only the receipt's text is kept/)).toBeNull();
+    expect(screen.getByText('Review 1 item')).toBeTruthy();
   });
 });

@@ -73,6 +73,41 @@ Example:
 directive @public on FIELD_DEFINITION
 
 """
+Require that a server-owned feature is ON for the caller.
+
+Checked before the resolver runs, so a refused operation writes nothing and
+queues nothing. A caller whose feature is OFF is refused with a top-level
+`FEATURE_DISABLED`; one whose feature needs a plan they do not hold, with
+`PREMIUM_REQUIRED`. Both are HTTP 403 and name the feature in `feature`.
+The state is resolved on the server for every request; a value the client
+cached does not open the gate.
+
+REPEATABLE, WITH AN INPUT CONDITION. `whenInput` names a field of the
+operation's `input` argument; that occurrence applies only when the field
+is sent and is not null. One operation can so gate each of its input
+variants on its own feature. The name is checked when the schema is built.
+
+NOT AN AUTH POSTURE. A state resolves per user, so a field carrying it MUST
+also carry `@auth` or `@requireSystemRole`. Schema build fails otherwise.
+
+Example:
+  type Mutation {
+    createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
+      @auth
+      @requireFeature(flag: RECIPE_CAPTURE_URL, whenInput: "url")
+      @requireFeature(flag: RECIPE_CAPTURE_PHOTO, whenInput: "photos")
+  }
+"""
+directive @requireFeature(
+  """The feature that must be ON for the caller"""
+  flag: FeatureFlagName!
+  """
+  A field of the operation's input: this occurrence applies only when it is sent and not null
+  """
+  whenInput: String
+) on FIELD_DEFINITION
+
+"""
 Require that the caller's email address is verified.
 
 Applies to the outward-facing writes — the ones that expose the caller's data
@@ -121,12 +156,23 @@ directive @requireVerifiedEmail(
   whenInputTrue: String
 ) on FIELD_DEFINITION
 
-input AcceptHomeInviteInput {
-  token: String!
+"""
+An invite, by exactly one of its emailed token or its id. Either way the
+caller must be the invite's addressee with a verified email.
+"""
+input AcceptHomeInviteInput @oneOf {
+  """The invite's id, as pendingHomeInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link"""
+  token: String
 }
 
 type AcceptHomeInvitePayload {
   home: Home
+  """
+  The list the invite opens on; null when it named none, or the list is gone or unreadable
+  """
+  landingShoppingList: ShoppingList
   membership: Membership!
 }
 
@@ -1151,6 +1197,10 @@ type Category {
   slug: String!
   """Position among its siblings, lowest first; 0 when none is set"""
   sortOrder: Int!
+  """
+  The store department set on the category itself; null when it takes its nearest ancestor's, or none
+  """
+  storeDepartment: StoreDepartment
   """What the category classifies"""
   type: CategoryType!
   """When the category was last written"""
@@ -1824,6 +1874,14 @@ input CreateItemInput {
   description: String
   externalSources: [ExternalSourceMappingInput!]
   healthInfo: HealthInfoInput
+  """
+  Client-minted CUID2 for the item. The created item takes it (outcome
+  CREATED). A create that matched an existing item (outcome MERGED) is
+  remembered under it, with the key it matched by, so a later write naming
+  it acts on that item. Sent again, it answers what the first send did. An
+  id another user's item or create holds is refused with a ConflictError.
+  """
+  id: ID
   media: MediaAssetsInput
   """
   Client-settable item metadata. Deliberately narrower than the stored
@@ -2284,6 +2342,79 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateReceiptCheckInInput {
+  """
+  Client-minted CUID2 for the receipt. Sending the same id again, with the
+  same pantryId and shoppingListId, returns the check-in it created and
+  attempts only the lines not yet recorded. An id another user holds, or one
+  sent again naming another pantry or list, is refused with a ConflictError.
+  """
+  id: ID!
+  """The confirmed lines, 1 to 100"""
+  lines: [ReceiptCheckInLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; lines are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """
+  The receipt's merchant header, when no store is given; it places the chain the lines are remembered under
+  """
+  merchantHeader: String
+  """
+  A saving the receipt takes off the whole order rather than one line ("$5
+  off $50"), in the lines' currency. It is counted in the household's
+  savings and changes no line's price. A check-in sent again keeps the
+  first value.
+  """
+  orderDiscount: Float
+  """
+  The pantry the stock goes to; the caller must be able to add items to it
+  """
+  pantryId: ID!
+  """The day on the receipt, as YYYY-MM-DD; not later than today"""
+  purchasedOn: LocalDate!
+  """The receipt's own number, as printed"""
+  receiptNumber: String
+  """
+  The caller's own receipt parse this check-in confirms. When the store is
+  the household's own label, the branch the parse names (its chain and
+  store number, or an address its pages print) is found or created and the
+  household's rows move onto it; the check-in then answers that branch. A
+  shared store is never changed; a parse that is not the caller's, or not
+  parsed, locates nothing and still checks in.
+  """
+  receiptParseId: ID
+  """
+  The shopping list whose lines the receipt ticks; the caller must be able to mark its lines purchased
+  """
+  shoppingListId: ID
+  """The receipt's store"""
+  storeId: ID
+  """The caller's own calendar date, as YYYY-MM-DD"""
+  today: LocalDate
+}
+
+type CreateReceiptCheckInPayload {
+  """The pantry the receipt was checked into"""
+  pantry: Pantry!
+  receiptCheckIn: ReceiptCheckIn!
+  """One result per line, in input order"""
+  results: [ReceiptCheckInLineResult!]!
+  """The shopping list its lines ticked, when one was given"""
+  shoppingList: ShoppingList
+  """
+  summary.succeeded = lines this call recorded; summary.skipped = lines already recorded; summary.failed = lines that failed
+  """
+  summary: BulkSummary!
+}
+
+"""
+Result of CreateReceiptCheckIn. Select on CreateReceiptCheckInPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateReceiptCheckInResult = ConflictError | CreateReceiptCheckInPayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateReceiptParseInput {
   """
   Client-minted CUID2. Creating the same id again returns the parse it
@@ -2306,6 +2437,14 @@ input CreateReceiptParseInput {
   and deletes them, whatever the outcome. Send pages or photos, not both.
   """
   photos: [String!]
+  """
+  The app covered the personal details (the payment block, card and member
+  numbers, names) of every photo in this parse before uploading them. Only
+  photos so marked may be read by a hosted model; otherwise the service's own
+  model reads them. Send it only when every photo was masked. Ignored without
+  photos.
+  """
+  photosMasked: Boolean
 }
 
 type CreateReceiptParsePayload {
@@ -2318,6 +2457,46 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreateReceiptParseResult = ConflictError | CreateReceiptParsePayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateRecipeCaptureInput {
+  """
+  Client-minted CUID2. Creating the same id again returns the capture it
+  created, so a retried request queues the source once.
+  """
+  id: ID!
+  """The source's locale (en-AU): its decimal mark and measurement region"""
+  locale: String
+  """
+  1 to 3 photos of a cookbook or printed page: keys from createImageUploadUrl
+  with purpose RECIPE_PHOTO. Read once and deleted, whatever the outcome.
+  """
+  photos: [String!]
+  """
+  The post or page the text came from: kept as attribution, never fetched
+  """
+  sourceUrl: String
+  """
+  Text a client shared, such as a caption, within a deployment limit on its characters
+  """
+  text: String
+  """
+  A recipe page's absolute http(s) URL. A social-media or video platform's
+  page is refused: share the post's text instead. Send one of url, text or
+  photos.
+  """
+  url: String
+}
+
+type CreateRecipeCapturePayload {
+  capture: RecipeCapture!
+}
+
+"""
+Result of CreateRecipeCapture. Select on CreateRecipeCapturePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateRecipeCaptureResult = ConflictError | CreateRecipeCapturePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
@@ -2475,6 +2654,13 @@ input CreateStoreInput {
   address: String
   """The chain the store belongs to, when known"""
   chainId: ID
+  """
+  The household a store with no address and no number is for: a name alone
+  is that household's own label, which no other household sees. Without it,
+  the label belongs to the caller's only home, else to the caller. A store
+  with an address or a number is shared, whatever this says.
+  """
+  homeId: ID
   """
   Client-minted CUID2, the replay anchor: sending it again returns the same
   store and outcome. When the create merges into a store already on file,
@@ -2697,8 +2883,15 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `dat
 """
 scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
-input DeclineHomeInviteInput {
-  token: String!
+"""
+An invite to decline, by exactly one of its emailed token or its id. By id,
+the caller must be its addressee with a verified email, as on acceptance.
+"""
+input DeclineHomeInviteInput @oneOf {
+  """The invite's id, as pendingHomeInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link"""
+  token: String
 }
 
 type DeclineHomeInvitePayload {
@@ -4053,6 +4246,22 @@ Always include a __typename so the variant can be discriminated.
 """
 union EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError
 
+"""One of the caller's active holds on a plan"""
+type Entitlement {
+  """When it ends; null when it lasts until revoked"""
+  expiresAt: DateTime
+  """The plan held"""
+  plan: Plan!
+  """Where the hold comes from"""
+  source: EntitlementSource!
+}
+
+"""Where a user's hold on a plan comes from"""
+enum EntitlementSource {
+  """Granted by an admin"""
+  ADMIN
+}
+
 """
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
@@ -4156,6 +4365,10 @@ enum ErrorCode {
   """
   UNIT_CHANGE_NEEDS_RESOLUTION
   UNIT_INVALID
+  """
+  A cooked recipe's ingredient that states no amount, which the cook did not state either: nothing was deducted for it. Reported only as a skipped ingredient of markRecipeAsCooked, never as a failure.
+  """
+  UNSTATED_AMOUNT
   VALIDATION_FAILED
   VERSION_CONFLICT
 }
@@ -4421,6 +4634,45 @@ type FailedIPStat {
   ipAddress: String
 }
 
+"""
+A server-owned feature. A client ignores a member it does not know: a new
+feature is a new member.
+"""
+enum FeatureFlagName {
+  """Reading pasted ingredient lines (parseIngredientLines)"""
+  INGREDIENT_PASTE
+  """
+  Recipes suggested from what the caller's pantries hold (recipeSuggestions)
+  """
+  PANTRY_SUGGESTIONS
+  """Reading a receipt on the server (createReceiptParse)"""
+  RECEIPT_PARSING
+  """
+  Capturing a recipe from cookbook photos (createRecipeCapture with photos)
+  """
+  RECIPE_CAPTURE_PHOTO
+  """Capturing a recipe from shared text (createRecipeCapture with text)"""
+  RECIPE_CAPTURE_TEXT
+  """Capturing a recipe from a page's URL (createRecipeCapture with url)"""
+  RECIPE_CAPTURE_URL
+  """
+  A list's learned walking order (ShoppingList.storeRoute beyond the default)
+  """
+  STORE_ROUTES
+}
+
+"""One server-owned feature, resolved for the caller"""
+type FeatureFlagState {
+  """Whether the caller can use it now: true exactly when state is ON"""
+  enabled: Boolean!
+  """The feature"""
+  flag: FeatureFlagName!
+  """The plan the feature needs; null when it is free"""
+  plan: Plan
+  """ON: show it. UPGRADE_REQUIRED: offer the plan. OFF: hide it"""
+  state: FeatureState!
+}
+
 """Sub-input for feature-specific notifications"""
 input FeatureNotificationsInput {
   collaborationInvites: Boolean
@@ -4436,14 +4688,32 @@ input FeatureNotificationsInput {
   weeklyDigest: Boolean
 }
 
-"""Sub-input for feature toggles"""
+"""A feature's state for one user"""
+enum FeatureState {
+  """Not available to the user: hide it"""
+  OFF
+  """
+  Available: the feature is released to the user and they hold any plan it needs
+  """
+  ON
+  """
+  Released, but it needs a plan the user does not hold: show an upgrade prompt
+  """
+  UPGRADE_REQUIRED
+}
+
+"""
+Lists the user keeps about themselves. The server stores and returns them,
+never reads them, and they unlock nothing: a feature's availability is
+myFeatureFlags.
+"""
 input FeatureTogglesInput {
   """
-  Names of the beta features the user has opted into, replacing the whole list: at most 100, each 1 to 100 characters after trimming. Null is refused
+  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
   """
   betaFeatures: [String!]
   """
-  Names of the features the user has turned on, replacing the whole list: at most 100, each 1 to 100 characters after trimming. Null is refused
+  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
   """
   enabledFeatures: [String!]
 }
@@ -4619,6 +4889,20 @@ type Home {
     orderBy: MembershipOrderBy
   ): MembershipConnection!
   membershipStats: MembershipStats!
+  """
+  What this household spent, saved, wasted and paid per cooked meal over a
+  period. Readable by a member who can view the home; the waste and meal
+  figures are null for a member whose pantry view (`canViewPantry`) is off.
+  """
+  moneyReport(
+    """
+    The period, as pantry analytics read it: a preset range, or a custom
+    range running forward over at most 366 days; the last 30 days when omitted
+    """
+    filters: AnalyticsFilters
+    """The UTC bucket `spendByPeriod` is cut into"""
+    granularity: PeriodGranularity = MONTHLY
+  ): HouseholdMoneyReport!
   myMembership: Membership
   name: String!
   """Deep link that opens this home in the app (for existing members)."""
@@ -4780,6 +5064,11 @@ type HomeInvite {
   invitedUserId: ID
   """Who sent the invite; null once that account is deleted"""
   inviter: User
+  """
+  The list the invite opens on; null when it named none, or when the list is
+  gone or the caller cannot read it.
+  """
+  landingShoppingList: ShoppingList
   """The invite's newest logs. `limit` defaults to 10 and is capped at 50."""
   logs(
     """At most this many entries, newest first"""
@@ -4928,6 +5217,72 @@ type HomeUsageStats {
   shoppingListCount: Int!
 }
 
+"""
+A household's money over a period. Every amount is per currency and rounded
+to its minor unit; currencies are never summed together or converted, and a
+currency with nothing to report is absent.
+"""
+type HouseholdMoneyReport {
+  """
+  The cooking logs that drew stock from the household's pantries. Null for a
+  member who cannot view the pantries.
+  """
+  cookedMealCount: Int
+  """
+  The value cooking drew, divided by the cooked meals that drew stock of
+  known cost in that currency. Null for a member who cannot view the pantries.
+  """
+  costPerCookedMeal: [CurrencyAmount!]
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  """Its purchases in the period, priced or not"""
+  purchaseCount: Int!
+  """
+  The discounts recorded on its purchases, and its receipts' order-level discounts
+  """
+  savings: [CurrencyAmount!]!
+  """What the household paid: the totals of its priced purchases"""
+  spend: [CurrencyAmount!]!
+  """Spend per top-level category; the entries add up to `spend`"""
+  spendByCategory: [HouseholdSpendCategory!]!
+  """Spend per bucket of the requested granularity, oldest first"""
+  spendByPeriod: [HouseholdSpendPeriod!]!
+  """Spend per store; the entries add up to `spend`"""
+  spendByStore: [HouseholdSpendStore!]!
+  """The purchases recorded with no price: they add nothing to `spend`"""
+  unpricedPurchaseCount: Int!
+  """
+  What the stock wasted from the household's pantries was worth, at the cost
+  of the batches it came from; stock of unknown cost adds nothing. Null for a
+  member who cannot view the pantries.
+  """
+  wasteValue: [CurrencyAmount!]
+}
+
+"""A household's spend on one top-level category."""
+type HouseholdSpendCategory {
+  """The top-level category; null for purchases whose item has no category"""
+  category: Category
+  spend: [CurrencyAmount!]!
+}
+
+"""A household's spend in one period bucket."""
+type HouseholdSpendPeriod {
+  """
+  The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
+  the ISO week's Monday for WEEKLY, and YYYY-MM for MONTHLY.
+  """
+  period: String!
+  spend: [CurrencyAmount!]!
+}
+
+"""A household's spend at one store."""
+type HouseholdSpendStore {
+  spend: [CurrencyAmount!]!
+  """The store; null for purchases that name none"""
+  store: Store
+}
+
 type IPStat {
   count: Int!
   ipAddress: String!
@@ -5007,6 +5362,29 @@ enum ImageUploadPurpose {
   A receipt photo for createReceiptParse: at most 4 MB and 4000 px on its longest edge, never served, deleted once parsed
   """
   RECEIPT_PHOTO
+  """
+  A cookbook page photo for createRecipeCapture: at most 4 MB and 4000 px on its longest edge, never served, deleted once read
+  """
+  RECIPE_PHOTO
+}
+
+"""A catalog item a parsed line may name, and how well it matches."""
+type IngredientCandidate {
+  item: Item!
+  """0 to 1, from the name and its meaning; comparable within one line"""
+  score: Float!
+}
+
+"""How sure a parsed ingredient line's best catalog candidate is."""
+enum IngredientMatchConfidence {
+  """
+  Named exactly, or clearly ahead of every other candidate: a capture links it
+  """
+  CONFIDENT
+  """Nothing in the catalog is close enough to propose"""
+  NONE
+  """Candidates exist, none clearly ahead: offered for review, never linked"""
+  UNSURE
 }
 
 """Input for ingredient usage when marking recipe as cooked"""
@@ -5039,6 +5417,15 @@ input InlineItemInput {
   category: CategoryRefInput
   description: String
   displayUnitId: ID
+  """
+  Client-minted CUID2 for the item, so a client can name it before the
+  server answers. A created item takes this id. One that matched an existing
+  item by barcode or name is remembered under it, so a later write naming it
+  acts on that item, and `item(id)` reads it, for anyone who may see the
+  item. Sent again, it answers the same item without matching anew. An id
+  an item the caller cannot see holds is refused with a ConflictError.
+  """
+  id: ID
   name: String
   netWeight: Float
   netWeights: [ItemNetWeightInput!]
@@ -5175,6 +5562,11 @@ enum InviteStatus {
 input InviteToHomeInput {
   email: EmailAddress!
   homeId: ID!
+  """
+  A live shopping list of the same home to open on acceptance; the email
+  names it. A list of another home is refused (ValidationError on this field).
+  """
+  landingShoppingListId: ID
   message: String
   role: MembershipRole!
 }
@@ -5571,6 +5963,12 @@ type Item {
   How this item is normally stored; a new pantry stack of it starts in this state.
   """
   storageState: StorageState!
+  """
+  The store department the item is shelved in: its primary category's, then its
+  other categories' by confidence, each through its nearest mapped ancestor; else
+  OTHER. A client places a line it creates offline by it.
+  """
+  storeDepartment: StoreDepartment!
   """This item's SKUs at individual stores, oldest first by default."""
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -6051,7 +6449,17 @@ the GraphQL executor (@oneOf) — the request is rejected before any resolver
 runs if zero or two are provided.
 """
 input ItemRefInput @oneOf {
+  """
+  An item typed for the line: it reads the inline item's name and
+  client-minted id. Matched by name, else created under the id, as
+  InlineItemInput describes.
+  """
+  inline: InlineItemInput
   itemId: ID
+  """
+  A typed name, read as `inline: { name }` with no client-minted id.
+  `inline` replaces it: it goes once every supported client sends `inline`.
+  """
   itemName: String
   """
   A barcode's product record, as Item.matchedVariation returned it: the line
@@ -6310,10 +6718,19 @@ scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/fi
 
 input JoinHomeByCodeInput {
   joinCode: String!
+  """
+  The list the join link names. Answered as the landing list only when it is
+  a live list of the joined home; it never causes the join to be refused.
+  """
+  landingShoppingListId: ID
 }
 
 type JoinHomeByCodePayload {
   home: Home
+  """
+  The list the join link named, when it is a live list of the joined home; null otherwise
+  """
+  landingShoppingList: ShoppingList
   membership: Membership!
 }
 
@@ -6958,7 +7375,7 @@ type MarkRecipeAsCookedPayload {
   cookingLog: CookingLog!
   recipe: Recipe
   """
-  Ingredients not deducted because no conversion reached the stack's unit.
+  Ingredients not deducted: no conversion reached the stack's unit, or the recipe states no amount.
   """
   skippedIngredients: [SkippedRecipeIngredient!]!
 }
@@ -7643,6 +8060,34 @@ input MeasurementProfileInput {
   wholePortionsOnly: Boolean
 }
 
+"""
+The region a source's units were read in: an Australian "cup" is the 250 mL
+metric cup, a British "pint" the imperial pint.
+"""
+type MeasurementRegion {
+  basis: MeasurementRegionBasis!
+  """
+  An ISO 3166 country code, or METRIC when only the caller's metric preference decided
+  """
+  region: String!
+}
+
+"""
+What decided the region a source's unit spellings were read in, strongest first.
+"""
+enum MeasurementRegionBasis {
+  """The locale the caller sent, or their device's"""
+  CALLER_LOCALE
+  """Nothing said: US customary, as an assumption"""
+  DEFAULT
+  """The page's declared language (en-AU)"""
+  PAGE_LANGUAGE
+  """The site's country domain (.co.uk)"""
+  SITE_DOMAIN
+  """The caller's preferred unit system"""
+  USER_SETTING
+}
+
 """Reusable sub-input for media assets (images)"""
 input MediaAssetsInput {
   imageUrl: String
@@ -8155,11 +8600,13 @@ input MultiUnitMeasurementInput {
 
 type Mutation {
   """
-  Accept a home invitation using its token. Requires a verified email
+  Accept a home invitation by its token or, for a partner who signed up
+  without opening the email, by its id. Requires a verified email
   (AUTH_EMAIL_NOT_VERIFIED otherwise): holding the invited address is not
   proof of owning it. An invitation already accepted, declined or revoked
   answers ConflictError, and one that has expired a ValidationError on the
-  token; only a token matching no invitation answers NotFoundError.
+  field that named it; only an invitation that does not exist answers
+  NotFoundError.
   """
   acceptHomeInvite(input: AcceptHomeInviteInput!): AcceptHomeInviteResult!
   """
@@ -8316,10 +8763,23 @@ type Mutation {
   """
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
+  Check a confirmed receipt into a household in one call, so a whole shop is
+  one request. Each line records its purchase with the receipt's store, day
+  and number, ticks the shopping-list line it names, and lands its stock: as
+  moveShoppingItemToPantry does for a listed line, and as createPantryItem
+  with forceAdd does for an unlisted one. The household's choices are
+  remembered as recordReceiptMatches remembers them. Each line commits or
+  fails on its own, and a check-in sent again records nothing twice.
+  """
+  createReceiptCheckIn(input: CreateReceiptCheckInInput!): CreateReceiptCheckInResult!
+  """
   Queue a receipt's text, or its photos, for the server to read into lines,
   for a phone without on-device parsing. Returns at once with the parse
   PENDING; poll receiptParse until it is not. Each user has a daily number of
   parses, and a smaller one of photo parses.
+  
+  Behind the RECEIPT_PARSING feature: refused with FEATURE_DISABLED or
+  PREMIUM_REQUIRED while it is not ON for the caller.
   """
   createReceiptParse(input: CreateReceiptParseInput!): CreateReceiptParseResult!
   """
@@ -8328,6 +8788,19 @@ type Mutation {
   upsertExternalRecipe instead.
   """
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
+  """
+  Queue a recipe page, a shared caption or cookbook photos for the server to
+  read into the caller's private draft recipe. Returns at once with the
+  capture PENDING; poll recipeCapture until it is not. Each user has a daily
+  number of captures, and a smaller one of photo captures.
+  
+  Each source is behind its own feature: RECIPE_CAPTURE_URL, _TEXT or
+  _PHOTO. A source whose feature is not ON for the caller is refused with
+  FEATURE_DISABLED or PREMIUM_REQUIRED. A text that is little more than one
+  link is that page, so it needs RECIPE_CAPTURE_URL too; a caption's one link
+  is followed only while RECIPE_CAPTURE_URL is ON for the caller.
+  """
+  createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
   """Create a review for a published recipe."""
   createRecipeReview(input: CreateRecipeReviewInput!): CreateRecipeReviewResult!
   """
@@ -8345,10 +8818,13 @@ type Mutation {
   """
   createStorageLocation(input: CreateStorageLocationInput!): CreateStorageLocationResult!
   """
-  Add a store, which every user sees at once. A store already on file (the
-  same chain and store number, else the same name and address compared by
-  their letters and digits) is returned instead, with outcome MERGED. Each
-  user has a per-minute number of store creations.
+  Add a store. One with an address or a store number is a branch every user
+  sees; one with neither is the caller's household's own label, which no
+  other household sees (see CreateStoreInput.homeId). A store already on
+  file (the same chain and store number, else the same name and address
+  compared by their letters and digits, among shared stores or the owner's
+  own) is returned instead, with outcome MERGED. Each user has a per-minute
+  number of store creations.
   """
   createStore(input: CreateStoreInput!): CreateStoreResult!
   """
@@ -8359,9 +8835,10 @@ type Mutation {
   """
   createUserReport(input: CreateUserReportInput!): CreateUserReportResult!
   """
-  Decline a home invitation using its token. Repeating it answers the same
-  invitation and changes nothing. One already accepted, revoked or expired
-  answers ConflictError and stays as it is.
+  Decline a home invitation by its token, or by its id for a verified
+  addressee. Repeating it answers the same invitation and changes nothing.
+  One already accepted, revoked or expired answers ConflictError and stays as
+  it is.
   """
   declineHomeInvite(input: DeclineHomeInviteInput!): DeclineHomeInviteResult!
   """Decline an invitation to collaborate on a shopping list."""
@@ -8624,6 +9101,20 @@ type Mutation {
   Sets isOpened=true and openedAt to current time on the targeted batch.
   """
   openPantryItemBatch(input: OpenPantryItemBatchInput!): OpenPantryItemBatchResult!
+  """
+  Record a household's answers about stacks of one pantry it was asked to
+  check (Pantry.stockToConfirm). Every entry that applies confirms its stack
+  now. STILL_HAVE changes nothing else and advances no version. SOME_LEFT and
+  USED_UP correct the stack to the count found, as adjustPantryItemQuantity
+  does, with the reason "Stock check": counted neither as consumption nor as
+  waste. THREW_OUT records everything held as waste. A stack holding nothing
+  records the confirmation alone. An entry naming a stack that is not an
+  active stack of the pantry, or carrying a field its answer does not take,
+  fails on its own; the entries that apply commit together, computed from the
+  stacks as they are now, and a replay applies nothing twice. Each changed
+  stack is published to pantry subscribers after the check commits.
+  """
+  recordPantryStockCheck(input: RecordPantryStockCheckInput!): RecordPantryStockCheckResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """
@@ -9434,6 +9925,10 @@ enum NotificationType {
   RECIPE_RECOMMENDATIONS
   """Confirms that a recipe has been saved to the user's collection"""
   RECIPE_SAVED
+  """
+  Items the household usually buys are predicted to run out within two days; gated by `lowStockAlerts`
+  """
+  RUNNING_LOW
   """Other participants changed the items on a shared shopping list"""
   SHARED_LIST_CHANGED
   """A summary of the week's pantry activity"""
@@ -9800,6 +10295,14 @@ type Pantry {
   expiring and expired counts are judged on.
   """
   stats(today: LocalDate!): PantryStats!
+  """
+  The stacks most worth a "still have it?" check for the caller's date:
+  active stacks that hold stock and are LOW or MEDIUM, LOW first, then the
+  longest unconfirmed, then by id. Answer them with recordPantryStockCheck.
+  Bounded field: limit defaults to 20 and is clamped server-side to a
+  maximum of 50.
+  """
+  stockToConfirm(limit: Int = 20, today: LocalDate!): [PantryItem!]!
   storageLocationsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -10144,6 +10647,11 @@ type PantryItem {
   sourceShoppingListItemId: ID
   """Whole and partly used packages, batch by batch."""
   stockBreakdown: StockBreakdown!
+  """
+  How sure the API is that this stack still holds what it records, for the
+  caller's calendar date. Null for a removed stack.
+  """
+  stockConfidence(today: LocalDate!): PantryStockConfidence
   """
   The named place in the home where the stack is kept, such as a particular fridge; null when unassigned
   """
@@ -10724,6 +11232,55 @@ type PantryStats {
   valueCurrency: Currency
 }
 
+"""One answer about one stack in recordPantryStockCheck"""
+input PantryStockCheckEntryInput {
+  answer: StockCheckAnswer!
+  """The stack the answer is about: an active stack of the request's pantry"""
+  pantryItemId: ID!
+  """
+  SOME_LEFT only, and required there: what is left, zero or more, in the stack's tracking unit
+  """
+  quantity: Float
+  """THREW_OUT only: why it was thrown out"""
+  wasteReason: WasteReason
+}
+
+"""One entry's outcome in recordPantryStockCheck"""
+type PantryStockCheckResult {
+  """The entry's answer, as sent"""
+  answer: StockCheckAnswer!
+  """Why the entry failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """The stack as it stands after the check; null when the entry failed"""
+  pantryItem: PantryItem
+  """The entry's stack, as sent"""
+  pantryItemId: ID!
+  success: Boolean!
+}
+
+"""
+How sure the API is that a pantry stack still holds what it records, for the
+caller's calendar date. Every surface that judges stock gives the same level
+and reasons for the same stack and date.
+"""
+type PantryStockConfidence {
+  """
+  The latest of the stack's creation, a ledger entry on it that was not
+  undone (an arrival, a use, waste or a correction), and a stock-check answer
+  about it. Editing the stack's other fields does not confirm it.
+  """
+  lastConfirmedAt: DateTime!
+  level: StockConfidence!
+  """Why the stack is in doubt; empty exactly when level is HIGH"""
+  reasons: [StockDoubtReason!]!
+  """
+  When the household is predicted to run out of this item, as a calendar day
+  counted from today; null without a reported buying rhythm. Computed in
+  instants, so it can be a day off at a time-zone edge.
+  """
+  runOutOn: LocalDate
+}
+
 """Subtype discriminator for pantry domain events."""
 enum PantrySubtype {
   """
@@ -10891,6 +11448,56 @@ type PantryUsageStats {
   lowStockItemCount: Int!
 }
 
+input ParseIngredientLinesInput {
+  """
+  One ingredient per line, at most the recipe ingredient limit, each at most 500 characters
+  """
+  lines: [String!]!
+  """
+  The source's locale (de-DE): its decimal mark, and its measurement region
+  """
+  locale: String
+}
+
+type ParseIngredientLinesPayload {
+  """One parse per line sent, in order"""
+  lines: [ParsedIngredientLine!]!
+  measurementRegion: MeasurementRegion!
+}
+
+"""
+An ingredient line read into its parts, with the catalog items it may name.
+Nothing is stored: send the parts to createRecipe or updateRecipeIngredients.
+"""
+type ParsedIngredientLine {
+  """Best first; empty when the line names nothing close"""
+  candidates: [IngredientCandidate!]!
+  confidence: IngredientMatchConfidence!
+  isOptional: Boolean!
+  """The best candidate's item when the confidence is CONFIDENT"""
+  item: Item
+  name: String!
+  """A package size, a size word, or another parenthesis"""
+  note: String
+  """The line exactly as given"""
+  originalText: String!
+  """Handling after the name: sifted, to taste"""
+  preparation: String
+  """The amount; null when the line states none (to taste)"""
+  quantity: Float
+  """
+  The heading the line falls under on its source (For the sauce); null for pasted lines
+  """
+  section: String
+  """
+  The unit, resolved in the source's measurement region. A count ("2 eggs")
+  is in pieces; null when the line states no amount or its unit is unknown.
+  """
+  unit: Unit
+  """The unit as the line spells it, when it named one"""
+  unitText: String
+}
+
 type ParsedReceipt {
   """ISO 4217, when the receipt shows it"""
   currency: String
@@ -10931,6 +11538,10 @@ type ParsedReceiptLine {
   kind: ReceiptLineKind!
   """The product name as printed, on an ITEM"""
   product: String
+  """
+  How much the line bought: a weight or count printed with it, else the
+  pack size its product ends with ("Goat Cheese 4 oz" is 4 oz)
+  """
   quantity: Float
   """The line as the receipt prints it"""
   text: String!
@@ -10985,6 +11596,12 @@ enum PeriodGranularity {
   DAILY
   MONTHLY
   WEEKLY
+}
+
+"""A paid plan a feature can require"""
+enum Plan {
+  """The premium plan"""
+  PREMIUM
 }
 
 type PlatformStat {
@@ -11088,6 +11705,11 @@ type PriceSuggestion {
   """The latest observation behind it"""
   observedAt: DateTime!
   scope: PriceSuggestionScope!
+  """
+  Priced from similar products of the same kind, because the line's own
+  product has no price at that scope
+  """
+  substitute: Boolean!
 }
 
 """Where a suggested price came from."""
@@ -11919,6 +12541,15 @@ type Query {
     """The id of the Membership to read"""
     id: ID!
   ): Membership
+  """The caller's active holds on a plan; empty on the free tier"""
+  myEntitlements: [Entitlement!]!
+  """
+  Every server-owned feature flag resolved for the caller: one entry per
+  FeatureFlagName. Read it at sign-in and on resync and keep it for offline
+  use; an operation behind a flag that is off is refused with
+  FEATURE_DISABLED whatever the client cached.
+  """
+  myFeatureFlags: [FeatureFlagState!]!
   """
   The current user's own item edit suggestions, newest first. Same filters as
   the admin queue, scoped to the caller — there is no arg to widen that scope.
@@ -12007,6 +12638,13 @@ type Query {
     status: BatchStatus
   ): PantryItemBatchConnection!
   """
+  Ingredient lines a user pastes, read as a capture reads them: amount, unit,
+  name, handling and catalog candidates. Writes nothing. Behind the
+  INGREDIENT_PASTE feature: refused with FEATURE_DISABLED or
+  PREMIUM_REQUIRED while it is not ON for the caller.
+  """
+  parseIngredientLines(input: ParseIngredientLinesInput!): ParseIngredientLinesPayload!
+  """
   Parse a typed amount ("1/4", "1 1/4", "0.25") by the parser every write
   door uses: greater than 0, at most 99,999. The display forms follow the
   caller's quantity display preference and the unit's fractions.
@@ -12073,6 +12711,10 @@ type Query {
     """The id of the Recipe to read"""
     id: ID!
   ): Recipe
+  """
+  A recipe capture the caller created; null for any other. Deleted after 7 days.
+  """
+  recipeCapture(id: ID!): RecipeCapture
   """List cooking logs for a specific recipe with cursor-based pagination."""
   recipeCookingLogs(
     """Resume after this cursor: a previous page's endCursor"""
@@ -12089,20 +12731,31 @@ type Query {
     recipeId: ID!
   ): CookingLogConnection!
   """
-  Published recipes anyone can discover, most cooked first. Every caller gets
-  the same list: it reads neither the caller's pantry nor their dietary
-  profile.
+  Recipes the caller could cook from what their pantries hold. Published
+  recipes anyone can discover, and the caller's own and saved ones, come
+  first when at least half their non-optional ingredients are held: best
+  covered first, with stock about to expire lifting the recipes that use it.
+  The most cooked published recipes fill the rest of the page.
+  
+  A recipe tagged with an intolerance the caller's dietary profile holds as
+  an allergy or an intolerance is left out, and so is one not tagged with a
+  diet held that way. The check reads recipe tags only: an untagged recipe
+  is not screened by its ingredients.
+  
+  Forward only, via first. The ranking depends on the caller's pantry and
+  day, so after, before and last are not offered.
+  
+  Behind the PANTRY_SUGGESTIONS flag: refused with FEATURE_DISABLED while it
+  is off for the caller.
   """
   recipeSuggestions(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """How many suggestions: 20 when omitted, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): RecipeConnection!
+    """
+    The caller's own calendar date, as YYYY-MM-DD. With it, stock expiring within 3 days lifts the recipes that use it
+    """
+    today: LocalDate
+  ): RecipeSuggestionConnection!
   """
   The calling user's own recipes — both those they created and those they
   saved.
@@ -12296,6 +12949,11 @@ type Query {
     id: ID!
   ): ShoppingListItem
   """
+  Where a shopping list is cheapest, by branch or by chain. Refused as a read
+  of the list is to a caller who cannot read it.
+  """
+  shoppingListStoreComparison(input: ShoppingListStoreComparisonInput!): ShoppingListStoreComparison!
+  """
   Get shopping lists accessible to the current user (owned, collaborated, or home-based).
   The default list is `filters: { isDefault: true }`; a list's collaborators
   are ShoppingList.collaboratorsConnection.
@@ -12443,6 +13101,118 @@ type RankedUnit {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""A receipt checked into a household in one call."""
+type ReceiptCheckIn {
+  createdAt: DateTime!
+  homeId: ID!
+  id: ID!
+  """How many lines the call that created it carried"""
+  lineCount: Int!
+  """
+  The saving the receipt took off the whole order; null when none was stated
+  """
+  orderDiscount: Float
+  pantryId: ID!
+  """The day on the receipt"""
+  purchasedOn: LocalDate!
+  receiptNumber: String
+  shoppingListId: ID
+  storeId: ID
+}
+
+"""One confirmed line of a receipt being checked in."""
+input ReceiptCheckInLineInput {
+  """What was bought: an amount in a unit, or a count of packages"""
+  amount: StockAmountInput!
+  """The client's id for the line, echoed back on its result"""
+  clientId: String!
+  """
+  What the receipt printed as saved on the line; the purchase's original price is totalPaid plus it
+  """
+  discount: Float
+  """
+  The user changed or chose the item rather than accepting the proposal; false when omitted
+  """
+  edited: Boolean
+  """The stock's expiry day, as YYYY-MM-DD"""
+  expiresOn: LocalDate
+  """
+  The line's item: an existing catalog item by id, or one described inline
+  (matched by barcode, then name, else created under its client-minted id),
+  as createPantryItem takes it. A scanned product record (variation) is
+  refused here. A listed line names its list line's item by id, or an id
+  redirecting to it. The line's result names the item it recorded.
+  """
+  item: PantryItemSourceInput!
+  """
+  Client-minted CUID2 for the stack or batch a stocked line adds, as
+  CreatePantryItemInput.id: an add sent again finds what it added.
+  """
+  pantryItemId: ID
+  """
+  Client-minted CUID2 for the line's purchase. A line whose purchase exists
+  is reported alreadyRecorded and writes nothing, so a check-in sent again
+  records nothing twice.
+  """
+  purchaseId: ID!
+  """
+  The line's product text as printed; remembered for the household as recordReceiptMatches remembers it
+  """
+  rawText: String
+  """
+  The step that proposed the item the user saw; null when nothing was proposed
+  """
+  resolvedBy: ReceiptMatchMethod
+  """
+  The shopping-list line this purchase ticks. It must be on the check-in's
+  shoppingListId, and the line's item that list line's item by id, recorded
+  whether or not the caller could read it alone; otherwise the line fails
+  with VALIDATION_FAILED and writes nothing.
+  """
+  shoppingListItemId: ID
+  """
+  False records the purchase, ticks its list line, and leaves the pantry as it is; true when omitted
+  """
+  stock: Boolean
+  """
+  The total paid for the line, after any discount. Zero only for a line its
+  discount made free (the free one of a deal): its purchase is recorded at
+  nothing paid, with the discount as its saving, and observes no price.
+  """
+  totalPaid: Float!
+}
+
+"""One line's outcome in createReceiptCheckIn."""
+type ReceiptCheckInLineResult {
+  """
+  True when the line's purchase already existed and this call wrote nothing for it
+  """
+  alreadyRecorded: Boolean!
+  """The line's clientId, as sent"""
+  clientId: String!
+  """Why the line failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """The line's position in the input"""
+  index: Int!
+  """
+  The item the line recorded, after matching: the one an inline item matched
+  or created. A client re-points what it holds under its own id to this one.
+  Null when the line failed.
+  """
+  item: Item
+  """
+  The stack the stock is in; null when the line failed or was not stocked
+  """
+  pantryItem: PantryItem
+  """The purchase the line recorded; null when the line failed"""
+  purchase: Purchase
+  """
+  The list line the purchase ticked; null when the line named none or failed
+  """
+  shoppingListItem: ShoppingListItem
+  success: Boolean!
 }
 
 """A catalog item proposed for a receipt line."""
@@ -12881,6 +13651,161 @@ input RecipeAttributionInput {
   sourceUrl: URL
 }
 
+"""
+A recipe capture: a page, a caption or cookbook photos read in the
+background into the caller's private draft recipe. Deleted 7 days after
+creation; the recipe it saved stays.
+"""
+type RecipeCapture {
+  """
+  SAVED by finding the page among the caller's recipes: no second recipe was made
+  """
+  alreadySaved: Boolean!
+  completedAt: DateTime
+  createdAt: DateTime!
+  """What was read; null while PENDING, or when nothing was"""
+  draft: RecipeCaptureDraft
+  """Why FAILED or UNAVAILABLE; null otherwise"""
+  failure: RecipeCaptureFailure
+  """
+  What FAILED or UNAVAILABLE means for the user, in a fixed sentence; null otherwise
+  """
+  failureReason: String
+  id: ID!
+  """The region the source's units were read in; null until read"""
+  measurementRegion: MeasurementRegion
+  """
+  The draft recipe a SAVED capture created or found; null otherwise, or once deleted
+  """
+  recipe: Recipe
+  source: RecipeCaptureSource!
+  status: RecipeCaptureStatus!
+  """What the read noticed; empty when nothing was"""
+  warnings: [RecipeCaptureWarning!]!
+}
+
+"""
+What a capture read: the content a SAVED capture's recipe was written from,
+or what an INCOMPLETE capture hands the recipe editor. Each line keeps its
+catalog candidates for review.
+"""
+type RecipeCaptureDraft {
+  author: String
+  cookTimeMinutes: Int
+  description: String
+  """The source's https image, a link the server never downloads"""
+  imageUrl: String
+  lines: [ParsedIngredientLine!]!
+  name: String
+  prepTimeMinutes: Int
+  servings: Int
+  """The publisher or site"""
+  sourceName: String
+  steps: [RecipeCaptureStep!]!
+  totalTimeMinutes: Int
+}
+
+"""Why a capture ended FAILED or UNAVAILABLE, as a closed code."""
+enum RecipeCaptureFailure {
+  """The worker stopped waiting for the model service"""
+  CALLER_GONE
+  """No worker took the capture in time"""
+  DEADLINE_PASSED
+  """The model never answered in the asked shape"""
+  INVALID_ANSWER
+  """No model answered"""
+  MODEL_DOWN
+  """No model is configured for this read"""
+  NO_MODEL
+  """The text or page holds no recipe"""
+  NO_RECIPE
+  """No model service is configured"""
+  NO_SERVICE
+  """No worker consumes captures"""
+  NO_WORKER
+  """A photo was over the size or pixel limits, or not JPEG, PNG or WebP"""
+  PHOTO_REFUSED
+  """A photo could not be read from storage"""
+  PHOTO_STORAGE
+  """The capture could not be queued"""
+  QUEUE_UNAVAILABLE
+  """
+  The read failed on the server on every attempt; send it again under a new capture id
+  """
+  READ_FAILED
+  """The model service refused the request"""
+  REQUEST_REFUSED
+  SERVICE_ERROR
+  """The model service is deployed without recipe reading"""
+  SERVICE_LACKS_RECIPES
+  SERVICE_REFUSED_TOKEN
+  SERVICE_TIMEOUT
+  SERVICE_UNREACHABLE
+  """The model's answer ran out of room before it ended"""
+  TRUNCATED
+  """The model service answered in a shape this server does not know"""
+  UNKNOWN
+  """
+  The page could not be fetched: refused, unreachable, too large or too slow
+  """
+  UNREACHABLE_URL
+  """The URL answered with something other than a web page"""
+  UNSUPPORTED_PAGE
+}
+
+"""What a capture was made from."""
+enum RecipeCaptureSource {
+  """Photos of a cookbook or printed page"""
+  PHOTO
+  """Text a client shared: a caption or description"""
+  TEXT
+  """A recipe page the server fetched"""
+  URL
+}
+
+enum RecipeCaptureStatus {
+  """The source could not be read into a recipe"""
+  FAILED
+  """
+  Read, but missing a name, ingredients or steps: no recipe; open the editor with the draft
+  """
+  INCOMPLETE
+  """Queued or running; poll again"""
+  PENDING
+  """
+  Read, and saved as the caller's private draft recipe (or found among theirs)
+  """
+  SAVED
+  """No worker or model service could take it now; try again later"""
+  UNAVAILABLE
+}
+
+"""A captured step, numbered by its place."""
+type RecipeCaptureStep {
+  """The heading the step falls under on its source; null when it has none"""
+  section: String
+  step: Int!
+  text: String!
+}
+
+type RecipeCaptureWarning {
+  code: RecipeCaptureWarningCode!
+  """Free text: the dropped line, or what was cut"""
+  detail: String!
+}
+
+"""Something a capture noticed about what it read."""
+enum RecipeCaptureWarningCode {
+  """The source held more than a recipe holds; the rest was cut"""
+  CONTENT_CLAMPED
+  """The photos held little readable text"""
+  LOW_TEXT
+  """
+  The model returned a line or step the source does not print; it was dropped
+  """
+  UNGROUNDED_LINE
+}
+
 enum RecipeCategory {
   APPETIZER
   BAKING
@@ -13077,8 +14002,8 @@ type RecipeIngredient {
   
   Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
   SYSTEM, their device's locale, so two callers reading the same recipe get
-  different answers. Null when the ingredient names no unit, or when no seeded
-  unit of the system shares its dimension.
+  different answers. Null when the ingredient states no amount or names no
+  unit, or when no seeded unit of the system shares its dimension.
   """
   convertedQuantity: ConvertedValue
   estimatedPrice: Float
@@ -13089,8 +14014,15 @@ type RecipeIngredient {
   item: Item
   name: String!
   notes: String
+  """The line as originally written, when the ingredient came from text."""
+  originalText: String
   preparation: String
-  quantity: Float!
+  """
+  The amount, in `unit`. Null when the recipe states none ("salt, to taste"):
+  such a line is never deducted, priced or converted, and a shopping list
+  carries it without a quantity.
+  """
+  quantity: Float
   recipe: Recipe!
   section: String
   sortOrder: Int!
@@ -13154,8 +14086,13 @@ input RecipeIngredientInput {
   name: String!
   notes: String
   originalString: String
+  """The line as originally written, at most 500 characters."""
+  originalText: String
   preparation: String
-  quantity: Float!
+  """
+  Positive when present; omitted or null when the recipe states no amount.
+  """
+  quantity: Float
   section: String
   sortOrder: Int
   spoonacular: SpoonacularDataInput
@@ -13172,7 +14109,8 @@ type RecipeIngredientLine {
   name: String!
   notes: String
   preparation: String
-  quantity: Float!
+  """Null when the line states no amount."""
+  quantity: Float
   section: String
   sortOrder: Int!
   unit: Unit
@@ -13187,6 +14125,9 @@ type RecipeIngredientMatch {
   """
   availableQuantity: Float
   ingredient: RecipeIngredient!
+  """
+  Whether the stack covers the amount; for an ingredient stating none, whether it holds any stock.
+  """
   isAvailable: Boolean!
   """
   The match kind as a number: ITEM 1, CONCEPT 0.9, NAME 0.7, NONE 0.
@@ -13202,10 +14143,15 @@ type RecipeIngredientMatch {
   matchedPantryItem: PantryItem
   """
   How much more the ingredient needs, in its unit. Null when it is available,
-  or when `availableQuantity` is unknown.
+  when `availableQuantity` is unknown, or when the recipe states no amount.
   """
   shortfall: Float
-  suggestedQuantity: Float!
+  """
+  The ingredient's amount scaled to the servings asked for. Null when the
+  recipe states none: a shopping list carries such a line without a quantity,
+  and only while it is not available.
+  """
+  suggestedQuantity: Float
   suggestedUnit: Unit
 }
 
@@ -13432,6 +14378,61 @@ enum RecipeStatus {
   """Approved by an admin and visible to everyone."""
   PUBLISHED
 }
+
+"""One ranked page of recipe suggestions."""
+type RecipeSuggestionConnection {
+  edges: [RecipeSuggestionEdge!]!
+  pageInfo: PageInfo!
+  """
+  The number of suggestions on this page; a ranked list has no later page to count
+  """
+  totalCount: Int!
+}
+
+"""A suggested recipe, and why it was suggested."""
+type RecipeSuggestionEdge {
+  """
+  The share of the recipe's non-optional ingredients the caller's pantries
+  hold, from 0 to 100: the figure Recipe.matchPercentage reports.
+  """
+  coverage: Int!
+  cursor: String!
+  """
+  The caller's stacks expiring within 3 days of today that the recipe would
+  use; empty when today was not sent.
+  """
+  expiringStacks: [PantryItem!]!
+  node: Recipe!
+}
+
+input RecordPantryStockCheckInput {
+  """1 to 50 answers, each about a different stack"""
+  entries: [PantryStockCheckEntryInput!]!
+  """
+  A client-minted CUID2 for this check: a replay with the same key is refused
+  as already applied (ConflictError, IDEMPOTENT_REPLAY), so the check is
+  recorded at most once
+  """
+  idempotencyKey: ID
+  """
+  The pantry the stacks belong to; the caller must be able to edit its items
+  """
+  pantryId: ID!
+}
+
+type RecordPantryStockCheckPayload {
+  """The pantry the stacks belong to"""
+  pantry: Pantry!
+  """One result per entry, in request order"""
+  results: [PantryStockCheckResult!]!
+}
+
+"""
+Result of RecordPantryStockCheck. Select on RecordPantryStockCheckPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordPantryStockCheckResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryStockCheckPayload | ValidationError
 
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
@@ -13966,6 +14967,15 @@ input ResolveReceiptLinesInput {
 type ResolveReceiptLinesPayload {
   """The chain the merchant header names"""
   chain: StoreChain
+  """
+  When no store is placed, the household's own label that proposedStore
+  would duplicate: its store of the proposed name with no address or
+  number, else the caller's own, of no other chain. Offer it before
+  creating a store: a check-in naming it with its receiptParseId locates
+  it, moving the household's rows onto the branch the receipt names. Read
+  for the pantry's (or homeId's) household; null otherwise.
+  """
+  completableStore: Store
   """One resolution per input line, in input order"""
   lines: [ReceiptLineResolution!]!
   """
@@ -14350,6 +15360,12 @@ type ShoppingList {
   is shared through home membership, a personal list through collaborators.
   """
   homeId: ID
+  """
+  A household list's invite link: it joins the list's home and lands on this
+  list. Null for a personal list, while the home's join link is off, or when
+  the caller may not invite to the home.
+  """
+  householdInviteLink: ShareLink
   """The list's unique identifier"""
   id: ID!
   """Whether status is COMPLETED; always in step with status"""
@@ -14468,6 +15484,15 @@ type ShoppingList {
   updateShoppingList sets ARCHIVED, PAUSED and CANCELLED.
   """
   status: ListStatus!
+  """
+  The walking order at a store: the household's own route, else the store's
+  pooled route, its chain's, else the default. A personal list skips the
+  household.
+  """
+  storeRoute(
+    """The store; the list's target store when omitted"""
+    storeId: ID
+  ): StoreRoute!
   """How many lines suggestedTotal prices by suggestion"""
   suggestedLines: Int!
   """
@@ -14480,12 +15505,16 @@ type ShoppingList {
   suggestedTotal: Float
   """
   Items worth adding to this shopping list, one list per section. An item
-  appears at most once, in the first section that offers it: recentlyDeleted,
-  frequentlyAdded, popular. Each section holds up to limit.
+  appears at most once, in the first section that offers it: runningLow,
+  recentlyDeleted, frequentlyAdded, popular. Each section holds up to limit.
   """
   suggestions(
     """At most this many per section: default 10, at most 50"""
     limit: Int = 10
+    """
+    The viewer's calendar date; runningLow is computed only when it is sent
+    """
+    today: LocalDate
   ): ShoppingListSuggestions!
   """Free-text labels on the list, at most 10; empty when none"""
   tags: [String!]!
@@ -14801,6 +15830,14 @@ type ShoppingListItem {
   How the line came onto the list, and the recipe or meal plan it was added for
   """
   source: ShoppingListItemSource!
+  """
+  The store department the line is shelved in: its own override, else its item's, else OTHER
+  """
+  storeDepartment: StoreDepartment!
+  """
+  The department set on this line over its item's; null while it follows the item
+  """
+  storeDepartmentOverride: StoreDepartment
   """Where to find the line: its preferred store, aisle and store section"""
   storeInfo: ShoppingListItemStoreInfo!
   """
@@ -15006,6 +16043,47 @@ input ShoppingListSettingsInput {
 }
 
 """
+Where a list is cheapest, from recorded prices. Each candidate prices the
+list's comparable lines (unpurchased, a catalog item, a unit that converts
+without an assumption) at its own median, a branch filling a gap from its
+chain, then from any store. Prices are counted as itemPriceComparison counts
+them; no household's prices are revealed.
+"""
+type ShoppingListStoreComparison {
+  """
+  The ranked candidates, cheapest first, at most five; then the target, when not among them
+  """
+  candidates: [StoreComparisonCandidate!]!
+  comparableLines: Int!
+  currency: Currency!
+  """
+  Unpurchased lines that cannot be compared: no catalog item, or a unit that does not convert
+  """
+  leftOutLines: Int!
+  scope: PriceComparisonScope!
+  shoppingList: ShoppingList!
+  """True when the list held more than the 200 lines a comparison considers"""
+  truncated: Boolean!
+  """Comparable lines no observation prices, left out of every total"""
+  unpricedLines: [ShoppingListItem!]!
+  windowDays: Int!
+}
+
+input ShoppingListStoreComparisonInput {
+  listId: ID!
+  """Compare store branches (the default) or whole chains"""
+  scope: PriceComparisonScope
+  """
+  Up to five stores to compare instead of the household's own (for a
+  personal list, the caller's): those it bought at or checked a receipt in
+  at within the window, and its live lists' target stores
+  """
+  storeIds: [ID!]
+  """How far back observations count: default 90 days, at most 365"""
+  windowDays: Int
+}
+
+"""
 Subtype discriminator for shopping list domain events.
 Values match the client-side changeType contract.
 """
@@ -15058,10 +16136,24 @@ type ShoppingListSuggestion {
   name: String!
   """Popularity ranking position (for POPULAR source)"""
   popularityRank: Int
+  """
+  When the household is predicted to run out, as a calendar day counted from
+  the viewer's today; computed in instants, so it can be a day off at a
+  time-zone edge (for RUNNING_LOW source)
+  """
+  runOutOn: LocalDate
   """Shopping list item ID - only present for RECENTLY_DELETED source"""
   shoppingListItemId: ID
   """Source of this suggestion"""
   source: SuggestionSource!
+  """
+  How many days usually pass between the household's buys of it (for RUNNING_LOW source)
+  """
+  usualIntervalDays: Int
+  """
+  How much the household usually buys at once, in lastUnitId; null when its buys do not convert to one unit (for RUNNING_LOW source)
+  """
+  usualQuantity: Float
 }
 
 """
@@ -15077,6 +16169,12 @@ type ShoppingListSuggestions {
   popular: [ShoppingListSuggestion!]!
   """Items removed from this list, most recently removed first"""
   recentlyDeleted: [ShoppingListSuggestion!]!
+  """
+  What the household is predicted to run out of within two days of today, or
+  usually buys and holds none of, soonest first; named by the product it last
+  bought. Home lists only, and only with today: empty otherwise.
+  """
+  runningLow: [ShoppingListSuggestion!]!
 }
 
 """
@@ -15095,8 +16193,9 @@ type ShoppingListUsageStats {
 }
 
 """
-A recipe ingredient the cook deduction could not express in a stack's unit.
-The stack was left untouched; nothing was deducted 1:1.
+A recipe ingredient the cook deduction left: one it could not express in a
+stack's unit (nothing was deducted 1:1), or one stating no amount
+(`UNSTATED_AMOUNT`). The stack it names was left untouched.
 """
 type SkippedRecipeIngredient {
   """
@@ -15344,6 +16443,50 @@ type StockBreakdown {
   partialPackages: [PartialPackage!]!
 }
 
+"""A member's answer about a pantry stack they were asked to check"""
+enum StockCheckAnswer {
+  """Some is left: corrects the stack to the stated quantity"""
+  SOME_LEFT
+  """The stack holds what it records; confirms it and changes nothing"""
+  STILL_HAVE
+  """It was thrown out: records everything held as waste"""
+  THREW_OUT
+  """None is left: corrects the stack to zero"""
+  USED_UP
+}
+
+"""How sure the API is that a pantry stack still holds what it records"""
+enum StockConfidence {
+  """Recently confirmed, not expired, and not predicted to run out soon"""
+  HIGH
+  """
+  Probably gone or unknown; a list built against the pantry does not count it
+  """
+  LOW
+  """
+  Worth confirming soon: unconfirmed for 30 days, or predicted to run out within two days
+  """
+  MEDIUM
+}
+
+"""Why the API doubts a stack's recorded stock"""
+enum StockDoubtReason {
+  """
+  Nobody has used, restocked, corrected or confirmed it for 30 days (MEDIUM) or 60 (LOW)
+  """
+  NOT_CONFIRMED_RECENTLY
+  """
+  Its expiry date is before the caller's today; expiring today is not past it
+  """
+  PAST_EXPIRY
+  """
+  Its item's predicted run-out has passed and nobody has touched the stack since
+  """
+  PAST_PREDICTED_RUN_OUT
+  """Its item is predicted to run out within two days of the caller's today"""
+  PREDICTED_RUN_OUT_SOON
+}
+
 """Reusable sub-input for storage details"""
 input StorageDetailsInput {
   condition: ItemCondition
@@ -15589,6 +16732,38 @@ type StoreChain {
 }
 
 """
+One branch or chain the list's comparable lines are priced at, in the list's currency.
+"""
+type StoreComparisonCandidate {
+  """Lines filled from the any-store median"""
+  anyStoreFilledLines: Int!
+  """The branch's chain, or the chain compared"""
+  chain: StoreChain
+  """Lines a branch fills from its chain's median"""
+  chainFilledLines: Int!
+  """
+  Every comparable line with a price anywhere, priced here or filled; null
+  when no line has a price anywhere
+  """
+  estimatedTotal: Float
+  """The list's target store, or that store's chain"""
+  isTarget: Boolean!
+  """The newest observation behind the lines it prices itself"""
+  newestObservedAt: DateTime
+  """The oldest observation behind the lines it prices itself"""
+  oldestObservedAt: DateTime
+  """Lines priced from this branch's or chain's own observations"""
+  pricedLines: Int!
+  """
+  Prices at least half of the comparable lines itself, so its total compares
+  """
+  ranked: Boolean!
+  scope: PriceComparisonScope!
+  """The branch, when scope is STORE"""
+  store: Store
+}
+
+"""
 A page of Store results. Read "edges" for the rows and "pageInfo" to decide
 whether to request another page.
 """
@@ -15614,6 +16789,30 @@ type StoreCostBreakdown {
   storeName: String
   """What the restocks from this store cost, per currency, largest first"""
   totalSpent: [CurrencyAmount!]!
+}
+
+"""
+Where a store shelves an item. Declared in the default order a shopper walks a
+store; a learned StoreRoute reorders them per store.
+"""
+enum StoreDepartment {
+  BABY
+  BAKERY
+  BEVERAGES
+  BREAKFAST_CEREAL
+  CONDIMENTS_SPICES
+  DAIRY_EGGS
+  DELI
+  FROZEN
+  HOUSEHOLD
+  INTERNATIONAL
+  MEAT_SEAFOOD
+  OTHER
+  PANTRY
+  PERSONAL_CARE
+  PET
+  PRODUCE
+  SNACKS_CANDY
 }
 
 """
@@ -15713,7 +16912,38 @@ input StoreOrderBy {
 input StorePreferencesInput {
   aisle: String
   preferredStoreId: ID
+  """
+  The line's own store department, over its item's; null follows the item again
+  """
+  storeDepartmentOverride: StoreDepartment
   storeSection: String
+}
+
+"""
+A store's walking order: every store department once, the departments its
+shoppers reach first first. The client sorts the list's lines by it.
+"""
+type StoreRoute {
+  """When it was learned; null for the default"""
+  computedAt: DateTime
+  departments: [StoreDepartment!]!
+  source: StoreRouteSource!
+  """The store the route is for; null when the list names none"""
+  store: Store
+  """The trips the route was learned from; 0 for the default"""
+  trips: Int!
+}
+
+"""Where a store route was learned from."""
+enum StoreRouteSource {
+  """Every household's trips at this store's chain"""
+  CHAIN
+  """Nothing learned yet: the default walk"""
+  DEFAULT
+  """The list's household's own trips at this store"""
+  HOUSEHOLD
+  """Every household's trips at this store"""
+  STORE
 }
 
 input StoreSkuInput {
@@ -15842,8 +17072,9 @@ type Subscription {
     pantryId: ID!
   ): PantryEvent!
   """
-  Subscribe to one store's changes. A store is shared reference data, so
-  anyone signed in may watch one that exists; an unknown storeId is refused.
+  Subscribe to one store's changes. A store's name and place are not
+  secret, so anyone signed in may watch one that exists; an unknown
+  storeId is refused.
   """
   storeEvents(
     """The store to watch"""
@@ -15904,6 +17135,8 @@ enum SuggestionSource {
   POPULAR
   """Item was recently removed from this shopping list"""
   RECENTLY_DELETED
+  """The household is predicted to run out of it soon"""
+  RUNNING_LOW
 }
 
 """
@@ -16090,6 +17323,10 @@ enum TopLevelErrorCode {
   EMAIL_ALREADY_EXISTS
   EMAIL_ALREADY_VERIFIED
   """
+  A feature the operation needs is OFF for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags and hide the feature. A 403 — clients must not sign the user out.
+  """
+  FEATURE_DISABLED
+  """
   Authenticated, active, and not allowed. The ONE authorization code, whichever layer refuses: the auth directive family, a service-thrown AuthorizationError, or the ForbiddenError union member.
   """
   FORBIDDEN
@@ -16131,6 +17368,10 @@ enum TopLevelErrorCode {
   The request body is over the server's size limit (HTTP 413). Send a smaller body; resending the same one cannot succeed.
   """
   PAYLOAD_TOO_LARGE
+  """
+  A feature the operation needs is released but requires a plan the caller does not hold. Carries feature, the FeatureFlagName, and plan, the Plan it needs. Retrying cannot fix it: show an upgrade prompt. A 403 — clients must not sign the user out.
+  """
+  PREMIUM_REQUIRED
   """Global rate limit. Carries retryAfter in seconds."""
   RATE_LIMIT_EXCEEDED
   RESOURCE_ALREADY_EXISTS
@@ -18275,13 +19516,17 @@ type UserSettings {
   alwaysShowFractions: Boolean!
   """Whether the app syncs automatically"""
   autoSync: Boolean!
-  """Names of the beta features the user has opted into; empty when none"""
+  """
+  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
+  """
   betaFeatures: [String!]!
   """Whether the app uses its compact layout"""
   compactMode: Boolean!
   """When the settings row was created"""
   createdAt: DateTime!
-  """Names of the features the user has turned on; empty when none"""
+  """
+  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
+  """
   enabledFeatures: [String!]!
   """The settings row's unique identifier"""
   id: ID!

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
@@ -10,10 +10,7 @@ import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
-import type {
-  ItemSelectorRef,
-  SelectorConfig,
-} from '#components/organisms/AnimatedItemSelector/types';
+import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
 interface ShoppingList {
@@ -51,17 +48,8 @@ export const ShoppingListPickerSheet: React.FC<
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const selectorRef = useRef<ItemSelectorRef>(null);
   const [newListName, setNewListName] = useState(defaultNewListName);
   const [naming, setNaming] = useState(false);
-
-  useEffect(() => {
-    if (visible) {
-      selectorRef.current?.open();
-    } else {
-      selectorRef.current?.close();
-    }
-  }, [visible]);
 
   const renderCustomItem = (
     item: ShoppingList,
@@ -142,7 +130,7 @@ export const ShoppingListPickerSheet: React.FC<
 
   return (
     <AnimatedItemSelector
-      ref={selectorRef}
+      isVisible={visible}
       config={config}
       onClose={() => {
         setNaming(false);

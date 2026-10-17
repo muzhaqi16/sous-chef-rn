@@ -90,7 +90,10 @@ export function toDisplayNotification(
   const payload: NotificationPayload = isNotificationPayload(n.payload)
     ? n.payload
     : {};
-  const { requiresAction, actionType } = getNotificationAction(type);
+  const { requiresAction, actionType } = getNotificationAction(
+    type,
+    n.pantryItemId,
+  );
 
   return {
     id: n.id,

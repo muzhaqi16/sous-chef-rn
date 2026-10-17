@@ -3,6 +3,8 @@
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
+import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
+import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
 import type { Theme } from '#/theme/themes';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 
@@ -93,6 +95,28 @@ describe('BaseItemCard', () => {
     );
     await user.press(getByText('Pressable'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // The row centres its slots; both text columns must leave that centre for its
+  // top, or a title with no subtitle sits half a line below its meta.
+  it('stacks the title and the meta from the row top, subtitle or not', () => {
+    type Node = ReturnType<ReturnType<typeof render>['getByText']>;
+    // The nearest host View above a text: the column it sits in.
+    const columnOf = (text: Node) => {
+      let node = text.parent;
+      while (node && typeof node.type !== 'string') node = node.parent;
+      return node;
+    };
+    const { getByText } = render(
+      <BaseItemCard rightElement={<CardRightSlot primary="1 g" />}>
+        <CardContent title="Feta Cheese" />
+      </BaseItemCard>,
+    );
+
+    expect(columnOf(getByText('Feta Cheese'))).toHaveStyle({
+      alignSelf: 'stretch',
+    });
+    expect(columnOf(getByText('1 g'))).toHaveStyle({ alignSelf: 'stretch' });
   });
 
   it('uses SwipeableItem when swipe actions provided', () => {

@@ -50,6 +50,7 @@ export interface SelectorConfig<T extends SelectableItem> {
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
+  /** Opens and closes the tray from a flag; the ref does the same imperatively. */
   isVisible?: boolean;
   onClose?: () => void;
   onOpen?: (afterDone?: () => void) => void;

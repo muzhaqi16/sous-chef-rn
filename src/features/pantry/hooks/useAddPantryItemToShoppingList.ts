@@ -34,7 +34,7 @@ export function useAddPantryItemToShoppingList() {
     if (!shoppingListId) return 'reverted';
     const { outcome } = await createShoppingListRow(client.cache, {
       listId: shoppingListId,
-      row: { itemName: display.itemName, itemId, unitId: display.unitId },
+      row: { itemName: display.itemName, unitId: display.unitId },
       line: { item: { itemId } },
       send: addToShoppingList,
       document: AddItemToShoppingListFromFilteredPantryDocument,

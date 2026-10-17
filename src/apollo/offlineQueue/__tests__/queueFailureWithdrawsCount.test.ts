@@ -118,6 +118,7 @@ const failure = (
   operationName: operationNameOf(CreatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'pi-local',
+  subjectType: 'PantryItem',
   variables: { input: { id: 'pi-local', pantryId: 'p-1' } },
   error: {
     type: 'server',

@@ -158,6 +158,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       case NotificationType.ItemDeleted:
         return userPreferences.pantryChanges;
       case NotificationType.LowStock:
+      case NotificationType.RunningLow:
         return userPreferences.lowStockAlerts;
       case NotificationType.ExpiryReminder:
         return userPreferences.expirationNotifications;

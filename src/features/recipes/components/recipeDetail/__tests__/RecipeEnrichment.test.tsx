@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { RecipeEnrichment } from '../RecipeEnrichment';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { lightTheme } from '#/theme/themes';
 
 const NUTRITION = {
   nutrients: [
@@ -45,6 +46,18 @@ describe('RecipeEnrichment', () => {
   it('shows the draft badge for an unpublished backend recipe', () => {
     render(<RecipeEnrichment status={RecipeStatus.Draft} />);
     expect(screen.getByText('Draft — not published')).toBeTruthy();
+  });
+
+  // The screen's next block (About) adds no space above itself.
+  it('leaves the gap below its status line', () => {
+    render(
+      <RecipeEnrichment
+        status={RecipeStatus.Draft}
+        reviewNote="Add the oven temperature."
+      />,
+    );
+
+    expect(screen.root).toHaveStyle({ marginBottom: lightTheme.spacing.md });
   });
 
   // Submitting lands in review, never straight in PUBLISHED: a publish badge

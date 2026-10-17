@@ -237,7 +237,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   field: {
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   reason: {

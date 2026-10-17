@@ -22,6 +22,7 @@ import { LogoutCleanup } from '../logoutCleanup';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { operationNameOf } from '../utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
@@ -43,6 +44,8 @@ import { useStore } from '#store';
 const FORBIDDEN: string = ErrorCode.Forbidden;
 const ACCOUNT_SUSPENDED: string = ErrorCode.AuthAccountSuspended;
 const CLIENT_UPGRADE_REQUIRED: string = TopLevelErrorCode.ClientUpgradeRequired;
+const FEATURE_DISABLED: string = TopLevelErrorCode.FeatureDisabled;
+const PREMIUM_REQUIRED: string = TopLevelErrorCode.PremiumRequired;
 
 const isResourceAccessError = (code: string) => code === FORBIDDEN;
 
@@ -108,6 +111,16 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     for (const err of error.errors) {
       const code = extensionText(err.extensions?.code, '');
       const message = String(err.message || '');
+
+      // The feature is off for this user, or needs a plan they do not hold: no
+      // retry or refresh changes that, and it is never a sign-out. The flags
+      // are asked again, so every screen that offers the feature stops.
+      if (code === FEATURE_DISABLED || code === PREMIUM_REQUIRED) {
+        void operation.client.refetchQueries({
+          include: [MyFeatureFlagsDocument],
+        });
+        return;
+      }
 
       // The build is below the server's minimum version. Terminal by
       // definition — a retry sends the same version, and a token refresh

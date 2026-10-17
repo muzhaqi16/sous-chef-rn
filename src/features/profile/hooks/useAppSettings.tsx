@@ -31,8 +31,6 @@ export interface AppSettings {
   autoSync: boolean;
   offlineMode: boolean;
   preferredUnitSystem: UnitSystem;
-  enabledFeatures: string[];
-  betaFeatures: string[];
 }
 
 export const useAppSettings = () => {
@@ -59,8 +57,6 @@ export const useAppSettings = () => {
       offlineMode: settings?.offlineMode ?? false,
       // The server's default, and what a user with no settings row reads.
       preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.System,
-      enabledFeatures: settings?.enabledFeatures ?? [],
-      betaFeatures: settings?.betaFeatures ?? [],
     };
   };
 
@@ -91,13 +87,6 @@ export const useAppSettings = () => {
     }
     if ('preferredUnitSystem' in updates) {
       input.regional = { preferredUnitSystem: updates.preferredUnitSystem };
-    }
-    if ('enabledFeatures' in updates || 'betaFeatures' in updates) {
-      input.features = {};
-      if ('enabledFeatures' in updates)
-        input.features.enabledFeatures = updates.enabledFeatures;
-      if ('betaFeatures' in updates)
-        input.features.betaFeatures = updates.betaFeatures;
     }
     return input;
   };

@@ -87,6 +87,8 @@ function writeRecipeRow(
           ? RecipeStatus.Draft
           : RecipeStatus.PendingReview,
       originalAuthor: input.attribution?.originalAuthor ?? null,
+      source: input.attribution?.source ?? null,
+      sourceUrl: input.attribution?.sourceUrl ?? null,
       tips: input.tips ?? null,
       tags: input.tags ?? [],
       // The create input's JSON is the same runtime instructions array the
@@ -101,7 +103,8 @@ function writeRecipeRow(
             __typename: 'RecipeIngredient',
             id: generateEntityId(),
             name: ing.name,
-            quantity: ing.quantity,
+            quantity: ing.quantity ?? null,
+            originalText: ing.originalText ?? null,
             estimatedPrice: ing.estimatedPrice ?? null,
             isOptional: ing.isOptional ?? false,
             notes: ing.notes ?? null,
@@ -160,6 +163,15 @@ export function upsertMyRecipesEdge(
       },
     };
   });
+}
+
+/**
+ * The server made a recipe this device never wrote (a capture saved it): the
+ * cached lists of the user's recipes are dropped, so the next read fetches.
+ */
+export function forgetMyRecipesLists(cache: ApolloCache): void {
+  cache.evict({ id: 'ROOT_QUERY', fieldName: 'recipes' });
+  cache.gc();
 }
 
 /** Remove a recipe edge from MyRecipes. */

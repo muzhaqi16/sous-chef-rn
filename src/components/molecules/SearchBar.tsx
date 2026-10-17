@@ -34,7 +34,8 @@ export interface SearchBarAction {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   library?: string;
   style?: StyleProp<ViewStyle>;
-  accessibilityLabel?: string;
+  /** What the button does; its icon's name is no label. */
+  accessibilityLabel: string;
   animated?: boolean;
   isHighlighted?: boolean;
   testID?: string; // Optional testID for E2E testing
@@ -244,9 +245,6 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
         <View style={styles.actionsContainer}>
           {actions.map((action, index) => {
             const key = `${side}-${index}-${action.icon}`;
-            const fallbackLabel = t('searchBar.actionFallback', {
-              icon: action.icon,
-            });
             const button = (
               <ThemedActionButton
                 key={key}
@@ -259,7 +257,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
                     action.backgroundColor ?? theme.colors.primary,
                 })}
                 size={action.size}
-                accessibilityLabel={action.accessibilityLabel ?? fallbackLabel}
+                accessibilityLabel={action.accessibilityLabel}
                 isHighlighted={action.animated ? action.isHighlighted : false}
                 testID={action.testID}
               />

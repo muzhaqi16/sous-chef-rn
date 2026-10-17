@@ -41,6 +41,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     minWidth: 0,
+    // Stacks from the row's top like `CardRightSlot`: a centred column puts a
+    // title with no subtitle half a line below the meta beside it.
+    alignSelf: 'stretch',
   },
   title: {
     marginBottom: theme.layout.rowTextGap,

@@ -36,16 +36,30 @@ export const useUserPreferences = () => {
 };
 
 /**
- * Narrow selector hook for showShoppingListImages.
- * Minimizes re-renders by only subscribing to the boolean value.
+ * One per-user preference and its setter, subscribed on its own so a change to
+ * another preference does not re-render the reader.
  */
-export const useShowShoppingListImages = (): boolean => {
+export function useUserPreference<K extends keyof UserPreferences>(
+  key: K,
+): [
+  Required<UserPreferences>[K],
+  (value: Required<UserPreferences>[K]) => void,
+] {
   const userId = useUserId();
-  const userPreferencesMap = useAppStore(state => state.userPreferences);
-
-  if (!userId) return defaultUserPreferences.showShoppingListImages;
-  return (
-    userPreferencesMap[userId]?.showShoppingListImages ??
-    defaultUserPreferences.showShoppingListImages
+  const stored = useAppStore(state =>
+    userId ? state.userPreferences[userId]?.[key] : undefined,
   );
-};
+  const setUserPreference = useAppStore(state => state.setUserPreference);
+
+  const setValue = (value: Required<UserPreferences>[K]) => {
+    if (!userId) return;
+    const update: Partial<UserPreferences> = {};
+    update[key] = value;
+    setUserPreference(userId, update);
+  };
+
+  return [stored ?? defaultUserPreferences[key], setValue];
+}
+
+export const useShowShoppingListImages = (): boolean =>
+  useUserPreference('showShoppingListImages')[0];

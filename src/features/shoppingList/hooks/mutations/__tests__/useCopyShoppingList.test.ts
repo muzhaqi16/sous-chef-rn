@@ -33,14 +33,17 @@ const USER = {
 function derivedList(lines: number): DerivedList {
   const items = Array.from({ length: lines }, (_, i) => ({
     id: `line-${i}`,
-    item: { itemName: `Item ${i}` },
+    item: { inline: { id: `item-${i}`, name: `Item ${i}` } },
     quantity: '1',
   }));
   return {
     list: { name: 'Copy' },
     items,
     display: new Map(
-      items.map(line => [line.id, { itemName: line.item.itemName }]),
+      items.map(line => [
+        line.id,
+        { itemName: line.item.inline.name, itemId: line.item.inline.id },
+      ]),
     ),
     skipped: [],
   };

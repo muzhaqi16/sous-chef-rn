@@ -128,14 +128,17 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByTestId('purchase-quantity-input').props.value).toBe('2');
   });
 
-  it('pre-fills the price input with the estimated total (per-unit estimate × quantity)', () => {
+  it('hints the estimated total (per-unit estimate × quantity) without entering it as paid', () => {
     renderWithInit(buildProps());
+    const price = screen.getByTestId('purchase-price-input');
+    expect(price.props.value).toBe('');
     // 4.99 per unit × 2 requested
-    expect(screen.getByTestId('purchase-price-input').props.value).toBe('9.98');
+    expect(price.props.placeholder).toBe('9.98');
   });
 
   it('shows how the total splits per unit when the quantity is not 1', () => {
     renderWithInit(buildProps());
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
     // Named in the line's OWN unit — the field beside it already says "cups",
     // so a generic "per unit" reads as a different measure.
     expect(screen.getByText(/4\.99 per cups/)).toBeTruthy();
@@ -146,11 +149,13 @@ describe('PurchaseAmountSheet', () => {
 
   it('falls back to a generic unit when the line carries none', () => {
     renderWithInit(buildProps({ item: makeItem({ unitName: null }) }));
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
     expect(screen.getByText(/4\.99 per unit/)).toBeTruthy();
   });
 
   it('hides the per-unit hint at quantity 1, where it would repeat the total', () => {
     renderWithInit(buildProps());
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
     fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '1');
     expect(screen.queryByText(/per unit/)).toBeNull();
   });
@@ -160,16 +165,18 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByText('cups')).toBeTruthy();
   });
 
-  it('leaves the price input empty when estimatedPrice is null', () => {
+  it('hints a sample amount when there is no estimate', () => {
     renderWithInit(buildProps({ item: makeItem({ estimatedPrice: null }) }));
-    expect(screen.getByTestId('purchase-price-input').props.value).toBe('');
+    const price = screen.getByTestId('purchase-price-input');
+    expect(price.props.value).toBe('');
+    expect(price.props.placeholder).toBe('0.00');
   });
 
-  it('confirms with the pre-filled values', async () => {
+  it('records an untouched price as unknown, never as the estimate', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
     fireEvent.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(2, 9.98);
+    expect(onConfirm).toHaveBeenCalledWith(2, null);
   });
 
   it('hands the entered total to onConfirm as typed — no per-unit maths here', async () => {
@@ -184,6 +191,7 @@ describe('PurchaseAmountSheet', () => {
   it('passes null price to onConfirm when the price input is cleared', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
     fireEvent.changeText(screen.getByTestId('purchase-price-input'), '');
     fireEvent.press(screen.getByTestId('header-action-0'));
     expect(onConfirm).toHaveBeenCalledWith(2, null);
@@ -193,6 +201,7 @@ describe('PurchaseAmountSheet', () => {
     const user = userEvent.setup();
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
     await user.press(screen.getByTestId('header-action-0'));
     expect(onConfirm).toHaveBeenCalledWith(2, 9.98);
   });
@@ -224,7 +233,9 @@ describe('PurchaseAmountSheet', () => {
     );
     expect(screen.getByTestId('purchase-quantity-input').props.value).toBe('5');
     // 1.25 per unit × 5 requested
-    expect(screen.getByTestId('purchase-price-input').props.value).toBe('6.25');
+    expect(screen.getByTestId('purchase-price-input').props.placeholder).toBe(
+      '6.25',
+    );
   });
 
   it('does not confirm via the header checkmark while loading', () => {
@@ -298,7 +309,7 @@ describe('an unusable quantity is refused, not substituted', () => {
 
     expect(screen.queryByTestId('purchase-quantity-error')).toBeNull();
     fireEvent.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(4, 9.98);
+    expect(onConfirm).toHaveBeenCalledWith(4, null);
   });
 });
 

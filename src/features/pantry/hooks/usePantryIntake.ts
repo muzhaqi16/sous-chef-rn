@@ -1,25 +1,37 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  addPantryItemLocally,
   reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
+import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import {
-  writeLocalPantryItem,
-  type LocalPantryItem,
-} from '#features/pantry/cache/writeLocalPantryItem';
+  localIntakeRow,
+  writeLocalIntake,
+} from '#features/pantry/cache/localIntake';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
-import { localQuantity } from '#domain/stockAmount';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
+import type {
+  CreatePantryItemInput,
+  PantryItemSourceInput,
+} from '#/graphql/generated/schemaTypes';
+
+/**
+ * A typed item goes under an id minted here, which the row names at once: the
+ * server creates the item under it, or remembers it for the item it matched.
+ */
+const withMintedItemId = (item: PantryItemSourceInput): PantryItemSourceInput =>
+  item.inline && !item.inline.id
+    ? { inline: { ...item.inline, id: generateEntityId() } }
+    : item;
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -61,9 +73,12 @@ export function usePantryIntake(pantryId: string | undefined) {
         // Read outside the try: `?.` is a value block, and one inside a try
         // body bails the React Compiler out of the whole function.
         const clientId = variables?.input.id;
+        const mintedItemId = variables?.input.item.inline?.id;
 
         try {
           reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
+          // A typed item the API matched: the row names the one it holds.
+          adoptServerEntityId(cache, 'Item', pantryItem.item.id, mintedItemId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for createPantryItem:',
@@ -92,47 +107,23 @@ export function usePantryIntake(pantryId: string | undefined) {
     }
 
     const id = generateEntityId();
+    const sent = { ...input, item: withMintedItemId(input.item) };
     // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    // Built outside the try: a value block inside a try body bails the compiler.
-    const localRow: LocalPantryItem = {
-      pantryId,
-      itemName,
-      itemId: input.item.id ?? null,
-      quantity:
-        input.quantity ??
-        (input.amount ? localQuantity(input.amount, {}) : undefined),
-      unitId:
-        input.unit?.id ??
-        input.amount?.measured?.unitId ??
-        input.amount?.packages?.unitId,
-      storageState: input.storage?.storageState,
-      acquisitionMethod: input.purchase?.acquisitionMethod,
-      ...local,
-    };
-
-    try {
-      // Publishes the row AND counts it, so the header cannot fall behind the
-      // list offline, where no response arrives to correct it.
-      writeLocalPantryItem(client.cache, id, localRow);
-      addPantryItemLocally(client.cache, pantryId, {
-        __typename: 'PantryItem',
-        id,
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Pantry Item (optimistic)',
-      });
-    }
+    writeLocalIntake(
+      client.cache,
+      id,
+      localIntakeRow(pantryId, itemName, sent, local),
+    );
 
     let result;
     let thrown: unknown;
     const today = todayKey();
     try {
       result = await createPantryItem({
-        variables: { input: { ...input, id, pantryId, today }, today },
+        variables: { input: { ...sent, id, pantryId, today }, today },
       });
     } catch (error) {
       thrown = error;

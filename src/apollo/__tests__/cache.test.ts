@@ -6,6 +6,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 import { gql, InMemoryCache } from '@apollo/client';
+import { parse } from 'graphql';
 import { makeCache } from '../cache';
 import { queueStore } from '../offlineQueue/queueStore';
 import { QueueStatus } from '../offlineQueue/types';
@@ -2580,5 +2581,40 @@ describe('cache', () => {
       expect(result?.name).toBe('Banana Updated');
       expect(result?.imageUrl).toBe('https://example.com/banana.jpg');
     });
+  });
+
+  describe('by-id root fields', () => {
+    // A move answers `shoppingListItem: null` for the line it takes off the
+    // list, and an add that reuses that line writes it back under the same id.
+    it.each([
+      ['shoppingListItem', 'ShoppingListItem'],
+      ['shoppingList', 'ShoppingList'],
+      ['pantryItem', 'PantryItem'],
+      ['pantry', 'Pantry'],
+      ['recipe', 'Recipe'],
+      ['home', 'Home'],
+    ])(
+      'Query.%s reads a %s written back after the server answered null',
+      (field, typename) => {
+        const cache = makeCache();
+        const query = parse(
+          `query ById($id: ID!) { ${field}(id: $id) { id } }`,
+        );
+        const variables = { id: 'reused-1' };
+
+        cache.writeQuery({ query, variables, data: { [field]: null } });
+        expect(cache.readQuery({ query, variables })).toEqual({
+          [field]: null,
+        });
+
+        cache.writeFragment({
+          fragment: parse(`fragment WrittenBack on ${typename} { id }`),
+          data: { __typename: typename, id: 'reused-1' },
+        });
+        expect(cache.readQuery({ query, variables })).toMatchObject({
+          [field]: { id: 'reused-1' },
+        });
+      },
+    );
   });
 });

@@ -11,7 +11,6 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
-  BatchAddShoppingListItemInput,
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
@@ -24,6 +23,7 @@ import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items
 import {
   createShoppingListRow,
   type ShoppingRowFields,
+  type ShoppingRowLine,
 } from '#features/shoppingList/cache/createShoppingListRow';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
@@ -121,10 +121,7 @@ export function useShoppingListItemWrites(
     context: { localFirst: true },
   });
 
-  const createItem = async (
-    row: ShoppingRowFields,
-    line: Omit<BatchAddShoppingListItemInput, 'id'>,
-  ) => {
+  const createItem = async (row: ShoppingRowFields, line: ShoppingRowLine) => {
     const created = await createShoppingListRow(client.cache, {
       listId,
       row,

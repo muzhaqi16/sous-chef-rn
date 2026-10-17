@@ -87,32 +87,36 @@ grep -n "bottomPadding\|paddingBottom" node_modules/react-native-keyboard-contro
 grep -n "mode = \"insets\"" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
-### RNGH v3 handlers survive a native scroll takeover
+### A native scroll takeover cancels a pending RNGH v3 gesture
 
-**Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while
-the user is only scrolling, and no activation distance prevents it. RNGH does
-not cancel v3 gesture handlers when a native scrollable takes the touch stream.
+**Claim:** when a native scrollable takes the touch stream on Android, RNGH
+cancels every v3 detector gesture that has not activated. A
+`ReanimatedSwipeable` row stays shut through a drifting scroll, and a tap that
+only stops a fling presses nothing — over React Native's `ScrollView` as well
+as RNGH's.
 
-**Verified against `react-native-gesture-handler@3.3.0`,** and on device by a
-controlled A/B (2026-08-24). The swipe pan registers as a v3 detector handler
-(action types 5 / 6). `cancelAllLegacyHandlers` in
-`GestureHandlerOrchestrator.kt` matches only types 1–4, and
-`cancelHandlersOnNativeTouchGrab` covers only a `NativeViewGestureHandler`.
+**Verified against `react-native-gesture-handler@3.4.0`** (2026-10-16), in
+source and by an on-device A/B on the pantry list (emulator, synthetic input)
+with 3.3.0 as the control:
 
-**The fix is to make the scrollable an RNGH handler,** so its activation
-cancels the row's pan through the orchestrator: FlashList takes RNGH's
-`ScrollView` via `renderScrollComponent`.
-`src/components/atoms/SwipeAwareScrollComponent.tsx` is the single place this
-is wired; `sous-chef/rngh-refresh-control-matches-host` guards it.
+| Pantry list                        | 3.3.0                    | 3.4.0              |
+| ---------------------------------- | ------------------------ | ------------------ |
+| Drifting scroll, RN `ScrollView`   | the row opens mid-scroll | stays shut (2 / 2) |
+| Drifting scroll, RNGH `ScrollView` | stays shut               | stays shut         |
+| Tap to stop a fling, RNGH host     | presses the row (3 / 3)  | no press (0 / 3)   |
+| Tap to stop a fling, RN host       | not run                  | no press (0 / 2)   |
 
-What does NOT fix it:
+`cancelHandlersOnNativeTouchGrab` in `GestureHandlerOrchestrator.kt` cancels a
+non-active handler whose action type is a native or virtual detector, and
+`cancelHandlersOnNativeTouchCancel` catches a takeover the root never hears
+about by the `ACTION_CANCEL` it sends down. `cancelAllLegacyHandlers` still
+matches v1/v2 alone, so before 3.4.0 an RNGH host was the only arbitration —
+and even that pressed a row on a fling-stopping tap.
 
-- An activation distance: `activeOffsetX` is measured from touch-down with no
-  time limit, so a long scroll crosses any threshold.
-- `touchAction="pan-y"` on the detectors: implemented on web only.
-- `RNGestureHandlerDetectorView`'s `requestDisallowInterceptTouchEvent`
-  override: the call propagates upward, and a row's detector sits below the
-  ScrollView.
+**Every swipeable list still takes `SwipeAwareScrollComponent`:** RNGH's
+refresh control needs an RNGH host (next entry), and the A/B covers one list —
+the shopping list's sits inside a pager. Dropping the host is a separate,
+measured change.
 
 Never pass `minDistance` beside `activeOffsetX` (`validatePanConfig` throws),
 and `dragOffsetFromRight` throws in `__DEV__` unless non-positive.
@@ -121,8 +125,7 @@ Re-check:
 
 ```
 node scripts/probe-rngh-nested-scroll.mjs
-grep -n "cancelAllLegacyHandlers" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
-grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
+grep -n "fun cancelHandlersOnNativeTouchGrab" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 ```
 
 ### RNGH's scroll gesture reaches only RNGH's RefreshControl
@@ -132,8 +135,8 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 `block` prop that only its own `RefreshControl` consumes; RN's control receives
 it as an unknown prop. Nothing throws, warns, or type-errors.
 
-**Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.5.3` + `@shopify/flash-list@2.3.3`** (2026-10-13).
+**Verified against `react-native-gesture-handler@3.4.0` +
+`react-native-unistyles@3.5.3` + `@shopify/flash-list@2.3.3`** (2026-10-16).
 
 - **RN's control arrives unnamed.** A list that passes only
   `onRefresh`/`refreshing` gets the control FlashList builds, which is React
@@ -162,12 +165,14 @@ retraction path androidx's `SwipeRefreshLayout` needs. This is the upstream fix
 for the parked Android refresh spinner — but the app still forces
 `nestedScrollEnabled={false}`, because nothing here has measured the removal.
 
-**Verified against `react-native-gesture-handler@3.3.0` +
-`react-native@0.86.3`.** Under a `refreshControl` on Android, RN defaults
-`nestedScrollEnabled` to `true`, and an explicit `false` survives.
+**Verified against `react-native-gesture-handler@3.4.0` +
+`react-native@0.86.3`** (2026-10-16). Under a `refreshControl` on Android, RN
+defaults `nestedScrollEnabled` to `true`, and an explicit `false` survives.
 `NativeViewGestureHandler.kt`'s `ScrollViewHook` overrides
 `shouldStopNestedScroll() = true`, so the handler calls
-`view.stopNestedScroll()` when the gesture ends and the indicator retracts.
+`view.stopNestedScroll()` when the gesture ends and the indicator retracts; the
+orchestrator does the same for a view it cancels when the root starts
+intercepting.
 
 **Why the override stays.** A controlled A/B on the meal plan, 3.2.1 vs 3.3.0,
 both with the override removed, could not reproduce the park on EITHER build
@@ -742,7 +747,7 @@ Verified 2026-09-30 on the iPhone 18 Pro simulator (iOS 27, arm64) through
 
 **Claim:** Vision returns a receipt's left column top to bottom, and then its
 price column as separate observations. A row's name and price are never one
-observation, so `receipts/utils/assembleReceiptLines.ts` rebuilds rows by
+observation, so `receipts/utils/assembleReceiptRows.ts` rebuilds rows by
 vertical overlap before redaction and parsing. On a rendered 18-row receipt:
 the 16 left-column rows first, then 8 prices, each price's `y` within 0.005 of
 its row's. The same call deletes the pages it read, plus any
@@ -767,7 +772,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt: it invented purchase dates, negated item prices and shifted line indices. On a longer, skewed receipt it numbers lines itself, skipping lines with no words.
 
-So `receipts/utils/structureReceipt.ts` reads every figure from the printed text, places each label by the words it copied, lets the printed words overrule a label, and `isUsableReceipt` asks for 75% of lines placed. Labelling took a median 0.55 s per labelled line on the simulator (2026-10-02, 32-receipt corpus), and 5 receipts of 48–79 lines ran past the 20 s timeout.
+So `receipts/utils/structureReceipt.ts` reads every figure from the printed text, places each label by the words it copied, and lets the printed words overrule a label. A model reading is kept only when the receipt rules' check accepts it (`checkOnPhone`). Labelling took a median 0.55 s per labelled line on the simulator (2026-10-02, 32-receipt corpus), and 5 receipts of 48–79 lines ran past the 20 s timeout.
 
 Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 `globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.

@@ -22,6 +22,15 @@ export interface PreparedPhoto {
   fileSize: number;
 }
 
+/**
+ * A polygon painted opaque over a photo: `points` are x, y pairs in fractions
+ * of the page, grown on every side by `margin`, a fraction of its height.
+ */
+export interface PhotoMask {
+  points: number[];
+  margin: number;
+}
+
 type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';
 
 // A build older than a method lacks it.
@@ -99,5 +108,22 @@ export const TextRecognition = {
 
   async deletePhotos(imageUris: readonly string[]): Promise<void> {
     await call('deletePhotos', imageUris);
+  },
+
+  /** Whether this build can paint masks over a photo before it goes up. */
+  canMaskPhotos(): boolean {
+    return nativeMethod('TextRecognitionModule', 'maskPhotos') !== null;
+  },
+
+  /**
+   * Paints each prepared photo's masks over it, rewriting it in place. Null
+   * where the build cannot mask: the photos are left as they were.
+   */
+  async maskPhotos(
+    photos: readonly { uri: string; masks: readonly PhotoMask[] }[],
+  ): Promise<PreparedPhoto[] | null> {
+    const method = nativeMethod('TextRecognitionModule', 'maskPhotos');
+    if (!method) return null;
+    return parseList(await method(photos), toPhoto);
   },
 };

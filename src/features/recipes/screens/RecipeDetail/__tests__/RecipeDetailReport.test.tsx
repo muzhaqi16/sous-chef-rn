@@ -8,6 +8,10 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import type { ReportContentSheet } from '#features/profile/ui/ReportContentSheet';
 import { RecipeDetail } from '../index';
 
+// Capture's review banner has its own suite; this one renders without Apollo.
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => false,
+}));
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');

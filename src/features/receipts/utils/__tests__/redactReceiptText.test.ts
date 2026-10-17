@@ -120,13 +120,15 @@ describe('redactReceiptText', () => {
     ]);
   });
 
-  it('Costco: a member number recognition broke with a bar goes from the header', () => {
+  it('Costco: a member number recognition broke with a bar or misspelled goes from the header', () => {
     expect(
       redactOne([
         'COSTCO WHOLESALE',
         'Leesburg #123',
         '9Q Member 123| 456',
         'Member 1l2I 345!678',
+        '04 Menber 111222333444',
+        'Mernber 111222333444',
         '540003 FIRE EXT.  39.99 A',
       ]),
     ).toEqual([
@@ -169,6 +171,12 @@ describe('redactReceiptText', () => {
     ).toEqual([['Celery  1.65  FA', 'VISA  16.19']]);
   });
 
+  it('ALDI US: a reference goes when recognition reads its Seq as Seg', () => {
+    expect(
+      redactOne(['Celery  1.65  FA', '09/30/26 09:51 Ref/Seg # 123456']),
+    ).toEqual(['Celery  1.65  FA']);
+  });
+
   it('ALDI UK: the British spelling and a partly masked merchant id go', () => {
     expect(
       redactReceiptText([
@@ -195,6 +203,124 @@ describe('redactReceiptText', () => {
         'VISA 1234.56',
       ]),
     ).toEqual(['TAX  0.49', 'VISA  12.50', 'VISA 1234.56']);
+  });
+
+  it('Giant Eagle: the name of the staff member who helped is masked', () => {
+    expect(
+      redactOne([
+        '#1619 EDGEWOOD',
+        'Helped by GEORGETTE N',
+        'POTATO SLD  8.99 F',
+      ]),
+    ).toEqual(['#1619 EDGEWOOD', 'Helped by [name]', 'POTATO SLD  8.99 F']);
+  });
+
+  it('Giant Eagle: a cashier is masked when recognition misspells the words around them', () => {
+    expect(
+      redactOne(['6493 Strip Ave. N', 'Yaur Cashier Todey was Sam K']),
+    ).toEqual(['6493 Strip Ave. N', 'Yaur Cashier Todey was [name]']);
+    expect(redactOne(['Yaur Cashier Today vas Sam K'])).toEqual([
+      'Yaur Cashier Today vas [name]',
+    ]);
+  });
+
+  it("masks an email and a customer's phone, and keeps the store's phone and a count's price", () => {
+    expect(
+      redactOne([
+        'SAMPLE MART  (412) 555-0100',
+        'Receipts to pat@example.com',
+        'WHOLE MILK  3.48',
+        '2@4.99',
+        'Callback 412-555-0199',
+      ]),
+    ).toEqual([
+      'SAMPLE MART  (412) 555-0100',
+      'Receipts to [email]',
+      'WHOLE MILK  3.48',
+      '2@4.99',
+      'Callback [phone]',
+    ]);
+  });
+
+  it('Walmart: the manager printed after the phone number is masked', () => {
+    expect(
+      redactOne(['4125550100 Mgr. PAT', 'BANANAS 000000004011 KF  1.24 N']),
+    ).toEqual(['4125550100 Mgr. [name]', 'BANANAS 000000004011 KF  1.24 N']);
+  });
+
+  it("East End co-op: the member's name goes, and nothing after a change read apart from its amount", () => {
+    expect(
+      redactOne([
+        'Inv#:00123456 Trs#:654321',
+        'DOE, JANE',
+        'Goat Cheese - Honey 4 oz  $4.69 F',
+        'TOTAL SALES  $4.69',
+        'Visa',
+        '$0.00',
+        'Change',
+        'NETWORK.ID:VISA',
+        'SEQUENCE #: 123456',
+        'AUTHOR #: 654321',
+      ]),
+    ).toEqual([
+      'Inv#:00123456 Trs#:654321',
+      '[name]',
+      'Goat Cheese - Honey 4 oz  $4.69 F',
+      'TOTAL SALES  $4.69',
+      'Visa',
+      '$0.00',
+      'Change',
+    ]);
+  });
+
+  it('drops a spelled-out sequence number and a shortened authorisation label anywhere', () => {
+    expect(
+      redactOne(['MILK  3.48', 'SEQUENCE #: 123456', 'AUTHOR #: 654321']),
+    ).toEqual(['MILK  3.48']);
+  });
+
+  it('keeps a bare balance, which some tills print as the total, a town and its state, and a priced item', () => {
+    expect(
+      redactOne([
+        'CAMERON, MO',
+        'PEPPERS, GREEN  1.99',
+        '**** BALANCE',
+        '18.76',
+        'Org Pinto/Kid Bean  0.99  FA',
+      ]),
+    ).toEqual([
+      'CAMERON, MO',
+      'PEPPERS, GREEN  1.99',
+      '**** BALANCE',
+      '18.76',
+      'Org Pinto/Kid Bean  0.99  FA',
+    ]);
+  });
+
+  it('keeps an item that only starts like a staff label', () => {
+    expect(redactOne(['TEAM MEMBER', 'SERVER 4.99'])).toEqual([
+      'TEAM MEMBER',
+      'SERVER 4.99',
+    ]);
+  });
+
+  // The duplicate receipt prints dots for spaces.
+  it('Giant Eagle duplicate: dotted payment rows go, a dotted name is masked', () => {
+    expect(
+      redactOne([
+        '........COTTAGE.CHSE...........4.79.F',
+        '.....Cashier:.PAT.................',
+        '***.REF.#.51833069687....H........',
+        'AID:.A0000000031010...............',
+        'TERMINAL:.393.....................',
+        '...****.BALANCE...............28.32..',
+        'DATE:.10/15/26..TIME:.04:18pm',
+      ]),
+    ).toEqual([
+      '........COTTAGE.CHSE...........4.79.F',
+      '.....Cashier:.[name]',
+      '...****.BALANCE...............28.32..',
+    ]);
   });
 
   it("Trader Joe's: a labelled chip cryptogram goes", () => {

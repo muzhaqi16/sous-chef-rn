@@ -119,6 +119,11 @@ export interface FailedMutationInfo {
   entityType: string | null;
   entityId: string | null;
   /**
+   * The type the write's input names its subject as: what the user is told was
+   * not saved when the cache does not hold the row (a removal evicts it).
+   */
+  subjectType: string | null;
+  /**
    * The refused write's own variables. The generic evict of
    * `entityType`/`entityId` covers a create; an operation that also UNLINKED
    * something needs its own withdrawal, which needs to know which row.

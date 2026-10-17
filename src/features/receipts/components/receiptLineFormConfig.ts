@@ -1,13 +1,13 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
 import {
   lazyMessage,
-  optionalMoneyRule,
   parseMoneyInput,
   quantityRule,
 } from '#/utils/validation/common';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { isRecord } from '#/utils/isRecord';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import {
   seedChoice,
@@ -25,6 +25,14 @@ export interface ReceiptLineFormValues {
   priceInput: string;
   /** Leave the shopping list line it matches open and add it on its own. */
   offList: boolean;
+  /** Record what was paid without adding it to the pantry. */
+  notStocked: boolean;
+}
+
+/** What the schema reads from the line beyond the form (`useForm`'s `context`). */
+export interface ReceiptLineFormContext {
+  /** The receipt's discounts cover the whole line, so it may be paid 0. */
+  free: boolean;
 }
 
 const parsedQuantity = (value: string) => {
@@ -38,8 +46,19 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
   quantityInput: quantityRule('errors.invalidQuantity'),
   unitValue: string().defined(),
   unitId: string().nullable().defined(),
-  priceInput: optionalMoneyRule('errors.invalidAmountPaid'),
+  priceInput: string()
+    .defined()
+    .test(
+      'paid',
+      lazyMessage('receipts.review.totalNeeded'),
+      (value, { options }) => {
+        const paid = parseMoneyInput(value);
+        const free = isRecord(options.context) && options.context.free === true;
+        return paid != null && (paid > 0 || free);
+      },
+    ),
   offList: boolean().defined(),
+  notStocked: boolean().defined(),
 });
 
 /** The form for a line: its saved choice, else what the receipt printed. */
@@ -47,8 +66,16 @@ export const receiptLineDefaults = (
   line: ReceiptReviewLine,
   choice: ReceiptLineChoice | undefined,
 ): ReceiptLineFormValues => {
-  const { itemName, itemId, quantity, unitText, unitId, price, offList } =
-    choice ?? seedChoice(line);
+  const {
+    itemName,
+    itemId,
+    quantity,
+    unitText,
+    unitId,
+    price,
+    offList,
+    notStocked,
+  } = choice ?? seedChoice(line);
   return {
     itemName,
     itemId,
@@ -57,6 +84,7 @@ export const receiptLineDefaults = (
     unitId,
     priceInput: formatNumberForInput(price),
     offList: offList ?? false,
+    notStocked: notStocked ?? false,
   };
 };
 
@@ -71,4 +99,5 @@ export const toLineChoice = (
   unitText: values.unitValue.trim(),
   price: parseMoneyInput(values.priceInput) ?? null,
   ...(values.offList ? { offList: true } : {}),
+  ...(values.notStocked ? { notStocked: true } : {}),
 });

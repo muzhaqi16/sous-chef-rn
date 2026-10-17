@@ -1,3 +1,4 @@
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useReceiptDraftStore } from '../receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
 
@@ -13,21 +14,29 @@ describe('receiptDraftStore', () => {
   describe('recordPhotoKeys', () => {
     it('keeps the photos of a draft nothing has asked about yet', () => {
       seedDraft();
-      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toEqual(PHOTOS);
+      expect(draft()?.photosMasked).toBeUndefined();
+    });
+
+    it('records that the photos were masked', () => {
+      seedDraft();
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, true);
+
+      expect(draft()?.photosMasked).toBe(true);
     });
 
     it('leaves a newer draft alone', () => {
       seedDraft({ scannedAt: '2026-10-07T12:00:00.000Z' });
-      actions().recordPhotoKeys('2026-10-07T11:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-07T11:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toBeUndefined();
     });
 
     it('leaves a draft already asked about alone', () => {
       seedDraft({ serverParse: { id: 'p1', via: 'text', state: 'pending' } });
-      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS);
+      actions().recordPhotoKeys('2026-10-01T10:00:00.000Z', PHOTOS, false);
 
       expect(draft()?.photoKeys).toBeUndefined();
     });
@@ -37,11 +46,12 @@ describe('receiptDraftStore', () => {
     it.each(['failed', 'unavailable', 'unreadable', 'tooLong'] as const)(
       'drops the spent photos of a receipt with text, so the text is asked for next (%s)',
       state => {
-        seedDraft({ photoKeys: PHOTOS });
+        seedDraft({ photoKeys: PHOTOS, photosMasked: true });
         actions().askServerParse('p1', 'photos');
         actions().settleServerParse('p1', state);
 
         expect(draft()?.photoKeys).toBeUndefined();
+        expect(draft()?.photosMasked).toBeUndefined();
         expect(draft()?.serverParse).toBeUndefined();
         expect(draft()?.pages).toEqual(['RECEIPT']);
       },
@@ -93,6 +103,131 @@ describe('receiptDraftStore', () => {
 
       expect(draft()?.photoKeys).toEqual(PHOTOS);
       expect(draft()?.serverParse?.state).toBe('failed');
+    });
+  });
+
+  describe('the check-in ids', () => {
+    it("mints a line's ids once and keeps them on every later confirm", () => {
+      seedDraft();
+      actions().ensureCheckInIds([0, 1], 1);
+      const first = draft()?.checkIn;
+      actions().ensureCheckInIds([0, 1, 2], 1);
+      const second = draft()?.checkIn;
+
+      expect(first?.ids).toHaveLength(1);
+      expect(second?.ids).toEqual(first?.ids);
+      expect(second?.lines[0]).toEqual(first?.lines[0]);
+      expect(second?.lines[1]).toEqual(first?.lines[1]);
+      expect(second?.lines[2]?.purchaseId).toEqual(expect.any(String));
+      expect(second?.lines[2]?.purchaseId).not.toBe(
+        second?.lines[2]?.pantryItemId,
+      );
+    });
+
+    it('keeps the ids a rehydrated draft holds', async () => {
+      seedDraft();
+      actions().ensureCheckInIds([0], 1);
+      const minted = draft()?.checkIn;
+
+      await useReceiptDraftStore.persist.rehydrate();
+      actions().ensureCheckInIds([0], 1);
+
+      expect(draft()?.checkIn?.ids).toEqual(minted?.ids);
+      expect(draft()?.checkIn?.lines[0]).toEqual(minted?.lines[0]);
+    });
+
+    it('adds a check-in id per send a long receipt needs', () => {
+      seedDraft();
+      actions().ensureCheckInIds([0], 1);
+      const [firstId] = draft()?.checkIn?.ids ?? [];
+      actions().ensureCheckInIds([0], 2);
+
+      expect(draft()?.checkIn?.ids).toHaveLength(2);
+      expect(draft()?.checkIn?.ids[0]).toBe(firstId);
+    });
+
+    it("replaces a check-in id another user holds, keeping its lines' ids", () => {
+      seedDraft();
+      actions().ensureCheckInIds([0], 1);
+      const before = draft()?.checkIn;
+      const [held = ''] = before?.ids ?? [];
+      actions().remintCheckInId(held);
+
+      expect(draft()?.checkIn?.ids[0]).not.toBe(held);
+      expect(draft()?.checkIn?.lines[0]).toEqual(before?.lines[0]);
+    });
+  });
+
+  describe("a line's outcome", () => {
+    it("clears a line's failure once it is added", () => {
+      seedDraft({
+        failed: { 0: ErrorCode.ValidationFailed, 1: ErrorCode.Forbidden },
+      });
+      actions().markAdded([0]);
+
+      expect(draft()?.added).toEqual([0]);
+      expect(draft()?.failed).toEqual({ 1: ErrorCode.Forbidden });
+    });
+  });
+
+  describe('closing the review', () => {
+    const sending = () => {
+      seedDraft();
+      actions().ensureCheckInIds([0, 1], 1);
+      actions().setCheckInState('sending');
+      actions().markAdded([0, 1]);
+      return draft()?.checkIn?.ids[0] ?? '';
+    };
+
+    it('forgets a receipt that has landed', () => {
+      seedDraft();
+      actions().markAdded([0]);
+      actions().closeReceipt();
+
+      expect(draft()).toBeNull();
+    });
+
+    it('keeps a receipt still landing, and forgets it once every line has', () => {
+      const checkInId = sending();
+      actions().closeReceipt();
+      expect(draft()?.checkIn?.closed).toBe(true);
+
+      actions().settleCheckIn(checkInId, [
+        { index: 0, success: true },
+        { index: 1, success: true },
+      ]);
+
+      expect(draft()).toBeNull();
+    });
+
+    it('keeps a closed receipt with a refused line for its retry', () => {
+      const checkInId = sending();
+      actions().closeReceipt();
+
+      actions().settleCheckIn(checkInId, [
+        { index: 0, success: true },
+        {
+          index: 1,
+          success: false,
+          failure: { code: ErrorCode.ValidationFailed },
+        },
+      ]);
+
+      expect(draft()?.added).toEqual([0]);
+      expect(draft()?.failed).toEqual({ 1: ErrorCode.ValidationFailed });
+      // Closing it again keeps it while the line waits for its retry.
+      actions().closeReceipt();
+      expect(draft()?.failed).toEqual({ 1: ErrorCode.ValidationFailed });
+    });
+
+    it('ignores the answer to a check-in the receipt never sent', () => {
+      sending();
+      actions().settleCheckIn('another-check-in', [
+        { index: 0, success: false, failure: { code: ErrorCode.Forbidden } },
+      ]);
+
+      expect(draft()?.added).toEqual([0, 1]);
+      expect(draft()?.checkIn?.state).toBe('sending');
     });
   });
 
@@ -152,6 +287,20 @@ describe('receiptDraftStore', () => {
         draft: { pages: ['RECEIPT'], scannedAt: '2026-10-01T10:00:00.000Z' },
       };
       expect(migrate(persisted)).toEqual(persisted);
+    });
+
+    it('reads a version 2 draft with its lines, picks and added lines as they were', () => {
+      const persisted = {
+        draft: {
+          pages: ['RECEIPT'],
+          scannedAt: '2026-10-01T10:00:00.000Z',
+          choices: { 0: null },
+          added: [1],
+        },
+      };
+      expect(
+        useReceiptDraftStore.persist.getOptions().migrate?.(persisted, 2),
+      ).toEqual(persisted);
     });
   });
 });

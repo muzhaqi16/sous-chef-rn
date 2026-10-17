@@ -26,6 +26,20 @@ export function resolveCurrency(
   return firstNonBlank(figureCurrency?.code, preferred) ?? DEFAULT_CURRENCY;
 }
 
+/**
+ * Each amount in its own currency, in the order given. Amounts in different
+ * currencies are never added together, so nothing here does; undefined when
+ * there are none, which a caller shows as unknown or omits — never as zero.
+ */
+export function moneyByCurrency(
+  amounts: readonly { currencyCode: string; amount: number }[],
+): string | undefined {
+  if (amounts.length === 0) return undefined;
+  return amounts
+    .map(({ currencyCode, amount }) => formatCurrency(amount, currencyCode))
+    .join(' · ');
+}
+
 /** The account's currency, mirrored from `UserSettings.preferredCurrency`. */
 export function usePreferredCurrency(): string {
   return useAppStore(state => state.preferredCurrency) || DEFAULT_CURRENCY;

@@ -20,6 +20,7 @@ query GetStores($first: Int = 100) {
         id
         name
         address
+        storeNumber
       }
     }
   }

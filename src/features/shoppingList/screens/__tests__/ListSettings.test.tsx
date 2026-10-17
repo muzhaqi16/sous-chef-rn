@@ -17,10 +17,14 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const fn = <T,>(
-    selector: (state: { setSelectedShoppingListId: () => void }) => T,
+    selector: (state: {
+      setSelectedShoppingListId: () => void;
+      cachedStores: never[];
+    }) => T,
   ): T =>
     selector({
       setSelectedShoppingListId: jest.fn(),
+      cachedStores: [],
     });
   fn.getState = () => ({});
   fn.setState = jest.fn();
@@ -32,20 +36,23 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
+// One object, as a cached list is: the screen re-seeds its form when it changes.
+const mockListDetails = {
+  shoppingList: {
+    id: 'sl1',
+    name: 'Weekly Groceries',
+    isDefault: true,
+    homeId: null,
+    home: null,
+    createdBy: { id: 'u1' },
+    collaboratorsConnection: { edges: [], totalCount: 0 },
+    targetStore: null,
+  },
+  isShared: false,
+  collaborators: [],
+};
 jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
-  useShoppingListDetails: () => ({
-    shoppingList: {
-      id: 'sl1',
-      name: 'Weekly Groceries',
-      isDefault: true,
-      homeId: null,
-      home: null,
-      createdBy: { id: 'u1' },
-      collaboratorsConnection: { edges: [], totalCount: 0 },
-    },
-    isShared: false,
-    collaborators: [],
-  }),
+  useShoppingListDetails: () => mockListDetails,
 }));
 
 jest.mock('#features/home/hooks/useLazyHomeData', () => ({
@@ -79,6 +86,40 @@ jest.mock(
     }),
   }),
 );
+
+const mockUpdateShoppingList = jest.fn(async () => null);
+jest.mock(
+  '#features/shoppingList/hooks/mutations/useUpdateShoppingList',
+  () => ({
+    useUpdateShoppingList: () => ({
+      updateShoppingList: mockUpdateShoppingList,
+    }),
+  }),
+);
+
+// Picking from the real field's modal is the field's own test; here a press
+// picks a store as the field reports it.
+jest.mock('#features/catalog/ui/autocomplete/StoreAutocompleteField', () => ({
+  StoreAutocompleteField: ({
+    onChangeText,
+    onStoreSelected,
+  }: {
+    onChangeText: (text: string) => void;
+    onStoreSelected: (id: string | null, name: string | null) => void;
+  }) => {
+    const { Text } = require('react-native');
+    return (
+      <Text
+        onPress={() => {
+          onChangeText('Costco');
+          onStoreSelected('store-1', 'Costco');
+        }}
+      >
+        pick-store
+      </Text>
+    );
+  },
+}));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -234,6 +275,35 @@ describe('ListSettings', () => {
   it('hides danger zone when creating', () => {
     render(<ListSettings route={createRoute} />);
     expect(screen.queryByText('Danger Zone')).toBeNull();
+  });
+
+  // The list's store is where a ticked line's price is recorded.
+  it('saves the store picked for the list', async () => {
+    render(<ListSettings route={editRoute} />);
+
+    fireEvent.press(screen.getByText('pick-store'));
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateShoppingList).toHaveBeenCalledWith(
+        'sl1',
+        expect.objectContaining({
+          targetStore: { id: 'store-1', name: 'Costco' },
+        }),
+      ),
+    );
+  });
+
+  it('sends no store when it did not change', async () => {
+    render(<ListSettings route={editRoute} />);
+
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => expect(mockUpdateShoppingList).toHaveBeenCalled());
+    expect(mockUpdateShoppingList).toHaveBeenCalledWith(
+      'sl1',
+      expect.not.objectContaining({ targetStore: expect.anything() }),
+    );
   });
 
   it('shows Save button for editing', () => {

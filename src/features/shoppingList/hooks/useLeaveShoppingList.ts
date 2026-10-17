@@ -4,7 +4,6 @@ import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shopp
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 
 /**
@@ -29,7 +28,7 @@ interface LeaveCallbacks {
  */
 export function useLeaveShoppingList(listId: string) {
   const { t } = useTranslation();
-  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [removeMember, { client }] = useMutation(RemoveCollaboratorDocument);
   const [leaving, setLeaving] = useState(false);
 
   const leaveList = async (
@@ -39,24 +38,11 @@ export function useLeaveShoppingList(listId: string) {
     await executeWithLoadingState(
       async () => {
         const settled = await settleMutation(
-          () =>
-            removeMember({
-              variables: { input: { id: collaboratorId } },
-              update(cache, { data }) {
-                // Only evict on success — a resolved error must not remove the
-                // collaborator entry from the cache.
-                if (!appliedPayload(data)) return;
-                removeCollaboratorFromShoppingListCache(
-                  cache,
-                  listId,
-                  collaboratorId,
-                  { evictItem: true },
-                );
-              },
-            }),
+          () => removeMember({ variables: { input: { id: collaboratorId } } }),
           {
             document: RemoveCollaboratorDocument,
             fallback: t('shoppingListScreens.failedToLeave'),
+            removal: true,
             // Callers show their own copy through `onError`.
             present: 'none',
           },
@@ -65,6 +51,14 @@ export function useLeaveShoppingList(listId: string) {
           callbacks?.onError?.(settled.failure);
           return;
         }
+        // A repeat answered as not found names no collaborator, so the cache
+        // is updated from the settle, not from the payload.
+        removeCollaboratorFromShoppingListCache(
+          client.cache,
+          listId,
+          collaboratorId,
+          { evictItem: true },
+        );
         callbacks?.onSuccess?.();
       },
       setLeaving,

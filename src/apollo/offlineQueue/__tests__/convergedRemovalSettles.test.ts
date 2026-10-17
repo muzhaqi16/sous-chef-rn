@@ -20,6 +20,7 @@ import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
@@ -147,8 +148,11 @@ describe('a queued shopping-list delete, replayed', () => {
         entityId: 'list-1',
       }),
     );
+    // No list row is cached, as after the local delete: its input names it.
     expect(toastService.error).toHaveBeenCalledWith(
-      "A change couldn't be saved and has been undone.",
+      t('errors.queuedChangeRejectedResource', {
+        resource: t('errors.resourceNames.ShoppingList'),
+      }),
     );
     expect(queued()).toEqual([]);
   });

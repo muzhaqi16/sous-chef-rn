@@ -53,7 +53,8 @@ import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isRefreshableAuthCode } from '#/utils/authErrorCodes';
 import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 // ---- Pure helper function tests (replicated logic) ----
 
@@ -297,6 +298,73 @@ describe('errorLink middleware', () => {
     const gqlError = new CombinedGraphQLErrors(result);
     expect(CombinedGraphQLErrors.is(gqlError)).toBe(true);
   });
+});
+
+describe('errorLink — FEATURE_DISABLED and PREMIUM_REQUIRED', () => {
+  const query = gql`
+    query TestOp {
+      me {
+        id
+      }
+    }
+  `;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // A feature switched off for this user, or one needing a plan they do not
+  // hold, asks for their flags again, so every screen stops offering it.
+  it.each([
+    TopLevelErrorCode.FeatureDisabled,
+    TopLevelErrorCode.PremiumRequired,
+  ])(
+    '%s asks for the flags again, and neither refreshes nor signs out',
+    async code => {
+      const client = new ApolloClient({
+        cache: new InMemoryCache(),
+        link: ApolloLink.empty(),
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      });
+      const refetch = jest.spyOn(client, 'refetchQueries').mockReturnValue(
+        Object.assign(Promise.resolve([]), {
+          queries: [],
+          results: [],
+        }),
+      );
+      const failing = new ApolloLink(
+        () =>
+          new Observable(observer => {
+            observer.error(
+              new CombinedGraphQLErrors({
+                errors: [
+                  {
+                    message: 'Refused',
+                    extensions: { code, feature: 'RECIPE_CAPTURE_PHOTO' },
+                  },
+                ],
+              }),
+            );
+          }),
+      );
+
+      await expect(
+        new Promise((resolve, reject) => {
+          ApolloLink.execute(
+            ApolloLink.from([errorLink, failing]),
+            { query, variables: {} },
+            { client },
+          ).subscribe({ next: resolve, error: reject });
+        }),
+      ).rejects.toBeDefined();
+
+      expect(refetch).toHaveBeenCalledWith({
+        include: [MyFeatureFlagsDocument],
+      });
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+      expect(mockEndSession).not.toHaveBeenCalled();
+    },
+  );
 });
 
 // A build below the server's minimum version is refused permanently. Refreshing

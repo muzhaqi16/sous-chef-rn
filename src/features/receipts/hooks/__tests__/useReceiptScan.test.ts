@@ -1,10 +1,18 @@
 import { act } from '@testing-library/react-native';
+import {
+  checkReading as rulesCheckReading,
+  readReceipt as rulesReadReceipt,
+  type RulesReading,
+} from '@muzhaqi16/receipt-rules';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
 import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
-import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import {
+  ReceiptStructuring,
+  type ReceiptLineLabels,
+} from '#/native/ReceiptStructuring';
 import {
   LABELLING_TIMEOUT_MS,
   onDeviceStructuring,
@@ -26,6 +34,8 @@ jest.mock('#/native/TextRecognition', () => ({
     recognizeAndDelete: jest.fn(),
     preparePhotos: jest.fn(),
     deletePhotos: jest.fn(),
+    maskPhotos: jest.fn(),
+    canMaskPhotos: jest.fn(),
   },
 }));
 const mockUploadUnconfirmed = jest.fn();
@@ -43,13 +53,22 @@ jest.mock('#hooks/usePhotoCapture', () => ({
 jest.mock('#/native/ReceiptStructuring', () => ({
   ReceiptStructuring: { availability: jest.fn(), labelLines: jest.fn() },
 }));
+jest.mock('@muzhaqi16/receipt-rules', () => ({
+  ...jest.requireActual('@muzhaqi16/receipt-rules'),
+  readReceipt: jest.fn(),
+  checkReading: jest.fn(),
+}));
 
 const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
 const preparePhotos = jest.mocked(TextRecognition.preparePhotos);
 const deletePhotos = jest.mocked(TextRecognition.deletePhotos);
+const maskPhotos = jest.mocked(TextRecognition.maskPhotos);
+const canMaskPhotos = jest.mocked(TextRecognition.canMaskPhotos);
 const availability = jest.mocked(ReceiptStructuring.availability);
 const labelLines = jest.mocked(ReceiptStructuring.labelLines);
+const readReceipt = jest.mocked(rulesReadReceipt);
+const checkReading = jest.mocked(rulesCheckReading);
 
 const line = (text: string, y: number) => ({
   text,
@@ -70,9 +89,12 @@ const RECEIPT: RecognizedPage[] = [
   },
 ];
 
-const renderScan = () => {
+// Reading on the phone is off unless a test turns it on: off is today's path.
+const renderScan = (serverParsing = true, deviceReading = false) => {
   const onCancel = jest.fn();
-  const view = renderHookWithApollo(() => useReceiptScan({ onCancel }));
+  const view = renderHookWithApollo(() =>
+    useReceiptScan({ onCancel, serverParsing, deviceReading }),
+  );
   return { ...view, onCancel };
 };
 
@@ -84,6 +106,9 @@ beforeEach(() => {
   availability.mockResolvedValue('unavailable');
   dateOrder.mockReturnValue('monthFirst');
   deletePhotos.mockResolvedValue(undefined);
+  // A build that cannot mask, unless a test says otherwise.
+  maskPhotos.mockResolvedValue(null);
+  canMaskPhotos.mockReturnValue(false);
   useStore.setState({ isOnline: true });
   // The text path, unless a test says otherwise.
   useReceiptPhotoConsentStore.setState({ consent: 'declined' });
@@ -96,6 +121,18 @@ const scannedOnePage = () => {
   });
   recognizeAndDelete.mockResolvedValue(RECEIPT);
 };
+
+// A photo still going up when the send stops rejects as cancelled.
+const untilStopped = (
+  _file: unknown,
+  _purpose: unknown,
+  { signal }: { signal: AbortSignal },
+) =>
+  new Promise<string>((_resolve, reject) => {
+    signal.addEventListener('abort', () =>
+      reject(new Error('Upload was cancelled')),
+    );
+  });
 
 describe('useReceiptScan', () => {
   it('keeps only the redacted text of every page as the draft', async () => {
@@ -175,6 +212,13 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft?.purchasedOn).toBe(
       toDateKey(today),
     );
+  });
+
+  it('says whether a photo sent to be read is masked first', () => {
+    expect(renderScan().result.current.masksPhotos).toBe(false);
+
+    canMaskPhotos.mockReturnValue(true);
+    expect(renderScan().result.current.masksPhotos).toBe(true);
   });
 
   it('returns to the add sheet with nothing kept when the scanner is cancelled', async () => {
@@ -259,8 +303,8 @@ describe('useReceiptScan', () => {
       (_, at) => `file:///page-${at}.jpg`,
     );
 
-    const failedRead = async (pages = PAGES) => {
-      const view = renderScan();
+    const failedRead = async (pages = PAGES, serverParsing = true) => {
+      const view = renderScan(serverParsing);
       scanDocument.mockResolvedValue({
         status: ScanDocumentResponseStatus.Success,
         scannedImages: pages,
@@ -290,6 +334,14 @@ describe('useReceiptScan', () => {
       expect(preparePhotos).not.toHaveBeenCalled();
       expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft).toBeNull();
+    });
+
+    it('offers nothing to send, and deletes the pages, where the server reads no receipts', async () => {
+      const { result } = await failedRead(PAGES, false);
+
+      expect(result.current.status).toBe('failed');
+      expect(deletePhotos).toHaveBeenCalledWith(PAGES);
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
     });
 
     it('sends the photos on consent, keeps only their keys, and deletes every copy', async () => {
@@ -506,6 +558,19 @@ describe('useReceiptScan', () => {
       rehydrate.mockRestore();
     });
 
+    it('neither asks nor sends photos where the server reads no receipts', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      scannedOnePage();
+      const { result } = renderScan(false);
+
+      await act(() => result.current.scan());
+
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+      expect(preparePhotos).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptPhotoConsentStore.getState().consent).toBeNull();
+    });
+
     it('scans without asking while offline, from the text', async () => {
       useReceiptPhotoConsentStore.setState({ consent: null });
       useStore.setState({ isOnline: false });
@@ -572,8 +637,7 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('saved');
     });
 
-    it('falls back to the text, parsed on the phone, when a photo does not go up', async () => {
-      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+    it('falls back to the text when a photo does not go up', async () => {
       scannedPages(1);
       preparePhotos.mockResolvedValue(prepared(1));
       recognizeAndDelete.mockResolvedValue(RECEIPT);
@@ -586,14 +650,12 @@ describe('useReceiptScan', () => {
       const draft = useReceiptDraftStore.getState().draft;
       expect(draft?.photoKeys).toBeUndefined();
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
-      expect(availability).toHaveBeenCalled();
       expect(result.current.status).toBe('saved');
       expect(Telemetry.histogram).toHaveBeenCalledWith(
         'receipt_scan_ready_ms',
         expect.any(Number),
         { route: 'text', pages: '1' },
       );
-      turnedOn.restore();
     });
 
     it('sends the photos of pages the phone could not read, without asking', async () => {
@@ -659,18 +721,6 @@ describe('useReceiptScan', () => {
       expect(draft?.photoKeys).toBeUndefined();
     });
 
-    // A photo still going up when the send stops rejects as cancelled.
-    const untilStopped = (
-      _file: unknown,
-      _purpose: unknown,
-      { signal }: { signal: AbortSignal },
-    ) =>
-      new Promise<string>((_resolve, reject) => {
-        signal.addEventListener('abort', () =>
-          reject(new Error('Upload was cancelled')),
-        );
-      });
-
     it('stops the other photos when one does not go up, and reads the text', async () => {
       const reportError = jest.spyOn(errorService, 'reportError');
       scannedPages(2);
@@ -732,8 +782,7 @@ describe('useReceiptScan', () => {
       expect(useReceiptDraftStore.getState().draft).toBeNull();
     });
 
-    it('reads the text, parsed on the phone, when the photos cannot be prepared', async () => {
-      const turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+    it('reads the text when the photos cannot be prepared', async () => {
       scannedPages(1);
       preparePhotos.mockRejectedValueOnce(new Error('unreadable'));
       recognizeAndDelete.mockResolvedValue(RECEIPT);
@@ -745,12 +794,10 @@ describe('useReceiptScan', () => {
       const draft = useReceiptDraftStore.getState().draft;
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
       expect(draft?.photoKeys).toBeUndefined();
-      expect(availability).toHaveBeenCalled();
       expect(result.current.status).toBe('saved');
-      turnedOn.restore();
     });
 
-    it('sends the photos while the phone is still reading the text', async () => {
+    it('holds the photos until the phone has read the text', async () => {
       scannedPages(1);
       preparePhotos.mockResolvedValue(prepared(1));
       let read: (pages: RecognizedPage[]) => void = () => {};
@@ -767,16 +814,130 @@ describe('useReceiptScan', () => {
       await act(async () => {
         scanning = result.current.scan();
       });
-      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
-      expect(result.current.status).toBe('sending');
+      expect(preparePhotos).toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('reading');
 
       read(RECEIPT);
       await act(() => scanning);
 
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
       const draft = useReceiptDraftStore.getState().draft;
       expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
       expect(result.current.status).toBe('saved');
+    });
+
+    describe('masking the photos', () => {
+      // Rewritten in place: the same files, now smaller.
+      const masksInPlace = () =>
+        maskPhotos.mockImplementation(async photos =>
+          photos.map(({ uri }) => ({ uri, fileSize: 700 })),
+        );
+
+      it('paints over what the phone read before any photo goes up, and says so', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).toHaveBeenCalledWith([
+          {
+            uri: 'file:///prepared-0.jpg',
+            masks: expect.arrayContaining([
+              expect.objectContaining({ points: expect.any(Array) }),
+            ]),
+          },
+        ]);
+        expect(maskPhotos.mock.invocationCallOrder[0]).toBeLessThan(
+          mockUploadUnconfirmed.mock.invocationCallOrder[0] ?? 0,
+        );
+        expect(mockUploadUnconfirmed).toHaveBeenCalledWith(
+          expect.objectContaining({
+            uri: 'file:///prepared-0.jpg',
+            fileSize: 700,
+          }),
+          ImageUploadPurpose.ReceiptPhoto,
+          expect.anything(),
+        );
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBe(true);
+      });
+
+      it('sends the photos as they are, unmarked, from a build that cannot mask', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+      });
+
+      it('sends the photos unmarked when masking fails', async () => {
+        const reportError = jest.spyOn(errorService, 'reportError');
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue(RECEIPT);
+        maskPhotos.mockRejectedValueOnce(new Error('out of memory'));
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+          operation: 'Mask receipt photos',
+        });
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+        reportError.mockRestore();
+      });
+
+      it('masks nothing, and marks nothing, when the phone read no payment block', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockResolvedValue([
+          {
+            lines: [line('WALMART', 0.05), line('GV WHOLE MILK  3.48 N', 0.1)],
+          },
+        ]);
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).not.toHaveBeenCalled();
+        expect(
+          useReceiptDraftStore.getState().draft?.photosMasked,
+        ).toBeUndefined();
+      });
+
+      it('marks nothing when the phone could not read the pages', async () => {
+        scannedPages(1);
+        preparePhotos.mockResolvedValue(prepared(1));
+        recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
+        masksInPlace();
+        uploadsAll();
+        const { result } = renderScan();
+
+        await act(() => result.current.scan());
+
+        expect(maskPhotos).not.toHaveBeenCalled();
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBeUndefined();
+      });
     });
 
     it('forgets the answer at sign-out', () => {
@@ -817,105 +978,328 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft).toBeNull();
   });
 
-  describe('on-device structuring', () => {
-    let turnedOn: jest.ReplaceProperty<boolean | undefined>;
-    beforeEach(() => {
-      turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
-    });
-    afterEach(() => {
-      turnedOn.restore();
+  describe('reading on the phone first', () => {
+    const MILK: RulesReading['receipt']['lines'][number] = {
+      text: 'GV WHOLE MILK  3.48 N',
+      kind: 'ITEM',
+      product: 'GV WHOLE MILK',
+      code: null,
+      quantity: null,
+      unit: null,
+      unitPrice: null,
+      amount: 3.48,
+      appliesTo: null,
+    };
+    const read: Omit<RulesReading, 'accepted'> = {
+      receipt: {
+        merchant: { name: 'WALMART', storeNumber: '5260', address: null },
+        purchasedOn: null,
+        currency: null,
+        subtotal: null,
+        tax: null,
+        total: 3.48,
+        lines: [
+          MILK,
+          { ...MILK, text: 'TOTAL  3.48', kind: 'TOTAL', product: null },
+        ],
+      },
+      warnings: [],
+      header: ['WALMART'],
+    };
+    const addsUp: RulesReading = { ...read, accepted: true };
+    const missesItsTotal: RulesReading = {
+      ...read,
+      accepted: false,
+      reason: 'TOTALS_MISMATCH',
+      counted: 3.48,
+      printed: 4.05,
+    };
+    const prepared = [{ uri: 'file:///prepared-0.jpg', fileSize: 900 }];
+
+    it("saves a reading that adds up as the receipt's, and asks for nothing more", async () => {
+      scannedOnePage();
+      readReceipt.mockReturnValue(addsUp);
+      const { result } = renderScan(true, true);
+
+      await act(() => result.current.scan());
+
+      // The redacted pages, the text the rules' corpus holds.
+      expect(readReceipt).toHaveBeenCalledWith(
+        ['WALMART\nGV WHOLE MILK  3.48 N'],
+        { today: toDateKey(new Date()), order: 'monthFirst' },
+      );
+      expect(result.current.status).toBe('saved');
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft).toMatchObject({
+        pages: ['WALMART\nGV WHOLE MILK  3.48 N'],
+        parsedBy: 'device',
+        printedStore: { name: 'WALMART', storeNumber: '5260' },
+        parsed: {
+          merchant: 'WALMART',
+          lines: [
+            expect.objectContaining({
+              kind: 'item',
+              product: 'GV WHOLE MILK',
+              lineTotal: 3.48,
+            }),
+            expect.objectContaining({ kind: 'total', lineTotal: 3.48 }),
+          ],
+        },
+      });
+      // Parsed, it is not sent to the server to be read.
+      expect(draft?.totalsGap).toBeUndefined();
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'receipt_scan_ready_ms',
+        expect.any(Number),
+        { route: 'device', pages: '1' },
+      );
     });
 
-    it('adds what the phone’s model read to the draft', async () => {
+    it('keeps only the text of a reading that does not add up', async () => {
       scannedOnePage();
-      availability.mockResolvedValue('available');
-      labelLines.mockResolvedValue({
+      readReceipt.mockReturnValue(missesItsTotal);
+      const { result } = renderScan(true, true);
+
+      await act(() => result.current.scan());
+
+      expect(result.current.status).toBe('saved');
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.pages).toEqual(['WALMART\nGV WHOLE MILK  3.48 N']);
+      expect(draft?.parsed).toBeUndefined();
+      expect(draft?.totalsGap).toBeUndefined();
+      expect(draft?.printedStore).toBeUndefined();
+    });
+
+    it('keeps a reading that misses its total, with the gap, where the server reads no receipts', async () => {
+      scannedOnePage();
+      readReceipt.mockReturnValue(missesItsTotal);
+      const { result } = renderScan(false, true);
+
+      await act(() => result.current.scan());
+
+      expect(useReceiptDraftStore.getState().draft).toMatchObject({
+        parsedBy: 'device',
+        totalsGap: { counted: 3.48, printed: 4.05 },
+        parsed: { merchant: 'WALMART' },
+      });
+    });
+
+    it('reads nothing on the phone with reading on the phone off', async () => {
+      scannedOnePage();
+      readReceipt.mockReturnValue(addsUp);
+      const { result } = renderScan(true, false);
+
+      await act(() => result.current.scan());
+
+      expect(readReceipt).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+    });
+
+    describe("with the phone's model", () => {
+      const MODEL_LABELS: ReceiptLineLabels = {
         storeName: 'WALMART',
         lines: [
           { line: 0, label: 'header' },
           { line: 1, label: 'item', product: 'GV WHOLE MILK' },
         ],
+      };
+      let turnedOn: jest.ReplaceProperty<boolean | undefined>;
+      beforeEach(() => {
+        turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+        scannedOnePage();
+        availability.mockResolvedValue('available');
+        labelLines.mockResolvedValue(MODEL_LABELS);
+        readReceipt.mockReturnValue(missesItsTotal);
+        checkReading.mockReturnValue(missesItsTotal);
       });
-      const { result } = renderScan();
-
-      await act(() => result.current.scan());
-
-      expect(labelLines).toHaveBeenCalledWith([
-        'WALMART',
-        'GV WHOLE MILK  3.48 N',
-      ]);
-      expect(result.current.status).toBe('saved');
-      const draft = useReceiptDraftStore.getState().draft;
-      expect(draft?.pages).toEqual(['WALMART\nGV WHOLE MILK  3.48 N']);
-      expect(draft?.parsed?.merchant).toBe('WALMART');
-      expect(
-        draft?.parsed?.lines.filter(parsed => parsed.kind === 'item'),
-      ).toEqual([
-        expect.objectContaining({
-          product: 'GV WHOLE MILK',
-          lineTotal: 3.48,
-        }),
-      ]);
-    });
-
-    it('keeps the plain text when the model fails', async () => {
-      scannedOnePage();
-      availability.mockResolvedValue('available');
-      labelLines.mockRejectedValue(new Error('model busy'));
-      const reportError = jest.spyOn(errorService, 'reportError');
-      const { result } = renderScan();
-
-      await act(() => result.current.scan());
-
-      expect(result.current.status).toBe('saved');
-      expect(useReceiptDraftStore.getState().draft?.pages).toHaveLength(1);
-      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
-      expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
-        operation: 'Label receipt lines on device',
-      });
-      reportError.mockRestore();
-    });
-
-    it('stops waiting for a model that does not answer', async () => {
-      jest.useFakeTimers();
-      scannedOnePage();
-      availability.mockResolvedValue('available');
-      labelLines.mockReturnValue(new Promise(() => {}));
-      const { result } = renderScan();
-
-      const scanning = result.current.scan();
-      await act(async () => {
-        await jest.advanceTimersByTimeAsync(LABELLING_TIMEOUT_MS);
-        await scanning;
+      afterEach(() => {
+        turnedOn.restore();
       });
 
-      expect(result.current.status).toBe('saved');
-      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
-      jest.useRealTimers();
+      it("saves the rules' reading without waiting for the model", async () => {
+        readReceipt.mockReturnValue(addsUp);
+        labelLines.mockReturnValue(new Promise(() => {}));
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(availability).toHaveBeenCalled();
+        expect(result.current.status).toBe('saved');
+        expect(useReceiptDraftStore.getState().draft).toMatchObject({
+          parsedBy: 'device',
+          parsed: { merchant: 'WALMART' },
+        });
+        expect(checkReading).not.toHaveBeenCalled();
+      });
+
+      it("keeps the model's reading when only it adds up, held to the rules' check", async () => {
+        checkReading.mockReturnValue(addsUp);
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(labelLines).toHaveBeenCalledWith([
+          'WALMART',
+          'GV WHOLE MILK  3.48 N',
+        ]);
+        expect(checkReading).toHaveBeenCalledWith(
+          expect.objectContaining({
+            merchant: { name: 'WALMART', storeNumber: null, address: null },
+            lines: expect.arrayContaining([
+              expect.objectContaining({
+                kind: 'ITEM',
+                product: 'GV WHOLE MILK',
+                amount: 3.48,
+              }),
+            ]),
+          }),
+          ['WALMART\nGV WHOLE MILK  3.48 N'],
+        );
+        expect(result.current.status).toBe('saved');
+        expect(useReceiptDraftStore.getState().draft).toMatchObject({
+          parsedBy: 'device',
+          printedStore: { name: 'WALMART', storeNumber: '5260' },
+        });
+      });
+
+      it('leaves the receipt to the server when neither reading adds up', async () => {
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(checkReading).toHaveBeenCalled();
+        expect(result.current.status).toBe('saved');
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.pages).toEqual(['WALMART\nGV WHOLE MILK  3.48 N']);
+        expect(draft?.parsed).toBeUndefined();
+      });
+
+      it('keeps the plain text when the model fails', async () => {
+        labelLines.mockRejectedValue(new Error('model busy'));
+        const reportError = jest.spyOn(errorService, 'reportError');
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(result.current.status).toBe('saved');
+        expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+        expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+          operation: 'Label receipt lines on device',
+        });
+        reportError.mockRestore();
+      });
+
+      it('stops waiting for a model that does not answer', async () => {
+        jest.useFakeTimers();
+        labelLines.mockReturnValue(new Promise(() => {}));
+        const { result } = renderScan(true, true);
+
+        const scanning = result.current.scan();
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(LABELLING_TIMEOUT_MS);
+          await scanning;
+        });
+
+        expect(result.current.status).toBe('saved');
+        expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+        jest.useRealTimers();
+      });
+
+      it('reads by the rules alone where the platform turns the model off', async () => {
+        turnedOn.replaceValue(false);
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(readReceipt).toHaveBeenCalled();
+        expect(availability).not.toHaveBeenCalled();
+        expect(labelLines).not.toHaveBeenCalled();
+        expect(result.current.status).toBe('saved');
+      });
+
+      it('reads by the rules alone on a phone without a model', async () => {
+        availability.mockResolvedValue('unavailable');
+        const { result } = renderScan(true, true);
+
+        await act(() => result.current.scan());
+
+        expect(readReceipt).toHaveBeenCalled();
+        expect(labelLines).not.toHaveBeenCalled();
+        expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+      });
+
+      it('asks neither reader with reading on the phone off', async () => {
+        const { result } = renderScan(true, false);
+
+        await act(() => result.current.scan());
+
+        expect(readReceipt).not.toHaveBeenCalled();
+        expect(availability).not.toHaveBeenCalled();
+        expect(result.current.status).toBe('saved');
+      });
     });
 
-    it('never asks the model on a platform where it is turned off', async () => {
-      turnedOn.replaceValue(false);
-      scannedOnePage();
-      availability.mockResolvedValue('available');
-      const { result } = renderScan();
+    describe('with photo consent', () => {
+      beforeEach(() => {
+        useReceiptPhotoConsentStore.setState({ consent: 'granted' });
+        scannedOnePage();
+        preparePhotos.mockResolvedValue(prepared);
+        maskPhotos.mockImplementation(async photos =>
+          photos.map(({ uri }) => ({ uri, fileSize: 900 })),
+        );
+        mockUploadUnconfirmed.mockResolvedValue('receipt-photos/u1/p-0.jpg');
+      });
 
-      await act(() => result.current.scan());
+      it('uploads nothing for a reading that adds up, and deletes the prepared photos', async () => {
+        readReceipt.mockReturnValue(addsUp);
+        const { result } = renderScan(true, true);
 
-      expect(availability).not.toHaveBeenCalled();
-      expect(labelLines).not.toHaveBeenCalled();
-      expect(result.current.status).toBe('saved');
-      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
-    });
+        await act(() => result.current.scan());
 
-    it('never asks a phone without a model', async () => {
-      scannedOnePage();
-      const { result } = renderScan();
+        expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+        expect(maskPhotos).not.toHaveBeenCalled();
+        expect(deletePhotos).toHaveBeenCalledWith(['file:///prepared-0.jpg']);
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toBeUndefined();
+        expect(draft?.parsedBy).toBe('device');
+        expect(result.current.status).toBe('saved');
+      });
 
-      await act(() => result.current.scan());
+      it('sends the photos of a receipt the phone could not read', async () => {
+        readReceipt.mockReturnValue(missesItsTotal);
+        const { result } = renderScan(true, true);
 
-      expect(labelLines).not.toHaveBeenCalled();
-      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+        await act(() => result.current.scan());
+
+        expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
+        const draft = useReceiptDraftStore.getState().draft;
+        expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
+        expect(draft?.photosMasked).toBe(true);
+        expect(draft?.parsed).toBeUndefined();
+        expect(result.current.status).toBe('saved');
+      });
+
+      it('still gives way to the text when the photos take too long to go up', async () => {
+        jest.useFakeTimers();
+        readReceipt.mockReturnValue(missesItsTotal);
+        mockUploadUnconfirmed.mockImplementationOnce(untilStopped);
+        const { result } = renderScan(true, true);
+
+        const scanning = result.current.scan();
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(45_000);
+          await scanning;
+        });
+
+        expect(Telemetry.increment).toHaveBeenCalledWith(
+          'receipt_photo_send_timeouts_total',
+        );
+        expect(
+          useReceiptDraftStore.getState().draft?.photoKeys,
+        ).toBeUndefined();
+        expect(result.current.status).toBe('saved');
+        jest.useRealTimers();
+      });
     });
   });
 

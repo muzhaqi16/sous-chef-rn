@@ -22,6 +22,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
@@ -102,7 +103,11 @@ export const ShoppingListItemDetail: React.FC<
   const [failedHeroUri, setFailedHeroUri] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  const { item, hasLoaded } = useShoppingListItemDetail(itemId);
+  // `item` may be only the list's row (offline, or before the fetch answers):
+  // its detail-only reads are guarded, and a section made only of them waits
+  // for `detail`.
+  const { item, detail, notFound, state, retry } =
+    useShoppingListItemDetail(itemId);
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });
@@ -123,12 +128,12 @@ export const ShoppingListItemDetail: React.FC<
     item?.netWeightUnit,
   );
 
-  const itemPhotos = galleryPhotos(item?.item?.photos);
-  const nutritionFacts = item?.item?.nutritionFacts ?? null;
+  const itemPhotos = galleryPhotos(detail?.item?.photos);
+  const nutritionFacts = detail?.item?.nutritionFacts ?? null;
   const showImages = itemPhotos.length > 0;
   const showNutrition = hasNutritionData(nutritionFacts);
 
-  if (!item) {
+  if (notFound || !item) {
     return (
       <CollapsingHeroDetail
         testID={shoppingListTestIDs.itemDetail}
@@ -136,11 +141,13 @@ export const ShoppingListItemDetail: React.FC<
         title={t('shoppingListScreens.itemDetailsTitle')}
       >
         <View style={styles.centerMessage}>
-          <Text role="body" tone="secondary" align="center">
-            {hasLoaded
-              ? t('errors.itemNotFound')
-              : t('shoppingListScreens.loading')}
-          </Text>
+          {notFound ? (
+            <Text role="body" tone="secondary" align="center">
+              {t('errors.itemNotFound')}
+            </Text>
+          ) : (
+            <DataStateView state={state} onRetry={retry} />
+          )}
         </View>
       </CollapsingHeroDetail>
     );
@@ -160,23 +167,23 @@ export const ShoppingListItemDetail: React.FC<
 
   // Purchase History — the lightweight summary (count / last date); the full
   // list is fetched on demand by the PurchaseHistory screen.
-  const purchaseHistory = item.purchaseHistory;
-  const purchaseCount = purchaseHistory.purchaseCount;
-  const hasPurchases = purchaseHistory.previouslyPurchased;
-  const addedFromKey = addedFromSourceKey(item.source.addedContext);
+  const purchaseHistory = detail?.purchaseHistory;
+  const addedFromKey = detail
+    ? addedFromSourceKey(detail.source.addedContext)
+    : null;
 
   const handleViewHistory = () => {
     toPurchaseHistory({
-      itemId: item.id,
+      itemId,
       itemName: item.itemName ?? '',
     });
   };
 
-  const purchaseHistoryItems = hasPurchases
+  const purchaseHistoryItems = purchaseHistory?.previouslyPurchased
     ? [
         {
           label: t('shoppingListScreens.timesPurchased'),
-          value: purchaseCount,
+          value: purchaseHistory.purchaseCount,
         },
         {
           label: t('shoppingListScreens.mostRecentPurchase'),
@@ -195,19 +202,21 @@ export const ShoppingListItemDetail: React.FC<
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
   // of showing the raw number.
-  const priorityOption = priorityOptionOf(item.priority);
+  const priorityOption =
+    item.priority === undefined ? undefined : priorityOptionOf(item.priority);
   const priorityLabel = priorityOption
     ? t(priorityLabelKey(priorityOption))
     : null;
 
-  const estimatedPrice = item.priceEstimate.estimated;
-  const preferredStoreName = item.storeInfo.preferredStore?.name;
+  const estimatedPrice = item.priceEstimate?.estimated;
+  const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
   // The API stores the price PER UNIT; the shopper entered the total. Show the
   // total they paid, with the split beneath it when it is not the same number.
-  const purchasedQuantity = item.purchaseInfo.purchasedQuantity ?? null;
-  const perUnitPaid = item.purchaseInfo.isPurchased
-    ? item.purchaseInfo.purchasedPrice ?? null
+  const purchaseInfo = item.purchaseInfo;
+  const purchasedQuantity = purchaseInfo?.purchasedQuantity ?? null;
+  const perUnitPaid = purchaseInfo?.isPurchased
+    ? purchaseInfo.purchasedPrice ?? null
     : null;
   const purchasedTotal =
     purchasedQuantity != null
@@ -265,7 +274,7 @@ export const ShoppingListItemDetail: React.FC<
           style={styles.titleRow}
         />
 
-        {!!item.purchaseInfo.isPurchased && (
+        {!!purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
@@ -303,15 +312,14 @@ export const ShoppingListItemDetail: React.FC<
               <Text role="label">{money(estimatedPrice)}</Text>
             </DetailRow>
           )}
-          {!!item.purchaseInfo.isPurchased &&
-            item.purchaseInfo.purchasedQuantity != null && (
-              <DetailRow label={t('shoppingListScreens.purchased')}>
-                <FormattedItemSubtitle
-                  quantity={item.purchaseInfo.purchasedQuantity}
-                  unitSymbol={unitSymbol}
-                />
-              </DetailRow>
-            )}
+          {!!purchaseInfo?.isPurchased && purchasedQuantity != null && (
+            <DetailRow label={t('shoppingListScreens.purchased')}>
+              <FormattedItemSubtitle
+                quantity={purchasedQuantity}
+                unitSymbol={unitSymbol}
+              />
+            </DetailRow>
+          )}
           {purchasedTotal != null && (
             <DetailRow label={t('labels.totalPaid')}>
               <View style={styles.paidCell}>
@@ -332,16 +340,16 @@ export const ShoppingListItemDetail: React.FC<
               </View>
             </DetailRow>
           )}
-          {!!item.purchaseInfo.isPurchased &&
-            !!item.purchaseInfo.purchasedBy && (
-              <DetailRow label={t('shoppingListScreens.purchasedBy')}>
-                <Text role="label">
-                  {firstNonBlank(
-                    item.purchaseInfo.purchasedBy.profile?.displayName,
-                  ) ?? t('labels.someone')}
-                </Text>
-              </DetailRow>
-            )}
+          {!!purchaseInfo?.isPurchased && !!purchaseInfo.purchasedBy && (
+            <DetailRow label={t('shoppingListScreens.purchasedBy')}>
+              <Text role="label">
+                {firstNonBlank(
+                  purchaseInfo.purchasedBy.displayName,
+                  purchaseInfo.purchasedBy.profile?.displayName,
+                ) ?? t('labels.someone')}
+              </Text>
+            </DetailRow>
+          )}
           {!!priorityLabel && (
             <DetailRow label={t('shoppingListScreens.priority')}>
               <Text role="label">{priorityLabel}</Text>
@@ -372,57 +380,63 @@ export const ShoppingListItemDetail: React.FC<
           </DetailSection>
         )}
 
-        <DetailSection>
-          <ClickableInfoPanel
-            title={t('labels.purchaseHistory')}
-            items={purchaseHistoryItems}
-            onPress={handleViewHistory}
-            emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-          />
-        </DetailSection>
+        {!!purchaseHistory && (
+          <DetailSection>
+            <ClickableInfoPanel
+              title={t('labels.purchaseHistory')}
+              items={purchaseHistoryItems}
+              onPress={handleViewHistory}
+              emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+            />
+          </DetailSection>
+        )}
 
-        <DetailSection title={t('shoppingListScreens.additionalDetails')}>
-          {!!item.addedBy && (
-            <DetailRow label={t('shoppingListScreens.addedBy')}>
-              <Text role="label">
-                {firstNonBlank(
-                  item.addedBy.profile?.displayName,
-                  item.addedBy.email,
-                ) ?? t('labels.someone')}
-              </Text>
-            </DetailRow>
-          )}
-          {!!item.lastEditedBy?.profile?.displayName &&
-            item.lastEditedBy.id !== item.addedBy?.id && (
-              <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
+        {!!detail && (
+          <DetailSection title={t('shoppingListScreens.additionalDetails')}>
+            {!!detail.addedBy && (
+              <DetailRow label={t('shoppingListScreens.addedBy')}>
                 <Text role="label">
-                  {item.lastEditedBy.profile.displayName}
+                  {firstNonBlank(
+                    detail.addedBy.profile?.displayName,
+                    detail.addedBy.email,
+                  ) ?? t('labels.someone')}
                 </Text>
               </DetailRow>
             )}
-          <DetailRow label={t('shoppingListScreens.addedOn')}>
-            <Text role="label">{formatDate(item.createdAt)}</Text>
-          </DetailRow>
-          {item.updatedAt !== item.createdAt && (
-            <DetailRow label={t('shoppingListScreens.lastUpdated')}>
-              <Text role="label">{formatDate(item.updatedAt)}</Text>
+            {!!detail.lastEditedBy?.profile?.displayName &&
+              detail.lastEditedBy.id !== detail.addedBy?.id && (
+                <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
+                  <Text role="label">
+                    {detail.lastEditedBy.profile.displayName}
+                  </Text>
+                </DetailRow>
+              )}
+            <DetailRow label={t('shoppingListScreens.addedOn')}>
+              <Text role="label">{formatDate(detail.createdAt)}</Text>
             </DetailRow>
-          )}
-          {addedFromKey !== null && (
-            <DetailRow label={t('shoppingListScreens.addedFrom')}>
-              <Text role="label">{t(addedFromKey)}</Text>
-            </DetailRow>
-          )}
-          {!!item.source.isFromMealPlan && (
-            <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
-              <Text role="label">{t('labels.yes')}</Text>
-            </DetailRow>
-          )}
-        </DetailSection>
+            {detail.updatedAt !== detail.createdAt && (
+              <DetailRow label={t('shoppingListScreens.lastUpdated')}>
+                <Text role="label">{formatDate(detail.updatedAt)}</Text>
+              </DetailRow>
+            )}
+            {addedFromKey !== null && (
+              <DetailRow label={t('shoppingListScreens.addedFrom')}>
+                <Text role="label">{t(addedFromKey)}</Text>
+              </DetailRow>
+            )}
+            {!!detail.source.isFromMealPlan && (
+              <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
+                <Text role="label">{t('labels.yes')}</Text>
+              </DetailRow>
+            )}
+          </DetailSection>
+        )}
 
-        {!!item.item?.dataAttributions.length && (
+        {!!detail?.item?.dataAttributions.length && (
           <DetailSection transparent>
-            <DataAttributionNotices attributions={item.item.dataAttributions} />
+            <DataAttributionNotices
+              attributions={detail.item.dataAttributions}
+            />
           </DetailSection>
         )}
       </CollapsingHeroDetail>
@@ -432,7 +446,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          item={item.item}
+          item={detail?.item}
         />
       )}
     </>

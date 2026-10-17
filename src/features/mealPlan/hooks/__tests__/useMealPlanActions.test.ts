@@ -1,8 +1,12 @@
 import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { ErrorCode, MealPlanType } from '#/graphql/generated/schemaTypes';
-import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import {
+  ErrorCode,
+  MealPlanType,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
+import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
   recordMock,
@@ -12,11 +16,14 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
+  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n';
+import { useMealPlan } from '../useMealPlan';
 import { useMealPlanActions } from '../useMealPlanActions';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -24,6 +31,12 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+/** The actions beside the screen's own watcher of the plan, as on MealPlanMain. */
+function usePlanAndActions() {
+  useMealPlan('plan-1');
+  return useMealPlanActions();
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -281,9 +294,136 @@ describe('useMealPlanActions', () => {
     expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 
-  it('updateMealPlan puts the plan back and offers a refresh when it was changed elsewhere', async () => {
+  /** A hand-built answer to `UpdateMealPlan`, recording what it was sent. */
+  const updateAnswering = (
+    result: MockFor<typeof UpdateMealPlanDocument>['result'],
+  ) => {
+    const fired: Array<Record<string, unknown>> = [];
+    const mock: MockFor<typeof UpdateMealPlanDocument> = {
+      request: {
+        query: UpdateMealPlanDocument,
+        variables: vars => {
+          fired.push(vars);
+          return true;
+        },
+      },
+      delay: 20,
+      result,
+    };
+    return { fired, mock };
+  };
+
+  /** The plan as the server reads it back, holding no meals. */
+  const planAsServed = (plan: {
+    name: string;
+    version: number;
+  }): MockDataFor<typeof GetMealPlanDocument> => ({
+    mealPlan: {
+      __typename: 'MealPlan',
+      id: 'plan-1',
+      ...plan,
+      mealPlanItemsConnection: {
+        edges: [],
+        pageInfo: { hasNextPage: false, endCursor: null },
+      },
+    },
+  });
+
+  const staleVersionRefusals: Array<
+    [string, MockFor<typeof UpdateMealPlanDocument>['result']]
+  > = [
+    [
+      'the VERSION_CONFLICT member',
+      {
+        data: {
+          updateMealPlan: {
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'raw server English',
+          },
+        },
+      },
+    ],
+    [
+      'a top-level RESOURCE_VERSION_CONFLICT',
+      {
+        data: null,
+        errors: [
+          {
+            message: 'raw server English',
+            extensions: { code: TopLevelErrorCode.ResourceVersionConflict },
+          },
+        ],
+      },
+    ],
+  ];
+
+  // Another member renamed the plan since it was read: theirs is shown.
+  it.each(staleVersionRefusals)(
+    "updateMealPlan shows the other member's plan and says the rename was not saved when refused with %s",
+    async (_label, refusal) => {
+      const cache = makeCache();
+      // The complete list-card row: what the local write and its revert read.
+      writeLocalMealPlan(
+        cache,
+        'plan-1',
+        {
+          name: 'Week Plan',
+          planType: MealPlanType.Weekly,
+          startDate: '2025-06-01',
+          endDate: '2025-06-07',
+        },
+        'user-1',
+      );
+      const screenRead = recordMock(GetMealPlanDocument, {
+        data: planAsServed({ name: 'Week Plan', version: 3 }),
+        maxUsageCount: 1,
+      });
+      const reRead = recordMock(GetMealPlanDocument, {
+        data: planAsServed({ name: 'Their Plan', version: 4 }),
+      });
+      const update = updateAnswering(refusal);
+
+      const { result } = renderHookWithApollo(usePlanAndActions, {
+        operationMocks: [screenRead.mock, reRead.mock, update.mock],
+        cache,
+      });
+      await waitFor(() => expect(readPlan(cache)?.version).toBe(3));
+
+      let pending: Promise<boolean> | undefined;
+      act(() => {
+        pending = result.current.updateMealPlan('plan-1', { name: 'Renamed' });
+      });
+      // Local-first: the rename shows before the server answers.
+      await waitFor(() => expect(readPlan(cache)?.name).toBe('Renamed'));
+
+      let updated: boolean | undefined;
+      await act(async () => {
+        updated = await pending;
+      });
+
+      expect(updated).toBe(false);
+      expect(update.fired).toEqual([
+        { input: { id: 'plan-1', name: 'Renamed', version: 3 } },
+      ]);
+      await waitFor(() =>
+        expect(readPlan(cache)).toMatchObject({
+          name: 'Their Plan',
+          version: 4,
+        }),
+      );
+      expect(reRead.fired).toHaveLength(1);
+      // Told, with nothing left to do: the plan on screen is already theirs.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(alertService.alert).toHaveBeenCalledWith(
+        t('errors.changedElsewhereTitle'),
+        t('errors.changedElsewhereLatestShown'),
+      );
+    },
+  );
+
+  it('updateMealPlan puts the plan back without re-reading it on any other refusal', async () => {
     const cache = makeCache();
-    // The complete list-card row: what the local write and its revert read.
     writeLocalMealPlan(
       cache,
       'plan-1',
@@ -295,49 +435,36 @@ describe('useMealPlanActions', () => {
       },
       'user-1',
     );
-    const data: MockDataFor<typeof UpdateMealPlanDocument> = {
-      updateMealPlan: {
-        __typename: 'ConflictError',
-        code: ErrorCode.VersionConflict,
-        message: 'raw server English',
-      },
-    };
+    const screenRead = recordMock(GetMealPlanDocument, {
+      data: planAsServed({ name: 'Week Plan', version: 3 }),
+    });
     const update = recordMock(UpdateMealPlanDocument, {
-      data,
-      delay: 20,
+      data: {
+        updateMealPlan: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          message: 'raw server English',
+        },
+      },
     });
 
-    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
-      operationMocks: [update.mock],
+    const { result } = renderHookWithApollo(usePlanAndActions, {
+      operationMocks: [screenRead.mock, update.mock],
       cache,
     });
-
-    let pending: Promise<boolean> | undefined;
-    act(() => {
-      pending = result.current.updateMealPlan('plan-1', { name: 'Renamed' });
-    });
-    // Local-first: the rename shows before the server answers.
-    await waitFor(() => expect(readPlan(cache)?.name).toBe('Renamed'));
+    await waitFor(() => expect(readPlan(cache)?.version).toBe(3));
 
     let updated: boolean | undefined;
     await act(async () => {
-      updated = await pending;
+      updated = await result.current.updateMealPlan('plan-1', {
+        name: 'Renamed',
+      });
     });
 
     expect(updated).toBe(false);
-    // A local plan is written at version 1, which is what the edit stated.
-    expect(update.fired).toEqual([
-      { input: { id: 'plan-1', name: 'Renamed', version: 1 } },
-    ]);
-    expect(readPlan(cache)).toMatchObject({ name: 'Week Plan', version: 1 });
+    expect(readPlan(cache)).toMatchObject({ name: 'Week Plan', version: 3 });
+    expect(screenRead.fired).toHaveLength(1);
     expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.arrayContaining([
-        expect.objectContaining({ onPress: expect.any(Function) }),
-      ]),
-    );
   });
 
   // Online writes are not queued, so nothing rebased the second onto the

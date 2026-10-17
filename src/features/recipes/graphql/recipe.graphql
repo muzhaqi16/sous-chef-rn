@@ -9,6 +9,7 @@ query SearchRecipes(
   $diets: [Diet!]
   $intolerances: [Intolerance!]
   $maxReadyTime: Int
+  $category: RecipeCategory
 ) {
   searchRecipes(
     query: $query
@@ -18,6 +19,7 @@ query SearchRecipes(
       diets: $diets
       intolerances: $intolerances
       maxReadyTime: $maxReadyTime
+      category: $category
     }
   ) {
     edges {
@@ -456,7 +458,11 @@ query MatchRecipeIngredientsToPantry(
   }
 }
 
-mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
+# `$stacksFirst` defaults, so a cook queued without it still replays.
+mutation MarkRecipeAsCooked(
+  $input: MarkRecipeAsCookedInput!
+  $stacksFirst: Int = 100
+) {
   markRecipeAsCooked(input: $input) {
     __typename
     ... on MarkRecipeAsCookedPayload {
@@ -486,6 +492,19 @@ mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
         recipe {
           id
           name
+        }
+        # The stacks the cook drew from, so the pantry shows what is left: a
+        # cook publishes no pantry event.
+        pantryItemsUsedConnection(first: $stacksFirst) {
+          edges {
+            node {
+              id
+              pantryItem {
+                id
+                ...PantryItemReaders
+              }
+            }
+          }
         }
       }
     }

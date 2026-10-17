@@ -17,14 +17,14 @@ export const unitPriceFromTotal = (
 };
 
 /**
- * Rounded to cents so the input shows `14.97`, not the 14.969999999999999 that
- * 4.99 × 3 produces (`formatNumberForInput` is `String(value)`).
+ * A per-unit price times the line's quantity (a line with none counts once),
+ * as the API's `suggestedTotal` adds lines up. Rounded to cents so the input
+ * shows `14.97`, not the 14.969999999999999 that 4.99 × 3 produces.
  */
+export const lineTotal = (unitPrice: number, quantity: number): number =>
+  Math.round((quantity > 0 ? unitPrice * quantity : unitPrice) * 100) / 100;
+
 export const totalFromUnitPrice = (
   unitPrice: number | null,
   quantity: number,
-): number | null => {
-  if (unitPrice == null) return null;
-  const total = quantity > 0 ? unitPrice * quantity : unitPrice;
-  return Math.round(total * 100) / 100;
-};
+): number | null => (unitPrice == null ? null : lineTotal(unitPrice, quantity));

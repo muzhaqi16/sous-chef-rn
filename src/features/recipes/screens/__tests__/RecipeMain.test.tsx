@@ -3,6 +3,9 @@
 import React from 'react';
 import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
@@ -46,8 +49,31 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: jest.fn(() => false),
+}));
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+// Each has its own suite; here only whether the screen renders them.
+jest.mock('#features/recipes/components/capture/CaptureSheet', () => ({
+  CaptureSheet: () => null,
+}));
+jest.mock('#features/recipes/components/capture/PhotoCaptureSheet', () => ({
+  PhotoCaptureSheet: () => null,
+}));
+// The screen starts captures for its sheets, which render outside the navigator.
+jest.mock('#features/recipes/hooks/useRecipeCapture', () => ({
+  useRecipeCapture: () => ({ start: jest.fn(), sending: false }),
+}));
+jest.mock('#features/recipes/components/capture/CapturePollers', () => ({
+  CapturePollers: () => null,
+}));
+jest.mock('#features/recipes/components/capture/CaptureRows', () => ({
+  CaptureRows: () => null,
+}));
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
@@ -643,5 +669,71 @@ describe('RecipeMain', () => {
       await capturedOnRefresh!();
     });
     expect(mockRefresh).toHaveBeenCalled();
+  });
+});
+
+describe('RecipeMain: the ways to add a recipe', () => {
+  const lastMenu = () =>
+    jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockItemListImpl = (props: ItemListMockProps) =>
+      props.ListHeaderComponent ?? null;
+    mockScreenWith({});
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+  });
+
+  it('writes a recipe at once while capture is switched off', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+
+    render(<RecipeMain />);
+
+    expect(lastMenu().map(action => action.key)).toEqual(['manual']);
+  });
+
+  it('offers a link, photos and text before writing one, with capture on', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
+
+    render(<RecipeMain />);
+
+    expect(lastMenu().map(action => action.key)).toEqual([
+      'link',
+      'photo',
+      'text',
+      'manual',
+    ]);
+    expect(lastMenu().every(action => !action.disabledReason)).toBe(true);
+  });
+
+  it('offers only the sources switched on for this user', () => {
+    jest
+      .mocked(useFeatureFlag)
+      .mockImplementation(flag => flag === 'recipeCaptureText');
+
+    render(<RecipeMain />);
+
+    expect(lastMenu().map(action => action.key)).toEqual(['text', 'manual']);
+  });
+
+  it('shows the capture entries disabled, with why, while the API is unreachable', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
+    jest.mocked(useIsApiUnavailable).mockReturnValue(true);
+
+    render(<RecipeMain />);
+
+    const reasons = Object.fromEntries(
+      lastMenu().map(action => [action.key, action.disabledReason]),
+    );
+    expect(reasons).toEqual({
+      link: 'Needs a connection',
+      photo: 'Needs a connection',
+      text: 'Needs a connection',
+      manual: undefined,
+    });
   });
 });

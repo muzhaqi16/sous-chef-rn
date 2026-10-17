@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedReaction,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
@@ -22,6 +23,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
+import { AddMenu } from './AddMenu';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
@@ -49,12 +51,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     addButtonConfig,
     isAddButtonDisabled,
     addButtonDisabledMessage,
+    addMenu,
+    isAddMenuOpen,
   } = useTabBarState();
 
   // True for every backdrop claim, sheets and selectors alike, from the global
   // backdrop's slot count — broader than the selector-only `isOverlayOpen`.
   const overlayPresent = useOverlayBackdropPresence();
-  const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
+  const { setActiveTab, setAddButtonRect, setAddMenuOpen, scrollTabBarHidden } =
     useTabBarSetters();
 
   const { ref: addButtonRef, measure: measureAddButton } =
@@ -62,11 +66,37 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   const showNavigationLabels = useShowNavigationLabels();
 
+  // A menu of one is its action; of two or more, the `+` opens it.
+  const [onlyAction] = addMenu ?? [];
+  const hasMenu = !!addMenu && addMenu.length > 1;
+  const menuProgress = useSharedValue(0);
+  // The scrim fades on its own: the `+`'s under-damped spring would swing its
+  // opacity past open and back several times before it settles.
+  const menuFade = useSharedValue(0);
+  useEffect(() => {
+    const opening = hasMenu && isAddMenuOpen;
+    menuProgress.set(withSpring(opening ? 1 : 0, motion.spring.SNAPPY));
+    menuFade.set(
+      withTiming(opening ? 1 : 0, {
+        duration: opening ? SHEET.BACKDROP_FADE_IN : SHEET.BACKDROP_FADE_OUT,
+      }),
+    );
+  }, [hasMenu, isAddMenuOpen, menuProgress, menuFade]);
+  const closeAddMenu = () => setAddMenuOpen(false);
+
   const handleAddPress = () => {
     if (isAddButtonDisabled) {
       toastService.info(
         firstNonBlank(addButtonDisabledMessage) ?? t('errors.codes.forbidden'),
       );
+      return;
+    }
+    if (hasMenu) {
+      setAddMenuOpen(!isAddMenuOpen);
+      return;
+    }
+    if (onlyAction) {
+      onlyAction.onPress();
       return;
     }
     onAddPress?.();
@@ -240,13 +270,27 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         icon={addButtonConfig.icon}
         iconLibrary={addButtonConfig.iconLibrary}
         disabled={isAddButtonDisabled}
+        {...(hasMenu && { menuOpen: isAddMenuOpen, menuProgress })}
       />
     </Animated.View>
   ) : null;
 
+  // Between the bar and the `+`, so the `+` stays above its own scrim.
+  const addMenuLayer =
+    showAddButton && hasMenu ? (
+      <AddMenu
+        actions={addMenu}
+        open={isAddMenuOpen}
+        fade={menuFade}
+        buttonBottom={floatingButtonStyle.bottom}
+        onClose={closeAddMenu}
+      />
+    ) : null;
+
   return (
     <>
       {bar}
+      {addMenuLayer}
       {floatingAddButton}
     </>
   );

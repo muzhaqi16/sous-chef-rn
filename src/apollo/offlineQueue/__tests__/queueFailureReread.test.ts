@@ -93,6 +93,7 @@ describe('withdrawing a refused queued update', () => {
       operationName: operationNameOf(UpdateShoppingListItemDocument),
       entityType: 'ShoppingListItem',
       entityId: 'sli-1',
+      subjectType: 'ShoppingListItem',
       variables: { input: { id: 'sli-1', itemName: 'Oat milk' } },
       error: {
         type: 'server',
@@ -117,6 +118,7 @@ describe('withdrawing a refused queued update', () => {
         operationName: operationNameOf(UpdateShoppingListItemDocument),
         entityType: 'ShoppingListItem',
         entityId: 'sli-1',
+        subjectType: 'ShoppingListItem',
         variables: { input: { id: 'sli-1', itemName: 'Oat milk' } },
         error: {
           type: 'server',

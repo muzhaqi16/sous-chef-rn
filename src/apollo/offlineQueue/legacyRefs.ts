@@ -3,6 +3,7 @@ import type { DocumentNode } from 'graphql';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import { isOwnKey } from '#/utils/isOwnKey';
+import { typedItemRef } from '#/utils/refInput';
 import { inputTypeOf } from './legacyExpiry';
 
 /**
@@ -149,13 +150,25 @@ const packageSizeCorrection = (input: Input): Input => {
   return { ...rest, correction };
 };
 
+/**
+ * A typed name sent as `itemName`, which the API retires, as the `inline` item
+ * this build sends. Its id is minted on load, and the queue saves the entry
+ * before its first send, so every send names the same item.
+ */
+const withInlineItem = (line: Input): Input => {
+  const { item } = line;
+  if (!isRecord(item) || !('itemName' in item)) return line;
+  const name = text(item.itemName);
+  return name ? { ...line, item: typedItemRef(name) } : line;
+};
+
 const shoppingBatchAdd = (input: Input): Input => {
   if (!Array.isArray(input.items)) return input;
   const items: unknown[] = input.items;
   return {
     ...input,
     items: items.map(item =>
-      isRecord(item) ? withBrand(withUnit(item)) : item,
+      isRecord(item) ? withInlineItem(withBrand(withUnit(item))) : item,
     ),
   };
 };

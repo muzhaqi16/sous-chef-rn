@@ -1,0 +1,12 @@
+# What moving a line to another aisle reads: its version for the update, and
+# its item's aisle, which a reset falls back to.
+fragment useMoveToAisleModal_item on ShoppingListItem {
+  id
+  version
+  storeDepartment
+  storeDepartmentOverride
+  item {
+    id
+    storeDepartment
+  }
+}

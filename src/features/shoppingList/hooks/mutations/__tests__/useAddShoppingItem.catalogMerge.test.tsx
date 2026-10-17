@@ -135,7 +135,10 @@ describe('useAddShoppingItem — catalog-merge id adoption', () => {
   const refetch = jest.fn().mockResolvedValue(undefined);
 
   it('evicts the client cuid when the server returns a different (merged) id', async () => {
-    mockGenerateEntityId.mockReturnValueOnce('cuid-A');
+    // The typed name's item id is minted first, then the row's.
+    mockGenerateEntityId
+      .mockReturnValueOnce('item-A')
+      .mockReturnValueOnce('cuid-A');
     const { result } = renderHookWithApollo(
       () => useAddShoppingItem({ listId: 'list-1', refetch }),
       { operationMocks: [mergeMock('server-canonical')] },
@@ -150,7 +153,9 @@ describe('useAddShoppingItem — catalog-merge id adoption', () => {
 
   it('does NOT cross-evict when two adds overlap (regression: per-call variables, not a shared ref)', async () => {
     mockGenerateEntityId
+      .mockReturnValueOnce('item-A')
       .mockReturnValueOnce('cuid-A')
+      .mockReturnValueOnce('item-B')
       .mockReturnValueOnce('cuid-B');
     const { result } = renderHookWithApollo(
       () => useAddShoppingItem({ listId: 'list-1', refetch }),

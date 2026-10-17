@@ -44,6 +44,7 @@ import {
 
 // Utils
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
+import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
@@ -119,8 +120,14 @@ export const ShoppingListMainContent: React.FC<
   } = useShoppingListModalActions();
   const anySheetVisible = useAnyShoppingListSheetVisible();
 
-  const { toBarcode, toListSettings, toShoppingListItemDetail, toEditItem } =
-    useAppNavigation();
+  const {
+    toBarcode,
+    toListSettings,
+    toShoppingListItemDetail,
+    toEditItem,
+    toStoreMode,
+  } = useAppNavigation();
+  const storeModeEnabled = useStoreModeEnabled();
   const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
 
@@ -289,10 +296,23 @@ export const ShoppingListMainContent: React.FC<
     label: t('shoppingListScreen.label'),
     title: t('labels.shoppingList'),
   };
+  // Opt-in from Settings: the list walked aisle by aisle on its own screen.
+  const storeModeAction: BarAction | null =
+    storeModeEnabled && currentListId
+      ? {
+          icon: 'storefront-outline',
+          tone: 'textSecondary',
+          onPress: () => toStoreMode({ listId: currentListId }),
+          testID: shoppingListTestIDs.storeModeButton,
+          accessibilityLabel: t('shoppingListScreens.storeMode.open'),
+        }
+      : null;
   const selectedListHeader: ScreenHeaderConfig = {
     ...tabHeader,
     title: currentList?.name ?? tabHeader.title,
-    actions: [switchListAction],
+    actions: storeModeAction
+      ? [storeModeAction, switchListAction]
+      : [switchListAction],
   };
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)

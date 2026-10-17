@@ -1120,6 +1120,45 @@ describe('AddEditItem', () => {
     );
   });
 
+  it('sends the typed name inline under a minted item id, which the row names', async () => {
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2' },
+        }),
+      );
+    const { createLocalShoppingListItem } = jest.requireMock(
+      '#features/shoppingList/cache/items',
+    );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    const [line] = (
+      added.fired[0]?.input as {
+        items: { item: { inline?: { id: string } } }[];
+      }
+    ).items;
+    expect(line?.item).toEqual({
+      inline: { id: expect.any(String), name: 'Flour' },
+    });
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ itemId: line?.item.inline?.id }),
+    );
+  });
+
   // The stepper writes the device's separator back into the field, so the
   // stepped value reaches the API only through the same normalisation.
   it('sends a comma-device quantity stepped with the increment control as API text', async () => {

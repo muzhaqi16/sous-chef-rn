@@ -8,7 +8,8 @@ import { Icon } from '#utils/iconUtils';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { recipesTestIDs } from '#features/recipes/testIDs';
+import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 interface RecipeIngredientListProps {
@@ -16,15 +17,29 @@ interface RecipeIngredientListProps {
   onEditIngredient: (ingredient: IngredientFormState) => void;
   onRemoveIngredient: (id: string) => void;
   onAddIngredient: () => void;
+  /** Offers Paste ingredients; absent, the list shows only Add ingredient. */
+  onPasteIngredients?: () => void;
   /** The section's own refusal — an empty list, or a blank entry in it. */
   error?: string;
 }
+
+/** "2 cups · sifted": the amount and the handling, whichever are stated. */
+const rowDetail = (ingredient: IngredientFormState): string =>
+  [
+    ingredient.quantity === null
+      ? ''
+      : formatQuantityDisplay(ingredient.quantity, ingredient.unitLabel),
+    ingredient.preparation ?? '',
+  ]
+    .filter(part => part.trim() !== '')
+    .join(' \u00B7 ');
 
 export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
   ingredients,
   onEditIngredient,
   onRemoveIngredient,
   onAddIngredient,
+  onPasteIngredients,
   error,
 }) => {
   const { t } = useTranslation();
@@ -44,10 +59,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
               {ingredient.name || t('recipes.unnamedIngredient')}
             </Text>
             <Text role="caption" tone="secondary" style={styles.ingredientMeta}>
-              {formatQuantityForDisplay(ingredient.quantity)}
-              {ingredient.preparation
-                ? ` \u00B7 ${ingredient.preparation}`
-                : ''}
+              {rowDetail(ingredient)}
               {ingredient.isOptional ? t('recipes.optionalSuffix') : ''}
             </Text>
           </View>
@@ -69,6 +81,18 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
           {t('recipes.addIngredient')}
         </Text>
       </AppPressable>
+      {onPasteIngredients ? (
+        <AppPressable
+          onPress={onPasteIngredients}
+          style={styles.addButton}
+          testID={recipesTestIDs.pasteIngredientsButton}
+        >
+          <Icon name="clipboard-outline" size={20} tone="primary" />
+          <Text role="bodyStrong" tone="accent" style={styles.addText}>
+            {t('recipes.pasteIngredients')}
+          </Text>
+        </AppPressable>
+      ) : null}
       {!!error && (
         <Text role="error" tone="error" style={styles.sectionError}>
           {error}

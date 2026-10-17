@@ -3,6 +3,7 @@ import type { FieldFunctionOptions } from '@apollo/client';
 import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
+  readByIdFromCache,
 } from '#/apollo/cacheFieldPolicies';
 import type { CachedConnection, CachedEdge } from '#/apollo/cacheFieldPolicies';
 import { isRecord } from '#/utils/isRecord';
@@ -69,38 +70,14 @@ export const pantryTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      pantry: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'Pantry',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
+      pantry: readByIdFromCache('Pantry'),
       // The redirect is all-or-nothing: `canRead` only checks that the
       // entity EXISTS, so a `PantryItem` missing one field of
       // `PantryItemDetail_pantryItem` still reads incomplete and Apollo
       // goes to the network. It therefore only pays off paired with a
       // detail-complete optimistic write —
       // `optimisticEntityCompleteness.test.ts` is what keeps that true.
-      pantryItem: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'PantryItem',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
+      pantryItem: readByIdFromCache('PantryItem'),
       // Batches for a pantry item are a Relay connection keyed by the item
       // (and optional status filter), so each item — and each active/all
       // view — keeps its own cached edge list; edges merge by node id.

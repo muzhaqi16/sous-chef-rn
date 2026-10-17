@@ -2,7 +2,6 @@ import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { removeCollaboratorFromShoppingListCache } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 
 /**
@@ -11,29 +10,25 @@ import { useTranslation } from '#/i18n';
  */
 export function useRemoveCollaborator(listId: string) {
   const { t } = useTranslation();
-  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [removeMember, { client }] = useMutation(RemoveCollaboratorDocument);
 
   /** `true` once the collaborator is removed; `false` when refused. */
   const removeCollaborator = async (memberId: string): Promise<boolean> => {
     const settled = await settleMutation(
-      () =>
-        removeMember({
-          variables: { input: { id: memberId } },
-          update(cache, { data }) {
-            // Only evict on success — a resolved error must not remove the
-            // collaborator from the cache.
-            if (!appliedPayload(data)) return;
-            removeCollaboratorFromShoppingListCache(cache, listId, memberId, {
-              evictItem: true,
-            });
-          },
-        }),
+      () => removeMember({ variables: { input: { id: memberId } } }),
       {
         document: RemoveCollaboratorDocument,
         fallback: t('errors.removeMemberFailed'),
+        removal: true,
       },
     );
-    return settled.status !== 'failed';
+    if (settled.status === 'failed') return false;
+    // A repeat answered as not found names no collaborator, so the cache is
+    // updated from the settle, not from the payload.
+    removeCollaboratorFromShoppingListCache(client.cache, listId, memberId, {
+      evictItem: true,
+    });
+    return true;
   };
 
   return { removeCollaborator };

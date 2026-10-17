@@ -32,19 +32,6 @@ export const money = (
   currency: string,
 ): string => formatCurrency(amount, currency);
 
-/**
- * Each amount in its own currency, in the API's order. The API never adds
- * amounts across currencies, so nothing here does; undefined when it sent none.
- */
-export const moneyByCurrency = (
-  amounts: readonly { currencyCode: string; amount: number }[],
-): string | undefined =>
-  amounts.length === 0
-    ? undefined
-    : amounts
-        .map(({ currencyCode, amount }) => money(amount, currencyCode))
-        .join(' · ');
-
 export const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
 export type AnalyticsResult = ReturnType<typeof usePantryAnalytics>;

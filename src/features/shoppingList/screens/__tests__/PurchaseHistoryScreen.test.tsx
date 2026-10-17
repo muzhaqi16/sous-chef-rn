@@ -3,6 +3,8 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { screen, waitFor } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
+import { t } from '#/i18n';
+import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -238,6 +240,88 @@ describe('PurchaseHistoryScreen', () => {
     // The row AND the spend summary: the aggregate counts a recorded zero, so
     // the row that produced it must not go blank.
     expect(screen.getAllByText('$0.00').length).toBeGreaterThan(1);
+  });
+
+  /** The summary line for `label`, with its figure, as one string. */
+  const summaryLine = (
+    label: 'purchaseHistory.totalSpent' | 'purchaseHistory.averagePrice',
+    figure: string,
+  ) => `${t(label)} ${figure}`;
+
+  it('shows the spend as unknown, never zero, when no purchase carries a price', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [
+        historyMock([{ ...purchase, unitPrice: null, totalPrice: null }]),
+      ],
+    });
+
+    expect(
+      await screen.findByText(
+        summaryLine('purchaseHistory.totalSpent', UNKNOWN_AMOUNT),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        summaryLine('purchaseHistory.averagePrice', UNKNOWN_AMOUNT),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/0\.00/)).toBeNull();
+  });
+
+  it('shows the spend as unknown while purchases remain on another page', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([purchase], true)],
+    });
+
+    expect(await screen.findByText('2 kg')).toBeTruthy();
+    expect(
+      screen.getByText(
+        summaryLine('purchaseHistory.totalSpent', UNKNOWN_AMOUNT),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        summaryLine('purchaseHistory.averagePrice', UNKNOWN_AMOUNT),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('shows the spend in each currency apart, never added together', async () => {
+    // Its own id: a Currency is normalized by id, so sharing one would make
+    // both purchases the same currency.
+    const euro: PurchaseNode['currency'] = {
+      __typename: 'Currency',
+      id: 'c2',
+      code: 'EUR',
+    };
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [
+        historyMock([
+          purchase,
+          { ...purchase, id: 'p6', unitPrice: 1.5, totalPrice: 3 },
+          {
+            ...purchase,
+            id: 'p7',
+            unitPrice: 2,
+            totalPrice: 4,
+            currency: euro,
+          },
+        ]),
+      ],
+    });
+
+    expect(
+      await screen.findByText(
+        summaryLine('purchaseHistory.totalSpent', '$8.00 · €4.00'),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        summaryLine('purchaseHistory.averagePrice', '$4.00 · €4.00'),
+      ),
+    ).toBeTruthy();
+    // Neither the sum of all three nor their mean.
+    expect(screen.queryByText(/12\.00/)).toBeNull();
   });
 
   it('names who recorded the purchase', async () => {

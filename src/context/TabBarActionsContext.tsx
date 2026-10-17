@@ -21,6 +21,19 @@ interface AddButtonConfig {
   iconLibrary: IconLibrary;
 }
 
+/** One entry of a tab's add menu. */
+export interface TabBarAddAction {
+  /** Unique within the menu. */
+  key: string;
+  label: string;
+  icon: string;
+  iconLibrary?: IconLibrary;
+  onPress: () => void;
+  /** Set while the action cannot run: the entry is disabled and shows it. */
+  disabledReason?: string;
+  testID?: string;
+}
+
 interface TabBarSettersContextType {
   setScannerProps: (onScanPress?: () => void, showButton?: boolean) => void;
   /** Registers the current screen's add handler; visibility follows the active tab. */
@@ -32,6 +45,12 @@ interface TabBarSettersContextType {
   setActiveTab: (tabName: string) => void;
   setOverlayOpen: (isOpen: boolean) => void;
   setAddButtonRect: (rect: TargetRect) => void;
+  /** A tab's add menu; undefined removes it. Kept per tab, so it survives blur. */
+  setAddMenu: (
+    tab: string,
+    actions: readonly TabBarAddAction[] | undefined,
+  ) => void;
+  setAddMenuOpen: (open: boolean) => void;
   /** Written from screens' scroll worklets on the UI thread; no JS re-renders. */
   scrollTabBarHidden: SharedValue<boolean>;
 }
@@ -45,6 +64,10 @@ interface TabBarStateContextType {
   addButtonConfig: AddButtonConfig;
   isAddButtonDisabled: boolean;
   addButtonDisabledMessage?: string;
+
+  /** The active tab's add menu; with two or more entries the `+` opens it. */
+  addMenu?: readonly TabBarAddAction[];
+  isAddMenuOpen: boolean;
 
   activeTab: string;
   isOverlayOpen: boolean;
@@ -98,6 +121,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const [tabHandlers, setTabHandlers] = useState<Record<string, () => void>>(
     {},
   );
+  const [tabMenus, setTabMenus] = useState<
+    Partial<Record<string, readonly TabBarAddAction[]>>
+  >({});
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   const setScannerProps = (
     scanPress?: () => void,
@@ -146,9 +173,24 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     setIsOverlayOpen(isOpen);
   };
 
+  const setAddMenu = (
+    tab: string,
+    actions: readonly TabBarAddAction[] | undefined,
+  ) => {
+    setTabMenus(prev => {
+      if (prev[tab] === actions) return prev;
+      const next = { ...prev };
+      if (actions) next[tab] = actions;
+      else delete next[tab];
+      return next;
+    });
+  };
+
   const handleSetActiveTab = (tabName: string) => {
     activeTabRef.current = tabName; // Sync update before state change to prevent race condition
     setActiveTab(tabName);
+    // An open menu belongs to the tab being left.
+    setIsAddMenuOpen(false);
   };
 
   const settersValue: TabBarSettersContextType = {
@@ -157,6 +199,8 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     setActiveTab: handleSetActiveTab,
     setOverlayOpen: setOverlayOpenCb,
     setAddButtonRect,
+    setAddMenu,
+    setAddMenuOpen: setIsAddMenuOpen,
     scrollTabBarHidden,
   };
 
@@ -182,6 +226,8 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     addButtonConfig,
     isAddButtonDisabled,
     addButtonDisabledMessage,
+    addMenu: activeTab ? tabMenus[activeTab] : undefined,
+    isAddMenuOpen,
     activeTab,
     isOverlayOpen,
     addButtonRect,

@@ -27,6 +27,7 @@ import {
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { formatCurrency } from '#/utils/formatters/number';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
@@ -38,6 +39,7 @@ import {
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
@@ -113,6 +115,27 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const itemName = data.itemName ?? '';
   const category = data.category ?? null;
   const categoryLabel = firstNonBlank(category?.split(',')[0])?.trim();
+  const quantity = data.quantity ?? 0;
+  const quantityInput = data.quantityInput ?? null;
+  // What a line still to buy would cost at recorded prices: the suggestion is
+  // per one of its unit, and a substitute is similar products' price, never
+  // shown as the product's own.
+  const suggested = isPurchased ? null : data.suggestedPrice;
+  const estimate =
+    suggested?.amount != null && suggested.currency?.code
+      ? t(
+          suggested.substitute
+            ? 'shoppingListScreens.suggestedLinePriceSimilar'
+            : 'shoppingListScreens.suggestedLinePrice',
+          {
+            price: formatCurrency(
+              lineTotal(suggested.amount, quantity),
+              suggested.currency.code,
+              suggested.currency.decimalPlaces,
+            ),
+          },
+        )
+      : null;
   const isPendingSync = useIsPendingSync(itemId);
   const subtitle = isPendingSync ? (
     <Text
@@ -124,10 +147,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       {t('status.syncing')}
     </Text>
   ) : (
-    categoryLabel
+    [categoryLabel, estimate].filter(Boolean).join(' · ') || undefined
   );
-  const quantity = data.quantity ?? 0;
-  const quantityInput = data.quantityInput ?? null;
   const unitDisplay = firstNonBlank(data.unitName, data.unit?.symbol);
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.

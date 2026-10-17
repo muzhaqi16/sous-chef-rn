@@ -54,7 +54,7 @@ jest.mock(
     })),
   }),
 );
-jest.mock('#features/pantry/hooks/mutations/useResolveUnit', () => ({
+jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
   useResolveUnit: jest.fn(() => ({ resolveUnitId: jest.fn() })),
 }));
 

@@ -11,7 +11,10 @@ import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
-import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
+import {
+  createLocalShoppingListItem,
+  revertOptimisticShoppingListItem,
+} from '#features/shoppingList/cache/items';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
 const mockNavigateTo = {
@@ -519,6 +522,33 @@ describe('usePantryItemDetailActions', () => {
           ],
         },
       });
+    });
+
+    it('sends a row naming no catalog item by its name, under a minted item id the list row names', async () => {
+      const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+        data: { addItemsToShoppingList: null },
+      });
+
+      const { result } = setup(
+        { item: { ...baseItem, item: null } },
+        { operationMocks: [addMock.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleAddToShoppingList();
+      });
+
+      const [fired] = addMock.fired;
+      const [line] = (
+        fired?.input as { items: { item: { inline?: { id: string } } }[] }
+      ).items;
+      expect(line?.item).toEqual({
+        inline: { id: expect.any(String), name: 'Milk' },
+      });
+      expect(createLocalShoppingListItem).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ itemId: line?.item.inline?.id }),
+      );
     });
 
     it('falls back to quantity 1 when item has no quantity', async () => {

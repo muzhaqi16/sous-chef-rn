@@ -3,13 +3,20 @@ import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
 import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
 import { useShoppingListItemMutations } from './mutations/useShoppingListItemMutations';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 
 /**
  * Data-layer composition for the shopping list screen. `currentListId` must come
  * from `useShoppingListSelection`, which guarantees it exists in the available
  * lists so no query fires for a deleted one.
  */
-export function useShoppingListManagement(currentListId: string | undefined) {
+export function useShoppingListManagement(
+  currentListId: string | undefined,
+  // Store mode walks the whole list, so an aisle can't miss a later page's line.
+  {
+    loadEveryUnpurchasedPage = false,
+  }: { loadEveryUnpurchasedPage?: boolean } = {},
+) {
   const {
     shoppingList,
     notFound: listNotFound,
@@ -30,6 +37,13 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   } = usePaginatedShoppingItems({
     listId: currentListId,
   });
+
+  useLoadRemainingPages(
+    loadEveryUnpurchasedPage,
+    itemsLoading,
+    unpurchased,
+    currentListId ?? '',
+  );
 
   const unpurchasedItems = unpurchased.items;
   const purchasedItems = purchased.items;

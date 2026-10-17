@@ -46,6 +46,9 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     purchaseDate
     purchasedBy {
       id
+      # The name for a row naming them: it follows the shared list, not the
+      # profile's visibility, and falls back to their first name.
+      displayName
       profile {
         id
         displayName

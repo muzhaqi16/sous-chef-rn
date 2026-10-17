@@ -7,11 +7,29 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { ApolloClient } from '@apollo/client';
+import { MockLink } from '@apollo/client/testing';
 import { buildSchema, parse, validate } from 'graphql';
 import { storage } from '#storage/mmkv';
+import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  completeMockedResponse,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { QueueManager } from '../queueManager';
 import { QueueStore } from '../queueStore';
 import { QueueStatus } from '../types';
 import refusedAsStored from './fixtures/mutationsRefusedAsStored.json';
+
+let mockClient: ApolloClient | null = null;
+jest.mock('#/apollo/clientRegistry', () => ({
+  getApolloClient: () => mockClient,
+  registerApolloClient: jest.fn(),
+  clearApolloClient: jest.fn(),
+}));
 
 const schema = buildSchema(
   fs.readFileSync(
@@ -200,4 +218,102 @@ describe('a write stored by the previous build', () => {
       expect(validate(schema, loaded.mutation)).not.toHaveLength(0);
     },
   );
+});
+
+/**
+ * A typed name the previous build queued as `itemName`, which the API removes:
+ * the load sends it `inline`, under an item id minted then.
+ */
+describe('a list add the previous build queued with a typed name', () => {
+  const addOperation = operationNameOf(AddItemToShoppingListDocument);
+
+  function storedWithItemName() {
+    storage.set(
+      'apollo-mutation-queue',
+      JSON.stringify({
+        v: 2,
+        documents: {
+          [addOperation]: JSON.stringify(AddItemToShoppingListDocument),
+        },
+        entries: [
+          {
+            id: 'entry-1',
+            operationName: addOperation,
+            document: addOperation,
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'line-1', item: { itemName: 'Milk' } }],
+              },
+            },
+            userId: USER_ID,
+            status: QueueStatus.PENDING,
+            timestamp: Date.now(),
+            retryCount: 0,
+          },
+        ],
+      }),
+    );
+  }
+
+  afterEach(() => {
+    mockClient = null;
+  });
+
+  it('loads sending the name inline, under a minted item id', () => {
+    storedWithItemName();
+
+    const [loaded] = new QueueStore().getMutationsForUser(USER_ID);
+
+    expect(loaded?.variables).toEqual({
+      input: {
+        shoppingListId: 'list-1',
+        items: [
+          {
+            id: 'line-1',
+            item: { inline: { id: expect.any(String), name: 'Milk' } },
+          },
+        ],
+      },
+    });
+  });
+
+  it('keeps that id through the save before its first send, and replays it once', async () => {
+    storedWithItemName();
+    const store = new QueueStore();
+    const [loaded] = store.getMutationsForUser(USER_ID);
+    if (!loaded) throw new Error('the stored add did not load');
+
+    // What the queue writes before it sends an entry.
+    store.updateMutation(loaded.id, { status: QueueStatus.PROCESSING });
+    const [reloaded] = new QueueStore().getMutationsForUser(USER_ID);
+    if (!reloaded) throw new Error('the saved add did not reload');
+    expect(reloaded.variables).toEqual(loaded.variables);
+
+    const add = recordMock(AddItemToShoppingListDocument, {
+      data: {
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: [
+            {
+              __typename: 'BatchAddShoppingListItemResult',
+              index: 0,
+              success: true,
+              item: { __typename: 'ShoppingListItem', id: 'line-1' },
+            },
+          ],
+        },
+      },
+    });
+    mockClient = new ApolloClient({
+      cache: makeCache(),
+      dataMasking: true,
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      link: new MockLink([completeMockedResponse(add.mock)]),
+    });
+
+    await new QueueManager()['executeMutation'](reloaded);
+
+    expect(add.fired).toEqual([loaded.variables]);
+  });
 });

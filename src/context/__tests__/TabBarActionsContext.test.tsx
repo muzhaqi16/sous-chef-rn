@@ -150,6 +150,63 @@ describe('TabBarActionsContext', () => {
     });
   });
 
+  describe('setAddMenu', () => {
+    const menu = [
+      { key: 'link', label: 'Link', icon: 'link', onPress: jest.fn() },
+      { key: 'manual', label: 'Manual', icon: 'create', onPress: jest.fn() },
+    ];
+
+    it("exposes a tab's menu only while that tab is active", () => {
+      const { result } = renderHook(() => useTabBarActions(), { wrapper });
+
+      act(() => {
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+      });
+      expect(result.current.addMenu).toBe(menu);
+
+      act(() => {
+        result.current.setActiveTab('Pantry');
+      });
+      expect(result.current.addMenu).toBeUndefined();
+
+      act(() => {
+        result.current.setActiveTab('Recipe');
+      });
+      expect(result.current.addMenu).toBe(menu);
+    });
+
+    it('removes a menu set to undefined', () => {
+      const { result } = renderHook(() => useTabBarActions(), { wrapper });
+
+      act(() => {
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+      });
+      act(() => {
+        result.current.setAddMenu('Recipe', undefined);
+      });
+
+      expect(result.current.addMenu).toBeUndefined();
+    });
+
+    it('closes an open menu when the tab changes', () => {
+      const { result } = renderHook(() => useTabBarActions(), { wrapper });
+      act(() => {
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+        result.current.setAddMenuOpen(true);
+      });
+      expect(result.current.isAddMenuOpen).toBe(true);
+
+      act(() => {
+        result.current.setActiveTab('Pantry');
+      });
+
+      expect(result.current.isAddMenuOpen).toBe(false);
+    });
+  });
+
   describe('setOverlayOpen', () => {
     it('toggles overlay state', () => {
       const { result } = renderHook(() => useTabBarActions(), { wrapper });

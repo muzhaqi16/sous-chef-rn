@@ -6,7 +6,11 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
@@ -28,6 +32,9 @@ interface ShoppingListSettingsUpdate {
   // Rides on the same write as the rename: every versioned write bumps the
   // version, so a second write would need the first one's answer first.
   planning?: Pick<ShoppingListPlanningInput, 'budgetAmount' | 'currency'>;
+  // The trip's store, where a ticked line's price is recorded; null clears it.
+  // Sent as planning.targetStoreId; the name is for the local write.
+  targetStore?: { id: string; name: string } | null;
 }
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
@@ -40,6 +47,17 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     id: string,
     updates: ShoppingListSettingsUpdate,
   ) => {
+    const { targetStore, ...fields } = updates;
+    const planning =
+      targetStore === undefined
+        ? fields.planning
+        : { ...fields.planning, targetStoreId: targetStore?.id ?? null };
+    const localStore:
+      | UseUpdateShoppingList_ListFragment['targetStore']
+      | undefined =
+      targetStore === undefined
+        ? undefined
+        : targetStore && { __typename: 'Store', ...targetStore };
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
     const snapshot = cacheId
       ? client.cache.readFragment<UseUpdateShoppingList_ListFragment>({
@@ -73,6 +91,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
         ...(updates.planning?.currency !== undefined && {
           currency: updates.planning.currency,
         }),
+        ...(localStore !== undefined && { targetStore: localStore }),
         updatedAt: new Date().toISOString(),
       };
       try {
@@ -105,7 +124,14 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     const settled = await settleMutation(
       () =>
         mutate({
-          variables: { input: { id, ...updates, version: snapshot.version } },
+          variables: {
+            input: {
+              id,
+              ...fields,
+              ...(planning !== undefined && { planning }),
+              version: snapshot.version,
+            },
+          },
         }),
       {
         document: UpdateShoppingListDocument,
@@ -118,7 +144,18 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
 
     // Queued (offline / API down): the permanent write stands and the update
     // replays keyed by the list id; there is no server entity to return.
-    return appliedPayload(settled.data)?.shoppingList ?? null;
+    const updated = appliedPayload(settled.data)?.shoppingList ?? null;
+    // The list's store prices every line's suggestion and marks the comparison's
+    // target; neither is part of the list the response carries.
+    if (updated && targetStore !== undefined) {
+      void client.refetchQueries({
+        include: [
+          GetShoppingListItemsFilteredDocument,
+          ListStoreComparisonDocument,
+        ],
+      });
+    }
+    return updated;
   };
 
   return { updateShoppingList };
