@@ -3,12 +3,14 @@ import type { DocumentNode } from 'graphql';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { isRecord } from '#/utils/isRecord';
 import { isOwnKey } from '#/utils/isOwnKey';
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  MoveShoppingListItemDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+  ConvertExpiredToWasteDocument,
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { text, type Input } from './legacyRefs';
 
 /**
  * A write queued by a build that sent an operation the API has since removed.
@@ -17,8 +19,6 @@ import {
  * once, on load, into the operation that replaced it, carrying the same
  * subject, ids and amounts.
  */
-
-type Input = Record<string, unknown>;
 
 export interface UpgradedEntry {
   operationName: string;
@@ -37,8 +37,7 @@ type RetiredOperation =
   | 'ConfirmRecipeConsumption'
   | 'ConvertExpiredBatchesToWaste';
 
-const text = (value: unknown): string | undefined =>
-  typeof value === 'string' && value !== '' ? value : undefined;
+type FoldedOperation = 'BarcodeCreatePantryItem' | 'BarcodeRestockPantryItem';
 
 /** One reviewed-cook line as the cook's `ingredientsUsed` entry. */
 const usageEntry = (line: unknown): Input[] =>
@@ -99,53 +98,28 @@ const RETIRED: Record<RetiredOperation, Replacement> = {
   },
 };
 
-const CONVERT_EXPIRED_TO_WASTE = operationNameOf(ConvertExpiredToWasteDocument);
-const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
-
 /**
- * A surviving operation whose INPUT moved: the waste now states the day in its
- * input (the previous build sent it only as `$today`), and a move names its
- * line `id`.
+ * A feature's own copy of a mutation that a later build folded into the
+ * canonical one, by the name it replays under now. The registries key on the
+ * name and an entry replays its own stored document, so only the name moves.
  */
-function withCurrentInput(
-  operationName: string,
-  variables: OperationVariables,
-): OperationVariables {
-  const input: unknown = variables.input;
-  if (!isRecord(input)) return variables;
-
-  if (operationName === CONVERT_EXPIRED_TO_WASTE && !('today' in input)) {
-    const today = text(variables.today);
-    return today ? { ...variables, input: { ...input, today } } : variables;
-  }
-  if (
-    operationName === MOVE_SHOPPING_LIST_ITEM &&
-    'itemId' in input &&
-    !('id' in input)
-  ) {
-    const { itemId, ...rest } = input;
-    return { ...variables, input: { ...rest, id: itemId } };
-  }
-  return variables;
-}
+const FOLDED: Record<FoldedOperation, string> = {
+  BarcodeCreatePantryItem: operationNameOf(CreatePantryItemDocument),
+  BarcodeRestockPantryItem: operationNameOf(RestockPantryItemDocument),
+};
 
 /** A stored entry as this build replays it; itself when nothing about it moved. */
 export function upgradeRetiredEntry(entry: UpgradedEntry): UpgradedEntry {
   const { operationName, variables } = entry;
-  if (!isOwnKey(RETIRED, operationName)) {
-    const current = withCurrentInput(operationName, variables);
-    return current === variables ? entry : { ...entry, variables: current };
+  if (isOwnKey(FOLDED, operationName)) {
+    return { ...entry, operationName: FOLDED[operationName] };
   }
-
   const input: unknown = variables.input;
-  if (!isRecord(input)) return entry;
+  if (!isOwnKey(RETIRED, operationName) || !isRecord(input)) return entry;
   const { document, input: toCurrent } = RETIRED[operationName];
   return {
     operationName: operationNameOf(document),
     mutation: document,
-    variables: withCurrentInput(operationNameOf(document), {
-      ...variables,
-      input: toCurrent(input),
-    }),
+    variables: { ...variables, input: toCurrent(input) },
   };
 }

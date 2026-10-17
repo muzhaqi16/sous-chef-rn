@@ -1,29 +1,79 @@
 import type { OperationVariables } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
+import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
+import { toDateKey } from '#/utils/dateUtils';
 import { isRecord } from '#/utils/isRecord';
 import { isOwnKey } from '#/utils/isOwnKey';
-import { typedItemRef } from '#/utils/refInput';
-import { inputTypeOf } from './legacyExpiry';
+import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 
 /**
- * A write queued by a build that named units, brands, storage locations and
- * catalog items by `*Id`/`*Name` pairs. The API now takes `@oneOf` references
- * and refuses the old shape before any resolver runs, so each entry is rewritten
- * once, on load, into the shape this build sends.
+ * A write queued by an earlier build whose input the API has since reshaped:
+ * `@oneOf` references for `*Id`/`*Name` pairs, calendar days for instants,
+ * moved and renamed fields. The API refuses the old shape before any resolver
+ * runs, so each entry is rewritten once, on load, by its input type, into the
+ * shape this build sends.
  */
 
-type Input = Record<string, unknown>;
+export type Input = Record<string, unknown>;
 
-const text = (value: unknown): string | undefined =>
+/** A stored string with visible text, trimmed; undefined for anything else. */
+export const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 
 /** A one-key reference, or undefined when neither half names anything. */
-const ref = (id: unknown, name: unknown): Input | undefined => {
-  const byId = text(id);
-  if (byId) return { id: byId };
-  const byName = text(name);
-  return byName ? { name: byName } : undefined;
+const ref = (id: unknown, name: unknown) => refByIdOrName(text(id), text(name));
+
+/**
+ * An `expiresAt` sent as the picked day's local midnight through
+ * `toISOString()`. The API stores that as its UTC date, a day early east of
+ * UTC; read back on this device, the instant is the day the user picked, so it
+ * replays as `expiresOn`.
+ */
+const expiresOn = (input: Input): Input => {
+  if (!('expiresAt' in input) || 'expiresOn' in input) return input;
+  const { expiresAt, ...rest } = input;
+  if (expiresAt === null) return { ...rest, expiresOn: null };
+  const instant = typeof expiresAt === 'string' ? new Date(expiresAt) : null;
+  if (!instant || Number.isNaN(instant.getTime())) return input;
+  return { ...rest, expiresOn: toDateKey(instant) };
+};
+
+/** An instant as the local day it falls on; a value that is not one, unchanged. */
+const asDayKey = (value: unknown): unknown => {
+  if (typeof value !== 'string' || !value.includes('T')) return value;
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? value : toDateKey(instant);
+};
+
+/**
+ * Meal-plan days sent as local noon through `toISOString()`. The API takes the
+ * calendar date and refuses a value with a time; read back on this device, the
+ * instant is the day the user picked.
+ */
+const calendarDays =
+  (...fields: string[]) =>
+  (input: Input): Input =>
+    fields.reduce<Input>((next, field) => {
+      const day = asDayKey(next[field]);
+      return day === next[field] ? next : { ...next, [field]: day };
+    }, input);
+
+const planDays = calendarDays('startDate', 'endDate');
+const mealDay = calendarDays('date');
+
+/** The waste states its day in its input; an earlier build sent it only as `$today`. */
+const wasteDay = (input: Input, variables: OperationVariables): Input => {
+  if ('today' in input) return input;
+  const today = text(variables.today);
+  return today ? { ...input, today } : input;
+};
+
+/** A move names its line `id`; an earlier build sent it as `itemId`. */
+const movedLineId = (input: Input): Input => {
+  if (!('itemId' in input) || 'id' in input) return input;
+  const { itemId, ...rest } = input;
+  return { ...rest, id: itemId };
 };
 
 /** The old unit spec's fields, or null when `unit` is absent or already a reference. */
@@ -129,7 +179,7 @@ const withItemSource = (input: Input): Input => {
 };
 
 const pantryItemWrite = (input: Input): Input =>
-  withStorageLocation(withBrand(withUnit(withItemSource(input))));
+  withStorageLocation(withBrand(withUnit(withItemSource(expiresOn(input)))));
 
 const usageAmount = (input: Input): Input => {
   if (!('quantityUsed' in input || 'consumeAll' in input)) return input;
@@ -247,9 +297,18 @@ type RewrittenInput =
   | 'RestockPantryItemInput'
   | 'UpdateDietaryProfileInput'
   | 'AddRestrictionInput'
-  | 'UpdateProfileInput';
+  | 'UpdateProfileInput'
+  | 'CreateMealPlanInput'
+  | 'UpdateMealPlanInput'
+  | 'CreateMealPlanItemInput'
+  | 'UpdateMealPlanItemInput'
+  | 'ConvertExpiredToWasteInput'
+  | 'MoveShoppingListItemInput';
 
-const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
+type Rewrite = (input: Input, variables: OperationVariables) => Input;
+
+/** Each input's rewrite; an entry holding a day rewrites it before its references. */
+const REWRITES: Readonly<Record<RewrittenInput, Rewrite>> = {
   CreatePantryItemInput: pantryItemWrite,
   UpdatePantryItemInput: pantryItemWrite,
   CreatePantryItemUsageInput: usageAmount,
@@ -258,22 +317,29 @@ const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
   // A blank unit on an edit was the user emptying it.
   UpdateShoppingListItemInput: input => withBrand(withUnit(input, true)),
   MovePurchasedItemsToPantryInput: purchasedMoveHints,
-  MoveShoppingItemToPantryInput: stockAmount('actualQuantity', 'actualUnitId'),
-  RestockPantryItemInput: stockAmount('quantity', 'unitId'),
+  MoveShoppingItemToPantryInput: input =>
+    stockAmount('actualQuantity', 'actualUnitId')(expiresOn(input)),
+  RestockPantryItemInput: input =>
+    stockAmount('quantity', 'unitId')(expiresOn(input)),
   UpdateDietaryProfileInput: dietarySkillLevel,
   AddRestrictionInput: restrictionKind,
   UpdateProfileInput: dateOfBirthDay,
+  CreateMealPlanInput: planDays,
+  UpdateMealPlanInput: planDays,
+  CreateMealPlanItemInput: mealDay,
+  UpdateMealPlanItemInput: mealDay,
+  ConvertExpiredToWasteInput: wasteDay,
+  MoveShoppingListItemInput: movedLineId,
 };
 
-export const withRefInputs = (
+/** A stored write's variables, its input in the shape this build sends. */
+export const withCurrentInput = (
   document: DocumentNode,
   variables: OperationVariables,
 ): OperationVariables => {
   const input: unknown = variables.input;
-  const inputType = inputTypeOf(document);
-  if (!inputType || !isOwnKey(REWRITES, inputType) || !isRecord(input)) {
-    return variables;
-  }
-  const next = REWRITES[inputType](input);
+  const inputType = inputTypeNameOf(document) ?? '';
+  if (!isRecord(input) || !isOwnKey(REWRITES, inputType)) return variables;
+  const next = REWRITES[inputType](input, variables);
   return next === input ? variables : { ...variables, input: next };
 };

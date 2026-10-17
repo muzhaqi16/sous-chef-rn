@@ -435,9 +435,10 @@ query-blocking, orthogonal to connectivity.
   in this order: an operation the API removed becomes the one that replaced it, document and
   variables both (`legacyRetired.ts`: the purchased toggle and the quantity edit →
   `UpdateShoppingListItem`, the reviewed cook → `MarkRecipeAsCooked` with `exactStacks`, the
-  expired-batches waste → `ConvertExpiredToWaste`); its inputs take this build's shapes
-  (`legacyExpiry.ts`: an `expiresAt` instant → `expiresOn`, a meal-plan instant → its calendar day;
-  `legacyRefs.ts`: `@oneOf` references); and its stored document loses the fields the API has
+  expired-batches waste → `ConvertExpiredToWaste`, and a feature's folded copy takes the canonical
+  name); its inputs take this build's shapes, one table keyed by input type (`legacyRefs.ts`: an
+  `expiresAt` instant → `expiresOn`, a meal-plan instant → its calendar day, `@oneOf` references,
+  the waste's `today` and a move's `id`); and its stored document loses the fields the API has
   removed since (`legacySelections.ts`: the batch lines' old failure fields, a shopping line's
   auto-add fields, a plan's and a template's bare lists, the user's region fields). An edit stored
   without a `version` the API now requires is given the cached row's at replay (`prepareReplay.ts`).

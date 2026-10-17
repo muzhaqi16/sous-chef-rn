@@ -1,9 +1,15 @@
+import { parse } from 'graphql';
 import {
   CorrectPantryItemPackageSizeDocument,
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
+  RestockPantryItemDocument,
   UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreateMealPlanDocument,
+  CreateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
@@ -16,15 +22,14 @@ import {
   UpdateDietaryProfileDocument,
 } from '#operations/user/user.generated';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { withRefInputs } from '../legacyRefs';
+import { withCurrentInput } from '../legacyRefs';
 
 /**
  * A write queued before the `@oneOf` references shipped replays after the
  * upgrade. The API refuses the old shape before any resolver runs, so an entry
  * not rewritten on load is a write lost.
  */
-describe('withRefInputs', () => {
+describe('references', () => {
   it.each([
     [
       'names a pantry create’s catalog item through `item`',
@@ -196,12 +201,12 @@ describe('withRefInputs', () => {
       { dateOfBirth: '1990-01-15' },
     ],
   ])('%s', (_, document, input, expected) => {
-    expect(withRefInputs(document, { input })).toEqual({ input: expected });
+    expect(withCurrentInput(document, { input })).toEqual({ input: expected });
   });
 
   it('states a use as an amount', () => {
     expect(
-      withRefInputs(CreatePantryItemUsageDocument, {
+      withCurrentInput(CreatePantryItemUsageDocument, {
         input: { pantryItemId: 'p1', quantityUsed: 2, purpose: 'COOKING' },
       }).input,
     ).toEqual({
@@ -210,7 +215,7 @@ describe('withRefInputs', () => {
       purpose: 'COOKING',
     });
     expect(
-      withRefInputs(CreatePantryItemUsageDocument, {
+      withCurrentInput(CreatePantryItemUsageDocument, {
         input: { pantryItemId: 'p1', consumeAll: true, purpose: 'COOKING' },
       }).input,
     ).toEqual({
@@ -222,7 +227,7 @@ describe('withRefInputs', () => {
 
   // The API removes `itemName`; a line queued with it would be refused.
   it('sends a shopping line’s typed name inline, under an item id minted for it', () => {
-    const { input } = withRefInputs(AddItemToShoppingListDocument, {
+    const { input } = withCurrentInput(AddItemToShoppingListDocument, {
       input: {
         shoppingListId: 'l1',
         items: [
@@ -255,7 +260,7 @@ describe('withRefInputs', () => {
   // refuses the old fields, so each is restated as a measured amount.
   it('states a queued move and restock as a measured amount', () => {
     expect(
-      withRefInputs(MoveShoppingItemToPantryDocument, {
+      withCurrentInput(MoveShoppingItemToPantryDocument, {
         input: {
           shoppingListItemId: 'sli1',
           pantryId: 'pan1',
@@ -272,7 +277,7 @@ describe('withRefInputs', () => {
       actualPrice: 1.5,
     });
     expect(
-      withRefInputs(RestockPantryItemDocument, {
+      withCurrentInput(RestockPantryItemDocument, {
         input: { id: 'p1', quantity: 1 },
       }).input,
     ).toEqual({ id: 'p1', amount: { measured: { quantity: 1 } } });
@@ -301,6 +306,88 @@ describe('withRefInputs', () => {
     ],
   ])('leaves %s alone', (_, document, input) => {
     const variables = { input };
-    expect(withRefInputs(document, variables)).toBe(variables);
+    expect(withCurrentInput(document, variables)).toBe(variables);
+  });
+});
+
+// An invite's expiry is still an instant.
+const InviteDocument = parse(
+  'mutation Invite($input: InviteToShoppingListInput!) { inviteToShoppingList(input: $input) { __typename } }',
+);
+
+describe('an expiry stored as an instant', () => {
+  it.each([
+    [
+      'replays a queued local-midnight instant as that local day',
+      new Date(2026, 8, 21).toISOString(),
+      '2026-09-21',
+    ],
+    ['keeps a cleared expiry cleared', null, null],
+  ])('%s', (_, expiresAt, expiresOn) => {
+    expect(
+      withCurrentInput(RestockPantryItemDocument, {
+        input: { id: 'p1', expiresAt },
+      }),
+    ).toEqual({ input: { id: 'p1', expiresOn } });
+  });
+
+  it.each([
+    [
+      'a write that already sends expiresOn',
+      RestockPantryItemDocument,
+      { id: 'p1', expiresOn: '2026-09-21' },
+    ],
+    [
+      'an input whose expiresAt did not move',
+      InviteDocument,
+      { listId: 'l1', expiresAt: '2026-09-21T10:00:00.000Z' },
+    ],
+  ])('leaves %s alone', (_, document, input) => {
+    const variables = { input };
+    expect(withCurrentInput(document, variables)).toBe(variables);
+  });
+});
+
+describe('a meal-plan day stored as an instant', () => {
+  // The previous build sent a day as local noon, whose local day is the pick.
+  const localNoon = (year: number, month: number, day: number) =>
+    new Date(year, month, day, 12).toISOString();
+
+  it.each([
+    [
+      'replays a queued meal instant as the local day it stood for',
+      CreateMealPlanItemDocument,
+      { id: 'meal-1', mealPlanId: 'plan-1', date: localNoon(2026, 8, 21) },
+      { id: 'meal-1', mealPlanId: 'plan-1', date: '2026-09-21' },
+    ],
+    [
+      'replays both ends of a queued plan as days',
+      CreateMealPlanDocument,
+      {
+        id: 'plan-1',
+        startDate: localNoon(2026, 8, 21),
+        endDate: localNoon(2026, 8, 27),
+      },
+      { id: 'plan-1', startDate: '2026-09-21', endDate: '2026-09-27' },
+    ],
+  ])('%s', (_, document, input, expected) => {
+    expect(withCurrentInput(document, { input })).toEqual({ input: expected });
+  });
+
+  it.each([
+    [
+      'a write that already sends a day',
+      CreateMealPlanItemDocument,
+      { id: 'meal-1', mealPlanId: 'plan-1', date: '2026-09-21' },
+    ],
+    // `expiresAt` on a restock is another input's field: not this rewrite's.
+    [
+      'an input that holds no plan day',
+      RestockPantryItemDocument,
+      { id: 'p1', date: localNoon(2026, 8, 21) },
+    ],
+  ])('leaves %s alone', (_, document, input) => {
+    const variables = { input };
+    expect(withCurrentInput(document, variables)).toBe(variables);
   });
 });
