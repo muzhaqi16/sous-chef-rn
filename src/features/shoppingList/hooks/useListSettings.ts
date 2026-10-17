@@ -5,7 +5,7 @@ import { useShoppingListDetails } from '#features/shoppingList/hooks/useShopping
 import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
-import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
+import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useCompleteShoppingList } from '#features/shoppingList/hooks/mutations/useCompleteShoppingList';
 import { useSetDefaultShoppingList } from '#features/shoppingList/hooks/mutations/useSetDefaultShoppingList';
@@ -169,7 +169,7 @@ export const useListSettings = (listId: string | undefined) => {
   const isHomeMember = !!shoppingList?.home?.myMembership;
   const linkedHomeId = shoppingList?.homeId ?? null;
 
-  const { leaveList, leaving } = useLeaveShoppingList(listId ?? '');
+  const { leaveList, leaving } = useRemoveCollaborator(listId ?? '');
   const { updateShoppingList } = useUpdateShoppingList(
     t('errors.saveSettingsFailed'),
   );

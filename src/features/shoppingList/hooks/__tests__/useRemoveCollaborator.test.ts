@@ -10,7 +10,6 @@ import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shopp
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
-import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 
 type Answer = MockDataFor<
   typeof RemoveCollaboratorDocument
@@ -134,7 +133,7 @@ describe('useRemoveCollaborator', () => {
   });
 });
 
-describe('useLeaveShoppingList', () => {
+describe('leaveList', () => {
   const leaveAnswered = async (answer: Answer) => {
     const { mock } = recordMock(RemoveCollaboratorDocument, {
       data: { removeShoppingListCollaborator: answer },
@@ -143,7 +142,7 @@ describe('useLeaveShoppingList', () => {
     const onSuccess = jest.fn();
     const onError = jest.fn();
     const { result } = renderHookWithApollo(
-      () => useLeaveShoppingList('list-1'),
+      () => useRemoveCollaborator('list-1'),
       { operationMocks: [mock], cache },
     );
     await act(async () => {

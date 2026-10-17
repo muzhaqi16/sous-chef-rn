@@ -169,22 +169,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
       seedThisPass = {
+        ...moveToPantryDefaults(StorageState.Ambient),
         quantityInput: formatQuantityForInput(seedQuantity) || '1',
         unitValue: resolvedUnit.symbol,
         unitId: resolvedUnit.id,
         unitType: resolvedUnit.type,
         pantryId: selectedPantryId,
-        storageState: StorageState.Ambient,
-        expirationDate: undefined,
-        removeFromList: true,
         actualPriceInput: formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
         ),
-        notes: '',
-        packageSizeInput: '',
-        packageSizeUnitValue: '',
-        packageSizeUnitId: null,
-        packageSizeUnitType: null,
       };
       unitIdThisPass = resolvedUnit.id;
       setSeededUnitPrice(purchasedUnitPrice);

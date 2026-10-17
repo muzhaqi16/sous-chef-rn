@@ -40,19 +40,11 @@ export interface MoveToPantryInput {
 interface UseMoveToPantryOptions {
   currentListId: string | undefined;
   onSuccess?: () => void;
-  /** `'none'` leaves telling the user about a refusal to the caller, via `reason`. */
-  present?: 'alert' | 'none';
 }
-
-/** What became of a move: applied or queued, or refused with the reason the user is told. */
-export type MoveToPantryOutcome =
-  | { status: 'moved' }
-  | { status: 'rejected'; reason: string };
 
 export function useMoveToPantry({
   currentListId,
   onSuccess,
-  present = 'alert',
 }: UseMoveToPantryOptions) {
   const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
@@ -100,7 +92,7 @@ export function useMoveToPantry({
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
-  ): Promise<MoveToPantryOutcome> => {
+  ): Promise<boolean> => {
     const pantryItemId = generateEntityId();
     const moved = {
       pantryId: input.pantryId,
@@ -172,15 +164,9 @@ export function useMoveToPantry({
         document: MoveShoppingItemToPantryDocument,
         fallback: t('errors.moveToPantryFailedRetry'),
         onFailed: revert,
-        present,
       },
     );
-    if (settled.status === 'failed') {
-      return {
-        status: 'rejected',
-        reason: settled.failure?.body ?? t('errors.moveToPantryFailedRetry'),
-      };
-    }
+    if (settled.status === 'failed') return false;
 
     // The id is the server's now, so the detail screen may query it.
     unconfirmedCreates.confirm(pantryItemId);
@@ -191,7 +177,7 @@ export function useMoveToPantry({
       remove_from_list: input.removeFromList,
     });
 
-    return { status: 'moved' };
+    return true;
   };
 
   return { moveToPantry };

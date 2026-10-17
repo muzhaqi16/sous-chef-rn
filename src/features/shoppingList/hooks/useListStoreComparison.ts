@@ -8,51 +8,49 @@ import {
 type Comparison = ListStoreComparisonQuery['shoppingListStoreComparison'];
 type Candidate = Comparison['candidates'][number];
 
-export interface StoreComparisonCandidate {
+/** A candidate as the section shows it: the branch, or the chain when chains are compared. */
+export type StoreComparisonCandidate = Pick<
+  Candidate,
+  | 'estimatedTotal'
+  | 'pricedLines'
+  | 'chainFilledLines'
+  | 'anyStoreFilledLines'
+  | 'ranked'
+  | 'isTarget'
+  | 'newestObservedAt'
+> & {
   key: string;
-  /** The branch, or the chain when chains are compared. */
   name: string;
   address: string | null;
   /** The chain a branch fills its gaps from; null when chains are compared. */
   chainName: string | null;
-  /** Null when no comparable line has a price anywhere. */
-  estimatedTotal: number | null;
-  pricedLines: number;
-  chainFilledLines: number;
-  anyStoreFilledLines: number;
-  /** Prices at least half the comparable lines itself, so its total compares. */
-  ranked: boolean;
-  /** The list's own store, or its chain. */
-  isTarget: boolean;
-  newestObservedAt: string | null;
-}
+};
 
-export interface StoreComparison {
+export type StoreComparison = Pick<
+  Comparison,
+  'comparableLines' | 'leftOutLines' | 'truncated'
+> & {
   currencyCode: string;
   decimalPlaces: number;
-  comparableLines: number;
-  leftOutLines: number;
   unpricedLines: number;
-  truncated: boolean;
   candidates: StoreComparisonCandidate[];
-}
+};
 
-function toCandidate(candidate: Candidate): StoreComparisonCandidate | null {
-  const branch = candidate.scope === PriceComparisonScope.Store;
-  const named = branch ? candidate.store : candidate.chain;
+function toCandidate({
+  scope,
+  store,
+  chain,
+  ...asAnswered
+}: Candidate): StoreComparisonCandidate | null {
+  const branch = scope === PriceComparisonScope.Store;
+  const named = branch ? store : chain;
   if (!named) return null;
   return {
+    ...asAnswered,
     key: named.id,
     name: named.name,
-    address: branch ? candidate.store?.address ?? null : null,
-    chainName: branch ? candidate.chain?.name ?? null : null,
-    estimatedTotal: candidate.estimatedTotal,
-    pricedLines: candidate.pricedLines,
-    chainFilledLines: candidate.chainFilledLines,
-    anyStoreFilledLines: candidate.anyStoreFilledLines,
-    ranked: candidate.ranked,
-    isTarget: candidate.isTarget,
-    newestObservedAt: candidate.newestObservedAt,
+    address: branch ? store?.address ?? null : null,
+    chainName: branch ? chain?.name ?? null : null,
   };
 }
 

@@ -9,7 +9,6 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
-import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import type { CollaboratorPermissionsBottomSheetRef } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import CollaboratorPermissionsBottomSheet from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
@@ -51,8 +50,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const { removeCollaborator } = useRemoveCollaborator(listId);
-  const { leaveList, leaving } = useLeaveShoppingList(listId);
+  const { removeCollaborator, leaveList, leaving } =
+    useRemoveCollaborator(listId);
 
   // `collaborators` from useShoppingListDetails are already materialized
   // ShoppingListCollaboratorFragments (with invitedAt) and null-filtered.
