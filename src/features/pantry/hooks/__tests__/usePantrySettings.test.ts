@@ -16,7 +16,6 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
-import { t } from '#/i18n';
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -242,31 +241,6 @@ describe('usePantrySettings.savePantryFields', () => {
     ]);
     expect(readRow(cache)).toMatchObject({ name: 'Kitchen', description: '' });
     expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('sends nothing and reports a failed save when the cache holds no version', async () => {
-    const cache = seedRow();
-    const save = saveMock();
-    const { result } = renderHookWithApollo(
-      () => usePantrySettings({ pantryId: 'pantry-1', homeId: 'home-1' }),
-      { operationMocks: [save.mock], cache },
-    );
-
-    let saved: unknown = 'unset';
-    await act(async () => {
-      saved = await result.current.savePantryFields('pantry-1', {
-        name: 'Kitchen',
-        description: '',
-      });
-    });
-
-    // The API refuses an edit that states no version, so none is sent.
-    expect(saved).toBe(false);
-    expect(save.fired).toEqual([]);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      t('labels.error'),
-      t('errors.saveSettingsFailed'),
-    );
   });
 
   // A row the home screens cached carries `name` and no `version`

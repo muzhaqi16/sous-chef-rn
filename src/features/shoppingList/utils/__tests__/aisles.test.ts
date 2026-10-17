@@ -1,29 +1,26 @@
-import type { FragmentType } from '@apollo/client/masking';
 import { StoreDepartment } from '#/graphql/generated/schemaTypes';
-import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
-import type { SortableItem_ItemFragmentDoc } from '#features/shoppingList/components/SortableShoppingList/SortableItem.generated';
+import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { aisleAfter, groupByAisle, linesInAisle } from '../aisles';
-
-const line = (id: string, storeDepartment: string): ShoppingListRowItem => ({
-  id,
-  isPurchased: false,
-  sortOrder: id,
-  // A department this build was compiled without arrives as a plain string.
-  storeDepartment: storeDepartment as StoreDepartment,
-  itemRef: { __typename: 'ShoppingListItem', id } as FragmentType<
-    typeof SortableItem_ItemFragmentDoc
-  >,
-});
 
 const ids = (entries: ReturnType<typeof groupByAisle>) =>
   entries.map(entry => entry.id);
 
 describe('groupByAisle', () => {
-  const milk = line('milk', StoreDepartment.DairyEggs);
-  const apples = line('apples', StoreDepartment.Produce);
-  const soap = line('soap', StoreDepartment.Other);
-  const peas = line('peas', StoreDepartment.Frozen);
-  const yogurt = line('yogurt', StoreDepartment.DairyEggs);
+  const milk = shoppingListRowItem('milk', {
+    storeDepartment: StoreDepartment.DairyEggs,
+  });
+  const apples = shoppingListRowItem('apples', {
+    storeDepartment: StoreDepartment.Produce,
+  });
+  const soap = shoppingListRowItem('soap', {
+    storeDepartment: StoreDepartment.Other,
+  });
+  const peas = shoppingListRowItem('peas', {
+    storeDepartment: StoreDepartment.Frozen,
+  });
+  const yogurt = shoppingListRowItem('yogurt', {
+    storeDepartment: StoreDepartment.DairyEggs,
+  });
 
   it("puts each aisle's lines under its heading, in the route's walk", () => {
     const grouped = groupByAisle(
@@ -76,7 +73,13 @@ describe('groupByAisle', () => {
 
   it('reads a department, or a route stop, this build does not know as OTHER', () => {
     const grouped = groupByAisle(
-      [line('wipes', 'HARDWARE'), milk],
+      [
+        // A department this build was compiled without arrives as a plain string.
+        shoppingListRowItem('wipes', {
+          storeDepartment: 'HARDWARE' as StoreDepartment,
+        }),
+        milk,
+      ],
       ['HARDWARE', StoreDepartment.DairyEggs],
     );
 
@@ -99,9 +102,15 @@ describe('groupByAisle', () => {
 });
 
 describe('linesInAisle', () => {
-  const milk = line('milk', StoreDepartment.DairyEggs);
-  const apples = line('apples', StoreDepartment.Produce);
-  const yogurt = line('yogurt', StoreDepartment.DairyEggs);
+  const milk = shoppingListRowItem('milk', {
+    storeDepartment: StoreDepartment.DairyEggs,
+  });
+  const apples = shoppingListRowItem('apples', {
+    storeDepartment: StoreDepartment.Produce,
+  });
+  const yogurt = shoppingListRowItem('yogurt', {
+    storeDepartment: StoreDepartment.DairyEggs,
+  });
   const grouped = groupByAisle(
     [milk, apples, yogurt],
     [StoreDepartment.Produce, StoreDepartment.DairyEggs],

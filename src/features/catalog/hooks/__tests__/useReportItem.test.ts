@@ -24,7 +24,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'MarkItemForReviewPayload',
-          item: { __typename: 'Item', id: 'item-1' },
+          item: { id: 'item-1' },
         },
       },
     });

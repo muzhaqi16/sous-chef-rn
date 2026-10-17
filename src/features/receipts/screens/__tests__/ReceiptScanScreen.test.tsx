@@ -45,6 +45,73 @@ jest.mock('../../hooks/useServerReceiptParse', () => ({
 
 const SCANNED_AT = '2026-10-07T10:00:00.000Z';
 
+const NOT_READING = { readingStatus: 'none', slowPhotoRead: false };
+
+// What the saved screen says left the phone, by the draft, the server's
+// reading and whether the server reads receipts, and what it shows beside it.
+const SAVED: [
+  string,
+  Partial<ReceiptDraft>,
+  typeof NOT_READING,
+  boolean,
+  string,
+  string[],
+][] = [
+  [
+    'says a photo went as it was, and that photos take a while',
+    { photoKeys: ['k1'] },
+    { readingStatus: 'reading', slowPhotoRead: true },
+    true,
+    "Your phone couldn't read this receipt on its own, so its photo was sent to be read as it is. The photo is deleted once read.",
+    ['Reading the photos can take up to a minute…'],
+  ],
+  [
+    'says a masked photo went with the personal details covered',
+    { photoKeys: ['k1'], photosMasked: true },
+    NOT_READING,
+    true,
+    "Your phone couldn't read this receipt on its own, so its photo was sent to be read, with card numbers, member numbers and names covered. The photo is deleted once read.",
+    [],
+  ],
+  [
+    'says the text of a receipt the phone could not read is sent to be read',
+    {},
+    { readingStatus: 'reading', slowPhotoRead: false },
+    true,
+    "Your phone couldn't read this receipt on its own, so its text is sent to be read, without card and loyalty numbers.",
+    ['Picking out the items…'],
+  ],
+  [
+    'says only the text is kept where the server reads no receipts',
+    {},
+    NOT_READING,
+    false,
+    "Only the receipt's text is kept, with card and loyalty numbers removed.",
+    [],
+  ],
+  [
+    'says a receipt read on the phone sent nothing',
+    {
+      parsedBy: 'device',
+      parsed: {
+        lines: [
+          {
+            index: 0,
+            rawText: 'MILK 3.48',
+            kind: 'item',
+            product: 'MILK',
+            lineTotal: 3.48,
+          },
+        ],
+      },
+    },
+    NOT_READING,
+    true,
+    "Read on your phone, so nothing was sent. Card and loyalty numbers are removed from what's kept.",
+    ['Review 1 item'],
+  ],
+];
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockReading = { readingStatus: 'none', slowPhotoRead: false };
@@ -84,24 +151,6 @@ describe('ReceiptScanScreen', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/names your phone finds are covered/)).toBeNull();
-  });
-
-  it('says a photo went as it was, and that photos take a while', () => {
-    mockScan = {
-      status: 'saved',
-      draft: { pages: ['MILK 3.48'], photoKeys: ['k1'], scannedAt: SCANNED_AT },
-    };
-    mockReading = { readingStatus: 'reading', slowPhotoRead: true };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-
-    expect(
-      screen.getByText(
-        "Your phone couldn't read this receipt on its own, so its photo was sent to be read as it is. The photo is deleted once read.",
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getByText('Reading the photos can take up to a minute…'),
-    ).toBeTruthy();
   });
 
   it('names the lines the API refused, to fix in the review and add again', () => {
@@ -154,87 +203,22 @@ describe('ReceiptScanScreen', () => {
     expect(screen.queryByTestId(receiptsTestIDs.savedFailed)).toBeNull();
   });
 
-  it('says a masked photo went with the personal details covered', () => {
-    mockScan = {
-      status: 'saved',
-      draft: {
-        pages: ['MILK 3.48'],
-        photoKeys: ['k1'],
-        photosMasked: true,
-        scannedAt: SCANNED_AT,
-      },
-    };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
+  it.each(SAVED)(
+    '%s',
+    (_name, draft, reading, serverParsing, body, alsoShown) => {
+      jest
+        .mocked(useFeatureFlag)
+        .mockImplementation(flag => serverParsing || flag !== 'receiptParsing');
+      mockScan = {
+        status: 'saved',
+        draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT, ...draft },
+      };
+      mockReading = reading;
+      const screen = renderWithApollo(<ReceiptScanScreen />);
 
-    expect(
-      screen.getByText(
-        "Your phone couldn't read this receipt on its own, so its photo was sent to be read, with card numbers, member numbers and names covered. The photo is deleted once read.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it('says the text of a receipt the phone could not read is sent to be read', () => {
-    mockScan = {
-      status: 'saved',
-      draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
-    };
-    mockReading = { readingStatus: 'reading', slowPhotoRead: false };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-
-    expect(
-      screen.getByText(
-        "Your phone couldn't read this receipt on its own, so its text is sent to be read, without card and loyalty numbers.",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText('Picking out the items…')).toBeTruthy();
-  });
-
-  it('says only the text is kept where the server reads no receipts', () => {
-    jest
-      .mocked(useFeatureFlag)
-      .mockImplementation(flag => flag !== 'receiptParsing');
-    mockScan = {
-      status: 'saved',
-      draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
-    };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-
-    expect(
-      screen.getByText(
-        "Only the receipt's text is kept, with card and loyalty numbers removed.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/is sent to be read/)).toBeNull();
-  });
-
-  it('says a receipt read on the phone sent nothing', () => {
-    mockScan = {
-      status: 'saved',
-      draft: {
-        pages: ['MILK 3.48'],
-        scannedAt: SCANNED_AT,
-        parsedBy: 'device',
-        parsed: {
-          lines: [
-            {
-              index: 0,
-              rawText: 'MILK 3.48',
-              kind: 'item',
-              product: 'MILK',
-              lineTotal: 3.48,
-            },
-          ],
-        },
-      },
-    };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-
-    expect(
-      screen.getByText(
-        "Read on your phone, so nothing was sent. Card and loyalty numbers are removed from what's kept.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/Only the receipt's text is kept/)).toBeNull();
-    expect(screen.getByText('Review 1 item')).toBeTruthy();
-  });
+      const bodies = SAVED.map(row => row[4]);
+      expect(bodies.filter(text => screen.queryByText(text))).toEqual([body]);
+      for (const text of alsoShown) expect(screen.getByText(text)).toBeTruthy();
+    },
+  );
 });

@@ -135,7 +135,6 @@ describe('useUpdateShoppingList', () => {
                 updateShoppingList: {
                   __typename: 'UpdateShoppingListPayload',
                   shoppingList: {
-                    __typename: 'ShoppingList',
                     id: 'list-1',
                     name: 'Weekly Run',
                     isDefault: true,
@@ -312,7 +311,6 @@ describe('useUpdateShoppingList', () => {
         updateShoppingList: {
           __typename: 'UpdateShoppingListPayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-1',
             version: (vars.input as { version: number }).version + 1,
           },

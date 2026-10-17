@@ -221,29 +221,24 @@ function updatePurchaseMock(
             ? {
                 __typename: 'UpdateShoppingListItemPayload',
                 shoppingListItem: {
-                  __typename: 'ShoppingListItem',
                   id: 'item-1',
                   // Recording a purchase through `purchaseTracking` writes a
                   // purchase row server-side, so the summary and the amounts
                   // move with the response — the mutation selects both so the
                   // detail screen doesn't need its own refetch to catch up.
                   purchaseHistory: {
-                    __typename: 'PurchaseHistorySummary',
                     previouslyPurchased: true,
                     purchaseCount: 2,
                     lastPurchaseDate: '2026-08-19T00:00:00.000Z',
                   },
                   purchaseInfo: {
-                    __typename: 'ShoppingListItemPurchaseInfo',
                     isPurchased: true,
                     purchasedQuantity: 2,
                     purchasedPrice: 4.5,
                     purchaseDate: '2026-08-19T00:00:00.000Z',
                     purchasedBy: {
-                      __typename: 'User',
                       id: 'user-1',
                       profile: {
-                        __typename: 'UserProfile',
                         id: 'profile-1',
                         displayName: 'Sam',
                         avatar: null,

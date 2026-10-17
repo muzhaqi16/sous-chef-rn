@@ -65,7 +65,7 @@ function setup(outcome: 'applied' | 'refused') {
   ]);
   const itemQuery = recordMock(GetShoppingListItemDocument, {
     data: {
-      shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+      shoppingListItem: { id: 'item-1' },
     },
   });
   const update = recordMock(UpdateShoppingListItemDocument, {
@@ -75,7 +75,6 @@ function setup(outcome: 'applied' | 'refused') {
           ? {
               __typename: 'UpdateShoppingListItemPayload',
               shoppingListItem: {
-                __typename: 'ShoppingListItem',
                 id: 'item-1',
               },
             }
@@ -194,14 +193,12 @@ describe('useShoppingListItemWrites.createItem', () => {
             __typename: 'AddItemsToShoppingListPayload',
             results: [
               {
-                __typename: 'BatchAddShoppingListItemResult',
                 index: 0,
                 success: true,
                 packageSizeCleared,
                 item: {
-                  __typename: 'ShoppingListItem',
                   id: row?.id ?? '',
-                  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+                  shoppingList: { id: 'list-1' },
                 },
               },
             ],
@@ -268,14 +265,12 @@ describe('useShoppingListItemWrites.createItem, for a typed name', () => {
             __typename: 'AddItemsToShoppingListPayload',
             results: [
               {
-                __typename: 'BatchAddShoppingListItemResult',
                 index: 0,
                 success: true,
                 item: {
-                  __typename: 'ShoppingListItem',
                   id: row?.id ?? '',
-                  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-                  item: { __typename: 'Item', id: servedItemId },
+                  shoppingList: { id: 'list-1' },
+                  item: { id: servedItemId },
                 },
               },
             ],

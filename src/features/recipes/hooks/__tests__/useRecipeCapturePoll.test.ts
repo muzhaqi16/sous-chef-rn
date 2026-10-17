@@ -38,11 +38,8 @@ const answering = (
   recordMock(RecipeCaptureDocument, {
     data: {
       recipeCapture: recipeCapture && {
-        __typename: 'RecipeCapture',
         id: 'capture-1',
         alreadySaved: false,
-        failure: null,
-        recipe: null,
         ...recipeCapture,
       },
     },
@@ -62,7 +59,7 @@ describe('useRecipeCapturePoll', () => {
       operationMocks: [
         answering({
           status: RecipeCaptureStatus.Saved,
-          recipe: { __typename: 'Recipe', id: 'recipe-1', name: 'Miso salmon' },
+          recipe: { id: 'recipe-1', name: 'Miso salmon' },
         }).mock,
       ],
     });

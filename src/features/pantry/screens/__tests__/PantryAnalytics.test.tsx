@@ -5,67 +5,92 @@ import { render, screen, within } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
+import { DateRange, PeriodGranularity } from '#/graphql/generated/schemaTypes';
+import type { MockPart } from '#/test-utils/apolloMockProvider';
 import { PantryAnalytics } from '../PantryAnalytics';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
+type AnalyticsReturn = MockPart<ReturnType<typeof usePantryAnalytics>>;
+type Ledger = NonNullable<AnalyticsReturn['ledgerData']>;
+
+let mockAnalytics: AnalyticsReturn;
 jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
-  usePantryAnalytics: () => ({
-    usageData: {
-      totalUsageCount: 42,
-      averageUsagePerDay: 2.5,
-      usageTrend: [],
-      usageByPurpose: [{ purpose: 'COOKING', count: 30, percentage: 71 }],
-      usageBySource: [{ source: 'MANUAL', count: 42, percentage: 100 }],
-      topUsedItems: [{ itemName: 'Eggs', count: 15 }],
-    },
-    wasteData: {
-      totalWasteCount: 5,
-      wasteRate: 10.5,
-      valueByCurrency: [
-        { currencyCode: 'USD', amount: 12.5 },
-        { currencyCode: 'EUR', amount: 3.1 },
-      ],
-      composted: 2.0,
-      recycled: 1.5,
-      wasteTrend: [],
-      wasteByReason: [{ reason: 'EXPIRED', count: 3, percentage: 60 }],
-      topWastedItems: [
-        {
-          itemName: 'Lettuce',
-          count: 2,
-          valueByCurrency: [{ currencyCode: 'USD', amount: 4.0 }],
-        },
-      ],
-    },
-    ledgerData: {
-      summary: {
-        totalAdded: 100,
-        totalConsumed: 80,
-        totalWasted: 5,
-        netQuantity: 15,
-        additionCount: 50,
-        consumptionCount: 40,
-        additionsByUnit: [],
-        consumptionByUnit: [],
-      },
-      periodData: [],
-      costAnalytics: null,
-      topRestockedItems: [],
-    },
-    usageLoading: false,
-    wasteLoading: false,
-    ledgerLoading: false,
-    usageError: null,
-    wasteError: null,
-    ledgerError: null,
-    dateRange: '7d',
-    setDateRange: jest.fn(),
-    ledgerGranularity: 'WEEKLY',
-    setLedgerGranularity: jest.fn(),
-    refetch: jest.fn(() => Promise.resolve()),
-  }),
+  usePantryAnalytics: () => mockAnalytics,
 }));
+
+/** The hook over an empty period, with the figures a case states. */
+const analyticsReturn = ({
+  usage,
+  waste,
+  summary,
+  ledger,
+}: {
+  usage?: AnalyticsReturn['usageData'];
+  waste?: AnalyticsReturn['wasteData'];
+  summary?: Ledger['summary'];
+  ledger?: Omit<Ledger, 'summary'>;
+} = {}): AnalyticsReturn => ({
+  usageData: {
+    totalUsageCount: 0,
+    averageUsagePerDay: 0,
+    usageTrend: [],
+    usageByPurpose: [],
+    usageBySource: [],
+    topUsedItems: [],
+    ...usage,
+  },
+  wasteData: {
+    totalWasteCount: 0,
+    wasteRate: 0,
+    valueByCurrency: [],
+    composted: 0,
+    recycled: 0,
+    wasteTrend: [],
+    wasteByReason: [],
+    topWastedItems: [],
+    ...waste,
+  },
+  ledgerData: {
+    summary: {
+      totalAdded: 0,
+      totalConsumed: 0,
+      totalWasted: 0,
+      netQuantity: 0,
+      additionCount: 0,
+      consumptionCount: 0,
+      additionsByUnit: [],
+      consumptionByUnit: [],
+      ...summary,
+    },
+    periodData: [],
+    costAnalytics: null,
+    topRestockedItems: [],
+    ...ledger,
+  },
+  usageLoading: false,
+  wasteLoading: false,
+  ledgerLoading: false,
+  dateRange: DateRange.LastWeek,
+  setDateRange: jest.fn(),
+  ledgerGranularity: PeriodGranularity.Weekly,
+  setLedgerGranularity: jest.fn(),
+  refetch: jest.fn(() => Promise.resolve()),
+});
+
+/** One ledger bucket, keyed by its start day; every figure zero unless stated. */
+const period = (
+  periodLabel: string,
+  figures: NonNullable<Ledger['periodData']>[number] = {},
+) => ({
+  periodLabel,
+  periodStart: periodLabel,
+  added: 0,
+  consumed: 0,
+  wasted: 0,
+  net: 0,
+  ...figures,
+});
 
 jest.mock('#components/organisms/Header', () => ({
   Header: ({
@@ -157,103 +182,68 @@ jest.mock('#/styles/commonStyles', () => ({
   commonStyles: { container: {} },
 }));
 
+const SAMPLE = analyticsReturn({
+  usage: { totalUsageCount: 42, averageUsagePerDay: 2.5 },
+  waste: {
+    totalWasteCount: 5,
+    wasteRate: 10.5,
+    valueByCurrency: [
+      { currencyCode: 'USD', amount: 12.5 },
+      { currencyCode: 'EUR', amount: 3.1 },
+    ],
+    composted: 2.0,
+    recycled: 1.5,
+  },
+  summary: {
+    totalAdded: 100,
+    totalConsumed: 80,
+    totalWasted: 5,
+    netQuantity: 15,
+    additionCount: 50,
+    consumptionCount: 40,
+  },
+});
+
 describe('PantryAnalytics', () => {
   const route = { params: { pantryId: 'p1' } };
 
-  beforeEach(() => jest.clearAllMocks());
-
-  it('renders the title', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Pantry Analytics')).toBeTruthy();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAnalytics = SAMPLE;
   });
 
-  it('renders usage tab', () => {
+  it.each([
+    ['renders the title', ['Pantry Analytics']],
+    ['renders usage tab', ['Usage']],
+    ['renders waste tab', ['Waste']],
+    ['renders ledger tab', ['Ledger']],
+    ['shows usage summary cards', ['Total Usage', '42']],
+    ['shows waste summary cards', ['Total Waste', '5']],
+    ['shows ledger summary cards', ['Added', '100']],
+    [
+      'shows granularity selector in ledger tab',
+      ['Period:', 'Daily', 'Weekly', 'Monthly'],
+    ],
+    ['shows waste rate in waste tab', ['Waste Rate', '10.5%']],
+    [
+      'shows the value lost in each currency apart, never added together',
+      ['Est. Value Lost', '$12.50 · €3.10'],
+    ],
+    ['shows composted value in waste tab', ['Composted']],
+    ['shows recycled value in waste tab', ['Recycled', '1.5']],
+    ['shows average usage per day', ['Avg Per Day', '2.5']],
+    ['shows net change in ledger', ['Net Change', '15']],
+    ['shows transaction counts', ['Additions', '50', 'Consumptions', '40']],
+  ])('%s', (_name, texts) => {
     render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Usage')).toBeTruthy();
-  });
-
-  it('renders waste tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Waste')).toBeTruthy();
-  });
-
-  it('renders ledger tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Ledger')).toBeTruthy();
-  });
-
-  it('shows usage summary cards', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Total Usage')).toBeTruthy();
-    expect(screen.getByText('42')).toBeTruthy();
-  });
-
-  it('shows waste summary cards', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Total Waste')).toBeTruthy();
-    expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1);
+    for (const text of texts) {
+      expect(screen.getAllByText(text).length).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it('shows date range filter', () => {
     render(<PantryAnalytics route={route} />);
     expect(screen.getByTestId('date-range-filter')).toBeTruthy();
-  });
-
-  it('shows ledger summary cards', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getAllByText('Added').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('100')).toBeTruthy();
-  });
-
-  it('shows granularity selector in ledger tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Period:')).toBeTruthy();
-    expect(screen.getByText('Daily')).toBeTruthy();
-    expect(screen.getByText('Weekly')).toBeTruthy();
-    expect(screen.getByText('Monthly')).toBeTruthy();
-  });
-
-  it('shows waste rate in waste tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Waste Rate')).toBeTruthy();
-    expect(screen.getByText('10.5%')).toBeTruthy();
-  });
-
-  it('shows the value lost in each currency apart, never added together', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Est. Value Lost')).toBeTruthy();
-    expect(screen.getByText('$12.50 · €3.10')).toBeTruthy();
-  });
-
-  it('shows composted value in waste tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Composted')).toBeTruthy();
-  });
-
-  it('shows recycled value in waste tab', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Recycled')).toBeTruthy();
-    expect(screen.getByText('1.5')).toBeTruthy();
-  });
-
-  it('shows average usage per day', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Avg Per Day')).toBeTruthy();
-    expect(screen.getByText('2.5')).toBeTruthy();
-  });
-
-  it('shows net change in ledger', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Net Change')).toBeTruthy();
-    expect(screen.getByText('15')).toBeTruthy();
-  });
-
-  it('shows transaction counts', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Additions')).toBeTruthy();
-    expect(screen.getByText('50')).toBeTruthy();
-    expect(screen.getByText('Consumptions')).toBeTruthy();
-    expect(screen.getByText('40')).toBeTruthy();
   });
 
   describe('cost figures', () => {
@@ -285,62 +275,9 @@ describe('PantryAnalytics', () => {
     const renderWithCosts = (
       costs: Pick<CostAnalytics, 'totalSpent' | 'averageCostPerUnit'> | null,
     ) => {
-      const costAnalytics: CostAnalytics | null = costs && {
-        __typename: 'AdditionCostAnalytics',
-        costByStore: [],
-        ...costs,
-      };
-      jest
-        .spyOn(
-          require('#features/pantry/hooks/usePantryAnalytics'),
-          'usePantryAnalytics',
-        )
-        .mockReturnValue({
-          usageData: {
-            totalUsageCount: 10,
-            averageUsagePerDay: 1,
-            usageTrend: [],
-            usageByPurpose: [],
-            usageBySource: [],
-            topUsedItems: [],
-          },
-          wasteData: {
-            totalWasteCount: 0,
-            wasteRate: 0,
-            valueByCurrency: [],
-            composted: 0,
-            recycled: 0,
-            wasteTrend: [],
-            wasteByReason: [],
-            topWastedItems: [],
-          },
-          ledgerData: {
-            summary: {
-              totalAdded: 10,
-              totalConsumed: 5,
-              totalWasted: 1,
-              netQuantity: 4,
-              additionCount: 5,
-              consumptionCount: 3,
-              additionsByUnit: [],
-              consumptionByUnit: [],
-            },
-            periodData: [],
-            costAnalytics,
-            topRestockedItems: [],
-          },
-          usageLoading: false,
-          wasteLoading: false,
-          ledgerLoading: false,
-          usageError: null,
-          wasteError: null,
-          ledgerError: null,
-          dateRange: '7d',
-          setDateRange: jest.fn(),
-          ledgerGranularity: 'WEEKLY',
-          setLedgerGranularity: jest.fn(),
-          refetch: jest.fn(() => Promise.resolve()),
-        });
+      mockAnalytics = analyticsReturn({
+        ledger: { costAnalytics: costs && { costByStore: [], ...costs } },
+      });
       render(<PantryAnalytics route={route} />);
     };
 
@@ -463,74 +400,14 @@ describe('PantryAnalytics', () => {
   });
 
   it('renders with period data in ledger', () => {
-    jest
-      .spyOn(
-        require('#features/pantry/hooks/usePantryAnalytics'),
-        'usePantryAnalytics',
-      )
-      .mockReturnValue({
-        usageData: {
-          totalUsageCount: 0,
-          averageUsagePerDay: 0,
-          usageTrend: [],
-          usageByPurpose: [],
-          usageBySource: [],
-          topUsedItems: [],
-        },
-        wasteData: {
-          totalWasteCount: 0,
-          wasteRate: 0,
-          valueByCurrency: [],
-          composted: 0,
-          recycled: 0,
-          wasteTrend: [],
-          wasteByReason: [],
-          topWastedItems: [],
-        },
-        ledgerData: {
-          summary: {
-            totalAdded: 10,
-            totalConsumed: 5,
-            totalWasted: 1,
-            netQuantity: 4,
-            additionCount: 5,
-            consumptionCount: 3,
-            additionsByUnit: [],
-            consumptionByUnit: [],
-          },
-          periodData: [
-            {
-              periodLabel: '2024-01-01',
-              periodStart: '2024-01-01',
-              added: 5,
-              consumed: 3,
-              wasted: 1,
-              net: 1,
-            },
-            {
-              periodLabel: '2024-01-08',
-              periodStart: '2024-01-02',
-              added: 3,
-              consumed: 2,
-              wasted: 0,
-              net: 1,
-            },
-          ],
-          costAnalytics: null,
-          topRestockedItems: [],
-        },
-        usageLoading: false,
-        wasteLoading: false,
-        ledgerLoading: false,
-        usageError: null,
-        wasteError: null,
-        ledgerError: null,
-        dateRange: '7d',
-        setDateRange: jest.fn(),
-        ledgerGranularity: 'WEEKLY',
-        setLedgerGranularity: jest.fn(),
-        refetch: jest.fn(() => Promise.resolve()),
-      });
+    mockAnalytics = analyticsReturn({
+      ledger: {
+        periodData: [
+          period('2024-01-01', { added: 5, consumed: 3, wasted: 1, net: 1 }),
+          period('2024-01-08', { added: 3, consumed: 2, net: 1 }),
+        ],
+      },
+    });
 
     render(<PantryAnalytics route={route} />);
     // `periodLabel` is the API's bucket key, formatted as a local date.
@@ -540,73 +417,19 @@ describe('PantryAnalytics', () => {
   });
 
   it('renders with additionsByUnit data', () => {
-    jest
-      .spyOn(
-        require('#features/pantry/hooks/usePantryAnalytics'),
-        'usePantryAnalytics',
-      )
-      .mockReturnValue({
-        usageData: {
-          totalUsageCount: 0,
-          averageUsagePerDay: 0,
-          usageTrend: [],
-          usageByPurpose: [],
-          usageBySource: [],
-          topUsedItems: [],
-        },
-        wasteData: {
-          totalWasteCount: 0,
-          wasteRate: 0,
-          valueByCurrency: [],
-          composted: 0,
-          recycled: 0,
-          wasteTrend: [],
-          wasteByReason: [],
-          topWastedItems: [],
-        },
-        ledgerData: {
-          summary: {
-            totalAdded: 10,
-            totalConsumed: 5,
-            totalWasted: 1,
-            netQuantity: 4,
-            additionCount: 5,
-            consumptionCount: 3,
-            additionsByUnit: [
-              {
-                unitId: 'u1',
-                unitSymbol: 'lbs',
-                unitName: 'Pounds',
-                totalQuantity: 10,
-                count: 3,
-              },
-            ],
-            consumptionByUnit: [
-              {
-                unitId: 'u1',
-                unitSymbol: 'lbs',
-                unitName: 'Pounds',
-                totalQuantity: 5,
-                count: 2,
-              },
-            ],
-          },
-          periodData: [],
-          costAnalytics: null,
-          topRestockedItems: [],
-        },
-        usageLoading: false,
-        wasteLoading: false,
-        ledgerLoading: false,
-        usageError: null,
-        wasteError: null,
-        ledgerError: null,
-        dateRange: '7d',
-        setDateRange: jest.fn(),
-        ledgerGranularity: 'WEEKLY',
-        setLedgerGranularity: jest.fn(),
-        refetch: jest.fn(() => Promise.resolve()),
-      });
+    const pounds = (totalQuantity: number, count: number) => ({
+      unitId: 'u1',
+      unitSymbol: 'lbs',
+      unitName: 'Pounds',
+      totalQuantity,
+      count,
+    });
+    mockAnalytics = analyticsReturn({
+      summary: {
+        additionsByUnit: [pounds(10, 3)],
+        consumptionByUnit: [pounds(5, 2)],
+      },
+    });
 
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('Additions by Unit')).toBeTruthy();
@@ -617,139 +440,44 @@ describe('PantryAnalytics', () => {
   });
 
   it('renders with negative net quantity', () => {
-    jest
-      .spyOn(
-        require('#features/pantry/hooks/usePantryAnalytics'),
-        'usePantryAnalytics',
-      )
-      .mockReturnValue({
-        usageData: {
-          totalUsageCount: 0,
-          averageUsagePerDay: 0,
-          usageTrend: [],
-          usageByPurpose: [],
-          usageBySource: [],
-          topUsedItems: [],
-        },
-        wasteData: {
-          totalWasteCount: 0,
-          wasteRate: 0,
-          valueByCurrency: [],
-          composted: 0,
-          recycled: 0,
-          wasteTrend: [],
-          wasteByReason: [],
-          topWastedItems: [],
-        },
-        ledgerData: {
-          summary: {
-            totalAdded: 5,
-            totalConsumed: 10,
-            totalWasted: 3,
-            netQuantity: -8,
-            additionCount: 2,
-            consumptionCount: 5,
-            additionsByUnit: [],
-            consumptionByUnit: [],
-          },
-          periodData: [],
-          costAnalytics: null,
-          topRestockedItems: [],
-        },
-        usageLoading: false,
-        wasteLoading: false,
-        ledgerLoading: false,
-        usageError: null,
-        wasteError: null,
-        ledgerError: null,
-        dateRange: '7d',
-        setDateRange: jest.fn(),
-        ledgerGranularity: 'WEEKLY',
-        setLedgerGranularity: jest.fn(),
-        refetch: jest.fn(() => Promise.resolve()),
-      });
+    mockAnalytics = analyticsReturn({ summary: { netQuantity: -8 } });
 
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('-8')).toBeTruthy();
   });
 
   it('renders ledger quantities through the quantity formatter', () => {
-    jest
-      .spyOn(
-        require('#features/pantry/hooks/usePantryAnalytics'),
-        'usePantryAnalytics',
-      )
-      .mockReturnValue({
-        usageData: {
-          totalUsageCount: 0,
-          averageUsagePerDay: 0,
-          usageTrend: [],
-          usageByPurpose: [],
-          usageBySource: [],
-          topUsedItems: [],
-        },
-        wasteData: {
-          totalWasteCount: 0,
-          wasteRate: 0,
-          valueByCurrency: [],
-          composted: 0,
-          recycled: 0,
-          wasteTrend: [],
-          wasteByReason: [],
-          topWastedItems: [],
-        },
-        ledgerData: {
-          summary: {
-            totalAdded: 1.25,
-            totalConsumed: 3.14159,
-            totalWasted: 0.33333334,
-            netQuantity: -177.4412,
-            additionCount: 2,
-            consumptionCount: 5,
-            additionsByUnit: [
-              {
-                unitId: 'u1',
-                unitSymbol: 'g',
-                unitName: 'Grams',
-                totalQuantity: 1500,
-                count: 3,
-              },
-            ],
-            consumptionByUnit: [
-              {
-                unitId: 'u2',
-                unitSymbol: 'cup',
-                unitName: 'Cups',
-                totalQuantity: 0.75,
-                count: 2,
-              },
-            ],
+    mockAnalytics = analyticsReturn({
+      summary: {
+        totalAdded: 1.25,
+        totalConsumed: 3.14159,
+        totalWasted: 0.33333334,
+        netQuantity: -177.4412,
+        additionsByUnit: [
+          {
+            unitId: 'u1',
+            unitSymbol: 'g',
+            unitName: 'Grams',
+            totalQuantity: 1500,
+            count: 3,
           },
-          periodData: [
-            {
-              periodLabel: '2024-01-01',
-              periodStart: '2024-01-01',
-              added: 0.5,
-              consumed: 1.6667,
-              wasted: 2.456,
-              net: 0,
-            },
-          ],
-          costAnalytics: null,
-          topRestockedItems: [],
-        },
-        usageLoading: false,
-        wasteLoading: false,
-        ledgerLoading: false,
-        usageError: null,
-        wasteError: null,
-        ledgerError: null,
-        dateRange: '7d',
-        setDateRange: jest.fn(),
-        ledgerGranularity: 'WEEKLY',
-        setLedgerGranularity: jest.fn(),
-        refetch: jest.fn(() => Promise.resolve()),
-      });
+        ],
+        consumptionByUnit: [
+          {
+            unitId: 'u2',
+            unitSymbol: 'cup',
+            unitName: 'Cups',
+            totalQuantity: 0.75,
+            count: 2,
+          },
+        ],
+      },
+      ledger: {
+        periodData: [
+          period('2024-01-01', { added: 0.5, consumed: 1.6667, wasted: 2.456 }),
+        ],
+      },
+    });
 
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('1 1/4')).toBeTruthy();

@@ -72,7 +72,6 @@ const suggestionPayload = (
   createItemSuggestion: {
     __typename: 'CreateItemSuggestionPayload',
     suggestion: {
-      __typename: 'ItemEditSuggestion',
       id: 'sug-1',
       status: ItemSuggestionStatus.Pending,
       note,
@@ -338,7 +337,6 @@ describe('useSuggestItemEdit', () => {
           updateItem: {
             __typename: 'UpdateItemPayload',
             item: {
-              __typename: 'Item',
               id: 'item-1',
               name: 'Skim Milk',
               description: null,
@@ -460,7 +458,6 @@ describe('useSuggestItemEdit', () => {
           updateItem: {
             __typename: 'UpdateItemPayload',
             item: {
-              __typename: 'Item',
               id: 'item-1',
               name: 'Skim Milk',
               description: null,

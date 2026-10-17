@@ -41,16 +41,13 @@ const accepted = (status = RecipeCaptureStatus.Pending) =>
       createRecipeCapture: {
         __typename: 'CreateRecipeCapturePayload',
         capture: {
-          __typename: 'RecipeCapture',
           id: 'capture-1',
           status,
           alreadySaved: false,
-          failure: null,
           recipe:
             status === RecipeCaptureStatus.Saved
-              ? { __typename: 'Recipe', id: 'recipe-1', name: 'Miso salmon' }
+              ? { id: 'recipe-1', name: 'Miso salmon' }
               : null,
-          draft: null,
         },
       },
     },
@@ -144,7 +141,6 @@ describe('useRecipeCapture', () => {
         createRecipeCapture: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
-          message: 'refused',
           field: 'url',
         },
       },

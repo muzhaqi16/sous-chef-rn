@@ -250,6 +250,84 @@ describe('fromServerReceipt', () => {
   });
 });
 
+describe('outcomeOf', () => {
+  type Warning = ReceiptParseReadersFragment['warnings'][number];
+
+  const warning = (
+    code: ReceiptParseWarningCode,
+    figures: Partial<Pick<Warning, 'counted' | 'printed'>> = {},
+  ): Warning => ({
+    __typename: 'ReceiptParseWarning',
+    code,
+    counted: null,
+    printed: null,
+    ...figures,
+  });
+
+  /** A parse the server finished, reading one item. */
+  const parsed = ({
+    warnings = [],
+    purchasedOn = null,
+  }: {
+    warnings?: Warning[];
+    purchasedOn?: string | null;
+  } = {}): ReceiptParseReadersFragment => ({
+    __typename: 'ReceiptParse',
+    id: 'rp-1',
+    status: ReceiptParseStatus.Parsed,
+    warnings,
+    receipt: {
+      __typename: 'ParsedReceipt',
+      purchasedOn,
+      merchant: merchant('WALMART'),
+      lines: [
+        line({
+          text: 'GV WHOLE MILK 3.48 N',
+          kind: ReceiptLineKind.Item,
+          product: 'GV WHOLE MILK',
+          amount: 3.48,
+        }),
+      ],
+    },
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date(2026, 9, 1, 12) });
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('calls a receipt the server could barely read unreadable, never an empty review', () => {
+    expect(
+      outcomeOf(
+        parsed({ warnings: [warning(ReceiptParseWarningCode.LowText)] }),
+      ),
+    ).toBe('unreadable');
+  });
+
+  // An API from before its discount rule sends no figures; its check misfired.
+  it('drops a mismatch the server gives no figures for', () => {
+    const outcome = outcomeOf(
+      parsed({ warnings: [warning(ReceiptParseWarningCode.TotalsMismatch)] }),
+    );
+
+    expect(outcome).toMatchObject({ parsed: expect.anything() });
+    expect(outcome).not.toHaveProperty('totalsGap');
+  });
+
+  it.each([
+    ['drops a day the server read in the future', '2026-12-29'],
+    // OCR noise at a receipt's top (`86/9/18`) read as a day years back.
+    ['drops a day the server read years back', '2018-09-06'],
+  ])('%s', (_name, purchasedOn) => {
+    const outcome = outcomeOf(parsed({ purchasedOn }));
+
+    expect(outcome).toMatchObject({ parsed: expect.anything() });
+    expect(outcome).not.toHaveProperty('purchasedOn');
+  });
+});
+
 describe('classifyCreateResult', () => {
   const refusedWith = (
     code: string,
@@ -307,15 +385,18 @@ describe('classifyCreateResult', () => {
     ).toEqual({ kind: 'poll' });
   });
 
-  it('settles a refusal on the pages as too long', () => {
+  it.each([
+    ['the pages as too long', 'pages', 'tooLong'],
+    ['any other field as unavailable', 'locale', 'unavailable'],
+  ])('settles a refusal on %s', (_name, refusedField, outcome) => {
     expect(
       classifyCreateResult({
         accepted: false,
         parse: null,
-        refusedField: 'pages',
+        refusedField,
         error: undefined,
       }),
-    ).toEqual({ kind: 'settle', outcome: 'tooLong' });
+    ).toEqual({ kind: 'settle', outcome });
   });
 
   it.each([

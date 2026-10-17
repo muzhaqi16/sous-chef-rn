@@ -110,7 +110,6 @@ describe('useShoppingListReminder', () => {
               deleteShoppingListReminder: {
                 __typename: 'DeleteShoppingListReminderPayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   reminderEnabled: false,
                   reminderDate: null,

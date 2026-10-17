@@ -16,7 +16,6 @@ import {
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { readTemplateSource } from '#features/mealPlan/cache/derivationSources';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
@@ -29,6 +28,10 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
+import {
+  planSource,
+  seedPlanSource,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 
 /**
  * Templates are copied from the cache, so these assert on what is SENT and on
@@ -117,61 +120,6 @@ const seeded = (data = template()): InMemoryCache => {
 };
 
 const PLAN_ID = 'plan-1';
-
-/** A cache holding a week's plan the way `GetMealPlan` leaves its meals. */
-const seededPlan = (hasNextPage: boolean = false): InMemoryCache => {
-  const cache = makeCache();
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
-    fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-    fragmentName: 'useDuplicateMealPlan_mealPlan',
-    data: {
-      __typename: 'MealPlan',
-      id: PLAN_ID,
-      description: 'A week of food',
-      planType: MealPlanType.Weekly,
-      servings: 4,
-      budgetAmount: null,
-      homeId: 'home-1',
-      startDate: '2026-01-05',
-      endDate: '2026-01-11',
-      mealPlanItemsConnection: {
-        __typename: 'MealPlanItemConnection',
-        totalCount: 2,
-        pageInfo: { __typename: 'PageInfo', hasNextPage },
-        edges: [
-          {
-            __typename: 'MealPlanItemEdge',
-            node: {
-              __typename: 'MealPlanItem',
-              id: 'mpi-1',
-              date: '2026-01-05',
-              mealType: MealType.Dinner,
-              servings: 2,
-              notes: null,
-              customMealName: null,
-              recipe: { __typename: 'Recipe', id: 'recipe-1' },
-            },
-          },
-          {
-            __typename: 'MealPlanItemEdge',
-            node: {
-              __typename: 'MealPlanItem',
-              id: 'mpi-2',
-              date: '2026-01-07',
-              mealType: MealType.Lunch,
-              servings: null,
-              notes: null,
-              customMealName: 'Leftovers',
-              recipe: null,
-            },
-          },
-        ],
-      },
-    },
-  });
-  return cache;
-};
 
 /** The ids of a plan's meals as the detail screen reads them, or null. */
 const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
@@ -391,7 +339,7 @@ describe('useMealTemplateActions', () => {
       const create = queuedTemplateMock();
       const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
         operationMocks: [create.mock],
-        cache: seededPlan(true),
+        cache: seedPlanSource(planSource(), { hasNextPage: true }),
       });
 
       expect(
@@ -408,7 +356,7 @@ describe('useMealTemplateActions', () => {
     it('sends one create with each meal at its day offset, and holds the template with its meals', async () => {
       useStore.setState({ apiReachable: false });
       const create = queuedTemplateMock();
-      const cache = seededPlan();
+      const cache = seedPlanSource();
       const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
         operationMocks: [create.mock],
         cache,

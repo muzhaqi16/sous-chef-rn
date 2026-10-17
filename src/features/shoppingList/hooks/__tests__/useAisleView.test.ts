@@ -1,5 +1,4 @@
 import { waitFor } from '@testing-library/react-native';
-import type { FragmentType } from '@apollo/client/masking';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,8 +9,7 @@ import {
   StoreRouteSource,
 } from '#/graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
-import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
-import type { SortableItem_ItemFragmentDoc } from '#features/shoppingList/components/SortableShoppingList/SortableItem.generated';
+import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { AisleViewRouteDocument } from '../useAisleView.generated';
 import { useAisleView } from '../useAisleView';
 
@@ -19,38 +17,23 @@ jest.mock('#hooks/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 
-const line = (
-  id: string,
-  storeDepartment: StoreDepartment,
-): ShoppingListRowItem => ({
-  id,
-  isPurchased: false,
-  sortOrder: id,
-  storeDepartment,
-  itemRef: { __typename: 'ShoppingListItem', id } as FragmentType<
-    typeof SortableItem_ItemFragmentDoc
-  >,
-});
-
 const ROWS = [
-  line('milk', StoreDepartment.DairyEggs),
-  line('apples', StoreDepartment.Produce),
+  shoppingListRowItem('milk', { storeDepartment: StoreDepartment.DairyEggs }),
+  shoppingListRowItem('apples', { storeDepartment: StoreDepartment.Produce }),
 ];
 
 const routeAnswer = (
   source: StoreRouteSource,
 ): MockDataFor<typeof AisleViewRouteDocument> => ({
   shoppingList: {
-    __typename: 'ShoppingList',
     id: 'list-1',
     storeRoute: {
-      __typename: 'StoreRoute',
       departments: [StoreDepartment.DairyEggs, StoreDepartment.Produce],
       source,
       store:
         source === StoreRouteSource.Default
           ? null
-          : { __typename: 'Store', id: 'store-1', name: 'Costco' },
+          : { id: 'store-1', name: 'Costco' },
     },
   },
 });

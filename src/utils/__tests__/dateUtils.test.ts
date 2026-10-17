@@ -5,6 +5,7 @@ import {
   extractDateString,
   keepDayInsidePlan,
   safeParseDate,
+  type PlanBounds,
 } from '../dateUtils';
 
 describe('extractDateString', () => {
@@ -219,44 +220,60 @@ describe('dayAsInstant', () => {
 
 describe('keepDayInsidePlan', () => {
   const week = { startDate: '2026-09-21', endDate: '2026-09-27' };
+  const instant = '2026-09-30T10:00:00.000Z';
 
-  it('leaves a day inside the plan where it is', () => {
-    expect(keepDayInsidePlan('2026-09-23', week)).toBe('2026-09-23');
-  });
-
-  it('leaves the first and the last day where they are: both are days of the plan', () => {
-    expect(keepDayInsidePlan('2026-09-21', week)).toBe('2026-09-21');
-    expect(keepDayInsidePlan('2026-09-27', week)).toBe('2026-09-27');
-  });
-
-  it('brings a day before the plan onto its first day', () => {
-    expect(keepDayInsidePlan('2026-09-20', week)).toBe('2026-09-21');
-    expect(keepDayInsidePlan('2025-12-31', week)).toBe('2026-09-21');
-  });
-
-  it('brings a day after the plan onto its last day', () => {
-    expect(keepDayInsidePlan('2026-09-28', week)).toBe('2026-09-27');
-    expect(keepDayInsidePlan('2026-10-01', week)).toBe('2026-09-27');
-  });
-
-  it('holds every day on the one day of a one-day plan', () => {
-    const oneDay = { startDate: '2026-09-21', endDate: '2026-09-21' };
-
-    expect(keepDayInsidePlan('2026-09-20', oneDay)).toBe('2026-09-21');
-    expect(keepDayInsidePlan('2026-09-21', oneDay)).toBe('2026-09-21');
-    expect(keepDayInsidePlan('2026-09-22', oneDay)).toBe('2026-09-21');
-  });
-
-  it('spans a month boundary by the keys alone', () => {
-    const acrossMonths = { startDate: '2026-09-28', endDate: '2026-10-04' };
-
-    expect(keepDayInsidePlan('2026-10-01', acrossMonths)).toBe('2026-10-01');
-    expect(keepDayInsidePlan('2026-09-27', acrossMonths)).toBe('2026-09-28');
-    expect(keepDayInsidePlan('2026-10-05', acrossMonths)).toBe('2026-10-04');
-  });
-
-  it('leaves the day unchanged when the plan is not known', () => {
-    expect(keepDayInsidePlan('2026-09-30', undefined)).toBe('2026-09-30');
+  // The plan, the days, and where each day lands.
+  it.each<[string, PlanBounds | undefined, string[], string[]]>([
+    [
+      'leaves a day inside the plan where it is',
+      week,
+      ['2026-09-23'],
+      ['2026-09-23'],
+    ],
+    [
+      'leaves the first and the last day where they are: both are days of the plan',
+      week,
+      ['2026-09-21', '2026-09-27'],
+      ['2026-09-21', '2026-09-27'],
+    ],
+    [
+      'brings a day before the plan onto its first day',
+      week,
+      ['2026-09-20', '2025-12-31'],
+      ['2026-09-21', '2026-09-21'],
+    ],
+    [
+      'brings a day after the plan onto its last day',
+      week,
+      ['2026-09-28', '2026-10-01'],
+      ['2026-09-27', '2026-09-27'],
+    ],
+    [
+      'holds every day on the one day of a one-day plan',
+      { startDate: '2026-09-21', endDate: '2026-09-21' },
+      ['2026-09-20', '2026-09-21', '2026-09-22'],
+      ['2026-09-21', '2026-09-21', '2026-09-21'],
+    ],
+    [
+      'spans a month boundary by the keys alone',
+      { startDate: '2026-09-28', endDate: '2026-10-04' },
+      ['2026-10-01', '2026-09-27', '2026-10-05'],
+      ['2026-10-01', '2026-09-28', '2026-10-04'],
+    ],
+    [
+      'leaves the day unchanged when the plan is not known',
+      undefined,
+      ['2026-09-30'],
+      ['2026-09-30'],
+    ],
+    [
+      'leaves a day that is not a date key unchanged',
+      week,
+      [instant, ''],
+      [instant, ''],
+    ],
+  ])('%s', (_, bounds, days, landsOn) => {
+    expect(days.map(day => keepDayInsidePlan(day, bounds))).toEqual(landsOn);
   });
 
   it('leaves the day unchanged when a boundary is not a date key', () => {
@@ -273,13 +290,6 @@ describe('keepDayInsidePlan', () => {
         endDate: '2026-09-26T22:00:00.000Z',
       }),
     ).toBe('2026-09-30');
-  });
-
-  it('leaves a day that is not a date key unchanged', () => {
-    const instant = '2026-09-30T10:00:00.000Z';
-
-    expect(keepDayInsidePlan(instant, week)).toBe(instant);
-    expect(keepDayInsidePlan('', week)).toBe('');
   });
 
   it.each(['Pacific/Pago_Pago', 'Pacific/Kiritimati'])(
@@ -307,8 +317,9 @@ describe('keepDayInsidePlan', () => {
 
 /**
  * Zones whose clocks change, with the day before and the day after the lost
- * hour and the gained one. Chile's change is AT midnight: the day it springs
- * forward on has no 00:00.
+ * hour and the gained one: enough to pin calendar-day arithmetic over 24-hour
+ * spans, which date-fns' own suite covers zone by zone. Chile's change is AT
+ * midnight: the day it springs forward on has no 00:00 for `fromDateKey`.
  */
 const DST_ZONES: [string, [string, string], [string, string]][] = [
   [
@@ -316,15 +327,9 @@ const DST_ZONES: [string, [string, string], [string, string]][] = [
     ['2026-03-07', '2026-03-09'],
     ['2026-10-31', '2026-11-02'],
   ],
-  ['Europe/Berlin', ['2026-03-28', '2026-03-30'], ['2026-10-24', '2026-10-26']],
   [
     'America/Santiago',
     ['2026-09-05', '2026-09-07'],
-    ['2026-04-04', '2026-04-06'],
-  ],
-  [
-    'Australia/Lord_Howe',
-    ['2026-10-03', '2026-10-05'],
     ['2026-04-04', '2026-04-06'],
   ],
 ];

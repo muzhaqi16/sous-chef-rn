@@ -277,7 +277,6 @@ describe('folder actions move the recipes, not just the folder list', () => {
       data: {
         deleteRecipeFolder: {
           __typename: 'ValidationError',
-          message: 'nope',
           code: ErrorCode.ValidationFailed,
         },
       },

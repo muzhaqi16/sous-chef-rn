@@ -21,7 +21,7 @@ function renderWithFailingSecondPage() {
         edges: [
           {
             cursor: 'page-1',
-            node: { id: 'recipe-1', name: 'Apple pie', description: null },
+            node: { id: 'recipe-1', name: 'Apple pie' },
           },
         ],
         pageInfo: { hasNextPage: true, endCursor: 'page-1' },

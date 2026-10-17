@@ -101,7 +101,6 @@ describe('ItemPhotoViewer set-as-main action', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-1.jpg',
             photos: [photo('photo-1', { isPrimary: true })],

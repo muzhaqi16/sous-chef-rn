@@ -21,68 +21,20 @@ import {
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
+import {
+  recipeFormFragment,
+  recipeFormIngredient,
+} from '#/test-utils/fixtures/recipeFixtures';
 
-const SOURCE = {
-  __typename: 'Recipe',
-  id: 'recipe-1',
-  version: 1,
-  name: 'Lasagna',
-  description: 'Layered',
-  imageUrl: null,
-  videoUrl: null,
-  servings: 6,
-  prepTimeMinutes: 20,
-  cookTimeMinutes: 45,
-  caloriesPerServing: null,
-  difficulty: 'MEDIUM',
-  category: 'DINNER',
-  cuisines: ['ITALIAN'],
-  status: 'PUBLISHED',
-  diets: [],
-  healthGoals: [],
-  intolerances: [],
-  notes: null,
-  tips: null,
-  originalAuthor: 'Nonna',
-  tags: [],
-  instructions: [{ step: 1, text: 'Layer' }],
-  pendingRevision: null,
-  ingredientsConnection: {
-    __typename: 'RecipeIngredientConnection',
-    edges: [
-      {
-        __typename: 'RecipeIngredientEdge',
-        node: {
-          __typename: 'RecipeIngredient',
-          id: 'ri-1',
-          name: 'Tomatoes',
-          quantity: 800,
-          originalText: null,
-          item: {
-            __typename: 'Item',
-            id: 'item-1',
-            name: 'Tomatoes',
-            imageUrl: null,
-          },
-          unit: {
-            __typename: 'Unit',
-            id: 'unit-1',
-            name: 'gram',
-            symbol: 'g',
-          },
-          image: null,
-          isOptional: false,
-          notes: null,
-          preparation: null,
-          sortOrder: 0,
-          section: null,
-        },
-      },
-    ],
-    pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
-    totalCount: 1,
-  },
-};
+/** The recipe forked and published: one ingredient, all of it on the device. */
+const sourceRecipe = (fixture: Parameters<typeof recipeFormFragment>[0] = {}) =>
+  recipeFormFragment({
+    status: RecipeStatus.Published,
+    ingredients: [recipeFormIngredient({ id: 'ri-1', name: 'Tomatoes' })],
+    ...fixture,
+  });
+
+const SOURCE = sourceRecipe();
 
 const seedSource = (source: SeedWithFragment['data'] = SOURCE) =>
   seedCache([
@@ -155,18 +107,15 @@ describe('useForkRecipe', () => {
   // ingredient list.
   it('refuses a source over the ingredient limit, without firing', async () => {
     const fork = recordMock(ForkRecipeDocument, { data: { forkRecipe: null } });
-    const cache = seedSource({
-      ...SOURCE,
-      ingredientsConnection: {
-        ...SOURCE.ingredientsConnection,
-        pageInfo: {
-          __typename: 'PageInfo',
+    const cache = seedSource(
+      sourceRecipe({
+        ingredientsPage: {
+          totalCount: 150,
           hasNextPage: true,
           endCursor: 'cursor-100',
         },
-        totalCount: 150,
-      },
-    });
+      }),
+    );
     const { result } = renderHookWithApollo(() => useForkRecipe(), {
       cache,
       operationMocks: [fork.mock],
@@ -260,7 +209,7 @@ describe('usePublishRecipe', () => {
   it('shows a submitted draft in review before the server answers', async () => {
     const cache = seedCache([
       {
-        data: { ...SOURCE, status: 'DRAFT' },
+        data: sourceRecipe({ status: RecipeStatus.Draft }),
         fragment: RecipeForm_RecipeFragmentDoc,
         fragmentName: 'RecipeForm_recipe',
       },
@@ -322,7 +271,6 @@ describe('usePublishRecipe', () => {
         updateRecipe: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
-          message: 'bad',
           field: 'status',
         },
       },

@@ -19,10 +19,7 @@ function renderSheet(room: number) {
   const parse = recordMock(ParseIngredientLinesDocument, {
     dataFor: vars => ({
       parseIngredientLines: {
-        __typename: 'ParseIngredientLinesPayload',
         lines: (vars.input as { lines: string[] }).lines.map(line => ({
-          __typename: 'ParsedIngredientLine',
-          name: line,
           originalText: line,
         })),
       },

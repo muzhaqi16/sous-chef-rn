@@ -115,22 +115,19 @@ describe('useCopyShoppingList', () => {
         __typename: 'AddItemsToShoppingListPayload',
         results: [
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 0,
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'line-0' },
+            item: { id: 'line-0' },
           },
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 1,
             success: false,
             item: null,
           },
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 2,
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'line-2' },
+            item: { id: 'line-2' },
           },
         ],
       },

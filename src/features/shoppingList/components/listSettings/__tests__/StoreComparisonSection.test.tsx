@@ -13,48 +13,25 @@ import { StoreComparisonSection } from '../StoreComparisonSection';
 type Comparison = MockDataFor<
   typeof ListStoreComparisonDocument
 >['shoppingListStoreComparison'];
-
-const comparison = (overrides: Partial<Comparison> = {}): Comparison => ({
-  __typename: 'ShoppingListStoreComparison',
-  scope: PriceComparisonScope.Store,
-  currency: {
-    __typename: 'Currency',
-    id: 'cur-usd',
-    code: 'USD',
-    decimalPlaces: 2,
-  },
-  comparableLines: 10,
-  leftOutLines: 0,
-  truncated: false,
-  unpricedLines: [],
-  candidates: [],
-  ...overrides,
-});
-
 type Candidate = NonNullable<NonNullable<Comparison>['candidates']>[number];
 
-const branch = (
-  id: string,
-  name: string,
-  overrides: Partial<Candidate> = {},
-): Candidate => ({
-  __typename: 'StoreComparisonCandidate',
-  scope: PriceComparisonScope.Store,
-  store: { __typename: 'Store', id, name, address: null },
-  chain: null,
-  estimatedTotal: 0,
-  pricedLines: 0,
-  chainFilledLines: 0,
-  anyStoreFilledLines: 0,
-  ranked: true,
-  isTarget: false,
-  newestObservedAt: null,
-  ...overrides,
-});
-
-const renderWith = (answer: Comparison) => {
+// The rest is completed from the SDL.
+const renderWith = (
+  candidates: Candidate[],
+  overrides: Partial<Comparison> = {},
+) => {
   const query = recordMock(ListStoreComparisonDocument, {
-    data: { shoppingListStoreComparison: answer },
+    data: {
+      shoppingListStoreComparison: {
+        scope: PriceComparisonScope.Store,
+        currency: { code: 'USD', decimalPlaces: 2 },
+        comparableLines: 10,
+        leftOutLines: 0,
+        unpricedLines: [],
+        candidates,
+        ...overrides,
+      },
+    },
   });
   renderWithApollo(<StoreComparisonSection listId="list-1" />, {
     operationMocks: [query.mock],
@@ -64,19 +41,17 @@ const renderWith = (answer: Comparison) => {
 
 describe('StoreComparisonSection', () => {
   it('ranks stores by total and says how much of each total is their own', async () => {
-    renderWith(
-      comparison({
-        candidates: [
-          branch('store-aldi', 'Aldi Main St', {
-            chain: { __typename: 'StoreChain', id: 'chain-aldi', name: 'Aldi' },
-            estimatedTotal: 42.1,
-            pricedLines: 7,
-            chainFilledLines: 2,
-            anyStoreFilledLines: 1,
-          }),
-        ],
-      }),
-    );
+    renderWith([
+      {
+        scope: PriceComparisonScope.Store,
+        chain: { name: 'Aldi' },
+        estimatedTotal: 42.1,
+        pricedLines: 7,
+        chainFilledLines: 2,
+        anyStoreFilledLines: 1,
+        ranked: true,
+      },
+    ]);
 
     expect(
       await screen.findByText(formatCurrency(42.1, 'USD', 2)),
@@ -90,19 +65,16 @@ describe('StoreComparisonSection', () => {
 
   // Its total rests mostly on other stores' prices, so it is not compared.
   it("shows the list's own store without a total while it has too few prices", async () => {
-    renderWith(
-      comparison({
-        candidates: [
-          branch('store-corner', 'Corner Shop', {
-            estimatedTotal: 50,
-            pricedLines: 1,
-            anyStoreFilledLines: 9,
-            ranked: false,
-            isTarget: true,
-          }),
-        ],
-      }),
-    );
+    renderWith([
+      {
+        scope: PriceComparisonScope.Store,
+        estimatedTotal: 50,
+        pricedLines: 1,
+        anyStoreFilledLines: 9,
+        ranked: false,
+        isTarget: true,
+      },
+    ]);
 
     expect(await screen.findByText('Your store')).toBeTruthy();
     expect(screen.getByText('Not enough prices yet')).toBeTruthy();
@@ -110,15 +82,7 @@ describe('StoreComparisonSection', () => {
   });
 
   it('says when no store has enough prices, and what was left out', async () => {
-    renderWith(
-      comparison({
-        leftOutLines: 1,
-        unpricedLines: [
-          { __typename: 'ShoppingListItem', id: 'line-1' },
-          { __typename: 'ShoppingListItem', id: 'line-2' },
-        ],
-      }),
-    );
+    renderWith([], { leftOutLines: 1, unpricedLines: [{}, {}] });
 
     expect(
       await screen.findByText(
@@ -136,7 +100,7 @@ describe('StoreComparisonSection', () => {
   });
 
   it('compares chains when asked', async () => {
-    const query = renderWith(comparison());
+    const query = renderWith([]);
     await screen.findByText('Compares 10 items on this list.');
 
     fireEvent.press(screen.getByText('Chains'));

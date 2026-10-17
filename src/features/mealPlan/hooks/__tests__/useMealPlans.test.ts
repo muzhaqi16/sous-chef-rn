@@ -7,6 +7,7 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
@@ -61,10 +62,6 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeMutation: jest.fn(<T>(fn: () => Promise<T>) => fn()),
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -72,25 +69,7 @@ beforeEach(() => {
 function planConnection(
   plans: Array<{ id: string; startDate: string; endDate: string }>,
 ): MockDataFor<typeof GetMealPlansDocument> {
-  return {
-    mealPlans: {
-      __typename: 'MealPlanConnection',
-      edges: plans.map(p => ({
-        __typename: 'MealPlanEdge',
-        cursor: p.id,
-        node: {
-          __typename: 'MealPlan',
-          ...p,
-        },
-      })),
-      totalCount: plans.length,
-      pageInfo: {
-        __typename: 'PageInfo',
-        hasNextPage: false,
-        endCursor: null,
-      },
-    },
-  };
+  return { mealPlans: connectionOf(plans) };
 }
 
 function planData(
@@ -102,10 +81,7 @@ function planData(
 }
 
 function emptyMock(): MockedResponse {
-  const data: MockDataFor<typeof GetMealPlansDocument> = { mealPlans: null };
-  return recordMock(GetMealPlansDocument, {
-    data,
-  }).mock;
+  return recordMock(GetMealPlansDocument, { data: { mealPlans: null } }).mock;
 }
 
 describe('useMealPlans', () => {
@@ -214,18 +190,7 @@ describe('useMealPlans', () => {
   // a second full page of display nodes on every mount.
   it('asks for only the plans that can overlap today', async () => {
     const recorded = recordMock(GetMealPlansDocument, {
-      data: {
-        mealPlans: {
-          __typename: 'MealPlanConnection',
-          edges: [],
-          totalCount: 0,
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
-        },
-      },
+      data: planConnection([]),
     });
     renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [recorded.mock, recorded.mock],
@@ -274,19 +239,10 @@ describe('useMealPlans', () => {
       plans: Plan[],
       endCursor: string | null,
     ): MockDataFor<typeof GetMealPlansDocument> => ({
-      mealPlans: {
-        __typename: 'MealPlanConnection',
-        edges: plans.map(p => ({
-          __typename: 'MealPlanEdge',
-          cursor: p.id,
-          node: { __typename: 'MealPlan', ...p },
-        })),
-        pageInfo: {
-          __typename: 'PageInfo',
-          hasNextPage: endCursor !== null,
-          endCursor,
-        },
-      },
+      mealPlans: connectionOf(plans, {
+        hasNextPage: endCursor !== null,
+        endCursor,
+      }),
     });
 
     // Page one (newest first) is twenty plans starting a year out or later.

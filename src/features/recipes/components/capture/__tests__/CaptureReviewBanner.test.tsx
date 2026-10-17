@@ -1,14 +1,8 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
-  recordMock,
-  renderWithApollo,
-  type MockDataFor,
-} from '#/test-utils/apolloMockProvider';
-import {
-  IngredientMatchConfidence,
   MeasurementRegionBasis,
-  RecipeCaptureStatus,
   RecipeCaptureWarningCode,
 } from '#/graphql/generated/schemaTypes';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
@@ -16,66 +10,27 @@ import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStor
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureReviewBanner } from '../CaptureReviewBanner';
 
-type Line = NonNullable<
-  NonNullable<
-    NonNullable<
-      NonNullable<
-        MockDataFor<typeof RecipeCaptureDocument>['recipeCapture']
-      >['draft']
-    >['lines']
-  >[number]
->;
-
-const line = (originalText: string, overrides: Partial<Line> = {}): Line => ({
-  __typename: 'ParsedIngredientLine',
-  originalText,
-  name: originalText,
-  item: null,
-  confidence: IngredientMatchConfidence.Unsure,
-  candidates: [],
-  ...overrides,
-});
-
+// The read left "2 scallions" unlinked, with one item proposed for it.
 const captureMock = () =>
   recordMock(RecipeCaptureDocument, {
     data: {
       recipeCapture: {
-        __typename: 'RecipeCapture',
         id: 'capture-1',
-        status: RecipeCaptureStatus.Saved,
         measurementRegion: {
-          __typename: 'MeasurementRegion',
           region: 'AU',
           basis: MeasurementRegionBasis.PageLanguage,
         },
-        warnings: [
-          {
-            __typename: 'RecipeCaptureWarning',
-            code: RecipeCaptureWarningCode.UngroundedLine,
-          },
-        ],
+        warnings: [{ code: RecipeCaptureWarningCode.UngroundedLine }],
         draft: {
-          __typename: 'RecipeCaptureDraft',
           lines: [
-            line('2 scallions', {
+            {
+              originalText: '2 scallions',
+              item: null,
               candidates: [
-                {
-                  __typename: 'IngredientCandidate',
-                  score: 0.7,
-                  item: {
-                    __typename: 'Item',
-                    id: 'item-green-onion',
-                    name: 'Green onion',
-                  },
-                },
+                { item: { id: 'item-green-onion', name: 'Green onion' } },
               ],
-            }),
-            line('1 cup rice', {
-              item: { __typename: 'Item', id: 'item-rice' },
-              confidence: IngredientMatchConfidence.Confident,
-            }),
+            },
           ],
-          steps: [],
         },
       },
     },
@@ -96,16 +51,22 @@ const hold = () => {
   store.settle('capture-1', 'recipe-1');
 };
 
+const renderBanner = (
+  ingredients: React.ComponentProps<typeof CaptureReviewBanner>['ingredients'],
+  onReview = jest.fn(),
+) =>
+  renderWithApollo(
+    <CaptureReviewBanner
+      recipeId="recipe-1"
+      ingredients={ingredients}
+      onReview={onReview}
+    />,
+    { operationMocks: [captureMock().mock] },
+  );
+
 describe('CaptureReviewBanner', () => {
   it('shows nothing for a recipe no held capture made', () => {
-    renderWithApollo(
-      <CaptureReviewBanner
-        recipeId="recipe-1"
-        ingredients={[]}
-        onReview={jest.fn()}
-      />,
-      { operationMocks: [captureMock().mock] },
-    );
+    renderBanner([]);
 
     expect(screen.queryByTestId(recipesTestIDs.captureReview)).toBeNull();
   });
@@ -113,16 +74,12 @@ describe('CaptureReviewBanner', () => {
   it('says how measures were read, what the read warned of, and what is unmatched', async () => {
     hold();
     const onReview = jest.fn();
-    renderWithApollo(
-      <CaptureReviewBanner
-        recipeId="recipe-1"
-        ingredients={[
-          { originalText: '2 scallions', item: null },
-          { originalText: '1 cup rice', item: { id: 'item-rice' } },
-        ]}
-        onReview={onReview}
-      />,
-      { operationMocks: [captureMock().mock] },
+    renderBanner(
+      [
+        { originalText: '2 scallions', item: null },
+        { originalText: '1 cup rice', item: { id: 'item-rice' } },
+      ],
+      onReview,
     );
 
     await waitFor(() =>
@@ -140,16 +97,9 @@ describe('CaptureReviewBanner', () => {
 
   it('counts a line the user has since matched as matched', async () => {
     hold();
-    renderWithApollo(
-      <CaptureReviewBanner
-        recipeId="recipe-1"
-        ingredients={[
-          { originalText: '2 scallions', item: { id: 'item-green-onion' } },
-        ]}
-        onReview={jest.fn()}
-      />,
-      { operationMocks: [captureMock().mock] },
-    );
+    renderBanner([
+      { originalText: '2 scallions', item: { id: 'item-green-onion' } },
+    ]);
 
     await waitFor(() =>
       expect(screen.getByTestId(recipesTestIDs.captureReview)).toBeTruthy(),

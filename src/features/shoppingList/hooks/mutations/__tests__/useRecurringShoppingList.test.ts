@@ -93,7 +93,6 @@ describe('useRecurringShoppingList', () => {
               cancelRecurring: {
                 __typename: 'CancelRecurringPayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   isRecurring: false,
                   recurringPattern: 'WEEKLY',

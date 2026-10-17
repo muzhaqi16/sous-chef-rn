@@ -71,7 +71,6 @@ const payloadItem = (id: string): MockPart<PayloadItem> => ({
   quantityInput: null,
   displayFormat: DisplayFormat.Auto,
   purchaseInfo: {
-    __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
   },
   version: 1,

@@ -64,75 +64,22 @@ jest.mock('#store', () => ({
 
 function referenceMocks() {
   return [
-    recordMock(GetCommonUnitsDocument, {
-      data: {
-        units: [
-          {
-            __typename: 'Unit',
-            id: 'u1',
-            name: 'Gram',
-            symbol: 'g',
-            type: UnitType.Weight,
-            isMetric: true,
-            isCommon: true,
-            sortOrder: 0,
-            displayAsFraction: false,
-            minPrecision: 0,
-          },
-        ],
-      },
-    }).mock,
+    recordMock(GetCommonUnitsDocument, { data: { units: [{ id: 'u1' }] } })
+      .mock,
     recordMock(GetCategoriesDocument, {
       data: {
         categories: {
-          __typename: 'CategoryConnection',
           edges: [
-            {
-              __typename: 'CategoryEdge',
-              node: {
-                __typename: 'Category',
-                id: 'c1',
-                name: 'Dairy',
-                type: CategoryType.General,
-                icon: null,
-                color: null,
-                slug: 'dairy',
-              },
-            },
+            { node: { id: 'c1', name: 'Dairy', type: CategoryType.General } },
           ],
         },
       },
     }).mock,
     recordMock(GetBrandsDocument, {
-      data: {
-        brands: {
-          __typename: 'BrandConnection',
-          edges: [
-            {
-              __typename: 'BrandEdge',
-              node: { __typename: 'Brand', id: 'b1', name: 'Heinz' },
-            },
-          ],
-        },
-      },
+      data: { brands: { edges: [{ node: { id: 'b1' } }] } },
     }).mock,
     recordMock(GetStoresDocument, {
-      data: {
-        stores: {
-          __typename: 'StoreConnection',
-          edges: [
-            {
-              __typename: 'StoreEdge',
-              node: {
-                __typename: 'Store',
-                id: 's1',
-                name: 'Local Market',
-                address: '1 Main St',
-              },
-            },
-          ],
-        },
-      },
+      data: { stores: { edges: [{ node: { id: 's1' } }] } },
     }).mock,
   ];
 }
@@ -220,7 +167,7 @@ describe('useDataPreloading', () => {
     mockState.lastBrandsFetchedAt = now;
     mockState.lastStoresFetchedAt = now;
     const units = recordMock(GetCommonUnitsDocument, {
-      data: { units: [{ __typename: 'Unit', id: 'u-fresh', name: 'Fresh' }] },
+      data: { units: [{ id: 'u-fresh' }] },
     });
 
     renderHookWithApollo(() => useDataPreloading(), {
@@ -240,7 +187,7 @@ describe('useDataPreloading', () => {
   it('does not stamp a refresh the network was withheld from', async () => {
     mockNetwork.apiReachable = false;
     const units = recordMock(GetCommonUnitsDocument, {
-      data: { units: [{ __typename: 'Unit', id: 'u-fresh' }] },
+      data: { units: [{ id: 'u-fresh' }] },
     });
 
     renderHookWithApollo(() => useDataPreloading(), {

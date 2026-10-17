@@ -13,13 +13,10 @@ const lookup = () =>
       vars,
     ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => ({
       shoppingList: {
-        __typename: 'ShoppingList',
         id: String(vars.id),
         itemsConnection: {
-          __typename: 'ShoppingListItemConnection',
           edges: [],
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: false,
             endCursor: null,
           },

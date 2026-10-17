@@ -99,9 +99,7 @@ describe('useUnitAutocomplete', () => {
     // and alternate names, so "sticks" finds stick.
     const m = recordMock(SearchUnitsDocument, {
       data: {
-        searchUnits: [
-          { __typename: 'Unit', id: 'u-stick', name: 'stick', symbol: 'stick' },
-        ],
+        searchUnits: [{ id: 'u-stick', name: 'stick', symbol: 'stick' }],
       },
     });
     const { result } = renderHookWithApollo(() => useUnitAutocomplete(), {

@@ -77,91 +77,105 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function matchesMock(
-  matches: Record<string, unknown>[],
-  options: { partial?: boolean } = {},
-) {
-  const data: MockDataFor<typeof MatchRecipeIngredientsToPantryDocument> = {
-    matchRecipeIngredientsToPantry: matches.map(m => ({
-      __typename: 'RecipeIngredientMatch',
-      ...m,
-    })),
-  };
-  return recordMock(MatchRecipeIngredientsToPantryDocument, {
-    data,
-    partial: options.partial,
+type Match = NonNullable<
+  MockDataFor<
+    typeof MatchRecipeIngredientsToPantryDocument
+  >['matchRecipeIngredientsToPantry']
+>[number];
+
+const matchesMock = (matches: Match[]) =>
+  recordMock(MatchRecipeIngredientsToPantryDocument, {
+    data: { matchRecipeIngredientsToPantry: matches },
   });
-}
+
+/**
+ * The server's match for a required ingredient: an available stack, two of
+ * the ingredient's cups suggested. `isOptional` is stated because the SDL
+ * would fill it `true`.
+ */
+const match = (ingredientId: string, overrides: Match = {}): Match => ({
+  ingredient: {
+    id: ingredientId,
+    isOptional: false,
+    unit: { id: `u-${ingredientId}` },
+  },
+  isAvailable: true,
+  matchKind: RecipeIngredientMatchKind.Item,
+  matchedPantryItem: { id: 'pi-1' },
+  availableQuantity: 5,
+  suggestedQuantity: 2,
+  suggestedUnit: { id: 'su-1' },
+  ...overrides,
+});
 
 describe('getAvailabilityStatus', () => {
-  it('returns "available" for an available stack of a catalog match', () => {
-    expect(
-      getAvailabilityStatus({
+  it.each([
+    {
+      name: 'returns "available" for an available stack of a catalog match',
+      read: {
         isAvailable: true,
         matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 2,
-      } as IngredientMatch),
-    ).toBe('available');
-  });
-
-  it('returns "partial" when the stack holds some, but not enough', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'available',
+    },
+    {
+      name: 'returns "partial" when the stack holds some, but not enough',
+      read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: 1,
-      } as IngredientMatch),
-    ).toBe('partial');
-  });
-
-  // The server reports null available when the recipe's unit cannot express
-  // the stack (a loaf against a pound): unknown, and the stack holds some.
-  it('returns "partial" for a stocked stack the recipe unit cannot express', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'partial',
+    },
+    {
+      // The server reports null available when the recipe's unit cannot
+      // express the stack (a loaf against a pound): unknown, and it holds some.
+      name: 'returns "partial" for a stocked stack the recipe unit cannot express',
+      read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: null,
-      } as IngredientMatch),
-    ).toBe('partial');
-  });
-
-  it('returns "missing" for a matched stack that holds nothing', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'partial',
+    },
+    {
+      name: 'returns "missing" for a matched stack that holds nothing',
+      read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 0 } },
         availableQuantity: 0,
-      } as IngredientMatch),
-    ).toBe('missing');
-  });
-
-  // The server's 0.7 is a name match only ("olives" finding "Kalamata Olives"),
-  // whatever the stack holds.
-  it('returns "unsure" for a stack matched by name only', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'missing',
+    },
+    {
+      // The server's 0.7 is a name match only ("olives" finding "Kalamata
+      // Olives"), whatever the stack holds.
+      name: 'returns "unsure" for a stack matched by name only',
+      read: {
         isAvailable: true,
         matchKind: RecipeIngredientMatchKind.Name,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 5,
-      } as IngredientMatch),
-    ).toBe('unsure');
-  });
-
-  it('returns "missing" when no pantry item matched', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'unsure',
+    },
+    {
+      name: 'returns "missing" when no pantry item matched',
+      read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
-      } as IngredientMatch),
-    ).toBe('missing');
+      },
+      status: 'missing',
+    },
+  ])('$name', ({ read, status }) => {
+    expect(getAvailabilityStatus(read as IngredientMatch)).toBe(status);
   });
 });
 
@@ -201,28 +215,7 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('loadMatches populates editableMatches on success', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchKind: RecipeIngredientMatchKind.Item,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([match('ing-1')]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -298,32 +291,37 @@ describe('useRecipeIngredientMatching', () => {
     // mock's partial `ingredient` (missing most fragment fields), so
     // cache.readFragment returns null. The ingredient must be dropped WITH a
     // diagnostic, not silently vanish.
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchKind: RecipeIngredientMatchKind.Item,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
     // The partial `ingredient` IS the subject: completing it from the SDL
     // would make `cache.readFragment` succeed and nothing would be dropped.
     // The opt-out rides on THIS mock, so it excuses only the fields this
-    // payload omits.
-    const m = matchesMock(matches, { partial: true });
+    // payload omits, and the payload states every `__typename`.
+    const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            __typename: 'RecipeIngredientMatch',
+            ingredient: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              isOptional: false,
+              unit: {
+                __typename: 'Unit',
+                id: 'u-ing-1',
+                name: 'cup',
+                symbol: 'cup',
+              },
+            },
+            isAvailable: true,
+            matchKind: RecipeIngredientMatchKind.Item,
+            matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            availableQuantity: 5,
+            suggestedQuantity: 2,
+            suggestedUnit: { __typename: 'Unit', id: 'su-1' },
+          },
+        ],
+      },
+      partial: true,
+    });
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -342,28 +340,9 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('updateMatch updates a specific match entry', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchKind: RecipeIngredientMatchKind.Concept,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+    ]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -383,28 +362,9 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('closeSheet hides the sheet', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchKind: RecipeIngredientMatchKind.Concept,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+    ]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -426,63 +386,24 @@ describe('useRecipeIngredientMatching', () => {
 
   it('matchSummary computes counts correctly', async () => {
     const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchKind: RecipeIngredientMatchKind.Concept,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-2',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-2',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+      match('ing-2', {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Name,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-2' },
+        matchedPantryItem: { id: 'pi-2' },
         availableQuantity: 1,
         suggestedQuantity: 3,
         suggestedUnit: null,
-      },
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-3',
-          isOptional: true,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-3',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
+      }),
+      match('ing-3', {
+        ingredient: { id: 'ing-3', isOptional: true, unit: { id: 'u-ing-3' } },
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
         suggestedQuantity: 1,
         suggestedUnit: null,
-      },
+      }),
     ];
     const m = matchesMock(matches);
 
@@ -513,63 +434,16 @@ describe('useRecipeIngredientMatching', () => {
 
 // A single included match (available, with a matched pantry item) so
 // confirmConsumption builds a non-empty `ingredientsUsed` and fires.
-const includedMatch = {
-  ingredient: {
-    __typename: 'RecipeIngredient',
-    id: 'ing-1',
-    isOptional: false,
-    unit: {
-      __typename: 'Unit',
-      id: 'u-ing-1',
-      name: 'cup',
-      symbol: 'cup',
-    },
-  },
-  isAvailable: true,
-  matchKind: RecipeIngredientMatchKind.Item,
-  matchedPantryItem: {
-    __typename: 'PantryItem',
-    id: 'pi-1',
-    unit: { __typename: 'Unit', id: 'u-ing-1' },
-  },
-  availableQuantity: 5,
-  suggestedQuantity: 2,
-  suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-};
+const includedMatch = match('ing-1', {
+  matchedPantryItem: { id: 'pi-1', unit: { id: 'u-ing-1' } },
+});
 
 /** A second included match, for a cook that states more than one stack. */
-const secondMatch = {
-  ...includedMatch,
-  ingredient: {
-    ...includedMatch.ingredient,
-    id: 'ing-2',
-    unit: { ...includedMatch.ingredient.unit, id: 'u-ing-2' },
-  },
-  matchedPantryItem: {
-    __typename: 'PantryItem',
-    id: 'pi-2',
-    unit: { __typename: 'Unit', id: 'u-ing-2' },
-  },
+const secondMatch = match('ing-2', {
+  matchedPantryItem: { id: 'pi-2', unit: { id: 'u-ing-2' } },
   suggestedQuantity: 3,
   // No suggestion: the entry falls back to the ingredient's own unit.
   suggestedUnit: null,
-};
-
-type CookPayload = Extract<
-  NonNullable<
-    MockDataFor<typeof MarkRecipeAsCookedDocument>['markRecipeAsCooked']
-  >,
-  { __typename?: 'MarkRecipeAsCookedPayload' | null }
->;
-type SkippedLine = NonNullable<
-  NonNullable<CookPayload['skippedIngredients']>[number]
->;
-
-/** An entry no conversion could take to its stack's unit. */
-const skippedLine = (itemName: string): SkippedLine => ({
-  __typename: 'SkippedRecipeIngredient',
-  itemName,
-  code: ErrorCode.UnitInvalid,
 });
 
 type CookOutcome =
@@ -596,7 +470,6 @@ function cookMock(outcome: CookOutcome) {
         markRecipeAsCooked: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
-          message: 'bad',
           field: null,
         },
       },
@@ -607,15 +480,12 @@ function cookMock(outcome: CookOutcome) {
       markRecipeAsCooked: {
         __typename: 'MarkRecipeAsCookedPayload',
         converged: outcome.converged ?? false,
-        // Stated even when empty: left out, the SDL fills in entries.
-        skippedIngredients: (outcome.skipped ?? []).map(skippedLine),
-        cookingLog: {
-          __typename: 'CookingLog',
-          id: 'client-cooklog-1',
-          servingsMade: 4,
-          notes: null,
-          cookedAt: '2026-01-01T00:00:00.000Z',
-        },
+        // Stated even when empty: left out, the SDL fills in entries. Each
+        // is an entry no conversion could take to its stack's unit.
+        skippedIngredients: (outcome.skipped ?? []).map(itemName => ({
+          itemName,
+          code: ErrorCode.UnitInvalid,
+        })),
       },
     },
   });
@@ -623,7 +493,7 @@ function cookMock(outcome: CookOutcome) {
 
 describe('useRecipeIngredientMatching — confirmConsumption', () => {
   async function loadMatchesFor(
-    matches: Record<string, unknown>[],
+    matches: Match[],
     cook: ReturnType<typeof cookMock>,
   ) {
     const matchesM = matchesMock(matches);
@@ -715,24 +585,17 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         includedMatch,
         secondMatch,
         // Offered, never deducted until the user turns it on.
-        {
-          ...includedMatch,
-          ingredient: { ...includedMatch.ingredient, id: 'ing-3' },
+        match('ing-3', {
           matchKind: RecipeIngredientMatchKind.Name,
-          matchedPantryItem: {
-            ...includedMatch.matchedPantryItem,
-            id: 'pi-3',
-          },
-        },
+          matchedPantryItem: { id: 'pi-3', unit: { id: 'u-ing-1' } },
+        }),
         // No stack to draw on at all.
-        {
-          ...includedMatch,
-          ingredient: { ...includedMatch.ingredient, id: 'ing-4' },
+        match('ing-4', {
           isAvailable: false,
           matchKind: RecipeIngredientMatchKind.None,
           matchedPantryItem: null,
           availableQuantity: 0,
-        },
+        }),
       ],
       cook,
     );
@@ -848,7 +711,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         availableQuantity: 0,
         matchedPantryItem: {
           ...includedMatch.matchedPantryItem,
-          displayAmount: { __typename: 'DisplayAmount', quantity: 0 },
+          displayAmount: { quantity: 0 },
         },
       },
     ]);
@@ -871,12 +734,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   // under its concept; the one the user picks is the one deducted.
   it('deducts from the stack the user picked instead of the server pick', async () => {
     const cook = cookMock({ kind: 'success' });
-    const evoo = {
-      __typename: 'PantryItem',
-      id: 'pi-evoo',
-      itemName: 'Extra virgin olive oil',
-      unit: { __typename: 'Unit', id: 'u-ml' },
-    };
+    const evoo = { id: 'pi-evoo', unit: { id: 'u-ml' } };
     const { result } = await loadMatchesFor(
       [{ ...includedMatch, alternativeMatches: [evoo] }],
       cook,

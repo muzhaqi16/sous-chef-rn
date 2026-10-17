@@ -46,13 +46,8 @@ function savedPage(
           cursor: edge.id,
           node: {
             id: edge.id,
-            folder: null,
             tags: edge.tags,
-            recipe: {
-              id: `recipe-${edge.id}`,
-              name: edge.id,
-              description: null,
-            },
+            recipe: { id: `recipe-${edge.id}`, name: edge.id },
           },
         })),
         pageInfo: { hasNextPage: endCursor !== null, endCursor },

@@ -124,6 +124,50 @@ describe('usePantryRestock', () => {
     });
   });
 
+  it("lands the server's count, default expiry and version on the row once it answers", async () => {
+    const cache = cacheWithRow(3);
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: {
+          __typename: 'RestockPantryItemPayload',
+          pantryItemUsage: {
+            pantryItem: {
+              id: ROW_ID,
+              quantity: 6,
+              expiresOn: '2026-10-15',
+              version: 5,
+            },
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+      cache,
+      operationMocks: [restock.mock],
+    });
+
+    await act(async () => {
+      await result.current.restock(ROW_ID, {
+        amount: { measured: { quantity: 1 } },
+        present: 'none',
+      });
+    });
+
+    expect(
+      cache.readFragment({
+        id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
+        fragment: gql`
+          fragment _PantryRestockAnswer on PantryItem {
+            id
+            quantity
+            expiresOn
+            version
+          }
+        `,
+      }),
+    ).toMatchObject({ quantity: 6, expiresOn: '2026-10-15', version: 5 });
+  });
+
   it('leaves the amount to the server for packages', async () => {
     const cache = cacheWithRow(3);
     const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {

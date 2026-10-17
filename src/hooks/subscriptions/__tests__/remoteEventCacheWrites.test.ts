@@ -172,11 +172,10 @@ describe('a pantry item created elsewhere', () => {
     const readBack = recordMock(PantryItemForEventDocument, {
       data: {
         pantryItem: {
-          __typename: 'PantryItem',
           id: 'item-new',
           pantryId: 'pantry-1',
           storageState: StorageState.Refrigerated,
-          storageLocation: { __typename: 'StorageLocation', id: 'loc-1' },
+          storageLocation: { id: 'loc-1' },
         },
       },
     });
@@ -248,11 +247,7 @@ describe('a meal plan created elsewhere', () => {
     }
     const readBack = recordMock(MealPlanForEventDocument, {
       data: {
-        mealPlan: {
-          __typename: 'MealPlan',
-          id: 'plan-new',
-          planType: MealPlanType.Weekly,
-        },
+        mealPlan: { id: 'plan-new', planType: MealPlanType.Weekly },
       },
     });
     const { result } = renderHookWithApollo(
@@ -299,10 +294,9 @@ describe('a meal-template item added elsewhere', () => {
     const template = recordMock(GetMealTemplateDocument, {
       data: {
         mealTemplate: {
-          __typename: 'MealTemplate',
           id: 'tpl-1',
           itemsConnection: {
-            edges: [{ node: { __typename: 'MealTemplateItem', id: 'item-1' } }],
+            edges: [{ node: { id: 'item-1' } }],
             pageInfo: wholePage,
           },
         },
@@ -311,20 +305,9 @@ describe('a meal-template item added elsewhere', () => {
     const readBack = recordMock(MealTemplateItemsForEventDocument, {
       data: {
         mealTemplate: {
-          __typename: 'MealTemplate',
           id: 'tpl-1',
           itemsConnection: {
-            edges: [
-              { node: { __typename: 'MealTemplateItem', id: 'item-1' } },
-              {
-                node: {
-                  __typename: 'MealTemplateItem',
-                  id: 'item-2',
-                  customMealName: 'Soup',
-                  recipe: null,
-                },
-              },
-            ],
+            edges: [{ node: { id: 'item-1' } }, { node: { id: 'item-2' } }],
             pageInfo: wholePage,
           },
         },
@@ -384,12 +367,9 @@ describe('a meal removed elsewhere', () => {
     ids: string[],
   ): MockDataFor<typeof GetMealPlanDocument> => ({
     mealPlan: {
-      __typename: 'MealPlan',
       id: 'plan-1',
       mealPlanItemsConnection: {
-        edges: ids.map(id => ({
-          node: { __typename: 'MealPlanItem', id },
-        })),
+        edges: ids.map(id => ({ node: { id } })),
         pageInfo: { hasNextPage: false, endCursor: null },
       },
     },
@@ -566,9 +546,8 @@ const rowReadBack = (isPurchased: boolean) =>
   recordMock(ShoppingListItemForEventDocument, {
     data: {
       shoppingListItem: {
-        __typename: 'ShoppingListItem',
         id: 'item-1',
-        shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        shoppingList: { id: 'list-1' },
         purchaseInfo: { isPurchased },
       },
     },

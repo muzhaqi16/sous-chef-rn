@@ -25,9 +25,8 @@ const addItemMock = () =>
         __typename: 'AddItemsToShoppingListPayload',
         results: [
           {
-            __typename: 'BatchAddShoppingListItemResult',
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'srv-1' },
+            item: { id: 'srv-1' },
           },
         ],
       },

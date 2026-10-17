@@ -406,15 +406,12 @@ describe('useShoppingListSubscriptions: event envelope and the cache', () => {
           request: { query: MyShoppingListsEventsDocument },
           result: {
             data: {
-              __typename: 'Subscription',
               myShoppingListsEvents: {
-                __typename: 'ShoppingListEvent',
                 subtype: ShoppingListSubtype.ItemsChanged,
                 mutation: MutationType.ItemRemoved,
                 listId: 'list-1',
                 originatorClientId: 'device_other',
                 actorUserId: 'user-2',
-                timestamp: '2026-01-01T00:00:00.000Z',
                 updatedFields: [],
                 clearedItemIds: [],
                 node: { __typename: 'ShoppingListItem', id: 'item-1' },

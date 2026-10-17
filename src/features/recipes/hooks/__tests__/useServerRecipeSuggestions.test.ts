@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
@@ -19,50 +20,32 @@ type Edge = NonNullable<
   >[number]
 >;
 
-const edge = (
-  id: string,
-  name: string,
-  coverage: number,
-  expiring: string[] = [],
-): Edge => ({
-  __typename: 'RecipeSuggestionEdge',
+// `expiringStacks` is stated even when empty: left out, the SDL fills entries.
+const edge = (id: string, coverage: number, expiring: string[] = []): Edge => ({
   coverage,
   expiringStacks: expiring.map((itemName, index) => ({
-    __typename: 'PantryItem',
     id: `stack-${id}-${index}`,
     itemName,
   })),
-  node: {
-    __typename: 'Recipe',
-    id,
-    name,
-    servings: 4,
-    totalTimeMinutes: 30,
-    imageUrl: null,
-  },
+  node: { id },
 });
 
 const suggestionsMock = (edges: Edge[]) =>
   recordMock(RecipeSuggestionsDocument, {
-    data: {
-      recipeSuggestions: {
-        __typename: 'RecipeSuggestionConnection',
-        edges,
-      },
-    },
+    data: { recipeSuggestions: { edges } },
     maxUsageCount: Number.POSITIVE_INFINITY,
+  });
+
+const renderSuggestions = (operationMocks: MockedResponse[], enabled = true) =>
+  renderHookWithApollo(() => useServerRecipeSuggestions(enabled), {
+    operationMocks,
   });
 
 describe('useServerRecipeSuggestions', () => {
   it("lists the server's suggestions in its order, each opening its recipe", async () => {
-    const suggestions = suggestionsMock([
-      edge('r-own', 'My curry', 80),
-      edge('r-pub', 'Pad thai', 60),
+    const { result } = renderSuggestions([
+      suggestionsMock([edge('r-own', 80), edge('r-pub', 60)]).mock,
     ]);
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      { operationMocks: [suggestions.mock] },
-    );
 
     await waitFor(() => expect(result.current.items).toHaveLength(2));
 
@@ -77,59 +60,38 @@ describe('useServerRecipeSuggestions', () => {
   });
 
   it("asks for one page, with the device's date", async () => {
-    const suggestions = suggestionsMock([edge('r-1', 'Soup', 50)]);
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      { operationMocks: [suggestions.mock] },
-    );
+    const suggestions = suggestionsMock([edge('r-1', 50)]);
+    const { result } = renderSuggestions([suggestions.mock]);
 
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
     expect(suggestions.fired[0]).toEqual({ first: 20, today: '2026-10-14' });
   });
 
-  it('names the stock about to expire that a suggestion uses', async () => {
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      {
-        operationMocks: [
-          suggestionsMock([edge('r-1', 'Spinach pie', 70, ['Spinach'])]).mock,
-        ],
-      },
-    );
+  it.each([
+    {
+      name: 'names the stock about to expire that a suggestion uses',
+      expiring: ['Spinach'],
+      uses: 'Uses Spinach before it expires',
+    },
+    {
+      name: 'names an item once however many of its stacks are expiring',
+      expiring: ['milk', 'Milk ', 'eggs'],
+      uses: 'Uses milk, eggs before they expire',
+    },
+  ])('$name', async ({ expiring, uses }) => {
+    const { result } = renderSuggestions([
+      suggestionsMock([edge('r-1', 70, expiring)]).mock,
+    ]);
 
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
-    expect(result.current.items[0]?.subtitle).toContain(
-      'Uses Spinach before it expires',
-    );
-  });
-
-  it('names an item once however many of its stacks are expiring', async () => {
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      {
-        operationMocks: [
-          suggestionsMock([
-            edge('r-1', 'Pancakes', 75, ['milk', 'Milk ', 'eggs']),
-          ]).mock,
-        ],
-      },
-    );
-
-    await waitFor(() => expect(result.current.items).toHaveLength(1));
-
-    expect(result.current.items[0]?.subtitle).toContain(
-      'Uses milk, eggs before they expire',
-    );
+    expect(result.current.items[0]?.subtitle).toContain(uses);
   });
 
   it('asks the server again on refresh', async () => {
-    const suggestions = suggestionsMock([edge('r-1', 'Soup', 50)]);
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      { operationMocks: [suggestions.mock] },
-    );
+    const suggestions = suggestionsMock([edge('r-1', 50)]);
+    const { result } = renderSuggestions([suggestions.mock]);
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
     await act(async () => {
@@ -139,34 +101,28 @@ describe('useServerRecipeSuggestions', () => {
     expect(suggestions.fired).toHaveLength(2);
   });
 
-  it('is unanswered when the server suggests nothing', async () => {
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      { operationMocks: [suggestionsMock([]).mock] },
-    );
+  it.each([
+    {
+      name: 'is unanswered when the server suggests nothing',
+      answer: () => suggestionsMock([]).mock,
+    },
+    {
+      name: 'is unanswered when the server cannot answer',
+      answer: () =>
+        recordMock(RecipeSuggestionsDocument, {
+          error: new Error('network down'),
+        }).mock,
+    },
+  ])('$name', async ({ answer }) => {
+    const { result } = renderSuggestions([answer()]);
 
     await waitFor(() => expect(result.current.unanswered).toBe(true));
     expect(result.current.items).toEqual([]);
   });
 
-  it('is unanswered when the server cannot answer', async () => {
-    const failing = recordMock(RecipeSuggestionsDocument, {
-      error: new Error('network down'),
-    });
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(true),
-      { operationMocks: [failing.mock] },
-    );
-
-    await waitFor(() => expect(result.current.unanswered).toBe(true));
-  });
-
   it('asks for nothing when switched off', () => {
-    const suggestions = suggestionsMock([edge('r-1', 'Soup', 50)]);
-    const { result } = renderHookWithApollo(
-      () => useServerRecipeSuggestions(false),
-      { operationMocks: [suggestions.mock] },
-    );
+    const suggestions = suggestionsMock([edge('r-1', 50)]);
+    const { result } = renderSuggestions([suggestions.mock], false);
 
     expect(suggestions.fired).toEqual([]);
     expect(result.current).toMatchObject({

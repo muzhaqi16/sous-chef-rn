@@ -14,10 +14,7 @@ import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
-import {
-  ErrorCode,
-  ExpirationFrequency,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useDeviceTimezoneSync } from '../useDeviceTimezoneSync';
 
 jest.mock('#/services/errorService');
@@ -49,88 +46,50 @@ type StoredPreferences = NonNullable<
 >;
 
 const basePreferences: StoredPreferences = {
-  __typename: 'NotificationPreferences',
   id: 'pref-1',
-  emailEnabled: true,
-  pushEnabled: true,
-  expirationNotifications: true,
-  expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
-  expirationDaysThreshold: 3,
-  lowStockAlerts: true,
-  pantryChanges: true,
-  shoppingListUpdates: true,
-  collaborationInvites: true,
-  homeInvites: true,
-  sharedListUpdates: true,
-  recipeRecommendations: true,
-  mealPlanReminders: true,
-  cookingReminders: true,
-  weeklyDigest: true,
-  monthlyReport: false,
   quietHoursEnabled: true,
-  quietHoursStart: '22:00',
-  quietHoursEnd: '08:00',
   quietHoursTimezone: 'UTC',
 };
 
-const prefsQueryMock = (patch: Partial<typeof basePreferences> = {}) => {
-  const data: MockDataFor<typeof GetNotificationPreferencesDocument> = {
-    me: {
-      __typename: 'User',
-      id: 'user-1',
-      notificationPreferences: {
-        ...basePreferences,
-        userId: 'user-1',
-        ...patch,
+const prefsQueryMock = (patch: StoredPreferences = {}) =>
+  recordMock(GetNotificationPreferencesDocument, {
+    data: {
+      me: {
+        id: 'user-1',
+        notificationPreferences: { ...basePreferences, ...patch },
       },
     },
-  };
-  return recordMock(GetNotificationPreferencesDocument, {
-    data,
-    maxUsageCount: Number.POSITIVE_INFINITY,
   }).mock;
-};
 
 const updatedPrefs = (
-  patch: Partial<typeof basePreferences>,
+  patch: StoredPreferences,
 ): MockDataFor<typeof UpdateNotificationPreferencesDocument> => ({
   updateNotificationPreferences: {
     __typename: 'UpdateNotificationPreferencesPayload',
-    notificationPreferences: {
-      ...basePreferences,
-      userId: 'user-1',
-      ...patch,
-    },
+    notificationPreferences: { ...basePreferences, ...patch },
   },
 });
 
 /** The account's settings as the server holds them; `null` is no row yet. */
-const settingsQueryMock = (timezone: string | null = 'America/New_York') => {
-  const data: MockDataFor<typeof GetUserSettingsDocument> = {
-    me: {
-      __typename: 'User',
-      id: 'user-1',
-      settings:
-        timezone === null
-          ? null
-          : { __typename: 'UserSettings', id: 'settings-1', timezone },
+const settingsQueryMock = (timezone: string | null = 'America/New_York') =>
+  recordMock(GetUserSettingsDocument, {
+    data: {
+      me: {
+        id: 'user-1',
+        settings: timezone === null ? null : { id: 'settings-1', timezone },
+      },
     },
-  };
-  return recordMock(GetUserSettingsDocument, {
-    data,
-    maxUsageCount: Number.POSITIVE_INFINITY,
   }).mock;
-};
 
-const settingsUpdate = (timezone: string) => {
-  const data: MockDataFor<typeof UpdateUserPreferencesDocument> = {
-    updateSettings: {
-      __typename: 'UpdateSettingsPayload',
-      userSettings: { __typename: 'UserSettings', id: 'settings-1', timezone },
+const settingsUpdate = (timezone: string) =>
+  recordMock(UpdateUserPreferencesDocument, {
+    data: {
+      updateSettings: {
+        __typename: 'UpdateSettingsPayload',
+        userSettings: { id: 'settings-1', timezone },
+      },
     },
-  };
-  return recordMock(UpdateUserPreferencesDocument, { data });
-};
+  });
 
 const heldSettingsZone = (cache: ReturnType<typeof makeCache>) =>
   cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings?.timezone;
@@ -147,47 +106,22 @@ beforeEach(() => {
  * a timezone too, but nothing reads it.
  */
 describe('useDeviceTimezoneSync', () => {
-  it('rewrites the API default of UTC to the device zone', async () => {
-    const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: updatedPrefs({ quietHoursTimezone: 'America/New_York' }),
-    });
-
-    renderHookWithApollo(() => useDeviceTimezoneSync(), {
-      operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
-    });
-
-    await waitFor(() =>
-      expect(update.fired).toContainEqual({
-        input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
-      }),
-    );
-  });
-
-  it('leaves a matching zone alone', async () => {
-    const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: updatedPrefs({}),
-    });
-
-    renderHookWithApollo(() => useDeviceTimezoneSync(), {
-      operationMocks: [
-        prefsQueryMock({ quietHoursTimezone: 'America/New_York' }),
-        settingsQueryMock(),
-        update.mock,
-      ],
-    });
-
-    await waitFor(() => expect(update.fired).toEqual([]));
-  });
-
-  // A morning meal-plan reminder is scheduled in this zone too.
-  it('keeps the zone in step while quiet hours are off', async () => {
+  // A morning meal-plan reminder is scheduled in this zone too, so it is kept
+  // in step whether or not quiet hours are on.
+  it.each<[string, StoredPreferences]>([
+    ['rewrites the API default of UTC to the device zone', {}],
+    [
+      'keeps the zone in step while quiet hours are off',
+      { quietHoursEnabled: false },
+    ],
+  ])('%s', async (_name, stored) => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ quietHoursTimezone: 'America/New_York' }),
     });
 
     renderHookWithApollo(() => useDeviceTimezoneSync(), {
       operationMocks: [
-        prefsQueryMock({ quietHoursEnabled: false }),
+        prefsQueryMock(stored),
         settingsQueryMock(),
         update.mock,
       ],
@@ -200,14 +134,25 @@ describe('useDeviceTimezoneSync', () => {
     );
   });
 
-  it('does not write when the device reports no zone', async () => {
-    mockGetDeviceTimezone.mockReturnValue(null);
+  it.each<[string, StoredPreferences, string | null]>([
+    [
+      'leaves a matching zone alone',
+      { quietHoursTimezone: 'America/New_York' },
+      'America/New_York',
+    ],
+    ['does not write when the device reports no zone', {}, null],
+  ])('%s', async (_name, stored, deviceZone) => {
+    mockGetDeviceTimezone.mockReturnValue(deviceZone);
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({}),
     });
 
     renderHookWithApollo(() => useDeviceTimezoneSync(), {
-      operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
+      operationMocks: [
+        prefsQueryMock(stored),
+        settingsQueryMock(),
+        update.mock,
+      ],
     });
 
     await waitFor(() => expect(update.fired).toEqual([]));
@@ -285,17 +230,26 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
     expect(heldSettingsZone(cache)).toBe('America/New_York');
   });
 
-  it('leaves settings that already hold the device zone alone', async () => {
+  // An account with no settings gets none: a row reads as a currency chosen.
+  it.each<[string, string | null]>([
+    [
+      'leaves settings that already hold the device zone alone',
+      'America/New_York',
+    ],
+    ['creates no settings for an account that has none', null],
+  ])('%s', async (_name, held) => {
     const cache = makeCache();
     const update = settingsUpdate('America/New_York');
 
     renderHookWithApollo(() => useDeviceTimezoneSync(), {
       cache,
-      operationMocks: [matchingPrefs(), settingsQueryMock(), update.mock],
+      operationMocks: [matchingPrefs(), settingsQueryMock(held), update.mock],
     });
 
     await waitFor(() =>
-      expect(heldSettingsZone(cache)).toBe('America/New_York'),
+      expect(
+        cache.readQuery({ query: GetUserSettingsDocument })?.me,
+      ).toMatchObject({ settings: held === null ? null : { timezone: held } }),
     );
     await new Promise(resolve => setTimeout(resolve, 50));
     expect(update.fired).toEqual([]);
@@ -324,25 +278,6 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
     expect(update.fired).toHaveLength(1);
     // The refusal puts the zone the server holds back.
     expect(heldSettingsZone(cache)).toBe('UTC');
-  });
-
-  // Writing would create the row, and a row reads as a currency chosen.
-  it('creates no settings for an account that has none', async () => {
-    const cache = makeCache();
-    const update = settingsUpdate('America/New_York');
-
-    renderHookWithApollo(() => useDeviceTimezoneSync(), {
-      cache,
-      operationMocks: [matchingPrefs(), settingsQueryMock(null), update.mock],
-    });
-
-    await waitFor(() =>
-      expect(
-        cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings,
-      ).toBeNull(),
-    );
-    await new Promise(resolve => setTimeout(resolve, 50));
-    expect(update.fired).toEqual([]);
   });
 
   it('follows the device to another zone when the app returns to the foreground', async () => {

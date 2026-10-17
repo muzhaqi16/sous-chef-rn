@@ -145,12 +145,10 @@ const favoriteMock = (
           : {
               __typename: 'AddRecipeToFavoritesPayload',
               savedRecipe: {
-                __typename: 'SavedRecipe',
                 id: outcome === 'divergent' ? SERVER_SAVED_ID : SAVED_RECIPE_ID,
                 recipeId: 'backend-1',
                 folder: null,
-                tags: [],
-                recipe: { __typename: 'Recipe', id: 'backend-1' },
+                recipe: { id: 'backend-1' },
               },
             },
     },
@@ -291,10 +289,9 @@ describe('useRecipeFavoriteState', () => {
           addRecipeToFavorites: {
             __typename: 'AddRecipeToFavoritesPayload',
             savedRecipe: {
-              __typename: 'SavedRecipe',
               id: SAVED_RECIPE_ID,
               folder: 'Weeknight',
-              recipe: { __typename: 'Recipe', id: 'backend-1' },
+              recipe: { id: 'backend-1' },
             },
           },
         },

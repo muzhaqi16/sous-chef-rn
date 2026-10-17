@@ -1,6 +1,7 @@
 import {
   recordMock,
   renderHookWithApollo,
+  type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -21,88 +22,64 @@ const HELD = [
   { id: 'unit-cup', name: 'cup', symbol: 'cup', type: UnitType.Volume },
 ];
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  useStore.setState({ isOnline: true, cachedUnits: [] });
-});
+let result: { current: ReturnType<typeof useResolveUnit> };
+let fired: RecordedMock['fired'];
 
-function unitMock(unit: { id: string } | null) {
-  return recordMock(GetUnitBySymbolDocument, {
-    data: {
-      unitBySymbol: unit ? { __typename: 'Unit', id: unit.id } : null,
-    },
+/** Mounts the hook over the device's state, with the API answering `answer`. */
+function mountWith(
+  state: { isOnline?: boolean; cachedUnits?: typeof HELD },
+  answer: { id: string } | null = { id: 'from-api' },
+) {
+  useStore.setState({ isOnline: true, cachedUnits: [], ...state });
+  const unit = recordMock(GetUnitBySymbolDocument, {
+    data: { unitBySymbol: answer && { id: answer.id } },
   });
+  fired = unit.fired;
+  ({ result } = renderHookWithApollo(() => useResolveUnit(), {
+    operationMocks: [unit.mock],
+  }));
 }
 
-describe('useResolveUnit', () => {
-  it('returns resolveUnitId function', () => {
-    const { result } = renderHookWithApollo(() => useResolveUnit());
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
-    expect(typeof result.current.resolveUnitId).toBe('function');
-  });
+describe('useResolveUnit', () => {
+  beforeEach(() => mountWith({}));
 
   it('returns currentUnitId if already set', async () => {
-    const m = unitMock({ id: 'resolved' });
-    const { result } = renderHookWithApollo(() => useResolveUnit(), {
-      operationMocks: [m.mock],
-    });
-
-    const unitId = await result.current.resolveUnitId('existing-unit-id', 'kg');
-
-    expect(unitId).toBe('existing-unit-id');
-    expect(m.fired).toEqual([]);
+    expect(await result.current.resolveUnitId('existing-unit-id', 'kg')).toBe(
+      'existing-unit-id',
+    );
+    expect(fired).toEqual([]);
   });
 
   it('returns null for empty symbol when no currentUnitId', async () => {
-    const m = unitMock({ id: 'resolved' });
-    const { result } = renderHookWithApollo(() => useResolveUnit(), {
-      operationMocks: [m.mock],
-    });
-
-    const unitId = await result.current.resolveUnitId(null, '   ');
-
-    expect(unitId).toBeNull();
-    expect(m.fired).toEqual([]);
+    expect(await result.current.resolveUnitId(null, '   ')).toBeNull();
+    expect(fired).toEqual([]);
   });
 
   it('queries for unit by symbol and returns the id', async () => {
-    const m = unitMock({ id: 'resolved-unit-id' });
-    const { result } = renderHookWithApollo(() => useResolveUnit(), {
-      operationMocks: [m.mock],
-    });
-
-    const unitId = await result.current.resolveUnitId(null, 'kg');
-
-    expect(m.fired).toContainEqual({ symbol: 'kg' });
-    expect(unitId).toBe('resolved-unit-id');
+    expect(await result.current.resolveUnitId(null, 'kg')).toBe('from-api');
+    expect(fired).toContainEqual({ symbol: 'kg' });
   });
 
   it('trims whitespace from symbol before querying', async () => {
-    const m = unitMock({ id: 'unit-1' });
-    const { result } = renderHookWithApollo(() => useResolveUnit(), {
-      operationMocks: [m.mock],
-    });
-
     await result.current.resolveUnitId(null, '  oz  ');
 
-    expect(m.fired).toContainEqual({ symbol: 'oz' });
+    expect(fired).toContainEqual({ symbol: 'oz' });
   });
 
   it('returns null when query returns no unit', async () => {
-    const m = unitMock(null);
-    const { result } = renderHookWithApollo(() => useResolveUnit(), {
-      operationMocks: [m.mock],
-    });
+    mountWith({}, null);
 
-    const unitId = await result.current.resolveUnitId(null, 'xyz');
-
-    expect(unitId).toBeNull();
+    expect(await result.current.resolveUnitId(null, 'xyz')).toBeNull();
   });
+});
 
-  describe('device first', () => {
-    beforeEach(() => {
-      useStore.setState({ cachedUnits: HELD });
-    });
+describe('useResolveUnit device first', () => {
+  describe('online', () => {
+    beforeEach(() => mountWith({ cachedUnits: HELD }));
 
     it.each([
       ['its symbol', 'lb', 'unit-lb'],
@@ -112,22 +89,12 @@ describe('useResolveUnit', () => {
     ])(
       'resolves a held unit by %s without asking the API',
       async (_how, text, id) => {
-        const m = unitMock({ id: 'from-api' });
-        const { result } = renderHookWithApollo(() => useResolveUnit(), {
-          operationMocks: [m.mock],
-        });
-
         expect(await result.current.resolveUnitId(null, text)).toBe(id);
-        expect(m.fired).toEqual([]);
+        expect(fired).toEqual([]);
       },
     );
 
     it('reads a longer name typed with one letter wrong, and says what kind of unit it is', async () => {
-      const m = unitMock({ id: 'from-api' });
-      const { result } = renderHookWithApollo(() => useResolveUnit(), {
-        operationMocks: [m.mock],
-      });
-
       expect(await result.current.resolveUnit('cartoon')).toEqual({
         id: 'unit-carton',
         symbol: 'carton',
@@ -138,13 +105,19 @@ describe('useResolveUnit', () => {
         symbol: 'lb',
         type: UnitType.Weight,
       });
-      expect(m.fired).toEqual([]);
+      expect(fired).toEqual([]);
     });
 
-    it('guesses no typo in a short text, nor between two units as close', async () => {
-      useStore.setState({ isOnline: false });
-      const { result } = renderHookWithApollo(() => useResolveUnit());
+    it('asks the API, online, for a unit the device does not hold', async () => {
+      expect(await result.current.resolveUnitId(null, 'tin')).toBe('from-api');
+      expect(fired).toContainEqual({ symbol: 'tin' });
+    });
+  });
 
+  describe('offline', () => {
+    beforeEach(() => mountWith({ cachedUnits: HELD, isOnline: false }));
+
+    it('guesses no typo in a short text, nor between two units as close', async () => {
       // `cap` is one letter from both can and cup, and short besides.
       expect(await result.current.resolveUnit('cap')).toBeNull();
       expect(await result.current.resolveUnit('cups')).toEqual(
@@ -153,24 +126,8 @@ describe('useResolveUnit', () => {
     });
 
     it('answers nothing offline for a unit the device does not hold', async () => {
-      useStore.setState({ isOnline: false });
-      const m = unitMock({ id: 'from-api' });
-      const { result } = renderHookWithApollo(() => useResolveUnit(), {
-        operationMocks: [m.mock],
-      });
-
       expect(await result.current.resolveUnitId(null, 'tin')).toBeNull();
-      expect(m.fired).toEqual([]);
-    });
-
-    it('asks the API, online, for a unit the device does not hold', async () => {
-      const m = unitMock({ id: 'from-api' });
-      const { result } = renderHookWithApollo(() => useResolveUnit(), {
-        operationMocks: [m.mock],
-      });
-
-      expect(await result.current.resolveUnitId(null, 'tin')).toBe('from-api');
-      expect(m.fired).toContainEqual({ symbol: 'tin' });
+      expect(fired).toEqual([]);
     });
   });
 });

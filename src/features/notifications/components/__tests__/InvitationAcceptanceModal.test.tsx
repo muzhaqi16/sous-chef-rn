@@ -1,15 +1,14 @@
 'use no memo';
 import React from 'react';
-import {
-  CollaboratorRole,
-  CollaboratorStatus,
-  ErrorCode,
-  MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, act, waitFor } from '@testing-library/react-native';
 import { InvitationAcceptanceModal } from '../InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -18,62 +17,12 @@ import {
   InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   InvitationAcceptanceModalDeclineShoppingListInviteDocument as DeclineShoppingListInviteDocument,
 } from '../InvitationAcceptanceModal.generated';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
-}));
-
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeAsyncWithCleanup: async (
-    fn: () => Promise<void>,
-    cleanup: () => void,
-    onError?: (e: unknown) => void,
-  ) => {
-    try {
-      await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      cleanup();
-    }
-  },
-  executeWithLoadingState: async (
-    fn: () => Promise<void>,
-    setLoading: (b: boolean) => void,
-    onError?: (e: unknown) => void,
-  ) => {
-    setLoading(true);
-    try {
-      await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  },
-  executeMutation: async <T,>(
-    fn: () => Promise<T>,
-    onErrorOrLog: string | ((error: unknown) => void | Promise<void>),
-  ) => {
-    try {
-      return await fn();
-    } catch (e) {
-      if (typeof onErrorOrLog === 'function') await onErrorOrLog(e);
-    }
-  },
-  executeRefreshWithFinally: async (
-    fn: () => Promise<unknown>,
-    setRefreshing: (b: boolean) => void,
-  ) => {
-    setRefreshing(true);
-    try {
-      await fn();
-    } finally {
-      setRefreshing(false);
-    }
-  },
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -107,132 +56,35 @@ const defaultProps = {
   onReject: jest.fn(),
 };
 
-function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
-  const hasMembership = opts.hasMembership ?? true;
-  // Note: AcceptHomeInviteSuccess.membership is non-nullable in the schema.
-  // When `hasMembership: false`, we return a ConflictError union member instead
-  // to simulate the "already accepted" branch the test asserts on.
-  if (!hasMembership) {
-    return recordMock(AcceptHomeInviteDocument, {
-      data: {
-        acceptHomeInvite: {
-          __typename: 'ConflictError',
-          code: ErrorCode.Conflict,
-          message: 'Already accepted',
-        },
-      },
-    });
-  }
-  return recordMock(AcceptHomeInviteDocument, {
+/** Joined; with `hasMembership: false`, refused as already accepted. */
+const acceptHomeOk = ({ hasMembership = true } = {}) =>
+  recordMock(AcceptHomeInviteDocument, {
     data: {
-      acceptHomeInvite: {
-        __typename: 'AcceptHomeInvitePayload',
-        membership: {
-          __typename: 'Membership',
-          id: 'm1',
-          homeId: 'home-1',
-          role: MembershipRole.Member,
-          canManageHome: false,
-          canViewPantry: true,
-          canEditPantry: true,
-          canAddItems: true,
-          canRemoveItems: true,
-          canInviteOthers: false,
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            name: "Alice's Home",
-            isDefault: false,
-            version: 1,
-            myMembership: {
-              __typename: 'Membership',
-              id: 'm1',
-              role: MembershipRole.Member,
-              canManageHome: false,
-              canViewPantry: true,
-              canEditPantry: true,
-              canAddItems: true,
-              canRemoveItems: true,
-              canInviteOthers: false,
-            },
-            pantriesConnection: {
-              __typename: 'PantryConnection',
-              totalCount: 0,
-              edges: [],
-            },
-            membersConnection: {
-              __typename: 'MembershipConnection',
-              totalCount: 1,
-            },
-          },
-        },
-      },
+      acceptHomeInvite: hasMembership
+        ? {
+            __typename: 'AcceptHomeInvitePayload',
+            membership: { id: 'm1', home: { id: 'home-1' } },
+          }
+        : { __typename: 'ConflictError', code: ErrorCode.Conflict },
     },
   });
-}
 
 function acceptHomeError(message: string) {
   return recordMock(AcceptHomeInviteDocument, { error: new Error(message) });
 }
 
-function acceptShoppingListOk(opts: { success?: boolean } = {}) {
-  const success = opts.success ?? true;
-  // When `success: false`, simulate the error branch via a ConflictError union
-  // member. The test asserts onAccept is NOT called in that case.
-  if (!success) {
-    return recordMock(
-      InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-      {
-        data: {
-          acceptShoppingListInvite: {
-            __typename: 'ConflictError',
-            code: ErrorCode.Conflict,
-            message: 'Could not accept',
-          },
-        },
-      },
-    );
-  }
-  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
+/** Joined; with `success: false`, refused, so `onAccept` is never called. */
+const acceptShoppingListOk = ({ success = true } = {}) =>
+  recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     data: {
-      acceptShoppingListInvite: {
-        __typename: 'AcceptShoppingListInvitePayload',
-        collaborator: {
-          __typename: 'ShoppingListCollaborator',
-          id: 'c1',
-          email: 'a@b.com',
-          role: CollaboratorRole.Editor,
-          status: CollaboratorStatus.Active,
-          collaboratorId: 'u1',
-          canAddItems: true,
-          canRemoveItems: true,
-          canEditItems: true,
-          canMarkPurchased: true,
-          canEdit: true,
-          canInviteOthers: false,
-          invitedAt: '2025-01-01T00:00:00.000Z',
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'sl-1',
-            name: 'Weekly Groceries',
-            description: null,
-          },
-          collaborator: {
-            __typename: 'User',
-            id: 'u1',
-            email: 'a@b.com',
-            profile: {
-              __typename: 'UserProfile',
-              id: 'p1',
-              displayName: 'Tester',
-              avatar: null,
-            },
-          },
-        },
-      },
+      acceptShoppingListInvite: success
+        ? {
+            __typename: 'AcceptShoppingListInvitePayload',
+            collaborator: { id: 'c1', shoppingList: { id: 'sl-1' } },
+          }
+        : { __typename: 'ConflictError', code: ErrorCode.Conflict },
     },
   });
-}
 
 function acceptShoppingListError(message: string) {
   return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
@@ -245,7 +97,7 @@ function declineHomeOk() {
     data: {
       declineHomeInvite: {
         __typename: 'DeclineHomeInvitePayload',
-        homeInvite: { __typename: 'HomeInvite', id: 'inv-1' },
+        homeInvite: { id: 'inv-1' },
       },
     },
   });
@@ -260,10 +112,7 @@ function declineShoppingListOk() {
     data: {
       declineShoppingListInvite: {
         __typename: 'DeclineShoppingListInvitePayload',
-        collaborator: {
-          __typename: 'ShoppingListCollaborator',
-          id: 'c1',
-        },
+        collaborator: { id: 'c1' },
       },
     },
   });
@@ -274,6 +123,25 @@ function declineShoppingListError(message: string) {
     error: new Error(message),
   });
 }
+
+/** Rejects `invitation` and confirms the decline the alert asks about. */
+const rejectAndConfirm = async (
+  invitation: InvitationData,
+  mock: MockedResponse,
+) => {
+  const user = userEvent.setup();
+  renderWithApollo(
+    <InvitationAcceptanceModal {...defaultProps} invitation={invitation} />,
+    { operationMocks: [mock] },
+  );
+  await act(async () => {
+    await user.press(screen.getByText('Reject'));
+  });
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
+  await act(async () => {
+    buttons?.find(button => button.text === 'Decline')?.onPress?.();
+  });
+};
 
 describe('InvitationAcceptanceModal', () => {
   beforeEach(() => {
@@ -420,7 +288,6 @@ describe('InvitationAcceptanceModal', () => {
 
   it('reports an invitee mismatch as a wrong-account state', async () => {
     const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
     const onAccept = jest.fn();
 
     renderWithApollo(
@@ -474,7 +341,6 @@ describe('InvitationAcceptanceModal', () => {
       ['ValidationError' as const, ErrorCode.ValidationFailed],
     ])('reports %s rather than falling through', async (typename, code) => {
       const user = userEvent.setup();
-      const { toastService } = require('#/services/toastService');
       const onAccept = jest.fn();
 
       renderWithApollo(
@@ -511,7 +377,6 @@ describe('InvitationAcceptanceModal', () => {
 
     it('does not report a refused decline as declined', async () => {
       const user = userEvent.setup();
-      const { toastService } = require('#/services/toastService');
       const onReject = jest.fn();
 
       renderWithApollo(
@@ -545,7 +410,6 @@ describe('InvitationAcceptanceModal', () => {
 
   it('handles accept error with no message falls back to default', async () => {
     const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
     const acceptMock = acceptHomeError('');
 
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
@@ -563,7 +427,6 @@ describe('InvitationAcceptanceModal', () => {
 
   it("reports a shopping-list accept failure in the app's own words", async () => {
     const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
     const acceptMock = acceptShoppingListError('Server error');
 
     renderWithApollo(
@@ -610,140 +473,55 @@ describe('InvitationAcceptanceModal', () => {
     );
   });
 
-  it('handles reject confirmation for HOME_INVITE with token', async () => {
-    const user = userEvent.setup();
-    const declineMock = declineHomeOk();
+  it.each([
+    [
+      'handles reject confirmation for HOME_INVITE with token',
+      homeInvitation,
+      declineHomeOk,
+      'abc123',
+    ],
+    [
+      'handles reject confirmation for SHOPPING_LIST_INVITE with token',
+      shoppingListInvitation,
+      declineShoppingListOk,
+      'def456',
+    ],
+  ])('%s', async (_name, invitation, declined, token) => {
+    const declineMock = declined();
 
-    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [declineMock.mock],
-    });
+    await rejectAndConfirm(invitation, declineMock.mock);
 
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
-
-    // Press 'Decline' in the confirmation alert
-    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const declineButton = (alertCall[2] as AlertButton[]).find(
-      b => b.text === 'Decline',
-    );
-
-    await act(async () => {
-      declineButton?.onPress?.();
-    });
-
-    expect(declineMock.fired).toContainEqual({ input: { token: 'abc123' } });
+    expect(declineMock.fired).toContainEqual({ input: { token } });
   });
 
-  it('handles reject confirmation for SHOPPING_LIST_INVITE with token', async () => {
-    const user = userEvent.setup();
-    const declineMock = declineShoppingListOk();
-
-    renderWithApollo(
-      <InvitationAcceptanceModal
-        {...defaultProps}
-        invitation={shoppingListInvitation}
-      />,
-      {
-        operationMocks: [declineMock.mock],
-      },
-    );
-
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
-
-    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const declineButton = (alertCall[2] as AlertButton[]).find(
-      b => b.text === 'Decline',
-    );
-
-    await act(async () => {
-      declineButton?.onPress?.();
-    });
-
-    expect(declineMock.fired).toContainEqual({ input: { token: 'def456' } });
-  });
-
-  it("reports a decline failure in the app's own words, not the server's", async () => {
-    const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
-    const declineMock = declineHomeError('Token expired');
-
-    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [declineMock.mock],
-    });
-
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
-    ).find(b => b.text === 'Decline');
-    declineButton?.onPress?.();
+  it.each([
+    [
+      "reports a decline failure in the app's own words, not the server's",
+      homeInvitation,
+      declineHomeError('Token expired'),
+      'Token expired',
+    ],
+    [
+      'handles reject error with no message falls back to default for HOME_INVITE',
+      homeInvitation,
+      declineHomeError(''),
+      '',
+    ],
+    [
+      "reports a shopping-list decline failure in the app's own words",
+      shoppingListInvitation,
+      declineShoppingListError('Server error'),
+      'Server error',
+    ],
+  ])('%s', async (_name, invitation, declineMock, serverMessage) => {
+    await rejectAndConfirm(invitation, declineMock.mock);
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith(
         'Failed to decline invitation. Please try again.',
       );
     });
-    expect(toastService.error).not.toHaveBeenCalledWith('Token expired');
-  });
-
-  it('handles reject error with no message falls back to default for HOME_INVITE', async () => {
-    const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
-    const declineMock = declineHomeError('');
-
-    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [declineMock.mock],
-    });
-
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
-    ).find(b => b.text === 'Decline');
-    declineButton?.onPress?.();
-
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to decline invitation. Please try again.',
-      );
-    });
-  });
-
-  it("reports a shopping-list decline failure in the app's own words", async () => {
-    const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
-    const declineMock = declineShoppingListError('Server error');
-
-    renderWithApollo(
-      <InvitationAcceptanceModal
-        {...defaultProps}
-        invitation={shoppingListInvitation}
-      />,
-      { operationMocks: [declineMock.mock] },
-    );
-
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
-    ).find(b => b.text === 'Decline');
-    declineButton?.onPress?.();
-
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to decline invitation. Please try again.',
-      );
-    });
-    expect(toastService.error).not.toHaveBeenCalledWith('Server error');
+    expect(toastService.error).not.toHaveBeenCalledWith(serverMessage);
   });
 
   it('offers no decline for an invite whose token it does not hold', () => {
@@ -821,7 +599,6 @@ describe('InvitationAcceptanceModal', () => {
 
   it("reports an accept failure in the app's own words, not the server's", async () => {
     const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
     // The server's message is unlocalizable English by construction, so the
     // caller's copy goes into the resolver and is what the reader sees.
     const acceptMock = acceptHomeError('Invalid invite token');
@@ -894,7 +671,6 @@ describe('InvitationAcceptanceModal', () => {
 
   it('tells a throttled accept how long to wait, not that accepting failed', async () => {
     const user = userEvent.setup();
-    const { toastService } = require('#/services/toastService');
     const onAccept = jest.fn();
     const rateLimited = Object.assign(new Error('rate limited'), {
       errors: [

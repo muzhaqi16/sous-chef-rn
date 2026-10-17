@@ -14,25 +14,8 @@ jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
-const flags = (states: { flag: FeatureFlagName; enabled: boolean }[]) =>
-  recordMock(MyFeatureFlagsDocument, {
-    data: {
-      myFeatureFlags: states.map(
-        ({
-          flag,
-          enabled,
-        }): {
-          __typename: 'FeatureFlagState';
-          flag: FeatureFlagName;
-          enabled: boolean;
-        } => ({
-          __typename: 'FeatureFlagState',
-          flag,
-          enabled,
-        }),
-      ),
-    },
-  });
+const flags = (myFeatureFlags: { flag: FeatureFlagName; enabled: boolean }[]) =>
+  recordMock(MyFeatureFlagsDocument, { data: { myFeatureFlags } });
 
 beforeEach(() => {
   jest

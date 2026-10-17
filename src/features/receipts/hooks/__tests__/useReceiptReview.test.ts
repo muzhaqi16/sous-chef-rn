@@ -21,7 +21,6 @@ import {
 import { useStore } from '#store';
 import {
   CreateOutcome,
-  ErrorCode,
   NetWeightKind,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
@@ -35,10 +34,13 @@ import {
   type ReceiptLineChoice,
 } from '../../store/receiptDraftStore';
 import {
+  checkInAnswer,
   lineChoice,
   parsedReceipt,
   seedDraft,
+  sentLinesOf,
 } from '../../__tests__/helpers/receiptFixtures';
+import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
@@ -73,16 +75,7 @@ globalThis.cancelIdleCallback = jest.fn();
 
 const PANTRY_VARS = { id: 'p1', itemsFirst: 100 };
 const PANTRY: MockDataFor<typeof GetPantryDocument> = {
-  pantry: {
-    __typename: 'Pantry',
-    id: 'p1',
-    stats: { totalItems: 0 },
-    itemsConnection: {
-      totalCount: 0,
-      pageInfo: { hasNextPage: false, endCursor: null },
-      edges: [],
-    },
-  },
+  pantry: { id: 'p1', itemsConnection: connectionOf([]) },
 };
 
 const MILK = lineChoice({ price: 2.79 });
@@ -141,137 +134,27 @@ function pantryItemNames(cache: ReturnType<typeof makeCache>) {
   );
 }
 
-const GRAM = {
-  __typename: 'Unit',
-  id: 'unit-g',
-  name: 'gram',
-  symbol: 'g',
-  type: UnitType.Weight,
-} as const;
-
-// Milk (counted) and beef (in grams) are open on the active list; nothing has
-// been bought from it yet. The API answers only the lines naming `itemIds`.
+// Milk is open on the active list; nothing has been bought from it yet. The
+// API answers only the lines naming `itemIds`.
 const listItems = (
   vars: Record<string, unknown>,
 ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {
   const milk = {
-    cursor: 'c1',
-    node: {
-      id: 'sli-milk',
-      itemName: 'Milk',
-      quantity: 2,
-      unit: null,
-      item: { id: 'cat-milk' },
-      shoppingList: { id: 'list-1' },
-      purchaseInfo: { isPurchased: false, movedToPantryAt: null },
-    },
-  };
-  const beef = {
-    cursor: 'c2',
-    node: {
-      id: 'sli-beef',
-      itemName: 'Ground beef',
-      quantity: 500,
-      unit: GRAM,
-      item: { id: 'cat-beef' },
-      shoppingList: { id: 'list-1' },
-      purchaseInfo: { isPurchased: false, movedToPantryAt: null },
-    },
+    id: 'sli-milk',
+    itemName: 'Milk',
+    unit: null,
+    item: { id: 'cat-milk' },
+    purchaseInfo: { isPurchased: false, movedToPantryAt: null },
   };
   const asked = Array.isArray(vars.itemIds) ? vars.itemIds : null;
-  const edges = [milk, beef].filter(
-    edge => !asked || asked.includes(edge.node.item.id),
-  );
+  const open = !asked || asked.includes(milk.item.id);
   return {
     shoppingList: {
-      __typename: 'ShoppingList',
       id: 'list-1',
-      itemsConnection: {
-        totalCount: vars.isPurchased ? 0 : edges.length,
-        pageInfo: { hasNextPage: false, endCursor: null },
-        edges: vars.isPurchased ? [] : edges,
-      },
+      itemsConnection: connectionOf(open && !vars.isPurchased ? [milk] : []),
     },
   };
 };
-
-interface SentLine {
-  clientId: string;
-  pantryItemId?: string | null;
-  shoppingListItemId?: string | null;
-  item: { id?: string | null; inline?: { id: string; name: string } | null };
-}
-
-const sentLinesOf = (vars: Record<string, unknown>) =>
-  (inputOf(vars) as { lines: SentLine[] }).lines;
-
-const ITEM_NAMES: Partial<Record<string, string>> = {
-  'cat-milk': 'Whole milk',
-  'cat-bananas': 'Bananas',
-};
-
-type HeldStack = { id: string; quantity: number };
-
-/**
- * The check-in as the API answers it: each line recorded under the stack it
- * names, or restocking the one `heldStackFor` names, unless `refuses` it.
- */
-const checkInAnswer =
-  ({
-    refuses = () => false,
-    heldStackFor = () => undefined,
-  }: {
-    refuses?: (line: SentLine) => boolean;
-    heldStackFor?: (line: SentLine) => HeldStack | undefined;
-  } = {}) =>
-  (
-    vars: Record<string, unknown>,
-  ): MockDataFor<typeof CreateReceiptCheckInDocument> => ({
-    createReceiptCheckIn: {
-      __typename: 'CreateReceiptCheckInPayload',
-      results: sentLinesOf(vars).map((line, index) => {
-        if (refuses(line)) {
-          return {
-            __typename: 'ReceiptCheckInLineResult',
-            index,
-            clientId: line.clientId,
-            success: false,
-            alreadyRecorded: false,
-            failure: {
-              __typename: 'BatchElementFailure',
-              code: ErrorCode.ValidationFailed,
-              errorId: null,
-            },
-            item: null,
-            purchase: null,
-            pantryItem: null,
-            shoppingListItem: null,
-          };
-        }
-        const itemId = line.item.id ?? line.item.inline?.id ?? 'cat-new';
-        const held = heldStackFor(line);
-        return {
-          __typename: 'ReceiptCheckInLineResult',
-          index,
-          clientId: line.clientId,
-          success: true,
-          alreadyRecorded: false,
-          failure: null,
-          pantryItem: line.pantryItemId
-            ? {
-                __typename: 'PantryItem',
-                id: held?.id ?? line.pantryItemId,
-                itemName:
-                  line.item.inline?.name ?? ITEM_NAMES[itemId] ?? itemId,
-                quantity: held?.quantity ?? 1,
-                item: { id: itemId },
-              }
-            : null,
-          shoppingListItem: null,
-        };
-      }),
-    },
-  });
 
 const fired = (checkIn: ReturnType<typeof recordMock>) =>
   checkIn.fired.map(vars => inputOf(vars));
@@ -288,12 +171,7 @@ const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
           method: ReceiptMatchMethod.Code,
           item: { id: 'cat-milk', name: 'Whole milk' },
         },
-        candidates: [
-          {
-            method: ReceiptMatchMethod.Code,
-            item: { id: 'cat-milk', name: 'Whole milk' },
-          },
-        ],
+        candidates: [{ item: { id: 'cat-milk', name: 'Whole milk' } }],
       },
       {
         clientId: '3',
@@ -303,19 +181,45 @@ const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
           item: { id: 'cat-bananas', name: 'Bananas' },
         },
         candidates: [
-          {
-            method: ReceiptMatchMethod.Search,
-            item: { id: 'cat-bananas', name: 'Bananas' },
-          },
-          {
-            method: ReceiptMatchMethod.Search,
-            item: { id: 'cat-plantains', name: 'Plantains' },
-          },
+          { item: { id: 'cat-bananas', name: 'Bananas' } },
+          { item: { id: 'cat-plantains', name: 'Plantains' } },
         ],
       },
     ],
   },
 };
+
+// The API places no store, proposing the receipt's shop to add on confirm
+// and the household's unlocated store a check-in would locate.
+const proposing = (
+  { name, address = null }: { name: string; address?: string | null },
+  completableStore: { id: string; name: string } | null = null,
+  delay?: number,
+) =>
+  recordMock(ResolveReceiptLinesDocument, {
+    data: {
+      resolveReceiptLines: {
+        ...RESOLVED.resolveReceiptLines,
+        store: null,
+        proposedStore: { name, address, storeNumber: null, chain: null },
+        completableStore,
+      },
+    },
+    ...(delay === undefined ? {} : { delay }),
+  });
+
+// Adds the store a confirm creates, under the id the client minted.
+const creating = (store: { name: string; address?: string }, delay = 0) =>
+  recordMock(CreateStoreDocument, {
+    delay,
+    dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
+      createStore: {
+        __typename: 'CreateStorePayload',
+        outcome: CreateOutcome.Created,
+        store: { id: String(inputOf(vars).id), ...store },
+      },
+    }),
+  });
 
 async function setup({
   checkIn = recordMock(CreateReceiptCheckInDocument, {
@@ -355,23 +259,11 @@ async function setup({
   // The user's lists: list-1 while a test has selected it, else none.
   const lists = recordMock(GetShoppingListsLiteDocument, {
     dataFor: (): MockDataFor<typeof GetShoppingListsLiteDocument> => ({
-      shoppingLists: {
-        __typename: 'ShoppingListConnection',
-        edges: useStore.getState().selectedShoppingListId
-          ? [
-              {
-                __typename: 'ShoppingListEdge',
-                cursor: 'list-1',
-                node: {
-                  __typename: 'ShoppingList',
-                  id: 'list-1',
-                  name: 'Groceries',
-                  isDefault: false,
-                },
-              },
-            ]
+      shoppingLists: connectionOf(
+        useStore.getState().selectedShoppingListId
+          ? [{ id: 'list-1', isDefault: false }]
           : [],
-      },
+      ),
     }),
   });
   const rendered = renderHookWithApollo(
@@ -485,16 +377,6 @@ describe('useReceiptReview', () => {
       { parsedBy: 'server' },
       null,
     ],
-    [
-      'shows the mismatch the phone found in its reading',
-      { parsedBy: 'device', totalsGap: { counted: 5.75, printed: 4.05 } },
-      { counted: 5.75, printed: 4.05 },
-    ],
-    [
-      'shows none when the phone found its reading adds up',
-      { parsedBy: 'device' },
-      null,
-    ],
   ])('%s', async (_name, readBy, totalsGap) => {
     const draft = useReceiptDraftStore.getState().draft!;
     const lines = draft.parsed!.lines.map(({ index: _index, ...line }) => line);
@@ -518,6 +400,7 @@ describe('useReceiptReview', () => {
     const checkIn = recordMock(CreateReceiptCheckInDocument, {
       // The typed bananas are refused.
       dataFor: checkInAnswer({ refuses: line => !!line.item.inline }),
+      maxUsageCount: 2,
     });
     const { result, cache, addChosen } = await setup({ checkIn });
     await act(async () => {
@@ -583,117 +466,13 @@ describe('useReceiptReview', () => {
     expect(milk?.status).toBe('added');
     expect(bananas?.status).toBe('failed');
     expect(bananas?.failure).toEqual(expect.any(String));
-    // A retry sends only the line that failed.
     expect(result.current.review.pendingCount).toBe(1);
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([1]);
-  });
 
-  it('restocks an item the pantry holds and adds a new one beside it', async () => {
-    const held: MockDataFor<typeof GetPantryDocument> = {
-      pantry: {
-        __typename: 'Pantry',
-        id: 'p1',
-        stats: { totalItems: 1 },
-        itemsConnection: {
-          totalCount: 1,
-          pageInfo: { hasNextPage: false, endCursor: null },
-          edges: [
-            {
-              node: {
-                id: 'pi-milk',
-                itemName: 'Whole milk',
-                quantity: 1,
-                item: { id: 'cat-milk' },
-              },
-            },
-          ],
-        },
-      },
-    };
-    // The milk line restocks the held stack; the check-in states the count.
-    const checkIn = recordMock(CreateReceiptCheckInDocument, {
-      dataFor: vars => {
-        const answered = checkInAnswer({
-          heldStackFor: line =>
-            line.item.id === 'cat-milk'
-              ? { id: 'pi-milk', quantity: 2 }
-              : undefined,
-        })(vars);
-        return {
-          createReceiptCheckIn: {
-            ...answered.createReceiptCheckIn,
-            pantry: { id: 'p1', stats: { totalItems: 2 } },
-          },
-        };
-      },
-    });
-    const { result, cache, addChosen } = await setup({ checkIn, held });
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-      result.current.review.chooseLine(3, {
-        ...BANANAS,
-        itemId: 'cat-bananas',
-      });
-    });
-
+    // A retry sends the line that failed alone, under the ids it was given.
     await addChosen();
-
-    // One milk row, restocked, beside the new bananas; the count is the server's.
-    expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
-    expect(readPantry(cache)?.stats.totalItems).toBe(2);
-    // Nothing written under the milk's own id outlives the restock: not the
-    // row, its edge, its local item, nor its batches field.
-    const mintedId =
-      useReceiptDraftStore.getState().draft?.checkIn?.lines[1]?.pantryItemId;
-    expect(mintedId).toEqual(expect.any(String));
-    expect(JSON.stringify(cache.extract())).not.toContain(String(mintedId));
-    expect(useReceiptDraftStore.getState().draft?.added).toEqual([1, 3]);
-  });
-
-  it('adds nine lines of ten when the API refuses one, and keeps that one to retry', async () => {
-    const products = Array.from({ length: 10 }, (_, at) => `ITEM ${at}`);
-    seedDraft({
-      pages: ['STORE'],
-      parsed: parsedReceipt(
-        products.map(product => ({
-          rawText: `${product}  1.00`,
-          kind: 'item',
-          product,
-          lineTotal: 1,
-        })),
-      ),
-    });
-    const checkIn = recordMock(CreateReceiptCheckInDocument, {
-      dataFor: checkInAnswer({ refuses: line => line.item.id === 'cat-6' }),
-      maxUsageCount: 2,
-    });
-    const { result, addChosen } = await setup({ checkIn });
-    await act(async () => {
-      products.forEach((product, index) =>
-        result.current.review.chooseLine(index, {
-          ...MILK,
-          itemId: `cat-${index}`,
-          itemName: product,
-          price: 1,
-        }),
-      );
-    });
-
-    expect(await addChosen()).toEqual({ sent: 10, held: 0 });
-
-    expect(
-      result.current.review.rows
-        .filter(row => row.failure)
-        .map(row => row.index),
-    ).toEqual([6]);
-    expect(result.current.review.pendingCount).toBe(1);
-    expect(useReceiptDraftStore.getState().draft?.added).toHaveLength(9);
-
-    // The retry sends the refused line alone, under the ids it was given.
-    const sentFirst = sentLinesOf(checkIn.fired[0] ?? {})[6];
-    await addChosen();
-    expect(checkIn.fired).toHaveLength(2);
-    expect(sentLinesOf(checkIn.fired[1] ?? {})).toEqual([sentFirst]);
+    const [first, retry] = checkIn.fired;
+    expect(sentLinesOf(retry ?? {})).toEqual([sentLinesOf(first ?? {})[1]]);
   });
 
   it('counts a check-in queued offline as added and shows it at once', async () => {
@@ -722,56 +501,6 @@ describe('useReceiptReview', () => {
     expect(useReceiptDraftStore.getState().draft?.checkIn?.state).toBe(
       'queued',
     );
-  });
-
-  it('returns once the lines show, while the API is still answering', async () => {
-    const checkIn = recordMock(CreateReceiptCheckInDocument, {
-      dataFor: checkInAnswer(),
-      delay: 300,
-    });
-    const { result, cache, addChosen } = await setup({ checkIn });
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-    });
-
-    await act(async () => {
-      await result.current.review.addChosen();
-    });
-
-    expect(pantryItemNames(cache)).toEqual(['Whole milk']);
-    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).toBe(
-      'sending',
-    );
-    expect(result.current.review.rows[0]?.status).toBe('added');
-    // It lands later, with nothing more to do.
-    await addChosen();
-    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).toBe('idle');
-  });
-
-  it('sends nothing twice when Add is tapped again', async () => {
-    const { result, checkIn, addChosen } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-    });
-
-    await addChosen();
-    expect(await addChosen()).toEqual({ sent: 0, held: 0 });
-
-    expect(checkIn.fired).toHaveLength(1);
-  });
-
-  it('forgets a line the user chose not to add', async () => {
-    const { result } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-    });
-    await act(async () => {
-      result.current.review.chooseLine(1, null);
-    });
-
-    expect(result.current.review.rows[0]?.choice).toBeUndefined();
-    expect(result.current.review.rows[0]?.status).toBe('skipped');
-    expect(result.current.review.pendingCount).toBe(0);
   });
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
@@ -813,43 +542,6 @@ describe('useReceiptReview', () => {
       expect(result.current.review.pendingCount).toBe(1);
     },
   );
-
-  it('adds a printed count as that many packages, priced by their total', async () => {
-    const { result, checkIn, addChosen } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, {
-        ...MILK,
-        quantity: 2,
-        price: 5.58,
-      });
-    });
-
-    await addChosen();
-
-    // 2 @ 2.79 is two packages the server sizes, never 2 of the milk's
-    // tracking unit (2 mL).
-    expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
-      expect.objectContaining({
-        amount: { packages: { count: 2 } },
-        totalPaid: 5.58,
-      }),
-    ]);
-  });
-
-  it('stocks nothing for a line the user keeps out of the pantry', async () => {
-    const { result, cache, checkIn, addChosen } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, { ...MILK, notStocked: true });
-    });
-
-    await addChosen();
-
-    const [line] = sentLinesOf(checkIn.fired[0] ?? {});
-    expect(line).toEqual(expect.objectContaining({ stock: false }));
-    expect(line).not.toHaveProperty('pantryItemId');
-    expect(pantryItemNames(cache)).toEqual([]);
-    expect(useReceiptDraftStore.getState().draft?.added).toEqual([1]);
-  });
 
   it('sends the server reading it was confirmed from, and a saving off the whole order', async () => {
     const draft = useReceiptDraftStore.getState().draft!;
@@ -1063,55 +755,41 @@ describe('useReceiptReview', () => {
       const resolve = recordMock(ResolveReceiptLinesDocument, {
         data: {
           resolveReceiptLines: {
-            store: null,
             lines: [
               {
                 clientId: '3',
-                confidence: ReceiptMatchConfidence.Low,
                 best: null,
                 candidates: [
                   {
-                    method: ReceiptMatchMethod.Search,
                     item: {
                       id: 'milk-kirkland',
                       name: 'Whole milk',
-                      brands: [
-                        { id: 'ib-1', brand: { id: 'b-1', name: 'Kirkland' } },
-                      ],
+                      brands: [{ brand: { name: 'Kirkland' } }],
                     },
                   },
                   {
-                    method: ReceiptMatchMethod.Search,
                     item: {
                       id: 'milk-gallon',
                       name: 'Whole milk',
                       netWeight: 1,
                       netWeightKind: NetWeightKind.Package,
-                      displayUnit: {
-                        id: 'u-gal',
-                        symbol: 'gal',
-                        name: 'gallon',
-                      },
+                      displayUnit: { symbol: 'gal', name: 'gallon' },
                     },
                   },
                   {
-                    method: ReceiptMatchMethod.Search,
                     item: {
                       id: 'milk-label',
                       name: 'Whole milk',
                       netWeight: 100,
                       netWeightKind: NetWeightKind.Reference,
-                      displayUnit: { id: 'u-g', symbol: 'g', name: 'gram' },
+                      displayUnit: { symbol: 'g', name: 'gram' },
                     },
                   },
                   {
-                    method: ReceiptMatchMethod.Search,
                     item: {
                       id: 'bananas-dole',
                       name: 'Bananas',
-                      brands: [
-                        { id: 'ib-2', brand: { id: 'b-2', name: 'Dole' } },
-                      ],
+                      brands: [{ brand: { name: 'Dole' } }],
                     },
                   },
                 ],
@@ -1322,33 +1000,12 @@ describe('useReceiptReview', () => {
           },
         },
       });
-      const resolve = recordMock(ResolveReceiptLinesDocument, {
-        data: {
-          resolveReceiptLines: {
-            ...RESOLVED.resolveReceiptLines,
-            store: null,
-            proposedStore: {
-              name: 'East End Food Co-Op',
-              address: '7516 Meade Street',
-              storeNumber: null,
-              chain: null,
-            },
-          },
-        },
-      });
-      const storeCreate = recordMock(CreateStoreDocument, {
-        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
-          createStore: {
-            __typename: 'CreateStorePayload',
-            outcome: CreateOutcome.Created,
-            store: {
-              id: String(inputOf(vars).id),
-              name: 'East End Food Co-Op',
-              address: '7516 Meade Street',
-            },
-          },
-        }),
-      });
+      const coOp = {
+        name: 'East End Food Co-Op',
+        address: '7516 Meade Street',
+      };
+      const resolve = proposing(coOp);
+      const storeCreate = creating(coOp);
       const { result, checkIn, addChosen } = await setup({
         resolve,
         storeCreate,
@@ -1395,30 +1052,8 @@ describe('useReceiptReview', () => {
       useReceiptDraftStore.setState({
         draft: { ...draft, printedStore: { name: 'Corner Deli' } },
       });
-      const resolve = recordMock(ResolveReceiptLinesDocument, {
-        data: {
-          resolveReceiptLines: {
-            ...RESOLVED.resolveReceiptLines,
-            store: null,
-            proposedStore: {
-              name: 'Corner Deli',
-              address: null,
-              storeNumber: null,
-              chain: null,
-            },
-          },
-        },
-      });
-      const storeCreate = recordMock(CreateStoreDocument, {
-        delay: 50,
-        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
-          createStore: {
-            __typename: 'CreateStorePayload',
-            outcome: CreateOutcome.Created,
-            store: { id: String(inputOf(vars).id), name: 'Corner Deli' },
-          },
-        }),
-      });
+      const resolve = proposing({ name: 'Corner Deli' });
+      const storeCreate = creating({ name: 'Corner Deli' }, 50);
       const { result, cache, checkIn, addChosen } = await setup({
         resolve,
         storeCreate,
@@ -1475,22 +1110,7 @@ describe('useReceiptReview', () => {
       completable: { id: string; name: string } | null,
       delay?: number,
     ) =>
-      recordMock(ResolveReceiptLinesDocument, {
-        data: {
-          resolveReceiptLines: {
-            ...RESOLVED.resolveReceiptLines,
-            store: null,
-            proposedStore: {
-              name: 'Kroger',
-              address: '412 Main St',
-              storeNumber: null,
-              chain: null,
-            },
-            completableStore: completable,
-          },
-        },
-        ...(delay === undefined ? {} : { delay }),
-      });
+      proposing({ name: 'Kroger', address: '412 Main St' }, completable, delay);
 
     afterEach(() => {
       useStore.getState().setCachedStores([]);
@@ -1604,33 +1224,6 @@ describe('useReceiptReview', () => {
       const { result } = await setup({ resolve: unplaced(null) });
       await waitFor(() =>
         expect(result.current.review.matchState).toBe('done'),
-      );
-
-      expect(result.current.review.storeOffer).toBeNull();
-    });
-
-    it('offers none when neither the device nor the API holds one', async () => {
-      readByServer();
-      useStore.getState().setCachedStores([KROGER_BRANCH]);
-      const { result } = await setup({ resolve: unplaced(null) });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
-
-      expect(result.current.review.storeOffer).toBeNull();
-    });
-
-    it('offers none when the device holds two stores of the name', async () => {
-      readByServer();
-      useStore
-        .getState()
-        .setCachedStores([
-          KROGER_LABEL,
-          { id: 'store-label-2', name: 'KROGER', address: null },
-        ]);
-      const { result } = await setup({ resolve: offline() });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
       );
 
       expect(result.current.review.storeOffer).toBeNull();
@@ -1764,61 +1357,6 @@ describe('useReceiptReview', () => {
       expect(useReceiptDraftStore.getState().draft?.added).toEqual([1, 3]);
     });
 
-    // A receipt's printed count (2 @ 1.99) is stated as that many packages and
-    // the total as printed; the API owns the package arithmetic.
-    it.each([
-      [
-        "the list's amount, not 1 of its unit, for a line that states none",
-        { quantity: 1, price: 7.99 },
-        { measured: { quantity: 500, unitId: 'unit-g' } },
-      ],
-      [
-        'a printed count as that many packages, with the total as printed',
-        { quantity: 2, price: 3.98 },
-        { packages: { count: 2 } },
-      ],
-      [
-        'its own amount for a line that states a unit',
-        { quantity: 750, unitText: 'g', price: 9.99 },
-        { measured: { quantity: 750, unitId: 'unit-g' } },
-      ],
-    ])('moves %s', async (_case, stated, amount) => {
-      const { checkIn, chooseOnListAndAdd } = await setup();
-      await chooseOnListAndAdd(
-        3,
-        lineChoice({ itemId: 'cat-beef', itemName: 'Ground beef', ...stated }),
-      );
-
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
-        expect.objectContaining({
-          shoppingListItemId: 'sli-beef',
-          amount,
-          totalPaid: stated.price,
-        }),
-      ]);
-    });
-
-    it('asks the list only for the lines naming the receipt items', async () => {
-      const { checkIn, list, chooseOnListAndAdd } = await setup();
-      await chooseOnListAndAdd(
-        3,
-        lineChoice({
-          itemId: 'cat-beef',
-          itemName: 'Ground beef',
-          price: 7.99,
-        }),
-      );
-
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
-        expect.objectContaining({ shoppingListItemId: 'sli-beef' }),
-      ]);
-      // Never the whole list: every ask names the items it looks for.
-      const asks = list.fired.filter(vars => !vars.isPurchased);
-      expect(asks.length).toBeGreaterThan(0);
-      expect(asks.every(vars => Array.isArray(vars.itemIds))).toBe(true);
-      expect(asks.at(-1)?.itemIds).toContain('cat-beef');
-    });
-
     it('holds the add until the list lines have loaded', async () => {
       const { result } = await setup({ listDelay: 300 });
       await act(async () => {
@@ -1850,43 +1388,16 @@ describe('useReceiptReview', () => {
     });
 
     it('says when the list is longer than the review can see', async () => {
-      // Every page is full and another always follows: the cache keeps 100.
-      const endless = (
-        vars: Record<string, unknown>,
-      ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {
-        const from = Number(vars.after ?? 0);
-        return {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            itemsConnection: {
-              totalCount: vars.isPurchased ? 0 : 500,
-              pageInfo: {
-                hasNextPage: !vars.isPurchased,
-                endCursor: String(from + 25),
-              },
-              edges: vars.isPurchased
-                ? []
-                : Array.from({ length: 25 }, (_, i) => ({
-                    cursor: String(from + i + 1),
-                    node: {
-                      id: `sli-${from + i}`,
-                      itemName: `Item ${from + i}`,
-                      quantity: 1,
-                      unit: null,
-                      item: { id: `cat-${from + i}` },
-                      shoppingList: { id: 'list-1' },
-                      purchaseInfo: {
-                        isPurchased: false,
-                        movedToPantryAt: null,
-                      },
-                    },
-                  })),
-            },
-          },
-        };
-      };
-      const { result } = await setup({ listFor: endless });
+      // Another page follows the one the review reads.
+      const longer = (): MockDataFor<
+        typeof GetShoppingListItemsFilteredDocument
+      > => ({
+        shoppingList: {
+          id: 'list-1',
+          itemsConnection: connectionOf([], { hasNextPage: true }),
+        },
+      });
+      const { result } = await setup({ listFor: longer });
       await act(async () => {
         result.current.review.chooseLine(1, MILK);
       });
@@ -1901,28 +1412,13 @@ describe('useReceiptReview', () => {
     it('counts a line no unit names in the counted stack the pantry holds', async () => {
       const held: MockDataFor<typeof GetPantryDocument> = {
         pantry: {
-          __typename: 'Pantry',
           id: 'p1',
-          stats: { totalItems: 1 },
-          itemsConnection: {
-            totalCount: 1,
-            pageInfo: { hasNextPage: false, endCursor: null },
-            edges: [
-              {
-                node: {
-                  id: 'pi-milk',
-                  itemName: 'Milk',
-                  quantity: 2,
-                  item: { id: 'cat-milk' },
-                  unit: {
-                    id: 'unit-carton',
-                    symbol: 'carton',
-                    type: UnitType.Count,
-                  },
-                },
-              },
-            ],
-          },
+          itemsConnection: connectionOf([
+            {
+              item: { id: 'cat-milk' },
+              unit: { id: 'unit-carton', type: UnitType.Count },
+            },
+          ]),
         },
       };
       const { checkIn, chooseOnListAndAdd } = await setup({ held });

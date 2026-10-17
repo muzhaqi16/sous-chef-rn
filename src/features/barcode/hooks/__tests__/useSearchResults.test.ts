@@ -5,27 +5,33 @@ import { ApolloProvider } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
-import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
+  type MockPart,
 } from '#/test-utils/apolloMockProvider';
+import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { CreateItemDocument } from '#operations/item/item.generated';
-import { ItemByLookupDocument } from '../useSearchResults.generated';
+import {
+  ItemByLookupDocument,
+  type ItemByLookupQuery,
+} from '../useSearchResults.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ExternalSource,
+  NetWeightKind,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 
-// Partial item-node shapes for mock connection edges. Kept as a loose record
-// because the fixtures deliberately omit required Item fields (type,
-// storageState, …) that the hook under test never reads.
-type MockItemNode = Record<string, unknown>;
+type LookupNode = MockPart<ItemByLookupQuery['items']['edges'][number]['node']>;
 
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
@@ -49,99 +55,36 @@ jest.mock('#hooks/useImageUpload', () => ({
 
 jest.mock('#/storage/mmkv');
 
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeMutation: jest.fn(
-    async <T>(
-      fn: () => Promise<T>,
-      onError: string | ((error: unknown) => void | Promise<void>),
-    ) => {
-      try {
-        await fn();
-        return true;
-      } catch (e) {
-        if (typeof onError === 'function') await onError(e);
-        return false;
-      }
-    },
-  ),
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-// --- Mock builders ---
-
-// One document serves both lookups, told apart by `lookup`.
-const byUpc = { match: (vars: Record<string, unknown>) => isUpcLookup(vars) };
-const bySku = { match: (vars: Record<string, unknown>) => !isUpcLookup(vars) };
-function isUpcLookup(vars: Record<string, unknown>): boolean {
-  return isRecord(vars.lookup) && 'upc' in vars.lookup;
-}
-
-function upcMock(items: MockItemNode[], options: { partial?: boolean } = {}) {
-  const data: MockDataFor<typeof ItemByLookupDocument> = {
-    items: {
-      __typename: 'ItemConnection',
-      edges: items.map((node, i) => ({
-        __typename: 'ItemEdge',
-        cursor: `c${i}`,
-        node: { __typename: 'Item', ...node },
-      })),
-    },
-  };
+/**
+ * One lookup's answer: the items it finds, or the error it fails with. One
+ * document serves both lookups, told apart by `lookup`.
+ */
+function lookupMock(
+  by: 'upc' | 'sku',
+  answer: LookupNode[] | Error,
+  options: { delay?: number; maxUsageCount?: number } = {},
+) {
   return recordMock(ItemByLookupDocument, {
-    ...byUpc,
-    data,
-    partial: options.partial,
+    match: vars =>
+      (isRecord(vars.lookup) && 'upc' in vars.lookup) === (by === 'upc'),
+    ...(answer instanceof Error
+      ? { error: answer }
+      : { data: { items: connectionOf(answer) } }),
+    ...options,
   });
-}
-
-function skuMock(items: MockItemNode[]): MockedResponse {
-  const data: MockDataFor<typeof ItemByLookupDocument> = {
-    items: {
-      __typename: 'ItemConnection',
-      edges: items.map((node, i) => ({
-        __typename: 'ItemEdge',
-        cursor: `c${i}`,
-        node: { __typename: 'Item', ...node },
-      })),
-    },
-  };
-  return recordMock(ItemByLookupDocument, {
-    ...bySku,
-    data,
-  }).mock;
-}
-
-function upcErrorMock(
-  error: Error,
-  options: { maxUsageCount?: number } = {},
-): MockedResponse {
-  return recordMock(ItemByLookupDocument, {
-    ...byUpc,
-    error,
-    maxUsageCount: options.maxUsageCount,
-  }).mock;
 }
 
 const SAMPLE_UPC_ITEM = {
   id: 'item-1',
   name: 'Test Product',
-  description: 'A test product',
   imageUrl: 'http://img.com/1.jpg',
-  primaryUpc: '1234567890',
-  netWeight: 500,
-  displayUnit: {
-    __typename: 'Unit',
-    id: 'unit-1',
-    name: 'grams',
-    symbol: 'g',
-  },
-  units: [{ __typename: 'ItemUnit', unitId: 'unit-1', isDefault: true }],
   variationBrand: null,
   matchedVariation: null,
-};
+} satisfies LookupNode;
 
 describe('useSearchResults', () => {
   describe('before the lookups answer', () => {
@@ -181,7 +124,7 @@ describe('useSearchResults', () => {
     it('shows the item the UPC lookup finds', async () => {
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890', 'ean-13'),
-        { operationMocks: [upcMock([SAMPLE_UPC_ITEM]).mock] },
+        { operationMocks: [lookupMock('upc', [SAMPLE_UPC_ITEM]).mock] },
       );
 
       await waitFor(() =>
@@ -204,9 +147,7 @@ describe('useSearchResults', () => {
     ])(
       'looks up %s (%s) as scanned and shows the product',
       async (code, format, upcFormat) => {
-        const upc = upcMock([
-          { ...SAMPLE_UPC_ITEM, primaryUpc: '012345678905' },
-        ]);
+        const upc = lookupMock('upc', [SAMPLE_UPC_ITEM]);
 
         const { result } = renderHookWithApollo(
           () => useSearchResults(code, format),
@@ -228,166 +169,116 @@ describe('useSearchResults', () => {
       },
     );
 
-    it("carries where the scanned pack's facts came from", async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('0012345678905', 'ean-13'),
-        {
-          operationMocks: [
-            upcMock([
-              {
-                ...SAMPLE_UPC_ITEM,
-                matchedVariation: {
-                  __typename: 'ProductVariation',
-                  id: 'off-1',
-                  upc: '0012345678905',
-                  source: 'OPENFOODFACTS',
-                },
-              },
-            ]).mock,
-          ],
-        },
-      );
+    const credit = {
+      __typename: 'ImageCredit',
+      text: 'Open Food Facts',
+      license: 'CC BY-SA 3.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+      sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
+    } satisfies LookupNode['imageCredit'];
+    const notice = {
+      __typename: 'DataAttribution',
+      source: ExternalSource.Openfoodfacts,
+      notice: 'Product data from Open Food Facts, available under the ODbL.',
+      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
+    } satisfies NonNullable<LookupNode['dataAttributions']>[number];
 
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({
-            variationId: 'off-1',
+    it.each<[string, LookupNode, Record<string, unknown>]>([
+      [
+        "carries where the scanned pack's facts came from",
+        {
+          matchedVariation: {
+            id: 'off-1',
+            upc: '0001112223334',
             source: 'OPENFOODFACTS',
-          }),
-        ),
-      );
-    });
-
-    // `imageUrl` is the primary photo's thumbnail, which an edit form starts
-    // from; the card's full-width image is the photo's original, with its credit.
-    it('carries the photo the card shows, with its credit', async () => {
-      const credit = {
-        text: 'Open Food Facts',
-        license: 'CC BY-SA 3.0',
-        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
-        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
-      };
+          },
+        },
+        { variationId: 'off-1', source: 'OPENFOODFACTS' },
+      ],
+      // `imageUrl` is the primary photo's thumbnail, which an edit form starts
+      // from; the card's full-width image is the photo's original, with its credit.
+      [
+        'carries the photo the card shows, with its credit',
+        {
+          photos: [
+            { id: 'photo-front', url: 'https://cdn.test/front.jpg', credit },
+          ],
+        },
+        {
+          imageUrl: SAMPLE_UPC_ITEM.imageUrl,
+          image: { url: 'https://cdn.test/front.jpg', credit },
+        },
+      ],
+      [
+        'shows an item with no photos by its only image and credit',
+        { photos: [], imageCredit: credit },
+        { image: { url: SAMPLE_UPC_ITEM.imageUrl, credit } },
+      ],
+      [
+        'carries the notices the item data asks for',
+        { dataAttributions: [notice] },
+        { dataAttributions: [notice] },
+      ],
+      // Both flags carry through to the card, which hides its edit action when
+      // both are false — a scan can surface an item the user may not touch.
+      [
+        'carries the write-path flags through to the scanned item',
+        { canEdit: false, canSuggest: false },
+        { canEdit: false, canSuggest: false },
+      ],
+      // A barcode names one pack of the item. What the scan shows, and what an
+      // add stores, is that pack's own size and brand — never another pack's
+      // figure or one brand picked from the item's list.
+      [
+        "reports the scanned barcode's own pack",
+        {
+          primaryUpc: '9998887776665',
+          netWeight: 30,
+          netWeightKind: NetWeightKind.Serving,
+          variationBrand: { id: 'brand-pack', name: 'Pack Brand' },
+          matchedVariation: { id: 'esm-1', upc: '0001112223334' },
+          trackingUnit: {
+            id: 'unit-can',
+            name: 'can',
+            symbol: 'can',
+            type: UnitType.Count,
+          },
+        },
+        {
+          upc: '0001112223334',
+          variationId: 'esm-1',
+          netWeight: 30,
+          netWeightKind: 'SERVING',
+          brandId: 'brand-pack',
+          brandName: 'Pack Brand',
+          trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
+        },
+      ],
+    ])('%s', async (_name, node, expected) => {
       const { result } = renderHookWithApollo(
-        () => useSearchResults('0012345678905', 'ean-13'),
+        () => useSearchResults('0001112223334', 'ean-13'),
         {
           operationMocks: [
-            upcMock([
-              {
-                ...SAMPLE_UPC_ITEM,
-                photos: [
-                  {
-                    __typename: 'ItemPhoto',
-                    id: 'photo-front',
-                    url: 'https://cdn.test/front.jpg',
-                    credit,
-                  },
-                ],
-              },
-            ]).mock,
+            lookupMock('upc', [{ ...SAMPLE_UPC_ITEM, ...node }]).mock,
           ],
         },
       );
 
       await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({
-            imageUrl: SAMPLE_UPC_ITEM.imageUrl,
-            image: {
-              url: 'https://cdn.test/front.jpg',
-              credit: expect.objectContaining(credit),
-            },
-          }),
-        ),
-      );
-    });
-
-    it('shows an item with no photos by its only image and credit', async () => {
-      const imageCredit = {
-        __typename: 'ImageCredit',
-        text: 'Open Food Facts',
-        license: 'CC BY-SA 3.0',
-        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
-        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
-      };
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('0012345678905', 'ean-13'),
-        {
-          operationMocks: [
-            upcMock([{ ...SAMPLE_UPC_ITEM, photos: [], imageCredit }]).mock,
-          ],
-        },
-      );
-
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({
-            image: { url: SAMPLE_UPC_ITEM.imageUrl, credit: imageCredit },
-          }),
-        ),
-      );
-    });
-
-    it('carries the notices the item data asks for', async () => {
-      const notice = {
-        __typename: 'DataAttribution',
-        source: 'OPENFOODFACTS',
-        notice: 'Product data from Open Food Facts, available under the ODbL.',
-        licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
-        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
-      };
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('0012345678905', 'ean-13'),
-        {
-          operationMocks: [
-            upcMock([{ ...SAMPLE_UPC_ITEM, dataAttributions: [notice] }]).mock,
-          ],
-        },
-      );
-
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({ dataAttributions: [notice] }),
-        ),
-      );
-    });
-
-    // Both flags carry through to the card, which hides its edit action when
-    // both are false — a scan can surface an item the user may not touch.
-    it('carries the write-path flags through to the scanned item', async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13'),
-        {
-          operationMocks: [
-            upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }])
-              .mock,
-          ],
-        },
-      );
-
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({ canEdit: false, canSuggest: false }),
-        ),
+        expect(result.current.item).toEqual(expect.objectContaining(expected)),
       );
     });
 
     it('falls back to SKU query when UPC finds nothing', async () => {
-      const skuItem = {
-        id: 'item-sku',
-        name: 'SKU Product',
-        description: null,
-        imageUrl: null,
-        primaryUpc: null,
-        netWeight: null,
-        displayUnit: null,
-        units: [],
-        variationBrand: null,
-        matchedVariation: null,
-      };
-
       const { result } = renderHookWithApollo(
         () => useSearchResults('SKU123'),
-        { operationMocks: [upcMock([]).mock, skuMock([skuItem])] },
+        {
+          operationMocks: [
+            lookupMock('upc', []).mock,
+            lookupMock('sku', [{ id: 'item-sku', name: 'SKU Product' }]).mock,
+          ],
+        },
       );
 
       await waitFor(() =>
@@ -399,64 +290,8 @@ describe('useSearchResults', () => {
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
     });
 
-    // A barcode names one pack of the item. What the scan shows, and what an
-    // add stores, is that pack's own size and brand — never another pack's
-    // figure or one brand picked from the item's list.
-    it("reports the scanned barcode's own pack", async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('0001112223334', 'ean-13'),
-        {
-          operationMocks: [
-            upcMock([
-              {
-                ...SAMPLE_UPC_ITEM,
-                primaryUpc: '9998887776665',
-                netWeight: 30,
-                netWeightKind: 'SERVING',
-                variationBrand: {
-                  __typename: 'Brand',
-                  id: 'brand-pack',
-                  name: 'Pack Brand',
-                },
-                matchedVariation: {
-                  __typename: 'ProductVariation',
-                  id: 'esm-1',
-                  upc: '0001112223334',
-                },
-                trackingUnit: {
-                  __typename: 'Unit',
-                  id: 'unit-can',
-                  name: 'can',
-                  symbol: 'can',
-                  type: 'COUNT',
-                  displayAsFraction: false,
-                },
-              },
-            ]).mock,
-          ],
-        },
-      );
-
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({
-            upc: '0001112223334',
-            variationId: 'esm-1',
-            netWeight: 30,
-            netWeightKind: 'SERVING',
-            brandId: 'brand-pack',
-            brandName: 'Pack Brand',
-            trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
-          }),
-        ),
-      );
-    });
-
     it('asks for the unit the destination pantry counts the item in', async () => {
-      const upc = recordMock(ItemByLookupDocument, {
-        ...byUpc,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
+      const upc = lookupMock('upc', []);
 
       renderHookWithApollo(
         () => useSearchResults('1234567890', 'ean-13', 'pantry-7'),
@@ -474,7 +309,12 @@ describe('useSearchResults', () => {
     it('opens the create sheet when neither UPC nor SKU finds results', async () => {
       const { result } = renderHookWithApollo(
         () => useSearchResults('UNKNOWN'),
-        { operationMocks: [upcMock([]).mock, skuMock([])] },
+        {
+          operationMocks: [
+            lookupMock('upc', []).mock,
+            lookupMock('sku', []).mock,
+          ],
+        },
       );
 
       await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalled());
@@ -486,14 +326,10 @@ describe('useSearchResults', () => {
     // Between the UPC miss and the SKU answer nothing is known yet: neither an
     // empty result nor a miss may show.
     it('stays loading until the SKU lookup answers', async () => {
-      const sku = recordMock(ItemByLookupDocument, {
-        ...bySku,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-        delay: 200,
-      });
+      const sku = lookupMock('sku', [], { delay: 200 });
       const { result } = renderHookWithApollo(
         () => useSearchResults('UNKNOWN'),
-        { operationMocks: [upcMock([]).mock, sku.mock] },
+        { operationMocks: [lookupMock('upc', []).mock, sku.mock] },
       );
 
       await waitFor(() => expect(sku.fired).toHaveLength(1));
@@ -506,51 +342,42 @@ describe('useSearchResults', () => {
   });
 
   describe('error mapping', () => {
-    it('shows the connection copy for a failed fetch', async () => {
+    it.each<[string, Error, TranslationKey]>([
+      [
+        'shows the connection copy for a failed fetch',
+        new NetworkRequestError('Network request failed'),
+        'errors.networkError',
+      ],
+      [
+        'shows the connection copy for a request timeout',
+        new TimeoutError('Request timeout after 10000ms', 10000),
+        'errors.networkError',
+      ],
+      [
+        "shows the app's retry copy for a server failure, never its message",
+        new Error('Server error'),
+        'errors.codes.genericRetry',
+      ],
+    ])('%s', async (_name, error, copy) => {
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890'),
-        {
-          operationMocks: [
-            upcErrorMock(new NetworkRequestError('Network request failed')),
-          ],
-        },
+        { operationMocks: [lookupMock('upc', error).mock] },
       );
 
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.networkError')),
-      );
+      await waitFor(() => expect(result.current.error).toBe(t(copy)));
       expect(result.current.loading).toBe(false);
       expect(result.current.item).toBeNull();
     });
 
-    it('shows the connection copy for a request timeout', async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('1234567890'),
-        {
-          operationMocks: [
-            upcErrorMock(
-              new TimeoutError('Request timeout after 10000ms', 10000),
-            ),
-          ],
-        },
-      );
-
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.networkError')),
-      );
-    });
-
     it('keeps the new-item form closed when the lookup fails', async () => {
       // The SKU lookup would answer, with nothing: it must not be asked.
-      const sku = recordMock(ItemByLookupDocument, {
-        ...bySku,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
+      const sku = lookupMock('sku', []);
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890'),
         {
           operationMocks: [
-            upcErrorMock(new NetworkRequestError('Network request failed')),
+            lookupMock('upc', new NetworkRequestError('Network request failed'))
+              .mock,
             sku.mock,
           ],
         },
@@ -625,18 +452,6 @@ describe('useSearchResults', () => {
         expect(result.current.error).toBe(t('errors.networkError'));
       });
     });
-
-    it("shows the app's retry copy for a server failure, never its message", async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('1234567890'),
-        { operationMocks: [upcErrorMock(new Error('Server error'))] },
-      );
-
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.codes.genericRetry')),
-      );
-      expect(result.current.error).not.toContain('Server error');
-    });
   });
 
   describe('retry', () => {
@@ -645,8 +460,9 @@ describe('useSearchResults', () => {
         () => useSearchResults('1234567890'),
         {
           operationMocks: [
-            upcErrorMock(new Error('Server error'), { maxUsageCount: 1 }),
-            upcMock([SAMPLE_UPC_ITEM]).mock,
+            lookupMock('upc', new Error('Server error'), { maxUsageCount: 1 })
+              .mock,
+            lookupMock('upc', [SAMPLE_UPC_ITEM]).mock,
           ],
         },
       );
@@ -683,27 +499,36 @@ describe('useSearchResults', () => {
     }
 
     /** A code neither lookup knows, so the form creates its item. */
-    const missedLookups = () => [upcMock([]).mock, skuMock([])];
+    const missedLookups = () => [
+      lookupMock('upc', []).mock,
+      lookupMock('sku', []).mock,
+    ];
 
-    it('stores plural images and calls CreateItem mutation', async () => {
+    // Held in the store until the create returns an id to attach them to,
+    // then handed to the batch upload and cleared.
+    it.each([
+      [
+        'stores plural images and calls CreateItem mutation',
+        { selectedImages: [{ uri: 'file://image.jpg' }] },
+        [{ uri: 'file://image.jpg' }],
+      ],
+      [
+        'takes a singular selectedImage as a one-image batch',
+        { selectedImage: { uri: 'file://single.jpg' } },
+        [{ uri: 'file://single.jpg' }],
+      ],
+    ])('%s', async (_name, images, uploaded) => {
       const { result } = renderHookWithApollo(
         () => useSearchResults('1234567890'),
         { operationMocks: [createItemMock()] },
       );
 
       await act(async () => {
-        await result.current.handleAddItem({
-          name: 'New Item',
-          description: 'Test description',
-          selectedImages: [{ uri: 'file://image.jpg' }],
-          brand: { brandName: 'TestBrand' },
-        });
+        await result.current.handleAddItem({ name: 'New Item', ...images });
       });
 
-      // Held in the store until the create returns an id to attach them to,
-      // then handed to the batch upload and cleared.
       expect(mockUploadItemImages).toHaveBeenCalledWith(
-        [{ uri: 'file://image.jpg' }],
+        uploaded,
         expect.any(String),
       );
       expect(useStore.getState().pendingItemImages).toBeNull();
@@ -862,25 +687,6 @@ describe('useSearchResults', () => {
       // Nothing was created to attach them to.
       expect(mockUploadItemImages).not.toHaveBeenCalled();
       expect(useStore.getState().pendingItemImages).toBeNull();
-    });
-
-    it('takes a singular selectedImage as a one-image batch', async () => {
-      const { result } = renderHookWithApollo(
-        () => useSearchResults('1234567890'),
-        { operationMocks: [createItemMock()] },
-      );
-
-      await act(async () => {
-        await result.current.handleAddItem({
-          name: 'New Item',
-          selectedImage: { uri: 'file://single.jpg' },
-        });
-      });
-
-      expect(mockUploadItemImages).toHaveBeenCalledWith(
-        [{ uri: 'file://single.jpg' }],
-        expect.any(String),
-      );
     });
   });
 });

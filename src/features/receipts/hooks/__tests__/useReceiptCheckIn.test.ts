@@ -1,9 +1,9 @@
 import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
-  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
@@ -11,7 +11,11 @@ import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
-import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
+import {
+  checkInAnswer,
+  seedDraft,
+  sentLinesOf,
+} from '../../__tests__/helpers/receiptFixtures';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
 import {
   useReceiptCheckIn,
@@ -44,53 +48,10 @@ const receipt = (checkInIds: string[]): ReceiptToCheckIn => ({
   storeId: 'store-1',
 });
 
-type Lines = { clientId: string; pantryItemId?: string | null }[];
-
-// Every line recorded under its own stack, except those `refused` names.
-const answering = (
-  refused: readonly number[] = [],
-  failure: { code: ErrorCode; errorId: string | null } = {
-    code: ErrorCode.ValidationFailed,
-    errorId: null,
-  },
-) =>
+// Every line recorded under its own stack, except those `refuses` names.
+const answering = (options?: Parameters<typeof checkInAnswer>[0]) =>
   recordMock(CreateReceiptCheckInDocument, {
-    dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> => {
-      const lines = (vars.input as { lines: Lines }).lines;
-      return {
-        createReceiptCheckIn: {
-          __typename: 'CreateReceiptCheckInPayload',
-          results: lines.map((sent, index) =>
-            refused.includes(index)
-              ? {
-                  __typename: 'ReceiptCheckInLineResult',
-                  index,
-                  clientId: sent.clientId,
-                  success: false,
-                  alreadyRecorded: false,
-                  failure: { __typename: 'BatchElementFailure', ...failure },
-                  item: null,
-                  purchase: null,
-                  pantryItem: null,
-                  shoppingListItem: null,
-                }
-              : {
-                  __typename: 'ReceiptCheckInLineResult',
-                  index,
-                  clientId: sent.clientId,
-                  success: true,
-                  alreadyRecorded: false,
-                  failure: null,
-                  pantryItem: {
-                    __typename: 'PantryItem',
-                    id: String(sent.pantryItemId),
-                  },
-                  shoppingListItem: null,
-                },
-          ),
-        },
-      };
-    },
+    dataFor: checkInAnswer(options),
   });
 
 const pantryRows = (cache: ReturnType<typeof makeCache>) =>
@@ -145,7 +106,7 @@ describe('useReceiptCheckIn', () => {
 
   it('withdraws only the line the API refused, and names it', async () => {
     const cache = makeCache();
-    const checkIn = answering([1]);
+    const checkIn = answering({ refuses: sent => sent.clientId === '1' });
     const { result } = renderHookWithApollo(
       () => useReceiptCheckIn(undefined),
       {
@@ -171,9 +132,9 @@ describe('useReceiptCheckIn', () => {
   });
 
   it("states the one cause every refused line shares, in the reader's language, and records its log id", async () => {
-    const checkIn = answering([0, 1], {
-      code: ErrorCode.ValidationFailed,
-      errorId: 'err-1',
+    const checkIn = answering({
+      refuses: () => true,
+      failure: { code: ErrorCode.ValidationFailed, errorId: 'err-1' },
     });
     const { result } = renderHookWithApollo(
       () => useReceiptCheckIn(undefined),
@@ -203,7 +164,7 @@ describe('useReceiptCheckIn', () => {
   });
 
   it('counts refused lines no name survives for', async () => {
-    const checkIn = answering([0]);
+    const checkIn = answering({ refuses: () => true });
     const { result } = renderHookWithApollo(
       () => useReceiptCheckIn(undefined),
       { operationMocks: [checkIn.mock] },
@@ -225,7 +186,6 @@ describe('useReceiptCheckIn', () => {
         createReceiptCheckIn: {
           __typename: 'ForbiddenError',
           code: ErrorCode.Forbidden,
-          message: 'No',
         },
       },
     });
@@ -266,18 +226,11 @@ describe('useReceiptCheckIn', () => {
           __typename: 'CreateReceiptCheckInPayload',
           results: [
             {
-              __typename: 'ReceiptCheckInLineResult',
               index: 0,
-              clientId: '0',
               success: true,
-              alreadyRecorded: false,
               failure: null,
-              item: { __typename: 'Item', id: 'item-held' },
-              pantryItem: {
-                __typename: 'PantryItem',
-                id: 'pi-0',
-                item: { __typename: 'Item', id: 'item-held' },
-              },
+              item: { id: 'item-held' },
+              pantryItem: { id: 'pi-0', item: { id: 'item-held' } },
               shoppingListItem: null,
             },
           ],
@@ -321,11 +274,10 @@ describe('useReceiptCheckIn', () => {
       await result.current.checkIn(receipt(checkInIds()), lines);
     });
 
-    const sent = checkIn.fired.map(
-      fired => fired.input as { id: string; lines: Lines },
-    );
-    expect(sent.map(input => input.lines.length)).toEqual([100, 30]);
-    expect(sent.map(input => input.id)).toEqual(checkInIds());
+    expect(checkIn.fired.map(vars => sentLinesOf(vars).length)).toEqual([
+      100, 30,
+    ]);
+    expect(checkIn.fired.map(vars => inputOf(vars).id)).toEqual(checkInIds());
     expect(useReceiptDraftStore.getState().draft?.added).toHaveLength(130);
   });
 });

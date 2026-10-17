@@ -27,6 +27,16 @@ const updateMock = (
   result: { data: { updateRecipe: payload } },
 });
 
+const appliedUpdate = () =>
+  recordMock(UpdateRecipeDocument, {
+    data: {
+      updateRecipe: {
+        __typename: 'UpdateRecipePayload',
+        recipe: { id: RECIPE_ID },
+      },
+    },
+  });
+
 const renderWrites = (mocks: MockedResponse[]) =>
   renderHookWithApollo(() => useRecipeFormWrites(undefined), {
     operationMocks: mocks,
@@ -49,14 +59,7 @@ const REFUSED_FAILURE = {
 
 describe('useRecipeFormWrites.updateRecipe', () => {
   it('sends the fields and the ingredient list in one write', async () => {
-    const update = recordMock(UpdateRecipeDocument, {
-      data: {
-        updateRecipe: {
-          __typename: 'UpdateRecipePayload',
-          recipe: { __typename: 'Recipe', id: RECIPE_ID },
-        },
-      },
-    });
+    const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
     const ingredients = [{ name: 'Flour', quantity: 2, sortOrder: 0 }];
@@ -86,14 +89,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
   // The list REPLACES the recipe's: the form of a recipe over the limit holds
   // one page of it, and would remove every ingredient past that page.
   it('sends nothing for the form of a recipe over the ingredient limit, and says why', async () => {
-    const update = recordMock(UpdateRecipeDocument, {
-      data: {
-        updateRecipe: {
-          __typename: 'UpdateRecipePayload',
-          recipe: { __typename: 'Recipe', id: RECIPE_ID },
-        },
-      },
-    });
+    const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
 
@@ -134,14 +130,7 @@ describe('useRecipeFormWrites.updateRecipe', () => {
   // The API refuses an edit that states no version, so one the form never read
   // is not sent at all.
   it('fails an edit whose version the form never read, without sending it', async () => {
-    const update = recordMock(UpdateRecipeDocument, {
-      data: {
-        updateRecipe: {
-          __typename: 'UpdateRecipePayload',
-          recipe: { __typename: 'Recipe', id: RECIPE_ID },
-        },
-      },
-    });
+    const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
     await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
 
@@ -195,7 +184,7 @@ describe('useRecipeFormWrites.reloadRecipe', () => {
   });
   const loaded = recipeMock({
     result: {
-      data: { recipe: { __typename: 'Recipe', id: RECIPE_ID, name: 'Soup' } },
+      data: { recipe: { id: RECIPE_ID } },
     },
   });
 
@@ -212,7 +201,7 @@ describe('useRecipeFormWrites.reloadRecipe', () => {
       recipeMock({
         result: {
           data: {
-            recipe: { __typename: 'Recipe', id: RECIPE_ID, name: 'Stew' },
+            recipe: { id: RECIPE_ID, name: 'Stew' },
           },
         },
       }),

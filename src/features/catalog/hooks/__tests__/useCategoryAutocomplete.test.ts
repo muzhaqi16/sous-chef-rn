@@ -41,7 +41,6 @@ function createMock(
     result: {
       data: {
         autocompleteCategories: {
-          __typename: 'AutocompleteCategoryResult',
           totalCount: 0,
           suggestions: [],
         },

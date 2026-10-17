@@ -414,13 +414,11 @@ describe('usePantrySubscriptions: event envelope and the cache', () => {
           result: {
             data: {
               pantryEvents: {
-                __typename: 'PantryEvent',
                 originatorClientId: 'device_other',
                 actorUserId: 'user-2',
                 mutation: MutationType.ItemRemoved,
                 subtype: PantrySubtype.ItemChanged,
                 pantryId: 'pantry-1',
-                timestamp: '2026-01-01T00:00:00.000Z',
                 node: { __typename: 'PantryItem', id: 'item-1' },
               },
             },

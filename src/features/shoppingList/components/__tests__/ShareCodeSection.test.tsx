@@ -73,7 +73,6 @@ describe('ShareCodeSection', () => {
         shareShoppingList: {
           __typename: 'ShareShoppingListPayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-1',
             isPublic: true,
             shareCode: 'ABC123',

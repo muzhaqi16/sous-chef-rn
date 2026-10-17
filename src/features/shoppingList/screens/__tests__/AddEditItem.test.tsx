@@ -277,13 +277,11 @@ jest.mock('#components/atoms/FieldRow', () => ({
  * states what the test asserts on rather than the whole selection.
  */
 const SHOPPING_LIST_ITEM_CORE: MockPart<AddedShoppingListItemFieldsFragment> = {
-  __typename: 'ShoppingListItem',
   itemName: 'Milk',
   quantity: 1,
   quantityInput: '1',
   displayFormat: DisplayFormat.Auto,
   purchaseInfo: {
-    __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
   },
   version: 1,
@@ -315,15 +313,13 @@ function buildDetailShoppingListItem(id: string) {
   return {
     ...SHOPPING_LIST_ITEM_CORE,
     id,
-    priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+    priceEstimate: { estimated: null },
     source: {
-      __typename: 'ShoppingListItemSource',
       addedContext: AddedContext.Manual,
       isFromMealPlan: false,
     },
     priority: 0,
     storeInfo: {
-      __typename: 'ShoppingListItemStoreInfo',
       preferredStore: null,
     },
     brand: null,
@@ -343,7 +339,6 @@ function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
           __typename: 'AddItemsToShoppingListPayload',
           results: [
             {
-              __typename: 'BatchAddShoppingListItemResult',
               index: 0,
               clientId: null,
               success: true,

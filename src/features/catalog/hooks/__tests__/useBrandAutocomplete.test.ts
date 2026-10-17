@@ -41,7 +41,7 @@ function createSearchBrandsMock(
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
-      data: { brands: { __typename: 'BrandConnection', edges: [] } },
+      data: { brands: { edges: [] } },
     },
   };
 }

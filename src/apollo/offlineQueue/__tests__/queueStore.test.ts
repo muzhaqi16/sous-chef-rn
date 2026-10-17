@@ -1,6 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
-import type { QueuedMutation } from '../types';
+import type { QueueError, QueuedMutation } from '../types';
 import { QueueCapacityError, QueueStatus } from '../types';
 import { storage } from '#storage/mmkv';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
@@ -203,20 +203,21 @@ describe('QueueStore', () => {
     });
 
     describe('MoveShoppingListItem coalescing', () => {
-      it('coalesces pending move mutations for the same item', () => {
-        const move1 = makeMutation({
-          id: 'move-1',
+      const move = (
+        id: string,
+        input: Record<string, unknown>,
+        overrides: Partial<QueuedMutation> = {},
+      ) =>
+        makeMutation({
+          id,
           ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { id: 'item-A', afterItemId: 'x' } },
-        });
-        const move2 = makeMutation({
-          id: 'move-2',
-          ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { id: 'item-A', afterItemId: 'y' } },
+          variables: { input },
+          ...overrides,
         });
 
-        store.addMutation(move1);
-        store.addMutation(move2);
+      it('coalesces pending move mutations for the same item', () => {
+        store.addMutation(move('move-1', { id: 'item-A', afterItemId: 'x' }));
+        store.addMutation(move('move-2', { id: 'item-A', afterItemId: 'y' }));
 
         const result = store.getMutationsForUser('user-1');
         expect(result).toHaveLength(1);
@@ -225,78 +226,35 @@ describe('QueueStore', () => {
         expect(result[0]!.variables.input.afterItemId).toBe('y');
       });
 
-      it('does not coalesce move mutations for different items', () => {
-        store.addMutation(
-          makeMutation({
-            id: 'move-a',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A' } },
-          }),
-        );
-        store.addMutation(
-          makeMutation({
-            id: 'move-b',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-B' } },
-          }),
-        );
+      it.each([
+        [
+          'does not coalesce move mutations for different items',
+          {},
+          { variables: { input: { id: 'item-B' } } },
+        ],
+        [
+          'does not coalesce move mutations from different users',
+          {},
+          { userId: 'user-2' },
+        ],
+        [
+          'does not coalesce non-pending move mutations',
+          { status: QueueStatus.PROCESSING },
+          {},
+        ],
+      ])('%s', (_, first: Partial<QueuedMutation>, second) => {
+        store.addMutation(move('move-1', { id: 'item-A' }, first));
+        store.addMutation(move('move-2', { id: 'item-A' }, second));
 
-        expect(store.getMutationsForUser('user-1')).toHaveLength(2);
-      });
-
-      it('does not coalesce move mutations from different users', () => {
-        store.addMutation(
-          makeMutation({
-            id: 'move-u1',
-            userId: 'user-1',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A' } },
-          }),
-        );
-        store.addMutation(
-          makeMutation({
-            id: 'move-u2',
-            userId: 'user-2',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A' } },
-          }),
-        );
-
-        const u1 = store.getMutationsForUser('user-1');
-        const u2 = store.getMutationsForUser('user-2');
-        expect(u1).toHaveLength(1);
-        expect(u2).toHaveLength(1);
-      });
-
-      it('does not coalesce non-pending move mutations', () => {
-        store.addMutation(
-          makeMutation({
-            id: 'move-processing',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A' } },
-            status: QueueStatus.PROCESSING,
-          }),
-        );
-        store.addMutation(
-          makeMutation({
-            id: 'move-new',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A' } },
-          }),
-        );
-
-        expect(store.getMutationsForUser('user-1')).toHaveLength(2);
+        expect(store.getMutation('move-1')).not.toBeNull();
+        expect(store.getMutation('move-2')).not.toBeNull();
       });
 
       it("queues the final move after a create it names, not in the first move's slot", () => {
         // The drain replays in queue order. In the first move's slot, "after X"
         // is sent before X exists, refused, and the row withdrawn.
         store.addMutation(
-          makeMutation({
-            id: 'move-1',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
-          }),
+          move('move-1', { id: 'item-A', afterItemId: 'item-Y' }),
         );
         store.addMutation(
           makeMutation({
@@ -308,11 +266,7 @@ describe('QueueStore', () => {
           }),
         );
         store.addMutation(
-          makeMutation({
-            id: 'move-2',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-X' } },
-          }),
+          move('move-2', { id: 'item-A', afterItemId: 'item-X' }),
         );
 
         expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
@@ -323,20 +277,18 @@ describe('QueueStore', () => {
 
       it("keeps the first move's age", () => {
         store.addMutation(
-          makeMutation({
-            id: 'move-1',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
-            createdAt: 1_000,
-          }),
+          move(
+            'move-1',
+            { id: 'item-A', afterItemId: 'item-Y' },
+            { createdAt: 1_000 },
+          ),
         );
         store.addMutation(
-          makeMutation({
-            id: 'move-2',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-Z' } },
-            createdAt: 5_000,
-          }),
+          move(
+            'move-2',
+            { id: 'item-A', afterItemId: 'item-Z' },
+            { createdAt: 5_000 },
+          ),
         );
 
         const [survivor] = store.getMutationsForUser('user-1');
@@ -353,22 +305,15 @@ describe('QueueStore', () => {
 
       it("expires the survivor on the first move's age, not its own", () => {
         const ninetyOneDays = 91 * 24 * 60 * 60 * 1000;
-        const old = Date.now() - ninetyOneDays;
         store.addMutation(
-          makeMutation({
-            id: 'move-1',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-Y' } },
-            createdAt: old,
-          }),
+          move(
+            'move-1',
+            { id: 'item-A', afterItemId: 'item-Y' },
+            { createdAt: Date.now() - ninetyOneDays },
+          ),
         );
         store.addMutation(
-          makeMutation({
-            id: 'move-2',
-            ...queuedMutationFor(MoveShoppingListItemDocument),
-            variables: { input: { id: 'item-A', afterItemId: 'item-Z' } },
-            createdAt: Date.now(),
-          }),
+          move('move-2', { id: 'item-A', afterItemId: 'item-Z' }),
         );
 
         expect(store.expireStalePending('user-1')).toHaveLength(1);
@@ -712,33 +657,22 @@ describe('QueueStore', () => {
   // markMutationFailed
   // -------------------------------------------------------------------------
   describe('markMutationFailed', () => {
-    it('marks mutation as FAILED for non-auth errors', () => {
+    it.each<[string, string, QueueError['type'], QueueStatus]>([
+      ['FAILED', 'non-auth', 'network', QueueStatus.FAILED],
+      ['AUTH_ERROR', 'auth', 'auth', QueueStatus.AUTH_ERROR],
+    ])('marks mutation as %s for %s errors', (_, __, type, status) => {
       store.addMutation(makeMutation({ id: 'fail-1' }));
       const result = store.markMutationFailed('fail-1', {
-        type: 'network',
-        message: 'timeout',
+        type,
+        message: 'refused',
         timestamp: Date.now(),
         retryable: true,
       });
       expect(result).toBe(true);
 
       const m = store.getMutation('fail-1');
-      expect(m?.status).toBe(QueueStatus.FAILED);
-      expect(m?.lastError?.type).toBe('network');
-    });
-
-    it('marks mutation as AUTH_ERROR for auth errors', () => {
-      store.addMutation(makeMutation({ id: 'auth-1' }));
-      const result = store.markMutationFailed('auth-1', {
-        type: 'auth',
-        message: 'unauthorized',
-        timestamp: Date.now(),
-        retryable: true,
-      });
-      expect(result).toBe(true);
-
-      const m = store.getMutation('auth-1');
-      expect(m?.status).toBe(QueueStatus.AUTH_ERROR);
+      expect(m?.status).toBe(status);
+      expect(m?.lastError?.type).toBe(type);
     });
 
     it('returns false for non-existent mutation', () => {
@@ -890,24 +824,20 @@ describe('QueueStore', () => {
       expect(store.getPendingMutationsForUser('user-1')).toHaveLength(1);
     });
 
-    it('leaves a refused entry parked when reviving', () => {
-      store.addMutation(
-        makeMutation({ id: 'refused', status: QueueStatus.FAILED }),
-      );
-      expect(store.revivePendingAuthErrors('user-1')).toBe(0);
-      expect(store.getMutation('refused')?.status).toBe(QueueStatus.FAILED);
-    });
+    it.each([
+      [
+        'leaves a refused entry parked when reviving',
+        { status: QueueStatus.FAILED },
+      ],
+      [
+        "does not revive another user's parked entries",
+        { userId: 'user-2', status: QueueStatus.AUTH_ERROR },
+      ],
+    ])('%s', (_, parked) => {
+      store.addMutation(makeMutation({ id: 'parked', ...parked }));
 
-    it("does not revive another user's parked entries", () => {
-      store.addMutation(
-        makeMutation({
-          id: 'theirs',
-          userId: 'user-2',
-          status: QueueStatus.AUTH_ERROR,
-        }),
-      );
       expect(store.revivePendingAuthErrors('user-1')).toBe(0);
-      expect(store.getMutation('theirs')?.status).toBe(QueueStatus.AUTH_ERROR);
+      expect(store.getMutation('parked')?.status).toBe(parked.status);
     });
 
     it('stamps processedAt when marking a mutation failed', () => {
@@ -1099,67 +1029,41 @@ describe('QueueStore', () => {
       expect(store.getPendingClientIds().size).toBe(0);
     });
 
-    it('collects the item id from a single-item batch add', () => {
+    it.each([
+      [
+        'collects the item id from a single-item batch add',
+        [{ id: 'cuid-batch-a' }],
+        ['cuid-batch-a'],
+      ],
+      [
+        'collects every item id from a multi-item batch add, not just the first',
+        [
+          { id: 'cuid-batch-1' },
+          { id: 'cuid-batch-2' },
+          { id: 'cuid-batch-3' },
+        ],
+        ['cuid-batch-1', 'cuid-batch-2', 'cuid-batch-3'],
+      ],
+      [
+        'skips batch items with missing or non-string ids without throwing',
+        [
+          { id: 'cuid-good' },
+          { name: 'no id at all' },
+          { id: 42 },
+          { id: '' },
+          null,
+        ],
+        ['cuid-good'],
+      ],
+    ])('%s', (_, items, expected) => {
       store.setCurrentUserId('user-1');
       store.addMutation(
         makeMutation({
-          id: 'm-batch-1',
           ...queuedMutationFor(AddItemToShoppingListDocument),
-          variables: {
-            input: {
-              shoppingListId: 'list-1',
-              items: [{ id: 'cuid-batch-a' }],
-            },
-          },
+          variables: { input: { shoppingListId: 'list-1', items } },
         }),
       );
-      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-batch-a']));
-    });
-
-    it('collects every item id from a multi-item batch add, not just the first', () => {
-      store.setCurrentUserId('user-1');
-      store.addMutation(
-        makeMutation({
-          id: 'm-batch-n',
-          ...queuedMutationFor(AddItemToShoppingListDocument),
-          variables: {
-            input: {
-              shoppingListId: 'list-1',
-              items: [
-                { id: 'cuid-batch-1' },
-                { id: 'cuid-batch-2' },
-                { id: 'cuid-batch-3' },
-              ],
-            },
-          },
-        }),
-      );
-      expect(store.getPendingClientIds()).toEqual(
-        new Set(['cuid-batch-1', 'cuid-batch-2', 'cuid-batch-3']),
-      );
-    });
-
-    it('skips batch items with missing or non-string ids without throwing', () => {
-      store.setCurrentUserId('user-1');
-      store.addMutation(
-        makeMutation({
-          id: 'm-batch-bad',
-          ...queuedMutationFor(AddItemToShoppingListDocument),
-          variables: {
-            input: {
-              shoppingListId: 'list-1',
-              items: [
-                { id: 'cuid-good' },
-                { name: 'no id at all' },
-                { id: 42 },
-                { id: '' },
-                null,
-              ],
-            },
-          },
-        }),
-      );
-      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-good']));
+      expect(store.getPendingClientIds()).toEqual(new Set(expected));
     });
 
     it('recovered PROCESSING entries regain pending-id protection', () => {

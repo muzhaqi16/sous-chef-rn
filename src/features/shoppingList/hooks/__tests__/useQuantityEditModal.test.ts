@@ -22,7 +22,7 @@ function updateMock() {
     data: {
       updateShoppingListItem: {
         __typename: 'UpdateShoppingListItemPayload',
-        shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        shoppingListItem: { id: 'item-1' },
       },
     },
   });
@@ -270,7 +270,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -310,7 +310,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -348,7 +348,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });

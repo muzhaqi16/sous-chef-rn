@@ -208,18 +208,8 @@ describe('RecipeFormScreen', () => {
 
   // A caption that lists ingredients and no method ends INCOMPLETE.
   it('opens filled with what an incomplete capture read, saving nothing', async () => {
-    type Line = NonNullable<
-      NonNullable<
-        NonNullable<
-          NonNullable<
-            MockDataFor<typeof RecipeCaptureDocument>['recipeCapture']
-          >['draft']
-        >['lines']
-      >[number]
-    >;
     const lines = ['2 tbsp white miso', '1 tbsp honey', 'salt, to taste'].map(
-      (originalText): Line => ({
-        __typename: 'ParsedIngredientLine',
+      originalText => ({
         originalText,
         name: originalText,
         quantity: null,
@@ -231,12 +221,10 @@ describe('RecipeFormScreen', () => {
     const capture = recordMock(RecipeCaptureDocument, {
       data: {
         recipeCapture: {
-          __typename: 'RecipeCapture',
           id: 'capture-1',
           status: RecipeCaptureStatus.Incomplete,
           recipe: null,
           draft: {
-            __typename: 'RecipeCaptureDraft',
             name: 'Miso salmon',
             lines,
             steps: [],
@@ -275,19 +263,16 @@ describe('RecipeFormScreen', () => {
     const capture = recordMock(RecipeCaptureDocument, {
       data: {
         recipeCapture: {
-          __typename: 'RecipeCapture',
           id: 'capture-2',
           status: RecipeCaptureStatus.Incomplete,
           recipe: null,
           draft: {
-            __typename: 'RecipeCaptureDraft',
             name: 'Miso salmon',
             imageUrl: null,
             author: 'Ana',
             sourceName: 'instagram.com',
             lines: [
               {
-                __typename: 'ParsedIngredientLine',
                 originalText: 'salmon',
                 name: 'salmon',
                 quantity: null,
@@ -339,7 +324,6 @@ describe('RecipeFormScreen', () => {
       hasNextPage: boolean,
     ): MockDataFor<typeof GetRecipeDocument> => ({
       recipe: {
-        __typename: 'Recipe',
         id: 'recipe-1',
         version: 3,
         name: 'Feast',
@@ -352,7 +336,6 @@ describe('RecipeFormScreen', () => {
           edges: [
             {
               node: {
-                __typename: 'RecipeIngredient',
                 id: 'ri-1',
                 name: 'Salt',
                 quantity: 1,
@@ -373,7 +356,7 @@ describe('RecipeFormScreen', () => {
         data: {
           updateRecipe: {
             __typename: 'UpdateRecipePayload',
-            recipe: { __typename: 'Recipe', id: 'recipe-1' },
+            recipe: { id: 'recipe-1' },
           },
         },
       });
@@ -434,7 +417,7 @@ describe('RecipeFormScreen', () => {
         data: {
           updateRecipe: {
             __typename: 'UpdateRecipePayload',
-            recipe: { __typename: 'Recipe', id: 'recipe-1' },
+            recipe: { id: 'recipe-1' },
           },
         },
       });
@@ -448,7 +431,6 @@ describe('RecipeFormScreen', () => {
                 recipe: {
                   ...loadedRecipe(false).recipe,
                   pendingRevision: {
-                    __typename: 'RecipeRevision',
                     id: 'rev-1',
                     proposed: {
                       name: 'Feast',

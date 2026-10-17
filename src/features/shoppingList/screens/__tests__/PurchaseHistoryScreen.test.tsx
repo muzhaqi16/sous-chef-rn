@@ -71,13 +71,10 @@ const historyMock = (
   result: {
     data: {
       shoppingListItem: {
-        __typename: 'ShoppingListItem',
         id: '1',
         purchasesConnection: {
-          __typename: 'PurchaseConnection',
-          edges: nodes.map(node => ({ __typename: 'PurchaseEdge', node })),
+          edges: nodes.map(node => ({ node })),
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage,
             endCursor: hasNextPage ? 'cursor-1' : null,
           },

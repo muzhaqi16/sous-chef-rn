@@ -119,7 +119,6 @@ describe('useCompleteShoppingList', () => {
               markShoppingListActive: {
                 __typename: 'MarkShoppingListActivePayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   status: 'ACTIVE',
                   isCompleted: false,

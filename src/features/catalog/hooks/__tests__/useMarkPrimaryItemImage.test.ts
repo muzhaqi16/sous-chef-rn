@@ -40,7 +40,6 @@ describe('useMarkPrimaryItemImage', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-2.jpg',
             photos: [photo('photo-2', true), photo('photo-1', false)],
@@ -136,7 +135,6 @@ describe('useMarkPrimaryItemImage', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-2.jpg',
             photos: [photo('photo-2', true), photo('photo-1', false)],

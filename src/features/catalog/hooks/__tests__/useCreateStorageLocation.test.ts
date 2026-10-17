@@ -28,7 +28,6 @@ function successMock() {
         createStorageLocation: {
           __typename: 'CreateStorageLocationPayload',
           storageLocation: {
-            __typename: 'StorageLocation',
             id: input.id,
             name: input.name,
             type: StorageType.PantryShelf,

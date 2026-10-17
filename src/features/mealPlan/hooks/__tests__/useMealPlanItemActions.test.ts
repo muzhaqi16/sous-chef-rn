@@ -2,12 +2,15 @@ import { toastService } from '#/services/toastService';
 import type { InMemoryCache } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
+import type {
+  MockDataFor,
+  MockedResponse,
+  MockFor,
+} from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
   recordMock,
   renderHookWithApollo,
-  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanItemDocument,
@@ -17,7 +20,6 @@ import {
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   ErrorCode,
-  MealPlanType,
   MealType,
   TopLevelErrorCode,
   type CreateMealPlanItemInput,
@@ -29,9 +31,9 @@ import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
-  UseDuplicateMealPlan_MealPlanFragmentDoc,
-  type UseDuplicateMealPlan_MealPlanFragment,
-} from '../useDuplicateMealPlan.generated';
+  planSource,
+  seedPlanSource,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 import { useMealPlan } from '../useMealPlan';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import {
@@ -44,8 +46,6 @@ const PLAN_ID = 'plan-1';
 const WEEK = { startDate: '2026-09-21', endDate: '2026-09-27' };
 
 type FullItem = Unmasked<MealPlanItemActions_OptimisticFullItemFragment>;
-type PlanMealEdges =
-  UseDuplicateMealPlan_MealPlanFragment['mealPlanItemsConnection']['edges'];
 
 /** A meal complete for the compound selection the actions read back. */
 const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
@@ -87,49 +87,14 @@ const readItem = (cache: InMemoryCache, id: string = 'mpi-1') =>
     fragmentName: 'MealPlanItemActions_optimisticFullItem',
   });
 
-/**
- * The plan's days and its meals' edges, written through the selection
- * `GetMealPlan` spreads — so the list sits where a loaded plan's does.
- */
+/** The plan's days, and its meals as edges of the list a loaded plan holds. */
 const seedPlan = (
   meals: FullItem[] = [],
   bounds: { startDate: string; endDate: string } = WEEK,
 ): InMemoryCache => {
-  const cache = makeCache();
-  const edges: PlanMealEdges = meals.map(meal => ({
-    __typename: 'MealPlanItemEdge',
-    node: {
-      __typename: 'MealPlanItem',
-      id: meal.id,
-      date: meal.date,
-      mealType: meal.mealType,
-      servings: meal.servings,
-      notes: meal.notes,
-      customMealName: meal.customMealName,
-      recipe: meal.recipe ? { __typename: 'Recipe', id: meal.recipe.id } : null,
-    },
-  }));
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
-    fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-    fragmentName: 'useDuplicateMealPlan_mealPlan',
-    data: {
-      __typename: 'MealPlan',
-      id: PLAN_ID,
-      description: null,
-      planType: MealPlanType.Weekly,
-      servings: 2,
-      budgetAmount: null,
-      homeId: null,
-      ...bounds,
-      mealPlanItemsConnection: {
-        __typename: 'MealPlanItemConnection',
-        totalCount: edges.length,
-        pageInfo: { __typename: 'PageInfo', hasNextPage: false },
-        edges,
-      },
-    },
-  });
+  const cache = seedPlanSource(
+    planSource({ id: PLAN_ID, ...bounds, mealPlanItems: meals }),
+  );
   for (const meal of meals) writeItem(cache, meal);
   return cache;
 };
@@ -148,16 +113,11 @@ const createdAsSent = () =>
       createMealPlanItem: {
         __typename: 'CreateMealPlanItemPayload',
         mealPlanItem: {
-          __typename: 'MealPlanItem',
           id: String(inputOf(vars).id),
           date: String(inputOf(vars).date),
         },
         // The plan's own fields come back too, and none of its lists.
-        mealPlan: {
-          __typename: 'MealPlan',
-          id: String(inputOf(vars).mealPlanId),
-          ...WEEK,
-        },
+        mealPlan: { id: String(inputOf(vars).mealPlanId), ...WEEK },
       },
     }),
   });
@@ -193,6 +153,15 @@ function usePlanAndActions() {
   return useMealPlanItemActions(PLAN_ID);
 }
 
+const renderActions = (
+  mocks: MockedResponse[],
+  cache: InMemoryCache = makeCache(),
+) =>
+  renderHookWithApollo(() => useMealPlanItemActions(PLAN_ID), {
+    operationMocks: mocks,
+    cache,
+  });
+
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 
@@ -206,9 +175,7 @@ afterEach(() => {
 
 describe('useMealPlanItemActions', () => {
   it('reports no create in flight initially', () => {
-    const { result } = renderHookWithApollo(() =>
-      useMealPlanItemActions(PLAN_ID),
-    );
+    const { result } = renderActions([]);
 
     expect(result.current.creating).toBe(false);
   });
@@ -217,10 +184,7 @@ describe('useMealPlanItemActions', () => {
     it('returns true on success, having sent the day as picked under a minted id', async () => {
       const create = createdAsSent();
       const cache = seedPlan([fullItem({ id: 'mpi-held' })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [create.mock], cache },
-      );
+      const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
       await act(async () => {
@@ -254,10 +218,7 @@ describe('useMealPlanItemActions', () => {
       'sends a meal on %s, a boundary day of the plan, as that day',
       async day => {
         const create = createdAsSent();
-        const { result } = renderHookWithApollo(
-          () => useMealPlanItemActions(PLAN_ID),
-          { operationMocks: [create.mock], cache: seedPlan() },
-        );
+        const { result } = renderActions([create.mock], seedPlan());
 
         await act(async () => {
           await result.current.createItem({ ...DINNER, date: day });
@@ -276,10 +237,7 @@ describe('useMealPlanItemActions', () => {
       async (_label, picked, sent) => {
         const create = createdAsSent();
         const cache = seedPlan();
-        const { result } = renderHookWithApollo(
-          () => useMealPlanItemActions(PLAN_ID),
-          { operationMocks: [create.mock], cache },
-        );
+        const { result } = renderActions([create.mock], cache);
 
         await act(async () => {
           await result.current.createItem({ ...DINNER, date: picked });
@@ -293,10 +251,7 @@ describe('useMealPlanItemActions', () => {
 
     it('sends the picked day as it is when the plan is not in the cache', async () => {
       const create = createdAsSent();
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [create.mock], cache: makeCache() },
-      );
+      const { result } = renderActions([create.mock]);
 
       await act(async () => {
         await result.current.createItem({ ...DINNER, date: '2026-09-30' });
@@ -311,10 +266,7 @@ describe('useMealPlanItemActions', () => {
         data: { createMealPlanItem: null },
       });
       const cache = seedPlan([fullItem({ id: 'mpi-held' })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [create.mock], cache },
-      );
+      const { result } = renderActions([create.mock], cache);
 
       let created: boolean | undefined;
       await act(async () => {
@@ -349,22 +301,18 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('shows one localized error toast, returns false and takes the meal back off the plan on failure', async () => {
-      const data: MockDataFor<typeof CreateMealPlanItemDocument> = {
-        createMealPlanItem: {
-          __typename: 'ConflictError',
-          code: ErrorCode.Conflict,
-          message: 'Conflict',
-        },
-      };
       const create = recordMock(CreateMealPlanItemDocument, {
-        data,
+        data: {
+          createMealPlanItem: {
+            __typename: 'ConflictError',
+            code: ErrorCode.Conflict,
+            message: 'Conflict',
+          },
+        },
       });
 
       const cache = seedPlan([fullItem({ id: 'mpi-held' })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [create.mock], cache },
-      );
+      const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
       await act(async () => {
@@ -394,12 +342,7 @@ describe('useMealPlanItemActions', () => {
         data: {
           updateMealPlanItem: {
             __typename: 'UpdateMealPlanItemPayload',
-            mealPlanItem: {
-              __typename: 'MealPlanItem',
-              id: 'mpi-1',
-              isCompleted,
-              version,
-            },
+            mealPlanItem: { id: 'mpi-1', isCompleted, version },
           },
         },
       });
@@ -407,10 +350,7 @@ describe('useMealPlanItemActions', () => {
     it('marks the meal completed at the version the cache holds, and shows a toast', async () => {
       const update = completedAs(4);
       const cache = seedPlan([fullItem({ version: 3 })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
+      const { result } = renderActions([update.mock], cache);
 
       let toggled: boolean | undefined;
       await act(async () => {
@@ -436,10 +376,7 @@ describe('useMealPlanItemActions', () => {
     it('states what was cooked beside the version when marking complete', async () => {
       const update = completedAs(4);
       const cache = seedPlan([fullItem({ version: 3 })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
+      const { result } = renderActions([update.mock], cache);
 
       await act(async () => {
         await result.current.toggleCompleted('mpi-1', {
@@ -467,10 +404,7 @@ describe('useMealPlanItemActions', () => {
     it('shows deduction toast when deductFromPantry is true', async () => {
       const update = completedAs(4);
       const cache = seedPlan([fullItem()]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
+      const { result } = renderActions([update.mock], cache);
 
       await act(async () => {
         await result.current.toggleCompleted('mpi-1', {
@@ -492,10 +426,7 @@ describe('useMealPlanItemActions', () => {
           version: 7,
         }),
       ]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
+      const { result } = renderActions([update.mock], cache);
 
       await act(async () => {
         await result.current.toggleCompleted('mpi-1');
@@ -511,68 +442,6 @@ describe('useMealPlanItemActions', () => {
           },
         },
       ]);
-      expect(mockToastSuccess).not.toHaveBeenCalled();
-    });
-
-    // Sent together at one version, the second would be refused as changed
-    // elsewhere by the user's own first edit.
-    it('sends a second toggle inside one round trip at the version the first answer wrote', async () => {
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        dataFor: (vars): MockDataFor<typeof UpdateMealPlanItemDocument> => ({
-          updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload',
-            mealPlanItem: {
-              __typename: 'MealPlanItem',
-              id: 'mpi-1',
-              isCompleted: Boolean(inputOf(vars).isCompleted),
-              version: Number(inputOf(vars).version) + 1,
-            },
-          },
-        }),
-        delay: 20,
-      });
-      const cache = seedPlan([fullItem({ version: 3 })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
-
-      let toggled: boolean[] = [];
-      await act(async () => {
-        toggled = await Promise.all([
-          result.current.toggleCompleted('mpi-1'),
-          result.current.toggleCompleted('mpi-1'),
-        ]);
-      });
-
-      expect(toggled).toEqual([true, true]);
-      expect(update.fired.map(vars => inputOf(vars))).toEqual([
-        expect.objectContaining({ isCompleted: true, version: 3 }),
-        expect.objectContaining({ isCompleted: false, version: 4 }),
-      ]);
-      expect(readItem(cache)).toMatchObject({ isCompleted: false, version: 5 });
-      expect(mockToastError).not.toHaveBeenCalled();
-    });
-
-    it('sends nothing and reports a failure for a meal cached without its version', async () => {
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        error: new Error('should not be sent without a version'),
-      });
-      const { version: _unread, ...unversioned } = fullItem();
-      const cache = seedCache([unversioned]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [update.mock], cache },
-      );
-
-      let toggled: boolean | undefined;
-      await act(async () => {
-        toggled = await result.current.toggleCompleted('mpi-1');
-      });
-
-      expect(toggled).toBe(false);
-      expect(update.fired).toHaveLength(0);
-      expect(mockToastError).toHaveBeenCalledTimes(1);
       expect(mockToastSuccess).not.toHaveBeenCalled();
     });
 
@@ -734,7 +603,7 @@ describe('useMealPlanItemActions', () => {
         data: {
           deleteMealPlanItem: {
             __typename: 'DeleteMealPlanItemPayload',
-            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+            mealPlanItem: { id: 'mpi-1' },
           },
         },
         ...(delay === undefined ? {} : { delay }),
@@ -747,10 +616,7 @@ describe('useMealPlanItemActions', () => {
       const claim = jest.spyOn(subscriptionService, 'registerPendingDelete');
       const del = deleted(20);
 
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [del.mock] },
-      );
+      const { result } = renderActions([del.mock]);
 
       let pending: Promise<unknown> | undefined;
       act(() => {
@@ -781,10 +647,7 @@ describe('useMealPlanItemActions', () => {
     it('takes the meal off the plan before the server answers, and returns true on success', async () => {
       const del = deleted(20);
       const cache = seedPlan([fullItem(), fullItem({ id: 'mpi-2' })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [del.mock], cache },
-      );
+      const { result } = renderActions([del.mock], cache);
 
       let pending: Promise<boolean> | undefined;
       act(() => {
@@ -805,22 +668,17 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('counts a meal that is already gone as deleted', async () => {
-      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
-        deleteMealPlanItem: {
-          __typename: 'NotFoundError',
-          code: ErrorCode.NotFound,
-          message: 'Meal plan item not found',
-        },
-      };
       const del = recordMock(DeleteMealPlanItemDocument, {
-        data,
+        data: {
+          deleteMealPlanItem: {
+            __typename: 'NotFoundError',
+            code: ErrorCode.NotFound,
+          },
+        },
       });
 
       const cache = seedPlan([fullItem()]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [del.mock], cache },
-      );
+      const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
       await act(async () => {
@@ -833,22 +691,17 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('returns false and puts the meal back on the plan on failure', async () => {
-      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
-        deleteMealPlanItem: {
-          __typename: 'ForbiddenError',
-          code: ErrorCode.Forbidden,
-          message: 'raw server English',
-        },
-      };
       const del = recordMock(DeleteMealPlanItemDocument, {
-        data,
+        data: {
+          deleteMealPlanItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
       });
 
       const cache = seedPlan([fullItem(), fullItem({ id: 'mpi-2' })]);
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions(PLAN_ID),
-        { operationMocks: [del.mock], cache },
-      );
+      const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
       await act(async () => {

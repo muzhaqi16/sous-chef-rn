@@ -55,20 +55,17 @@ function buildConnectionData(
       __typename: 'ShoppingList',
       id: listId,
       itemsConnection: {
-        __typename: 'ShoppingListItemConnection',
         edges: edges.map(node => ({
-          __typename: 'ShoppingListItemEdge',
           cursor: `cursor-${node.id}`,
           node: {
             __typename: 'ShoppingListItem',
             ...node,
             purchaseInfo: {
-              __typename: 'ShoppingListItemPurchaseInfo',
               isPurchased,
             },
           },
         })),
-        pageInfo: { __typename: 'PageInfo', ...pageInfo },
+        pageInfo: { ...pageInfo },
         totalCount: totalCount ?? edges.length,
       },
     },

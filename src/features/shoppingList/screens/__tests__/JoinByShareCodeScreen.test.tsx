@@ -103,7 +103,6 @@ describe('JoinByShareCodeScreen', () => {
         joinShoppingListByShareCode: {
           __typename: 'JoinShoppingListByShareCodePayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-9',
             name: 'Party',
           },

@@ -159,32 +159,15 @@ const sampleIngredientSearchResponse = [
 ];
 
 // ── Local GraphQL SearchRecipes mocks ──
-// Node fixtures must include every field the document selects (Apollo can't
-// cache partially-specified entities in operationMocks).
+// What the combined search reads of a node; the SDL completion fills the rest.
 function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
   return {
-    __typename: 'Recipe',
     id: 'r1',
     name: 'Family Lasagna',
-    description: null,
-    imageUrl: 'https://img/local-r1.jpg',
-    servings: 6,
-    prepTimeMinutes: 20,
-    cookTimeMinutes: 40,
     totalTimeMinutes: 60,
-    difficulty: null,
-    category: null,
-    cuisines: [],
-    status: 'PUBLISHED',
-    isExternal: false,
     externalSource: null,
     externalId: null,
     isSaved: false,
-    primarySource: null,
-    caloriesPerServing: null,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    savedDetails: null,
     ...overrides,
   };
 }
@@ -198,17 +181,8 @@ function searchRecipesMockWith(
     result: {
       data: {
         searchRecipes: {
-          __typename: 'RecipeConnection',
-          edges: nodes.map(node => ({
-            __typename: 'RecipeEdge',
-            cursor: `cursor-${node.id}`,
-            node,
-          })),
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
+          edges: nodes.map(node => ({ cursor: `cursor-${node.id}`, node })),
+          pageInfo: { hasNextPage: false, endCursor: null },
           totalCount: nodes.length,
         },
       },
@@ -246,14 +220,11 @@ function searchRecipesPageMock(opts: {
     result: {
       data: {
         searchRecipes: {
-          __typename: 'RecipeConnection',
           edges: opts.nodes.map(node => ({
-            __typename: 'RecipeEdge',
             cursor: `cursor-${node.id}`,
             node,
           })),
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: opts.hasNextPage,
             endCursor: opts.endCursor,
           },
@@ -801,7 +772,6 @@ describe('useRecipeScreen', () => {
           makeLocalRecipeNode({
             id: 'r-ext',
             name: 'Pasta Carbonara (saved)',
-            isExternal: true,
             externalSource: 'SPOONACULAR',
             externalId: '7001',
           }),

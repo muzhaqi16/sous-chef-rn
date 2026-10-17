@@ -54,14 +54,13 @@ function createClearMock(
         removeItemsFromShoppingList: {
           __typename: 'RemoveItemsFromShoppingListPayload',
           summary: {
-            __typename: 'BulkSummary',
             total: 1,
             succeeded: 1,
             failed: 0,
             skipped: 0,
             executionTime: 0,
           },
-          shoppingListItems: [{ __typename: 'ShoppingListItem', id: 'item-1' }],
+          shoppingListItems: [{ id: 'item-1' }],
         },
       },
     },

@@ -7,7 +7,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode, StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import {
   UseMoveToAisleModal_ItemFragmentDoc,
   type UseMoveToAisleModal_ItemFragment,
@@ -35,6 +35,7 @@ const LINE: UseMoveToAisleModal_ItemFragment = {
   },
 };
 
+/** Seeds the line, mounts the hook and opens the sheet on the line. */
 function setup(
   answer: MockDataFor<typeof UpdateShoppingListItemDocument>,
   line: Partial<UseMoveToAisleModal_ItemFragment> = {},
@@ -46,17 +47,20 @@ function setup(
     },
   ]);
   const update = recordMock(UpdateShoppingListItemDocument, { data: answer });
-  const hook = renderHookWithApollo(() => useMoveToAisleModal(), {
+  const { result } = renderHookWithApollo(() => useMoveToAisleModal(), {
     cache,
     operationMocks: [update.mock],
   });
+  act(() => result.current.openForItem('line-1'));
+  const moveTo = (department: StoreDepartment | null) =>
+    act(() => result.current.moveTo(department));
   const readLine = () =>
     cache.readFragment({
       id: cache.identify({ __typename: 'ShoppingListItem', id: 'line-1' }),
       fragment: UseMoveToAisleModal_ItemFragmentDoc,
       fragmentName: 'useMoveToAisleModal_item',
     });
-  return { ...hook, update, readLine };
+  return { result, update, moveTo, readLine };
 }
 
 const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
@@ -69,8 +73,6 @@ describe('useMoveToAisleModal', () => {
   it('opens on the aisle a line is in', () => {
     const { result } = setup(queued);
 
-    act(() => result.current.openForItem('line-1'));
-
     expect(result.current.visible).toBe(true);
     expect(result.current.line).toEqual({
       department: StoreDepartment.Other,
@@ -80,12 +82,9 @@ describe('useMoveToAisleModal', () => {
 
   // Queued offline, the line must stay in its new aisle through a restart.
   it('moves the line at once, and sends its own aisle on the line update', async () => {
-    const { result, update, readLine } = setup(queued);
-    act(() => result.current.openForItem('line-1'));
+    const { result, update, moveTo, readLine } = setup(queued);
 
-    await act(async () => {
-      await result.current.moveTo(StoreDepartment.Frozen);
-    });
+    await moveTo(StoreDepartment.Frozen);
 
     expect(result.current.visible).toBe(false);
     expect(readLine()).toMatchObject({
@@ -110,7 +109,7 @@ describe('useMoveToAisleModal', () => {
   });
 
   it("puts a moved line back under its item's aisle", async () => {
-    const { result, update, readLine } = setup(queued, {
+    const { result, update, moveTo, readLine } = setup(queued, {
       storeDepartment: StoreDepartment.Frozen,
       storeDepartmentOverride: StoreDepartment.Frozen,
       item: {
@@ -119,12 +118,9 @@ describe('useMoveToAisleModal', () => {
         storeDepartment: StoreDepartment.DairyEggs,
       },
     });
-    act(() => result.current.openForItem('line-1'));
     expect(result.current.line?.moved).toBe(true);
 
-    await act(async () => {
-      await result.current.moveTo(null);
-    });
+    await moveTo(null);
 
     expect(readLine()).toMatchObject({
       storeDepartment: StoreDepartment.DairyEggs,
@@ -142,19 +138,11 @@ describe('useMoveToAisleModal', () => {
   });
 
   it('returns the line to its aisle when the server refuses the move', async () => {
-    const { result, readLine } = setup({
-      updateShoppingListItem: {
-        __typename: 'ValidationError',
-        code: ErrorCode.ValidationFailed,
-        message: 'Refused',
-        field: 'storePrefs.storeDepartmentOverride',
-      },
+    const { moveTo, readLine } = setup({
+      updateShoppingListItem: { __typename: 'ValidationError' },
     });
-    act(() => result.current.openForItem('line-1'));
 
-    await act(async () => {
-      await result.current.moveTo(StoreDepartment.Frozen);
-    });
+    await moveTo(StoreDepartment.Frozen);
 
     expect(readLine()).toMatchObject({
       storeDepartment: StoreDepartment.Other,

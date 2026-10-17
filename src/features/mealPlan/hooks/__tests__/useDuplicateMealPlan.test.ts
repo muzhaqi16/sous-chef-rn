@@ -1,7 +1,6 @@
 'use no memo';
 
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,16 +9,12 @@ import {
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  UseDuplicateMealPlan_MealPlanFragmentDoc,
-  type UseDuplicateMealPlan_MealPlanFragment,
-} from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
+import { ErrorCode, MealPlanType } from '#/graphql/generated/schemaTypes';
 import {
-  ErrorCode,
-  MealPlanType,
-  MealType,
-} from '#/graphql/generated/schemaTypes';
+  planSource,
+  seedPlanSource,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { useDuplicateMealPlan } from '../useDuplicateMealPlan';
@@ -31,54 +26,6 @@ import { useDuplicateMealPlan } from '../useDuplicateMealPlan';
  */
 
 const SOURCE_ID = 'plan-1';
-
-/** The source as `GetMealPlan` caches it: every meal an edge of one list. */
-const sourcePlan = (
-  hasNextPage: boolean = false,
-): UseDuplicateMealPlan_MealPlanFragment => ({
-  __typename: 'MealPlan',
-  id: SOURCE_ID,
-  description: 'A week of food',
-  planType: MealPlanType.Weekly,
-  servings: 4,
-  budgetAmount: 90,
-  homeId: 'home-1',
-  startDate: '2026-01-05',
-  endDate: '2026-01-11',
-  mealPlanItemsConnection: {
-    __typename: 'MealPlanItemConnection',
-    totalCount: 2,
-    pageInfo: { __typename: 'PageInfo', hasNextPage },
-    edges: [
-      {
-        __typename: 'MealPlanItemEdge',
-        node: {
-          __typename: 'MealPlanItem',
-          id: 'mpi-1',
-          date: '2026-01-05',
-          mealType: MealType.Dinner,
-          servings: 2,
-          notes: null,
-          customMealName: null,
-          recipe: { __typename: 'Recipe', id: 'recipe-1' },
-        },
-      },
-      {
-        __typename: 'MealPlanItemEdge',
-        node: {
-          __typename: 'MealPlanItem',
-          id: 'mpi-2',
-          date: '2026-01-07',
-          mealType: MealType.Lunch,
-          servings: null,
-          notes: null,
-          customMealName: 'Leftovers',
-          recipe: null,
-        },
-      },
-    ],
-  },
-});
 
 const nextWeek = {
   mealPlanId: SOURCE_ID,
@@ -108,17 +55,6 @@ const createItemMock = () =>
     },
     partial: true,
   });
-
-const seeded = (source = sourcePlan()): InMemoryCache => {
-  const cache = makeCache();
-  cache.writeFragment({
-    id: cache.identify(source),
-    fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-    fragmentName: 'useDuplicateMealPlan_mealPlan',
-    data: source,
-  });
-  return cache;
-};
 
 /** The ids of a plan's meals as the detail screen reads them, or null. */
 const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
@@ -164,7 +100,7 @@ describe('duplicating a meal plan', () => {
     const plan = createPlanMock();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock],
-      cache: seeded(),
+      cache: seedPlanSource(),
     });
 
     const response = await result.current.duplicatePlan({
@@ -182,7 +118,7 @@ describe('duplicating a meal plan', () => {
     const item = createItemMock();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, item.mock],
-      cache: seeded(sourcePlan(true)),
+      cache: seedPlanSource(planSource(), { hasNextPage: true }),
     });
 
     expect(await result.current.duplicatePlan(nextWeek)).toBeNull();
@@ -196,7 +132,7 @@ describe('duplicating a meal plan', () => {
     useStore.setState({ apiReachable: false });
     const plan = createPlanMock();
     const item = createItemMock();
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, item.mock],
       cache,
@@ -244,7 +180,7 @@ describe('duplicating a meal plan', () => {
     const queuedItem = recordMock(CreateMealPlanItemDocument, {
       data: { createMealPlanItem: null },
     });
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [createPlanMock().mock, queuedItem.mock],
       cache,
@@ -281,7 +217,7 @@ describe('duplicating a meal plan', () => {
         },
       },
     });
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [createPlanMock().mock, refusedItem.mock],
       cache,
@@ -309,7 +245,7 @@ describe('duplicating a meal plan', () => {
     });
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, failedItem.mock],
-      cache: seeded(),
+      cache: seedPlanSource(),
     });
 
     await result.current.duplicatePlan(nextWeek);

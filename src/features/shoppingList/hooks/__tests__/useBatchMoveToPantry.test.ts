@@ -79,7 +79,6 @@ function moveMock(payload: {
         ),
       ],
       summary: {
-        __typename: 'BulkSummary',
         total:
           payload.movedCount +
           payload.skippedCount +

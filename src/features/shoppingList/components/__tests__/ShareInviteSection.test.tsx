@@ -67,7 +67,7 @@ describe('ShareInviteSection', () => {
       data: {
         inviteToShoppingList: {
           __typename: 'InviteToShoppingListPayload',
-          collaborator: { __typename: 'ShoppingListCollaborator', id: 'c-1' },
+          collaborator: { id: 'c-1' },
         },
       },
     });

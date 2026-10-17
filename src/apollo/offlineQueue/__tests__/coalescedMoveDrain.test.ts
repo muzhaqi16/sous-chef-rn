@@ -36,7 +36,7 @@ interface MoveArgs {
 function serverResolvers(existingIds: string[]) {
   const rows = new Set(existingIds);
   const arrivals: string[] = [];
-  const line = (id: string) => ({ __typename: 'ShoppingListItem', id });
+  const line = (id: string) => ({ id });
   const resolvers = () => ({
     Mutation: {
       addItemsToShoppingList: (_: unknown, { input }: AddArgs) => {
@@ -46,7 +46,6 @@ function serverResolvers(existingIds: string[]) {
         return {
           __typename: 'AddItemsToShoppingListPayload',
           results: ids.map((id, index) => ({
-            __typename: 'BatchAddShoppingListItemResult',
             index,
             success: true,
             failure: null,
