@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface DeferredScreenProps {
   fallback: React.ReactNode;

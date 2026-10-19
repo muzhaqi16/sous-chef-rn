@@ -36,7 +36,7 @@ import {
   useSortableListTheme,
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';

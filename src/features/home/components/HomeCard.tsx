@@ -17,7 +17,7 @@ import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface HomeCardProps {
   homeRef: FragmentType<typeof HomeCard_HomeFragmentDoc>;

@@ -1,5 +1,5 @@
 import { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 /**
  * Shared animation configuration for all bottom sheet modals.

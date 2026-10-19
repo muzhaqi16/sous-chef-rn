@@ -4,7 +4,7 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 import type { BarcodeSource } from '#features/barcode/types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 

@@ -11,7 +11,7 @@ import { FormSelect } from '#components/molecules/FormSelect';
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { buildCapacityUnitOptions } from '#features/catalog/components/storageLocationFormConfig';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface StorageLocationAdvancedSectionProps {
   isClimateControlled: boolean;

@@ -15,7 +15,7 @@ import { getFormAnimationPreset } from '#/constants/animations';
 import { buildJoinListUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface ShareCodeSectionProps {
   listId: string;

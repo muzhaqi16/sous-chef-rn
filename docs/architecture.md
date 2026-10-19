@@ -764,9 +764,12 @@ sit inside `BottomSheetView`, and why sheet inputs must resolve to
 ### Theming and design tokens
 
 `src/theme/` holds foundations (colors, typography, spacing, radii, shadows,
-sizes, breakpoints, zIndex), theme composition, and the appearance system —
+sizes, breakpoints, zIndex, motion durations, the palette derivation and the
+appearance options), theme composition, and the appearance system —
 light/dark/system, brand color, density, font scale, and high contrast, all
-derived at runtime (`derivePalette.ts`, `applyAppearance.ts`).
+derived at runtime (`foundations/derivePalette.ts`, `applyAppearance.ts`).
+`foundations/` is core and has no React Native in it, so a web host builds its
+styles from the same tokens; the rest of `src/theme/` is the Unistyles runtime.
 
 ### Internationalization
 

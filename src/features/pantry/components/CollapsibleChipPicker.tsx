@@ -8,7 +8,7 @@ import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface CollapsibleChipPickerProps<T extends string> {
   label: string;

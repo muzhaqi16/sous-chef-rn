@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import { requirePlatform } from '#platform/install';
 import { defaultUserPreferences } from '../preferencesSlice';
 import {
   ThemePreference,
@@ -35,6 +36,37 @@ describe('preferencesSlice', () => {
       const store = createTestStore();
       store.getState().setTheme(ThemePreference.DARK);
       expect(store.getState().theme).toBe(ThemePreference.DARK);
+    });
+
+    it('applies the theme through the host before subscribers hear of it', () => {
+      const store = createTestStore();
+      const themeAtApply: ThemePreference[] = [];
+      const applyTheme = jest
+        .spyOn(requirePlatform('appearance'), 'applyTheme')
+        .mockImplementation(() => {
+          themeAtApply.push(store.getState().theme);
+        });
+
+      store.getState().setTheme(ThemePreference.DARK);
+
+      expect(applyTheme).toHaveBeenCalledWith(ThemePreference.DARK);
+      expect(themeAtApply).toEqual([ThemePreference.SYSTEM]);
+      applyTheme.mockRestore();
+    });
+
+    it('applies a brand color with the other appearance settings', () => {
+      const store = createTestStore();
+      const apply = jest.spyOn(requirePlatform('appearance'), 'apply');
+
+      store.getState().setPrimaryColorOverride('#0d9488');
+
+      expect(apply).toHaveBeenCalledWith({
+        primaryColorOverride: '#0d9488',
+        densityPreference: store.getState().densityPreference,
+        fontScalePreference: store.getState().fontScalePreference,
+        highContrast: store.getState().highContrast,
+      });
+      apply.mockRestore();
     });
   });
 

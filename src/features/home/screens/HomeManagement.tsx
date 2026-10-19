@@ -30,7 +30,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';

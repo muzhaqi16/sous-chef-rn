@@ -23,7 +23,7 @@ import { useHiddenStatusBar } from '#features/barcode/hooks/useHiddenStatusBar';
 import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 const { height: screenHeight } = Dimensions.get('window');
 

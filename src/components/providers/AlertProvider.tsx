@@ -15,7 +15,7 @@ import type { AlertButton, AlertEntry } from '#platform/presenters';
 import { ALERT } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { zIndex } from '#/theme/foundations/zIndex';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 interface AlertCardProps {

@@ -18,10 +18,7 @@ enableMapSet();
 import type { AuthState } from './slices/authSlice';
 import { createAuthSlice } from './slices/authSlice';
 import type { PreferencesState } from './slices/preferencesSlice';
-import {
-  applyThemePreferenceToRuntime,
-  createPreferencesSlice,
-} from './slices/preferencesSlice';
+import { createPreferencesSlice } from './slices/preferencesSlice';
 import { FontScalePreference } from './slices/preferenceTypes';
 import type { AppState } from './slices/appSlice';
 import { createAppSlice } from './slices/appSlice';
@@ -127,7 +124,7 @@ export const handleStoreRehydration = (
 
   // Before `isHydrated`, so no hook needs a side-effect to catch up.
   if (state?.theme) {
-    applyThemePreferenceToRuntime(state.theme);
+    requirePlatform('appearance').applyTheme(state.theme);
   }
 
   // The account record wins over the mirror. Both are restored from the same

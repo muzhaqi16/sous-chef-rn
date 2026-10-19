@@ -3,7 +3,6 @@ import { initialAppState } from './slices/appSlice';
 import { TRANSIENT_UI_STATE } from './slices/uiSlice';
 import { storage, zustandStorage } from '#/store/deviceStorage';
 import { STORAGE_KEY } from '#/store/persistedKeys';
-import { clearTempRegistrationPassword } from '#native/storage/keychain';
 import { requirePlatform } from '#platform/install';
 import { runSessionTeardown } from './sessionTeardown';
 import { whileSessionEnds } from './sessionEnding';
@@ -235,9 +234,8 @@ export const createResetManager = (set: SetState, get: GetState) => ({
 
 const clearAuthFromStorage = async () => {
   try {
-    // Biometric keychain credentials deliberately survive a logout; only a full
+    // Stored logins (biometrics) deliberately survive a logout; only a full
     // reset or an explicit user action clears them.
-    await clearTempRegistrationPassword();
     await secureStore.clearSessionTokens();
 
     storage.remove('accessToken');

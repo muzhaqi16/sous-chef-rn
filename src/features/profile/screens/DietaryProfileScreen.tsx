@@ -33,7 +33,7 @@ import { CookingPreferencesSheet } from '#features/profile/components/CookingPre
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
 import { errorService } from '#/services/errorService';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 export const DietaryProfileScreen: React.FC = () => {

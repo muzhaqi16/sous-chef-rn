@@ -14,7 +14,7 @@ import { HapticService } from '#services/haptic/HapticService';
 // Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
 // separate gesture system, so the tap fires both toggle and row navigation.
 import { Pressable } from 'react-native-gesture-handler';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 type AnimatedCheckboxProps = {
   checked: boolean;

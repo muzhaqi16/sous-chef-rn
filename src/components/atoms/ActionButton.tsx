@@ -10,7 +10,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { IconButton } from '#components/atoms/IconButton';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 type ActionButtonProps = {
   onPress: () => void;

@@ -16,7 +16,7 @@ import { Icon } from '#components/atoms/Icon';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Text } from '#components/atoms/Text';
 import type { TabIconPair } from '#features/types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 /** Shown when a route arrives with no appearance entry — a wiring mistake, not

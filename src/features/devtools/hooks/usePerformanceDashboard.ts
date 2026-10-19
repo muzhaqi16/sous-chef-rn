@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import performance from 'react-native-performance';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import { usePerformanceStore } from '#/store/performanceStore';
+import { usePerformanceStore } from '#/services/performance/performanceStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import type {

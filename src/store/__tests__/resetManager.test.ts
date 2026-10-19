@@ -4,7 +4,6 @@
 // remembered login) and is mocked purely so the assertion that session end
 // never touches it has something real to watch.
 jest.mock('#native/storage/keychain', () => ({
-  clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearCredentials: jest.fn(() => Promise.resolve()),
 }));
 
@@ -38,11 +37,13 @@ import {
 } from '../apolloResetBridge';
 import type { RootState } from '#store/index';
 import { storage } from '#/store/deviceStorage';
-import {
-  clearTempRegistrationPassword,
-  clearCredentials,
-} from '#native/storage/keychain';
+import { clearCredentials } from '#native/storage/keychain';
 import { requirePlatform } from '#platform/install';
+
+const clearSessionTokens = jest.spyOn(
+  requirePlatform('secureStore'),
+  'clearSessionTokens',
+);
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import {
   registerSessionTeardown,
@@ -270,7 +271,7 @@ describe('resetManager', () => {
           preferences: false,
           clearApolloCache: false,
         });
-        expect(clearTempRegistrationPassword).toHaveBeenCalled();
+        expect(clearSessionTokens).toHaveBeenCalled();
         expect(storage.contains('accessToken')).toBe(false);
         expect(storage.contains('refreshToken')).toBe(false);
       });
@@ -283,7 +284,7 @@ describe('resetManager', () => {
           preferences: false,
           clearApolloCache: false,
         });
-        expect(clearTempRegistrationPassword).toHaveBeenCalled();
+        expect(clearSessionTokens).toHaveBeenCalled();
       });
 
       it('ensures isHydrated remains true after reset', async () => {
@@ -312,7 +313,7 @@ describe('resetManager', () => {
         // The rest of the reset still runs, so a storage failure can't leave
         // the user half signed-out.
         expect(findAuthResetCall(mockSet)).toBeDefined();
-        expect(clearTempRegistrationPassword).toHaveBeenCalled();
+        expect(clearSessionTokens).toHaveBeenCalled();
       });
 
       it('clears the persisted blob even when the in-memory clear fails', async () => {
@@ -474,7 +475,7 @@ describe('resetManager', () => {
 
           // Scheduled refresh, keychain tier, and persisted tokens
           expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
-          expect(clearTempRegistrationPassword).toHaveBeenCalled();
+          expect(clearSessionTokens).toHaveBeenCalled();
           expect(storage.contains('accessToken')).toBe(false);
           expect(storage.contains('refreshToken')).toBe(false);
 
@@ -572,12 +573,10 @@ describe('resetManager', () => {
           apolloReset.clearStore.mockImplementation(async () => {
             gate.push(isSessionEnding());
           });
-          jest
-            .spyOn(requirePlatform('secureStore'), 'clearSessionTokens')
-            .mockImplementation(async () => {
-              gate.push(isSessionEnding());
-              return true;
-            });
+          clearSessionTokens.mockImplementationOnce(async () => {
+            gate.push(isSessionEnding());
+            return true;
+          });
 
           await resetManager.endSession('refresh_rejected');
 

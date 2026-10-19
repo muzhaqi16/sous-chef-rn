@@ -5,7 +5,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Icon, type IconTone } from '#components/atoms/Icon';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface ExpandChevronProps {
   expanded: boolean;

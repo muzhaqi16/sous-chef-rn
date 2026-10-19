@@ -7,7 +7,7 @@ import Animated, {
   FadeInUp,
   LinearTransition,
 } from 'react-native-reanimated';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { Icon } from '#components/atoms/Icon';
 import type { ActionButtonConfig } from './types';
 import { Text } from '#components/atoms/Text';

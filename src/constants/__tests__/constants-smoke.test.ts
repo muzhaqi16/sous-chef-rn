@@ -13,7 +13,7 @@ import {
   getScrollClearancePadding,
   TAB_BAR_HEIGHT,
 } from '../layout';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 describe('animations constants', () => {
   it('exports spring presets with expected keys', () => {

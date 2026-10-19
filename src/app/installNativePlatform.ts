@@ -6,8 +6,10 @@ import type { AppLifecycleState } from '#platform/ports';
 import { generatedEnv } from '#native/generatedEnv';
 import { mmkvKeyValueStore } from '#native/storage/keyValueStore';
 import { keychainSecureStore } from '#native/storage/secureStore';
-import { applyThemePreferenceToRuntime } from '#store/slices/preferencesSlice';
-import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
+import {
+  applyAppearanceToRuntime,
+  applyThemeToRuntime,
+} from '#/theme/applyAppearance';
 import { preloadImages } from '#components/atoms/CachedImage';
 
 const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
@@ -41,7 +43,7 @@ installPlatform({
     },
   },
   appearance: {
-    applyTheme: theme => applyThemePreferenceToRuntime(theme),
+    applyTheme: theme => applyThemeToRuntime(theme),
     apply: settings => applyAppearanceToRuntime(settings),
   },
   clock: { now: () => performance.now() },

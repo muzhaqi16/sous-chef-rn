@@ -17,7 +17,7 @@ import {
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
 import { useShoppingListModalActions } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Module scope so it survives unmount/remount through stack navigation (and
 // resets on app restart): once content has shown, skeletons are skipped.

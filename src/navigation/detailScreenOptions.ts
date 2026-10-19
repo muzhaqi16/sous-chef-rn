@@ -1,5 +1,5 @@
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 /**
  * Shared options for feature detail/sub screens — full-screen swipe-back and a

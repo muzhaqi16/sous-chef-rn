@@ -266,9 +266,11 @@ they read it.
 
 ## Motion
 
-- **Where the tokens live:** `src/theme/foundations/motion.ts`, read as
+- **Where the tokens live:** durations and springs in
+  `src/theme/foundations/motion.ts`, the curves (Reanimated's) in
+  `src/theme/motion.ts`, which composes all of them. Read as
   `theme.motion.timing.FAST` in a stylesheet and as `motion.timing.FAST` from
-  the module elsewhere.
+  `#/theme/motion` elsewhere.
 - **The scale stops at 300 ms.** A longer number is a loop's own period — a
   1500 ms shimmer, a 1200 ms bob — and stays a literal at its call site rather
   than becoming a token only one animation uses.

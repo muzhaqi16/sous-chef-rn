@@ -49,7 +49,7 @@ const LAYERS = [
     patterns: ['src/config/**'],
     enforced: true,
   },
-  { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: false },
+  { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: true },
   { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: true },
   { name: 'utils', layer: 'core', patterns: ['src/utils/**'], enforced: false },
   {
@@ -79,7 +79,7 @@ const LAYERS = [
     name: 'theme/foundations',
     layer: 'core',
     patterns: ['src/theme/foundations/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'features/utils',

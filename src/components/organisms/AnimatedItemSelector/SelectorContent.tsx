@@ -17,7 +17,7 @@ import type {
 } from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface SelectorContentProps<T extends SelectableItem> {

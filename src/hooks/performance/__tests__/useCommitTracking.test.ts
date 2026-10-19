@@ -6,7 +6,7 @@ import {
 } from '../useCommitTracking';
 import { Telemetry } from '#/services/telemetry';
 
-jest.mock('#/store/performanceStore', () => ({
+jest.mock('#/services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       recordComponentRender: jest.fn(),

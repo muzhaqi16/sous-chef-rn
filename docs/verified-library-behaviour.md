@@ -525,7 +525,7 @@ stop — a loop's resting state, an ambient illustration, a shimmer.
 **Verified 2026-09-03 against `react-native-reanimated@4.6.0`; probe re-run
 2026-10-02 against 4.7.1.** An animation that passes no `reduceMotion` resolves
 to the device setting (`getReduceMotionFromConfig` in `animation/utilCommon.js`).
-This is why `src/theme/foundations/motion.ts` holds one set of tokens rather
+This is why `src/theme/motion.ts` holds one set of tokens rather
 than a reduced twin of each, and `src/hooks/animations/useMotionEnabled.ts` is
 the single `useReducedMotion` read, for the loop cases and CSS transitions
 (below).

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ScrollViewProps, ViewProps } from 'react-native';
 import type { CSSTransitionProperties } from 'react-native-reanimated';
 import type { FlashListRef } from '@shopify/flash-list';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { createValueContext } from '#hooks/utils/createValueContext';
 import { useMotionEnabled } from './useMotionEnabled';
 

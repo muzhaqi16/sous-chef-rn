@@ -29,7 +29,7 @@ import { daysUntilExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;

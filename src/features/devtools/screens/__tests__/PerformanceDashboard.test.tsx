@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
-import type { PerformanceState } from '#/store/slices/performanceSlice';
+import type { PerformanceState } from '#/services/performance/performanceSlice';
 import { alertService } from '#/services/alertService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { PerformanceDashboard } from '../PerformanceDashboard';
@@ -39,7 +39,7 @@ const mockSetTrackMemory = jest.fn();
 const mockSetTrackScreens = jest.fn();
 const mockClearPerformanceData = jest.fn();
 
-jest.mock('#/store/performanceStore', () => ({
+jest.mock('#/services/performance/performanceStore', () => ({
   usePerformanceStore: jest.fn(
     (selector: (state: Partial<PerformanceState>) => unknown) =>
       selector({
@@ -154,7 +154,9 @@ beforeEach(() => {
     (selector: (state: Partial<RootState>) => unknown) => selector({}),
   );
 
-  const { usePerformanceStore } = require('#/store/performanceStore');
+  const {
+    usePerformanceStore,
+  } = require('#/services/performance/performanceStore');
   usePerformanceStore.mockImplementation(
     (selector: (state: Partial<PerformanceState>) => unknown) =>
       selector({
@@ -215,7 +217,9 @@ describe('PerformanceDashboard', () => {
   });
 
   it('shows clear button when metrics exist', () => {
-    const { usePerformanceStore } = require('#/store/performanceStore');
+    const {
+      usePerformanceStore,
+    } = require('#/services/performance/performanceStore');
     const metrics = new Map();
     metrics.set('TestComponent', {
       componentName: 'TestComponent',
@@ -248,7 +252,9 @@ describe('PerformanceDashboard', () => {
   });
 
   it('shows component metrics in table with Total column', () => {
-    const { usePerformanceStore } = require('#/store/performanceStore');
+    const {
+      usePerformanceStore,
+    } = require('#/services/performance/performanceStore');
     const metrics = new Map();
     metrics.set('TestComponent', {
       componentName: 'TestComponent',
@@ -287,7 +293,9 @@ describe('PerformanceDashboard', () => {
 
   it('triggers clear data confirmation alert', async () => {
     const user = userEvent.setup();
-    const { usePerformanceStore } = require('#/store/performanceStore');
+    const {
+      usePerformanceStore,
+    } = require('#/services/performance/performanceStore');
     const metrics = new Map();
     metrics.set('Test', {
       componentName: 'Test',
@@ -327,7 +335,9 @@ describe('PerformanceDashboard', () => {
 
   it('starts MemoryMonitor when memory toggle is turned on', async () => {
     const user = userEvent.setup();
-    const { usePerformanceStore } = require('#/store/performanceStore');
+    const {
+      usePerformanceStore,
+    } = require('#/services/performance/performanceStore');
     usePerformanceStore.mockImplementation(
       (selector: (state: Partial<PerformanceState>) => unknown) =>
         selector({
@@ -375,7 +385,9 @@ describe('PerformanceDashboard', () => {
   });
 
   it('shows current memory card when snapshots exist', () => {
-    const { usePerformanceStore } = require('#/store/performanceStore');
+    const {
+      usePerformanceStore,
+    } = require('#/services/performance/performanceStore');
     const snapshots = [
       {
         timestamp: 1000,

@@ -13,7 +13,7 @@ import Animated, {
 import { Pressable } from '#components/atoms/themedComponents';
 
 import { HapticService } from '#services/haptic/HapticService';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Module scope — `createAnimatedComponent` must never be called per render.
 // Built on RN's `Pressable` (the themedComponents re-export, auto-bound to the

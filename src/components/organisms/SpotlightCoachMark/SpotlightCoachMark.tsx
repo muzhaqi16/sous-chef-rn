@@ -40,7 +40,7 @@ import {
 } from './spotlightConstants';
 import { SpotlightTooltip } from './SpotlightTooltip';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 

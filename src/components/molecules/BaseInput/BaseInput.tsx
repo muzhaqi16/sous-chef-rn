@@ -22,7 +22,7 @@ import {
   type ThemedTextInputRef,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 

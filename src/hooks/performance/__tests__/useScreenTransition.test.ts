@@ -14,7 +14,7 @@ jest.mock('#/services/performance/types', () => ({
 }));
 
 const mockRecordScreenTransition = jest.fn();
-jest.mock('#/store/performanceStore', () => ({
+jest.mock('#/services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       recordScreenTransition: mockRecordScreenTransition,

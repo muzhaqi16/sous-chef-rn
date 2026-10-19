@@ -18,7 +18,6 @@
  */
 
 jest.mock('#native/storage/keychain', () => ({
-  clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),

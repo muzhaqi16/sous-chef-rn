@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface SkeletonBaseProps {
   width?: number | string;

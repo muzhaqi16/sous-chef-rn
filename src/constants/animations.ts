@@ -1,6 +1,6 @@
 import { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 /** Alert modal animation. */
 export const ALERT = {
