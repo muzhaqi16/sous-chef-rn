@@ -13,7 +13,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { formatShortDate } from '#/utils/formatters/date';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { MyUserReportsDocument } from '#features/profile/hooks/useMyReports.generated';
+import { MyUserReportsDocument } from '../useMyReports.generated';
 import { MyReportsScreen } from '../MyReportsScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');

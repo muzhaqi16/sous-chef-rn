@@ -184,14 +184,6 @@ export function useRecipeForm() {
     setSteps(getValues('steps').filter(step => step.id !== id));
   };
 
-  const moveStep = (fromIndex: number, toIndex: number) => {
-    const newSteps = [...getValues('steps')];
-    const [moved] = newSteps.splice(fromIndex, 1);
-    if (!moved) return;
-    newSteps.splice(toIndex, 0, moved);
-    setSteps(newSteps.map((step, i) => ({ ...step, sortOrder: i })));
-  };
-
   // Tags
   const setDiets = (diets: Diet[]) => {
     setValue('diets', diets, { shouldDirty: true });
@@ -435,7 +427,6 @@ export function useRecipeForm() {
     addStep,
     updateStep,
     removeStep,
-    moveStep,
     setDiets,
     setHealthGoals,
     setIntolerances,

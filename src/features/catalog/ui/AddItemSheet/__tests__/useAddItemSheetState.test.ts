@@ -20,8 +20,6 @@ describe('useAddItemSheetState', () => {
       useAddItemSheetState({ visible: false, contextId: undefined }),
     );
     expect(result.current.searchQuery).toBe('');
-    expect(result.current.showSearchResults).toBe(false);
-    expect(result.current.showSuggestions).toBe(true);
   });
 
   it('enables shouldFetch when visible with contextId', () => {
@@ -29,15 +27,6 @@ describe('useAddItemSheetState', () => {
       useAddItemSheetState({ visible: true, contextId: 'ctx-1' }),
     );
     expect(result.current.shouldFetch).toBe(true);
-  });
-
-  it('shows search results when query >= 2 characters', () => {
-    const { result } = renderHook(() =>
-      useAddItemSheetState({ visible: true, contextId: 'ctx-1' }),
-    );
-    act(() => result.current.setSearchQuery('mi'));
-    expect(result.current.showSearchResults).toBe(true);
-    expect(result.current.showSuggestions).toBe(false);
   });
 
   it('manages exit animations', () => {

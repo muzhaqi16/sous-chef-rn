@@ -130,8 +130,9 @@ Map and reasoning: `docs/architecture.md`.
 Deep dive: `docs/apollo-client-patterns.md`; offline model:
 `docs/local-first-architecture.md`.
 
-- **What renders gets data from its feature's `hooks/`**, as plain values and
-  callbacks. The `src/apollo` import zone and `sous-chef/hook-returns-no-library-type`
+- **What renders gets data from a data hook**, as plain values and callbacks: its
+  feature's `hooks/`, or a `use*.ts` beside the UI that owns a display query
+  (`COLOCATED_DATA_HOOKS`). The `src/apollo` import zone and `sous-chef/hook-returns-no-library-type`
   hold part of it; a screen or component calling `useQuery`/`useMutation`/the
   client directly is caught only by review. `useFragment` and masking types stay allowed.
 - **Fragments**: a component or hook owns a sibling `<Consumer>_<entity>`

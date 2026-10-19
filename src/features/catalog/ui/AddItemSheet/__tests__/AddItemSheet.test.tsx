@@ -140,8 +140,6 @@ jest.mock('../useAddItemSheetState', () => ({
     exitingItems: new Set(),
     startExitAnimation: jest.fn(),
     completeExitAnimation: jest.fn(),
-    showSearchResults: false,
-    showSuggestions: true,
   })),
 }));
 

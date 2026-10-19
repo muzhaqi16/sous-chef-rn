@@ -142,24 +142,6 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps).toHaveLength(1);
   });
 
-  it('moveStep reorders steps', () => {
-    const { result } = renderHook(() => useRecipeForm());
-
-    act(() => {
-      result.current.addStep('Step A');
-      result.current.addStep('Step B');
-      result.current.addStep('Step C');
-    });
-
-    act(() => {
-      result.current.moveStep(2, 0);
-    });
-
-    expect(result.current.state.steps[0]!.instruction).toBe('Step C');
-    expect(result.current.state.steps[0]!.sortOrder).toBe(0);
-    expect(result.current.state.steps[1]!.sortOrder).toBe(1);
-  });
-
   // Each refusal has to reach the FIELD it is about — the screen renders the
   // name's under its input and the two lists' under their sections — so the
   // submit is driven through `handleSubmit` and the errors read back per key.

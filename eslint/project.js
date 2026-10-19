@@ -16,6 +16,8 @@ const {
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
+  COLOCATED_DATA_HOOKS,
+  COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
   LAYER_FILES,
@@ -201,15 +203,27 @@ const overrides = [
   {
     // A hook's return type is the other half of the data-layer boundary: the
     // import rule cannot see a screen coupled by TYPE alone.
-    files: ['src/features/*/hooks/**/*.{ts,tsx}'],
+    files: ['src/features/*/hooks/**/*.{ts,tsx}', ...COLOCATED_DATA_HOOKS],
     ignores: [...TEST_FILES, '**/__mocks__/**', '**/*.generated.ts'],
     languageOptions: { parserOptions: TYPED },
     rules: { 'sous-chef/hook-returns-no-library-type': 'error' },
   },
   {
+    // A hook beside the UI that owns its query reads the data layer like any
+    // feature hook; the rest of the boundary still holds.
+    files: COLOCATED_DATA_HOOKS,
+    ignores: [...TEST_FILES, '**/__mocks__/**'],
+    rules: {
+      'import/no-restricted-paths': [
+        'error',
+        { zones: COLOCATED_DATA_HOOK_ZONES },
+      ],
+    },
+  },
+  {
     // What a feature hook reads while rendering must re-render when the cache
     // changes. Mutation hooks read the cache to write it.
-    files: ['src/features/**/hooks/**/*.{ts,tsx}'],
+    files: ['src/features/**/hooks/**/*.{ts,tsx}', ...COLOCATED_DATA_HOOKS],
     ignores: [
       ...TEST_FILES,
       '**/__mocks__/**',

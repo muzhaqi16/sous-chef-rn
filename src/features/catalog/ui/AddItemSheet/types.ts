@@ -120,7 +120,4 @@ export interface AddItemSheetState {
   exitingItems: Set<string>;
   startExitAnimation: (itemId: string) => void;
   completeExitAnimation: (itemId: string) => void;
-  /** Query is at least 2 characters. */
-  showSearchResults: boolean;
-  showSuggestions: boolean;
 }

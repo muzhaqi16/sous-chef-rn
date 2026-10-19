@@ -133,12 +133,21 @@ describe('every member a hook returns is read by production code', () => {
   const hookFiles = files.filter(
     file =>
       (/\/features\/[^/]+\/hooks\//.test(file) ||
+        /\/features\/[^/]+\/(screens|components|ui)\/(.*\/)?use[A-Z][^/]*\.tsx?$/.test(
+          file,
+        ) ||
         /\/src\/hooks\//.test(file)) &&
       !file.endsWith('.generated.ts'),
   );
 
   it('finds the hooks at all', () => {
     expect(hookFiles.length).toBeGreaterThan(100);
+  });
+
+  it('finds the data hooks that live beside their UI', () => {
+    expect(hookFiles.map(file => path.relative(SRC, file))).toContain(
+      path.join('features', 'profile', 'screens', 'useMyReports.ts'),
+    );
   });
 
   it('leaves no returned member unread', () => {

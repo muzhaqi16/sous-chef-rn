@@ -82,6 +82,19 @@ const CASES: Case[] = [
     code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
     blocked: true,
   },
+  {
+    label: 'a screen reaching into the data layer',
+    filePath: 'src/features/profile/screens/MyReportsScreen.tsx',
+    code: `import { x } from '#/apollo/utils/settleMutation';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    // A display query belongs to its UI, and so does the hook that runs it.
+    label: 'a data hook beside the UI whose query it runs',
+    filePath: 'src/features/profile/screens/useMyReports.ts',
+    code: `import { x } from '#/apollo/utils/settleMutation';\n${VALUE_USE}`,
+    blocked: false,
+  },
 ];
 
 /**

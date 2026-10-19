@@ -98,6 +98,29 @@ const BOUNDARY_POLICIES = [
   },
 ];
 
+// ── The data layer stays out of what renders ──
+const DATA_LAYER_ZONE = {
+  target: [
+    './src/features/*/screens/**',
+    './src/features/*/components/**',
+    './src/features/*/ui/**',
+    './src/screens/**',
+    './src/components/**',
+  ],
+  from: './src/apollo',
+  message:
+    "A screen, sheet or list cell must not import the data layer. Move the cache read/write into a hook in the feature's hooks/ directory, or one beside the UI that owns its query, and return plain values and callbacks. See CLAUDE.md and openspec data-layer-boundary.",
+};
+
+/**
+ * A data hook beside the UI whose query it runs: a display query belongs to
+ * that UI, so its hook does too. It is held to the feature-hook rules, and the
+ * data-layer zone does not apply to it.
+ */
+const COLOCATED_DATA_HOOKS = [
+  'src/features/*/{screens,components,ui}/**/use*.{ts,tsx}',
+];
+
 const BOUNDARY_ZONES = [
   // ── Composition direction inside the kit ──
   //
@@ -134,20 +157,13 @@ const BOUNDARY_ZONES = [
       'A molecule composes atoms. Importing an organism inverts the composition order — move the consumer up to organisms/. See src/components/atoms/README.md.',
   },
 
-  // ── The data layer stays out of what renders ──
-  {
-    target: [
-      './src/features/*/screens/**',
-      './src/features/*/components/**',
-      './src/features/*/ui/**',
-      './src/screens/**',
-      './src/components/**',
-    ],
-    from: './src/apollo',
-    message:
-      "A screen, sheet or list cell must not import the data layer. Move the cache read/write into a hook in the feature's hooks/ directory and return plain values and callbacks. See CLAUDE.md and openspec data-layer-boundary.",
-  },
+  DATA_LAYER_ZONE,
 ];
+
+/** Every zone but the data layer's, for `COLOCATED_DATA_HOOKS`. */
+const COLOCATED_DATA_HOOK_ZONES = BOUNDARY_ZONES.filter(
+  zone => zone !== DATA_LAYER_ZONE,
+);
 
 // ── Layers ──
 //
@@ -233,6 +249,8 @@ const ENFORCED_CORE_PATTERNS = LAYERS.filter(
 
 module.exports = {
   BOUNDARY_ZONES,
+  COLOCATED_DATA_HOOKS,
+  COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
   LAYER_FILES,

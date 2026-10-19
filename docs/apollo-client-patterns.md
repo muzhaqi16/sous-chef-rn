@@ -24,10 +24,14 @@ This document defines the standardized patterns for using Apollo Client in this 
 
 ## The data layer stays out of what renders
 
-A screen, sheet or list cell gets its data from a hook in its feature's `hooks/`.
-It does not import `#/apollo/*` or `@apollo/client`'s operation hooks, hold the
-client, or write the cache; an `import/no-restricted-paths` zone in `eslint/`
-bans the `src/apollo/**` import.
+A screen, sheet or list cell gets its data from a hook in its feature's `hooks/`,
+or from one beside it when the query is that UI's own: a display query spreads
+the fragments its screen's components own, so the query and the hook that runs
+it live with that screen (`COLOCATED_DATA_HOOKS` in `eslint/boundaries.js`).
+What renders does not import `#/apollo/*` or `@apollo/client`'s operation hooks,
+hold the client, or write the cache; an `import/no-restricted-paths` zone in
+`eslint/` bans the `src/apollo/**` import everywhere but those hooks, which the
+feature-hook rules hold instead.
 
 What a hook HANDS BACK matters as much as what a screen imports: a leaked
 `ApolloError` or `NetworkStatus` couples a screen that imports nothing. A hook
@@ -485,12 +489,12 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event             | Fires when                                                       |
-| ----------------- | ---------------------------------------------------------------- |
+| Event             | Fires when                                                        |
+| ----------------- | ----------------------------------------------------------------- |
 | `appForeground`   | The `appLifecycle` port goes from background/inactive to `active` |
-| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)     |
-| `wsReconnected`   | `onWebSocketReconnected`                                         |
-| `languageChanged` | The resolved language really changes; after one, each navigation |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)      |
+| `wsReconnected`   | `onWebSocketReconnected`                                          |
+| `languageChanged` | The resolved language really changes; after one, each navigation  |
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is
