@@ -143,9 +143,7 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
       mealPlanItem {
         id
         ...MealPlanItemReaders
-        ...MealPlanItemCard_item
         ...DailyMeals_item
-        ...MealPlanMain_item
         ...MealPlanItemActions_item
       }
       mealPlan {
@@ -174,9 +172,7 @@ mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
       mealPlanItem {
         id
         ...MealPlanItemReaders
-        ...MealPlanItemCard_item
         ...DailyMeals_item
-        ...MealPlanMain_item
         ...MealPlanItemActions_item
       }
       mealPlan {

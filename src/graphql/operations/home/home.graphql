@@ -124,21 +124,7 @@ mutation CreateHome($input: CreateHomeInput!) {
       home {
         id
         ...HomeReaders
-        pantriesConnection(first: 10) {
-          edges {
-            node {
-              id
-              name
-              isDefault
-            }
-          }
-          totalCount
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
-        ...HomeCard_home
+        ...home_listed
       }
     }
     ... on Error {
@@ -238,8 +224,7 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
           edges {
             node {
               id
-              role
-              ...HomeMemberCard_member
+              ...MembershipReaders
             }
           }
           totalCount
@@ -294,8 +279,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     ... on InviteToHomePayload {
       homeInvite {
         id
-        ...InviteCard_invite
-        ...HomeInviteCard_invite
+        ...HomeInviteReaders
       }
     }
     ... on Error {
@@ -323,26 +307,8 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
         home {
           id
           ...HomeReaders
-          pantriesConnection(first: 10) {
-            edges {
-              node {
-                id
-                name
-                isDefault
-              }
-            }
-            totalCount
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-          }
-          membersConnection(first: 5) {
-            totalCount
-          }
-          ...HomeCard_home
+          ...home_listed
         }
-        ...HomeMemberCard_member
       }
       # The list the invite names, joined with the home: written like any read
       # of it, so the lists tab shows it before its own query runs.
@@ -394,7 +360,6 @@ mutation UpdateMembership($input: UpdateMembershipInput!) {
       membership {
         id
         ...MembershipReaders
-        ...HomeMemberCard_member
       }
     }
     ... on Error {
@@ -466,30 +431,12 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
       membership {
         id
         ...MembershipReaders
-        ...HomeMemberCard_member
         homeId
       }
       home {
         id
         ...HomeReaders
-        pantriesConnection(first: 10) {
-          edges {
-            node {
-              id
-              name
-              isDefault
-            }
-          }
-          totalCount
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
-        membersConnection(first: 5) {
-          totalCount
-        }
-        ...HomeCard_home
+        ...home_listed
       }
       # The list the join code names, joined with the home.
       landingShoppingList {

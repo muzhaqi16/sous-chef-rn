@@ -193,7 +193,6 @@ mutation OpenCatalogRecipe(
         id
         ...RecipeReaders
         ...useRecipeData_recipe
-        ...RecipeForm_recipe
       }
       created
     }
@@ -215,7 +214,6 @@ mutation UpdateRecipe($input: UpdateRecipeInput!, $ingredientsFirst: Int!) {
         id
         ...RecipeReaders
         ...useRecipeData_recipe
-        ...RecipeForm_recipe
         ingredientsConnection(first: $ingredientsFirst) {
           edges {
             node {
