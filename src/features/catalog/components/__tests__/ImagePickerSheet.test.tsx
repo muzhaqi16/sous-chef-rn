@@ -7,7 +7,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},

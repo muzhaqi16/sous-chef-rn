@@ -6,7 +6,7 @@ import {
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
-import type { HookReturn } from '#hooks/types';
+import type { HookReturn } from '#hooks/utils/types';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 
 /** `useRecipeTags` watches the same page, so the first request is shared. */

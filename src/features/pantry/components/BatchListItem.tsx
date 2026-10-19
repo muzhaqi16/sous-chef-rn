@@ -20,7 +20,7 @@ import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useDataPreloading } from '#/hooks/useDataPreloading';
+import { useDataPreloading } from '#/hooks/data/useDataPreloading';
 import { useOfflineTabPreloading } from '#/app/useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';

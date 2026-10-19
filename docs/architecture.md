@@ -4,6 +4,7 @@ How Sous Chef is built and organized. This is the orientation document — read
 it first, then follow the links into the deep dives.
 
 - [The shape of the app](#the-shape-of-the-app)
+- [Layers](#layers)
 - [Feature modules](#feature-modules)
 - [State: two systems, one rule](#state-two-systems-one-rule)
 - [The data layer](#the-data-layer)
@@ -44,6 +45,35 @@ That goal drives most of the architectural choices below.
 │  GraphQL API  (HTTP + WebSocket)                        │
 └─────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Layers
+
+Every production file in `src/` belongs to one of two layers:
+
+- **core** runs without React Native. It holds the data layer, state, copy and
+  domain logic, and is what a second host (the web app) shares.
+- **mobile** is the React Native app: screens, components, navigation, device
+  services and the composition root.
+
+| Core                                                                                                                                                                                      | Mobile                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                                | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `storage`, `styles` |
+| `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance}`, `NavigationService.ts`                        |
+| `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
+| `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
+| `features/*/{hooks,cache,offline,graphql,utils,store,locales,constants}`, `manifest.static.ts`, `types.ts`, `pushCopy.ts`, and `features/{registry.static,registry.cache,staticTypes}.ts` | `features/*/{screens,components,ui,context}`, `manifest.ts`, `testIDs.ts`, and `features/{registry,types}.ts` |
+
+**Classify by folder; move only what mixes.** A file takes its layer from where
+it sits, so a new file needs no registration, and a file that would need an
+exception moves to the folder of its layer instead. `src/hooks/` has no files at
+its top level for that reason.
+
+The map lives in `scripts/lib/layers.js`, the one copy lint, Jest and scripts
+read. `__tests__/architecture/layerMembership.test.ts` fails when a file matches
+no entry or two, naming the file. Each entry carries an `enforced` flag, set
+once its area imports nothing from mobile; it never turns back off.
 
 ---
 

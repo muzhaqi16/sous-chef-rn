@@ -8,9 +8,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { withUnistyles } from 'react-native-unistyles';
 import { NavigationContext } from '@react-navigation/native';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
+import { useSharedBottomSheetConfigs } from '#hooks/ui/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
+import { useBottomSheetBackdropClaim } from '#hooks/ui/useBottomSheetBackdropClaim';
 import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 const ThemedModalShell = withUnistyles(GorhomBottomSheetModal, theme => ({

@@ -9,7 +9,7 @@ import {
   BottomSheetModal,
   useStandardBottomSheet,
   type UseStandardBottomSheetOptions,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';

@@ -5,7 +5,7 @@ import { WriteReviewSheet } from '../../../src/features/recipes/components/Write
 import { renderWithApollo, seedCache } from '../../helpers/apolloMockProvider';
 import { WriteReviewSheet_ReviewFragmentDoc } from '#features/recipes/components/WriteReviewSheet.generated';
 
-jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
+jest.mock('../../../src/hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },
     modalProps: {},

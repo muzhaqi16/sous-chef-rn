@@ -113,8 +113,8 @@ describe('ShoppingListTutorialProvider — Detox suppression', () => {
   it('never starts once feature hints are suppressed for E2E', () => {
     jest.useFakeTimers();
     const { suppressFeatureHintsForE2E } = jest.requireActual<
-      typeof import('#hooks/useFeatureHint')
-    >('#hooks/useFeatureHint');
+      typeof import('#hooks/settings/useFeatureHint')
+    >('#hooks/settings/useFeatureHint');
     suppressFeatureHintsForE2E();
 
     const { result } = renderHook(() => useShoppingListTutorialState(), {

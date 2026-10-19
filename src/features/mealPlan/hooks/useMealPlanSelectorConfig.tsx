@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';

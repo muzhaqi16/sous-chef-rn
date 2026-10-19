@@ -6,7 +6,7 @@ import type {
   ItemUnitInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import type { ImageFile } from '#hooks/useImageUpload';
+import type { ImageFile } from '#hooks/device/useImageUpload';
 import { useStore } from '#store';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { refByIdOrName } from '#/utils/refInput';

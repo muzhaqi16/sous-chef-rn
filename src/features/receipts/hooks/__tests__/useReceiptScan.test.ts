@@ -15,7 +15,7 @@ import {
   type ReceiptLineLabels,
 } from '#/native/ReceiptStructuring';
 import { LABELLING_TIMEOUT_MS } from '../../utils/onDeviceStructuring';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
@@ -37,12 +37,12 @@ jest.mock('#/native/TextRecognition', () => ({
   },
 }));
 const mockUploadUnconfirmed = jest.fn();
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/device/useImageUpload', () => ({
   useImageUpload: () => ({ uploadUnconfirmed: mockUploadUnconfirmed }),
 }));
 const mockTakePhoto = jest.fn();
 const mockPickPhoto = jest.fn();
-jest.mock('#hooks/usePhotoCapture', () => ({
+jest.mock('#hooks/device/usePhotoCapture', () => ({
   usePhotoCapture: () => ({
     takePhoto: mockTakePhoto,
     pickPhoto: mockPickPhoto,
@@ -58,7 +58,9 @@ jest.mock('@muzhaqi16/receipt-rules', () => ({
   dateOrderOf: jest.fn(),
 }));
 // `deviceReceiptModel`, the only flag the hook reads.
-jest.mock('#hooks/useFeatureFlag', () => ({ useFeatureFlag: jest.fn() }));
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
+  useFeatureFlag: jest.fn(),
+}));
 
 const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);

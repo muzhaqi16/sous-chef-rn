@@ -12,7 +12,7 @@ import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';
 import { format } from 'date-fns';
 
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
 

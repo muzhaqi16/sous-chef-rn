@@ -11,16 +11,16 @@ import {
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { useStore } from '#store';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StoreAutocompleteField } from '../StoreAutocompleteField';
 
 jest.mock('#/services/errorService');
 // Spied, not replaced: the picker's `visible` is what the person sees, and the
 // gorhom mock renders the sheet's content whether it is presented or not.
-jest.mock('#hooks/useStandardBottomSheet', () => {
+jest.mock('#hooks/ui/useStandardBottomSheet', () => {
   const actual = jest.requireActual<
-    typeof import('#hooks/useStandardBottomSheet')
-  >('#hooks/useStandardBottomSheet');
+    typeof import('#hooks/ui/useStandardBottomSheet')
+  >('#hooks/ui/useStandardBottomSheet');
   return {
     ...actual,
     useStandardBottomSheet: jest.fn(actual.useStandardBottomSheet),

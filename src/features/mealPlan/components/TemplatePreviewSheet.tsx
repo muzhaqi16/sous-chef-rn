@@ -11,9 +11,9 @@ import {
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/atoms/FormInput';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';

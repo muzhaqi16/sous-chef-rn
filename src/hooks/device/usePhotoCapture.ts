@@ -16,7 +16,7 @@ import {
   validateImageFile,
   type ImageValidationError,
 } from '#utils/imageValidation';
-import { imageErrorMessage } from '#hooks/useImageUpload';
+import { imageErrorMessage } from '#hooks/device/useImageUpload';
 import type { ImageFile } from '#/types/media';
 
 const CAPTURE_OPTIONS: CameraOptions = {

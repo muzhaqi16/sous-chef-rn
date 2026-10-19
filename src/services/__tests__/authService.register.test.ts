@@ -55,7 +55,9 @@ jest.mock(
 jest.mock('#/services/auth/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
-jest.mock('#/hooks/useFeatureHint', () => ({ incrementLoginCount: jest.fn() }));
+jest.mock('#/hooks/settings/useFeatureHint', () => ({
+  incrementLoginCount: jest.fn(),
+}));
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
 }));

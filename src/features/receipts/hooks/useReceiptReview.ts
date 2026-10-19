@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { errorService } from '#/services/errorService';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';

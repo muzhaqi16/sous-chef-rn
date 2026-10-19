@@ -12,8 +12,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {

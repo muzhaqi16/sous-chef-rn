@@ -6,7 +6,7 @@ import type { FragmentType } from '@apollo/client/masking';
 import type { MealTemplateDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
-import type { HookReturn } from '#hooks/types';
+import type { HookReturn } from '#hooks/utils/types';
 
 interface UseMealTemplatesOptions {
   category?: TemplateCategory;

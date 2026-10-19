@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useOverlayBackdropOptional } from '#components/providers/OverlayBackdropProvider';
-import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
+import { useSheetBackdropOpacity } from '#hooks/ui/useSheetBackdropOpacity';
 
 interface DismissableRef {
   dismiss: () => void;

@@ -3,7 +3,7 @@ import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { logger } from '#/utils/environment';
-import type { PaginationState } from '#hooks/types';
+import type { PaginationState } from '#hooks/utils/types';
 
 /**
  * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables })`.

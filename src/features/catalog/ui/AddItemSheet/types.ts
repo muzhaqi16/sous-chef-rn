@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
+import type { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet';
 import type { SearchBarRef } from '#components/molecules/SearchBar';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';

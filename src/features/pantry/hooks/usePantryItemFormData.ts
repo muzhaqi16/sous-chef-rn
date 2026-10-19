@@ -8,7 +8,7 @@ import { PantryItemForm_PantryItemFragmentDoc } from '#features/pantry/component
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;

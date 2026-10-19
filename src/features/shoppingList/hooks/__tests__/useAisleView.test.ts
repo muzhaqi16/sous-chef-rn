@@ -8,12 +8,12 @@ import {
   StoreDepartment,
   StoreRouteSource,
 } from '#/graphql/generated/schemaTypes';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { AisleViewRouteDocument } from '../useAisleView.generated';
 import { useAisleView } from '../useAisleView';
 
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 

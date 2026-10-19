@@ -18,7 +18,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';

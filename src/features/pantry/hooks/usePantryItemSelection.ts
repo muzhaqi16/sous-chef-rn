@@ -8,7 +8,7 @@ import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePant
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 interface ExistingPantryIndex {
   /** catalog id -> the pantry row's id */

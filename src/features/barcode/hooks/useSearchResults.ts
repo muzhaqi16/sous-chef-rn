@@ -19,7 +19,7 @@ import type { ScannedItem } from '#features/barcode/types';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
-import { useImageUpload } from '#hooks/useImageUpload';
+import { useImageUpload } from '#hooks/device/useImageUpload';
 import {
   mapFormToCreateItemInput,
   stashPendingFormImages,

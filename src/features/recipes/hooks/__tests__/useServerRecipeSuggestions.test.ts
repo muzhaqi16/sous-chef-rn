@@ -8,7 +8,7 @@ import {
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
 
-jest.mock('#hooks/useToday', () => ({
+jest.mock('#hooks/app/useToday', () => ({
   useToday: () => '2026-10-14',
 }));
 

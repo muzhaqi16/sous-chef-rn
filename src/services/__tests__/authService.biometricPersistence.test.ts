@@ -101,7 +101,7 @@ jest.mock('#/services/push/pushTokenProvider', () => ({
   onPushTokenRefresh: () => jest.fn(),
 }));
 
-jest.mock('#/hooks/useFeatureHint', () => ({
+jest.mock('#/hooks/settings/useFeatureHint', () => ({
   incrementLoginCount: jest.fn(),
   resetAllFeatureHints: jest.fn(),
 }));

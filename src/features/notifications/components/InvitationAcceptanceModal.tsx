@@ -18,7 +18,7 @@ import {
 } from '#features/notifications/hooks/useInvitationActions';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';

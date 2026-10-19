@@ -3,7 +3,7 @@ import type { ViewProps } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},

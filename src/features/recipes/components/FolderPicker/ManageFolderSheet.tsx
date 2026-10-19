@@ -10,7 +10,7 @@ import {
 import {
   BottomSheetModal,
   type BottomSheetModalRef,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   OnPrimaryActivityIndicator,

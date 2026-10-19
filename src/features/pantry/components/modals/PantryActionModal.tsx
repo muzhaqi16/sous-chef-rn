@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';

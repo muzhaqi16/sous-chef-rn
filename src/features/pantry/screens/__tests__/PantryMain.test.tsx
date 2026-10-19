@@ -170,8 +170,8 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
 // the app imports another of its exports — `useTutorialSequence` now calls
 // `hasFeatureHintBeenShown`, and this mock omitting it failed all 22 tests here
 // with "is not a function".
-jest.mock('#hooks/useFeatureHint', () => ({
-  ...jest.requireActual('#hooks/useFeatureHint'),
+jest.mock('#hooks/settings/useFeatureHint', () => ({
+  ...jest.requireActual('#hooks/settings/useFeatureHint'),
   useFeatureHint: () => ({
     isVisible: false,
     hasBeenShown: true,

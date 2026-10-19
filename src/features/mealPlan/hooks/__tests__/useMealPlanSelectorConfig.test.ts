@@ -21,7 +21,7 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 
 // The device's calendar day, pinned.
 const TODAY = '2026-03-10';
-jest.mock('#hooks/useToday', () => ({ useToday: () => '2026-03-10' }));
+jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-03-10' }));
 
 const displayPlan = (
   id: string,

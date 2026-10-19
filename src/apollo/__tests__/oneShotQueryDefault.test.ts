@@ -50,7 +50,7 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     'reads back the entity an event just named',
   'services/auth/deviceRegistration.ts':
     'device rows decide registration; a stale read re-registers',
-  'hooks/useDataPreloading.ts':
+  'hooks/data/useDataPreloading.ts':
     'a time-to-live refresh; a cached answer must not be stamped fresh',
   'features/catalog/hooks/useUnitAutocomplete.ts':
     'a time-to-live refresh; a cached answer must not be stamped fresh',

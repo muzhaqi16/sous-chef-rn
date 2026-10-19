@@ -18,7 +18,7 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { incrementLoginCount } from '#/hooks/useFeatureHint';
+import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
   ExchangeDeviceCredentialDocument,

@@ -17,7 +17,7 @@ type PagerViewMockProps = {
 };
 type PagerViewMockRef = React.Ref<{ setPage: (page: number) => void }>;
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},

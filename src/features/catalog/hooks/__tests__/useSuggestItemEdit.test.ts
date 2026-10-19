@@ -27,7 +27,7 @@ const mockUploadItemImages = jest
 // path runs no mutation, so it is the only thing that can gate the submit
 // button while bytes are in flight.
 let mockUploading = false;
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/device/useImageUpload', () => ({
   useImageUpload: () => ({
     uploadItemImages: mockUploadItemImages,
     get uploading() {

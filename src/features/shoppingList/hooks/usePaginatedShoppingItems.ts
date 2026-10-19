@@ -13,7 +13,7 @@ import {
 } from '#hooks/utils/useConnectionData';
 import { errorService } from '#/services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
-import type { HookReturn } from '#hooks/types';
+import type { HookReturn } from '#hooks/utils/types';
 
 /**
  * Carries inline meta fields for direct hook-layer access plus the masked

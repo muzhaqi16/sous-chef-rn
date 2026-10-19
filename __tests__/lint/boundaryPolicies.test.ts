@@ -64,7 +64,7 @@ const CASES: Case[] = [
   },
   {
     label: "shared code reaching into a feature's utils",
-    filePath: 'src/hooks/useAppearance.ts',
+    filePath: 'src/hooks/ui/useAppearance.ts',
     code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
     blocked: true,
   },

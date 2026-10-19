@@ -4,7 +4,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { TemplateBrowserSheet } from '../../../src/features/mealPlan/components/TemplateBrowserSheet';
 
-jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
+jest.mock('../../../src/hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },
     modalProps: {},

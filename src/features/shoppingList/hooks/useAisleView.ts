@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { StoreRouteSource } from '#/graphql/generated/schemaTypes';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import type {
   ShoppingListEntry,
   ShoppingListRowItem,

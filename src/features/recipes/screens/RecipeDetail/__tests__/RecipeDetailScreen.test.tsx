@@ -28,7 +28,7 @@ const pressMenuAction = (testID: string) => {
 };
 
 // Capture's review banner has its own suite; this one renders without Apollo.
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: () => false,
 }));
 

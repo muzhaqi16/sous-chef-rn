@@ -15,12 +15,12 @@ import type {
 } from '../types';
 
 // Mock useSharedBottomSheetConfigs
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
 }));
 
 // Mock useBottomSheetBackHandler
-jest.mock('#hooks/useBottomSheetBackHandler', () => ({
+jest.mock('#hooks/ui/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 

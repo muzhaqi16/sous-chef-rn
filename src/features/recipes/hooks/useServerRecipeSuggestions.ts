@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import type { DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   RecipeSuggestionsDocument,

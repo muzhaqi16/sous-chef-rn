@@ -40,7 +40,7 @@ jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
   useTabBarAddMenu: jest.fn(),
 }));
 
-jest.mock('#hooks/useFeatureHint', () => ({
+jest.mock('#hooks/settings/useFeatureHint', () => ({
   useFeatureHint: jest.fn(() => ({
     isVisible: false,
     hasBeenShown: false,

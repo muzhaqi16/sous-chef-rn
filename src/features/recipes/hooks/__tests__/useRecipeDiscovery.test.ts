@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import {
@@ -7,7 +7,7 @@ import {
   type SpoonacularDiscoveryResult,
 } from '../useSpoonacularDiscovery';
 
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 jest.mock('../useServerRecipeSuggestions', () => ({

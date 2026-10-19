@@ -10,7 +10,7 @@ import type {
   PantrySortDirection,
   PantrySortOption,
 } from '#store/slices/preferenceTypes';
-import { suppressFeatureHintsForE2E } from '#/hooks/useFeatureHint';
+import { suppressFeatureHintsForE2E } from '#/hooks/settings/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';

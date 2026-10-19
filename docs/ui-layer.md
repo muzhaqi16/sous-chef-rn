@@ -202,7 +202,7 @@ they read it.
   change can hand a host elements carrying the old theme's colours. Unistyles
   updates MOUNTED views natively, but corrects a snapshot at mount only inside a
   scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
-  the next theme change. The sheet wrapper (`#hooks/useStandardBottomSheet`,
+  the next theme change. The sheet wrapper (`#hooks/ui/useStandardBottomSheet`,
   which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
   (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
   `children` on its own open state adds it. A component rendering its own JSX
@@ -347,7 +347,7 @@ they read it.
 
 - **`BottomSheetModal`, never inline `BottomSheet`.** An inline sheet's backdrop
   conflicts with the global backdrop below.
-  `useStandardBottomSheet` (`src/hooks/useStandardBottomSheet.tsx`) drives it
+  `useStandardBottomSheet` (`src/hooks/ui/useStandardBottomSheet.tsx`) drives it
   with a `visible` boolean and `onDismiss`; `present()`/`dismiss()` are called
   only inside the hook's own effects. It re-exports `BottomSheetModal`
   theme-wrapped, composes the backdrop claim into `modalProps.onChange`, and

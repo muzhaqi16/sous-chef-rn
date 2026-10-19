@@ -8,14 +8,14 @@ import type { ReceiptDraft } from '../../store/receiptDraftStore';
 import type { ReceiptScanStatus } from '../../hooks/useReceiptScan';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { ReceiptScanScreen } from '../ReceiptScanScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: jest.fn(), toReceiptReview: jest.fn() }),
 }));
 
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 

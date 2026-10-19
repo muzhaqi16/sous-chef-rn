@@ -26,7 +26,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/foundations/motion';

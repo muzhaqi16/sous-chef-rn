@@ -56,7 +56,7 @@ import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItem
 import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
 import type { RecipeInformation } from '#/services/spoonacular/types';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.

@@ -7,7 +7,7 @@ import {
   type BottomSheetModalRef,
 } from '../useStandardBottomSheet';
 import { createFakeBottomSheetModal } from '#/test-utils/gorhomModalStateMachine';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 
 // Track present/dismiss calls on the BottomSheetModal ref
 const mockPresent = jest.fn();
@@ -31,11 +31,11 @@ const attachRefMocks = (
 // mocks above can't see. Reused across sheet tests via the reopen invariant.
 
 // Mock the hooks this depends on
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
 
-jest.mock('#hooks/useBottomSheetBackHandler', () => ({
+jest.mock('#hooks/ui/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 

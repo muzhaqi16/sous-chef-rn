@@ -6,7 +6,7 @@ import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPla
 import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},

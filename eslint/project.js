@@ -459,14 +459,14 @@ const overrides = [
   {
     // The gorhom re-export site and its circular-import helper.
     files: [
-      'src/hooks/useStandardBottomSheet.tsx',
-      'src/hooks/useBottomSheetBackHandler.ts',
+      'src/hooks/ui/useStandardBottomSheet.tsx',
+      'src/hooks/ui/useBottomSheetBackHandler.ts',
     ],
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: {
           '@gorhom/bottom-sheet': true,
-          '#hooks/useBottomSheetBackdropClaim': true,
+          '#hooks/ui/useBottomSheetBackdropClaim': true,
         },
         add: [
           {
@@ -715,9 +715,9 @@ const overrides = [
     // points callers at. FolderPicker hands off between two STACKED sheets in
     // an order a `visible` boolean cannot express.
     files: [
-      'src/hooks/useStandardBottomSheet.tsx',
-      'src/hooks/useBottomSheetBackHandler.ts',
-      'src/hooks/useBottomSheetBackdropClaim.ts',
+      'src/hooks/ui/useStandardBottomSheet.tsx',
+      'src/hooks/ui/useBottomSheetBackHandler.ts',
+      'src/hooks/ui/useBottomSheetBackdropClaim.ts',
       'src/components/templates/ActionTray/ActionTray.tsx',
       'src/features/recipes/components/FolderPicker.tsx',
     ],

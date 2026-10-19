@@ -1,4 +1,4 @@
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 
 /**
  * The capture sources this user may start, each switched on its own. `any`

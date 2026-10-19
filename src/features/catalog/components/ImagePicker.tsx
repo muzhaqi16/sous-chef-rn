@@ -5,7 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { usePhotoCapture } from '#hooks/usePhotoCapture';
+import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { ImagePickerSheet } from '#features/catalog/components/ImagePickerSheet';
 import { Text } from '#components/atoms/Text';
 import type { ImageFile } from '#/types/media';

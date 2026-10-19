@@ -40,7 +40,7 @@ const selectorFor = (id: string) =>
  */
 const ALLOWED_DROPS: Record<string, string[]> = {
   'src/utils/parseDecimalInput.ts': ['parseFloat'],
-  'src/hooks/useStandardBottomSheet.tsx': ['imperativeSheet'],
+  'src/hooks/ui/useStandardBottomSheet.tsx': ['imperativeSheet'],
 };
 
 const base = project.base.rules[RULE];

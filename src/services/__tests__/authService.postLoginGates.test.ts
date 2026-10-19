@@ -71,7 +71,9 @@ jest.mock('#/services/auth/credentials', () => ({
 jest.mock('#/services/auth/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
-jest.mock('#/hooks/useFeatureHint', () => ({ incrementLoginCount: jest.fn() }));
+jest.mock('#/hooks/settings/useFeatureHint', () => ({
+  incrementLoginCount: jest.fn(),
+}));
 jest.mock('#/apollo/logoutCleanup', () => ({
   LogoutCleanup: {
     performLogoutCleanup: jest.fn().mockResolvedValue(undefined),

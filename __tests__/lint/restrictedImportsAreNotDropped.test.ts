@@ -48,10 +48,10 @@ const bannedPairs = (rule: RuleConfig) => [
  * standing in for an input. Each entry states which file set allows what.
  */
 const ALLOWED_DROPS: Record<string, string[]> = {
-  'src/hooks/useStandardBottomSheet.tsx': [
+  'src/hooks/ui/useStandardBottomSheet.tsx': [
     '@gorhom/bottom-sheet#BottomSheetModal',
     '@gorhom/bottom-sheet#BottomSheetTextInput',
-    '#hooks/useBottomSheetBackdropClaim#*',
+    '#hooks/ui/useBottomSheetBackdropClaim#*',
   ],
   '**/__tests__/**/*.{ts,tsx}': [
     'react-native#TextInput',

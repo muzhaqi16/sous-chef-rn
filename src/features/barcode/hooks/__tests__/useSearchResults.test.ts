@@ -46,7 +46,7 @@ jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
 const mockUploadItemImages = jest.fn(
   async (): Promise<Array<{ imageUrl: string }>> => [],
 );
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/device/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({
     uploadItemImage: jest.fn(),
     uploadItemImages: mockUploadItemImages,

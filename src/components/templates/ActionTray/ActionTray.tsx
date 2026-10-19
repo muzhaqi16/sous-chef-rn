@@ -24,12 +24,12 @@ import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { BarActions } from '#components/molecules/BarActions';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import {
   BottomSheetModal,
   type BottomSheetModalRef,
-} from '#hooks/useStandardBottomSheet';
-import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
+} from '#hooks/ui/useStandardBottomSheet';
+import { useSheetBackdropOpacity } from '#hooks/ui/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 import { useTranslation } from '#/i18n';
