@@ -52,23 +52,6 @@ jest.mock('#domain/nutrition', () => ({
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/performance/useScreenTransition');
-jest.mock('#components/molecules/ClickableInfoPanel', () => ({
-  ClickableInfoPanel: ({
-    title,
-    emptyMessage,
-  }: {
-    title: string;
-    emptyMessage?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        {emptyMessage ? <Text>{emptyMessage}</Text> : null}
-      </View>
-    );
-  },
-}));
 jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
@@ -402,6 +385,25 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() =>
       expect(screen.getByText('Purchase History')).toBeTruthy(),
     );
+  });
+
+  it("dates the most recent purchase by a receipt's printed day", async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseHistory: {
+              __typename: 'PurchaseHistorySummary',
+              previouslyPurchased: true,
+              purchaseCount: 1,
+              lastPurchaseDate: '2026-10-17T00:00:00Z',
+            },
+          }),
+        ),
+      ],
+    });
+    expect(await screen.findByText('Oct 17, 2026')).toBeTruthy();
   });
 
   it('shows the loading state while nothing is cached or answered', () => {

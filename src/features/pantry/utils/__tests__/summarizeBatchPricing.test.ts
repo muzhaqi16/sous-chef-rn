@@ -24,6 +24,7 @@ const batch = (
     wasteReason: null,
     pantryItemId: 'pi1',
     store: null,
+    purchase: null,
     ...overrides,
   } as PantryItemBatchFragment);
 
@@ -189,5 +190,56 @@ describe('which acquisition is the newest', () => {
 
     expect(after.lastPurchase?.date).toBe(before.lastPurchase?.date);
     expect(after.lastPurchase?.totalCost).toBe(before.lastPurchase?.totalCost);
+  });
+
+  it('goes by the day the stock was bought, not the day it was recorded', () => {
+    // A receipt confirmed after a later shop is the older purchase.
+    const summary = summarizeBatchPricing([
+      batch({
+        id: 'receipt',
+        costPerUnit: 1.85,
+        totalCost: 1.85,
+        createdAt: '2026-10-19T09:00:00Z',
+        purchase: {
+          __typename: 'Purchase',
+          id: 'pu1',
+          purchaseDate: '2026-10-10T00:00:00Z',
+        },
+      }),
+      batch({
+        id: 'shop',
+        costPerUnit: 2,
+        totalCost: 4,
+        createdAt: '2026-10-15T18:30:00Z',
+        purchase: {
+          __typename: 'Purchase',
+          id: 'pu2',
+          purchaseDate: '2026-10-15T18:30:00Z',
+        },
+      }),
+    ]);
+
+    expect(summary.lastPurchase).toMatchObject({
+      date: '2026-10-15T18:30:00Z',
+      totalCost: 4,
+    });
+  });
+
+  it("dates the last purchase by its receipt's day", () => {
+    const summary = summarizeBatchPricing([
+      batch({
+        id: 'b1',
+        costPerUnit: 2.99,
+        totalCost: 2.99,
+        createdAt: '2026-10-19T09:00:00Z',
+        purchase: {
+          __typename: 'Purchase',
+          id: 'pu1',
+          purchaseDate: '2026-10-17T00:00:00Z',
+        },
+      }),
+    ]);
+
+    expect(summary.lastPurchase?.date).toBe('2026-10-17T00:00:00Z');
   });
 });

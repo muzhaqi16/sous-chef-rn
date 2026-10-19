@@ -146,6 +146,17 @@ describe('PurchaseHistoryScreen', () => {
     expect(await screen.findByText('2 kg')).toBeTruthy();
   });
 
+  // UTC midnight with no time of day; local time reads it as the day before
+  // west of UTC.
+  it("dates a receipt's purchase by its printed day alone", async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [
+        historyMock([{ ...purchase, purchaseDate: '2026-10-17T00:00:00Z' }]),
+      ],
+    });
+    expect(await screen.findByText('Oct 17, 2026')).toBeTruthy();
+  });
+
   it('renders the per-purchase price and spending summary', async () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([purchase])],

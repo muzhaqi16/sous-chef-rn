@@ -186,6 +186,23 @@ describe('fromDateKey', () => {
   });
 });
 
+describe('purchaseDay', () => {
+  it("reads a receipt's printed day as that day west of UTC, and a real instant as its local day", () => {
+    const [receipt, withMillis, instant] = inZone<[string, string, string]>(
+      'America/Los_Angeles',
+      `({ purchaseDay, toDateKey }) => [
+        toDateKey(purchaseDay('2026-10-17T00:00:00Z')),
+        toDateKey(purchaseDay('2026-10-17T00:00:00.000Z')),
+        toDateKey(purchaseDay('2026-10-17T03:00:00Z')),
+      ]`,
+    );
+
+    expect(receipt).toBe('2026-10-17');
+    expect(withMillis).toBe('2026-10-17');
+    expect(instant).toBe('2026-10-16');
+  });
+});
+
 describe('dayAsInstant', () => {
   // A phone in Paris whose account still holds New York: the API reads the
   // reminder's day there, six hours behind.

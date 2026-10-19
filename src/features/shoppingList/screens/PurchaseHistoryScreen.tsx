@@ -20,7 +20,8 @@ import {
   usePreferredCurrency,
   type FigureCurrency,
 } from '#/domain/money';
-import { formatDateTime } from '#/utils/formatters/date';
+import { formatDateTime, formatMonthDayYear } from '#/utils/formatters/date';
+import { isCalendarDayInstant, purchaseDay } from '#/utils/dateUtils';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
@@ -32,12 +33,11 @@ type RouteParams = {
   itemName: string;
 };
 
-// An `undefined` locale makes Intl use the device's own, so the field order
-// follows the reader rather than forcing US month-day.
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return formatDateTime(date);
-};
+// A receipt records its day and no time, so it shows as that day alone.
+const formatDate = (dateString: string) =>
+  isCalendarDayInstant(dateString)
+    ? formatMonthDayYear(purchaseDay(dateString))
+    : formatDateTime(new Date(dateString));
 
 // null for a missing/zero amount, so an auto-recorded purchase omits the row
 // rather than show "$0.00". Formatted from the ISO code, not `currencySymbol`,

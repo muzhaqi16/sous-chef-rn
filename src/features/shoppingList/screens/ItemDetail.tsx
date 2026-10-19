@@ -32,6 +32,7 @@ import {
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { purchaseDay } from '#/utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
@@ -187,7 +188,7 @@ export const ShoppingListItemDetail: React.FC<
         {
           label: t('shoppingListScreens.mostRecentPurchase'),
           value: purchaseHistory.lastPurchaseDate
-            ? formatDate(purchaseHistory.lastPurchaseDate)
+            ? formatMonthDayYear(purchaseDay(purchaseHistory.lastPurchaseDate))
             : 'N/A',
         },
       ]

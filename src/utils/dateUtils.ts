@@ -75,6 +75,17 @@ export const fromDateKey = (key: string): Date =>
   parse(key, 'yyyy-MM-dd', new Date());
 
 /**
+ * A receipt's purchase carries its printed day as UTC midnight: an instant with
+ * no time of day, which local time reads as the day before west of UTC.
+ */
+export const isCalendarDayInstant = (iso: string): boolean =>
+  /T00:00:00(?:\.0+)?Z$/.test(iso);
+
+/** The day a purchase was made: a receipt's printed day, else its local day. */
+export const purchaseDay = (iso: string): Date =>
+  isCalendarDayInstant(iso) ? fromDateKey(iso.slice(0, 10)) : new Date(iso);
+
+/**
  * A picked day as the instant to send where the API takes a `DateTime` and
  * reads its day in a time zone it holds: local noon is that day in every zone
  * within twelve hours of the phone's, local midnight the day before west of it.
