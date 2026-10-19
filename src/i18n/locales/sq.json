@@ -253,6 +253,7 @@
     "deleteAccount": "Vërtet dëshiron ta fshish llogarinë? Ky veprim nuk mund të zhbëhet.",
     "logout": "Vërtet dëshiron të dalësh?",
     "discardChanges": "Vërtet dëshiron t'i shpërfillësh ndryshimet?",
+    "discardChangesTitle": "T'i shpërfillësh ndryshimet?",
     "logoutWithPending_one": "Ke {{count}} ndryshim të pasinkronizuar. Dalja do ta heqë atë.",
     "logoutWithPending_other": "Ke {{count}} ndryshime të pasinkronizuara. Dalja do t'i heqë ato.",
     "deleteHomeTitle": "Fshi shtëpinë",

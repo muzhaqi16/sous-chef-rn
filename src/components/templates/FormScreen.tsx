@@ -1,7 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
+import { usePreventRemove } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from './Screen';
 
 interface FormScreenProps {
@@ -13,10 +17,31 @@ interface FormScreenProps {
   canSave?: boolean;
   /** False when the first child brings its own lead-in, as a tab strip does. */
   leadIn?: boolean;
+  /**
+   * While true, leaving by any route (close, back, a gesture) asks first. False
+   * once a save has landed, before the screen navigates away.
+   */
+  unsavedChanges?: boolean;
   children: React.ReactNode;
   testID?: string;
   submitButtonTestID?: string;
 }
+
+/** Mounted only for a form that opts in: the hook needs a navigator's route. */
+const DiscardChangesGuard: React.FC<{ active: boolean }> = ({ active }) => {
+  const { t } = useTranslation();
+  const { navigation } = useAppNavigation();
+  usePreventRemove(active, ({ data }) => {
+    alertService.alert(
+      t('confirmations.discardChangesTitle'),
+      t('confirmations.discardChanges'),
+      destructiveConfirm(t('labels.discard'), () =>
+        navigation.dispatch(data.action),
+      ),
+    );
+  });
+  return null;
+};
 
 /**
  * A full-screen form with close and confirm in the header. A `Screen` preset,
@@ -30,6 +55,7 @@ export const FormScreen: React.FC<FormScreenProps> = ({
   loading = false,
   canSave = true,
   leadIn = true,
+  unsavedChanges,
   children,
   testID,
   submitButtonTestID,
@@ -56,6 +82,9 @@ export const FormScreen: React.FC<FormScreenProps> = ({
         close: onClose,
       }}
     >
+      {unsavedChanges === undefined ? null : (
+        <DiscardChangesGuard active={unsavedChanges} />
+      )}
       <View style={styles.body}>{children}</View>
     </Screen>
   );

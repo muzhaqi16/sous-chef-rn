@@ -424,6 +424,7 @@ export function useRecipeForm() {
   return {
     state,
     errors: form.formState.errors,
+    isDirty: form.formState.isDirty,
     handleSubmit: form.handleSubmit,
     setError: form.setError,
     updateField,

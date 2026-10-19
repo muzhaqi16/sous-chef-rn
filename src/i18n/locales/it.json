@@ -253,6 +253,7 @@
     "deleteAccount": "Vuoi davvero eliminare il tuo account? Questa azione non può essere annullata.",
     "logout": "Vuoi davvero uscire?",
     "discardChanges": "Vuoi davvero annullare le modifiche?",
+    "discardChangesTitle": "Annullare le modifiche?",
     "logoutWithPending_one": "Hai {{count}} modifica non sincronizzata. Uscendo verrà eliminata.",
     "logoutWithPending_other": "Hai {{count}} modifiche non sincronizzate. Uscendo verranno eliminate.",
     "deleteHomeTitle": "Elimina casa",

@@ -97,6 +97,14 @@ export const RecipeFormScreen: React.FC<
   }, [captureId, captureDraft, captureLink, populateFromCapture]);
   const { settle: settleCapture } = useRecipeCaptureActions();
 
+  // A landed save leaves from an effect: by then the render has turned the
+  // discard guard off, which a `goBack` in the save handler would still meet.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (saved) goBack();
+  }, [saved, goBack]);
+  const unsavedChanges = form.isDirty && !saved;
+
   // A refusal naming a field the form renders a message for lands on it. An
   // edit made elsewhere since the form loaded offers to reload the form from it.
   const reportFailure = (failure: RecipeWriteFailure) => {
@@ -131,7 +139,7 @@ export const RecipeFormScreen: React.FC<
       if (isEditMode && recipeId) {
         const outcome = await updateRecipe(recipeId, form.buildUpdateInput());
         if (outcome.status === 'ok') {
-          goBack();
+          setSaved(true);
           return;
         }
         reportFailure(outcome.failure);
@@ -150,7 +158,7 @@ export const RecipeFormScreen: React.FC<
       if (outcome.status === 'ok') {
         // The capture it finished leaves the Recipes tab.
         if (captureId) settleCapture(captureId);
-        goBack();
+        setSaved(true);
         return;
       }
       reportFailure(outcome.failure);
@@ -222,6 +230,7 @@ export const RecipeFormScreen: React.FC<
         onClose={goBack}
         onSave={handleSave}
         loading={saving}
+        unsavedChanges={unsavedChanges}
         testID={recipesTestIDs.recipeFormScreen}
       >
         {/* Basic fields */}

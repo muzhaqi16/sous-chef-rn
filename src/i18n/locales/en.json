@@ -253,6 +253,7 @@
     "deleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "logout": "Are you sure you want to log out?",
     "discardChanges": "Are you sure you want to discard your changes?",
+    "discardChangesTitle": "Discard changes?",
     "logoutWithPending_one": "You have {{count}} change that hasn't synced yet. Signing out will discard it.",
     "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them.",
     "deleteHomeTitle": "Delete Home",

@@ -20,6 +20,7 @@ import {
 } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
@@ -40,11 +41,21 @@ jest.mock('#hooks/useFeatureFlag', () => ({
 jest.mock('#features/recipes/components/recipeForm/RecipeBasicFields', () => ({
   RecipeBasicFields: ({
     errors,
+    updateField,
   }: {
     errors?: { name?: { message?: string } };
+    updateField: (field: 'description', value: string) => void;
   }) => {
-    const { Text } = require('react-native');
-    return errors?.name?.message ? <Text>{errors.name.message}</Text> : null;
+    const { Text, Pressable } = require('react-native');
+    return (
+      <>
+        <Pressable
+          testID="edit-description"
+          onPress={() => updateField('description', 'Edited')}
+        />
+        {errors?.name?.message ? <Text>{errors.name.message}</Text> : null}
+      </>
+    );
   },
 }));
 jest.mock(
@@ -100,16 +111,19 @@ jest.mock('#components/templates/FormScreen', () => ({
     onSave,
     title,
     testID,
+    unsavedChanges,
   }: {
     children?: React.ReactNode;
     onSave: () => void;
     title: string;
     testID?: string;
+    unsavedChanges?: boolean;
   }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID={testID}>
         <Text>{title}</Text>
+        <Text testID="unsaved-changes">{String(unsavedChanges)}</Text>
         <Pressable testID="save-button" onPress={onSave}>
           <Text>Save</Text>
         </Pressable>
@@ -390,6 +404,37 @@ describe('RecipeFormScreen', () => {
         ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       });
       expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('asks before leaving only once the loaded recipe is edited', async () => {
+      const user = userEvent.setup();
+      const { getByTestId } = await renderEdit(false);
+      expect(getByTestId('unsaved-changes')).toHaveTextContent('false');
+
+      await user.press(getByTestId('edit-description'));
+
+      expect(getByTestId('unsaved-changes')).toHaveTextContent('true');
+    });
+
+    // The guard is off by the time the screen leaves, or it would ask about
+    // changes that were just saved.
+    it('leaves without asking once the save lands', async () => {
+      const user = userEvent.setup();
+      const { goBack } = useAppNavigation();
+      const guardAtLeave: string[] = [];
+      const { sent, getByTestId } = await renderEdit(false);
+      jest.mocked(goBack).mockImplementation(() => {
+        guardAtLeave.push(
+          String(getByTestId('unsaved-changes').props.children),
+        );
+      });
+
+      await user.press(getByTestId('edit-description'));
+      await user.press(getByTestId('save-button'));
+
+      await waitFor(() => expect(goBack).toHaveBeenCalledTimes(1));
+      expect(sent).toHaveLength(1);
+      expect(guardAtLeave).toEqual(['false']);
     });
 
     // `hasNextPage` on the one page the form reads: the form holds part of
