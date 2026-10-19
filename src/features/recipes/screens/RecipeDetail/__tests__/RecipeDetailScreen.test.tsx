@@ -1,13 +1,31 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { ModerationContentType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { RecipeDetail } from '../index';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { kitTestIDs } from '#components/testIDs';
 import type { ReportContentSheet } from '#features/profile/ui/ReportContentSheet';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+
+/** A header action, in the bar or in the "more" menu it overflowed into. */
+const headerAction = (testID: string) => {
+  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
+  if (more) fireEvent.press(more);
+  return screen.queryByTestId(testID);
+};
+
+/** Presses an overflowed action: its row runs once the menu has closed. */
+const pressMenuAction = (testID: string) => {
+  fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
+  fireEvent.press(screen.getByTestId(testID));
+  const { onDismiss } = screen.UNSAFE_getByProps({ detached: true }).props as {
+    onDismiss: () => void;
+  };
+  act(() => onDismiss());
+};
 
 // Capture's review banner has its own suite; this one renders without Apollo.
 jest.mock('#hooks/useFeatureFlag', () => ({
@@ -15,6 +33,7 @@ jest.mock('#hooks/useFeatureFlag', () => ({
 }));
 
 jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual<object>('@react-navigation/native'),
   useNavigation: jest.fn(() => ({
     navigate: jest.fn(),
     goBack: jest.fn(),
@@ -126,13 +145,6 @@ jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
 }));
 
 jest.mock('react-native-turbo-image', () => 'TurboImage');
-
-jest.mock('@gorhom/bottom-sheet', () => ({
-  BottomSheetFlatList: () => null,
-  BottomSheetTextInput: () => null,
-  BottomSheetModal: 'BottomSheetModal',
-  useBottomSheetScrollableCreator: jest.fn(() => () => null),
-}));
 
 // The screen reads its params through `useRecipeDetail`, which is mocked here.
 const route = { params: {} };
@@ -667,17 +679,12 @@ describe('RecipeDetail', () => {
     });
 
     it('offers no fork until its content is fetched', () => {
-      expect(
-        renderWithDetails('pending').queryByTestId(recipesTestIDs.forkButton),
-      ).toBeNull();
-      expect(
-        renderWithDetails('unavailable').queryByTestId(
-          recipesTestIDs.forkButton,
-        ),
-      ).toBeNull();
-      expect(
-        renderWithDetails('complete').getByTestId(recipesTestIDs.forkButton),
-      ).toBeTruthy();
+      renderWithDetails('pending');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
+      renderWithDetails('unavailable');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
+      renderWithDetails('complete');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
     });
 
     it('shows no notice once it is complete', () => {
@@ -756,8 +763,6 @@ describe('reporting a recipe from its detail screen', () => {
       backendRecipe: { id: 'recipe-1', createdBy },
     });
 
-  const reportButton = () => screen.queryByTestId(recipesTestIDs.reportButton);
-
   beforeEach(() => {
     useStore.setState({ user: VIEWER });
   });
@@ -769,10 +774,8 @@ describe('reporting a recipe from its detail screen', () => {
   it("opens the report for another user's recipe, naming it and its owner", () => {
     renderRecipe({ id: 'owner' });
 
-    const button = reportButton();
-    expect(button).toBeTruthy();
     expect(screen.queryByTestId('report-sheet')).toBeNull();
-    if (button) fireEvent.press(button);
+    pressMenuAction(recipesTestIDs.reportButton);
 
     expect(screen.getByTestId('report-sheet')).toHaveTextContent(
       JSON.stringify({
@@ -786,14 +789,14 @@ describe('reporting a recipe from its detail screen', () => {
   it("offers no report on the viewer's own recipe", () => {
     renderRecipe({ id: VIEWER.id });
 
-    expect(screen.getByTestId(recipesTestIDs.editButton)).toBeTruthy();
-    expect(reportButton()).toBeNull();
+    expect(headerAction(recipesTestIDs.editButton)).toBeTruthy();
+    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
   });
 
   it('offers no report on a catalog recipe, which nobody owns', () => {
     renderRecipe(null);
 
-    expect(screen.getByTestId(recipesTestIDs.forkButton)).toBeTruthy();
-    expect(reportButton()).toBeNull();
+    expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
+    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
   });
 });

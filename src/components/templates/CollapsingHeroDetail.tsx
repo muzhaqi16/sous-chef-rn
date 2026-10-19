@@ -26,6 +26,10 @@ import {
   HeaderActionIcon,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
+import {
+  HeaderActionMenu,
+  useHeaderOverflow,
+} from '#components/organisms/HeaderActionMenu';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
@@ -78,6 +82,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
 
 interface CollapsingHeroDetailProps {
   onBack: () => void;
+  /** Past three, the first two show and the rest open from "more". */
   actions?: HeaderAction[];
   /** Hidden at rest; fades in as the hero collapses, or as the large title
    *  scrolls under the bar on a no-hero screen. */
@@ -113,6 +118,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { barActions, menuRef, overflow } = useHeaderOverflow(actions);
   const hasHero = !!renderHero;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 
@@ -262,7 +268,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
                 signal too, not just the tab headers. Renders null when online,
                 leaving the chip row untouched. */}
             <OfflineStatusPill size={22} />
-            {actions.map((action, index) => (
+            {barActions.map((action, index) => (
               <HeroChip
                 key={action.testID ?? `${action.icon}-${index}`}
                 action={action}
@@ -271,6 +277,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </View>
         </View>
       </View>
+      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
 
       {/* iOS draws a pull's own spinner at the scroll view's top edge, which an
           edge-to-edge hero puts under the status bar; this one sits centred

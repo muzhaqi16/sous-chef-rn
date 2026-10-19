@@ -294,8 +294,23 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  // Pinned action chips for the collapsing hero bar.
+  // Favourite and meal plan lead: they stay in the bar when the rest go behind
+  // its "more".
   const headerActions: HeaderAction[] = [
+    ...(showHeartIcon
+      ? [
+          {
+            icon: isInFavorites ? 'heart' : 'heart-outline',
+            accessibilityLabel: isInFavorites
+              ? t('recipes.unfavoriteA11y')
+              : t('recipes.favoriteA11y'),
+            onPress: handleHeartPress,
+            tone: 'favorite',
+            loading: saving || updatingFolderTags,
+            testID: recipesTestIDs.heartButton,
+          } satisfies HeaderAction,
+        ]
+      : []),
     ...(recipeId
       ? [
           {
@@ -351,20 +366,6 @@ const RecipeDetailScreen: React.FC = () => {
             variant: 'primary',
             disabled: saving || updatingFolderTags,
             testID: recipesTestIDs.folderButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(showHeartIcon
-      ? [
-          {
-            icon: isInFavorites ? 'heart' : 'heart-outline',
-            accessibilityLabel: isInFavorites
-              ? t('recipes.unfavoriteA11y')
-              : t('recipes.favoriteA11y'),
-            onPress: handleHeartPress,
-            tone: 'favorite',
-            loading: saving || updatingFolderTags,
-            testID: recipesTestIDs.heartButton,
           } satisfies HeaderAction,
         ]
       : []),

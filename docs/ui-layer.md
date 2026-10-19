@@ -46,6 +46,13 @@ optional:
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
   so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
   same distance apart in both; the same test pins all of it.
+- **Three trailing slots.** Past three actions, `Header` and
+  `CollapsingHeroDetail` keep the first two and put the rest behind "more" (an
+  `ActionTray` of `ActionMenuRow`s, `src/components/organisms/HeaderActionMenu.tsx`),
+  so the offline pill and a crowded bar never squeeze the title. A text action
+  and one a spotlight measures always stay; callers lead with the most used. A
+  menu action runs once the tray has closed, so a sheet it opens never stacks on
+  one animating out.
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset

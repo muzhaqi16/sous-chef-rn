@@ -292,7 +292,6 @@ export const PantryItemDetail: React.FC<
           } satisfies HeaderAction,
         ]
       : []),
-    ...discardActions,
     ...(permissions.canEditItems
       ? ([
           {
@@ -309,6 +308,7 @@ export const PantryItemDetail: React.FC<
           },
         ] satisfies HeaderAction[])
       : []),
+    ...discardActions,
     ...(permissions.canRemoveItems
       ? ([
           {

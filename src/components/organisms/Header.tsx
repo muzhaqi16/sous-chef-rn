@@ -7,6 +7,10 @@ import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { BarActions, type BarAction } from '#components/molecules/BarActions';
+import {
+  HeaderActionMenu,
+  useHeaderOverflow,
+} from '#components/organisms/HeaderActionMenu';
 import { kitTestIDs } from '#components/testIDs';
 
 interface HeaderProps {
@@ -22,7 +26,10 @@ interface HeaderProps {
   onTitlePress?: () => void;
   /** Beside a pressable title, saying what it opens (a chevron). */
   titleAccessory?: React.ReactNode;
-  /** Trailing actions, icon or text; `BarActions` owns their geometry. */
+  /**
+   * Trailing actions, icon or text; `BarActions` owns their geometry. Past
+   * three, the first two show and the rest open from "more".
+   */
   rightActions?: BarAction[];
   /** Hide bottom border */
   borderless?: boolean;
@@ -30,7 +37,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   title,
-  rightActions,
+  rightActions = [],
   centerTitle,
   onTitlePress,
   titleAccessory,
@@ -40,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   styles.useVariants({ borderless });
+  const { barActions, menuRef, overflow } = useHeaderOverflow(rightActions);
 
   const showTitle = title !== undefined && title !== '';
   const leading: BarAction[] = onClose
@@ -122,9 +130,10 @@ export const Header: React.FC<HeaderProps> = ({
           null when online, so screens with no actions are unaffected. */}
       <BarActions
         leading={<OfflineStatusPill size={22} />}
-        actions={rightActions}
+        actions={barActions}
         onLayout={trackSide('right')}
       />
+      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
     </View>
   );
 };
