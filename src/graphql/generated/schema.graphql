@@ -15644,10 +15644,10 @@ type ShoppingListCollaborator {
   """
   invitedBy: User
   """
-  The inviter's display name, else first name, as the invite's notification
-  and email give it; null when neither is set. The addressee of a pending
-  invite shares nothing with the inviter yet, so invitedBy.displayName is
-  null to them.
+  The inviter's display name, else first name; null when neither is set,
+  where the invite's notification and email name the inviter's email
+  instead. The addressee of a pending invite shares nothing with the inviter
+  yet, so invitedBy.displayName is null to them.
   """
   inviterName: String
   """
