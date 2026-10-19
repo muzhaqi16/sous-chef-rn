@@ -15,10 +15,8 @@ import {
   MembershipRole,
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
-import type {
-  GetHomeQuery,
-  GetHomesQuery,
-} from '#operations/home/home.generated';
+import type { GetHomesQuery } from '#operations/home/home.generated';
+import type { GetHomeQuery } from '#features/home/screens/useHomeDetailManagement.generated';
 
 // The document's own shapes. Annotating a builder with one narrows every
 // `__typename` inside it, and fails the build when the selection gains a field

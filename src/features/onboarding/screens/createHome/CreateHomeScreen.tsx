@@ -27,7 +27,7 @@ import {
   type CreatePantryFn,
 } from '#features/pantry/hooks/useCreatePantry';
 import type { CreateHomeFn } from '#features/home/hooks/useCreateHome';
-import { useCreateHomeFlow } from '#features/onboarding/hooks/useCreateHomeFlow';
+import { useCreateHomeFlow } from '#features/onboarding/screens/createHome/useCreateHomeFlow';
 
 import {
   useAppStore,

@@ -1,5 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
-import { GetHomeDocument } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForm_PantryItemFragmentDoc } from './PantryItemForm.generated';
 import { PantryItemForEditDocument } from './usePantryItemFormData.generated';

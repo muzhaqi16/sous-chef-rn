@@ -1,8 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import {
-  GetHomesDocument,
-  GetMyPendingInvitesDocument,
-} from '#operations/home/home.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';

@@ -10,7 +10,6 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import {
-  GetHomeDocument,
   UpdateHomeDocument,
   EnableHomeJoinLinkDocument,
   UpdateHomeJoinCodeDocument,
@@ -19,6 +18,7 @@ import {
   RemoveMemberDocument,
   LeaveHomeDocument,
 } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { alertService } from '#/services/alertService';
 import type { RootState } from '#store/index';

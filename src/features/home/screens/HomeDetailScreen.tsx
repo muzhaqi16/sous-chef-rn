@@ -10,7 +10,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useHomeDetailManagement,
   ROLE_OPTIONS,
-} from '#features/home/hooks/useHomeDetailManagement';
+} from '#features/home/screens/useHomeDetailManagement';
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';

@@ -6,7 +6,7 @@ import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetHomeDocument } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
 import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';

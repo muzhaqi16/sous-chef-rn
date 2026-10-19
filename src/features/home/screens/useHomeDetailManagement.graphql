@@ -1,0 +1,20 @@
+query GetHome($homeId: ID!) {
+  home(id: $homeId) {
+    # Direct selection for the default-pantry lookup (getDefaultPantry); the
+    # rest of the detail fields live in the masked HomeDetailScreen_home spread.
+    id
+    pantriesConnection(first: 20) {
+      edges {
+        node {
+          id
+          isDefault
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+    ...HomeDetailScreen_home
+  }
+}

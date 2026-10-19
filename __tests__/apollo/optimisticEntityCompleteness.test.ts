@@ -95,12 +95,12 @@ import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceip
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import {
   InviteToHomeDocument,
-  GetHomeDocument,
   GetHomesDocument,
   CreateHomeDocument,
   AcceptHomeInviteDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { writeLocalHome } from '#features/home/cache/optimisticHome';
 import {
   CreateStorageLocationDocument,

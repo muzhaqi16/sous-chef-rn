@@ -2,27 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetHome($homeId: ID!) {
-  home(id: $homeId) {
-    # Direct selection for the default-pantry lookup (getDefaultPantry); the
-    # rest of the detail fields live in the masked HomeDetailScreen_home spread.
-    id
-    pantriesConnection(first: 20) {
-      edges {
-        node {
-          id
-          isDefault
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    ...HomeDetailScreen_home
-  }
-}
-
 query GetHomes($first: Int, $after: String) {
   homes(first: $first, after: $after) {
     edges {
@@ -70,21 +49,6 @@ query GetHomes($first: Int, $after: String) {
       endCursor
     }
     totalCount
-  }
-}
-
-query GetMyPendingInvites {
-  me {
-    id
-    pendingHomeInvitesConnection {
-      edges {
-        node {
-          id
-          role
-          ...InviteCard_invite
-        }
-      }
-    }
   }
 }
 

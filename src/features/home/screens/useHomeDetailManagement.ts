@@ -11,7 +11,6 @@ import {
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import {
-  GetHomeDocument,
   EnableHomeJoinLinkDocument,
   UpdateHomeJoinCodeDocument,
   TransferHomeOwnershipDocument,
@@ -21,6 +20,7 @@ import {
   LeaveHomeDocument,
   GetHomesDocument,
 } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import {
   MembershipRole,

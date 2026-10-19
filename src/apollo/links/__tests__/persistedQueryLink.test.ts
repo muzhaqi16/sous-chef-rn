@@ -21,7 +21,7 @@ import { persistedQueryLink } from '../persistedQueryLink';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { GetHomeDocument } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 
 interface ManifestOperation {
   id: string;
