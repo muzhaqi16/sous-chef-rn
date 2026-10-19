@@ -18,6 +18,12 @@ import './src/services/performance/armStartupProfiling';
 // globalThis.crypto.getRandomValues.
 import 'react-native-get-random-values';
 
+// The platform services every core module reads: installed before the first of
+// them evaluates. Side-effect imports stay in order under inline requires, the
+// same mechanism the startup clock above depends on.
+// `__tests__/architecture/platformInstallOrder.test.ts` pins the position.
+import './src/app/installNativePlatform';
+
 // Side-effect import, and it MUST stay eager and near the top.
 //
 // `react-native-performance` attaches its native `mark` listener at module

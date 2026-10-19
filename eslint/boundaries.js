@@ -13,6 +13,8 @@
  * `docs/architecture.md` § The public API boundary carries the reasoning.
  */
 
+const { LAYERS } = require('../scripts/lib/layers');
+
 // A feature's public surface is `screens/`, `manifest.ts`, `testIDs.ts` and its
 // top-level `hooks/`; the catalog also publishes `ui/`. Everything below is not.
 // Each internal group is its own TYPE rather than one type with a captured
@@ -147,4 +149,92 @@ const BOUNDARY_ZONES = [
   },
 ];
 
-module.exports = { BOUNDARY_ZONES, BOUNDARY_ELEMENTS, BOUNDARY_POLICIES };
+// ── Layers ──
+//
+// File categories, independent of the elements above: `core` or `mobile` for
+// every src file, from `scripts/lib/layers.js`, and `enforced-core` for the
+// core areas held to the layer boundary. `docs/architecture.md` § Layers.
+const LAYER_FILES = LAYERS.flatMap(entry => [
+  ...entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
+  ...(entry.layer === 'core' && entry.enforced
+    ? entry.patterns.map(pattern => ({ category: 'enforced-core', pattern }))
+    : []),
+]);
+
+// What the core may import from node_modules: modules a browser host has too.
+const CORE_EXTERNALS = [
+  'react',
+  '@apollo/client',
+  '@apollo/persisted-query-lists',
+  'graphql',
+  'graphql-ws',
+  'zustand',
+  'immer',
+  'i18next',
+  'react-i18next',
+  'yup',
+  'date-fns',
+  'fraction.js',
+  'fractional-indexing',
+  'fuse.js',
+  '@paralleldrive/cuid2',
+  'uuid',
+  'jwt-decode',
+  'js-sha256',
+  'chroma-js',
+  '@muzhaqi16/receipt-rules',
+];
+
+// No `dependency.kind`: a type import ties core to mobile as surely as a value.
+const LAYER_POLICIES = [
+  {
+    from: { file: { categories: 'enforced-core' } },
+    disallow: { to: { file: { categories: 'mobile' } } },
+    message:
+      'Core code runs without React Native and imports only core. Reach the device through a port in src/platform/, or move this file to the mobile layer. See docs/architecture.md § Layers.',
+  },
+  {
+    from: { file: { categories: 'enforced-core' } },
+    disallow: {
+      to: {
+        module: {
+          origin: 'external',
+          source: `!{${CORE_EXTERNALS.join(',')}}`,
+        },
+      },
+    },
+    message:
+      'Core code imports only the external modules a browser host has too (CORE_EXTERNALS in eslint/boundaries.js). Reach the device through a port in src/platform/.',
+  },
+];
+
+// Globals one host has and another lacks; `globalThis` is the portable spelling.
+const CORE_RESTRICTED_GLOBALS = [
+  'window',
+  'document',
+  'navigator',
+  'localStorage',
+  'sessionStorage',
+  'location',
+  'alert',
+  'confirm',
+  'global',
+].map(name => ({
+  name,
+  message:
+    'Core code runs in every host. Use `globalThis`, or reach the host through a port in src/platform/.',
+}));
+
+const ENFORCED_CORE_PATTERNS = LAYERS.filter(
+  entry => entry.layer === 'core' && entry.enforced,
+).flatMap(entry => entry.patterns);
+
+module.exports = {
+  BOUNDARY_ZONES,
+  BOUNDARY_ELEMENTS,
+  BOUNDARY_POLICIES,
+  LAYER_FILES,
+  LAYER_POLICIES,
+  CORE_RESTRICTED_GLOBALS,
+  ENFORCED_CORE_PATTERNS,
+};

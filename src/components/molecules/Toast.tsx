@@ -22,27 +22,11 @@ import { Text } from '#components/atoms/Text';
 import type { IconName } from '#utils/iconUtils';
 import { motion } from '#/theme/foundations/motion';
 import { kitTestIDs } from '#components/testIDs';
-
-export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastOptions {
-  message: string;
-  /**
-   * Hold in ms, default `TOAST.AUTO_DISMISS_SHORT`. Prefer a `TOAST` preset. The
-   * hold spans the fade-in and excludes the fade-out, so time on screen is about
-   * `duration + motion.timing.STANDARD`.
-   */
-  duration?: number;
-  type?: ToastType;
-  action?: { label: string; onPress: () => void };
-  /**
-   * A toast replaces a displayed or queued one of its own type, `action` and
-   * all. This marks a state announcement, which also replaces an announcement
-   * of another type: only the latest state is still true.
-   */
-  supersede?: boolean;
-}
-export type ToastFn = (options: ToastOptions) => void;
+import type {
+  ToastOptions,
+  ToastPresenter,
+  ToastType,
+} from '#platform/presenters';
 
 const TOAST_ICONS: Partial<Record<ToastType, IconName>> = {
   success: 'checkmark-circle',
@@ -260,7 +244,7 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   // Rapid same-type calls coalesce into one toast that ends N seconds after the
   // LAST call, not a sequential parade. A replaced toast's action lapses with
   // it; the change it offered to undo stands.
-  const showToast: ToastFn = opts => {
+  const showToast: ToastPresenter = opts => {
     setQueue(prev => {
       const waiting = prev.queue.filter(q => !replaces(q, opts));
       if (!prev.current || replaces(prev.current, opts))

@@ -12,7 +12,8 @@ import {
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import {
   AddedContext,
   DisplayFormat,

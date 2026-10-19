@@ -9,7 +9,7 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { getWebAppUrl } from '#utils/environment';
-import { appConfig } from '#/config/appConfig';
+import { appAssets } from '#/assets/appAssets';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { authTestIDs } from '#features/auth/testIDs';
@@ -23,7 +23,7 @@ export function LandingAuthScreen() {
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
         <LocalImage
-          source={appConfig.assets.logo}
+          source={appAssets.logo}
           style={styles.hero}
           resizeMode="contain"
         />

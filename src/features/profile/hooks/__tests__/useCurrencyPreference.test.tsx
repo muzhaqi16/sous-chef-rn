@@ -14,7 +14,8 @@ import {
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 import { useStore } from '#store';
 import { t } from '#/i18n';

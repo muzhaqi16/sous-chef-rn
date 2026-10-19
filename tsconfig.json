@@ -55,6 +55,8 @@
       "#i18n/*": ["./src/i18n/*"],
       "#native": ["./src/native"],
       "#native/*": ["./src/native/*"],
+      "#platform": ["./src/platform"],
+      "#platform/*": ["./src/platform/*"],
       "#theme": ["./src/theme"],
       "#theme/*": ["./src/theme/*"]
     }

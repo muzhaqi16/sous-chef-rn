@@ -3,7 +3,8 @@
 import { act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import type { SettingItem } from '#components/organisms/SettingRow';
 import {
   recordMock,

@@ -19,6 +19,12 @@
 /** @type {LayerEntry[]} */
 const LAYERS = [
   {
+    name: 'platform',
+    layer: 'core',
+    patterns: ['src/platform/**'],
+    enforced: true,
+  },
+  {
     name: 'apollo',
     layer: 'core',
     patterns: ['src/apollo/**'],
@@ -36,7 +42,7 @@ const LAYERS = [
     patterns: ['src/graphql/**'],
     enforced: false,
   },
-  { name: 'i18n', layer: 'core', patterns: ['src/i18n/**'], enforced: false },
+  { name: 'i18n', layer: 'core', patterns: ['src/i18n/**'], enforced: true },
   {
     name: 'config',
     layer: 'core',
@@ -44,7 +50,7 @@ const LAYERS = [
     enforced: false,
   },
   { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: false },
-  { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: false },
+  { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: true },
   { name: 'utils', layer: 'core', patterns: ['src/utils/**'], enforced: false },
   {
     name: 'services/auth',

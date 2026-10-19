@@ -59,7 +59,7 @@ Every production file in `src/` belongs to one of two layers:
 
 | Core                                                                                                                                                                                      | Mobile                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                                | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `storage`, `styles` |
+| `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `storage`, `styles` |
 | `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance}`, `NavigationService.ts`                        |
 | `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
 | `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
@@ -74,6 +74,49 @@ The map lives in `scripts/lib/layers.js`, the one copy lint, Jest and scripts
 read. `__tests__/architecture/layerMembership.test.ts` fails when a file matches
 no entry or two, naming the file. Each entry carries an `enforced` flag, set
 once its area imports nothing from mobile; it never turns back off.
+
+An enforced area is held two ways:
+
+- **Lint** (`eslint/boundaries.js`). Every file carries a `core` or `mobile`
+  category, and an `enforced-core` file may not import a `mobile` one, type
+  imports included. Of packages it imports only `CORE_EXTERNALS`, and it names
+  no host-only global (`window`, `navigator`, …), so `globalThis` it is.
+  `__tests__/lint/layerPolicies.test.ts` pins what is blocked.
+- **At runtime** (the `core-portability` Jest project). A node environment with
+  no React Native preset, where every React-Native-family package throws when
+  loaded and the in-memory platform is installed. `enforcedCoreLoads.test.ts`
+  loads every enforced file, so a reach anywhere in its imports fails, naming
+  the package it got to.
+
+### Platform ports
+
+The core reaches the device only through ports in `src/platform/`, in two kinds.
+
+**Services** are installed once by the host, before any core module evaluates,
+with `installPlatform()`. A core module reads one with
+`requirePlatform('<name>')`, which throws `PlatformServiceMissing` naming the
+service if the install has not happened, so nothing degrades silently.
+
+| Service         | What it is                                                 | Mobile adapter                       |
+| --------------- | ---------------------------------------------------------- | ------------------------------------ |
+| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `config/env` |
+| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`storage/mmkv`)                |
+| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`storage/keychain`)        |
+| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info |
+| `appLifecycle`  | Foreground state and its changes                           | `AppState`                           |
+| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                |
+| `clock`         | A monotonic `now()` for durations                          | react-native-performance             |
+| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`      |
+
+`src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`
+imports it right after the startup clock, the startup profiler and the crypto
+polyfill (`platformInstallOrder.test.ts` pins that). Each adapter delegates
+through an arrow or a getter, so Metro's inline requires load a native module at
+its first use, not during the install. `jest.setup.js` installs the in-memory
+platform (`__tests__/helpers/memoryPlatform.ts`) the same way.
+
+**Presenters** are what the core asks a host to show: toast and alert requests
+(`platform/presenters.ts`), which a mounted host registers.
 
 ---
 
@@ -819,7 +862,8 @@ src/
 │                    apollo, offline, ui, search, auth, performance,
 │                    navigation, autocomplete, subscriptions, …
 ├── i18n/            i18next config + locale JSON
-├── native/          Native module bindings
+├── native/          Native module bindings, React Native ambient types
+├── platform/        Ports the core reaches the device through (§ Layers)
 ├── navigation/      RootNavigator, stacks, layouts
 ├── screens/         SplashScreen and NotFoundScreen only
 ├── services/        Push, subscriptions, telemetry, Spoonacular,

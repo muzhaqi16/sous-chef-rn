@@ -5,12 +5,12 @@ import { usePanGesture } from 'react-native-gesture-handler';
 import { withSpring } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
 import { scheduleOnRN } from 'react-native-worklets';
-import {
-  ToastProvider,
-  type ToastFn,
-  type ToastOptions,
-  type ToastType,
-} from '../Toast';
+import { ToastProvider } from '../Toast';
+import type {
+  ToastOptions,
+  ToastPresenter,
+  ToastType,
+} from '#platform/presenters';
 import { TOAST } from '#/constants/animations';
 
 // `_setToastDispatch` is the ONLY way into the provider, so the mock captures
@@ -19,14 +19,14 @@ import { TOAST } from '#/constants/animations';
 // BEFORE its parent's, so a helper firing on mount fires before the provider has
 // registered — those toasts queue here and the registration drains them, which
 // is what the real `toastService` does with a pre-mount toast (minus the drop).
-let registered: ToastFn | null = null;
+let registered: ToastPresenter | null = null;
 const pending: ToastOptions[] = [];
-const dispatchToast: ToastFn = opts => {
+const dispatchToast: ToastPresenter = opts => {
   if (registered) registered(opts);
   else pending.push(opts);
 };
 jest.mock('#/services/toastService', () => ({
-  _setToastDispatch: jest.fn((fn: ToastFn) => {
+  _setToastDispatch: jest.fn((fn: ToastPresenter) => {
     registered = fn;
     while (pending.length) fn(pending.shift() as ToastOptions);
   }),
@@ -71,7 +71,7 @@ const ToastTrigger: React.FC<{
 };
 
 // Hands the registered dispatch back out so a test can fire toasts on demand.
-const ToastCapture: React.FC<{ onReady: (show: ToastFn) => void }> = ({
+const ToastCapture: React.FC<{ onReady: (show: ToastPresenter) => void }> = ({
   onReady,
 }) => {
   useEffect(() => {
@@ -254,8 +254,8 @@ describe('ToastProvider', () => {
     const isLive = () =>
       screen.getByTestId('toast-success').props.pointerEvents === 'auto';
 
-    const showToastNow = (opts: Parameters<ToastFn>[0]) => {
-      let show: ToastFn | undefined;
+    const showToastNow = (opts: Parameters<ToastPresenter>[0]) => {
+      let show: ToastPresenter | undefined;
       render(
         <ToastProvider>
           <ToastCapture
@@ -336,8 +336,8 @@ describe('ToastProvider', () => {
       withSpringMock.mockImplementation(passThrough);
     });
 
-    const mountProvider = (): ToastFn => {
-      let show: ToastFn | undefined;
+    const mountProvider = (): ToastPresenter => {
+      let show: ToastPresenter | undefined;
       render(
         <ToastProvider>
           <ToastCapture
@@ -483,7 +483,7 @@ describe('ToastProvider', () => {
     });
 
     it('ignores a dismissal that lands after a newer toast took over', () => {
-      let show: ToastFn | undefined;
+      let show: ToastPresenter | undefined;
       render(
         <ToastProvider>
           <ToastCapture

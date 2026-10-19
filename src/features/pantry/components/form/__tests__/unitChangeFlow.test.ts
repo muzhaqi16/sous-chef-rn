@@ -1,4 +1,5 @@
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import {
   ErrorCode,
   PantryUnitChangeMethod,

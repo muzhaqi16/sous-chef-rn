@@ -18,6 +18,10 @@ const {
   BOUNDARY_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
+  LAYER_FILES,
+  LAYER_POLICIES,
+  CORE_RESTRICTED_GLOBALS,
+  ENFORCED_CORE_PATTERNS,
 } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
 
@@ -60,6 +64,7 @@ const base = {
       },
     },
     'boundaries/elements': BOUNDARY_ELEMENTS,
+    'boundaries/files': LAYER_FILES,
   },
   rules: {
     'no-barrel-files/no-barrel-files': 'error',
@@ -73,9 +78,15 @@ const base = {
     'no-restricted-syntax': restrictedSyntax(),
 
     'import/no-restricted-paths': ['error', { zones: BOUNDARY_ZONES }],
+    // `checkAllOrigins` brings package imports under the policies too; only
+    // the layer policies select one.
     'boundaries/dependencies': [
       'error',
-      { default: 'allow', policies: BOUNDARY_POLICIES },
+      {
+        default: 'allow',
+        checkAllOrigins: true,
+        policies: [...BOUNDARY_POLICIES, ...LAYER_POLICIES],
+      },
     ],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
     // specifier; it still loads the module, so it reads as a side-effect import.
@@ -695,8 +706,10 @@ const overrides = [
   },
   {
     // Device storage's writers: the kernel persisters, the reset manager and
-    // the feature caches that register with it.
+    // the feature caches that register with it, and the composition root that
+    // adapts it to the key-value store port.
     files: [
+      'src/app/installNativePlatform.ts',
       'src/apollo/**/*.{ts,tsx}',
       'src/storage/**/*.{ts,tsx}',
       'src/store/**/*.{ts,tsx}',
@@ -861,6 +874,12 @@ const overrides = [
       'sous-chef/no-raw-color': 'off',
       'sous-chef/no-raw-spacing': 'off',
     },
+  },
+  {
+    // Core runs in every host, so it names no host-only global.
+    files: ENFORCED_CORE_PATTERNS,
+    ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
+    rules: { 'no-restricted-globals': ['error', ...CORE_RESTRICTED_GLOBALS] },
   },
   {
     // The one module that reads message text: each predicate there is a library

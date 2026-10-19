@@ -25,8 +25,4 @@ describe('appConfig', () => {
   it('primaryColor is a hex value', () => {
     expect(appConfig.branding.primaryColor).toMatch(/^#[0-9a-fA-F]{3,8}$/);
   });
-
-  it('logo is a require()-able asset', () => {
-    expect(appConfig.assets.logo).toBeTruthy();
-  });
 });

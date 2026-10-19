@@ -6,30 +6,18 @@
 import { Alert } from 'react-native';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
-
-export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
-
-export interface AlertButton {
-  text: string;
-  style?: AlertButtonStyle;
-  onPress?: () => void;
-}
-
-export interface AlertEntry {
-  id: number;
-  title: string;
-  message?: string;
-  buttons: AlertButton[];
-}
-
-type ShowAlertFn = (entry: AlertEntry) => void;
+import type {
+  AlertButton,
+  AlertEntry,
+  AlertPresenter,
+} from '#platform/presenters';
 
 class AlertService {
-  private showAlertFn: ShowAlertFn | null = null;
+  private showAlertFn: AlertPresenter | null = null;
   private nextId = 1;
 
   /** Called once by AlertProvider on mount. */
-  init(showAlert: ShowAlertFn) {
+  init(showAlert: AlertPresenter) {
     this.showAlertFn = showAlert;
   }
 

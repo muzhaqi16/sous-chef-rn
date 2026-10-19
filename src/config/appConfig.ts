@@ -1,10 +1,9 @@
-import type { ImageSourcePropType } from 'react-native';
 import type { FeatureFlag } from './featureFlags';
-import logo from '../assets/images/logo.png';
 
 /**
- * The first file to edit when forking. `app.json` and the native project names
- * still drive bundle ids and OS display names.
+ * The first file to edit when forking, with `src/assets/appAssets.ts` for the
+ * images. `app.json` and the native project names still drive bundle ids and OS
+ * display names.
  */
 export interface AppConfig {
   identity: {
@@ -29,9 +28,6 @@ export interface AppConfig {
      * from `keychainNamespace` — re-deriving it strands the stored value.
      */
     lastBiometricEmailKey: string;
-  };
-  assets: {
-    logo: ImageSourcePropType;
   };
   /**
    * Which features ship; absent means shipped. The FORK-level switch, where a
@@ -70,9 +66,6 @@ export const appConfig: AppConfig = {
   features: {},
   featureFlags: {},
   locales: ['en', 'it', 'es', 'sq'],
-  assets: {
-    logo,
-  },
   branding: {
     primaryColor: '#f58234',
   },

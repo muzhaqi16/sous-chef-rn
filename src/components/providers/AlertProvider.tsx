@@ -10,11 +10,8 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import {
-  alertService,
-  type AlertEntry,
-  type AlertButton,
-} from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton, AlertEntry } from '#platform/presenters';
 import { ALERT } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { zIndex } from '#/theme/foundations/zIndex';

@@ -1,4 +1,4 @@
-import type { ToastOptions } from '#components/molecules/Toast';
+import type { ToastOptions, ToastPresenter } from '#platform/presenters';
 import { HapticService } from '#services/haptic/HapticService';
 import { logger } from '#/utils/environment';
 
@@ -6,13 +6,11 @@ import { logger } from '#/utils/environment';
  * The toast API, in and out of the React tree alike. `ToastProvider` mounts it
  * via `_setToastDispatch`; a toast fired before that is dropped with a warning.
  */
-type Dispatch = (opts: ToastOptions) => void;
-
-let dispatch: Dispatch = opts => {
+let dispatch: ToastPresenter = opts => {
   logger.warn('[toast] called before provider mounted:', opts.message);
 };
 
-export const _setToastDispatch = (fn: Dispatch) => {
+export const _setToastDispatch = (fn: ToastPresenter) => {
   dispatch = fn;
 };
 
