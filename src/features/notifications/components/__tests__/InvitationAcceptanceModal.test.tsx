@@ -14,9 +14,9 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import {
-  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-  InvitationAcceptanceModalDeclineShoppingListInviteDocument as DeclineShoppingListInviteDocument,
-} from '../InvitationAcceptanceModal.generated';
+  AcceptShoppingListInviteDocument,
+  DeclineShoppingListInviteDocument,
+} from '#features/shoppingList/graphql/collaboration.generated';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
@@ -28,6 +28,8 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  skipOtherHomeVariants: jest.fn(() => () => false),
   safeEvict: jest.fn(),
 }));
 
@@ -75,7 +77,7 @@ function acceptHomeError(message: string) {
 
 /** Joined; with `success: false`, refused, so `onAccept` is never called. */
 const acceptShoppingListOk = ({ success = true } = {}) =>
-  recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
+  recordMock(AcceptShoppingListInviteDocument, {
     data: {
       acceptShoppingListInvite: success
         ? {
@@ -87,7 +89,7 @@ const acceptShoppingListOk = ({ success = true } = {}) =>
   });
 
 function acceptShoppingListError(message: string) {
-  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
+  return recordMock(AcceptShoppingListInviteDocument, {
     error: new Error(message),
   });
 }

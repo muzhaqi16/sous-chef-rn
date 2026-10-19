@@ -5,6 +5,13 @@
 export const shoppingListTestIDs = {
   screen: 'shopping-list-screen',
   listSelectorButton: 'shopping-list-selector',
+  /** The selector's pending invitations; one invite and its answers, by its id. */
+  pendingInvites: 'shopping-list-pending-invites',
+  pendingInvite: (id: string) => `shopping-list-pending-invite-${id}`,
+  pendingInviteAccept: (id: string) =>
+    `shopping-list-pending-invite-${id}-accept`,
+  pendingInviteDecline: (id: string) =>
+    `shopping-list-pending-invite-${id}-decline`,
   searchInput: 'shopping-list-search-input',
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
   moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',

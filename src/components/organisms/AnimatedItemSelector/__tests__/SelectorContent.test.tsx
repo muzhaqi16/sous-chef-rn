@@ -1,5 +1,12 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
+import { ActionTrayScrollContext } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorContent } from '../SelectorContent';
 import type { SelectorConfig, SelectorPagination } from '../types';
 
@@ -58,5 +65,50 @@ describe('SelectorContent pagination', () => {
     );
     expect(screen.getByText('None')).toBeTruthy();
     expect(screen.getByText('Show more')).toBeTruthy();
+  });
+});
+
+describe('SelectorContent on open', () => {
+  const scrollToContentOffset = jest.fn();
+
+  beforeEach(() => scrollToContentOffset.mockClear());
+
+  /** In a settled tray 300 tall, with the second row selected. */
+  const renderOpen = (overrides: Partial<SelectorConfig<Row>> = {}) =>
+    render(
+      <ActionTrayScrollContext.Provider
+        value={{ scrollToContentOffset, viewportHeight: 300, isReady: true }}
+      >
+        <SelectorContent
+          config={{ ...config(), selectedId: 'b', ...overrides }}
+        />
+      </ActionTrayScrollContext.Provider>,
+    );
+
+  const layout = (text: string, y: number, height: number) =>
+    fireEvent(screen.getByText(text), 'layout', {
+      nativeEvent: { layout: { x: 0, y, width: 300, height } },
+    });
+
+  it('centres the selected row', () => {
+    renderOpen();
+    layout('Second', 600, 50);
+
+    expect(scrollToContentOffset).toHaveBeenCalledWith(475, true);
+  });
+
+  it('shows a leading header instead, though it arrives after the centring', () => {
+    renderOpen({ listHeader: <Text>Invites</Text>, listHeaderLeads: true });
+    layout('Second', 600, 50);
+    layout('Invites', 0, 80);
+
+    expect(scrollToContentOffset).toHaveBeenLastCalledWith(0, true);
+  });
+
+  it('centres past a header that leads nothing', () => {
+    renderOpen({ listHeader: <Text>Filters</Text> });
+    layout('Second', 600, 50);
+
+    expect(scrollToContentOffset).toHaveBeenCalledWith(475, true);
   });
 });

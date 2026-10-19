@@ -285,6 +285,11 @@
     "deletedToast_one": "U fshi {{count}} listë",
     "deletedToast_other": "U fshinë {{count}} lista"
   },
+  "listInvites": {
+    "invitedBy": "{{name}} të ftoi · {{role}}",
+    "invitedAnonymously": "Ke marrë një ftesë · {{role}}",
+    "expired": "Kjo ftesë ka skaduar"
+  },
   "shoppingListScreen": {
     "label": "Lista e blerjeve",
     "searchPlaceholder": "Kërko në listën e blerjeve...",

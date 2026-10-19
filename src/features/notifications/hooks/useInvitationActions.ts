@@ -7,9 +7,9 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import {
-  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-  InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-} from '#features/notifications/components/InvitationAcceptanceModal.generated';
+  useAnswerListInvite,
+  type ListInviteAnswer,
+} from '#features/shoppingList/hooks/useAnswerListInvite';
 import type { InvitationData } from '#features/notifications/types';
 import {
   createAddToQueryConnectionUpdater,
@@ -36,12 +36,6 @@ const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
   'pendingHomeInvitesConnection',
   'HomeInvite',
 );
-const removePendingCollaborationInvite =
-  createRemoveFromParentConnectionUpdater(
-    'User',
-    'pendingCollaborationInvitesConnection',
-    'ShoppingListCollaborator',
-  );
 
 export type InvitationFailure = SettledFailure;
 
@@ -54,6 +48,9 @@ const writeResult = ({
   failure,
 }: Pick<Settled<unknown>, 'failure'>): InvitationWriteResult =>
   failure ? { status: 'failed', failure } : { status: 'done' };
+
+const fromListAnswer = (answer: ListInviteAnswer): InvitationWriteResult =>
+  answer.status === 'failed' ? answer : { status: 'done' };
 
 /**
  * The invite is not pending any more: the server refused the write as a plain
@@ -79,9 +76,9 @@ const refusalOptions = (
 });
 
 /**
- * Each `update` prefers the payload's `inviteId`, else `invitation.id` (the
+ * Each home `update` prefers the payload's `inviteId`, else `invitation.id` (the
  * server's `sourceId`), so a notification carrying only a sourceId still evicts
- * its pending record.
+ * its pending record. A list invite is answered by `useAnswerListInvite`.
  */
 export function useInvitationActions(
   invitation: InvitationData | null,
@@ -115,21 +112,6 @@ export function useInvitationActions(
     },
   });
 
-  const [acceptShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-    {
-      update: (cache, { data }) => {
-        if (!appliedPayload(data)) return;
-        // Not evicted: accepting transitions the pending collaborator record to
-        // active, and Apollo has already normalized the response — only the
-        // reference has to leave the pending list.
-        if (inviteId && userId) {
-          removePendingCollaborationInvite(cache, userId, inviteId);
-        }
-      },
-    },
-  );
-
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
@@ -146,19 +128,7 @@ export function useInvitationActions(
     },
   });
 
-  const [declineShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-    {
-      update: (cache, { data }) => {
-        if (!appliedPayload(data)) return;
-        if (inviteId && userId) {
-          removePendingCollaborationInvite(cache, userId, inviteId, {
-            evictItem: true,
-          });
-        }
-      },
-    },
-  );
+  const { acceptListInvite, declineListInvite } = useAnswerListInvite();
 
   /**
    * The bearer token rides only in the notification that delivered it: the API
@@ -184,19 +154,8 @@ export function useInvitationActions(
 
   const acceptList = async (
     inviteToken: string,
-  ): Promise<InvitationWriteResult> => {
-    const settled = await settleMutation(
-      () =>
-        acceptShoppingListInvite({
-          variables: { input: { token: inviteToken } },
-        }),
-      refusalOptions(
-        InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-        t('invitationAcceptance.acceptFailed'),
-      ),
-    );
-    return writeResult(settled);
-  };
+  ): Promise<InvitationWriteResult> =>
+    fromListAnswer(await acceptListInvite({ token: inviteToken }));
 
   const declineHome = async (
     inviteToken: string,
@@ -213,19 +172,8 @@ export function useInvitationActions(
 
   const declineList = async (
     inviteToken: string,
-  ): Promise<InvitationWriteResult> => {
-    const settled = await settleMutation(
-      () =>
-        declineShoppingListInvite({
-          variables: { input: { token: inviteToken } },
-        }),
-      refusalOptions(
-        InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-        t('invitationAcceptance.declineFailed'),
-      ),
-    );
-    return writeResult(settled);
-  };
+  ): Promise<InvitationWriteResult> =>
+    fromListAnswer(await declineListInvite({ token: inviteToken }));
 
   return { token, acceptHome, acceptList, declineHome, declineList };
 }

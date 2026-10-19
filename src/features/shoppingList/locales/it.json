@@ -285,6 +285,11 @@
     "deletedToast_one": "{{count}} lista eliminata",
     "deletedToast_other": "{{count}} liste eliminate"
   },
+  "listInvites": {
+    "invitedBy": "Invito da {{name}} · {{role}}",
+    "invitedAnonymously": "Hai ricevuto un invito · {{role}}",
+    "expired": "Questo invito è scaduto"
+  },
   "shoppingListScreen": {
     "label": "Lista della spesa",
     "searchPlaceholder": "Cerca nella lista della spesa...",

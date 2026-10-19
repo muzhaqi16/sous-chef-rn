@@ -7,7 +7,10 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
 import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
+import { PendingListInvites } from '#features/shoppingList/components/PendingListInvites';
+import { SelectorSectionHeader } from '#features/shoppingList/components/SelectorSectionHeader';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -44,9 +47,11 @@ type ListItemOrHeader = ShoppingListSelectorItem | SectionHeader;
 export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
+  setSelectedShoppingListId,
 }: UseShoppingListSelectorOptions) {
   const { t } = useTranslation();
   const { toListSettings, toShareList } = useAppNavigation();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const { setOverlayOpen } = useTabBarSetters();
 
   const selectorRef = useRef<ItemSelectorRef>(null);
@@ -231,16 +236,10 @@ export function useShoppingListSelectorModal({
   ) => {
     if ('_isHeader' in item) {
       return (
-        <View style={styles.sectionHeader}>
-          <Icon
-            name={item.id === 'header-personal' ? 'person' : 'home'}
-            size={14}
-            tone="textTertiary"
-          />
-          <Text role="label" tone="tertiary" style={styles.sectionHeaderText}>
-            {item.title}
-          </Text>
-        </View>
+        <SelectorSectionHeader
+          icon={item.id === 'header-personal' ? 'person' : 'home'}
+          title={item.title}
+        />
       );
     }
 
@@ -383,6 +382,16 @@ export function useShoppingListSelectorModal({
     displayProperty: 'id', // unused — renderCustomItem handles all rendering
     loading: false,
     emptyMessage: t('shoppingListSelector.emptyMessage'),
+    // Above Personal Lists; an accepted list lands among them, selected.
+    listHeader: isDeleteMode ? undefined : (
+      <PendingListInvites
+        onAccepted={setSelectedShoppingListId}
+        requireVerifiedEmail={requireVerifiedEmail}
+      />
+    ),
+    // Invites show first; an invitee with invite notifications off has no
+    // other way to them.
+    listHeaderLeads: true,
     renderCustomItem: renderListItem,
     actions: listActions,
     headerActions: deleteHeaderActions,
@@ -398,20 +407,8 @@ export function useShoppingListSelectorModal({
   };
 }
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   selectorItemInfo: {
     flex: 1,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
-  },
-  sectionHeaderText: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-}));
+});
