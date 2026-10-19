@@ -11,8 +11,8 @@ import {
   LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
   type UseGenerateShoppingList_MealPlanFragment,
+  GenerateShoppingListPlanDocument,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
@@ -132,7 +132,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
     const fetched = await client
       .query({
-        query: GetMealPlanDocument,
+        query: GenerateShoppingListPlanDocument,
         variables: {
           id,
           mealsFirst: MEALS_PAGE_SIZE,

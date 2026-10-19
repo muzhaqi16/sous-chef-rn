@@ -33,20 +33,6 @@ query GetMealPlans(
 # one request; `$mealsAfter` follows `endCursor` for a longer one.
 # `$ingredientsFirst` is the same page for each meal's recipe, which is the
 # most a recipe holds.
-query GetMealPlan(
-  $id: ID!
-  $mealsFirst: Int!
-  $mealsAfter: String
-  $ingredientsFirst: Int!
-) {
-  mealPlan(id: $id) {
-    id
-    ...MealPlanMain_mealPlan
-    ...MealPlanSettingsSheet_mealPlan
-    ...useGenerateShoppingList_mealPlan
-    ...useDuplicateMealPlan_mealPlan
-  }
-}
 
 # Event read-back. `MealPlanEvents` carries only the envelope plus the changed
 # entity's id — a subscription document is validated against depth 5, which no

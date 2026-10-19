@@ -58,12 +58,14 @@ import { makeCache } from '#/apollo/cache';
 import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
   GetMealPlansDocument,
-  GetMealPlanDocument,
   MealPlanForEventDocument,
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
-  type GetMealPlanQuery,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealPlanDocument,
+  type GetMealPlanQuery,
+} from '#features/mealPlan/screens/useMealPlan.generated';
 import {
   GetMealTemplatesDocument,
   GetMealTemplateDocument,

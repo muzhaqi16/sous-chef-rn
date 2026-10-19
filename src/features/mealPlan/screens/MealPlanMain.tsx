@@ -31,7 +31,7 @@ import {
   useMealPlanDisplay,
   useMealPlans,
 } from '#features/mealPlan/hooks/useMealPlans';
-import { useActiveMealPlan } from '#features/mealPlan/hooks/useActiveMealPlan';
+import { useActiveMealPlan } from './useActiveMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';

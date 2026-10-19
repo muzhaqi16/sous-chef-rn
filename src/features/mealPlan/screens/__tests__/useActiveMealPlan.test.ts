@@ -5,7 +5,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { useActiveMealPlan } from '../useActiveMealPlan';

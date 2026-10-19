@@ -1,0 +1,16 @@
+# The plan screen's read. It also spreads the core actions' fragments, so
+# generating a list or duplicating the plan reads it from the cache.
+query GetMealPlan(
+  $id: ID!
+  $mealsFirst: Int!
+  $mealsAfter: String
+  $ingredientsFirst: Int!
+) {
+  mealPlan(id: $id) {
+    id
+    ...MealPlanMain_mealPlan
+    ...MealPlanSettingsSheet_mealPlan
+    ...useGenerateShoppingList_mealPlan
+    ...useDuplicateMealPlan_mealPlan
+  }
+}

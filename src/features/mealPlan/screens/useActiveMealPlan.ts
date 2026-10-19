@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppStore } from '#store/useAppStore';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
-import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
+import { useMealPlan } from './useMealPlan';
 
 interface UseActiveMealPlanArgs {
   /** Plan the list hook considers current: active > nearest upcoming > latest. */

@@ -31,11 +31,9 @@ import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
-import {
-  GetMealPlanDocument,
-  MealPlanForEventDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
-import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
+import { MealPlanForEventDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
+import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';

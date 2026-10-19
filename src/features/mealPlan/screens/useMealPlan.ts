@@ -1,6 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from './useMealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
@@ -11,7 +11,7 @@ import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
   type MealPlanMain_ItemFragment,
-} from '#features/mealPlan/screens/MealPlanMain.generated';
+} from './MealPlanMain.generated';
 
 export function useMealPlan(id: string | null) {
   // `createMealPlan` writes the plan under a minted id, so before the ack a

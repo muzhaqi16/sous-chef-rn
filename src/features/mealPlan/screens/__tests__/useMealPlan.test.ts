@@ -5,7 +5,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,

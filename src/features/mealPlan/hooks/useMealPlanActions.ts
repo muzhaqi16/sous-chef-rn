@@ -9,7 +9,6 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
-  GetMealPlanDocument,
   GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
@@ -212,7 +211,7 @@ export function useMealPlanActions() {
     // A stale version means another member saved the plan since: show theirs.
     const showServerPlan = () => {
       void client.refetchQueries({
-        include: [GetMealPlanDocument, GetMealPlansDocument],
+        include: ['GetMealPlan', GetMealPlansDocument],
       });
     };
     // A save made elsewhere since is refused, not overwritten.

@@ -41,7 +41,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { UpdateDeviceDocument } from '#operations/auth/device.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';

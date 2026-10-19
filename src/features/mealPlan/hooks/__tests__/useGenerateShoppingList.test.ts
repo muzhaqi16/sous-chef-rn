@@ -23,7 +23,7 @@ import {
   LinkDerivedListToMealPlanDocument,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GenerateShoppingListPlanDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { toastService } from '#/services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
@@ -378,9 +378,9 @@ describe('generating a shopping list from a cached meal plan', () => {
       seedPlan(
         planOf([recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked])]),
       );
-    // The server's answer, now linked, in the shape GetMealPlan selects.
+    // The server's answer, now linked, in the shape the re-read selects.
     const planMock = ({ overLimit = false } = {}) =>
-      recordMock(GetMealPlanDocument, {
+      recordMock(GenerateShoppingListPlanDocument, {
         data: {
           mealPlan: {
             __typename: 'MealPlan',
@@ -388,7 +388,7 @@ describe('generating a shopping list from a cached meal plan', () => {
             name: PLAN_NAME,
             homeId: 'home-1',
             mealPlanItemsConnection: {
-              pageInfo: { hasNextPage: false, endCursor: null },
+              pageInfo: { hasNextPage: false },
               totalCount: 1,
               edges: [
                 {
