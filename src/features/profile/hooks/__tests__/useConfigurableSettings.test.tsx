@@ -33,6 +33,10 @@ const mockRevokeDeviceCredential = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/services/authService', () => ({
   authService: {
     logout: (...args: unknown[]) => mockLogout(...args),
+  },
+}));
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     revokeDeviceCredentialForThisDevice: () => mockRevokeDeviceCredential(),
   },
 }));

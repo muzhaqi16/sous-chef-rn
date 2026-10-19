@@ -1,4 +1,4 @@
-// Device-lifecycle behaviors of authService:
+// Device-lifecycle behaviors of device registration and the sign-out:
 //  - P2-13: the getToken-timeout dead window — a push token that materializes
 //    after acquirePushToken timed out (null) but before the refresh listener
 //    subscribed is re-checked after subscribe and pushed to the server.
@@ -6,8 +6,8 @@
 //    a live session bound to the device, so the refresh-token revoke ends
 //    delivery. It unsubscribes the rotation listener and resets local state.
 //
-// authService uses the singleton Apollo client and reads module boundaries, so
-// each dependency is mocked at its module edge (the pattern in
+// Both read the registered Apollo client and module boundaries, so each
+// dependency is mocked at its module edge (the pattern in
 // authService.register.test.ts).
 
 const mockMutate = jest.fn();
@@ -71,6 +71,9 @@ jest.mock('#native/storage/keychain', () => ({
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 import { logger } from '#/utils/environment';
 import {
   clearLegacyDeviceFingerprint,
@@ -81,6 +84,9 @@ import {
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { DeleteDeviceDocument } from '#operations/auth/device.generated';
+
+// A sign-out revokes and drops the slot through the step the app registers.
+registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
 registerApolloClient({
@@ -200,7 +206,7 @@ describe('registerDeviceInBackground — push token write intent', () => {
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(registerCall()).toMatchObject({ pushToken: 'apns-1' });
@@ -209,7 +215,7 @@ describe('registerDeviceInBackground — push token write intent', () => {
   it('clears the stored token when permission is not granted', async () => {
     mockPermissionCheck.mockResolvedValueOnce('blocked');
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(registerCall()?.pushToken).toBeNull();
@@ -227,7 +233,7 @@ describe('registerDeviceInBackground — push token write intent', () => {
     mockAcquireToken.mockResolvedValueOnce(null);
     mockGetToken.mockResolvedValueOnce(null);
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(registerCall()?.pushToken).toBeUndefined();
@@ -248,7 +254,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
     });
     (recordRegisteredLocale as jest.Mock).mockReturnValueOnce(true);
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(recordRegisteredLocale).toHaveBeenCalledWith('en-US');
@@ -259,7 +265,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
   });
 
   it('keeps them when the locale is the one already registered', async () => {
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(recordRegisteredLocale).toHaveBeenCalled();
@@ -273,7 +279,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
       },
     });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(recordRegisteredLocale).not.toHaveBeenCalled();
@@ -284,7 +290,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
   it("clears the stored locale when the device's cannot be read", async () => {
     mockCollect.mockResolvedValueOnce({ deviceId: 'local-1', language: null });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     const location = registerCall()?.location;
@@ -302,7 +308,7 @@ describe('registerDeviceInBackground — no identity to register under', () => {
   it('collects nothing and does not retry', async () => {
     (ensureDeviceId as jest.Mock).mockResolvedValue(null);
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(mockCollect).not.toHaveBeenCalled();
@@ -338,7 +344,7 @@ describe('registerDeviceInBackground — a session that ends', () => {
     jest.useFakeTimers();
     refuse();
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
     expect(registerCalls()).toBe(1);
 
@@ -352,7 +358,7 @@ describe('registerDeviceInBackground — a session that ends', () => {
   it('does not start once the session has already ended', async () => {
     Object.assign(mockStoreState, { accessToken: null, refreshToken: null });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(mockCollect).not.toHaveBeenCalled();
@@ -366,7 +372,7 @@ describe('registerDeviceInBackground — a session that ends', () => {
     jest.useFakeTimers();
     refuse();
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
     await jest.advanceTimersByTimeAsync(2_000);
     await flush();
@@ -381,7 +387,7 @@ describe('registerDeviceInBackground — getToken dead-window re-check (P2-13)',
     mockAcquireToken.mockResolvedValueOnce(null);
     mockGetToken.mockResolvedValueOnce('apns-late');
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     // The device was registered (with no token) then updated with the late one.
@@ -395,7 +401,7 @@ describe('registerDeviceInBackground — getToken dead-window re-check (P2-13)',
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     // No updateDevice(pushToken) — the token at registration already matched.
@@ -459,7 +465,8 @@ describe('revoking this device’s credential', () => {
       },
     });
 
-    const revoked = await authService.revokeDeviceCredentialForThisDevice();
+    const revoked =
+      await biometricService.revokeDeviceCredentialForThisDevice();
 
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ variables: { input: { id: 'dc-1' } } }),
@@ -473,7 +480,8 @@ describe('revoking this device’s credential', () => {
       error: new Error('listing failed'),
     });
 
-    const revoked = await authService.revokeDeviceCredentialForThisDevice();
+    const revoked =
+      await biometricService.revokeDeviceCredentialForThisDevice();
 
     expect(revoked).toBe(false);
     expect(mockMutate).not.toHaveBeenCalled();
@@ -493,7 +501,7 @@ describe('retiring the row a superseded identifier registered', () => {
     mockQuery.mockResolvedValue({ data: { deviceByDeviceId: row } });
 
   it('does not look anything up on an install that has no legacy key', async () => {
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(mockQuery).not.toHaveBeenCalled();
@@ -504,7 +512,7 @@ describe('retiring the row a superseded identifier registered', () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     foundRow({ id: 'srv-old', deviceId: LEGACY });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(mockQuery).toHaveBeenCalledWith(
@@ -529,7 +537,7 @@ describe('retiring the row a superseded identifier registered', () => {
       device: null,
     });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
@@ -540,7 +548,7 @@ describe('retiring the row a superseded identifier registered', () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     foundRow(null);
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(deleteCalls()).toEqual([]);
@@ -551,7 +559,7 @@ describe('retiring the row a superseded identifier registered', () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     mockQuery.mockRejectedValue(new Error('offline'));
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(clearLegacyDeviceFingerprint).not.toHaveBeenCalled();
@@ -566,7 +574,7 @@ describe('retiring the row a superseded identifier registered', () => {
       message: 'no',
     });
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
@@ -581,7 +589,7 @@ describe('retiring the row a superseded identifier registered', () => {
     (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
     (ensureDeviceId as jest.Mock).mockResolvedValue(null);
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(mockQuery).not.toHaveBeenCalled();
@@ -615,7 +623,7 @@ describe('a device update is judged by its result, not by not throwing', () => {
     mockGetToken.mockResolvedValueOnce('apns-2');
     refuse('NotFoundError', 'RESOURCE_NOT_FOUND');
 
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
 
     expect(logger.info).not.toHaveBeenCalledWith(
@@ -636,7 +644,7 @@ describe('a session end leaves the push registration to the server', () => {
     require('#store/sessionTeardown').runSessionTeardown() as Promise<void>;
 
   it('sends no device update from the teardown', async () => {
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
     mockMutate.mockClear();
 
@@ -676,7 +684,7 @@ describe('logout — push/notification teardown', () => {
   it('unsubscribes the rotation listener and resets the session state', async () => {
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
     expect(mockOnRefresh).toHaveBeenCalledTimes(1);
 
@@ -708,7 +716,7 @@ describe('a rotated push token', () => {
     );
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
-    authService.registerDeviceInBackground();
+    registerDeviceInBackground();
     await flush();
     mockMutate.mockClear();
 

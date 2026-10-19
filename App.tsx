@@ -35,6 +35,7 @@ import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
 import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
 import { nativePushProvider } from '#/services/push/nativePushProvider';
 import { iosPushProvider } from '#/services/push/iosPushProvider';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
@@ -45,6 +46,10 @@ setupGlobalErrorHandler();
 setPushTokenProvider(
   Platform.OS === 'ios' ? iosPushProvider : nativePushProvider,
 );
+
+// Device registration and the biometric slot, which a session runs on this
+// device beyond the core. Before the first sign-in, which this module precedes.
+registerMobileSessionHost();
 
 // Foreground, API-reachable, socket-reconnect and language triggers for the
 // client's resync (`src/apollo/refetchEvents.ts`); navigation paces the

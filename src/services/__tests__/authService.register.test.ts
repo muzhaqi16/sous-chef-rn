@@ -48,7 +48,7 @@ jest.mock(
     ),
 );
 
-jest.mock('#/services/auth/deviceRegistration', () => ({
+jest.mock('#/services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('#/hooks/settings/useFeatureHint', () => ({
@@ -69,6 +69,10 @@ import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { authService } from '#/services/authService';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+
+// The keychain is reached only through the steps the mobile app registers.
+registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
 registerApolloClient({

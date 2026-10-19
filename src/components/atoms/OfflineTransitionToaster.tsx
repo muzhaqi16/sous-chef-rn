@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from '#/i18n';
-import { useOfflineStatus } from '#hooks/app/useOfflineStatus';
+import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 

@@ -85,6 +85,24 @@ and are mobile-only.
 `/revoke` deliberately leaves the device credential exchangeable, so the
 settings sign-out keeps biometric sign-in working.
 
+**What a device adds, its host registers.** `authService` signs in and out
+with no device behind it. The steps that need one come from
+`registerSessionHost` (`src/services/auth/sessionHost.ts`), which the mobile
+app calls from `App.tsx` before the first sign-in
+(`src/app/mobileSessionHost.ts`):
+
+- `afterSignIn` registers the device for push, on idle
+  (`src/services/device/deviceRegistration.ts`);
+- `postSignInGate` decides, before auth state changes, whether a password
+  sign-in goes on to biometric enrolment or the remember-me offer;
+- `forgetStoredSignIn` is a sign-out's first step: it revokes the device
+  credential while the session can still authorise that, then deletes the
+  biometric slot (`src/services/biometric/`).
+
+A host that registers nothing, as the web app will, signs out through the same
+teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
+that it still leaves no tokens, cache, queued writes or session-scoped state.
+
 **A session is bound to the device only if the id is present at sign-in.**
 `login` and `register` await `ensureDeviceId()` before minting, because
 `authLink` sends only what the sync `getDeviceId()` already holds. A session
@@ -94,7 +112,7 @@ it. Refresh inherits the binding server-side.
 **A device update is read as errors-as-data.** `UpdateDeviceResult` is a union
 (`ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload |
 ValidationError`), so a refusal RESOLVES and a `.catch` never sees it.
-`readDeviceUpdate` in `src/services/auth/deviceRegistration.ts` discriminates on
+`readDeviceUpdate` in `src/services/device/deviceRegistration.ts` discriminates on
 `__typename`; no caller may report a change from the absence of a throw.
 
 Where the identity that names the device comes from, and why it is keychain-

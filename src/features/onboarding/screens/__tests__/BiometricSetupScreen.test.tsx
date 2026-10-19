@@ -41,10 +41,9 @@ let mockBiometricInfo: { isAvailable: boolean; biometryType: string | null } = {
   biometryType: 'Face ID',
 };
 
-jest.mock('#/services/authService', () => ({
-  authService: {
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     getBiometricInfo: jest.fn(() => Promise.resolve(mockBiometricInfo)),
-    storeCredentials: jest.fn(() => Promise.resolve(true)),
   },
 }));
 

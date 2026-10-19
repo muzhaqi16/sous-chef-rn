@@ -1,5 +1,6 @@
-// The gates `handleLogin` resolves after a SUCCESSFUL sign-in, and what `login`
-// reports when it cannot open a session at all.
+// The gates `handleLogin` resolves after a SUCCESSFUL sign-in, through the
+// steps the mobile app registers, and what `login` reports when it cannot open
+// a session at all.
 //
 // The other authService suites drive refusals, so neither reaches this path.
 // Both defects here are invisible from a refusal: the RememberMe gate offers
@@ -53,7 +54,7 @@ jest.mock('#native/storage/keychain', () => ({
 }));
 
 const mockCheckStoredCredentials = jest.fn();
-jest.mock('#/services/auth/credentials', () => ({
+jest.mock('#/services/biometric/credentials', () => ({
   checkStoredCredentials: (...args: unknown[]) =>
     mockCheckStoredCredentials(...args),
   getBiometricInfo: jest.fn(),
@@ -64,7 +65,7 @@ jest.mock('#/services/auth/credentials', () => ({
   storeCredentials: jest.fn(),
 }));
 
-jest.mock('#/services/auth/deviceRegistration', () => ({
+jest.mock('#/services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('#/hooks/settings/useFeatureHint', () => ({
@@ -88,6 +89,9 @@ import { registerApolloClient } from '#/apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+
+registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
 registerApolloClient({

@@ -3,7 +3,7 @@
 // This suite asserted the opposite. The reasoning behind that was recorded as
 // "reading the slot still costs a successful biometric prompt from that
 // account's owner" — and it does not hold. The credential slot is
-// `ACCESS_CONTROL.BIOMETRY_ANY` (`src/storage/keychain.ts`), which ANY biometric
+// `ACCESS_CONTROL.BIOMETRY_ANY` (`src/native/storage/keychain.ts`), which ANY biometric
 // enrolled on the device satisfies, and typically the device passcode as well;
 // the two slots the login screen reads to decide whether to OFFER the button
 // (`indicatorServiceFor`, `LAST_BIOMETRIC_EMAIL_KEY`) carry no access control at
@@ -106,6 +106,11 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
 
 import { logger } from '#/utils/environment';
 import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+
+// A sign-out drops the slot through the step the app registers.
+registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
 registerApolloClient({
@@ -196,7 +201,8 @@ describe('logout and biometric credentials', () => {
   it('says so when it cannot revoke, rather than resolving as though it had', async () => {
     (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
 
-    const revoked = await authService.revokeDeviceCredentialForThisDevice();
+    const revoked =
+      await biometricService.revokeDeviceCredentialForThisDevice();
 
     expect(revoked).toBe(false);
     expect(mockMutate).not.toHaveBeenCalled();
@@ -206,7 +212,7 @@ describe('logout and biometric credentials', () => {
   // everything once `isLoggingOut` is set, and this revoke needs two sequential
   // round trips, so without the opt-in a slow link cancels it.
   it('opts its round trips out of the logout refusal', async () => {
-    await authService.revokeDeviceCredentialForThisDevice();
+    await biometricService.revokeDeviceCredentialForThisDevice();
 
     // `toEqual` drops undefined entries, so the opt-in is read as a boolean
     // per call — an absent context has to be visible as `false`.
@@ -239,13 +245,17 @@ describe('logout and biometric credentials', () => {
       },
     });
 
-    expect(await authService.revokeDeviceCredentialForThisDevice()).toBe(false);
+    expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
+      false,
+    );
   });
 
   it('treats a device with no credential of its own as nothing to revoke', async () => {
     mockQuery.mockResolvedValueOnce({ data: { deviceCredentials: [] } });
 
-    expect(await authService.revokeDeviceCredentialForThisDevice()).toBe(true);
+    expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
+      true,
+    );
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
@@ -255,7 +265,7 @@ describe('logout and biometric credentials', () => {
     (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
 
     expect(
-      await authService.signInWithDeviceCredential('chef@example.com'),
+      await biometricService.signInWithDeviceCredential('chef@example.com'),
     ).toBe(false);
     expect(mockToastError).toHaveBeenCalledWith(
       expect.stringContaining("isn't available on this device"),
@@ -274,14 +284,14 @@ describe('logout and biometric credentials', () => {
         },
       },
     });
-    await authService.signInWithDeviceCredential('chef@example.com');
+    await biometricService.signInWithDeviceCredential('chef@example.com');
     expect(mockStoreState.registerBiometricRefusal).toHaveBeenCalled();
 
     mockStoreState.biometricRetryAt = Date.now() + 30_000;
     mockMutate.mockClear();
 
     expect(
-      await authService.signInWithDeviceCredential('chef@example.com'),
+      await biometricService.signInWithDeviceCredential('chef@example.com'),
     ).toBe(false);
     expect(mockMutate).not.toHaveBeenCalled();
     expect(mockToastError).toHaveBeenCalledWith(
@@ -296,7 +306,7 @@ describe('logout and biometric credentials', () => {
     mockHasCredentials.mockResolvedValueOnce(false);
 
     expect(
-      await authService.signInWithDeviceCredential('chef@example.com'),
+      await biometricService.signInWithDeviceCredential('chef@example.com'),
     ).toBe(false);
 
     expect(mockStoreState.setHasStoredCredentials).toHaveBeenCalledWith(false);
@@ -325,7 +335,7 @@ describe('logout and biometric credentials', () => {
         .mockResolvedValueOnce(false);
 
       expect(
-        await authService.signInWithDeviceCredential('chef@example.com'),
+        await biometricService.signInWithDeviceCredential('chef@example.com'),
       ).toBe(false);
 
       expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
@@ -335,7 +345,7 @@ describe('logout and biometric credentials', () => {
       setHasStoredCredentials().mockClear();
       keychainMock().loadCredentials.mockResolvedValueOnce(null);
 
-      await authService.signInWithDeviceCredential('chef@example.com');
+      await biometricService.signInWithDeviceCredential('chef@example.com');
 
       expect(setHasStoredCredentials()).not.toHaveBeenCalledWith(false);
     });
@@ -354,9 +364,9 @@ describe('logout and biometric credentials', () => {
         },
       });
 
-      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        'enrolled',
-      );
+      expect(
+        await biometricService.enrolDeviceCredential('chef@example.com'),
+      ).toBe('enrolled');
       expect(setHasStoredCredentials()).toHaveBeenCalledWith(true);
     });
 
@@ -374,9 +384,9 @@ describe('logout and biometric credentials', () => {
         },
       });
 
-      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        'unsaved',
-      );
+      expect(
+        await biometricService.enrolDeviceCredential('chef@example.com'),
+      ).toBe('unsaved');
       expect(setHasStoredCredentials()).not.toHaveBeenCalled();
     });
 
@@ -396,9 +406,9 @@ describe('logout and biometric credentials', () => {
         },
       });
 
-      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        'unsaved',
-      );
+      expect(
+        await biometricService.enrolDeviceCredential('chef@example.com'),
+      ).toBe('unsaved');
       expect(mockToastError).not.toHaveBeenCalled();
     });
 
@@ -406,9 +416,9 @@ describe('logout and biometric credentials', () => {
       mockToastError.mockClear();
       (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
 
-      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        'unsaved',
-      );
+      expect(
+        await biometricService.enrolDeviceCredential('chef@example.com'),
+      ).toBe('unsaved');
       expect(mockMutate).not.toHaveBeenCalled();
       expect(mockToastError).not.toHaveBeenCalled();
     });
@@ -425,7 +435,7 @@ describe('logout and biometric credentials', () => {
       },
     });
 
-    await authService.signInWithDeviceCredential('chef@example.com');
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
     expect(mockStoreState.setHasStoredCredentials).toHaveBeenCalledWith(false);
@@ -446,29 +456,27 @@ describe('logout and biometric credentials', () => {
    * The other half of the same rule, from the opposite direction: a failure
    * that does NOT establish the credentials are dead must leave them alone.
    *
-   * `autoLogin` cleared on any `result.error` and again in its catch, so a
-   * single network blip on launch silently un-enrolled the device — the next
-   * launch offered no biometric button, with nothing said. The payload branch
-   * beside it already got this right via `isDeadCredentialCode`; these two did
-   * not.
+   * Clearing on any `result.error`, or in the catch, would let a single
+   * network blip silently un-enrol the device — the next launch offering no
+   * biometric button, with nothing said. Only `isDeadCredentialCode` clears.
    */
-  it('keeps stored credentials when auto-login fails on transport', async () => {
+  it('keeps stored credentials when a biometric sign-in fails on transport', async () => {
     mockClearCredentials.mockClear();
     mockMutate.mockRejectedValueOnce(new Error('Network request failed'));
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 
-  it('keeps them when auto-login resolves with a transport error', async () => {
+  it('keeps them when a biometric sign-in resolves with a transport error', async () => {
     mockClearCredentials.mockClear();
     mockMutate.mockResolvedValueOnce({
       data: { login: null },
       error: new Error('Network request failed'),
     });
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
@@ -489,7 +497,7 @@ describe('logout and biometric credentials', () => {
       },
     });
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
@@ -506,7 +514,7 @@ describe('logout and biometric credentials', () => {
       },
     });
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
   });
@@ -523,7 +531,7 @@ describe('logout and biometric credentials', () => {
       },
     });
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).toHaveBeenCalled();
   });

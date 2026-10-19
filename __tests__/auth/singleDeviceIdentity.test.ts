@@ -70,7 +70,7 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
 
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
-import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
 import { MOCK_DEVICE_ID as DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
@@ -95,7 +95,7 @@ beforeEach(() => {
 
 describe('every identity surface presents one value', () => {
   it('issuing a device credential binds it to the same device', async () => {
-    await authService.enrolDeviceCredential('chef@example.com');
+    await biometricService.enrolDeviceCredential('chef@example.com');
 
     expect(inputWith('deviceId')).toEqual(
       expect.objectContaining({ deviceId: DEVICE_ID }),
@@ -103,7 +103,7 @@ describe('every identity surface presents one value', () => {
   });
 
   it('exchanging a device credential presents the same device', async () => {
-    await authService.signInWithDeviceCredential('chef@example.com');
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(inputWith('credential')).toEqual(
       expect.objectContaining({ deviceId: DEVICE_ID }),
@@ -124,7 +124,7 @@ describe('every identity surface presents one value', () => {
       },
     });
 
-    await authService.revokeDeviceCredentialForThisDevice();
+    await biometricService.revokeDeviceCredentialForThisDevice();
 
     expect(inputWith('id')).toEqual(expect.objectContaining({ id: 'mine' }));
   });

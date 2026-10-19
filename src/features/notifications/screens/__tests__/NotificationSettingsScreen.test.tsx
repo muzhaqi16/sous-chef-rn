@@ -15,12 +15,13 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('#/services/authService', () => ({
-  authService: { registerDeviceInBackground: jest.fn() },
+jest.mock('#/services/device/deviceRegistration', () => ({
+  registerDeviceInBackground: jest.fn(),
 }));
 
-const registerDeviceInBackground = jest.requireMock('#/services/authService')
-  .authService.registerDeviceInBackground;
+const { registerDeviceInBackground } = jest.requireMock(
+  '#/services/device/deviceRegistration',
+);
 
 const mockUpdateNotificationSetting = jest.fn().mockResolvedValue(true);
 const mockResetToDefaults = jest.fn().mockResolvedValue(true);

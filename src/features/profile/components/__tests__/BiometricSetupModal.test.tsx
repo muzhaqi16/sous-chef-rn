@@ -18,8 +18,8 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/services/authService', () => ({
-  authService: {
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     getBiometricInfo: jest.fn(),
     enrolDeviceCredential: jest.fn(),
     loadStoredCredentials: jest.fn(),
@@ -28,12 +28,12 @@ jest.mock('#/services/authService', () => ({
 }));
 
 // Get references to mock functions after the module mock is created
-const { authService: mockAuthService } = jest.requireMock(
-  '#/services/authService',
+const { biometricService: mockBiometricService } = jest.requireMock(
+  '#/services/biometric/deviceCredential',
 );
-const mockGetBiometricInfo = mockAuthService.getBiometricInfo;
-const mockEnrol = mockAuthService.enrolDeviceCredential;
-const mockCheckStoredCredentials = mockAuthService.checkStoredCredentials;
+const mockGetBiometricInfo = mockBiometricService.getBiometricInfo;
+const mockEnrol = mockBiometricService.enrolDeviceCredential;
+const mockCheckStoredCredentials = mockBiometricService.checkStoredCredentials;
 
 const defaultProps: {
   visible: boolean;

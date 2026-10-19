@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { authService } from '#/services/authService';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 /**
@@ -15,7 +15,7 @@ const syncPermissionChange = async (
 ): Promise<void> => {
   const granted = await checkPermissions();
   if (wasGranted === null || granted === wasGranted || !pushEnabled) return;
-  authService.registerDeviceInBackground();
+  registerDeviceInBackground();
 };
 
 interface ResyncOptions {

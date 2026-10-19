@@ -16,8 +16,8 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#services/authService', () => ({
-  authService: { registerDeviceInBackground: jest.fn() },
+jest.mock('#/services/device/deviceRegistration', () => ({
+  registerDeviceInBackground: jest.fn(),
 }));
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -47,7 +47,9 @@ jest.mock('react-native-launch-arguments', () => ({
 }));
 
 const { useStore } = jest.requireMock('#store');
-const { authService } = jest.requireMock('#services/authService');
+const { registerDeviceInBackground } = jest.requireMock(
+  '#/services/device/deviceRegistration',
+);
 
 describe('useStartupInit — restored-session push registration', () => {
   beforeAll(() => {
@@ -71,7 +73,7 @@ describe('useStartupInit — restored-session push registration', () => {
 
     renderHook(() => useStartupInit());
 
-    expect(authService.registerDeviceInBackground).toHaveBeenCalledTimes(1);
+    expect(registerDeviceInBackground).toHaveBeenCalledTimes(1);
   });
 
   it('does not register when the app starts unauthenticated', () => {
@@ -79,7 +81,7 @@ describe('useStartupInit — restored-session push registration', () => {
 
     renderHook(() => useStartupInit());
 
-    expect(authService.registerDeviceInBackground).not.toHaveBeenCalled();
+    expect(registerDeviceInBackground).not.toHaveBeenCalled();
   });
 
   it('does not register when only a stale user without token is present', () => {
@@ -90,7 +92,7 @@ describe('useStartupInit — restored-session push registration', () => {
 
     renderHook(() => useStartupInit());
 
-    expect(authService.registerDeviceInBackground).not.toHaveBeenCalled();
+    expect(registerDeviceInBackground).not.toHaveBeenCalled();
   });
 });
 

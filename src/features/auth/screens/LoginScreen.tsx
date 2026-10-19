@@ -21,6 +21,7 @@ import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppStore, useHasStoredCredentials } from '#store/useAppStore';
 import { useBiometricBackoff } from '../hooks/useBiometricBackoff';
 import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
 import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationScreen';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
@@ -103,7 +104,7 @@ export function LoginScreen(): React.JSX.Element {
     // The password is not stored: enrolment asks the server for a device-bound
     // credential and puts that behind biometry instead.
     onAccept: async ({ email }) => {
-      if ((await authService.enrolDeviceCredential(email)) === 'unsaved') {
+      if ((await biometricService.enrolDeviceCredential(email)) === 'unsaved') {
         toastService.error(t('errors.saveLoginFailed'));
       }
       finishRememberMe();
@@ -149,9 +150,9 @@ export function LoginScreen(): React.JSX.Element {
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
     void loadAuthInfoAsync(
-      authService.getLastBiometricEmail,
-      authService.checkStoredCredentials,
-      authService.getBiometricInfo,
+      biometricService.getLastBiometricEmail,
+      biometricService.checkStoredCredentials,
+      biometricService.getBiometricInfo,
       setBiometricInfo,
       setBiometricEmail,
       setShouldShowBiometricButton,
@@ -192,7 +193,7 @@ export function LoginScreen(): React.JSX.Element {
         // Exchanges the device credential; the password is never held, so
         // there is nothing here to replay through `login`.
         if (!biometricEmail) return;
-        const signedIn = await authService.signInWithDeviceCredential(
+        const signedIn = await biometricService.signInWithDeviceCredential(
           biometricEmail,
         );
 

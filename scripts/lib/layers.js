@@ -56,7 +56,7 @@ const LAYERS = [
     name: 'services/auth',
     layer: 'core',
     patterns: ['src/services/auth/**', 'src/services/authService.ts'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'services',
@@ -79,7 +79,7 @@ const LAYERS = [
     name: 'hooks/session',
     layer: 'core',
     patterns: ['src/hooks/{app,offline,subscriptions}/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'theme/foundations',
@@ -133,7 +133,7 @@ const LAYERS = [
     name: 'services (device)',
     layer: 'mobile',
     patterns: [
-      'src/services/{push,permissions,haptic,notifications,performance}/**',
+      'src/services/{push,permissions,haptic,notifications,performance,biometric,device}/**',
       'src/services/NavigationService.ts',
     ],
     enforced: false,

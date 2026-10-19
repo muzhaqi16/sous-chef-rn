@@ -20,8 +20,8 @@ jest.mock('#hooks/performance/useScreenTransition', () => ({
   useScreenTransition: jest.fn(),
 }));
 
-jest.mock('#/services/authService', () => ({
-  authService: {
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     getBiometricInfo: jest.fn(() =>
       Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
     ),
@@ -31,8 +31,8 @@ jest.mock('#/services/authService', () => ({
   },
 }));
 
-const { authService: mockAuthService } = jest.requireMock(
-  '#/services/authService',
+const { biometricService: mockBiometricService } = jest.requireMock(
+  '#/services/biometric/deviceCredential',
 );
 
 jest.mock('#/utils/finallyHelpers', () => ({
@@ -122,7 +122,7 @@ describe('PostLoginBiometricScreen', () => {
     await user.press(await screen.findByText('Enable Now'));
 
     await waitFor(() => {
-      expect(mockAuthService.enrolDeviceCredential).toHaveBeenCalledWith(
+      expect(mockBiometricService.enrolDeviceCredential).toHaveBeenCalledWith(
         'test@example.com',
       );
       expect(mockRecordResponse).toHaveBeenCalledWith(true, undefined);

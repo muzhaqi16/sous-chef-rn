@@ -21,7 +21,7 @@ import {
   clearTempRegistrationPassword,
 } from '#native/storage/keychain';
 import { ensureDeviceId } from '#/services/auth/deviceId';
-import { authService } from '#services/authService';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 import type { AuthUserInput } from '#store/slices/authSlice';
 
@@ -208,7 +208,7 @@ export function useStartupInit(): void {
       // subscribe. `registerDeviceOnce` permission-gates, so this never prompts.
       const { user, accessToken } = useStore.getState();
       if (user && accessToken && !detoxDisabled) {
-        requestIdleCallback(() => authService.registerDeviceInBackground());
+        requestIdleCallback(() => registerDeviceInBackground());
       }
 
       // A module-scope latch, NEVER `global.__APP_START_TIMESTAMP = undefined`:
