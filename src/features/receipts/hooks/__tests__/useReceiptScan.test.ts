@@ -193,6 +193,37 @@ describe('useReceiptScan', () => {
     expect(JSON.stringify(rest)).not.toMatch(/TC#|14:22/);
   });
 
+  // receipt-rules turns a 12-hour time into the HH:MM the check-in takes,
+  // however the receipt spaces its AM/PM.
+  it.each([
+    ['6:42 P M', '18:42'],
+    ['9:05AM', '09:05'],
+  ])('keeps a printed %s as %s', async (printedTime, kept) => {
+    const today = new Date();
+    const printed = [
+      today.getMonth() + 1,
+      today.getDate(),
+      today.getFullYear() % 100,
+    ]
+      .map(part => String(part).padStart(2, '0'))
+      .join('/');
+    scannedOnePage();
+    recognizeAndDelete.mockResolvedValue([
+      {
+        lines: [
+          line('ALDI', 0.05),
+          line('POWDERED SUGAR  1.85 FA', 0.1),
+          line(`${printed} ${printedTime}`, 0.15),
+        ],
+      },
+    ]);
+    const { result } = renderScan();
+
+    await act(() => result.current.scan());
+
+    expect(useReceiptDraftStore.getState().draft?.purchaseTime).toBe(kept);
+  });
+
   it("reads the printed day in the device region's order", async () => {
     dateOrder.mockReturnValue('dayFirst');
     const today = new Date();
