@@ -9,7 +9,7 @@ import {
   ForkRecipeDocument,
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { RecipeForm_RecipeFragmentDoc } from '#features/recipes/screens/RecipeForm/RecipeForm.generated';
+import { UseRecipeFormWrites_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
@@ -40,8 +40,8 @@ const seedSource = (source: SeedWithFragment['data'] = SOURCE) =>
   seedCache([
     {
       data: source,
-      fragment: RecipeForm_RecipeFragmentDoc,
-      fragmentName: 'RecipeForm_recipe',
+      fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+      fragmentName: 'useRecipeFormWrites_recipe',
     },
   ]);
 
@@ -210,8 +210,8 @@ describe('usePublishRecipe', () => {
     const cache = seedCache([
       {
         data: sourceRecipe({ status: RecipeStatus.Draft }),
-        fragment: RecipeForm_RecipeFragmentDoc,
-        fragmentName: 'RecipeForm_recipe',
+        fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+        fragmentName: 'useRecipeFormWrites_recipe',
       },
     ]);
     const { result } = renderHookWithApollo(() => usePublishRecipe(), {
@@ -230,8 +230,8 @@ describe('usePublishRecipe', () => {
 
     const recipe = cache.readFragment<{ status: string }>({
       id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
-      fragment: RecipeForm_RecipeFragmentDoc,
-      fragmentName: 'RecipeForm_recipe',
+      fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+      fragmentName: 'useRecipeFormWrites_recipe',
     });
     expect(recipe?.status).toBe('PENDING_REVIEW');
   });
@@ -291,8 +291,8 @@ describe('usePublishRecipe', () => {
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     const recipe = cache.readFragment<{ status: string }>({
       id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
-      fragment: RecipeForm_RecipeFragmentDoc,
-      fragmentName: 'RecipeForm_recipe',
+      fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+      fragmentName: 'useRecipeFormWrites_recipe',
     });
     expect(recipe?.status).toBe(SOURCE.status);
   });

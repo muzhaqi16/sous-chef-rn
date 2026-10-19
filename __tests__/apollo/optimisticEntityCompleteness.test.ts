@@ -1461,9 +1461,9 @@ describe('optimistic entity completeness', () => {
     });
 
     it('keeps GetRecipe complete after an optimistic create', async () => {
-      // GetRecipe spreads useRecipeData_recipe AND RecipeForm_recipe; the
-      // create has to materialize both or the detail screen (and the edit form)
-      // are blank offline.
+      // GetRecipe spreads useRecipeData_recipe AND useRecipeFormWrites_recipe;
+      // the create has to materialize both or the detail screen (and the edit
+      // form) are blank offline.
       const cache = makeCache();
       writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 

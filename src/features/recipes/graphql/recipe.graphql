@@ -95,7 +95,7 @@ query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
   recipe(id: $id) {
     id
     ...useRecipeData_recipe
-    ...RecipeForm_recipe
+    ...useRecipeFormWrites_recipe
   }
 }
 

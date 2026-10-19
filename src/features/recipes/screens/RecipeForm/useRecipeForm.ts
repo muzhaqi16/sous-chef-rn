@@ -8,7 +8,7 @@ import type {
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
-import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { UseRecipeFormWrites_RecipeFragment } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import type { RecipeCaptureQuery } from '#features/recipes/hooks/useRecipeCapture.generated';
 import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
 import type {
@@ -308,7 +308,7 @@ export function useRecipeForm() {
   // Populate from existing recipe (edit mode). A pending edit reopens from
   // what it proposes: a save sends the whole form, so live values would set
   // every pending change back.
-  const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
+  const populateFromRecipe = (recipe: UseRecipeFormWrites_RecipeFragment) => {
     const proposed = recipe.pendingRevision?.proposed;
     const content = proposed ?? recipe;
     const ingredients = proposed
