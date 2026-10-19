@@ -183,8 +183,12 @@ Always include a __typename so the variant can be discriminated.
 """
 union AcceptHomeInviteResult = AcceptHomeInvitePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-input AcceptShoppingListInviteInput {
-  token: String!
+"""An invite to accept, by exactly one of its token or its id."""
+input AcceptShoppingListInviteInput @oneOf {
+  """The invite's id, as pendingCollaborationInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link or the invite notification"""
+  token: String
 }
 
 type AcceptShoppingListInvitePayload {
@@ -2298,7 +2302,7 @@ input CreatePurchaseInput {
   id: ID
   """The catalog item bought; it must exist and be visible to the caller"""
   itemId: ID!
-  """The price before any discount; not negative"""
+  """The price per unit before any discount; not negative"""
   originalPrice: Float
   """When it was bought; the time of recording when omitted"""
   purchaseDate: DateTime
@@ -2346,8 +2350,9 @@ input CreateReceiptCheckInInput {
   """
   Client-minted CUID2 for the receipt. Sending the same id again, with the
   same pantryId and shoppingListId, returns the check-in it created and
-  attempts only the lines not yet recorded. An id another user holds, or one
-  sent again naming another pantry or list, is refused with a ConflictError.
+  attempts only the lines not yet recorded, on the store and day it recorded.
+  An id another user holds, or one sent again naming another pantry or list,
+  is refused with a ConflictError.
   """
   id: ID!
   """The confirmed lines, 1 to 100"""
@@ -2371,6 +2376,13 @@ input CreateReceiptCheckInInput {
   The pantry the stock goes to; the caller must be able to add items to it
   """
   pantryId: ID!
+  """
+  The moment of the sale: the parse's purchaseTime on purchasedOn, placed by
+  the device in its own time zone (noon when no time is printed). Every
+  line's purchase and stock is dated by it; it must fall on purchasedOn in
+  some time zone. A check-in sent again keeps the first send's moment.
+  """
+  purchasedAt: DateTime
   """The day on the receipt, as YYYY-MM-DD; not later than today"""
   purchasedOn: LocalDate!
   """The receipt's own number, as printed"""
@@ -2906,8 +2918,15 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError
 
-input DeclineShoppingListInviteInput {
-  token: String!
+"""
+An invite to decline, by exactly one of its token or its id. By id, the
+caller must be its addressee with a verified email, as on acceptance.
+"""
+input DeclineShoppingListInviteInput @oneOf {
+  """The invite's id, as pendingCollaborationInvitesConnection lists it"""
+  inviteId: ID
+  """The token from the emailed link or the invite notification"""
+  token: String
 }
 
 type DeclineShoppingListInvitePayload {
@@ -4250,7 +4269,6 @@ union EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError 
 type Entitlement {
   """When it ends; null when it lasts until revoked"""
   expiresAt: DateTime
-  """The plan held"""
   plan: Plan!
   """Where the hold comes from"""
   source: EntitlementSource!
@@ -4665,7 +4683,6 @@ enum FeatureFlagName {
 type FeatureFlagState {
   """Whether the caller can use it now: true exactly when state is ON"""
   enabled: Boolean!
-  """The feature"""
   flag: FeatureFlagName!
   """The plan the feature needs; null when it is free"""
   plan: Plan
@@ -5261,7 +5278,9 @@ type HouseholdMoneyReport {
 
 """A household's spend on one top-level category."""
 type HouseholdSpendCategory {
-  """The top-level category; null for purchases whose item has no category"""
+  """
+  The top-level category; null for purchases whose item has no category, and for a category the reader may not see, whose spend still counts
+  """
   category: Category
   spend: [CurrencyAmount!]!
 }
@@ -8610,8 +8629,12 @@ type Mutation {
   """
   acceptHomeInvite(input: AcceptHomeInviteInput!): AcceptHomeInviteResult!
   """
-  Accept an invitation to collaborate on a shopping list. Requires a verified
-  email (AUTH_EMAIL_NOT_VERIFIED otherwise), as joining by share code does.
+  Accept an invitation to collaborate on a shopping list, by its token or,
+  for an addressee who never opened the email or the notification, by its
+  id. Requires a verified email (AUTH_EMAIL_NOT_VERIFIED otherwise), as
+  joining by share code does. An invitation sent to another account answers
+  ForbiddenError; one no longer pending answers NotFoundError, and one past
+  its expiry a ValidationError on the field that named it.
   """
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
   """
@@ -8794,11 +8817,8 @@ type Mutation {
   capture PENDING; poll recipeCapture until it is not. Each user has a daily
   number of captures, and a smaller one of photo captures.
   
-  Each source is behind its own feature: RECIPE_CAPTURE_URL, _TEXT or
-  _PHOTO. A source whose feature is not ON for the caller is refused with
-  FEATURE_DISABLED or PREMIUM_REQUIRED. A text that is little more than one
-  link is that page, so it needs RECIPE_CAPTURE_URL too; a caption's one link
-  is followed only while RECIPE_CAPTURE_URL is ON for the caller.
+  Each source is behind its own feature (@requireFeature); a text that is
+  little more than one link is that page, and needs RECIPE_CAPTURE_URL too.
   """
   createRecipeCapture(input: CreateRecipeCaptureInput!): CreateRecipeCaptureResult!
   """Create a review for a published recipe."""
@@ -8841,7 +8861,11 @@ type Mutation {
   it is.
   """
   declineHomeInvite(input: DeclineHomeInviteInput!): DeclineHomeInviteResult!
-  """Decline an invitation to collaborate on a shopping list."""
+  """
+  Decline an invitation to collaborate on a shopping list, by its token, or
+  by its id for a verified addressee. An invitation sent to another account
+  answers ForbiddenError, and one no longer pending NotFoundError.
+  """
   declineShoppingListInvite(input: DeclineShoppingListInviteInput!): DeclineShoppingListInviteResult!
   """Delete the current user's account."""
   deleteAccount: DeleteAccountResult!
@@ -10764,6 +10788,12 @@ type PantryItemBatch {
   """This batch's own portions per tracking unit (an 18-egg pack is 18)."""
   portionsPerTrackingUnit: Float
   """
+  The purchase this acquisition was recorded under; null when none is. Its
+  purchaseDate is when the stock was bought, a receipt's day for a receipt,
+  where createdAt is when the batch was recorded.
+  """
+  purchase: Purchase
+  """
   The purchase this acquisition was recorded under, where one exists. A
   restock's purchase belongs here rather than on the item, whose purchaseId
   names only the acquisition that first stocked it.
@@ -11511,6 +11541,12 @@ type ParsedReceipt {
   """
   lines: [ParsedReceiptLine!]!
   merchant: ParsedReceiptMerchant!
+  """
+  The time of the sale printed with purchasedOn, HH:MM on a 24-hour clock in
+  the store's own time; null when none was read. The device places it in its
+  own time zone and sends the moment as createReceiptCheckIn's purchasedAt.
+  """
+  purchaseTime: String
   purchasedOn: LocalDate
   """
   The amount of the receipt's last printed SUBTOTAL line; null when it prints none
@@ -11867,7 +11903,7 @@ type Purchase {
   """
   itemUpc: String
   """
-  The price before any discount, in this purchase's currency. One recorded from a shopping line carries its unit price here.
+  The price per unit before any discount, in this purchase's currency: a receipt's discount adds its share of each unit to unitPrice. One recorded from a shopping line carries its unit price here.
   """
   originalPrice: Float
   """
@@ -12639,9 +12675,7 @@ type Query {
   ): PantryItemBatchConnection!
   """
   Ingredient lines a user pastes, read as a capture reads them: amount, unit,
-  name, handling and catalog candidates. Writes nothing. Behind the
-  INGREDIENT_PASTE feature: refused with FEATURE_DISABLED or
-  PREMIUM_REQUIRED while it is not ON for the caller.
+  name, handling and catalog candidates. Writes nothing.
   """
   parseIngredientLines(input: ParseIngredientLinesInput!): ParseIngredientLinesPayload!
   """
@@ -13115,6 +13149,8 @@ type ReceiptCheckIn {
   """
   orderDiscount: Float
   pantryId: ID!
+  """The moment of the sale the first send stated; null when it stated none"""
+  purchasedAt: DateTime
   """The day on the receipt"""
   purchasedOn: LocalDate!
   receiptNumber: String
@@ -13129,7 +13165,7 @@ input ReceiptCheckInLineInput {
   """The client's id for the line, echoed back on its result"""
   clientId: String!
   """
-  What the receipt printed as saved on the line; the purchase's original price is totalPaid plus it
+  What the receipt printed as saved on the line; the purchase's original price per unit is its unit price plus the discount's share of each unit
   """
   discount: Float
   """
@@ -13372,6 +13408,13 @@ enum ReceiptParser {
 
 """The receipt a purchase was made on."""
 input ReceiptRefInput {
+  """
+  The moment of the sale: the receipt's printed time on purchasedOn, placed
+  by the device in its own time zone (noon when no time is printed). It
+  dates the purchase and the stock; it must fall on purchasedOn in some time
+  zone. Without it they are dated by purchasedOn alone.
+  """
+  purchasedAt: DateTime
   """The day on the receipt, as YYYY-MM-DD; not later than today."""
   purchasedOn: LocalDate!
   """The receipt's own number, as printed."""
@@ -15600,6 +15643,13 @@ type ShoppingListCollaborator {
   when that account no longer exists.
   """
   invitedBy: User
+  """
+  The inviter's display name, else first name, as the invite's notification
+  and email give it; null when neither is set. The addressee of a pending
+  invite shares nothing with the inviter yet, so invitedBy.displayName is
+  null to them.
+  """
+  inviterName: String
   """
   The collaborator's role on the list. An invite takes its default permission
   flags from the role; someone who joins through the share code is a VIEWER.
@@ -18344,7 +18394,7 @@ input UpdatePurchaseInput {
   expiresOn: LocalDate
   """The purchase to change"""
   id: ID!
-  """The price before any discount; null clears it"""
+  """The price per unit before any discount; null clears it"""
   originalPrice: Float
   """When it was bought; null is refused"""
   purchaseDate: DateTime
