@@ -166,6 +166,56 @@ describe('useUserSubscriptions', () => {
     );
   });
 
+  describe('a removal', () => {
+    const REMOVED: [UserSubtype, Record<string, string>, string][] = [
+      [
+        UserSubtype.RemovedFromHome,
+        { homeId: 'home-1' },
+        'You were removed from a home',
+      ],
+      [
+        UserSubtype.RemovedFromShoppingList,
+        { shoppingListId: 'list-1' },
+        'You were removed from a shopping list',
+      ],
+    ];
+
+    const drive = (
+      subtype: UserSubtype,
+      parents: Record<string, string>,
+      actorUserId: string,
+    ) => {
+      const getOnData = captureOnData(mockRegister);
+      renderHookWithApollo(() => useUserSubscriptions('user-1'));
+      getOnData()({
+        __typename: 'UserEvent',
+        subtype,
+        userId: 'user-1',
+        actorUserId,
+        parents,
+      });
+    };
+
+    it.each(REMOVED)(
+      'announces %s when someone else made it',
+      (subtype, parents, message) => {
+        drive(subtype, parents, 'user-owner');
+
+        expect(mockToastError).toHaveBeenCalledWith(message);
+      },
+    );
+
+    it.each(REMOVED)(
+      'says nothing for %s the user made by leaving, and still drops it',
+      (subtype, parents) => {
+        drive(subtype, parents, 'user-1');
+
+        expect(mockToastError).not.toHaveBeenCalled();
+        expect(useStore.getState().selectedShoppingListId).toBeNull();
+      },
+    );
+  });
+
   it('leaves selections alone when removed from a home that is not selected', () => {
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useUserSubscriptions('user-1'));

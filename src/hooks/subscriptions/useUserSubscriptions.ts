@@ -34,6 +34,10 @@ import { useSubscriptionTransportRecovery } from './useSubscriptionTransportReco
 
 type UserEventPayload = UserEventsSubscription['userEvents'];
 
+/** A leave arrives as a removal the user made themselves; it is not news. */
+const removedThemselves = (payload: UserEventPayload) =>
+  !!payload.actorUserId && payload.actorUserId === payload.userId;
+
 function handleRemovedFromHome(
   payload: UserEventPayload,
   client: SubscriptionApolloClient,
@@ -66,7 +70,9 @@ function handleRemovedFromHome(
     store.setSelectedMealPlanId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromHome'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromHome'));
+  }
 }
 
 /** `ownAccept`: the echo of an invite this device just accepted. */
@@ -92,7 +98,9 @@ function handleRemovedFromShoppingList(
     store.setSelectedShoppingListId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromShoppingList'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromShoppingList'));
+  }
 }
 
 function handleAddedToShoppingList(ownAccept: boolean) {
