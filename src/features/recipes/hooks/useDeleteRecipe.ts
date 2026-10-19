@@ -1,9 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  DeleteRecipeDocument,
-  MyRecipesDocument,
-  type MyRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import { DeleteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { removeMyRecipesEdge } from '#features/recipes/utils/recipeCacheWriters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -20,31 +17,10 @@ export function useDeleteRecipe() {
     context: { localFirst: true },
   });
 
-  const removeRecipeEdge = (id: string) => {
-    client.cache.updateQuery<MyRecipesQuery>(
-      { query: MyRecipesDocument },
-      existing => {
-        if (!existing?.recipes) return existing;
-        const present = existing.recipes.edges.some(
-          edge => edge.node.id === id,
-        );
-        if (!present) return existing;
-        return {
-          ...existing,
-          recipes: {
-            ...existing.recipes,
-            edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
-            totalCount: (existing.recipes.totalCount ?? 0) - 1,
-          },
-        };
-      },
-    );
-  };
-
   /** `true` once the recipe is gone or its removal is queued; `false` when refused. */
   const deleteRecipe = async (id: string): Promise<boolean> => {
     try {
-      removeRecipeEdge(id);
+      removeMyRecipesEdge(client.cache, id);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Delete Recipe (optimistic)',

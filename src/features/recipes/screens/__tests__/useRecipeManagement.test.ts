@@ -5,7 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { MyRecipesDocument } from '../useRecipeManagement.generated';
 import {
   MyRecipeCard_RecipeFragmentDoc,
   type MyRecipeCard_RecipeFragment,

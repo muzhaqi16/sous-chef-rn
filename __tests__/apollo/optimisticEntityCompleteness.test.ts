@@ -121,13 +121,15 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   AddRecipeToFavoritesDocument,
-  MyRecipesDocument,
   MySavedRecipesDocument,
   GetRecipeDocument,
   type GetRecipeQuery,
-  type MyRecipesQuery,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  MyRecipesDocument,
+  type MyRecipesQuery,
+} from '#features/recipes/screens/useRecipeManagement.generated';
 import { writeLocalRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
   writeLocalPantryItem,
@@ -1652,6 +1654,8 @@ describe('optimistic entity completeness', () => {
         'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',
       'src/features/recipes/cache/favorites.ts':
         'covered: AddRecipeToFavorites is compared below against MySavedRecipes; the optimistic row spreads SavedRecipeReaders',
+      'src/features/recipes/utils/recipeCacheWriters.ts':
+        'covered: "keeps MyRecipes complete after an optimistic create"; the row spreads RecipeReaders',
     };
 
     // Every way the app links an entity into a collection a screen reads: a

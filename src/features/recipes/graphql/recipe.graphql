@@ -65,29 +65,6 @@ query SearchRecipes(
   }
 }
 
-query MyRecipes($cursor: String, $first: Int = 25) {
-  recipes(after: $cursor, first: $first) {
-    edges {
-      node {
-        id
-        # Selected at the parent so the screen can filter the connection
-        # without materializing each masked node. Already fetched inside
-        # MyRecipeCard_recipe — this only keeps it visible after masking,
-        # so it costs nothing on the wire.
-        name
-        description
-        ...MyRecipeCard_recipe
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 # `$ingredientsFirst` is the server's largest page and the most a recipe holds,
 # so one request is the whole list. No cursor: a recipe over the limit stays
 # marked `hasNextPage`, which every derived write refuses.
