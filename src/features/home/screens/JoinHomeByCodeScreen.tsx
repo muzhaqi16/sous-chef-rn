@@ -7,7 +7,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { ErrorState } from '#components/molecules/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useJoinHomeByCode } from '#features/home/hooks/useJoinHomeByCode';

@@ -1,4 +1,4 @@
-import { TONE_TO_COLOR } from '#utils/iconUtils';
+import { TONE_TO_COLOR } from '#components/atoms/Icon';
 import { lightTheme, darkTheme } from '#/theme/themes';
 
 /**

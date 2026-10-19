@@ -18,7 +18,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#components/atoms/InfoRow';

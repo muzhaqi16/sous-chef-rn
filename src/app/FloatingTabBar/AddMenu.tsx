@@ -9,7 +9,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { SHEET } from '#/constants/animations';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { motion } from '#/theme/foundations/motion';

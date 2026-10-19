@@ -1,12 +1,8 @@
-import { RAW_ENV, type GeneratedEnv } from './env.generated';
+import { requirePlatform } from '#platform/install';
+import type { Env } from '#platform/ports';
 
 /**
- * Build-time config as pure JS, injected by `scripts/generate-env.js`. Every
- * value is `string | undefined`; consumers apply their own parsing. A `KEY=`
- * line generates `''`, which means unset, so it arrives here as `undefined`.
+ * Build-time configuration, from the host's `environment` service. Every value
+ * is a string or unset; consumers apply their own parsing.
  */
-export const env: GeneratedEnv = Object.fromEntries(
-  Object.entries(RAW_ENV).filter(([, value]) => value !== ''),
-);
-
-export type Env = GeneratedEnv;
+export const env: Env = requirePlatform('environment');

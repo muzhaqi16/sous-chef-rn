@@ -6,7 +6,7 @@ import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {

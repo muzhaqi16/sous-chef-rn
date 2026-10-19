@@ -15,7 +15,7 @@ type ShoppingListTabsProps = React.ComponentProps<typeof ShoppingListTabs>;
 type MockRoute = { key: string; title: string };
 type MockNavigationState = { index: number; routes: MockRoute[] };
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

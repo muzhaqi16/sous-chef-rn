@@ -14,7 +14,7 @@ import { BiometricSetupModal } from '#features/profile/components/BiometricSetup
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

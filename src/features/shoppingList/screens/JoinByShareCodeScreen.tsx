@@ -6,7 +6,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Button } from '#components/molecules/Button';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useJoinShoppingListByShareCode } from '#features/shoppingList/hooks/useJoinShoppingListByShareCode';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

@@ -15,7 +15,7 @@ import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useIsOnline } from '#store/useAppStore';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';

@@ -6,7 +6,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { SavedRecipeNode } from '#features/recipes/hooks/useSavedRecipes';
 import { SavedRecipeRow_SavedRecipeFragmentDoc } from './SavedRecipeRow.generated';
 

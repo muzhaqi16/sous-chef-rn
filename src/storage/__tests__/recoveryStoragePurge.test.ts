@@ -1,7 +1,7 @@
 import { createMMKV, existsMMKV } from 'react-native-mmkv';
 import { purgeRecoveryStorage } from '#/storage/mmkv';
 
-jest.mock('#/utils/security/deviceKey', () => ({
+jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {
     getDeviceEncryptionKey: jest.fn(async () => ({
       key: 'test-encryption-key',

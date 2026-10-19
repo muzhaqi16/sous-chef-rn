@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { formatQuantityForDisplay } from '#utils/formatQuantity';
 import { formatMonthDayYear } from '#utils/formatters/date';
 import { purchaseDay } from '#utils/dateUtils';

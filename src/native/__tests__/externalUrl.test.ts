@@ -1,5 +1,5 @@
 import { Linking } from 'react-native';
-import { isWebUrl, openWebUrl } from '#utils/externalUrl';
+import { isWebUrl, openWebUrl } from '#native/externalUrl';
 
 jest.mock('react-native', () => ({
   Linking: { openURL: jest.fn() },

@@ -178,7 +178,7 @@ jest.mock('#hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

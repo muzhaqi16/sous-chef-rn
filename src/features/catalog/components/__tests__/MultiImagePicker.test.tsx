@@ -7,7 +7,7 @@ import {
 } from '#features/catalog/components/MultiImagePicker';
 import type { ImageFile } from '#/types/media';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

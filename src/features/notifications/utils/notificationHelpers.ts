@@ -3,7 +3,7 @@ import {
   CollaboratorRole,
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
-import type { Icon } from '#utils/iconUtils';
+import type { Icon } from '#components/atoms/Icon';
 import { isDateKey, safeParseDate } from '#utils/dateUtils';
 import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';

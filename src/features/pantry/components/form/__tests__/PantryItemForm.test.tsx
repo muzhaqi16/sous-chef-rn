@@ -27,7 +27,7 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

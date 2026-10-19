@@ -5,7 +5,7 @@ import {
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';

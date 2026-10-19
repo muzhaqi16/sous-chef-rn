@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { Icon, type IconName } from '#/utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 import { DeletionBlockerType } from '#/graphql/generated/schemaTypes';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Loading } from '#components/molecules/Loading';

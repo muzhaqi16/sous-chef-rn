@@ -35,7 +35,7 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

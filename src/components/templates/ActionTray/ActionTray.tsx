@@ -21,7 +21,7 @@ import {
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { BarActions } from '#components/molecules/BarActions';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';

@@ -93,7 +93,7 @@ const RESTRICTED_IMPORT_PATHS = [
   {
     name: '@react-native-vector-icons/ionicons',
     message:
-      "Use `Icon` from '#utils/iconUtils' with a `tone`, so the glyph colour follows the theme. For an icon NAME type, import `type { IconName }` from the same module. A colour the tone set cannot express is a missing entry in TONE_TO_COLOR, not a reason to import the glyph package.",
+      "Use `Icon` from '#components/atoms/Icon' with a `tone`, so the glyph colour follows the theme. For an icon NAME type, import `type { IconName }` from the same module. A colour the tone set cannot express is a missing entry in TONE_TO_COLOR, not a reason to import the glyph package.",
   },
   {
     name: '@react-navigation/native',

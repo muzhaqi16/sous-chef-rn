@@ -12,8 +12,8 @@ import { ItemNotFound } from '../components/ItemNotFound';
 import { SearchResults } from '../components/SearchResults';
 import AddItemForm, {
   type AddItemFormMode,
-  type AddItemFormInitialData,
 } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';

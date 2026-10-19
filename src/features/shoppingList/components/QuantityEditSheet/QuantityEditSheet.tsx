@@ -13,7 +13,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import Chip from '#features/shoppingList/components/Chip';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';

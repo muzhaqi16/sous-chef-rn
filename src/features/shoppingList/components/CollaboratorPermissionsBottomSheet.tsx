@@ -6,7 +6,7 @@ import { alertService } from '#/services/alertService';
 import { localizedErrorMessage } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';

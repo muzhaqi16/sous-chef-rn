@@ -35,7 +35,7 @@ type MockSharedState = Pick<
 };
 type MockPantryItem = { id: string; quantity: number };
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;

@@ -7,7 +7,7 @@ import Animated, {
   FadeInUp,
   LinearTransition,
 } from 'react-native-reanimated';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
 import type {

@@ -6,7 +6,7 @@ import { useOfflineStatus } from '#hooks/app/useOfflineStatus';
 import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 

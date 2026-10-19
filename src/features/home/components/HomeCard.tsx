@@ -11,7 +11,7 @@ import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';

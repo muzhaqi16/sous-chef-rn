@@ -3,7 +3,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type {
   SelectorConfig,
   SelectableItem,

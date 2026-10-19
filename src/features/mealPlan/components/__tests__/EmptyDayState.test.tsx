@@ -3,10 +3,10 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { EmptyDayState } from '../EmptyDayState';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({
     name,
-  }: React.ComponentProps<typeof import('#utils/iconUtils').Icon>) => {
+  }: React.ComponentProps<typeof import('#components/atoms/Icon').Icon>) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },

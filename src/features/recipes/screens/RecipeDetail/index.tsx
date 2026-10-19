@@ -8,7 +8,7 @@ import {
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#utils/externalUrl';
+import { openWebUrl } from '#native/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -16,7 +16,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, type IconName } from '#utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';

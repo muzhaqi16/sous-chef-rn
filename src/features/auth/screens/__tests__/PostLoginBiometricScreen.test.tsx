@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { PostLoginBiometricScreen } from '../PostLoginBiometricScreen';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

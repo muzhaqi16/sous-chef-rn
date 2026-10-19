@@ -8,7 +8,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';

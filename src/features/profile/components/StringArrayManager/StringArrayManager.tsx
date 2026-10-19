@@ -4,7 +4,7 @@ import { errorService } from '#/services/errorService';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { localizedErrorMessage } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';

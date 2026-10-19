@@ -131,7 +131,7 @@ beforeEach(() => {
   (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
 });
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

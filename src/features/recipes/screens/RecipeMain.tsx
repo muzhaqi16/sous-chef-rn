@@ -17,7 +17,7 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';

@@ -564,7 +564,7 @@ const overrides = [
     // `createAnimatedComponent`; Toast's glyph colour is a runtime theme lookup.
     files: [
       'src/services/permissions/PermissionService.ts',
-      'src/utils/iconUtils.tsx',
+      'src/components/atoms/Icon.tsx',
       'src/components/atoms/CachedImage.tsx',
       'src/features/recipes/components/recipeDetail/RecipeHeroImage.tsx',
       'src/components/molecules/Toast.tsx',
@@ -684,6 +684,7 @@ const overrides = [
       'src/components/atoms/ThemedStatusBar.tsx',
       'src/components/molecules/Loading.tsx',
       'src/components/atoms/CachedImage.tsx',
+      'src/components/atoms/Icon.tsx',
       'src/components/molecules/Toast.tsx',
       'src/components/atoms/BottomSheetFormScrollView.tsx',
     ],

@@ -38,7 +38,7 @@ jest.mock('@hookform/resolvers/yup', () => ({
   yupResolver: () => jest.fn().mockResolvedValue({ values: {}, errors: {} }),
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

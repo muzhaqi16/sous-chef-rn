@@ -25,7 +25,7 @@ import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { SubScreen } from '#components/templates/SubScreen';

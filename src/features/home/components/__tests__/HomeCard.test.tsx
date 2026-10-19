@@ -12,7 +12,7 @@ import {
 } from '../HomeCard.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

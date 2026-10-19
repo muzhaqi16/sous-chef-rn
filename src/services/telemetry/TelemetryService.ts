@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import type {
   TelemetryConfig,
   LogEntry,
@@ -17,7 +16,7 @@ import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { backoffDelay } from '#/utils/backoff';
-import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
 
@@ -34,7 +33,10 @@ const SESSION_ID = generateId();
  */
 let appVersion: string | undefined;
 function resolveAppVersion(): string {
-  appVersion ??= safeNativeRead(getVersion, 'unknown');
+  appVersion ??= safeNativeRead(
+    () => requirePlatform('platformInfo').appVersion,
+    'unknown',
+  );
   return appVersion;
 }
 
@@ -45,15 +47,16 @@ function resolveAppVersion(): string {
 let deviceType: string | undefined;
 function resolveDeviceType(): string {
   deviceType ??= safeNativeRead(
-    () => (isEmulatorSync() ? 'emulator' : 'physical'),
+    () =>
+      requirePlatform('platformInfo').isEmulator ? 'emulator' : 'physical',
     'unknown',
   );
   return deviceType;
 }
 
 /**
- * Both readers are blocking SYNCHRONOUS bridge calls (a binder IPC on Android),
- * so they stay lazy, out of the startup window this service measures. A throw
+ * On mobile both readers are blocking SYNCHRONOUS bridge calls (a binder IPC on
+ * Android), so they stay lazy, out of the startup window this service measures. A throw
  * is swallowed: a missing label beats breaking every `import { Telemetry }`.
  */
 function safeNativeRead<T>(read: () => T, fallback: T): T {
@@ -140,7 +143,7 @@ export class TelemetryService {
     this.isInitialized = true;
 
     this.trackEvent('app_telemetry_initialized', {
-      platform: Platform.OS,
+      platform: requirePlatform('platformInfo').os,
       environment: this.config.environment,
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
@@ -203,7 +206,7 @@ export class TelemetryService {
       message: scrubString(message),
       timestamp: new Date().toISOString(),
       extra: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         ...scrubLogExtra(extra),
         // Last, so a caller's `extra` cannot shadow it. BODY fields, not Loki
@@ -261,7 +264,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),
@@ -289,7 +292,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),
@@ -318,7 +321,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),

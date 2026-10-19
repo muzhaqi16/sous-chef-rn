@@ -11,7 +11,7 @@ import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { useImageUpload } from '#hooks/device/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';

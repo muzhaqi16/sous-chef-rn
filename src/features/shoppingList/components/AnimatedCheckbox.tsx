@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
 
 // RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH

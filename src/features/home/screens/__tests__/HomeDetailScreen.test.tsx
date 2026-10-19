@@ -187,7 +187,7 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

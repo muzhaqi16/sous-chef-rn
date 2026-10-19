@@ -227,7 +227,7 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

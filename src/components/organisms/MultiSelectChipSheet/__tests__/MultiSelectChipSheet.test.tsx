@@ -69,7 +69,7 @@ jest.mock('#components/molecules/AnimatedChip', () => ({
   },
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

@@ -6,7 +6,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import {
   RecipeReviewFragmentDoc,

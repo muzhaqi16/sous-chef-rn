@@ -4,7 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
 import type { PantryStats } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';

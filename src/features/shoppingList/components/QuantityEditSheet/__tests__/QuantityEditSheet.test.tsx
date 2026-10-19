@@ -45,7 +45,7 @@ jest.mock('#/utils/deviceLocale', () => ({
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

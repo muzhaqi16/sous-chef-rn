@@ -94,7 +94,7 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
+jest.mock('#components/atoms/Icon', () => ({ Icon: 'Icon' }));
 
 jest.mock('#features/profile/components/ProfileHero', () => {
   const { View } = require('react-native');

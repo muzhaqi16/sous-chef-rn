@@ -3,7 +3,7 @@ import performance from 'react-native-performance';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
-import { env } from '#/config/env';
+import { generatedEnv } from '#native/generatedEnv';
 import {
   initializeSecureStorage,
   isRecoveryStorage,
@@ -32,7 +32,7 @@ const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
 // then load each native module at its first use, not during this install,
 // which runs before the rest of the app has started.
 installPlatform({
-  environment: env,
+  environment: generatedEnv,
   keyValueStore: {
     set: (key, value) => storage.set(key, value),
     getString: key => storage.getString(key),

@@ -16,7 +16,7 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
 import type { Theme } from '#/theme/themes';
 
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // Shared withUnistyles wrappers for third-party components taking theme-derived

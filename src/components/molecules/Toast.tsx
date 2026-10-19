@@ -19,7 +19,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
-import type { IconName } from '#utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 import { motion } from '#/theme/foundations/motion';
 import { kitTestIDs } from '#components/testIDs';
 import type {

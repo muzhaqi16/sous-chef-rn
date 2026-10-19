@@ -1,6 +1,7 @@
-import { env, type Env } from '#/config/env';
+import { env } from '#/config/env';
 import { appConfig } from '#/config/appConfig';
 import { requirePlatform } from '#platform/install';
+import type { Env } from '#platform/ports';
 
 type ConfigValue = string | number | boolean | undefined;
 // Pure-JS build-time config (see scripts/generate-env.js). The return type

@@ -5,7 +5,7 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
 import { PendingListInvites } from '#features/shoppingList/components/PendingListInvites';
 import { SelectorSectionHeader } from '#features/shoppingList/components/SelectorSectionHeader';

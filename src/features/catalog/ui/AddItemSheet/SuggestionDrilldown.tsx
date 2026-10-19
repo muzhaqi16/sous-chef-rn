@@ -4,7 +4,7 @@ import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import type { BaseSuggestionItem } from './types';
 import { hitSlop } from '#/theme/foundations/sizes';

@@ -120,7 +120,7 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
   })),
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

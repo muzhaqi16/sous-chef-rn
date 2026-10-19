@@ -1,6 +1,6 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind, OperationTypeNode, type GraphQLFormattedError } from 'graphql';
-import performance from 'react-native-performance';
+import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
@@ -53,7 +53,7 @@ export const createTelemetryLink = () => {
       return forward(operation);
     }
 
-    const startTime = performance.now();
+    const startTime = requirePlatform('clock').now();
     const operationName = operation.operationName ?? 'unnamed';
     const [firstDefinition] = operation.query.definitions;
     const operationType =
@@ -72,9 +72,6 @@ export const createTelemetryLink = () => {
 
     const operationId = `${operationName}_${startTime}`;
 
-    // No `performance.mark`/`measure` pair: nothing reads a `gql:*` measure,
-    // and each appends an entry `clearMarks` must filter, making
-    // instrumentation QUADRATIC in session length.
     timings.set(operationId, {
       operationName,
       operationType,
@@ -97,7 +94,7 @@ export const createTelemetryLink = () => {
     });
 
     const finalizeTiming = (timing: GraphQLTiming, hasErrors: boolean) => {
-      const duration = performance.now() - timing.startTime;
+      const duration = requirePlatform('clock').now() - timing.startTime;
       timings.delete(operationId);
 
       // NOT sample-weighted: latency quantiles are scale-invariant. Its

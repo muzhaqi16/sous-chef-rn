@@ -8,7 +8,7 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import { motion } from '#/theme/foundations/motion';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { ActionButtonConfig } from './types';
 import { Text } from '#components/atoms/Text';
 

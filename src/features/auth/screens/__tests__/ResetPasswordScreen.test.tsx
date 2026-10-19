@@ -57,7 +57,7 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

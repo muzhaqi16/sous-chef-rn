@@ -9,7 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { Reveal } from '#components/atoms/Reveal';
 import type { BadgeVariant } from '#components/atoms/Badge';
-import { Icon, type IconTone } from '#utils/iconUtils';
+import { Icon, type IconTone } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DatePickerField } from '#components/molecules/DatePickerField';

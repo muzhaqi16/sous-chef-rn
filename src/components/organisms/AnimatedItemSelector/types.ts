@@ -1,4 +1,4 @@
-import type { IconLibrary } from '#utils/iconUtils';
+import type { IconLibrary } from '#components/atoms/Icon';
 import type { BarAction } from '#components/molecules/BarActions';
 
 export interface SelectableItem {

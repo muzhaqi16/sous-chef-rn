@@ -5,7 +5,7 @@ import { sleep } from '#/utils/backoff';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,
-} from '#/utils/security/deviceKey';
+} from '#native/storage/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 

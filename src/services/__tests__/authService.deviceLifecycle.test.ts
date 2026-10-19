@@ -32,7 +32,7 @@ jest.mock('#store', () => ({
 }));
 
 const mockCollect = jest.fn().mockResolvedValue({ deviceId: 'local-1' });
-jest.mock('#/utils/deviceInfo', () => ({
+jest.mock('#native/deviceInfo', () => ({
   collectDeviceInformation: () => mockCollect(),
   validateDeviceInformation: jest.fn().mockReturnValue(true),
 }));

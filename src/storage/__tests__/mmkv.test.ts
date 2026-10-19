@@ -7,7 +7,7 @@ import {
 } from '../mmkv';
 
 // Mock DeviceKeyManager
-jest.mock('#/utils/security/deviceKey', () => ({
+jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {
     getDeviceEncryptionKey: jest.fn(() =>
       Promise.resolve('test-encryption-key'),
@@ -94,7 +94,7 @@ describe('mmkv storage', () => {
 
     const loadIsolated = (
       keyImpl: () => Promise<
-        import('#/utils/security/deviceKey').DeviceEncryptionKey
+        import('#native/storage/deviceKey').DeviceEncryptionKey
       >,
     ): {
       mmkvModule: typeof import('../mmkv');
@@ -104,7 +104,7 @@ describe('mmkv storage', () => {
       process.env.NODE_ENV = 'development';
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
-        '#/utils/security/deviceKey',
+        '#native/storage/deviceKey',
       );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockImplementation(keyImpl);
@@ -200,7 +200,7 @@ describe('mmkv storage', () => {
       process.env.NODE_ENV = 'development';
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
-        '#/utils/security/deviceKey',
+        '#native/storage/deviceKey',
       );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockResolvedValue({

@@ -91,7 +91,7 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(

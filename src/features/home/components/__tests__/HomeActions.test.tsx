@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { HomeActions } from '../HomeActions';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

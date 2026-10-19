@@ -11,7 +11,7 @@ import {
   type ProfileHeroProps,
 } from '#features/profile/components/ProfileHero';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

@@ -15,7 +15,7 @@ import AddItemForm from '../AddItemForm';
  * dropped with nothing reported, while Save stayed gated on `isValid`.
  */
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

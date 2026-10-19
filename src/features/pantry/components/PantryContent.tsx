@@ -11,7 +11,7 @@ import {
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
   PantrySortDirection,
@@ -35,7 +35,7 @@ import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 
 import {
   DRAW_DISTANCE,

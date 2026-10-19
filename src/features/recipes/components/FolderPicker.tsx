@@ -18,7 +18,7 @@ import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';

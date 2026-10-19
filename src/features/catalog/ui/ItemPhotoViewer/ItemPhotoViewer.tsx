@@ -27,7 +27,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { photoDisplayUrl, getPerspectiveLabel } from '#utils/imageUtils';

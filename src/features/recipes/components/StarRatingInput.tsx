@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
 

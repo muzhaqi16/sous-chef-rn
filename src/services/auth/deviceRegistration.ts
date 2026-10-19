@@ -21,7 +21,7 @@ import {
 import {
   collectDeviceInformation,
   validateDeviceInformation,
-} from '#/utils/deviceInfo';
+} from '#native/deviceInfo';
 import {
   clearLegacyDeviceFingerprint,
   clearRegisteredLocale,

@@ -7,7 +7,7 @@ import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';

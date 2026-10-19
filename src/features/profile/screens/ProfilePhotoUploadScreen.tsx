@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { useImageUpload } from '#hooks/device/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';

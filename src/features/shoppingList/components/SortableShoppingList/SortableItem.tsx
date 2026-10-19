@@ -15,7 +15,7 @@ import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedChec
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 

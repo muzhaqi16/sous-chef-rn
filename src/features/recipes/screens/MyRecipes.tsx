@@ -16,7 +16,7 @@ import {
   type MyRecipeNode,
 } from '#features/recipes/hooks/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';

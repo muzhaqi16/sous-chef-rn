@@ -7,12 +7,13 @@ import { useTranslation } from '#/i18n';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';
-import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
+import { buildJoinListUrl } from '#/utils/deepLinkUrls';
+import { shareUrl } from '#native/share';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { motion } from '#/theme/foundations/motion';
 

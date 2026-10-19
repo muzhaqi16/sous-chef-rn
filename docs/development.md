@@ -52,6 +52,11 @@ your `.env` into `src/config/env.generated.ts`. If you edit `.env`, re-run:
 npm run genenv
 ```
 
+The generated `RAW_ENV` is typed as the core's `Env` (`src/platform/ports.ts`),
+so a key added to the generator's `KEYS` also needs its field there. The app
+reads it through `env` from `#/config/env`, which the mobile host fills from
+this file at startup.
+
 ---
 
 ## Environment files
@@ -503,7 +508,7 @@ that IS the canonical mechanism as its only exemption:
 | RN `ActivityIndicator`                | a themed spinner from `themedComponents`                                                          | `themedComponents`, and `Loading` for its caller-supplied colour                       |
 | `react-native-permissions`            | `PermissionService`                                                                               | the service                                                                            |
 | `react-native-turbo-image`            | `CachedImage`                                                                                     | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper                 |
-| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name                                                  | `iconUtils`, and `Toast` for a runtime nested-theme lookup                             |
+| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name                                                  | `Icon`, and `Toast` for a runtime nested-theme lookup                                  |
 
 ### Dependency vulnerabilities
 

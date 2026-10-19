@@ -126,6 +126,10 @@ export interface Appearance {
   apply(settings: AppearanceSettings): void;
 }
 
+/**
+ * No marks: a mark per operation appends to a buffer that lives as long as the
+ * session, and clearing it filters the whole buffer each time.
+ */
 export interface Clock {
   /** Milliseconds on a monotonic clock, for durations only. */
   now(): number;

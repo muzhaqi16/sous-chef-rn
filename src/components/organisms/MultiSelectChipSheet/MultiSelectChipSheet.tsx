@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';

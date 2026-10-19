@@ -16,7 +16,7 @@ import {
   OnPrimaryActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { hitSlop } from '#/theme/foundations/sizes';

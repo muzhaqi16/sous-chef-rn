@@ -97,16 +97,16 @@ with `installPlatform()`. A core module reads one with
 `requirePlatform('<name>')`, which throws `PlatformServiceMissing` naming the
 service if the install has not happened, so nothing degrades silently.
 
-| Service         | What it is                                                 | Mobile adapter                       |
-| --------------- | ---------------------------------------------------------- | ------------------------------------ |
-| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `config/env` |
-| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`storage/mmkv`)                |
-| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`storage/keychain`)        |
-| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info |
-| `appLifecycle`  | Foreground state and its changes                           | `AppState`                           |
-| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                |
-| `clock`         | A monotonic `now()` for durations                          | react-native-performance             |
-| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`      |
+| Service         | What it is                                                 | Mobile adapter                                |
+| --------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv` |
+| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`storage/mmkv`)                         |
+| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`storage/keychain`)                 |
+| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info          |
+| `appLifecycle`  | Foreground state and its changes                           | `AppState`                                    |
+| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                         |
+| `clock`         | A monotonic `now()` for durations                          | react-native-performance                      |
+| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`               |
 
 `src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`
 imports it right after the startup clock, the startup profiler and the crypto

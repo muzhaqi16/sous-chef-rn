@@ -92,7 +92,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplate', () => ({
   useMealTemplate: jest.fn(() => mockLoadedEmptyTemplate()),
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(

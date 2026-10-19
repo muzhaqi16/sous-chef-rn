@@ -13,7 +13,7 @@ import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { IconName } from '#/utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 import {
   type RecipeFilters,

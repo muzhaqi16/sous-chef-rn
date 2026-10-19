@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Sheet } from '#components/templates/Sheet';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
 import {
   PantrySortOption,

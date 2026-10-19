@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';

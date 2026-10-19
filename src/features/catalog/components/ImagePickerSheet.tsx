@@ -8,7 +8,7 @@ import {
   useStandardBottomSheet,
 } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 
 const VariantBottomSheetModal = withUnistyles(BottomSheetModal, theme => ({

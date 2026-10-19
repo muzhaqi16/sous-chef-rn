@@ -13,7 +13,7 @@ import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemFo
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { SuggestionListItem } from '#features/catalog/components/SuggestionListItem';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import type {
   AddItemSheetProps,

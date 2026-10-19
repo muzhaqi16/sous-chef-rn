@@ -6,7 +6,7 @@ import { InfoRow } from '#components/atoms/InfoRow';
 import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import { Reveal } from '#components/atoms/Reveal';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { formatMonthDayYear } from '#/utils/formatters/date';

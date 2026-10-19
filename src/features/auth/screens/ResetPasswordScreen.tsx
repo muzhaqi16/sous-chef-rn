@@ -6,7 +6,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';

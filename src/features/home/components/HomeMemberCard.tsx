@@ -5,7 +5,7 @@ import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { commonStyles } from '#/styles/commonStyles';

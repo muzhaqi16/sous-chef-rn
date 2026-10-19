@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { addDays, differenceInDays, parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import {

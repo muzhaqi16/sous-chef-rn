@@ -1,7 +1,7 @@
 import { useTranslation } from '#/i18n';
 import { useAppStore } from '#store/useAppStore';
 import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
-import type { IconName } from '#utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 
 type IoniconName = IconName;
 

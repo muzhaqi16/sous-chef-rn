@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';

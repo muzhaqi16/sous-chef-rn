@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';

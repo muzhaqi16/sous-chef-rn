@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#/services/spoonacular/utils';

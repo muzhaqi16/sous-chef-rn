@@ -145,7 +145,7 @@ they read it.
   (`ThemedBottomSheetTextInput`, `ThemedActivityIndicator`,
   `OnPrimaryActivityIndicator`, …); a new one goes there, not in a feature file.
   Switches use `BaseSwitch` (`src/components/atoms/BaseSwitch.tsx`); themed icon
-  colours use `<Icon tone="X" />` (`src/utils/iconUtils.tsx`), and the glyph
+  colours use `<Icon tone="X" />` (`src/components/atoms/Icon.tsx`), and the glyph
   package itself is an import ban.
 - **A node reanimated animates takes no themed Unistyles style**
   ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).

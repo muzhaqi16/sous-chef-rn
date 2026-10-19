@@ -14,7 +14,7 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: mockGoBack }),
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

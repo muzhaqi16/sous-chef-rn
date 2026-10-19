@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';

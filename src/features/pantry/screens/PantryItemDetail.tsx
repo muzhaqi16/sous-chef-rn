@@ -44,7 +44,7 @@ import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';

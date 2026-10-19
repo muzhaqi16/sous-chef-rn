@@ -7,7 +7,7 @@ import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Title } from '#components/atoms/Title';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';

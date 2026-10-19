@@ -60,7 +60,7 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

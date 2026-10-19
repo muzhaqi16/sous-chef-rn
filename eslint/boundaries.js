@@ -173,6 +173,7 @@ const CORE_EXTERNALS = [
   'i18next',
   'react-i18next',
   'yup',
+  'react-hook-form',
   'date-fns',
   'fraction.js',
   'fractional-indexing',

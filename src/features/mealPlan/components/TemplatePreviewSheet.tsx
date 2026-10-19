@@ -15,7 +15,7 @@ import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';

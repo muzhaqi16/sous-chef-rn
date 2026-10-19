@@ -7,7 +7,7 @@ import { MEAL_PLAN_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnum
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { formatDateRange } from '#/utils/formatters/date';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import type {
   SelectorConfig,

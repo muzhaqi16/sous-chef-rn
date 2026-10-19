@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,

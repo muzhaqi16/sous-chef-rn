@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Text } from '#components/atoms/Text';
 import type { TabIconPair } from '#features/types';

@@ -7,7 +7,7 @@ import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';

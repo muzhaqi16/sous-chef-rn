@@ -8,7 +8,7 @@ import {
   type PurchaseItem,
 } from '#features/shoppingList/hooks/useItemPurchaseHistory';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';

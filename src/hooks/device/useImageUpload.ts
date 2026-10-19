@@ -36,6 +36,7 @@ import {
 } from '#/utils/errors/mutationPayload';
 import type { Translate } from '#/i18n/types';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import type { ImageFile } from '#/types/media';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 
 /**
@@ -100,13 +101,6 @@ function confirmRefusalError(data: unknown): ImageValidationError {
       : 'Failed to confirm upload',
     isByteMismatch ? 'CONTENT_MISMATCH' : 'UNKNOWN_ERROR',
   );
-}
-
-export interface ImageFile {
-  uri: string;
-  fileName?: string;
-  fileSize?: number;
-  type?: string;
 }
 
 export interface PresignedUploadData {

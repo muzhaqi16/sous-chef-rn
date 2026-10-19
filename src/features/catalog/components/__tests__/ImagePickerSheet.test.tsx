@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { ImagePickerSheet } from '#features/catalog/components/ImagePickerSheet';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

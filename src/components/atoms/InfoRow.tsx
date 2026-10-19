@@ -6,7 +6,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, type IconTone } from '#/utils/iconUtils';
+import { Icon, type IconTone } from '#components/atoms/Icon';
 import { Text, type TextTone } from '#components/atoms/Text';
 
 export interface InfoRowProps {

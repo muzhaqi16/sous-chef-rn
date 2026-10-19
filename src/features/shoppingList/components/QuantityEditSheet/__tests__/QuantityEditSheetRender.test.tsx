@@ -87,7 +87,7 @@ jest.mock('#features/shoppingList/components/Chip', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

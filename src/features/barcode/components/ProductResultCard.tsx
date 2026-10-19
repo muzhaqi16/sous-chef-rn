@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';

@@ -10,7 +10,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
 import {
   useInvitationActions,

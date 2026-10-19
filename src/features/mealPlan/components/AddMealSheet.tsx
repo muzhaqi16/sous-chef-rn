@@ -11,10 +11,10 @@ import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,

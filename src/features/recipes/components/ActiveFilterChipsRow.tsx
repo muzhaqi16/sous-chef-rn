@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import {
   DIET_OPTIONS,

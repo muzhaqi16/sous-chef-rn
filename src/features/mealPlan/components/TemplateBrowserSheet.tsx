@@ -10,8 +10,8 @@ import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { Icon } from '#components/atoms/Icon';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
 import {
   TemplateBrowserProvider,

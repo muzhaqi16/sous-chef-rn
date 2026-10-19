@@ -38,7 +38,7 @@ jest.mock('#features/catalog/ui/autocomplete/StoreAutocompleteField', () => ({
 jest.mock('#components/molecules/SegmentedControl', () => ({
   SegmentedControl: () => null,
 }));
-jest.mock('#/utils/iconUtils', () => ({ Icon: () => null }));
+jest.mock('#components/atoms/Icon', () => ({ Icon: () => null }));
 
 const renderStep = (
   overrides: Partial<React.ComponentProps<typeof ShoppingListDetailsStep>> = {},

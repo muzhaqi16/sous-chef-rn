@@ -1,13 +1,13 @@
-import { Platform } from 'react-native';
 import { env as buildEnv } from '#/config/env';
 import { TelemetryService } from './TelemetryService';
 import type { LogEntry, TelemetryConfig } from './types';
-import { getVersion } from 'react-native-device-info';
+import { requirePlatform } from '#platform/install';
 import { Environment } from '#/utils/environment';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
+  const { os, appVersion } = requirePlatform('platformInfo');
 
   return {
     enabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
@@ -25,12 +25,12 @@ const createTelemetryConfig = (): TelemetryConfig => {
       : env.isStaging
       ? 'staging'
       : 'development',
-    platform: Platform.OS,
+    platform: os,
     // Coarse instance id (platform + app version), NOT per-device: a
     // per-device id becomes the `instance` label on every series and
     // multiplies active series by the install base in Prometheus. Per-device
     // identity, when needed, belongs on logs (Loki), not metric labels.
-    instanceId: `${Platform.OS}_${getVersion()}`,
+    instanceId: `${os}_${appVersion}`,
     flushIntervals: {
       metrics: env.isDevelopment ? 5000 : 10000,
       logs: env.isDevelopment ? 2000 : 5000,

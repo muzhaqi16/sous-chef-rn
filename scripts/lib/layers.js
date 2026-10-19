@@ -47,7 +47,7 @@ const LAYERS = [
     name: 'config',
     layer: 'core',
     patterns: ['src/config/**'],
-    enforced: false,
+    enforced: true,
   },
   { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: false },
   { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: true },

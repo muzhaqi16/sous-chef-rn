@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { CardLeftSlot } from '../CardLeftSlot';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text: RNText } = require('react-native');
     return require('react').createElement(RNText, null, `icon-${name}`);

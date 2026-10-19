@@ -1,6 +1,6 @@
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';
-import type { IconName } from '#utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 
 /**
  * i18n key paths, not display strings — this table is module-level and cannot

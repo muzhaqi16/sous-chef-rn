@@ -81,7 +81,7 @@ setupNotificationHandlers();
  * clears when the user reads notifications in-app (the server can only set the
  * badge on push delivery).
  */
-import { setupBadgeSync } from './src/utils/notifications/badgeSync';
+import { setupBadgeSync } from './src/services/notifications/badgeSync';
 setupBadgeSync();
 
 /**

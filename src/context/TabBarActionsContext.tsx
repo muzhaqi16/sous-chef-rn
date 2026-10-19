@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
-import type { IconLibrary } from '#/utils/iconUtils';
+import type { IconLibrary } from '#components/atoms/Icon';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 /**
