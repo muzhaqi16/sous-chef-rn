@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { useRef, useEffect, useContext, useState } from 'react';
+import { Keyboard } from 'react-native';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
   type BottomSheetModalProps,
@@ -29,9 +30,19 @@ type ThemedBottomSheetModalProps = Omit<
  */
 const ThemedBottomSheetModal = ({
   children,
+  onAnimate,
   ...props
 }: ThemedBottomSheetModalProps) => (
-  <ThemedModalShell {...props}>
+  <ThemedModalShell
+    {...props}
+    // Android hands the focus of an input unmounted with the sheet to the first
+    // field on the screen beneath, keyboard and all; blurred as the close
+    // starts, it goes nowhere.
+    onAnimate={(fromIndex, toIndex, fromPosition, toPosition) => {
+      if (toIndex === -1) Keyboard.dismiss();
+      onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
+    }}
+  >
     <CurrentThemeScope>{children}</CurrentThemeScope>
   </ThemedModalShell>
 );
