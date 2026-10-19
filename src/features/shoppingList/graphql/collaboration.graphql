@@ -2,10 +2,8 @@
 # QUERIES
 # ============================================
 
-# The pending-invites QUERY lives in the notifications feature
-# (InvitationAcceptanceModal.graphql) — the invitation modal is its only
-# consumer. Keeping a second copy here caused codegen "operation name not
-# unique" failures the moment the copies diverged.
+# The pending-invites query is `usePendingListInvites.graphql`, beside the
+# hook that reads it.
 
 # ============================================
 # MUTATIONS

@@ -111,10 +111,9 @@ export function itemToEditableSnapshot(
 }
 
 /**
- * Emits ONLY changed fields — an unchanged one reads to the reviewing admin as a
- * requested change. An absent key means "no change", so CLEARING is not
- * expressible; a removal is asked for in the note. `media`, `tagOps`,
- * `categoryOps`, `unit*`, `storeSkuOps` and `packageInfo.defaultConsume*` never.
+ * Emits ONLY changed fields (an unchanged one reads to the admin as a request);
+ * absent is "no change", so a removal goes in the note. Never `media`, `tagOps`,
+ * `categoryOps`, `unit*`, `storeSkuOps` or `packageInfo.defaultConsume*`.
  */
 export function buildSuggestibleItemChanges(
   original: EditableItemSnapshot,
@@ -195,11 +194,9 @@ export function buildSuggestibleItemChanges(
     packageInfo.netWeightKind = NetWeightKind.Package;
     changedFields.push('packageInfo.netWeight');
   }
-  // The unit picker leaves `unitId` undefined when the user free-types a unit
-  // the catalog doesn't have, so fall back to the name, which the server
-  // resolves find-or-create. An explicit id always wins. Sending the name is
-  // accepted and then dropped on approval, so diffing only the id would let a
-  // free-typed unit change vanish silently.
+  // A free-typed unit leaves `unitId` undefined, so the name goes instead (the
+  // server finds-or-creates it); an explicit id wins. Diffing only the id would
+  // drop a free-typed unit change silently.
   const unitName = norm(netWeight?.unitName);
   if (netWeight?.unitId) {
     if (netWeight.unitId !== original.displayUnitId) {
@@ -221,10 +218,9 @@ export function buildSuggestibleItemChanges(
     changes.packageInfo = packageInfo;
   }
 
-  // `brand` resolves an id, else finds-or-creates by name — the only way
-  // to name a brand that isn't in the catalog yet, so a free-typed brand is
-  // expressible. It is purely additive and never removes the brand already on
-  // the item, so replacing one means pairing it with brandOps.removeBrandIds.
+  // `brand` resolves an id, else finds-or-creates by name, so a free-typed brand
+  // is expressible. It never removes the item's brand: replacing one pairs it
+  // with brandOps.removeBrandIds.
   const brandName = norm(formData.brandName);
   const brandChanged = formData.brandId
     ? formData.brandId !== original.brandId
@@ -296,11 +292,9 @@ export function buildInitialDataFromSnapshot(
     shelfLifeOpenedDays: snapshot.shelfLifeOpenedDays,
     baseDimension: snapshot.baseDimension,
     tags: snapshot.tags,
-    // Only a PACKAGE weight is a package size. A SERVING or a REFERENCE
-    // (100g nutrition basis) means something else entirely, so seeding it into
-    // a package-size field would present it as one — and an edit would submit
-    // it as one. Absent kind is treated as PACKAGE, which is what the field
-    // meant before the API said otherwise.
+    // Only a PACKAGE weight is a package size: a SERVING or REFERENCE seeded
+    // here would be presented, and submitted, as one. An absent kind is PACKAGE,
+    // the field's meaning before the API stated a kind.
     netWeights:
       snapshot.netWeight != null &&
       snapshot.displayUnitName &&

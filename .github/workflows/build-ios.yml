@@ -1,5 +1,9 @@
 name: 'Build iOS app'
 
+env:
+  # Installs @muzhaqi16/receipt-rules from GitHub Packages (see .npmrc).
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 on:
   push:
     # branches:

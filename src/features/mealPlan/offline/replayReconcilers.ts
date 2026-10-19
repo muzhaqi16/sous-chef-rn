@@ -15,9 +15,8 @@ import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 /**
  * A replayed recipe meal converges on the (plan, date, meal type, recipe) key,
- * so a meal another device already added comes back under its own id; the
- * minted row is withdrawn and the server's linked, as the foreground does, and
- * the writes still queued against the minted row follow it.
+ * so one added elsewhere returns under its own id: the minted row is withdrawn,
+ * the server's linked, and queued writes follow it.
  */
 export const reconcileCreateMealPlanItemReplay: ReplayReconcilerTable[string] =
   (cache, variables, data, adopt) => {

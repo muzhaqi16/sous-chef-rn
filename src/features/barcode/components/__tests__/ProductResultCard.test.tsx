@@ -4,8 +4,6 @@ import { render, screen } from '@testing-library/react-native';
 import { ProductResultCard } from '../ProductResultCard';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: { uri: string }) => {
     const { View } = require('react-native');

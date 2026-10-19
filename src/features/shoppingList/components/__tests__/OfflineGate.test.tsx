@@ -4,8 +4,6 @@ import { render, screen } from '@testing-library/react-native';
 import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { Text } from '#components/atoms/Text';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text: RNText } = require('react-native');

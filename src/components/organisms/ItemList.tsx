@@ -188,11 +188,9 @@ export const ItemList: React.FC<ItemListProps> = ({
   const flashListRef = useRef<FlashListRef<Item>>(null);
   const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  // `items` reaches FlashList as-is — never through `useDeferredValue`. A
-  // deferred render can be interrupted after FlashList has shrunk its layout
-  // table but before cells are re-indexed, and a native `onLayout` in that gap
-  // throws "index out of bounds, not enough layouts" (fatal in release). See
-  // docs/flashlist-layout-index-race.md.
+  // `items` reaches FlashList as-is, never via `useDeferredValue`: an interrupted
+  // deferred render throws "not enough layouts", fatal in release
+  // (docs/flashlist-layout-index-race.md).
 
   // ── Performance instrumentation (matches PantryContent & SortableList) ──
   const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -257,10 +255,8 @@ export const ItemList: React.FC<ItemListProps> = ({
     onRemoveRow: reflow.removeRow,
   };
 
-  // The scrollable swaps when the list empties, so a drag in flight on the old
-  // one never delivers its end event and the caller's drag tracking stays on —
-  // a later programmatic scroll then reads as finger-driven. An empty list has
-  // come to rest by definition, so say so.
+  // The scrollable swaps when the list empties, so a drag in flight never ends
+  // and the caller's drag tracking stays on; an empty list is at rest, so say so.
   const isEmpty = items.length === 0 && !!emptyState;
   useEffect(() => {
     if (isEmpty) {
@@ -277,10 +273,8 @@ export const ItemList: React.FC<ItemListProps> = ({
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
-        // Deliver taps on header/row buttons on the first touch even while the
-        // keyboard is up (default "never" swallows the first tap to dismiss the
-        // keyboard, forcing a second tap on the search button). Taps on empty
-        // space still dismiss the keyboard.
+        // The default "never" spends a button's first tap dismissing the
+        // keyboard; a tap on empty space still dismisses it.
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
       >
@@ -313,10 +307,8 @@ export const ItemList: React.FC<ItemListProps> = ({
             onScrollEndDrag={onScrollEndDrag}
             onMomentumScrollEnd={onMomentumScrollEnd}
             scrollEventThrottle={scrollEventThrottle}
-            // Deliver taps on header/row buttons on the first touch even while the
-            // keyboard is up (default "never" swallows the first tap to dismiss the
-            // keyboard, forcing a second tap on the search button). Taps on empty
-            // space still dismiss the keyboard.
+            // The default "never" spends a button's first tap dismissing the
+            // keyboard; a tap on empty space still dismisses it.
             keyboardShouldPersistTaps="handled"
             refreshControl={refreshControl}
             renderItem={renderItem}

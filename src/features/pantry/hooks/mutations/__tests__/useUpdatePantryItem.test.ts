@@ -33,10 +33,6 @@ jest.mock('../utils', () => ({
   stateToCountKey: jest.fn(() => 'ambient'),
 }));
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // Hook reads currentItem from the cache via cache.readFragment, so tests
 // must seed the cache with a matching entity. The optimistic response is
 // then computed from the cached values plus the dirty-field updates.

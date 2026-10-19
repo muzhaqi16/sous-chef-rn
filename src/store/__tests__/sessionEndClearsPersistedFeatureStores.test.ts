@@ -17,8 +17,6 @@
  * their real persist config — the opposite premise, so it lives in its own file.
  */
 
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
 jest.mock('#/storage/mmkv');
 
 jest.mock('#/storage/keychain', () => ({

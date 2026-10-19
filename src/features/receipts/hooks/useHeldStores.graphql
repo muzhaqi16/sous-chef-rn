@@ -1,0 +1,17 @@
+# The shop the active list is shopped at, as the cache holds it.
+fragment useHeldStores_list on ShoppingList {
+  id
+  targetStore {
+    id
+    name
+  }
+}
+
+# A store with its address and number, complete only when the cache knows both:
+# an unknown one is not a store with none.
+fragment useHeldStores_store on Store {
+  id
+  name
+  address
+  storeNumber
+}

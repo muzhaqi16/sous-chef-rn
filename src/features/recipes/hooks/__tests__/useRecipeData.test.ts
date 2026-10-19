@@ -38,23 +38,14 @@ const ingredientsPage = (
   pageInfo: PageInfoFixture = { hasNextPage: false, endCursor: null },
   totalCount: number = ids.length,
 ): IngredientsFixture => ({
-  edges: ids.map((id, sortOrder) => ({
-    node: {
-      __typename: 'RecipeIngredient',
-      id,
-      name: `Ingredient ${id}`,
-      sortOrder,
-    },
-  })),
+  edges: ids.map((id, sortOrder) => ({ node: { id, sortOrder } })),
   pageInfo,
   totalCount,
 });
 
 /** A recipe the user wrote: no provider behind it. */
 const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
-  __typename: 'Recipe',
   id: 'r1',
-  name: 'Pasta',
   isExternal: false,
   sourceMapping: null,
   externalDetails: null,
@@ -67,12 +58,9 @@ const catalogRecipe = (
   syncStatus: ExternalSyncStatus,
   overrides: RecipeFixture = {},
 ): RecipeFixture => ({
-  __typename: 'Recipe',
   id: 'r1',
-  name: 'Catalog Pasta',
   isExternal: true,
-  createdBy: null,
-  sourceMapping: { __typename: 'RecipeSourceMapping', id: 'sm-1', syncStatus },
+  sourceMapping: { id: 'sm-1', syncStatus },
   ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
@@ -134,9 +122,8 @@ describe('useRecipeData', () => {
       const { result } = renderData({ recipeId: 'r1' }, [
         recipeMock(
           authoredRecipe({
-            pendingRevision: { __typename: 'RecipeRevision', id: 'rev-2' },
+            pendingRevision: { id: 'rev-2' },
             latestRevision: {
-              __typename: 'RecipeRevision',
               id: 'rev-2',
               status: RecipeRevisionStatus.Pending,
               reviewNote: null,
@@ -159,7 +146,6 @@ describe('useRecipeData', () => {
           authoredRecipe({
             pendingRevision: null,
             latestRevision: {
-              __typename: 'RecipeRevision',
               id: 'rev-1',
               status: RecipeRevisionStatus.Rejected,
               reviewNote: 'Keep the original photo.',
@@ -329,12 +315,9 @@ describe('useRecipeData', () => {
           result: {
             data: {
               recipe: {
-                __typename: 'Recipe',
                 id: 'r1',
-                name: 'Catalog Pasta',
                 isExternal: true,
                 sourceMapping: {
-                  __typename: 'RecipeSourceMapping',
                   id: 'sm-1',
                   syncStatus: newerStatus as ExternalSyncStatus,
                 },

@@ -187,48 +187,60 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
 
       {/* Only the author sees a recipe that is not published. */}
       {status === RecipeStatus.Draft && (
-        <View style={styles.draftBadge}>
-          <Icon name="eye-off-outline" size={14} tone="textSecondary" />
-          <Text role="caption" tone="secondary" style={styles.metaText}>
-            {t('recipes.draftBadge')}
-          </Text>
+        <View style={styles.status}>
+          <View style={styles.metaLine}>
+            <Icon name="eye-off-outline" size={14} tone="textSecondary" />
+            <Text role="caption" tone="secondary" style={styles.metaText}>
+              {t('recipes.draftBadge')}
+            </Text>
+          </View>
+          {/* A rejection returns the recipe as a draft, always with a note. */}
+          {!!reviewNote && (
+            <Text role="caption" tone="secondary">
+              {t('recipes.reviewNote', { note: reviewNote })}
+            </Text>
+          )}
         </View>
       )}
       {status === RecipeStatus.PendingReview && (
-        <View style={styles.draftBadge}>
-          <Icon name="hourglass-outline" size={14} tone="textSecondary" />
-          <Text role="caption" tone="secondary" style={styles.metaText}>
-            {t('recipes.inReviewBadge')}
-          </Text>
+        <View style={styles.status}>
+          <View style={styles.metaLine}>
+            <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+            <Text role="caption" tone="secondary" style={styles.metaText}>
+              {t('recipes.inReviewBadge')}
+            </Text>
+          </View>
         </View>
-      )}
-      {/* A rejection returns the recipe as a draft, always with a note. */}
-      {status === RecipeStatus.Draft && !!reviewNote && (
-        <Text role="caption" tone="secondary" style={styles.reviewNote}>
-          {t('recipes.reviewNote', { note: reviewNote })}
-        </Text>
       )}
       {/* An edit to a published recipe waits for review while the recipe stays live. */}
-      {status === RecipeStatus.Published && !!hasPendingRevision && (
-        <View style={styles.draftBadge}>
-          <Icon name="hourglass-outline" size={14} tone="textSecondary" />
-          <Text role="caption" tone="secondary" style={styles.metaText}>
-            {t('recipes.pendingChangesBadge')}
-          </Text>
-        </View>
-      )}
-      {status === RecipeStatus.Published && !!revisionRejectionNote && (
-        <Text role="caption" tone="secondary" style={styles.reviewNote}>
-          {t('recipes.revisionRejectedNote', { note: revisionRejectionNote })}
-        </Text>
-      )}
+      {status === RecipeStatus.Published &&
+        (!!hasPendingRevision || !!revisionRejectionNote) && (
+          <View style={styles.status}>
+            {!!hasPendingRevision && (
+              <View style={styles.metaLine}>
+                <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+                <Text role="caption" tone="secondary" style={styles.metaText}>
+                  {t('recipes.pendingChangesBadge')}
+                </Text>
+              </View>
+            )}
+            {!!revisionRejectionNote && (
+              <Text role="caption" tone="secondary">
+                {t('recipes.revisionRejectedNote', {
+                  note: revisionRejectionNote,
+                })}
+              </Text>
+            )}
+          </View>
+        )}
     </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Each block spaces below itself, as the detail screen around it does.
   section: {
-    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
     marginBottom: theme.spacing.sm,
@@ -245,7 +257,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   tagChip: {
     paddingHorizontal: theme.spacing.sm,
@@ -256,7 +268,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   metaColumn: {
-    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     gap: theme.spacing.xs,
   },
   metaLine: {
@@ -267,13 +279,8 @@ const styles = StyleSheet.create(theme => ({
   metaText: {
     flex: 1,
   },
-  draftBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  status: {
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  reviewNote: {
-    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
 }));

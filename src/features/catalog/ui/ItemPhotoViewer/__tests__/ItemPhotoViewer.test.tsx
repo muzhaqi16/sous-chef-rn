@@ -12,12 +12,6 @@ import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPri
 import { ItemPhotoViewer } from '../ItemPhotoViewer';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
 /**
  * A literal photo complete for `ItemPhotoCarousel_itemPhoto`. The viewer takes
  * either a masked ref or the materialized object, and codegen inlines the
@@ -107,7 +101,6 @@ describe('ItemPhotoViewer set-as-main action', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-1.jpg',
             photos: [photo('photo-1', { isPrimary: true })],

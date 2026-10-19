@@ -31,8 +31,6 @@ export interface AppSettings {
   autoSync: boolean;
   offlineMode: boolean;
   preferredUnitSystem: UnitSystem;
-  enabledFeatures: string[];
-  betaFeatures: string[];
 }
 
 export const useAppSettings = () => {
@@ -59,8 +57,6 @@ export const useAppSettings = () => {
       offlineMode: settings?.offlineMode ?? false,
       // The server's default, and what a user with no settings row reads.
       preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.System,
-      enabledFeatures: settings?.enabledFeatures ?? [],
-      betaFeatures: settings?.betaFeatures ?? [],
     };
   };
 
@@ -92,13 +88,6 @@ export const useAppSettings = () => {
     if ('preferredUnitSystem' in updates) {
       input.regional = { preferredUnitSystem: updates.preferredUnitSystem };
     }
-    if ('enabledFeatures' in updates || 'betaFeatures' in updates) {
-      input.features = {};
-      if ('enabledFeatures' in updates)
-        input.features.enabledFeatures = updates.enabledFeatures;
-      if ('betaFeatures' in updates)
-        input.features.betaFeatures = updates.betaFeatures;
-    }
     return input;
   };
 
@@ -113,14 +102,14 @@ export const useAppSettings = () => {
   ) => {
     const previous = snapshotFields<AppSettings>(memoizedSettings, updates);
 
-    const { persisted } = await updateEntityFieldsLocalFirst<AppSettings>({
+    return updateEntityFieldsLocalFirst<AppSettings>({
       cache: client.cache,
       entity: settingsEntity,
       updates,
       previous,
       // The settle is the ONLY alerter for this failure, so callers must not
-      // add their own. Its failure stands in for the error, driving the revert.
-      mutate: async () => {
+      // add their own.
+      settle: async () => {
         const settled = await settleMutation(
           () =>
             updateSettings({
@@ -132,11 +121,9 @@ export const useAppSettings = () => {
         if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
           dropUnitSystemAnswers(client.cache);
         }
-        return { data: settled.data, error: settled.failure };
+        return settled;
       },
-      logLabel: 'Update Settings',
     });
-    return persisted;
   };
 
   /** Single-key convenience over {@link updateMultipleSettings}. */
@@ -177,9 +164,8 @@ export const useAppSettings = () => {
     settings: memoizedSettings,
     loading,
     // `settings` is never empty (`getAppSettings()` fills every field), so it
-    // cannot answer "has the server replied yet" — and a screen gating on
-    // `loading` blanks itself on every mount, since `cache-and-network` reports
-    // `loading: true` for the whole network leg whatever the cache holds.
+    // cannot say whether the server replied; gating on `loading` blanks the
+    // screen on every mount, since Apollo reports it true on each one.
     hasLoadedSettings: !!settings,
     // Failures RESOLVE under the global `errorPolicy: 'all'`.
     error,

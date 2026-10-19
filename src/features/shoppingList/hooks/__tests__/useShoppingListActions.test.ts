@@ -9,14 +9,6 @@ import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
 
 const mockClearItems = jest.fn();
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {

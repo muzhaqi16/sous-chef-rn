@@ -24,7 +24,7 @@ import { isLifestyleDiet } from '#domain/dietary';
 import {
   toDisplayItems,
   type DisplayItem,
-  type RecipeSearchRow,
+  type RecipeRow,
 } from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   EMPTY_PAGINATION,
@@ -66,10 +66,9 @@ export function useRecipeScreen() {
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
-  // Reconcile the profile's diet restrictions into the single-lifestyle +
-  // stackable-constraints model: keep at most one lifestyle diet (the first,
-  // deterministic) plus every constraint diet, as Spoonacular-format strings.
-  // Shared by discovery tags and the search filter seeding so the two agree.
+  // The profile's diets as Spoonacular strings: at most one lifestyle diet (the
+  // first) plus every constraint diet. Discovery tags and the search filters'
+  // seed share it, so the two agree.
   const profileDietRestrictions = (dietaryProfile?.restrictions ?? []).filter(
     (r): r is typeof r & { diet: Diet } => Boolean(r.diet),
   );
@@ -94,12 +93,11 @@ export function useRecipeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  // Rows and cursors live in ONE atom because they advance together, so a
-  // resolved load-more commits both atomically — and pagination identity is
-  // what tells it a new search replaced the state mid-flight, so the stale page
-  // is dropped instead of corrupting the new list.
+  // Rows and cursors are ONE atom so a load-more commits both together; a
+  // changed pagination identity tells it a new search replaced the state
+  // mid-flight, and the stale page is dropped.
   const [searchData, setSearchData] = useState<{
-    rows: RecipeSearchRow[];
+    rows: RecipeRow[];
     pagination: SearchPagination;
   }>({ rows: [], pagination: EMPTY_PAGINATION });
   // Written here, not when a page arrives, so the list follows a language change.
@@ -127,7 +125,7 @@ export function useRecipeScreen() {
 
   // A fresh search replaces the list and resets pagination (the cursors come
   // from executeRecipeTextSearch via setSearchPagination).
-  const setSearchRows = (rows: RecipeSearchRow[]) => {
+  const setSearchRows = (rows: RecipeRow[]) => {
     setSearchData(prev => ({ ...prev, rows }));
   };
 
@@ -152,11 +150,9 @@ export function useRecipeScreen() {
     );
   };
 
-  // ── Filters ──
-  // Normalize the dietary profile's Diet/Intolerance enums into the
-  // Spoonacular-format strings RecipeFilters stores, via the shared forward
-  // maps (single source of truth). useRecipeFilters owns the state + mutators
-  // and seeds itself from this the first time it arrives carrying data.
+  // The profile's Diet/Intolerance enums as the Spoonacular strings
+  // RecipeFilters stores. `useRecipeFilters` seeds itself from this the first
+  // time it carries data.
   const profileFilters: RecipeFilters | null = dietaryProfile
     ? {
         diet: reconciledDietValues,
@@ -225,7 +221,6 @@ export function useRecipeScreen() {
     }, setSearchLoadingMore);
   };
 
-  // DiscoveryItem already satisfies DisplayItem — no mapping needed
   const items: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery
@@ -355,10 +350,9 @@ export function useRecipeScreen() {
       }
     : searchPerformed && activeFilterCount > 0 && searchQuery.trim() !== ''
     ? {
-        // Zero TEXT-search results with dietary filters narrowing the search —
-        // tell the user why and offer a one-tap recovery instead of a dead
-        // end. Ingredient search never applies filters (searchQuery stays
-        // empty), so it falls through to the plain empty state.
+        // No TEXT-search results under dietary filters: say why and offer a
+        // one-tap recovery. Ingredient search takes no filters, so it falls to
+        // the plain empty state.
         icon: 'search-outline',
         title: t('recipes.noRecipesFoundTitle'),
         description: t('recipes.noResultsFiltered', {

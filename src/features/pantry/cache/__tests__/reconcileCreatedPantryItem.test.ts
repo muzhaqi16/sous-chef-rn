@@ -5,9 +5,6 @@ import {
   type PantryItemRef,
 } from '../items';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const PANTRY = 'Pantry:pantry-1';
 const EXPIRING = 'itemsConnection({"filters":{"expiringSoon":true}})';
 

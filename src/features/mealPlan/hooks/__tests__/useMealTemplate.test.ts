@@ -18,8 +18,6 @@ import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { useMealTemplate } from '../useMealTemplate';
 import { useMealTemplateForEdit } from '../useMealTemplateForEdit';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 const item = (id: string, dayOffset: number): MealTemplateItemFragment => ({
   __typename: 'MealTemplateItem',
   id,

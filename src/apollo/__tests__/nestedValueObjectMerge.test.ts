@@ -64,6 +64,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
     purchasedBy: {
       __typename: 'User',
       id: 'u1',
+      displayName: 'Sam',
       profile: {
         __typename: 'UserProfile',
         id: 'profile-1',

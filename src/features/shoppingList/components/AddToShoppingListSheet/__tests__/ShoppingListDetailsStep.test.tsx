@@ -39,9 +39,6 @@ jest.mock('#components/molecules/SegmentedControl', () => ({
   SegmentedControl: () => null,
 }));
 jest.mock('#/utils/iconUtils', () => ({ Icon: () => null }));
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 const renderStep = (
   overrides: Partial<React.ComponentProps<typeof ShoppingListDetailsStep>> = {},

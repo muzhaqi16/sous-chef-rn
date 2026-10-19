@@ -27,30 +27,6 @@ import {
   type UsePantryItemFormSubmitParams,
 } from '../usePantryItemFormSubmit';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeMutation: jest.fn(
-    async (
-      fn: () => Promise<unknown>,
-      onError: string | ((error: unknown) => void | Promise<void>),
-    ) => {
-      try {
-        await fn();
-        return true;
-      } catch (e) {
-        if (typeof onError === 'function') await onError(e);
-        return false;
-      }
-    },
-  ),
-}));
-
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => {
     const n = parseFloat(input);

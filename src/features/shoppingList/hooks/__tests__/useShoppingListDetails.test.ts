@@ -64,7 +64,6 @@ function buildShoppingList(
     shareCode: null,
     isPublic: false,
     home: {
-      __typename: 'Home',
       id: 'home-1',
       name: 'Home',
       myMembership: {
@@ -78,10 +77,8 @@ function buildShoppingList(
     },
     ownerships: [],
     collaboratorsConnection: {
-      __typename: 'ShoppingListCollaboratorConnection',
       totalCount: collaborators.length,
       edges: collaborators.map(c => ({
-        __typename: 'ShoppingListCollaboratorEdge',
         cursor: c.id,
         node: {
           __typename: 'ShoppingListCollaborator',
@@ -109,7 +106,6 @@ function buildShoppingList(
         },
       })),
       pageInfo: {
-        __typename: 'PageInfo',
         hasNextPage: false,
         endCursor: null,
       },

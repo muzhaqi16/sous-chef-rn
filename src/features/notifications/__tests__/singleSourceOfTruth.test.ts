@@ -20,9 +20,6 @@ import {
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const node = (
   id: string,
   status: NotificationStatus = NotificationStatus.Sent,

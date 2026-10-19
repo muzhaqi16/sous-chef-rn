@@ -101,6 +101,7 @@ fragment ItemReaders on Item {
   shelfLifeDays
   shelfLifeOpenedDays
   storageState
+  storeDepartment
   tags
   type
   units {

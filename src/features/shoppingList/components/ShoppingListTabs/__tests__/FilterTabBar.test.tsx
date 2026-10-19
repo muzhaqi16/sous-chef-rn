@@ -3,8 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { FilterTabBar } from '../FilterTabBar';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
@@ -49,7 +47,12 @@ describe('FilterTabBar', () => {
 
   it('renders action buttons when provided', () => {
     const actionButtons = [
-      { icon: 'filter', onPress: jest.fn(), testID: 'filter-btn' },
+      {
+        icon: 'filter',
+        accessibilityLabel: 'Filter',
+        onPress: jest.fn(),
+        testID: 'filter-btn',
+      },
     ];
     render(
       <FilterTabBar

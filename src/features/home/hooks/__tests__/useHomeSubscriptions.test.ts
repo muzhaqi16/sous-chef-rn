@@ -1,5 +1,6 @@
 'use no memo';
 
+import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
@@ -8,10 +9,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import type {
-  SubscriptionApolloClient,
-  SubscriptionConfig,
-} from '#/services/subscriptions/types';
+import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import {
   GetHomeDocument,
@@ -23,29 +21,12 @@ import { HomeInvitesForEventDocument } from '../useHomeSubscriptions.generated';
 import { useStore } from '#store/index';
 import { useHomeSubscriptions } from '../useHomeSubscriptions';
 
-type CapturedOnData = (data: unknown, client: SubscriptionApolloClient) => void;
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockRegister = jest.fn().mockReturnValue({});
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
   },
 }));
-
-function captureCustomOnData() {
-  let customOnData: CapturedOnData | undefined;
-  mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    customOnData = config.customOnData;
-    return {};
-  });
-  return (): CapturedOnData => {
-    if (!customOnData) throw new Error('customOnData was not captured');
-    return customOnData;
-  };
-}
 
 // The viewer's row in `home-1`, as the home list caches it.
 const cacheWithViewerMembership = (membershipId: string) => {
@@ -74,14 +55,11 @@ function deliverMembershipEvent(
   membershipId: string,
   cache: ReturnType<typeof makeCache>,
 ) {
-  const getOnData = captureCustomOnData();
+  const getOnData = captureOnData(mockRegister);
   renderHookWithApollo(() => useHomeSubscriptions('member-1'));
 
   const refetchQueries = jest.fn(() => Promise.resolve([]));
-  const client = {
-    refetchQueries,
-    cache,
-  } as unknown as SubscriptionApolloClient;
+  const client = { refetchQueries, cache };
   getOnData()(
     {
       __typename: 'HomeEvent',
@@ -207,7 +185,7 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
       },
     });
     const pending = recordMock(GetMyPendingInvitesDocument, {});
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     const { result } = renderHookWithApollo(
       () => {
         useHomeSubscriptions('admin-2');

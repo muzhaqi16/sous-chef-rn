@@ -12,6 +12,7 @@ import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 import { classifyError } from '../queueErrorPolicy';
+import { subjectTypeOf } from '../queuedSubject';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { client } from '#/apollo/client';
@@ -26,6 +27,7 @@ import {
   MoveShoppingItemToPantryDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
 jest.mock('#/apollo/client', () => ({
   client: { cache: {}, refetchQueries: jest.fn(() => Promise.resolve([])) },
@@ -63,9 +65,6 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     clearEntityById: jest.fn(),
   },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),
@@ -88,6 +87,7 @@ const failure = (
   operationName: operationNameOf(UpdatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'item-1',
+  subjectType: 'PantryItem',
   variables: {},
   error: {
     type: 'server',
@@ -237,6 +237,48 @@ describe('queue failure handler', () => {
     expect(message).not.toContain('VALIDATION_ERROR');
   });
 
+  describe('naming what was not saved', () => {
+    const toldAfter = (overrides: Partial<FailedMutationInfo>) => {
+      handleQueueFailure(failure(overrides));
+      const [message] = (toastService.error as jest.Mock).mock.calls[0];
+      return message;
+    };
+
+    it('names the entity a refused change was to', () => {
+      expect(toldAfter({})).toBe(
+        t('errors.queuedChangeRejectedResource', {
+          resource: t('errors.resourceNames.PantryItem'),
+        }),
+      );
+    });
+
+    // A removal evicts its row, and a stored edit can outlive its row's cache.
+    it("names it from the write's input when the cache does not hold the row", () => {
+      const message = toldAfter({
+        operationName: operationNameOf(UpdateMealPlanItemDocument),
+        entityType: null,
+        entityId: 'meal-1',
+        subjectType: subjectTypeOf({ mutation: UpdateMealPlanItemDocument }),
+      });
+
+      expect(message).toBe(
+        t('errors.queuedChangeRejectedResource', {
+          resource: t('errors.resourceNames.MealPlanItem'),
+        }),
+      );
+      expect(message).toContain('meal plan item');
+    });
+
+    it.each([null, 'NoSuchEntity'])(
+      'says a change was not saved when nothing names it (%s)',
+      subjectType => {
+        expect(toldAfter({ entityType: null, subjectType })).toBe(
+          t('errors.queuedChangeRejected'),
+        );
+      },
+    );
+  });
+
   // "Someone got there first" is a different thing for the user to know than
   // "this failed", and the resource map already names the entity.
   it('names the entity when a newer change overwrote this one', () => {
@@ -267,6 +309,7 @@ describe('queue failure handler', () => {
       failure({
         entityType: null,
         entityId: null,
+        subjectType: null,
         error: {
           type: 'conflict',
           message: 'Version conflict',
@@ -293,7 +336,9 @@ describe('queue failure handler', () => {
       }),
     );
 
-    handleQueueFailure(failure({ entityType: null, entityId: null, error }));
+    handleQueueFailure(
+      failure({ entityType: null, entityId: null, subjectType: null, error }),
+    );
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
     expect(message).toBe(t('errors.queuedChangeOverwritten'));

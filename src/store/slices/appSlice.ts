@@ -3,6 +3,7 @@ import type { RootState } from '../index';
 import type {
   CategorySuggestion,
   ItemSuggestion,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { dedupeById } from '#utils/dedupeById';
 
@@ -11,6 +12,7 @@ interface Unit {
   name: string;
   symbol: string;
   abbreviation?: string;
+  type?: UnitType;
 }
 
 // Reference data cached while online (see useDataPreloading) so the
@@ -24,6 +26,7 @@ export interface CachedStore {
   id: string;
   name: string;
   address?: string | null;
+  storeNumber?: string | null;
 }
 
 /**

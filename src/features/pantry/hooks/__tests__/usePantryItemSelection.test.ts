@@ -22,12 +22,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSelection } from '../usePantryItemSelection';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerPendingDelete: jest.fn(),

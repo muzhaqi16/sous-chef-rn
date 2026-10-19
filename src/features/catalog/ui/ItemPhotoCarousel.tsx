@@ -69,10 +69,9 @@ interface ItemPhotoCarouselProps {
   /** How the image fills its band (default: 'contain') */
   resizeMode?: 'cover' | 'contain';
   /**
-   * Float the page dots over the photo instead of rendering them in-flow
-   * below it. Keeps the component's total height equal to `imageHeight` —
-   * required when a parent (e.g. CollapsingHeroDetail's content card)
-   * overlaps the bottom edge of the hero.
+   * Float the page dots over the photo, keeping the total height at
+   * `imageHeight`, for a parent that overlaps the hero's bottom edge (e.g.
+   * CollapsingHeroDetail's content card).
    */
   overlayDots?: boolean;
   /** Bottom offset of the floated dots (overlayDots only, default 8). */
@@ -80,10 +79,9 @@ interface ItemPhotoCarouselProps {
   /** Opens the fullscreen viewer at the tapped page. */
   onPhotoPress?: (index: number) => void;
   /**
-   * Fired when the gallery has nothing left to show — a lone photo whose image
-   * failed, or a failing `fallbackImageUrl`. Lets a host collapse its hero band
-   * instead of reserving 280pt for a placeholder icon. Deliberately not fired
-   * for one bad photo among several: the rest of the gallery still renders.
+   * Fired when the gallery has nothing left to show (a lone failed photo or a
+   * failing `fallbackImageUrl`), so a host can collapse its hero band; never for
+   * one bad photo among several, since the rest still render.
    */
   onUnrenderable?: () => void;
 }

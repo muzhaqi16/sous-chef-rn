@@ -9,10 +9,6 @@ import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.gen
 import { alertService } from '#/services/alertService';
 import { useOpenPantryItemBatch } from '../useOpenPantryItemBatch';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => jest.clearAllMocks());
 
 const READ_BATCH = gql`

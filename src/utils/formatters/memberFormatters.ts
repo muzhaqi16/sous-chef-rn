@@ -62,10 +62,9 @@ export type CollaboratorDisplayShape = Pick<
 >;
 
 /**
- * `User.displayName` first: it follows the SHARING relationship, so a
- * collaborator on this list resolves a name even when their profile is private
- * and `profile` comes back null. The profile read stays as the path for a
- * viewer who can see it; the email's local part is the last resort.
+ * `User.displayName` first: it follows the SHARING relationship, so it resolves
+ * even when a private `profile` comes back null. Then the profile; the email's
+ * local part is the last resort.
  */
 export function getCollaboratorDisplayName(
   collaborator: CollaboratorDisplayShape,

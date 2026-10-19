@@ -156,11 +156,10 @@ export function useRecipeReviews({
       {
         document: CreateRecipeReviewDocument,
         fallback: t('recipes.submitReviewFailed'),
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
-    else toastService.success(t('recipes.reviewSubmitted'));
+    if (!settled.failure) toastService.success(t('recipes.reviewSubmitted'));
   };
 
   const updateReview = async (
@@ -181,11 +180,10 @@ export function useRecipeReviews({
       {
         document: UpdateRecipeReviewDocument,
         fallback: t('recipes.updateReviewFailed'),
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
-    else toastService.success(t('recipes.reviewUpdated'));
+    if (!settled.failure) toastService.success(t('recipes.reviewUpdated'));
   };
 
   const deleteReview = async (id: string) => {
@@ -204,7 +202,7 @@ export function useRecipeReviews({
         document: DeleteRecipeReviewDocument,
         fallback: t('recipes.deleteReviewFailed'),
         removal: true,
-        present: 'none',
+        present: 'toast',
         onFailed: () => {
           if (!snapshot) return;
           apolloClient.cache.writeFragment({
@@ -219,12 +217,11 @@ export function useRecipeReviews({
         },
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
-    else toastService.success(t('recipes.reviewDeleted'));
+    if (!settled.failure) toastService.success(t('recipes.reviewDeleted'));
   };
 
   const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {
-    const settled = await settleMutation(
+    await settleMutation(
       () =>
         toggleHelpfulMutation({
           variables: { input: { reviewId, isHelpful } },
@@ -232,16 +229,14 @@ export function useRecipeReviews({
       {
         document: ToggleReviewHelpfulDocument,
         fallback: t('recipes.helpfulVoteFailed'),
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
   };
 
-  // Server-computed per requesting user — never derive it from
-  // `review.helpfulVotes`, which is windowed, so a vote past the window reads
-  // as un-voted. The `userId` guard is separate: the field is false for an
-  // anonymous viewer, and a null id also means there is no vote to toggle.
+  // Server-computed per viewer; never derive it from the windowed
+  // `review.helpfulVotes`, where a vote past the window reads as un-voted. The
+  // `userId` guard is separate: a null id has no vote to toggle.
   const hasVotedHelpful = (review: RecipeReviewFragment) =>
     !!userId && review.viewerHasVotedHelpful;
 

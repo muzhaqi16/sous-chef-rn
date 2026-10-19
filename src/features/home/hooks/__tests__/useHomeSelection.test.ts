@@ -53,12 +53,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // The GetHomes connection-node shape this hook consumes. Derived from the
 // generated query so it stays in sync.
 type MockHomeNode = GetHomesQuery['homes']['edges'][number]['node'];

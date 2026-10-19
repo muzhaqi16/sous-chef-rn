@@ -15,14 +15,6 @@ import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { useCopyShoppingList } from '../useCopyShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const USER = {
   id: 'user-1',
   email: 'tani@example.com',
@@ -33,14 +25,17 @@ const USER = {
 function derivedList(lines: number): DerivedList {
   const items = Array.from({ length: lines }, (_, i) => ({
     id: `line-${i}`,
-    item: { itemName: `Item ${i}` },
+    item: { inline: { id: `item-${i}`, name: `Item ${i}` } },
     quantity: '1',
   }));
   return {
     list: { name: 'Copy' },
     items,
     display: new Map(
-      items.map(line => [line.id, { itemName: line.item.itemName }]),
+      items.map(line => [
+        line.id,
+        { itemName: line.item.inline.name, itemId: line.item.inline.id },
+      ]),
     ),
     skipped: [],
   };
@@ -120,22 +115,19 @@ describe('useCopyShoppingList', () => {
         __typename: 'AddItemsToShoppingListPayload',
         results: [
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 0,
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'line-0' },
+            item: { id: 'line-0' },
           },
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 1,
             success: false,
             item: null,
           },
           {
-            __typename: 'BatchAddShoppingListItemResult',
             index: 2,
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'line-2' },
+            item: { id: 'line-2' },
           },
         ],
       },

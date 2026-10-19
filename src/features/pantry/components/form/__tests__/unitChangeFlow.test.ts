@@ -17,9 +17,6 @@ import {
   type UnitChangeTarget,
 } from '../unitChangeFlow';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 const mockAlert = jest.mocked(alertService.alert);
 
 const unit = (

@@ -10,6 +10,7 @@ import type {
   RenderMetrics,
   ScreenMetrics,
 } from '#/services/performance/types';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export interface StartupMetrics {
   nativeLaunch: number | null;
@@ -120,20 +121,13 @@ export const usePerformanceDashboard = (): PerformanceDashboardData => {
     alertService.alert(
       t('performance.clearData'),
       t('performance.clearDataConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.clear'),
-          style: 'destructive',
-          onPress: () => {
-            clearPerformanceData();
-            performance.clearMarks();
-            performance.clearMeasures();
-            performance.clearResourceTimings();
-            setLastUpdated(Date.now());
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.clear'), () => {
+        clearPerformanceData();
+        performance.clearMarks();
+        performance.clearMeasures();
+        performance.clearResourceTimings();
+        setLastUpdated(Date.now());
+      }),
     );
   };
 

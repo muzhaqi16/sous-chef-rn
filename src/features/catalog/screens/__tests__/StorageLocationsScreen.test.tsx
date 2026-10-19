@@ -15,10 +15,6 @@ type StorageLocationCardProps = React.ComponentProps<
   typeof StorageLocationCardComponent
 >;
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -43,8 +39,6 @@ jest.mock('#features/catalog/hooks/useStorageLocationManagement', () => ({
     refetch: mockRefetch,
   })),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/DetailTemplate', () => ({
   DetailTemplate: ({ title, sections }: DetailTemplateProps) => {
@@ -101,10 +95,6 @@ jest.mock('#utils/iconUtils', () => ({
 
 jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 const defaultRoute = { params: { homeId: 'home-1' } };

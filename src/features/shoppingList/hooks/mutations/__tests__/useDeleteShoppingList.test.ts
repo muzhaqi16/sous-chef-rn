@@ -9,10 +9,6 @@ import { List_EmptyItemsVariantFragmentDoc } from '#features/shoppingList/cache/
 import { useDeleteShoppingList } from '../useDeleteShoppingList';
 import { toastService } from '#/services/toastService';
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn() },
-}));
-
 const LIST_ID = 'list-1';
 
 const LIST = gql`

@@ -27,10 +27,6 @@ jest.mock('../../logoutCleanup', () => ({
     isInLogoutProcess: jest.fn(() => false),
   },
 }));
-jest.mock('../refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
-
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { Observable, of } from 'rxjs';

@@ -168,13 +168,6 @@ jest.mock('#domain/recipeTransform', () => ({
   transformRecipeForDisplay: jest.fn((r: unknown) => r),
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    error: jest.fn(),
-    success: jest.fn(),
-  },
-}));
-
 jest.mock('#features/recipes/store/useRecipeCacheStore', () => ({
   useRecipeCacheStore: {
     getState: jest.fn(() => ({
@@ -184,8 +177,6 @@ jest.mock('#features/recipes/store/useRecipeCacheStore', () => ({
   },
   textSearchCacheKey: jest.fn((q: string) => `text:${q}`),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 const defaultProps = {
   visible: true,

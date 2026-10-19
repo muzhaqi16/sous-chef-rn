@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import {
@@ -16,14 +17,8 @@ import { profileTestIDs } from '#features/profile/testIDs';
 import { CreateUserReportDocument } from '#features/profile/hooks/useReportContent.generated';
 import { ReportContentSheet, type ReportTarget } from '../ReportContentSheet';
 
-const mockToastSuccess = jest.fn();
-const mockToastInfo = jest.fn();
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastInfo = jest.mocked(toastService.info);
 
 const TARGET: ReportTarget = {
   reportedUserId: 'user-2',

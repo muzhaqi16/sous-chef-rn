@@ -1,28 +1,22 @@
 /**
- * The DEVICE's locale conventions, routinely different from the interface
- * language. Separators follow the device — `keyboardType` renders the DEVICE
- * locale's keypad — while words follow i18n (`getDateFnsLocale`). Derived from
- * `Intl`, treated as possibly-absent: a build without it must degrade.
+ * The DEVICE's locale conventions, routinely not the interface language's:
+ * separators follow the device keypad, words follow i18n (`getDateFnsLocale`).
+ * `Intl` may be absent, and a build without it must degrade.
  */
 
 /** The two decimal separators any locale the app can plausibly run under uses. */
 export type DecimalSeparator = '.' | ',';
 
-/**
- * `.` matches the JS number grammar, so a fallback round-trips through
- * `parseFloat` unchanged, and it is what `en` (the `fallbackLng`) uses anyway.
- */
+/** `.` round-trips through `parseFloat`; `en`, the `fallbackLng`, uses it. */
 const FALLBACK_SEPARATOR: DecimalSeparator = '.';
 
-// Resolving a locale walks the platform's locale database and cannot change
-// without an app restart, so compute once.
+// Fixed until an app restart, so computed once.
 let cachedSeparator: DecimalSeparator | undefined;
 
 /**
- * The separator the device's keypad offers, and so the only one some people can
- * type. Read back from `format` with the digits stripped rather than via
- * `formatToParts`: `format` is the part of `Intl.NumberFormat` Hermes implements
- * most consistently. Falls back to `.`.
+ * The device keypad's separator, the only one some people can type. Read back
+ * from `format`, not `formatToParts`: Hermes implements `format` most
+ * consistently.
  */
 export function getDeviceDecimalSeparator(): DecimalSeparator {
   if (cachedSeparator !== undefined) return cachedSeparator;
@@ -47,39 +41,6 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
   return resolved;
 }
 
-/** Which part a device's slash date (`05/09/2026`) puts first. */
-export type DateOrder = 'monthFirst' | 'dayFirst';
-
-let cachedDateOrder: DateOrder | undefined;
-
-/**
- * The order the device's region writes day and month in, read back from
- * `format`, as {@link getDeviceDecimalSeparator} is, rather than via
- * `formatToParts`. Falls back to month-first, the US order.
- */
-export function getDeviceDateOrder(): DateOrder {
-  if (cachedDateOrder !== undefined) return cachedDateOrder;
-
-  let resolved: DateOrder = 'monthFirst';
-  try {
-    // February 3rd: the month prints as 02 and the day as 03 in every locale
-    // with Latin digits; any other script leaves the fallback.
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date(2001, 1, 3));
-    const month = formatted.indexOf('02');
-    const day = formatted.indexOf('03');
-    if (month >= 0 && day >= 0 && day < month) resolved = 'dayFirst';
-  } catch {
-    // Left at the fallback.
-  }
-
-  cachedDateOrder = resolved;
-  return resolved;
-}
-
 /** The device's locale (`en-US`), or null when neither source can say. */
 export function getDeviceLocale(): string | null {
   try {
@@ -93,11 +54,9 @@ export function getDeviceLocale(): string | null {
 }
 
 /**
- * Test-only: the underlying values cannot change while the app runs, so nothing
- * in the app should call this.
+ * Test-only: the values cannot change while the app runs.
  * @internal Test seam.
  */
 export function resetDeviceLocaleCache(): void {
   cachedSeparator = undefined;
-  cachedDateOrder = undefined;
 }

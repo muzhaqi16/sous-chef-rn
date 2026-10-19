@@ -4,6 +4,10 @@
  * `PantryEvents` is a thin event — the envelope plus the changed entity's id —
  * so what these pin is which events are worth a read-back and which are not.
  */
+import {
+  captureOnData,
+  type CapturedOnData,
+} from '#/test-utils/subscriptionCapture';
 import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
@@ -20,11 +24,6 @@ import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscrip
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { todayKey } from '#/utils/dateUtils';
-
-type CapturedOnData = (data: unknown, client: unknown) => void;
-
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
 
 jest.mock('#/storage/deviceId', () => ({
   getDeviceId: jest.fn(() => 'device_this'),
@@ -53,19 +52,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
     (...args: unknown[]) =>
       mockRemoveFromConnection(...args),
 }));
-
-/** Captures the hook's customOnData so tests can drive it with a payload. */
-function captureCustomOnData() {
-  let customOnData: CapturedOnData | undefined;
-  mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    customOnData = config.customOnData as CapturedOnData | undefined;
-    return {};
-  });
-  return (): CapturedOnData => {
-    if (!customOnData) throw new Error('customOnData was not captured');
-    return customOnData;
-  };
-}
 
 const makeClient = (
   readFragment: jest.Mock = jest.fn(),
@@ -137,7 +123,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it('removes a deleted item without reading it back, then recounts the pantry', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -159,7 +145,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it('reads an item added elsewhere back before adding it', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue({
@@ -190,7 +176,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it("writes into the event's pantry, not the one selected when it arrives", async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -218,7 +204,7 @@ describe('usePantrySubscriptions', () => {
 
   it('skips the add when the item cannot be read back', async () => {
     // Offline, or deleted between the event and the read.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
       jest.fn(),
@@ -233,7 +219,7 @@ describe('usePantrySubscriptions', () => {
   it('does not read back an update to a row nothing is showing', async () => {
     // readFragment returns null — no mounted list holds this item, so warming
     // it would be a request for a row nobody is looking at.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(jest.fn().mockReturnValue(null));
 
@@ -247,7 +233,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it('reads back an update to a row the cache is holding', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
@@ -266,7 +252,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it('ignores its own echo', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -286,7 +272,7 @@ describe('usePantrySubscriptions', () => {
 
   it('skips an echo while a local delete is in flight', async () => {
     mockIsPendingDelete.mockReturnValue(true);
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -300,7 +286,7 @@ describe('usePantrySubscriptions', () => {
   it('recounts once for a burst of deletes made elsewhere', async () => {
     // The counts are aggregates, so the last read wins: one read however many
     // rows another device just cleared.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -314,7 +300,7 @@ describe('usePantrySubscriptions', () => {
   });
 
   it('re-reads the pantry summary when its metadata changes', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
 
@@ -336,7 +322,7 @@ describe('usePantrySubscriptions', () => {
 
   describe('echo suppression', () => {
     it('drops the echo of a write this device made', async () => {
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => usePantrySubscriptions('user-1'));
       const client = makeClient();
 
@@ -358,7 +344,7 @@ describe('usePantrySubscriptions', () => {
     it('applies a write the SAME user made on another device', async () => {
       // The whole reason this keys on the device: the mutation response landed
       // on the other device, so this one has nothing applied yet.
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => usePantrySubscriptions('user-1'));
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
@@ -384,7 +370,7 @@ describe('usePantrySubscriptions', () => {
     it('applies a system-initiated event, which names no actor at all', async () => {
       // Background jobs send neither an originator nor an actor. The fallback
       // must read that as "not mine" rather than dropping it.
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => usePantrySubscriptions('user-1'));
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
@@ -428,13 +414,11 @@ describe('usePantrySubscriptions: event envelope and the cache', () => {
           result: {
             data: {
               pantryEvents: {
-                __typename: 'PantryEvent',
                 originatorClientId: 'device_other',
                 actorUserId: 'user-2',
                 mutation: MutationType.ItemRemoved,
                 subtype: PantrySubtype.ItemChanged,
                 pantryId: 'pantry-1',
-                timestamp: '2026-01-01T00:00:00.000Z',
                 node: { __typename: 'PantryItem', id: 'item-1' },
               },
             },
@@ -496,7 +480,7 @@ describe('usePantrySubscriptions: the counts after a change made elsewhere', () 
     const read = recordMock(PantrySummaryForEventDocument, {
       data: summary(2),
     });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     const { result } = renderHookWithApollo(
       () => {
         usePantrySubscriptions('user-1');

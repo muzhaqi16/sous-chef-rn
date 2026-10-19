@@ -12,6 +12,7 @@ import {
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type {
+  CapturedFrom,
   IngredientFormState,
   RecipeFormState,
   StepFormState,
@@ -20,7 +21,7 @@ import type {
 // The API's URL scalar takes an absolute http(s) URL of at most 2048 characters
 // and refuses anything else before any resolver runs, with no field to report
 // on. Blank stays valid: the field is optional and is sent as undefined.
-const httpUrl = (key: TranslationKey) =>
+export const httpUrl = (key: TranslationKey) =>
   string()
     .defined()
     .trim()
@@ -49,10 +50,9 @@ export function parseCommaTags(raw: string): string[] {
 }
 
 /**
- * UTF-8 BYTES, not UTF-16 code units: `String.length` under-counts every
- * non-ASCII character, so measuring with it would pass exactly the accented and
- * non-Latin recipes the server refuses. Counted from code points so the result
- * does not depend on `TextEncoder` being present in the JS engine.
+ * UTF-8 BYTES, not `String.length`, which under-counts non-ASCII and would pass
+ * the accented and non-Latin recipes the server refuses. Counted from code
+ * points, so no `TextEncoder` is needed.
  */
 function utf8ByteLength(value: string): number {
   let bytes = 0;
@@ -69,8 +69,10 @@ function utf8ByteLength(value: string): number {
 const ingredientSchema: ObjectSchema<IngredientFormState> = object({
   id: string().defined(),
   name: string().trim().required(lazyMessage('recipes.ingredientNameRequired')),
-  quantity: number().defined(),
+  quantity: number().nullable().defined(),
   unitId: string().nullable().optional(),
+  unitLabel: string().optional(),
+  originalText: string().nullable().optional(),
   itemId: string().nullable().optional(),
   preparation: string().optional(),
   section: string().optional(),
@@ -113,10 +115,9 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       }),
     )
     .defined(),
-  // The API bounds every JSON-scalar input at 64 KiB serialized, 8 levels deep
-  // and 1,000 items at any depth, and `instructions` is the one this app sends.
-  // Depth is fixed by the shape below; the two the user can move are checked
-  // here rather than discovered as a field error after a long save.
+  // The API bounds a JSON-scalar input at 64 KiB serialized, 8 levels and 1,000
+  // items; `instructions` is the one sent. Depth is fixed by this shape, so
+  // size and count are checked here, not after a long save.
   steps: array()
     .of(stepSchema)
     .min(1, lazyMessage('recipes.stepRequired'))
@@ -136,6 +137,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       lazyMessage('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
     ),
   originalAuthor: string().defined(),
+  capturedFrom: mixed<CapturedFrom>().nullable().defined(),
   tags: string()
     .defined()
     .test(
@@ -173,6 +175,7 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   notes: '',
   tips: '',
   originalAuthor: '',
+  capturedFrom: null,
   tags: '',
   version: null,
   ingredientsUnread: false,

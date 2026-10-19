@@ -103,8 +103,10 @@ describe('PantryDetailInfo', () => {
         }}
       />,
     );
-    // Cost/Unit already carries the 0.59; repeating it here read as a bug.
-    expect(screen.getByText('Jan 1, 2024 · $2.95')).toBeTruthy();
+    // Cost/Unit already carries the 0.59; repeating it here read as a bug. A
+    // receipt's day is UTC midnight, which local time reads as the day before
+    // west of UTC.
+    expect(screen.getByText('Aug 30, 2026 · $2.95')).toBeTruthy();
     expect(screen.getByText('$0.59')).toBeTruthy();
     expect(screen.getByText('$2.95')).toBeTruthy();
   });
@@ -294,6 +296,7 @@ describe('PantryDetailInfo', () => {
       expect(screen.getByText('Stock value')).toBeTruthy();
       expect(screen.getByText('$5.95')).toBeTruthy();
       expect(screen.getByText('Last purchase')).toBeTruthy();
+      expect(screen.getByText('Aug 31, 2026 · $3.00')).toBeTruthy();
     });
 
     // The item-level currency is null exactly when the costed batches disagree,

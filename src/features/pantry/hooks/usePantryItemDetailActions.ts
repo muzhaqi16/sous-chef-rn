@@ -2,20 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
-// The module-level `t` takes a fallback string, not options, so an interpolated
-// key has to go through the i18next instance directly — same split as
-// src/utils/errorHandlers.ts.
 import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { typedItemRef } from '#/utils/refInput';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  addLocalShoppingListItem,
-  createLocalShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-} from '#features/shoppingList/cache/items';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
@@ -25,15 +17,15 @@ import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type PantryItemForActions =
   | {
       id: string;
       /**
-       * The item's OWN pantry, selected by `PantryItemDetail_pantryItem`. It is
-       * authoritative regardless of which pantry the user currently has
-       * selected — `selectedPantryId` is genuinely nullable (navigationSlice
-       * starts it null and a deep link can land here before it resolves).
+       * The item's OWN pantry, from `PantryItemDetail_pantryItem`,
+       * authoritative whatever pantry is selected: `selectedPantryId` starts
+       * null, and a deep link can land here before it resolves.
        */
       pantryId?: string | null;
       // `PantryItem.version` is `Int!`, and the server now requires it on every
@@ -113,21 +105,16 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  // The shared `removeItem`, not a local delete: it evicts before firing (an
-  // `update:` callback never runs on a queued offline delete) and registers the
-  // pending-delete that stops a subscription echo resurrecting the row.
-  // The item's OWN pantry drives the cache surgery. `selectedPantryId` is only a
-  // navigation detail — nullable, and a deep link can land outside it; passing
-  // '' makes `removeItem` early-return while the screen still navigates back.
+  // The shared `removeItem` evicts before firing (no `update:` runs on a queued
+  // delete) and registers the pending delete that stops an echo resurrecting
+  // the row. The item's OWN pantry drives it; '' makes it return early.
   const resolvedPantryId = item?.pantryId ?? selectedPantryId ?? null;
 
   const { removeItem } = usePantryItemMutations({
     pantryId: resolvedPantryId ?? '',
-    // `removeItem` evicts the row and drops the count BEFORE firing, and calls
-    // this to put both back on a refusal — never a no-op, since on failure the
-    // screen stays. A refusal resolves as DATA under `errorPolicy: 'all'`, so the
-    // check sits on the resolved result; `onError` sees only transport failures,
-    // which must NOT restore because the delete is queued for replay.
+    // `removeItem` drops the row and count before firing and calls this to
+    // restore them on a refusal (DATA under `errorPolicy: 'all'`). A transport
+    // failure must NOT restore: the delete is queued.
     refetch: () => {
       void client.refetchQueries({ include: [GetPantryDocument] });
     },
@@ -165,10 +152,8 @@ export function usePantryItemDetailActions({
       return;
     }
     try {
-      // Only leave the screen if the item is actually gone. A refusal resolves
-      // normally (it is DATA, not an error), and `removeItem` has already told
-      // the user and restored the row — navigating away here would report a
-      // success that did not happen.
+      // Leaves only once the item is gone: a refusal resolves as DATA, and
+      // `removeItem` has already told the user and restored the row.
       if (await removeItem(itemId)) {
         goBack();
       }
@@ -184,16 +169,9 @@ export function usePantryItemDetailActions({
     alertService.alert(
       t('pantryItemDetail.deleteTitle'),
       t('labels.areYouSureYouWantToDeleteThisItem'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void confirmDelete();
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void confirmDelete();
+      }),
     );
   };
 
@@ -210,85 +188,32 @@ export function usePantryItemDetailActions({
     setAddToListStatus('loading');
 
     const catalogItemId = item?.item?.id ?? '';
+    const itemName = item?.itemName ?? '';
     // An out-of-stock item (quantity 0) still adds one to the list.
     const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
-    const unitInput = item?.unit?.id ? { id: item.unit.id } : undefined;
-    const itemName = item?.itemName ?? '';
-    // Generate the new item's id so a create that gets queued (offline / API
-    // down) replays idempotently, keyed by this id.
-    const id = generateEntityId();
-
-    // Write the item into the cache before firing so it's on the list when it
-    // comes into view — and survives a queued (offline / API-down) create that
-    // replays later.
-    // Built before the try: the `??`/`?.` below are value blocks, and the React
-    // Compiler bails out of a hook when one appears inside a try body.
-    const optimisticListItem = createLocalShoppingListItem(id, {
-      shoppingListId: selectedShoppingListId,
-      itemName,
-      quantity,
-      itemId: catalogItemId || undefined,
-      unitId: item?.unit?.id,
-      unitName: item?.unit?.name,
-    });
-    try {
-      addLocalShoppingListItem(
-        client.cache,
-        selectedShoppingListId,
-        optimisticListItem,
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    const settled = await settleMutation(
-      () =>
-        addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [
-                {
-                  id,
-                  item: catalogItemId
-                    ? { itemId: catalogItemId }
-                    : { itemName },
-                  quantity,
-                  unit: unitInput,
-                },
-              ],
-            },
-          },
-        }),
-      {
-        document: AddItemToShoppingListFromPantryItemDocument,
-        fallback: t('errors.addItemFailed'),
-        onFailed: () => {
-          reconcileShoppingCreate(
-            client.cache,
-            selectedShoppingListId,
-            id,
-            undefined,
-          );
-        },
+    const created = await createShoppingListRow(client.cache, {
+      listId: selectedShoppingListId,
+      row: {
+        itemName,
+        quantity,
+        unitId: item?.unit?.id,
+        unitName: item?.unit?.name,
       },
-    );
-
-    let reverted = settled.status === 'failed';
-    // The batch can apply while refusing its only item; that refusal carries no
-    // code to classify, so it takes the caller's copy.
-    if (
-      !reverted &&
-      reconcileShoppingCreate(client.cache, selectedShoppingListId, id, {
-        data: settled.data,
-      }) === 'reverted'
-    ) {
-      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      reverted = true;
+      line: {
+        item: catalogItemId
+          ? { itemId: catalogItemId }
+          : typedItemRef(itemName),
+        quantity,
+        unit: item?.unit?.id ? { id: item.unit.id } : undefined,
+      },
+      send: addToShoppingList,
+      document: AddItemToShoppingListFromPantryItemDocument,
+      fallback: t('errors.addItemFailed'),
+    });
+    if (created.failure) {
+      alertService.alert(created.failure.title, created.failure.body);
     }
-    setAddToListStatus(reverted ? 'error' : 'success');
+    setAddToListStatus(created.outcome === 'reverted' ? 'error' : 'success');
     statusTimeoutRef.current = setTimeout(
       () => setAddToListStatus('idle'),
       3000,
@@ -314,16 +239,13 @@ export function usePantryItemDetailActions({
           unit: item.unit?.name ?? '',
         });
 
-    alertService.alert(title, body, [
-      { text: t('labels.cancel'), style: 'cancel' },
-      {
-        text: t('labels.discard'),
-        style: 'destructive',
-        onPress: () => {
-          void convertExpiredToWaste(item.id, { hasBatches });
-        },
-      },
-    ]);
+    alertService.alert(
+      title,
+      body,
+      destructiveConfirm(t('labels.discard'), () => {
+        void convertExpiredToWaste(item.id, { hasBatches });
+      }),
+    );
   };
 
   const handleConfirmAdjust = (

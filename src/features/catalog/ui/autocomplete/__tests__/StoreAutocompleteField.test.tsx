@@ -14,8 +14,6 @@ import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.gene
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StoreAutocompleteField } from '../StoreAutocompleteField';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/services/errorService');
 // Spied, not replaced: the picker's `visible` is what the person sees, and the
 // gorhom mock renders the sheet's content whether it is presented or not.
@@ -43,15 +41,15 @@ const found = (
   },
 });
 
-/** Answers the store search for `term` only, after `delay` ms when given. */
+/** Answers the store search for `term` only; a `held` one, never. */
 const searchFor = (
   term: string,
   stores: MockDataFor<typeof SearchStoresDocument>,
-  delay?: number,
+  { held = false }: { held?: boolean } = {},
 ): RecordedMock =>
   recordMock(SearchStoresDocument, {
     data: stores,
-    delay,
+    held,
     match: vars => vars.search === term,
   });
 
@@ -155,8 +153,37 @@ describe('StoreAutocompleteField', () => {
     expect(screen.queryByText(/^Add /)).toBeNull();
   });
 
+  // A store with no address is its own label beside a branch of that name.
+  it('offers the name when only a branch of that name is listed', async () => {
+    const branch: MockDataFor<typeof SearchStoresDocument> = {
+      stores: {
+        edges: [
+          { node: { id: 'store-0', name: 'Kroger', address: '7516 Meade St' } },
+        ],
+        totalCount: 1,
+      },
+    };
+    const field = renderField('inline', searchFor('Kroger', branch));
+
+    fireEvent.changeText(screen.getByTestId('store-field'), 'Kroger');
+    fireEvent.press(await screen.findByText('Add Kroger'));
+
+    await expectAddedAndPicked('Kroger', field);
+  });
+
+  it('asks for more letters only until two are typed', async () => {
+    renderField('modal', searchFor('Corner Shop', found()));
+
+    fireEvent.changeText(screen.getByTestId('store-field'), 'Corner Shop');
+
+    expect(await screen.findByText('Add Corner Shop')).toBeTruthy();
+    expect(
+      screen.queryByText('Type at least 2 characters to search'),
+    ).toBeNull();
+  });
+
   it('offers nothing while the search for the typed name runs', async () => {
-    const running = searchFor('East End', found(), Infinity);
+    const running = searchFor('East End', found(), { held: true });
     renderField('inline', searchFor('Ea', found('Eastgate')), running);
     const input = screen.getByTestId('store-field');
 

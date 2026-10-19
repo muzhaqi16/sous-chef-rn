@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import { ReviewSection } from '../../../src/features/recipes/components/ReviewSection';
 import type { RecipeReviewFragment } from '../../../src/features/recipes/graphql/recipeFragments.generated';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/features/recipes/components/RatingBreakdown', () => ({
   RatingBreakdown: () => 'RatingBreakdown',
 }));

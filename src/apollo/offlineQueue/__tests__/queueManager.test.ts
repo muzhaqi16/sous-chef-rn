@@ -9,11 +9,15 @@ import type { QueueStore } from '../queueStore';
 import { QueueStatus } from '../types';
 import {
   classifyError as classifyErrorFn,
-  calculateRetryDelay as calculateRetryDelayFn,
+  calculateRetryDelay,
   ReplayRejectedError,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
-import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  ErrorCode,
+  type MealPlanItem,
+} from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
@@ -26,7 +30,10 @@ import {
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  CreateMealPlanItemDocument,
+  UpdateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   AddItemToShoppingListDocument,
@@ -128,10 +135,6 @@ jest.mock('#/utils/generateId', () => ({
 // Mock the token refresh used on auth errors (dynamically imported by the
 // manager). Default: refresh fails (returns undefined) — individual tests
 // override with mockResolvedValue('new-token').
-jest.mock('../../links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
-
 jest.mock('../refreshUnitVocabulary', () => ({
   refreshUnitVocabulary: jest.fn(),
 }));
@@ -1896,28 +1899,20 @@ describe('QueueManager', () => {
     });
   });
 
+  // The arithmetic is backoffDelay's (backoff.test.ts); this pins the queue's
+  // schedule: the base it is given, a 30s cap, and half again at random. Capped
+  // before the jitter: capping the sum would put every device that reached the
+  // cap back on the same 30s tick.
   describe('calculateRetryDelay', () => {
-    // calculateRetryDelay is now a standalone function taking the base delay
-    // explicitly; the manager passes config.retryDelayMs (10 in this suite).
-    const calculateRetryDelay = (retryCount: number) =>
-      calculateRetryDelayFn(retryCount, 10);
-
-    it('doubles per retry, plus up to half again at random', () => {
-      expect(calculateRetryDelay(0)).toBeGreaterThanOrEqual(10);
-      expect(calculateRetryDelay(0)).toBeLessThanOrEqual(15);
-      expect(calculateRetryDelay(1)).toBeGreaterThanOrEqual(20);
-      expect(calculateRetryDelay(1)).toBeLessThanOrEqual(30);
-      expect(calculateRetryDelay(2)).toBeGreaterThanOrEqual(40);
-      expect(calculateRetryDelay(2)).toBeLessThanOrEqual(60);
-    });
-
-    // Capped before the jitter: capping the sum would put every device that
-    // reached the cap back on the same 30s tick.
-    it('caps at 30 seconds and still spreads retries past the cap', () => {
+    it('doubles the base delay, caps at 30 seconds and still spreads retries past the cap', () => {
       const random = jest.spyOn(Math, 'random');
-      random.mockReturnValueOnce(0).mockReturnValueOnce(1);
-      expect(calculateRetryDelay(20)).toBe(30_000);
-      expect(calculateRetryDelay(20)).toBe(45_000);
+      random
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(1);
+      expect(calculateRetryDelay(1, 10)).toBe(20);
+      expect(calculateRetryDelay(20, 10)).toBe(30_000);
+      expect(calculateRetryDelay(20, 10)).toBe(45_000);
       random.mockRestore();
     });
   });
@@ -2561,6 +2556,34 @@ describe('QueueManager', () => {
       invokeFailureHandler(mutation, error);
 
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ error }));
+    });
+
+    // A queued meal edit whose row the cache does not hold is still named.
+    it('passes the type the input names when the cache does not hold the row', () => {
+      const MEAL: NonNullable<MealPlanItem['__typename']> = 'MealPlanItem';
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+
+      invokeFailureHandler(
+        makeMutation({
+          ...queuedMutationFor(UpdateMealPlanItemDocument),
+          variables: { input: { id: 'meal-gone', isCompleted: true } },
+        }),
+        {
+          type: 'server',
+          message: 'refused',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      );
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: null,
+          entityId: 'meal-gone',
+          subjectType: MEAL,
+        }),
+      );
     });
 
     // --- extractEntityInfo: the subject each input type names ---

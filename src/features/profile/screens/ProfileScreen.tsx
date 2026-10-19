@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 
-import { AppPressable } from '#components/atoms/AppPressable';
+import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
 import {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -15,7 +15,6 @@ import { useConfigurableSettings } from '#features/profile/hooks/useConfigurable
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
-import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
@@ -27,7 +26,6 @@ import {
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
 import { AlertBanner } from '#components/molecules/AlertBanner';
-import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -147,23 +145,18 @@ export const ProfileScreen = () => {
       {BiometricModal}
       <ActionTray ref={actionTrayRef}>
         <View style={styles.menu}>
-          <AppPressable
-            style={styles.menuItem(false)}
+          <ActionMenuRow
+            icon="log-out-outline"
+            label={t('profile.labels.logout')}
             onPress={handleLogout}
             testID={profileTestIDs.logoutButton}
-          >
-            <Icon name="log-out-outline" size={20} tone="textPrimary" />
-            <Text role="bodyStrong">{t('profile.labels.logout')}</Text>
-          </AppPressable>
-          <AppPressable
-            style={styles.menuItem(true)}
+          />
+          <ActionMenuRow
+            icon="trash-outline"
+            label={t('account.deleteTitle')}
             onPress={handleDeleteAccount}
-          >
-            <Icon name="trash-outline" size={20} tone="error" />
-            <Text role="bodyStrong" tone="danger">
-              {t('account.deleteTitle')}
-            </Text>
-          </AppPressable>
+            destructive
+          />
         </View>
       </ActionTray>
     </SubScreen>
@@ -174,16 +167,4 @@ const styles = StyleSheet.create(theme => ({
   menu: {
     gap: theme.spacing.sm,
   },
-  menuItem: (destructive: boolean) => ({
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: destructive ? theme.colors.error : theme.colors.border,
-    backgroundColor: 'transparent',
-  }),
 }));

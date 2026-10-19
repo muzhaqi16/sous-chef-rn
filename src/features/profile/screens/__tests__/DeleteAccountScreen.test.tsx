@@ -185,7 +185,6 @@ describe('DeleteAccountScreen - loading state', () => {
   });
 
   it('shows loading state when checking eligibility', () => {
-    // delay so initial render shows loading
     const m = recordMock(CanDeleteAccountDocument, {
       data: {
         canDeleteAccount: {
@@ -194,7 +193,7 @@ describe('DeleteAccountScreen - loading state', () => {
           blockers: [],
         },
       },
-      delay: 1000,
+      held: true,
     }).mock;
     renderWithApollo(<DeleteAccountScreen />, { operationMocks: [m] });
     expect(screen.getByText('Checking account status...')).toBeTruthy();

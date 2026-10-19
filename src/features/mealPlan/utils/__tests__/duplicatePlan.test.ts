@@ -2,7 +2,12 @@ import {
   duplicatePlan,
   type SourcePlan,
 } from '#features/mealPlan/utils/duplicatePlan';
-import { MealPlanType, MealType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import {
+  leftoversLunch,
+  planSource,
+  recipeDinner,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 
 /**
  * The copy rules are the server's, read out of `MealPlanService.duplicateMealPlan`:
@@ -17,36 +22,12 @@ beforeEach(() => {
   next = 0;
 });
 
-const source: SourcePlan = {
-  id: 'plan-1',
-  description: 'A week of food',
-  planType: MealPlanType.Weekly,
-  servings: 4,
-  budgetAmount: 90,
-  homeId: 'home-1',
-  startDate: '2026-01-05',
-  endDate: '2026-01-11',
+const source: SourcePlan = planSource({
   mealPlanItems: [
-    {
-      id: 'mpi-1',
-      date: '2026-01-05',
-      mealType: MealType.Dinner,
-      servings: 2,
-      notes: 'double the sauce',
-      customMealName: null,
-      recipe: { id: 'recipe-1' },
-    },
-    {
-      id: 'mpi-2',
-      date: '2026-01-07',
-      mealType: MealType.Lunch,
-      servings: null,
-      notes: null,
-      customMealName: 'Leftovers',
-      recipe: null,
-    },
+    recipeDinner({ notes: 'double the sauce' }),
+    leftoversLunch(),
   ],
-};
+});
 
 const nextWeek = {
   newName: 'Week Two',

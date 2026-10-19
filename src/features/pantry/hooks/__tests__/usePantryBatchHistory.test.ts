@@ -8,8 +8,6 @@ import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pant
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { usePantryBatchHistory } from '../usePantryBatchHistory';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 async function loadHistory() {
   const cache = makeCache();
   const get = recordMock(GetPantryItemBatchHistoryDocument, {

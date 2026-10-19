@@ -1,5 +1,6 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { alertService, type AlertButton } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
 import { t } from '#/i18n';
@@ -21,11 +22,8 @@ import { operationNameOf } from '../documentOperation';
 import { presentFailure } from '#/utils/errors/presentFailure';
 import { settleMutation, settledStatus } from '../settleMutation';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
 import { Telemetry } from '#/services/telemetry';
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 // A payload member, its typename checked against the operation's result union.
 type Member<T extends { __typename: string }> = {
@@ -175,6 +173,22 @@ describe('settleMutation', () => {
       ]);
     });
 
+    it('shows the same copy as an error toast when asked to, and no alert', async () => {
+      await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'input.quantity',
+        }),
+        { ...options, present: 'toast' },
+      );
+
+      expect(alerts()).toEqual([]);
+      expect(toastService.error).toHaveBeenCalledWith(
+        t('errors.field.quantity', { defaultValue: FALLBACK }),
+      );
+    });
+
     // A nested input's field (`amount.packages.size`) has copy of its own that
     // its last segment alone could never name.
     it("shows a nested field's own copy, by its whole path", async () => {
@@ -298,6 +312,28 @@ describe('settleMutation', () => {
       expect(alerts()).toHaveLength(2);
       expect(asData?.slice(0, 2)).toEqual(thrown?.slice(0, 2));
       expect(asData?.[1]).toBe(getVersionConflictMessage());
+    });
+
+    it('shows the newer version on either conflict code, and says it is shown', async () => {
+      const onVersionConflict = jest.fn();
+      await settleMutation(
+        create({
+          __typename: 'ConflictError',
+          code: ErrorCode.VersionConflict,
+        }),
+        { ...options, onVersionConflict },
+      );
+      await settleMutation(
+        throwing(graphQLError(TopLevelErrorCode.ResourceVersionConflict)),
+        { ...options, onVersionConflict },
+      );
+
+      expect(onVersionConflict).toHaveBeenCalledTimes(2);
+      const shown = [
+        t('errors.changedElsewhereTitle'),
+        t('errors.changedElsewhereLatestShown'),
+      ];
+      expect(alerts()).toEqual([shown, shown]);
     });
 
     it('offers no Refresh button when the caller has nothing to refresh', async () => {
@@ -478,6 +514,53 @@ describe('settleMutation', () => {
       errorService.getUserFriendlyMessage(ErrorCode.Forbidden, FALLBACK),
     );
     expect(message).not.toContain(SERVER_TEXT);
+  });
+
+  // One settings session against a down API reported 228 failures, all the
+  // same known condition.
+  describe('the report of a failure during a known outage', () => {
+    const setApiUnavailable = (unavailable: boolean) => {
+      storeApi.setState({
+        isOnline: !unavailable,
+        // `null` is what losing the link leaves: the API's state is unknown.
+        // `true` means a probe PROVED it reachable, which is no outage at all.
+        apiReachable: unavailable ? null : true,
+      } as Partial<ReturnType<typeof storeApi.getState>>);
+    };
+    afterEach(() => setApiUnavailable(false));
+
+    it.each([
+      [
+        'skips a network error while the API is unavailable',
+        true,
+        new NetworkRequestError('Network request failed'),
+        0,
+      ],
+      [
+        'skips an offline rejection while the API is unavailable',
+        true,
+        new OfflineRejectedError('Update'),
+        0,
+      ],
+      [
+        'still reports a non-network error while the API is unavailable',
+        true,
+        new Error('Validation failed: name required'),
+        1,
+      ],
+      [
+        'reports a network error while the API is reachable',
+        false,
+        new NetworkRequestError('Network request failed'),
+        1,
+      ],
+    ])('%s', async (_, unavailable, error, reports) => {
+      setApiUnavailable(unavailable);
+
+      await settleMutation(throwing(error), { ...options, present: 'none' });
+
+      expect(reportError).toHaveBeenCalledTimes(reports);
+    });
   });
 
   describe('a committed write whose response also carries an error', () => {

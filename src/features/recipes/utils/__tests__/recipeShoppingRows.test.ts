@@ -84,12 +84,18 @@ describe('recipeShoppingRows', () => {
     expect(rows.map(row => row.recipeIngredientId)).toEqual(['ing-salt']);
   });
 
-  it('adds an ingredient with no catalog item by its name', () => {
+  it('adds an ingredient with no catalog item by its name, under a minted item id', () => {
     const [row] = rowsFor([line({ name: 'Smoked paprika', item: null })]);
 
-    expect(row!.input.item).toEqual({ itemName: 'Smoked paprika' });
-    expect(row!.display).toMatchObject({ itemName: 'Smoked paprika' });
-    expect(row!.display.itemId).toBeUndefined();
+    expect(row!.input.id).toBe('row-1');
+    expect(row!.input.item).toEqual({
+      inline: { id: 'row-2', name: 'Smoked paprika' },
+    });
+    // The row the list shows names the item the request mints.
+    expect(row!.display).toMatchObject({
+      itemName: 'Smoked paprika',
+      itemId: 'row-2',
+    });
   });
 
   it('states no unit for an ingredient that has none', () => {
@@ -109,8 +115,11 @@ describe('recipeShoppingRows', () => {
   });
 
   // The API refuses a quantity that is not above zero; omitted, it states none.
-  it('states no quantity for an ingredient whose amount is zero', () => {
-    const [row] = rowsFor([line({ quantity: 0 })]);
+  it.each([
+    ['states no amount', null],
+    ['has a legacy zero amount', 0],
+  ])('states no quantity for an ingredient that %s', (_, quantity) => {
+    const [row] = rowsFor([line({ quantity })]);
 
     expect(row!.input).not.toHaveProperty('quantity');
     expect(row!.display.quantity).toBeNull();
@@ -142,7 +151,9 @@ describe('recipeShoppingRows', () => {
     name => {
       const [row] = rowsFor([line({ name, item: null })]);
 
-      expect(row!.input.item).toEqual({ itemName: UNNAMED });
+      expect(row!.input.item).toEqual({
+        inline: { id: 'row-2', name: UNNAMED },
+      });
       expect(row!.display.itemName).toBe(UNNAMED);
     },
   );

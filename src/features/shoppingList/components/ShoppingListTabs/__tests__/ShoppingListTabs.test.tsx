@@ -7,21 +7,13 @@ import {
 } from '@testing-library/react-native';
 import { ShoppingListTabs } from '../ShoppingListTabs';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
+import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
+import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
 
 type ShoppingListTabsProps = React.ComponentProps<typeof ShoppingListTabs>;
 
 type MockRoute = { key: string; title: string };
 type MockNavigationState = { index: number; routes: MockRoute[] };
-type RowItem = ShoppingListTabsProps['items'] extends (infer T)[] | undefined
-  ? T
-  : never;
-type MockItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  isPurchased: boolean;
-  sortKey: string;
-};
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
@@ -81,8 +73,8 @@ jest.mock('../ShoppingTab', () => ({
     const { items } = useShoppingListData('shopping');
     return (
       <View testID="shopping-tab">
-        {(items ?? []).map((item: MockItem) => (
-          <Text key={item.id}>{item.title}</Text>
+        {(items ?? []).map((item: ShoppingListRowItem) => (
+          <Text key={item.id}>{item.id}</Text>
         ))}
       </View>
     );
@@ -96,8 +88,8 @@ jest.mock('../PurchasedTab', () => ({
     const { items } = useShoppingListData('purchased');
     return (
       <View testID="purchased-tab">
-        {(items ?? []).map((item: MockItem) => (
-          <Text key={item.id}>{item.title}</Text>
+        {(items ?? []).map((item: ShoppingListRowItem) => (
+          <Text key={item.id}>{item.id}</Text>
         ))}
       </View>
     );
@@ -163,21 +155,11 @@ jest.mock('react-native-tab-view', () => {
   };
 });
 
-const makeItem = (id: string, title: string, isPurchased: boolean) => ({
-  id,
-  title,
-  subtitle: 'some subtitle',
-  isPurchased,
-  sortKey: id,
-  sortOrder: id,
-  itemRef: {} as RowItem['itemRef'],
-});
-
 const defaultProps: ShoppingListTabsProps = {
   items: [
-    makeItem('1', 'Milk', false),
-    makeItem('2', 'Eggs', false),
-    makeItem('3', 'Bread', true),
+    shoppingListRowItem('Milk'),
+    shoppingListRowItem('Eggs'),
+    shoppingListRowItem('Bread', { isPurchased: true }),
   ],
   onItemPress: jest.fn(),
 };
@@ -268,8 +250,10 @@ describe('ShoppingListTabs', () => {
   });
 
   it('uses pre-filtered items when provided', () => {
-    const unpurchased = [makeItem('1', 'Pre-filtered Milk', false)];
-    const purchased = [makeItem('3', 'Pre-filtered Bread', true)];
+    const unpurchased = [shoppingListRowItem('Pre-filtered Milk')];
+    const purchased = [
+      shoppingListRowItem('Pre-filtered Bread', { isPurchased: true }),
+    ];
     render(
       <ShoppingListTabs
         {...defaultProps}

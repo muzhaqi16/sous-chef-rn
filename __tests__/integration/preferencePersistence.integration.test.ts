@@ -24,12 +24,6 @@
 
 'use no memo';
 
-// authSlice transitively imports tokenScheduler/refreshToken which need
-// native AppState. Stub them so the slice import is pure-JS — same pattern
-// as `authSlice.test.ts`.
-jest.mock('../../src/apollo/links/tokenScheduler');
-jest.mock('../../src/apollo/links/refreshToken');
-
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import {

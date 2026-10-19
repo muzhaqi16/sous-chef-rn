@@ -7,22 +7,16 @@ import {
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useOpenListLinesFor } from '../useOpenListLinesFor';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const lookup = () =>
   recordMock(GetShoppingListItemsFilteredDocument, {
     dataFor: (
       vars,
     ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => ({
       shoppingList: {
-        __typename: 'ShoppingList',
         id: String(vars.id),
         itemsConnection: {
-          __typename: 'ShoppingListItemConnection',
           edges: [],
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: false,
             endCursor: null,
           },

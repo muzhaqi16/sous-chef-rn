@@ -10,10 +10,6 @@ import {
 import { UseShoppingListReminder_ListFragmentDoc } from '../useShoppingListReminder.generated';
 import { useShoppingListReminder } from '../useShoppingListReminder';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',
@@ -114,7 +110,6 @@ describe('useShoppingListReminder', () => {
               deleteShoppingListReminder: {
                 __typename: 'DeleteShoppingListReminderPayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   reminderEnabled: false,
                   reminderDate: null,

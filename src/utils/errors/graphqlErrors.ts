@@ -57,12 +57,9 @@ const positiveSeconds = (value: unknown): number | null => {
 };
 
 /**
- * The GraphQL error envelope of a response refused before execution: a rate
- * limit, a timeout, an oversized body. The API answers those under a non-2xx
- * status as `application/json`, and Apollo parses a non-2xx body only for
- * `application/graphql-response+json` — so the refusal arrives as a
- * `ServerError` holding the envelope as TEXT, and its code is read here.
- * Null for any other error, and for a body that is not an envelope.
+ * The envelope of a response refused before execution (rate limit, timeout,
+ * oversized body). The API sends it non-2xx as `application/json`, which Apollo
+ * leaves unparsed, so it arrives as a `ServerError` holding the envelope as TEXT.
  */
 export function refusalEnvelopeOf(error: unknown): RefusalEnvelope | null {
   if (!ServerError.is(error)) return null;
@@ -86,10 +83,9 @@ export function refusalEnvelopeOf(error: unknown): RefusalEnvelope | null {
   };
 }
 
-// The authorization codes a read is refused with: FORBIDDEN on both channels,
-// and HOME_NOT_A_MEMBER where the home's own rule answers a caller who has left
-// it. A MISSING record is deliberately not here: a by-id query reports a miss
-// as null data, and RESOURCE_NOT_FOUND is the mutation spelling of the same.
+// The codes a read is refused with; HOME_NOT_A_MEMBER answers a caller who left
+// the home. A MISSING record is not here: a by-id query reports it as null
+// data, and RESOURCE_NOT_FOUND is the mutation spelling.
 const RESOURCE_ACCESS_LOST_CODES = new Set<string>([
   ErrorCode.Forbidden,
   TopLevelErrorCode.HomeNotAMember,
@@ -104,10 +100,9 @@ export function isResourceAccessLostError(error: unknown): boolean {
 }
 
 /**
- * True when the server refused a page request's CURSOR. Keyed on the code plus
- * the cursor the caller SENT — never the message, never the argument's name.
- * Wider than a cursor: the API refuses every pagination argument with
- * VALIDATION_FAILED and no field, so one bounded restart is what caps it.
+ * Keyed on the code plus the cursor the caller SENT, never the message: the API
+ * refuses every pagination argument with VALIDATION_FAILED and no field, so one
+ * bounded restart caps it.
  */
 export function isDeadCursorError(error: unknown, cursor: unknown): boolean {
   if (cursor == null || cursor === '') return false;

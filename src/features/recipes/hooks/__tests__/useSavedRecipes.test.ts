@@ -21,9 +21,6 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
-
 /**
  * The node on the wire: what the query selects plus what the card's fragment
  * reads, since masking keeps a fragment's fields out of the query's own type
@@ -34,49 +31,20 @@ type SavedRecipeNode = NonNullable<
 >['savedRecipesConnection']['edges'][number]['node'] &
   SavedRecipeCard_SavedRecipeFragment;
 
-function buildRecipe(
+const buildRecipe = (
   id: string,
   name: string,
-  overrides: MockPart<SavedRecipeNode['recipe']> = {},
-): MockPart<SavedRecipeNode['recipe']> {
-  // Exactly what `MySavedRecipes` selects on the nested recipe: `id`, `name`
-  // and `description` at the parent, plus the four card fields from
-  // `SavedRecipeCard_savedRecipe`. The recipe's own category, status, external
-  // provenance and timestamps are not on this query's wire at all.
-  return {
-    __typename: 'Recipe',
-    id,
-    name,
-    description: null,
-    imageUrl: null,
-    servings: 4,
-    prepTimeMinutes: null,
-    cookTimeMinutes: null,
-    totalTimeMinutes: null,
-    ...overrides,
-  };
-}
+): MockPart<SavedRecipeNode['recipe']> => ({ id, name });
 
 function buildSavedRecipeNode(
   id: string,
   recipe: ReturnType<typeof buildRecipe>,
-  overrides: {
-    folder?: string | null;
-    tags?: string[] | null;
-    cookedCount?: number | null;
-  } = {},
+  overrides: { folder?: string | null; tags?: string[] | null } = {},
 ): MockPart<SavedRecipeNode> {
   return {
-    __typename: 'SavedRecipe',
     id,
     folder: overrides.folder ?? null,
     tags: overrides.tags ?? [],
-    notes: null,
-    personalRating: null,
-    cookedCount: overrides.cookedCount ?? 0,
-    lastCookedAt: null,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
     recipe,
   };
 }
@@ -110,19 +78,13 @@ function buildMySavedRecipesMock(
     result: {
       data: {
         me: {
-          __typename: 'User',
           id: 'user-1',
           savedRecipesConnection: {
-            __typename: 'SavedRecipeConnection',
             totalCount: options.totalCount ?? options.edges?.length ?? 0,
             edges:
-              options.edges?.map(e => ({
-                __typename: 'SavedRecipeEdge',
-                cursor: e.cursor,
-                node: e.node,
-              })) ?? [],
+              options.edges?.map(e => ({ cursor: e.cursor, node: e.node })) ??
+              [],
             pageInfo: {
-              __typename: 'PageInfo',
               hasNextPage: options.hasNextPage ?? false,
               endCursor: options.hasNextPage ? 'cursor' : null,
             },
@@ -139,7 +101,6 @@ const standardEdges = [
     node: buildSavedRecipeNode('sr-1', buildRecipe('r-1', 'Pasta'), {
       folder: 'Weeknight',
       tags: ['Quick'],
-      cookedCount: 3,
     }),
   },
   {
@@ -147,7 +108,6 @@ const standardEdges = [
     node: buildSavedRecipeNode('sr-2', buildRecipe('r-2', 'Salad'), {
       folder: null,
       tags: null,
-      cookedCount: null,
     }),
   },
 ];
@@ -178,18 +138,11 @@ function buildPageMock(options: {
     result: {
       data: {
         me: {
-          __typename: 'User',
           id: 'user-1',
           savedRecipesConnection: {
-            __typename: 'SavedRecipeConnection',
             totalCount: 3,
-            edges: options.edges.map(e => ({
-              __typename: 'SavedRecipeEdge',
-              cursor: e.cursor,
-              node: e.node,
-            })),
+            edges: options.edges.map(e => ({ cursor: e.cursor, node: e.node })),
             pageInfo: {
-              __typename: 'PageInfo',
               hasNextPage: options.endCursor !== null,
               endCursor: options.endCursor,
             },

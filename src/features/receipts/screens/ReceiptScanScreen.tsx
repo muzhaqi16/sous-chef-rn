@@ -9,6 +9,7 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { alertService } from '#/services/alertService';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useReceiptScan } from '../hooks/useReceiptScan';
@@ -18,7 +19,9 @@ import {
 } from '../hooks/useServerReceiptParse';
 import { formatDateTime } from '#/utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
+import type { ReceiptDraft } from '../store/receiptDraftStore';
 import { receiptsTestIDs } from '../testIDs';
+import { cappedNames } from '#/utils/cappedNames';
 
 interface BannerCopy {
   title: TranslationKey;
@@ -30,6 +33,22 @@ interface ReadingBanner extends BannerCopy {
   icon: string;
   /** Its copy when the receipt went to the server as photos. */
   photos?: BannerCopy;
+}
+
+// What left the phone: nothing for a receipt the phone read; else its photos,
+// masked or as they were; else its text, sent only where the server reads
+// receipts.
+function savedBodyOf(
+  { parsedBy, photoKeys, photosMasked }: ReceiptDraft,
+  serverParsing: boolean,
+): TranslationKey {
+  if (parsedBy === 'device') return 'receipts.saved.bodyDevice';
+  if (photoKeys) {
+    return photosMasked
+      ? 'receipts.saved.bodyPhotoMasked'
+      : 'receipts.saved.bodyPhoto';
+  }
+  return serverParsing ? 'receipts.saved.bodyText' : 'receipts.saved.body';
 }
 
 // What the saved screen says of the server's reading, past `reading`'s spinner.
@@ -84,22 +103,29 @@ const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack, toReceiptReview } = useAppNavigation();
+  const serverParsing = useFeatureFlag('receiptParsing');
+  const deviceReading = useFeatureFlag('deviceReceiptReading');
   const {
     status,
     answerConsent,
     draft,
     pickedFromLibrary,
     canSendPhotos,
+    masksPhotos,
     scan,
     takePhoto,
     pickPhoto,
     sendPhotos,
     declinePhotos,
     discard,
-  } = useReceiptScan({ onCancel: goBack });
+  } = useReceiptScan({
+    onCancel: goBack,
+    serverParsing,
+    deviceReading,
+  });
   // Only once the phone has had its go at the receipt.
   const { readingStatus, retryAt, slowPhotoRead } = useServerReceiptParse({
-    enabled: status === 'saved',
+    enabled: serverParsing && status === 'saved',
   });
 
   const header: ScreenHeaderConfig = {
@@ -134,9 +160,14 @@ export const ReceiptScanScreen: React.FC = () => {
   };
 
   if (status === 'saved' && draft) {
-    const itemCount = draft.parsed
-      ? receiptReviewLines(draft.parsed).length
-      : 0;
+    const lines = draft.parsed ? receiptReviewLines(draft.parsed) : [];
+    const itemCount = lines.length;
+    // Named as the user chose them, else as printed.
+    const failedNames = lines.flatMap(line =>
+      draft.failed?.[line.index]
+        ? [draft.choices?.[line.index]?.itemName ?? line.printed]
+        : [],
+    );
     // Photos the server failed to read give way to the receipt's text, so a
     // photo banner shows only for a receipt with none.
     const sentPhotos = !!draft.photoKeys;
@@ -163,9 +194,7 @@ export const ReceiptScanScreen: React.FC = () => {
         <View style={styles.saved}>
           <Text role="title">{t('receipts.saved.title')}</Text>
           <Text role="body" tone="secondary">
-            {sentPhotos
-              ? t('receipts.saved.bodyPhoto')
-              : t('receipts.saved.body')}
+            {t(savedBodyOf(draft, serverParsing))}
           </Text>
           {pickedFromLibrary ? (
             <Text role="body" tone="secondary">
@@ -184,6 +213,30 @@ export const ReceiptScanScreen: React.FC = () => {
             />
           )}
           {banner ? readingBanner(banner) : null}
+          {failedNames.length > 0 ? (
+            <AlertBanner
+              variant="warning"
+              icon="alert-circle-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.failedTitle', {
+                count: failedNames.length,
+              })}
+              subtitle={t('receipts.saved.failedBody', {
+                names: cappedNames(failedNames).shown,
+              })}
+              testID={receiptsTestIDs.savedFailed}
+            />
+          ) : null}
+          {draft.checkIn?.state === 'queued' ? (
+            <AlertBanner
+              variant="info"
+              icon="cloud-upload-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.queuedTitle')}
+              subtitle={t('receipts.saved.queuedBody')}
+              testID={receiptsTestIDs.savedQueued}
+            />
+          ) : null}
           <View style={styles.actions}>
             {itemCount > 0 && (
               <Button
@@ -237,7 +290,11 @@ export const ReceiptScanScreen: React.FC = () => {
           <EmptyState
             icon="cloud-upload-outline"
             title={t('receipts.photoConsent.title')}
-            description={t('receipts.photoConsent.body')}
+            description={t(
+              masksPhotos
+                ? 'receipts.photoConsent.body'
+                : 'receipts.photoConsent.bodyUnmasked',
+            )}
             hint={t('receipts.photoConsent.hint')}
             action={{
               label: t('receipts.photoConsent.send'),

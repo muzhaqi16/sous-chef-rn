@@ -34,6 +34,9 @@ export interface SelectorConfig<T extends SelectableItem> {
   // Optional node rendered above the list (and above the empty state, so a
   // filter UI stays reachable when a filter yields no matches).
   listHeader?: React.ReactNode;
+  // The header holds something to answer: once it has height, the tray shows
+  // it instead of centring the selected row, also when it arrives later.
+  listHeaderLeads?: boolean;
   loading?: boolean;
   // `data` is one page of more: a trailing row fetches the next. A row, not an
   // end-reached callback, because the tray's scroll view reports no position.
@@ -50,6 +53,7 @@ export interface SelectorConfig<T extends SelectableItem> {
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
+  /** Opens and closes the tray from a flag; the ref does the same imperatively. */
   isVisible?: boolean;
   onClose?: () => void;
   onOpen?: (afterDone?: () => void) => void;

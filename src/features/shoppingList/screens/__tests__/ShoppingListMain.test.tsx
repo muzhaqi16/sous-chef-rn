@@ -4,9 +4,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ShoppingListMain } from '../ShoppingListMain';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/shoppingList/hooks/useShoppingListScreen', () => ({

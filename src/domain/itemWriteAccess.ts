@@ -1,8 +1,7 @@
 /**
- * Whether the app writes a catalog item directly: only the viewer's own private
- * item. A PUBLIC item (`canSuggest`) is only ever suggested to, even when
- * `canEdit` says the viewer is an admin. Catalog administration belongs to the
- * admin app, never the phone.
+ * Only the viewer's own private item is written directly: a PUBLIC item
+ * (`canSuggest`) is only suggested to, even when `canEdit` says admin, since
+ * catalog administration belongs to the admin app.
  */
 export const writesItemDirectly = (item: {
   canEdit?: boolean | null;

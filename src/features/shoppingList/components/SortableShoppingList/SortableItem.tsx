@@ -38,6 +38,7 @@ import {
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
@@ -113,6 +114,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const itemName = data.itemName ?? '';
   const category = data.category ?? null;
   const categoryLabel = firstNonBlank(category?.split(',')[0])?.trim();
+  const quantity = data.quantity ?? 0;
+  const quantityInput = data.quantityInput ?? null;
+  // A substitute is similar products' price, never shown as the product's own.
+  const suggested = isPurchased ? null : data.suggestedPrice;
+  const suggestedCost = suggestedLineCost(suggested, quantity);
+  const estimate = suggestedCost
+    ? t(
+        suggested?.substitute
+          ? 'shoppingListScreens.suggestedLinePriceSimilar'
+          : 'shoppingListScreens.suggestedLinePrice',
+        { price: suggestedCost },
+      )
+    : null;
   const isPendingSync = useIsPendingSync(itemId);
   const subtitle = isPendingSync ? (
     <Text
@@ -124,10 +138,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       {t('status.syncing')}
     </Text>
   ) : (
-    categoryLabel
+    [categoryLabel, estimate].filter(Boolean).join(' · ') || undefined
   );
-  const quantity = data.quantity ?? 0;
-  const quantityInput = data.quantityInput ?? null;
   const unitDisplay = firstNonBlank(data.unitName, data.unit?.symbol);
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.

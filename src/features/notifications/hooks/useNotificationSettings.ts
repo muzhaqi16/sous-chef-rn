@@ -147,10 +147,9 @@ function toNestedInput(
 }
 
 /**
- * The shared write path: cache first, fire with `localFirst`, revert only on a
- * genuine refusal. Module scope so the quiet-hours timezone effect can reuse it
- * without a per-render dependency that would re-arm it every render. Returns
- * whether the change is safe to treat as saved (queued counts).
+ * Cache first, fire with `localFirst`, revert only on a genuine refusal. Module
+ * scope so the timezone effect's dependency never re-arms it. True when the
+ * change counts as saved (queued included).
  */
 export async function applySettingsUpdate({
   cache,
@@ -167,45 +166,29 @@ export async function applySettingsUpdate({
     input: UpdateNotificationPreferencesInput,
   ) => Promise<{ data?: unknown; error?: unknown }>;
 }): Promise<boolean> {
-  const { persisted } =
-    await updateEntityFieldsLocalFirst<NotificationSettings>({
-      cache,
-      entity,
-      updates,
-      previous,
-      // localFirst: an unreachable API queues the change for replay rather
-      // than failing it, so the toggle the user just flipped isn't lost.
-      mutate: async () => {
-        const settled = await settleMutation(
-          () => mutate(toNestedInput(updates)),
-          {
-            document: UpdateNotificationPreferencesDocument,
-            fallback: t('notifications.updateFailed'),
-            // The screen alerts off the returned boolean; the timezone sync logs.
-            present: 'none',
-          },
-        );
-        // A failure travels as `error`, which is what makes the helper revert.
-        return settled.failure
-          ? { error: settled.failure }
-          : { data: settled.data };
-      },
-      logLabel: 'Failed to update notification settings',
-    });
-
-  // Queued counts as persisted — it replays later.
-  return persisted;
+  return updateEntityFieldsLocalFirst<NotificationSettings>({
+    cache,
+    entity,
+    updates,
+    previous,
+    // localFirst: an unreachable API queues the change for replay rather
+    // than failing it, so the toggle the user just flipped isn't lost.
+    settle: () =>
+      settleMutation(() => mutate(toNestedInput(updates)), {
+        document: UpdateNotificationPreferencesDocument,
+        fallback: t('notifications.updateFailed'),
+        // The screen alerts off the returned boolean; the timezone sync logs.
+        present: 'none',
+      }),
+  });
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const user = useUser();
   const client = useApolloClient();
 
-  // cache-and-network (the app-wide default) paints from cache and still
-  // refreshes on mount. Under cache-first this query never reached the network
-  // once anything was cached, so a cache that lacked `me.notificationPreferences`
-  // could never repair itself and `settings` stayed on the defaults below —
-  // which reads as "every toggle is broken".
+  // The app-wide cache-and-network, never cache-first: a cache lacking
+  // `me.notificationPreferences` must still reach the network to repair itself.
   const skipped = !user?.id || !!options?.skip;
   const { data, loading, error, refetch } = useQuery(
     GetNotificationPreferencesDocument,
@@ -216,10 +199,8 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
   useApolloErrorLogger(GetNotificationPreferencesDocument, error);
 
-  // `User.notificationPreferences` is NULLABLE: an account that has never
-  // changed a setting has no row, and the defaults below are then the right
-  // answer, not a lie. Only a read that produced no `me` at all leaves the
-  // screen unable to know what it is showing.
+  // `User.notificationPreferences` is NULL until a first change, when the
+  // defaults below are right; only a read with no `me` leaves the screen unsure.
   const readUser = data?.me;
   useEffect(() => {
     if (!loading && !skipped && !readUser) {
@@ -230,10 +211,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     }
   }, [loading, readUser, skipped, error]);
 
-  // The mutation returns the full fragment, so normalization is the whole cache
-  // update. No `optimisticResponse`: callers write permanently before firing,
-  // and an optimistic layer is torn down on completion — offline that
-  // completion is `queueLink`'s null result, which snaps every toggle back.
+  // No `optimisticResponse`: callers write permanently before firing, and an
+  // optimistic layer is torn down on completion, which offline is `queueLink`'s
+  // null result, snapping every toggle back.
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
     { context: { localFirst: true } },
@@ -343,12 +323,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   return {
     settings,
     loading,
-    // `settings` always has a value — every field below falls back to a
-    // fabricated default — so it cannot tell a screen whether the server has
-    // answered. A screen gating on `loading` alone blanks itself on every
-    // mount: `cache-and-network` reports `loading: true` for the whole network
-    // leg even when the cache already answered, and `nextFetchPolicy` does not
-    // survive an unmount (useQuery builds a new ObservableQuery per mount).
+    // `settings` always has a value (fabricated defaults), so it cannot say
+    // whether the server answered; gating on `loading` blanks the screen on
+    // every mount, since Apollo reports it true on each one.
     hasPreferences: !!preferences,
     skipped,
     error,

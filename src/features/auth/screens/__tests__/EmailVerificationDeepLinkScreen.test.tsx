@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -12,18 +12,6 @@ import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScr
 
 const mockGoBack = jest.fn();
 const mockUpdateUser = jest.fn();
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-const mockToastWarning = jest.fn();
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: (...args: unknown[]) => mockToastWarning(...args),
-  },
-}));
 const mockNavigateToLogin = jest.fn();
 const mockReplaceWithLogin = jest.fn();
 
@@ -71,10 +59,6 @@ jest.mock('#store/useAppStore', () => {
     useUpdateUser: () => getState().updateUser,
   };
 });
-
-// Environment is auto-mocked via jest.setup.js; logger methods are no-op jest.fn().
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -423,9 +407,8 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Reusing the initial-verification flag for a retry swaps the whole screen
     // back to "Verifying…" and takes away the failure the user is reading.
     // Progress belongs in the button alone.
-    const failingMock: MockFor<typeof VerifyEmailDocument> = {
-      request: { query: VerifyEmailDocument, variables: () => true },
-      result: {
+    const refusal = (options: { maxUsageCount?: number; held?: boolean }) =>
+      recordMock(VerifyEmailDocument, {
         data: {
           verifyEmail: {
             __typename: 'ValidationError',
@@ -434,14 +417,14 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
             field: 'code',
           },
         },
-      },
-      maxUsageCount: 2,
-      delay: 20,
-    };
+        ...options,
+      });
+    const first = refusal({ maxUsageCount: 1 });
+    const retry = refusal({ held: true });
 
     const user = userEvent.setup();
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
-      operationMocks: [failingMock],
+      operationMocks: [first.mock, retry.mock],
     });
 
     await waitFor(() => {
@@ -449,8 +432,9 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     });
 
     await user.press(screen.getByTestId('verification-retry'));
+    await waitFor(() => expect(retry.fired).toHaveLength(1));
 
-    // Still the failure state — no full-page loader, no lost error message.
+    // While the retry is in flight: still the failure state — no full-page loader, no lost error message.
     expect(screen.getByText('Verification Failed')).toBeTruthy();
     expect(
       screen.getAllByText(

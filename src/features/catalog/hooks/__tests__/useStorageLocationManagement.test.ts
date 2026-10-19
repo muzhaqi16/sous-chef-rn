@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { GraphQLError } from 'graphql';
 ('use no memo');
 
@@ -76,19 +77,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () =>
   jest.requireActual('#/apollo/utils/cacheUpdaters'),
 );
 
-jest.mock('#/utils/finallyHelpers');
-
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 // ----------------------------------------------------------------------
 // Mock builders
@@ -149,11 +139,9 @@ function buildGetLocationsMock(
     result: {
       data: {
         storageLocations: {
-          __typename: 'StorageLocationConnection',
           totalCount: 2,
           edges: [
             {
-              __typename: 'StorageLocationEdge',
               cursor: 'c1',
               node: buildLocationNode({
                 id: 'loc-1',
@@ -163,7 +151,6 @@ function buildGetLocationsMock(
               }),
             },
             {
-              __typename: 'StorageLocationEdge',
               cursor: 'c2',
               node: buildLocationNode({
                 id: 'loc-2',
@@ -174,7 +161,6 @@ function buildGetLocationsMock(
             },
           ],
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: false,
             endCursor: null,
           },
@@ -222,7 +208,6 @@ function buildDeleteLocationMock(
           ? {
               __typename: 'DeleteStorageLocationPayload',
               storageLocation: {
-                __typename: 'StorageLocation',
                 id: 'loc-1',
               },
             }
@@ -250,7 +235,6 @@ function buildSetDefaultMock(): MockFor<
         markStorageLocationAsDefault: {
           __typename: 'MarkStorageLocationAsDefaultPayload',
           storageLocation: {
-            __typename: 'StorageLocation',
             id: 'loc-2',
             name: 'Pantry',
             isDefault: true,

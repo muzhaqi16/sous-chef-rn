@@ -87,11 +87,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
 
-  // Keep the sheet "open" across the barcode / identify navigation so the
-  // user lands back on it if they cancel. useStandardBottomSheet dismisses the
-  // underlying BottomSheetModal when the screen blurs but preserves `visible`,
-  // so its focus effect re-presents the sheet (with the user's typed state) on
-  // return.
+  // Stays "open" across the barcode / identify navigation: the sheet hook
+  // dismisses on blur but keeps `visible`, so its focus effect re-presents the
+  // sheet, typed state intact, on return.
   const handleScanPress = () => {
     toBarcode({
       source: 'pantry',

@@ -1,11 +1,9 @@
 import { isOwnKey } from '#/utils/isOwnKey';
 
 /**
- * Region → currency, for the currencies the API offers. Keyed on REGION, never
- * on language: the app ships four languages against eleven currencies and the
- * mapping between them is many-to-many — Spanish spans USD and EUR, English
- * spans five, and only Albanian maps cleanly to one. Unannotated, so its keys
- * are the closed set of regions a lookup narrows to.
+ * Keyed on REGION, never language: languages and the API's currencies map
+ * many-to-many (Spanish spans USD and EUR). Unannotated, so its keys are the
+ * closed set of regions a lookup narrows to.
  */
 const REGION_CURRENCY = {
   // EUR — the eurozone, plus the states that adopted it.
@@ -92,10 +90,9 @@ export function deviceRegion(): string | null {
 }
 
 /**
- * The currency to record new costs in on a device we have not been told about.
- * Null when the region is unknown or uses a currency the API does not offer —
- * the account then keeps whatever the server chose, rather than being moved to
- * a currency that is merely nearby.
+ * The currency for new costs on a device with no stated preference. Null for an
+ * unknown region or one whose currency the API lacks: the account keeps the
+ * server's choice rather than moving to a merely nearby currency.
  */
 export function deviceRegionCurrency(): string | null {
   const region = deviceRegion();
@@ -104,10 +101,9 @@ export function deviceRegionCurrency(): string | null {
 }
 
 /**
- * True when the account has never been denominated. Absence is the only signal:
- * an account has no settings until its first settings write, and a stored code
- * cannot say whether it was chosen or defaulted — reading the app's own default
- * as "unchosen" moves an account whose holder deliberately picked it.
+ * Absence is the only signal of an undenominated account: a stored code cannot
+ * say whether it was chosen or defaulted, so treating the app's default as
+ * unchosen moves an account whose holder picked it.
  */
 export function isUnchosenCurrency(code: string | null | undefined): boolean {
   return !code;

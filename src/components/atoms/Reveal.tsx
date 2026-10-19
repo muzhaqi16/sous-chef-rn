@@ -30,10 +30,9 @@ interface RevealProps {
 }
 
 /**
- * Slides its content open and shut, and follows it when it grows. The height
- * is a style prop with a transition, so what follows moves with it and a React
- * commit cannot reset it. Content open from the first render shows at once.
- * Spacing goes inside, so it slides too.
+ * Height is a transitioned style prop, so what follows moves with it and a React
+ * commit cannot reset it. Open on first render shows at once; spacing goes
+ * inside the content so it slides too.
  */
 export const Reveal: React.FC<RevealProps> = ({ open, children }) => {
   // Reanimated's CSS transitions ignore reduce motion.

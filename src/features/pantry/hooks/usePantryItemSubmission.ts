@@ -1,10 +1,7 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import type {
-  StorageState,
-  ItemCondition,
-} from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
+import type { AddPantryItemFormData } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import {
@@ -18,40 +15,20 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
 import { toDateKey } from '#/utils/dateUtils';
 
-export interface PantryItemSubmissionParams {
+export function usePantryItemSubmission({
+  pantryId,
+  onSuccess,
+}: {
   pantryId: string | undefined;
-  itemName: string;
-  quantityInput: string;
-  unit: string;
-  unitId: string | null;
-  storageState: StorageState;
-  showPackageDetails: boolean;
-  packageSize: string;
-  contentUnit: string;
-  contentUnitId: string | null;
-  itemNetWeight: string;
-  weightUnitId: string | null;
-  pantryNetWeight: string;
-  pantryNetWeightUnitId: string | null;
-  expirationDate: Date | null;
-  selectedStorageLocationId: string | null;
-  storageLocation: string;
-  storageNotes: string;
-  condition: ItemCondition;
-  tags: string;
-  brand: string;
-  category: string;
-  minQuantity: string;
-  restockQuantity: string;
-  storeId: string | null;
-  costPerUnit: string;
-  acquisitionMethod: AcquisitionMethod;
   onSuccess: () => void;
-}
+}) {
+  const { t } = useTranslation();
+  const client = useApolloClient();
 
-export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
-  const {
-    pantryId,
+  const { addItem, adding } = usePantryIntake(pantryId);
+  const { restock } = usePantryRestock(pantryId);
+
+  const handleConfirm = async ({
     itemName,
     quantityInput,
     unit,
@@ -78,16 +55,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     storeId,
     costPerUnit,
     acquisitionMethod,
-    onSuccess,
-  } = params;
-
-  const { t } = useTranslation();
-  const client = useApolloClient();
-
-  const { addItem, adding } = usePantryIntake(pantryId);
-  const { restock } = usePantryRestock(pantryId);
-
-  const handleConfirm = async () => {
+  }: AddPantryItemFormData) => {
     if (!pantryId) return;
 
     // No validation here. The sheet's yup schema owns it and reports on the
@@ -118,12 +86,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           ];
         }
       }
-      // Per-container net weight, and it is all-or-nothing here too: a bare
-      // `item.netWeight` with no `displayUnitId` is a number the server cannot
-      // interpret, and it fed a pantry-level `NetWeightInput` that the
-      // both-or-neither guard below then dropped. The form's
-      // `item-net-weight-needs-unit` rule reports the missing unit on the
-      // field; this is the second line of defence, matching the guard below.
+      // Per-container net weight is all-or-nothing too: `item.netWeight`
+      // without `displayUnitId` means nothing to the server. The form's
+      // `item-net-weight-needs-unit` rule reports it on the field first.
       if (itemNetWeight && weightUnitId) {
         const nw = parseDecimalInput(itemNetWeight);
         if (!isNaN(nw) && nw > 0) {
@@ -142,10 +107,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       pantryNetWeightUnitId ??
       (totalPackageNetWeight ? displayUnitId : undefined);
 
-    // Purchase info — send only when the user provided something. `storeId`
-    // comes from picking an existing store (PurchaseInfoInput has no free-text
-    // store name). acquisitionMethod is always meaningful, so include it
-    // whenever any purchase field is set (or the method isn't the default).
+    // Sent only when the user gave some: `storeId` comes from a picked store
+    // (no free-text store name), and `acquisitionMethod` rides along with any
+    // purchase field or a non-default method.
     const parsedCost = costPerUnit.trim()
       ? parseDecimalInput(costPerUnit)
       : undefined;
@@ -274,11 +238,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       });
     };
 
-    // Offline-first: the pantry answers "do I already stock this?" itself, so
-    // nothing is published and no doomed create is queued. The server refuses
-    // only the item IN THAT UNIT, so the match is name plus unit id. A blank
-    // unit resolves server-side to the item's tracking unit, which a held stack
-    // almost always is, so it matches any held unit; free text is the server's.
+    // The pantry answers "do I stock this?" itself, so no doomed create queues.
+    // The server refuses only the item IN THAT UNIT: name plus unit id, where a
+    // blank unit (the tracking unit) matches any; free text is the server's.
     const cachedDuplicate =
       unitId || !unit.trim()
         ? findCachedPantryItemDuplicate(client.cache, pantryId, {

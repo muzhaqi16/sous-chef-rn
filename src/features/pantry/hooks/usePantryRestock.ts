@@ -67,10 +67,9 @@ type PantryRestockOptions = Stated & {
 };
 
 /**
- * The one restock of a stack the pantry already holds. The row moves at once
- * for an amount it can count in its own unit, offline included; packages wait
- * for the server to size them. A bought count nothing sizes goes as an add with
- * `forceAdd` instead, which the API counts in a counted stack of the item.
+ * The one restock of a held stack: an amount countable in its own unit moves
+ * the row at once, offline too; packages wait for the server to size them. A
+ * count nothing sizes goes as a `forceAdd` add, counted into a counted stack.
  */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();

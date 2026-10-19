@@ -42,12 +42,12 @@ import {
 import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /**
- * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
- * landing while the mutation is in flight. Nothing waits on it — the change is
- * cached before firing and queued for replay. The action rows keep `loading`,
- * where it debounces a one-shot command.
+ * No `loading` prop: `SettingSwitch` forwards it to `disabled`, dropping taps
+ * while the mutation is in flight, and the change is cached before it fires.
+ * The action rows keep `loading`, where it debounces a one-shot command.
  */
 const renderSettings = (
   defs: SettingDef[],
@@ -175,10 +175,8 @@ export const NotificationSettingsScreen: React.FC = () => {
       return;
     }
 
-    // Default handling for all other settings. The `!success` branch covers a
-    // resolved refusal; `onError` covers a throw, which the finalizer would
-    // otherwise swallow — same copy, so one failure produces one message
-    // whichever route it took.
+    // `!success` covers a resolved refusal and `onError` a throw, which the
+    // finalizer would otherwise swallow; one copy, so a failure shows once.
     void executeWriteWithFinally(
       async () => {
         const success = await updateNotificationSetting(key, value);
@@ -201,39 +199,32 @@ export const NotificationSettingsScreen: React.FC = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
       t('notifications.resetConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('settings.resetSection'),
-          style: 'destructive',
-          onPress: () => {
-            void executeWriteWithFinally(
-              async () => {
-                const success = await resetToDefaults();
-                if (success) {
-                  alertService.alert(
-                    t('labels.success'),
-                    t('notifications.resetSuccess'),
-                  );
-                } else {
-                  alertService.alert(
-                    t('labels.error'),
-                    t('errors.resetSettingsFailed'),
-                  );
-                }
-              },
-              isLoading => setUpdating(isLoading ? 'reset' : null),
-              error => {
-                logger.error('Notification settings reset threw', { error });
-                alertService.alert(
-                  t('labels.error'),
-                  t('errors.resetSettingsFailed'),
-                );
-              },
+      destructiveConfirm(t('settings.resetSection'), () => {
+        void executeWriteWithFinally(
+          async () => {
+            const success = await resetToDefaults();
+            if (success) {
+              alertService.alert(
+                t('labels.success'),
+                t('notifications.resetSuccess'),
+              );
+            } else {
+              alertService.alert(
+                t('labels.error'),
+                t('errors.resetSettingsFailed'),
+              );
+            }
+          },
+          isLoading => setUpdating(isLoading ? 'reset' : null),
+          error => {
+            logger.error('Notification settings reset threw', { error });
+            alertService.alert(
+              t('labels.error'),
+              t('errors.resetSettingsFailed'),
             );
           },
-        },
-      ],
+        );
+      }),
     );
   };
 

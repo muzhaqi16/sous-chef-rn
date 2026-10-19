@@ -49,9 +49,6 @@ const seedCollaboratorCache = () =>
 const render = (ui: React.ReactElement) =>
   renderWithApollo(ui, { cache: seedCollaboratorCache() });
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // The verification gate is exercised in its own suite; here it always allows
 // the action so these tests stay focused on their own behaviour.
 jest.mock('#hooks/auth/useEmailVerification', () => ({
@@ -151,7 +148,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/molecules/EmailInput', () => ({
   EmailInput: (props: TextInputProps) => {

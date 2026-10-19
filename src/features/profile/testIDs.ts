@@ -22,6 +22,7 @@ export const profileTestIDs = {
   settingsNavigationLabelsSwitch: 'settings-navigation-labels-switch',
   settingsShowShoppingListImagesSwitch:
     'settings-show-shopping-list-images-switch',
+  settingsStoreModeSwitch: 'settings-store-mode-switch',
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
 
   cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',

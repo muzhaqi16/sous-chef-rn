@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { act, waitFor } from '@testing-library/react-native';
 
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -7,6 +8,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
 import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { RecipeCategory } from '#/graphql/generated/schemaTypes';
 import { useRecipeScreen } from '../useRecipeScreen';
 
 // ── Mock external Spoonacular HTTP service ──
@@ -34,12 +36,7 @@ jest.mock('#/services/spoonacular/SpoonacularService', () => ({
 }));
 
 // ── Mock alert service (assertions on user-facing alerts) ──
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: {
-    alert: (...args: unknown[]) => mockAlert(...args),
-  },
-}));
+const mockAlert = jest.mocked(alertService.alert);
 
 // ── Mock useAppStore (selector + getState) ──
 const appStoreState = {
@@ -100,7 +97,7 @@ function makeDiscovery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// Sample discovery item shape — mirrors DiscoveryItem
+// Sample discovery item shape — a DisplayItem
 const sampleDiscoveryItem = {
   id: 'disc-1',
   title: 'Sample Random Recipe',
@@ -162,32 +159,15 @@ const sampleIngredientSearchResponse = [
 ];
 
 // ── Local GraphQL SearchRecipes mocks ──
-// Node fixtures must include every field the document selects (Apollo can't
-// cache partially-specified entities in operationMocks).
+// What the combined search reads of a node; the SDL completion fills the rest.
 function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
   return {
-    __typename: 'Recipe',
     id: 'r1',
     name: 'Family Lasagna',
-    description: null,
-    imageUrl: 'https://img/local-r1.jpg',
-    servings: 6,
-    prepTimeMinutes: 20,
-    cookTimeMinutes: 40,
     totalTimeMinutes: 60,
-    difficulty: null,
-    category: null,
-    cuisines: [],
-    status: 'PUBLISHED',
-    isExternal: false,
     externalSource: null,
     externalId: null,
     isSaved: false,
-    primarySource: null,
-    caloriesPerServing: null,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    savedDetails: null,
     ...overrides,
   };
 }
@@ -201,17 +181,8 @@ function searchRecipesMockWith(
     result: {
       data: {
         searchRecipes: {
-          __typename: 'RecipeConnection',
-          edges: nodes.map(node => ({
-            __typename: 'RecipeEdge',
-            cursor: `cursor-${node.id}`,
-            node,
-          })),
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
+          edges: nodes.map(node => ({ cursor: `cursor-${node.id}`, node })),
+          pageInfo: { hasNextPage: false, endCursor: null },
           totalCount: nodes.length,
         },
       },
@@ -249,14 +220,11 @@ function searchRecipesPageMock(opts: {
     result: {
       data: {
         searchRecipes: {
-          __typename: 'RecipeConnection',
           edges: opts.nodes.map(node => ({
-            __typename: 'RecipeEdge',
             cursor: `cursor-${node.id}`,
             node,
           })),
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: opts.hasNextPage,
             endCursor: opts.endCursor,
           },
@@ -804,7 +772,6 @@ describe('useRecipeScreen', () => {
           makeLocalRecipeNode({
             id: 'r-ext',
             name: 'Pasta Carbonara (saved)',
-            isExternal: true,
             externalSource: 'SPOONACULAR',
             externalId: '7001',
           }),
@@ -1184,6 +1151,42 @@ describe('useRecipeScreen', () => {
       expect(secondCall.diet).toBeUndefined();
       expect(secondCall.maxReadyTime).toBe(15);
       expect(result.current.activeFilterCount).toBe(1);
+    });
+
+    it('narrows the local search to the meal type as its category', async () => {
+      mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
+      const fired: Record<string, unknown>[] = [];
+      const { result } = renderRecipeScreen([
+        searchRecipesPageMock({
+          matchAfter: null,
+          nodes: [],
+          hasNextPage: false,
+          endCursor: null,
+          fired,
+        }),
+      ]);
+
+      await act(async () => {
+        result.current.applyFilters({
+          diet: [],
+          intolerances: [],
+          mealType: 'breakfast',
+          maxReadyTime: null,
+        });
+      });
+      await act(async () => {
+        await result.current.handleTextSearch('pancakes');
+      });
+
+      await waitFor(() => expect(fired.length).toBeGreaterThan(0));
+      expect(fired[0]).toMatchObject({
+        query: 'pancakes',
+        category: RecipeCategory.Breakfast,
+      });
+      expect(mockSearchRecipes).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'breakfast' }),
+        undefined,
+      );
     });
 
     it('does not re-run a search when filters change before any search', async () => {

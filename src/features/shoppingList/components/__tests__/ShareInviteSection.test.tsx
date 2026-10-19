@@ -6,13 +6,6 @@ import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { ShareInviteSection } from '../ShareInviteSection';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#hooks/auth/useEmailVerification', () => ({
   useVerifiedEmailGate: () => ({
     requireVerifiedEmail: () => true,
@@ -74,7 +67,7 @@ describe('ShareInviteSection', () => {
       data: {
         inviteToShoppingList: {
           __typename: 'InviteToShoppingListPayload',
-          collaborator: { __typename: 'ShoppingListCollaborator', id: 'c-1' },
+          collaborator: { id: 'c-1' },
         },
       },
     });

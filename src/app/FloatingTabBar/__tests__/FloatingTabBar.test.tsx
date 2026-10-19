@@ -20,6 +20,7 @@ jest.mock(
 );
 
 import React from 'react';
+import { toastService } from '#/services/toastService';
 import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -39,17 +40,31 @@ import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '#features/types';
 import { useStore } from '#store';
 import { TAB_BAR_HEIGHT } from '#constants/layout';
+import { withTiming } from 'react-native-reanimated';
+import { SHEET } from '#/constants/animations';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
-const mockOnAddPress = jest.fn();
-let mockTabBarState = {
-  onAddPress: mockOnAddPress,
+const mockSetAddMenuOpen = jest.fn();
+interface MockMenuEntry {
+  key: string;
+  label: string;
+  icon: string;
+  onPress: () => void;
+  testID?: string;
+  disabledReason?: string;
+}
+let mockTabBarState: {
+  showAddButton: boolean;
+  addButtonConfig: { icon: string; iconLibrary: string };
+  isOverlayOpen: boolean;
+  addMenu?: MockMenuEntry[];
+  isAddMenuOpen: boolean;
+} = {
   showAddButton: true,
   addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-  isAddButtonDisabled: false,
-  addButtonDisabledMessage: '',
   isOverlayOpen: false,
+  isAddMenuOpen: false,
 };
 
 jest.mock('#context/TabBarActionsContext', () => ({
@@ -57,19 +72,9 @@ jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
     setActiveTab: mockSetActiveTab,
     setScannerProps: jest.fn(),
-    setAddProps: jest.fn(),
     setOverlayOpen: jest.fn(),
+    setAddMenuOpen: mockSetAddMenuOpen,
   })),
-}));
-
-// Mock toastService
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    info: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-    warning: jest.fn(),
-  },
 }));
 
 // Mock HapticService
@@ -83,7 +88,11 @@ jest.mock('#services/haptic/HapticService', () => ({
 
 // Mock animations constants
 jest.mock('#/constants/animations', () => ({
-  SHEET: { BACKDROP_OPACITY: 0.5 },
+  SHEET: {
+    BACKDROP_OPACITY: 0.5,
+    BACKDROP_FADE_IN: 100,
+    BACKDROP_FADE_OUT: 300,
+  },
 }));
 
 // Mock iconUtils
@@ -227,12 +236,10 @@ describe('FloatingTabBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTabBarState = {
-      onAddPress: mockOnAddPress,
       showAddButton: true,
       addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-      isAddButtonDisabled: false,
-      addButtonDisabledMessage: '',
       isOverlayOpen: false,
+      isAddMenuOpen: false,
     };
   });
 
@@ -260,36 +267,84 @@ describe('FloatingTabBar', () => {
     expect(screen.queryByTestId('add-button')).toBeNull();
   });
 
-  it('calls onAddPress when add button is pressed', async () => {
-    const user = userEvent.setup();
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(mockOnAddPress).toHaveBeenCalled();
-  });
+  describe('with an add menu', () => {
+    const entry = (key: string): MockMenuEntry => ({
+      key,
+      label: key,
+      icon: 'add',
+      onPress: jest.fn(),
+      testID: `entry-${key}`,
+    });
 
-  it('shows toast when add button is disabled', async () => {
-    const user = userEvent.setup();
-    mockTabBarState.isAddButtonDisabled = true;
-    mockTabBarState.addButtonDisabledMessage = 'No permission';
-    const { toastService } = require('#/services/toastService');
+    it('opens the menu instead of running a handler', async () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      const user = userEvent.setup();
+      renderTabBar();
 
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(toastService.info).toHaveBeenCalledWith('No permission');
-    expect(mockOnAddPress).not.toHaveBeenCalled();
-  });
+      await user.press(screen.getByTestId('add-button'));
 
-  it('shows default message when add button is disabled without custom message', async () => {
-    const user = userEvent.setup();
-    mockTabBarState.isAddButtonDisabled = true;
-    mockTabBarState.addButtonDisabledMessage = '';
-    const { toastService } = require('#/services/toastService');
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+    });
 
-    renderTabBar();
-    await user.press(screen.getByTestId('add-button'));
-    expect(toastService.info).toHaveBeenCalledWith(
-      "You don't have permission to perform this action",
-    );
+    it('closes the open menu from the +', async () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
+    });
+
+    it('shows the entries while open and runs a picked one', async () => {
+      const link = entry('Link');
+      mockTabBarState.addMenu = [link, entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('entry-Link'));
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
+      expect(link.onPress).toHaveBeenCalledTimes(1);
+    });
+
+    // The `+` rotates on an under-damped spring; a scrim on that spring would
+    // swing past open and back, flickering until it settled.
+    it('fades its scrim in on a timing, never the spring the + turns on', () => {
+      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+      mockTabBarState.isAddMenuOpen = true;
+      renderTabBar();
+
+      expect(withTiming).toHaveBeenCalledWith(1, {
+        duration: SHEET.BACKDROP_FADE_IN,
+      });
+    });
+
+    it('runs a menu of one directly', async () => {
+      const only = entry('Write it myself');
+      mockTabBarState.addMenu = [only];
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(only.onPress).toHaveBeenCalledTimes(1);
+      expect(mockSetAddMenuOpen).not.toHaveBeenCalled();
+    });
+
+    it('says why a menu of one cannot run, and runs nothing', async () => {
+      const only = { ...entry('Link'), disabledReason: 'Needs a connection' };
+      mockTabBarState.addMenu = [only];
+      const user = userEvent.setup();
+      renderTabBar();
+
+      await user.press(screen.getByTestId('add-button'));
+
+      expect(toastService.info).toHaveBeenCalledWith('Needs a connection');
+      expect(only.onPress).not.toHaveBeenCalled();
+    });
   });
 
   it('navigates to the tab on press', async () => {

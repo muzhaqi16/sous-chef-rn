@@ -19,6 +19,7 @@ fragment ReceiptParseReaders on ReceiptParse {
       storeNumber
     }
     purchasedOn
+    purchaseTime
   }
   status
   warnings {

@@ -13,13 +13,6 @@ import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { alertService } from '#/services/alertService';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#domain/pantryItemDuplicate', () => ({
   promptPantryDuplicate: jest.fn(),
 }));
@@ -42,58 +35,18 @@ jest.mock('#store/useAppStore', () => ({
     selector({ setPendingPantryScrollToTop: mockSetPendingPantryScrollToTop }),
 }));
 
-jest.mock('#/utils/finallyHelpers', () =>
-  jest.requireActual('#/utils/finallyHelpers'),
+jest.mock('../ProductResultCard', () =>
+  require('#/test-utils/searchResultsStubs'),
 );
+jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 
-jest.mock('../ProductResultCard', () => ({
-  ProductResultCard: ({ item }: { item: { name: string } }) => {
-    const { Text } = require('react-native');
-    return require('react').createElement(Text, null, item.name);
-  },
-}));
-
-type MockAction = { label: string; onPress: () => void };
-jest.mock('../ActionButtons', () => ({
-  ActionButtons: ({ primaryAction }: { primaryAction?: MockAction }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return primaryAction
-      ? R.createElement(
-          RN.Pressable,
-          { onPress: primaryAction.onPress, testID: 'primary-btn' },
-          R.createElement(RN.Text, null, primaryAction.label),
-        )
-      : null;
-  },
-}));
-
-// Hands back a 500 mL size and closes as the real sheet does: only on `done`.
 const PACK_SIZE = { netWeight: 500, netWeightUnitId: 'unit-ml' };
 jest.mock('../PackSizeSheet', () => ({
-  PackSizeSheet: ({
-    visible,
-    onConfirm,
-    onDismiss,
-  }: {
-    visible: boolean;
-    onConfirm: (size: typeof PACK_SIZE) => Promise<{ status: string }>;
-    onDismiss: () => void;
-  }) => {
-    if (!visible) return null;
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(RN.Pressable, {
-      testID: 'pack-size-stub',
-      onPress: async () => {
-        const outcome = await onConfirm({
-          netWeight: 500,
-          netWeightUnitId: 'unit-ml',
-        });
-        if (outcome.status === 'done') onDismiss();
-      },
-    });
-  },
+  PackSizeSheet:
+    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming({
+      netWeight: 500,
+      netWeightUnitId: 'unit-ml',
+    }),
 }));
 
 const onScanAnother = jest.fn();

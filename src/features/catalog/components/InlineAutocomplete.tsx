@@ -50,19 +50,15 @@ export interface InlineAutocompleteProps<T> {
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 
-  // Renders a spacer of the list's height while open. The list is absolutely
-  // positioned, so it adds nothing to the height its parent measures — in an
-  // `enableDynamicSizing` sheet it otherwise opens past the sheet's bottom edge,
-  // into the keyboard. Off by default: a fixed-height container has the room.
+  // Renders a spacer of the open list's height: the list is absolute, so an
+  // `enableDynamicSizing` sheet doesn't measure it and it opens past the sheet's
+  // bottom edge, into the keyboard. A fixed-height container has the room.
   reserveDropdownSpace?: boolean;
 }
 
-// Presentation only — anti-flicker lives upstream in `useAutocompleteSearch`.
-//
-// Stacking contract: the suggestion list is an absolutely-positioned overlay and
-// RN `zIndex` orders SIBLINGS only, so every level up to the overlap needs an
-// explicit descending zIndex on a `collapsable={false}` view. Wrap stacked form
-// rows in `DropdownStack`, which applies both; never hand-roll a zIndex chain.
+// The suggestion list is an absolute overlay and RN `zIndex` orders SIBLINGS
+// only, so every level up to the overlap needs a descending zIndex on a
+// `collapsable={false}` view: wrap stacked form rows in `DropdownStack`.
 export function InlineAutocomplete<T>({
   label,
   value,
@@ -148,11 +144,9 @@ export function InlineAutocomplete<T>({
     setSearchTerm(value);
   }
 
-  // The debounced notify fires up to `debounceMs` after the keystroke, by which
-  // time the parent may have rebuilt `onChangeText` around newer state, so always
-  // call the latest one. It must be a LAYOUT effect: a passive one flushes in a
-  // separate task, and an already-due debounce timer can run in that gap and read
-  // the stale callback this ref exists to avoid.
+  // The debounced notify calls the latest `onChangeText`, rebuilt since the
+  // keystroke. A LAYOUT effect: a passive one flushes in a later task, and a due
+  // debounce timer can run in that gap and read the stale callback.
   const onChangeTextRef = useRef(onChangeText);
   useLayoutEffect(() => {
     onChangeTextRef.current = onChangeText;

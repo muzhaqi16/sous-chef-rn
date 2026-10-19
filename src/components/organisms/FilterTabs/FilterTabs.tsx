@@ -102,6 +102,11 @@ function FilterTabsComponent<T extends string = string>({
             }
             style={styles.tab}
             disabled={actionButton.disabled}
+            accessibilityRole="button"
+            accessibilityLabel={
+              actionButton.accessibilityLabel ?? actionButton.label
+            }
+            accessibilityState={{ disabled: !!actionButton.disabled }}
           >
             {!!actionButton.icon && (
               <Icon

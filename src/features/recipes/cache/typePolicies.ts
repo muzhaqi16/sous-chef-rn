@@ -1,14 +1,13 @@
 import type { TypePolicies } from '@apollo/client';
-import type { FieldFunctionOptions } from '@apollo/client';
-import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
+import {
+  mergeConnectionByNodeId,
+  readByIdFromCache,
+} from '#/apollo/cacheFieldPolicies';
 
 /**
- * A recipe merges field-wise; `recipes` keys on the whole `filters` input, so each filter set keeps its own entry.
- * A recipe's ingredients are ONE list whatever arguments read it: a selection
- * that names a page size and a local writer that names none hold the same rows.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * A recipe merges field-wise; `recipes` keys on the whole `filters` input.
+ * Ingredients are ONE list whatever arguments read them: a paged selection and
+ * a local writer naming none hold the same rows.
  */
 export const recipesTypePolicies: TypePolicies = {
   Recipe: {
@@ -19,22 +18,15 @@ export const recipesTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      recipe: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'Recipe',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
+      recipe: readByIdFromCache('Recipe'),
       recipes: {
         ...mergeConnectionByNodeId(),
         keyArgs: ['filters'],
+      },
+      // A ranking for one day: a new answer replaces the last, never merges.
+      recipeSuggestions: {
+        keyArgs: ['today'],
+        merge: (_existing: unknown, incoming: unknown) => incoming,
       },
     },
   },

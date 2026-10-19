@@ -29,9 +29,6 @@ import { useNotifications, useNotificationListener } from '../useNotifications';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import { logger } from '#/utils/environment';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // Mutable so a test can simulate a logged-out session. Prefixed `mock` so the
 // jest.mock factory below may reference it.
 let mockUser: { id: string } | null = { id: 'user-1' };

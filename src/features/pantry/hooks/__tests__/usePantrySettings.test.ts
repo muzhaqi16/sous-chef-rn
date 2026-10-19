@@ -16,11 +16,6 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
-import { t } from '#/i18n';
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -130,7 +125,7 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
           pantry: { __typename: 'Pantry', id: 'pantry-1', version: 6 },
         },
       },
-      delay: 20,
+      held: true,
     });
     const save = recordMock(UpdatePantryDocument, {
       dataFor: (vars): MockDataFor<typeof UpdatePantryDocument> => ({
@@ -149,14 +144,23 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
       { operationMocks: [markDefaultMock.mock, save.mock], cache },
     );
 
+    let both: Promise<unknown> = Promise.resolve();
     await act(async () => {
-      await Promise.all([
+      both = Promise.all([
         result.current.setDefault('pantry-1'),
         result.current.savePantryFields('pantry-1', {
           name: 'Kitchen',
           description: '',
         }),
       ]);
+    });
+    // The save waits for the toggle's answer.
+    expect(markDefaultMock.fired).toHaveLength(1);
+    expect(save.fired).toEqual([]);
+
+    await act(async () => {
+      markDefaultMock.release();
+      await both;
     });
 
     expect(save.fired).toEqual([
@@ -246,31 +250,6 @@ describe('usePantrySettings.savePantryFields', () => {
     ]);
     expect(readRow(cache)).toMatchObject({ name: 'Kitchen', description: '' });
     expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('sends nothing and reports a failed save when the cache holds no version', async () => {
-    const cache = seedRow();
-    const save = saveMock();
-    const { result } = renderHookWithApollo(
-      () => usePantrySettings({ pantryId: 'pantry-1', homeId: 'home-1' }),
-      { operationMocks: [save.mock], cache },
-    );
-
-    let saved: unknown = 'unset';
-    await act(async () => {
-      saved = await result.current.savePantryFields('pantry-1', {
-        name: 'Kitchen',
-        description: '',
-      });
-    });
-
-    // The API refuses an edit that states no version, so none is sent.
-    expect(saved).toBe(false);
-    expect(save.fired).toEqual([]);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      t('labels.error'),
-      t('errors.saveSettingsFailed'),
-    );
   });
 
   // A row the home screens cached carries `name` and no `version`

@@ -1,8 +1,7 @@
 /**
- * A queued write replays as the canonical mutation it was queued as, each safe
- * to send again (sous-chef-api `docs/api/offline-sync.md` § Replaying through
- * the canonical mutations). The registered operations restate what the device
- * knows better at replay; every replay counts totals on the day it runs.
+ * A queued write replays as its canonical mutation, safe to send again
+ * (sous-chef-api `docs/api/offline-sync.md`); registered operations restate what
+ * the device knows better at replay, and totals count on the day it runs.
  */
 import { Kind } from 'graphql';
 import type { ApolloCache, OperationVariables } from '@apollo/client';
@@ -15,9 +14,9 @@ import {
 import type { QueuedMutation, ReplayInputs } from './types';
 import { todayKey } from '#/utils/dateUtils';
 import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
-import { localFirstFragment } from '#/apollo/utils/localFirstFields';
+import { cachedVersion } from '#/apollo/utils/entityWriteChain';
 import { isRecord } from '#/utils/isRecord';
-import { isOwnKey } from '#/utils/isOwnKey';
+import { subjectTypeOf } from './queuedSubject';
 
 /**
  * queueLink's "replay-safe without an explicit `context.localFirst` opt-in"
@@ -52,20 +51,12 @@ export async function prepareReplay(
   );
 }
 
-type VersionedEdit =
-  | 'UpdateMealPlanItemInput'
-  | 'UpdateRecipeInput'
-  | 'UpdatePantryInput';
-
-/**
- * Edits the API holds to a `version` that an earlier build queued without one,
- * by the entity each edits.
- */
-const VERSIONED_EDIT_ENTITY: Record<VersionedEdit, string> = {
-  UpdateMealPlanItemInput: 'MealPlanItem',
-  UpdateRecipeInput: 'Recipe',
-  UpdatePantryInput: 'Pantry',
-};
+/** Edits the API holds to a `version` that an earlier build queued without one. */
+const VERSIONED_EDITS: ReadonlySet<string> = new Set([
+  'UpdateMealPlanItemInput',
+  'UpdateRecipeInput',
+  'UpdatePantryInput',
+]);
 
 /**
  * States the version the cache holds on an edit stored without one. With no
@@ -78,23 +69,21 @@ function withStatedVersion(
   { cache }: ReplayContext,
 ): OperationVariables {
   const input: unknown = variables.input;
-  const inputType = inputTypeNameOf(mutation.mutation) ?? '';
+  const typename = subjectTypeOf(mutation);
   if (
     !isRecord(input) ||
     typeof input.version === 'number' ||
     typeof input.id !== 'string' ||
-    !isOwnKey(VERSIONED_EDIT_ENTITY, inputType)
+    !typename ||
+    !VERSIONED_EDITS.has(inputTypeNameOf(mutation.mutation) ?? '')
   ) {
     return variables;
   }
-  const typename = VERSIONED_EDIT_ENTITY[inputType];
-  const held = cache.readFragment<{ version?: number | null }>({
-    id: cache.identify({ __typename: typename, id: input.id }),
-    fragment: localFirstFragment(typename, 'version'),
-  });
-  return typeof held?.version === 'number'
-    ? { ...variables, input: { ...input, version: held.version } }
-    : variables;
+  const id = cache.identify({ __typename: typename, id: input.id });
+  const version = id ? cachedVersion(cache, id, typename) : undefined;
+  return version === undefined
+    ? variables
+    : { ...variables, input: { ...input, version } };
 }
 
 /**

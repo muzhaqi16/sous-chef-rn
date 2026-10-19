@@ -5,10 +5,6 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockCreateMealPlan = jest.fn().mockResolvedValue({ success: true });
@@ -117,10 +113,6 @@ jest.mock('#features/mealPlan/components/TemplateBrowserSheet', () => ({
 
 jest.mock('#features/mealPlan/components/TemplatePreviewSheet', () => ({
   TemplatePreviewSheet: () => null,
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 describe('CreateMealPlanScreen', () => {

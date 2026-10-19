@@ -178,10 +178,9 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
 
-  // ONE ladder for the border and the text, so they cannot collapse
+  // ONE ladder for border and text, so they cannot split
   // `getExpirationStatus`'s four levels at different boundaries. An item
-  // expiring TODAY is `critical` — not expired — and reads as a warning on
-  // both.
+  // expiring TODAY is `critical`, not expired, and reads as a warning on both.
   const variant: ItemVariant = toItemVariant(expStatus.type);
   const expirationText = showExpiration ? expStatus.text : null;
   const expirationVariant: ExpirationVariant | undefined = showExpiration

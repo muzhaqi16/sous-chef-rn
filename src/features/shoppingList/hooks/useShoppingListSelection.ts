@@ -6,10 +6,9 @@ import { useActiveShoppingListId } from './useActiveShoppingListId';
 const EMPTY_DENIED: ReadonlySet<string> = new Set();
 
 /**
- * Selection over ALL the user's lists; grouping by home is the selector modal's
- * job. Auto-select fills a null selection (so a delete just sets the id to
- * null); a PENDING id — created but not yet in query results — suppresses it,
- * and a DENIED id (FORBIDDEN read, or null data) is excluded for good.
+ * Selection over ALL the user's lists. Auto-select fills a null selection (a
+ * delete just nulls the id); a PENDING id, created but not yet queried,
+ * suppresses it, and a DENIED id (FORBIDDEN or null read) is excluded for good.
  */
 export function useShoppingListSelection(
   allLists: ShoppingListFromQuery[],

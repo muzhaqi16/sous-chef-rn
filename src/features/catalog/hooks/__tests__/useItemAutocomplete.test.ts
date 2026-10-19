@@ -13,9 +13,6 @@ import {
   type ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
   __typename: 'ItemSuggestion',
   id,
@@ -68,7 +65,6 @@ function createItemsMock(
     result: {
       data: {
         autocompleteItems: {
-          __typename: 'AutocompleteResult',
           totalCount: 0,
           suggestions: [],
         },
@@ -85,7 +81,7 @@ function createSemanticMock(): MockFor<typeof SearchItemsSemanticDocument> {
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
       data: {
-        searchItemsSemantic: { __typename: 'ItemConnection', edges: [] },
+        searchItemsSemantic: { edges: [] },
       },
     },
   };

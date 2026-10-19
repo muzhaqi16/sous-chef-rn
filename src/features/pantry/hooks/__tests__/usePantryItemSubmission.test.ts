@@ -12,18 +12,17 @@ import {
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
-  AcquisitionMethod,
   ErrorCode,
-  ItemCondition,
   StorageState,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { alertService } from '#/services/alertService';
+import {
+  addPantryItemDefaults,
+  type AddPantryItemFormData,
+} from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -64,46 +63,31 @@ jest.mock('#domain/pantryItemDuplicate', () => {
   };
 });
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const mockOnSuccess = jest.fn();
-const mockHandlePageChange = jest.fn();
 
-const defaultParams = {
-  pantryId: 'pantry-1',
-  itemName: 'Milk',
+const defaultValues: AddPantryItemFormData = {
+  ...addPantryItemDefaults('Milk'),
   quantityInput: '2',
   unit: 'cups',
   unitId: 'unit-1',
   storageState: StorageState.Refrigerated,
-  showPackageDetails: false,
-  packageSize: '',
-  contentUnit: '',
-  contentUnitId: null,
-  itemNetWeight: '',
-  weightUnitId: null,
-  pantryNetWeight: '',
-  pantryNetWeightUnitId: null,
-  expirationDate: null,
-  selectedStorageLocationId: null,
-  storageLocation: '',
-  storageNotes: '',
-  condition: ItemCondition.Good,
-  tags: '',
-  brand: '',
-  category: '',
-  minQuantity: '',
-  restockQuantity: '',
-  storeId: null,
-  costPerUnit: '',
-  acquisitionMethod: AcquisitionMethod.Purchased,
-  onSuccess: mockOnSuccess,
-  handlePageChange: mockHandlePageChange,
 };
+
+/** The hook as the sheet drives it: the form's values reach `handleConfirm`. */
+function useSubmission(
+  overrides: Partial<AddPantryItemFormData> & { pantryId?: string },
+) {
+  const { pantryId, ...values } = { pantryId: 'pantry-1', ...overrides };
+  const submission = usePantryItemSubmission({
+    pantryId,
+    onSuccess: mockOnSuccess,
+  });
+  return {
+    loading: submission.loading,
+    handleConfirm: () =>
+      submission.handleConfirm({ ...defaultValues, ...values }),
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -176,9 +160,7 @@ function createErrorMock() {
  */
 describe('usePantryItemSubmission', () => {
   it('returns handleConfirm and loading', () => {
-    const { result } = renderHookWithApollo(() =>
-      usePantryItemSubmission(defaultParams),
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}));
 
     expect(typeof result.current.handleConfirm).toBe('function');
     expect(result.current.loading).toBe(false);
@@ -187,7 +169,7 @@ describe('usePantryItemSubmission', () => {
   it('does nothing when pantryId is undefined', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission({ ...defaultParams, pantryId: undefined }),
+      () => useSubmission({ pantryId: undefined }),
       { operationMocks: [m.mock] },
     );
 
@@ -200,10 +182,9 @@ describe('usePantryItemSubmission', () => {
 
   it('calls createPantryItem with correct input on success', async () => {
     const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission(defaultParams),
-      { operationMocks: [m.mock] },
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}), {
+      operationMocks: [m.mock],
+    });
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -223,8 +204,7 @@ describe('usePantryItemSubmission', () => {
   it('includes tags when provided', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
-      () =>
-        usePantryItemSubmission({ ...defaultParams, tags: 'dairy, organic' }),
+      () => useSubmission({ tags: 'dairy, organic' }),
       { operationMocks: [m.mock] },
     );
 
@@ -244,8 +224,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           minQuantity: '1',
           restockQuantity: '5',
         }),
@@ -265,10 +244,9 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('shows error alert when mutation fails', async () => {
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission(defaultParams),
-      { operationMocks: [createErrorMock().mock] },
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}), {
+      operationMocks: [createErrorMock().mock],
+    });
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -284,7 +262,7 @@ describe('usePantryItemSubmission', () => {
     const date = new Date(2025, 5, 15);
     const m = createMock();
     const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission({ ...defaultParams, expirationDate: date }),
+      () => useSubmission({ expirationDate: date }),
       { operationMocks: [m.mock] },
     );
 
@@ -304,8 +282,7 @@ describe('usePantryItemSubmission', () => {
   it('includes brand when provided', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
-      () =>
-        usePantryItemSubmission({ ...defaultParams, brand: 'Organic Valley' }),
+      () => useSubmission({ brand: 'Organic Valley' }),
       { operationMocks: [m.mock] },
     );
 
@@ -327,8 +304,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           selectedStorageLocationId: 'loc-1',
         }),
       { operationMocks: [m.mock] },
@@ -350,8 +326,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           storageLocation: 'Top Shelf',
         }),
       { operationMocks: [m.mock] },
@@ -375,8 +350,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           storageNotes: 'Keep cool',
         }),
       { operationMocks: [m.mock] },
@@ -398,8 +372,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           showPackageDetails: true,
           packageSize: '12',
           contentUnit: 'oz',
@@ -436,10 +409,9 @@ describe('usePantryItemSubmission', () => {
       existingPantryItemId: 'existing-1',
     });
 
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission(defaultParams),
-      { operationMocks: [createErrorMock().mock] },
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}), {
+      operationMocks: [createErrorMock().mock],
+    });
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -471,10 +443,9 @@ describe('usePantryItemSubmission', () => {
       },
     });
 
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission(defaultParams),
-      { operationMocks: [refused.mock, restock.mock] },
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}), {
+      operationMocks: [refused.mock, restock.mock],
+    });
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -533,8 +504,7 @@ describe('usePantryItemSubmission', () => {
     });
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           pantryNetWeight: '22',
           pantryNetWeightUnitId: 'u-oz',
         }),
@@ -581,10 +551,9 @@ describe('usePantryItemSubmission', () => {
     } = require('#domain/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(false);
 
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission(defaultParams),
-      { operationMocks: [createErrorMock().mock] },
-    );
+    const { result } = renderHookWithApollo(() => useSubmission({}), {
+      operationMocks: [createErrorMock().mock],
+    });
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -600,8 +569,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           showPackageDetails: true,
           packageSize: '6',
           contentUnit: 'oz',
@@ -633,8 +601,7 @@ describe('usePantryItemSubmission', () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
-        usePantryItemSubmission({
-          ...defaultParams,
+        useSubmission({
           pantryNetWeight: '500',
           pantryNetWeightUnitId: 'g-unit',
         }),
@@ -659,8 +626,7 @@ describe('usePantryItemSubmission', () => {
   it('omits unit from input when no unitId and no unit name', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
-      () =>
-        usePantryItemSubmission({ ...defaultParams, unit: '', unitId: null }),
+      () => useSubmission({ unit: '', unitId: null }),
       { operationMocks: [m.mock] },
     );
 
@@ -766,10 +732,10 @@ describe('usePantryItemSubmission', () => {
 
     it('prompts without firing a create', async () => {
       const m = createMock();
-      const { result } = renderHookWithApollo(
-        () => usePantryItemSubmission(defaultParams),
-        { cache: seedStocked('  MILK '), operationMocks: [m.mock] },
-      );
+      const { result } = renderHookWithApollo(() => useSubmission({}), {
+        cache: seedStocked('  MILK '),
+        operationMocks: [m.mock],
+      });
 
       await act(async () => {
         await result.current.handleConfirm();
@@ -785,10 +751,10 @@ describe('usePantryItemSubmission', () => {
 
     it('still fires the create when the name is not stocked', async () => {
       const m = createMock();
-      const { result } = renderHookWithApollo(
-        () => usePantryItemSubmission(defaultParams),
-        { cache: seedStocked('Oat Milk'), operationMocks: [m.mock] },
-      );
+      const { result } = renderHookWithApollo(() => useSubmission({}), {
+        cache: seedStocked('Oat Milk'),
+        operationMocks: [m.mock],
+      });
 
       await act(async () => {
         await result.current.handleConfirm();
@@ -801,10 +767,10 @@ describe('usePantryItemSubmission', () => {
     it('fires the create when the item is stocked only in another unit', async () => {
       // A different unit is a separate stack the server accepts.
       const m = createMock();
-      const { result } = renderHookWithApollo(
-        () => usePantryItemSubmission(defaultParams),
-        { cache: seedStocked('Milk', 'unit-litre'), operationMocks: [m.mock] },
-      );
+      const { result } = renderHookWithApollo(() => useSubmission({}), {
+        cache: seedStocked('Milk', 'unit-litre'),
+        operationMocks: [m.mock],
+      });
 
       await act(async () => {
         await result.current.handleConfirm();
@@ -819,8 +785,7 @@ describe('usePantryItemSubmission', () => {
       const m = createMock();
       const { result } = renderHookWithApollo(
         () =>
-          usePantryItemSubmission({
-            ...defaultParams,
+          useSubmission({
             itemName: 'Eggs',
             unit: '',
             unitId: null,
@@ -868,10 +833,10 @@ describe('usePantryItemSubmission', () => {
       const queued = recordMock(RestockPantryItemDocument, {
         data: { restockPantryItem: null },
       });
-      const { result } = renderHookWithApollo(
-        () => usePantryItemSubmission(defaultParams),
-        { cache, operationMocks: [queued.mock] },
-      );
+      const { result } = renderHookWithApollo(() => useSubmission({}), {
+        cache,
+        operationMocks: [queued.mock],
+      });
 
       await act(async () => {
         await result.current.handleConfirm();
@@ -902,8 +867,7 @@ describe('usePantryItemSubmission', () => {
       const m = createMock();
       const { result } = renderHookWithApollo(
         () =>
-          usePantryItemSubmission({
-            ...defaultParams,
+          useSubmission({
             unit: 'cups',
             unitId: null,
           }),

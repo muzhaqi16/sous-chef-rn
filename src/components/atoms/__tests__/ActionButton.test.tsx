@@ -14,15 +14,11 @@ describe('ActionButton', () => {
   const defaultProps = {
     name: 'add',
     onPress: jest.fn(),
+    accessibilityLabel: 'Add item',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders with custom icon name', () => {
-    render(<ActionButton {...defaultProps} name="filter" />);
-    expect(screen.getByLabelText('filter button')).toBeTruthy();
   });
 
   it('renders with custom accessibility label', () => {

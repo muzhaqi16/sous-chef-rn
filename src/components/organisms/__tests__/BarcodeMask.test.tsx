@@ -9,8 +9,6 @@ const themed = {
   backgroundColor: lightTheme.colors.overlay,
 };
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('react-native-svg', () => {
   const { View } = require('react-native');
   return {

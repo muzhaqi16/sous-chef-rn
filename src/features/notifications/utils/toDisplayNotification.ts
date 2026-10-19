@@ -1,8 +1,7 @@
 /**
- * Derives the fields a notification needs on screen but the server does not
- * send. A projection of the server fragment, NOT a second copy: everything else
- * passes straight through, and it runs at read time because the notifications
- * live only in the Apollo cache.
+ * Derives the on-screen fields the server does not send. A projection, NOT a
+ * second copy: it runs at read time, since notifications live only in the
+ * Apollo cache.
  */
 
 import {
@@ -22,11 +21,9 @@ import { getNotificationAction } from '#features/notifications/utils/notificatio
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /**
- * Mirrors the server's definition, which drives
- * `notificationSummary.unreadCount` and the `unreadOnly` filter, so the local
- * badge agrees with the stated one.
- * Listed POSITIVELY: a status added to the enum later must read as terminal
- * rather than silently inflating every badge.
+ * Mirrors the server's definition behind `notificationSummary.unreadCount` and
+ * `unreadOnly`, so the local badge agrees. Listed POSITIVELY: a status added
+ * later reads as terminal rather than inflating every badge.
  */
 const UNREAD_STATUSES: readonly NotificationStatus[] = [
   NotificationStatus.Pending,
@@ -34,11 +31,9 @@ const UNREAD_STATUSES: readonly NotificationStatus[] = [
 ];
 
 /**
- * A notification as the UI needs it: the server's fields plus the four derived
- * ones. Declared here rather than in a store slice, because it describes a
- * projection for rendering — nothing holds it. `title` and `message` are the
- * server's and reach the screen only when `isAuthoredContent` says a person
- * wrote them; otherwise the words come from `getNotificationCopy` at render.
+ * The server's fields plus the derived ones; nothing holds it. `title` and
+ * `message` reach the screen only when `isAuthoredContent` says a person wrote
+ * them; otherwise the words come from `getNotificationCopy` at render.
  */
 export interface DisplayNotification {
   id: string;
@@ -90,7 +85,10 @@ export function toDisplayNotification(
   const payload: NotificationPayload = isNotificationPayload(n.payload)
     ? n.payload
     : {};
-  const { requiresAction, actionType } = getNotificationAction(type);
+  const { requiresAction, actionType } = getNotificationAction(
+    type,
+    n.pantryItemId,
+  );
 
   return {
     id: n.id,

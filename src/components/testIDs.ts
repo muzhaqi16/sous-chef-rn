@@ -8,12 +8,15 @@ export const kitTestIDs = {
   headerCloseButton: 'header-close-button',
   /** A standard header's title when it opens something. */
   headerTitleButton: 'header-title-button',
+  /** Opens the actions a bar has no room for; each keeps its own testID. */
+  headerMoreButton: 'header-more-button',
   offlineBanner: 'offline-banner',
   spotlightTarget: 'spotlight-target',
   spotlightSkipButton: 'spotlight-skip-button',
   splashScreen: 'splash-screen',
   tabBar: 'tab-bar',
   tabBarAddButton: 'tab-bar-add-button',
+  tabBarAddMenuScrim: 'tab-bar-add-menu-scrim',
   toastMessage: 'toast-message',
   filterTabsPrefix: 'filter-tab',
   alertModal: 'alert-modal',

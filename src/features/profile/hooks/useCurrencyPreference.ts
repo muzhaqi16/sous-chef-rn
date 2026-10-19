@@ -13,10 +13,9 @@ export interface CurrencyOption {
 }
 
 /**
- * The account's currency: the option list, the current code, and the write.
- * It is the settings' own (`updateSettings { regional }`): the server
- * denominates an unnamed cost from it. The write is NOT `localFirst` — queued,
- * the money on screen would read in a currency the account does not hold.
+ * The settings' own currency (`updateSettings { regional }`), which the server
+ * denominates an unnamed cost from. The write is NOT `localFirst`: queued, the
+ * money on screen would read in a currency the account does not hold.
  */
 export function useCurrencyPreference() {
   const { t } = useTranslation();
@@ -64,10 +63,9 @@ export function useCurrencyPreference() {
   };
 
   /**
-   * Confirmed, because the change is not retroactive: costs already recorded
-   * keep their own currency, so a pantry can end up spanning two and the API
-   * withholds its value rather than summing across them. Said here, where the
-   * decision is made, rather than discovered later on a blank total.
+   * Confirmed, because the change is not retroactive: recorded costs keep their
+   * currency, so a pantry can span two and the API withholds its value rather
+   * than summing across them.
    */
   const selectCurrency = (code: string): void => {
     if (code === preferredCurrency) return;

@@ -70,10 +70,9 @@ interface ScreenBaseProps {
 }
 
 /**
- * `scroll`: `none` fixed, `scroll` a plain scroll view, `form` keyboard-aware,
- * `list` means THE CHILD IS THE SCROLLABLE — so `list` takes `refresh?: never`:
- * only a `createNativeWrapper` control takes RNGH's gesture, so it has to reach
- * the list, and a dropped `refresh` is otherwise silent.
+ * `list` means THE CHILD IS THE SCROLLABLE, so it takes `refresh?: never`: only
+ * a `createNativeWrapper` control takes RNGH's gesture, so the list must own
+ * it, and a dropped `refresh` is otherwise silent.
  */
 export type ScreenProps = ScreenBaseProps &
   (
@@ -89,11 +88,9 @@ export type ScreenProps = ScreenBaseProps &
   );
 
 /**
- * The one screen scaffold. It NEVER applies the top inset — the navigator's
- * `screenLayout` already does, and applying it twice is what pushed six profile
- * screens down by a status bar. The bottom inset is applied to every mode as
- * padding, so the `scroll` host turns off iOS's automatic inset, which would
- * reserve it a second time.
+ * NEVER applies the top inset: the navigator's `screenLayout` does. The bottom
+ * inset is padding in every mode, so the `scroll` host turns off iOS's automatic
+ * inset, which would reserve it twice.
  */
 export const Screen: React.FC<ScreenProps> = props => {
   const {

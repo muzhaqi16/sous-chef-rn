@@ -37,6 +37,7 @@ import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type RouteParams = {
   homeId: string;
@@ -112,16 +113,9 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     alertService.alert(
       t('homeDetail.transferOwnershipTitle'),
       t('homeDetail.transferOwnershipMessage', { name }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('homeDetail.transferOwnershipConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            void transferOwnership(memberUserId);
-          },
-        },
-      ],
+      destructiveConfirm(t('homeDetail.transferOwnershipConfirm'), () => {
+        void transferOwnership(memberUserId);
+      }),
     );
   };
 
@@ -179,12 +173,9 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     }
   };
 
-  // Gate on the absence of the home, not on `loading`. Under
-  // `cache-and-network` Apollo reports `loading: true` for the whole network
-  // leg on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and
-  // useQuery builds a new one each time — so `loading ||` here threw the cached
-  // home away and showed a spinner on every visit, for as long as the request
-  // took.
+  // Gate on the absence of the home, never `loading`: Apollo reports `loading:
+  // true` on EVERY mount (useQuery builds a new ObservableQuery each time), so
+  // gating on it shows a spinner over the cached home.
   if (!home) {
     const getMessage = () => {
       if (loading) return t('labels.loading');

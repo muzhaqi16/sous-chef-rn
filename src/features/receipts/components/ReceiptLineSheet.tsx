@@ -16,6 +16,7 @@ import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
+import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
@@ -26,6 +27,7 @@ import {
   receiptLineDefaults,
   receiptLineSchema,
   toLineChoice,
+  type ReceiptLineFormContext,
   type ReceiptLineFormValues,
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
@@ -37,6 +39,7 @@ interface ReceiptLineFormProps {
   candidates: readonly ReceiptCandidate[];
   /** The shopping list line the product and unit being picked would tick off. */
   listItemNameFor: (key: ListMatchKey) => string | undefined;
+  /** A product picked before it is saved, so its list line is asked for. */
   onPickItem: (itemId: string) => void;
   onClose: () => void;
   onSave: (choice: ReceiptLineChoice) => void;
@@ -56,8 +59,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
-  const { control, handleSubmit, setValue } = useForm<ReceiptLineFormValues>({
+  const { resolveUnitId } = useResolveUnit();
+  const { control, handleSubmit, setValue, setError } = useForm<
+    ReceiptLineFormValues,
+    ReceiptLineFormContext
+  >({
     resolver: yupResolver(receiptLineSchema),
+    context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice),
   });
 
@@ -71,8 +79,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       ? itemName
       : t('labels.nameWithDetail', { name: itemName, detail });
 
-  const save = handleSubmit(values => {
-    onSave(toLineChoice(values));
+  // A typed unit is resolved on the device first: the check-in takes a unit's
+  // id, never its name.
+  const save = handleSubmit(async values => {
+    const typedUnit = values.unitValue.trim();
+    const resolvedUnitId = await resolveUnitId(values.unitId, typedUnit);
+    if (typedUnit && !resolvedUnitId) {
+      setError('unitValue', {
+        message: t('itemForm.unknownUnit', { unit: typedUnit }),
+      });
+      return;
+    }
+    onSave(toLineChoice({ ...values, unitId: resolvedUnitId }));
     onClose();
   }, logValidationErrors);
 
@@ -179,6 +197,21 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           />
         )}
 
+        <Controller
+          control={control}
+          name="notStocked"
+          render={({ field }) => (
+            <SettingSwitch
+              title={t('receipts.review.notStockedTitle')}
+              description={t('receipts.review.notStockedBody')}
+              value={field.value}
+              onValueChange={field.onChange}
+              testID={receiptsTestIDs.lineNotStocked}
+              containerStyle={styles.listToggle}
+            />
+          )}
+        />
+
         <View style={styles.amountRow}>
           <View style={styles.quantityField}>
             <Controller
@@ -199,14 +232,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             <Controller
               control={control}
               name="unitValue"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <UnitAutocompleteField
                   variant="inline"
                   label={t('labels.unit')}
                   value={field.value}
-                  onChangeText={field.onChange}
+                  onChangeText={text => {
+                    field.onChange(text);
+                    setValue('unitId', null);
+                  }}
                   onUnitSelected={id => setValue('unitId', id)}
                   placeholder={t('labels.pcsKgEtc')}
+                  error={fieldState.error?.message}
                 />
               )}
             />
@@ -240,55 +277,29 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   );
 };
 
-interface ReceiptLineSheetProps {
+interface ReceiptLineSheetProps extends Omit<ReceiptLineFormProps, 'line'> {
   visible: boolean;
   /** The line being edited, kept after closing so the sheet animates out full. */
   line: ReceiptReviewLine | null;
-  choice: ReceiptLineChoice | undefined;
-  candidates: readonly ReceiptCandidate[];
-  listItemNameFor: (key: ListMatchKey) => string | undefined;
-  /** A product picked before it is saved, so its list line is asked for. */
-  onPickItem: (itemId: string) => void;
   /** Changes on every opening, so each one starts from the saved choice. */
   opening: number;
-  onClose: () => void;
-  onSave: (choice: ReceiptLineChoice) => void;
-  onRemove: () => void;
 }
 
 /** Picks the product a receipt line is, with its amount and price. */
 export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
   visible,
   line,
-  choice,
-  candidates,
-  listItemNameFor,
-  onPickItem,
   opening,
-  onClose,
-  onSave,
-  onRemove,
+  ...form
 }) => (
   <Sheet
     mode="form"
     visible={visible ? !!line : false}
-    onDismiss={onClose}
+    onDismiss={form.onClose}
     snapPoints={['85%']}
     contentContainerStyle={styles.content}
   >
-    {!!line && (
-      <ReceiptLineForm
-        key={opening}
-        line={line}
-        choice={choice}
-        candidates={candidates}
-        listItemNameFor={listItemNameFor}
-        onPickItem={onPickItem}
-        onClose={onClose}
-        onSave={onSave}
-        onRemove={onRemove}
-      />
-    )}
+    {!!line && <ReceiptLineForm key={opening} line={line} {...form} />}
   </Sheet>
 );
 
@@ -298,7 +309,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   printed: {
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
     padding: theme.spacing.md,
     gap: theme.spacing.xs,

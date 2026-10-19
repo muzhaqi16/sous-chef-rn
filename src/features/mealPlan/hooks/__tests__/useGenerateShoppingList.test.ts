@@ -1,16 +1,5 @@
 'use no memo';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
 // Captured, never invoked automatically: a rendered hook starts focused.
 type FocusCallback = () => (() => void) | void;
 let focusCallback: FocusCallback | undefined;

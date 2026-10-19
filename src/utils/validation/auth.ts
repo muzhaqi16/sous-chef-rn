@@ -18,8 +18,6 @@ export const loginSchema = object({
   password: passwordRule,
 });
 
-export const getLoginValidationSchema = () => loginSchema;
-
 // ----------------------------------------------------------------------------
 
 // 2) sign-up (email + password + confirmPassword)
@@ -32,8 +30,6 @@ export const signUpSchema = object({
     .required(msg('passwordConfirmRequired')),
 });
 
-export const getSignUpValidationSchema = () => signUpSchema;
-
 // ----------------------------------------------------------------------------
 
 // 3) forgot-password (email only)
@@ -41,18 +37,15 @@ export const forgotPasswordSchema = object({
   email: emailRule,
 });
 
-export const getForgotPasswordValidationSchema = () => forgotPasswordSchema;
-
 // ----------------------------------------------------------------------------
 
 // 4) email-verification (6-digit code)
 
-export const getEmailVerificationValidationSchema = () =>
-  object({
-    code: string()
-      .required(msg('codeRequired'))
-      .matches(/^\d{6}$/, msg('codeMustBeSixDigits')),
-  });
+export const emailVerificationSchema = object({
+  code: string()
+    .required(msg('codeRequired'))
+    .matches(/^\d{6}$/, msg('codeMustBeSixDigits')),
+});
 
 // ----------------------------------------------------------------------------
 
@@ -63,8 +56,6 @@ export const resetPasswordSchema = object({
     .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
     .required(msg('newPasswordConfirmRequired')),
 });
-
-export const getResetPasswordValidationSchema = () => resetPasswordSchema;
 
 // ----------------------------------------------------------------------------
 

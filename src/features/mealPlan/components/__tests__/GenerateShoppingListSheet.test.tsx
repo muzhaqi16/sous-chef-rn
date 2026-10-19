@@ -153,10 +153,6 @@ jest.mock('#components/atoms/FormInput', () => ({
   },
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-
-jest.mock('#/apollo/links/refreshToken');
-
 const defaultProps = {
   visible: true,
   onClose: jest.fn(),

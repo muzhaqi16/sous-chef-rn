@@ -3,9 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import { isRecord } from '#/utils/isRecord';
-import type { ParsedReceipt } from '../utils/parsedReceipt';
-import type { ReceiptTotalsGap } from '../utils/receiptTotalsGap';
+import { generateEntityId } from '#/utils/generateEntityId';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import type { ParsedReceipt, ReceiptTotalsGap } from '../utils/parsedReceipt';
 
 /** What one receipt line becomes in the pantry. */
 export interface ReceiptLineChoice {
@@ -20,6 +20,8 @@ export interface ReceiptLineChoice {
   price: number | null;
   /** Added on its own, leaving the shopping list line it matches open. */
   offList?: boolean;
+  /** Recorded as bought without adding it to the pantry. */
+  notStocked?: boolean;
 }
 
 /**
@@ -53,9 +55,41 @@ export type ServerParseOutcome =
   | {
       parsed: ParsedReceipt;
       purchasedOn?: string;
+      purchaseTime?: string;
       totalsGap?: ReceiptTotalsGap;
       printedStore?: PrintedStore;
     };
+
+/** One line's outcome, as a check-in answers it. */
+export interface CheckInLineOutcome {
+  index: number;
+  success: boolean;
+  failure?: { code: string } | null;
+}
+
+const ERROR_CODES: ReadonlySet<string> = new Set(Object.values(ErrorCode));
+const isErrorCode = (code: string): code is ErrorCode => ERROR_CODES.has(code);
+
+/** A line's ids on the check-in, minted the first time it is confirmed. */
+export interface CheckInLineIds {
+  purchaseId: string;
+  pantryItemId: string;
+  /** The catalog item a typed product name creates, or is matched under. */
+  newItemId: string;
+}
+
+/**
+ * The receipt as sent to the API. Its ids are minted once and kept across
+ * retries, restarts and the offline queue, so the API records nothing twice.
+ */
+export interface ReceiptCheckIn {
+  /** One per check-in sent: the API takes at most 100 lines in one. */
+  ids: string[];
+  lines: Partial<Record<number, CheckInLineIds>>;
+  state: 'idle' | 'sending' | 'queued';
+  /** The review closed while it was sending or queued: cleared once it lands. */
+  closed?: boolean;
+}
 
 export interface ReceiptDraft {
   /**
@@ -69,19 +103,28 @@ export interface ReceiptDraft {
    * text is sent instead. The server deletes the photos.
    */
   photoKeys?: string[];
+  /** Every photo had the personal details the phone read painted over. */
+  photosMasked?: boolean;
   scannedAt: string;
   /**
    * The day of the shop (YYYY-MM-DD): read from the receipt before redaction
    * cut it, or set by the user in the review.
    */
   purchasedOn?: string;
+  /**
+   * The time of the sale printed with that day (HH:MM, the store's clock). It
+   * stays when the user changes the day.
+   */
+  purchaseTime?: string;
   /** The store the user picked in the review, over the one the API resolved. */
   store?: { id: string; name: string };
-  /** Structured on the phone, when its model could, else by the server. */
+  /** Read on the phone, by the rules or its model, else by the server. */
   parsed?: ParsedReceipt;
+  /** The server parse that read it: the check-in completes its store from it. */
+  parseId?: string;
   /** Which of the two structured `parsed`. */
   parsedBy?: 'device' | 'server';
-  /** The server found its reading does not add up to the receipt. */
+  /** Whoever read it found its lines do not add up to the receipt. */
   totalsGap?: ReceiptTotalsGap;
   printedStore?: PrintedStore;
   serverParse?: ServerReceiptParse;
@@ -92,33 +135,38 @@ export interface ReceiptDraft {
   choices?: Partial<Record<number, ReceiptLineChoice | null>>;
   /** Lines already in the pantry, so a retry sends only what failed. */
   added?: number[];
+  checkIn?: ReceiptCheckIn;
+  /** Why each line the API refused failed, by line index. */
+  failed?: Partial<Record<number, ErrorCode>>;
 }
 
 interface ReceiptDraftState {
   draft: ReceiptDraft | null;
   saveDraft: (draft: ReceiptDraft) => void;
-  /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
-  /** The day of the shop, as the user corrected it (YYYY-MM-DD). */
+  /** Keeps every id already minted. */
+  ensureCheckInIds: (indexes: readonly number[], sends: number) => void;
+  setCheckInState: (state: ReceiptCheckIn['state']) => void;
+  /** Ignored for a check-in the draft does not hold. */
+  settleCheckIn: (
+    checkInId: string,
+    results: readonly CheckInLineOutcome[],
+  ) => void;
+  /** For an id another user holds: a resend is known by its purchase ids. */
+  remintCheckInId: (id: string) => string;
+  /**
+   * Keeps a receipt still sending or queued until it lands, and one with a
+   * refused line for its retry; else the draft goes.
+   */
+  closeReceipt: () => void;
   setPurchasedOn: (day: string) => void;
-  /** The store, as the user corrected it. */
   chooseStore: (store: { id: string; name: string }) => void;
-  /**
-   * The upload keys of the photos of the draft scanned at `scannedAt`, before
-   * it is asked for. An upload that outlives its draft records nothing.
-   */
-  recordPhotoKeys: (scannedAt: string, keys: string[]) => void;
-  /**
-   * Records that server parse `id` was asked for, of the photos or the text, if
-   * nothing read the draft yet, or asked again after the daily allowance
-   * turned it away.
-   */
+  /** Ignored once its draft is gone, read or asked: an upload outlives it. */
+  recordPhotoKeys: (scannedAt: string, keys: string[], masked: boolean) => void;
+  /** Ignored once the draft is read or asked, unless a limit turned it away. */
   askServerParse: (id: string, via: ServerReceiptParse['via']) => void;
-  /**
-   * Records what became of server parse `id`, or when the daily allowance lets
-   * it be asked again. Ignored once the draft has moved on.
-   */
+  /** Ignored once the draft has moved on from parse `id`. */
   settleServerParse: (
     id: string,
     outcome: ServerParseOutcome | { retryAt: string },
@@ -128,119 +176,206 @@ interface ReceiptDraftState {
 
 const PERSIST_KEY = 'sous-chef-receipt-draft';
 
-// v1 parses carry no `via`: a draft with photo keys sent them.
-const migrateDraft = (persisted: unknown, version: number): unknown => {
-  if (version >= 2 || !isRecord(persisted) || !isRecord(persisted.draft)) {
-    return persisted;
+const withCheckInIds = (
+  checkIn: ReceiptCheckIn | undefined,
+  indexes: readonly number[],
+  sends: number,
+): ReceiptCheckIn => {
+  const ids = [...(checkIn?.ids ?? [])];
+  while (ids.length < sends) ids.push(generateEntityId());
+  const lines = { ...checkIn?.lines };
+  for (const index of indexes) {
+    lines[index] ??= {
+      purchaseId: generateEntityId(),
+      pantryItemId: generateEntityId(),
+      newItemId: generateEntityId(),
+    };
   }
-  const { draft } = persisted;
-  if (!isRecord(draft.serverParse)) return persisted;
-  const via = Array.isArray(draft.photoKeys) ? 'photos' : 'text';
-  return {
-    ...persisted,
-    draft: { ...draft, serverParse: { ...draft.serverParse, via } },
-  };
+  return { ids, lines, state: checkIn?.state ?? 'idle' };
 };
+
+const withoutIndexes = <Value>(
+  byIndex: Partial<Record<number, Value>> | undefined,
+  indexes: readonly number[],
+) =>
+  Object.fromEntries(
+    Object.entries(byIndex ?? {}).filter(
+      ([index]) => !indexes.includes(Number(index)),
+    ),
+  );
 
 /** The one receipt waiting to be matched; persisted so a scan made offline survives a restart. */
 export const useReceiptDraftStore = create<ReceiptDraftState>()(
   persist(
-    set => ({
-      draft: null,
-      saveDraft: draft => set({ draft }),
-      chooseLine: (index, choice) =>
-        set(({ draft }) =>
-          draft
-            ? {
-                draft: {
-                  ...draft,
-                  choices: { ...draft.choices, [index]: choice },
-                },
-              }
-            : {},
-        ),
-      markAdded: indexes =>
-        set(({ draft }) =>
-          draft
-            ? {
-                draft: {
-                  ...draft,
-                  added: [...new Set([...(draft.added ?? []), ...indexes])],
-                },
-              }
-            : {},
-        ),
-      setPurchasedOn: day =>
-        set(({ draft }) =>
-          draft ? { draft: { ...draft, purchasedOn: day } } : {},
-        ),
-      chooseStore: store =>
-        set(({ draft }) => (draft ? { draft: { ...draft, store } } : {})),
-      recordPhotoKeys: (scannedAt, keys) =>
-        set(({ draft }) =>
-          draft?.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
-            ? { draft: { ...draft, photoKeys: keys } }
-            : {},
-        ),
-      askServerParse: (id, via) =>
-        set(({ draft }) =>
-          draft &&
-          !draft.parsed &&
-          (!draft.serverParse || draft.serverParse.state === 'limited')
-            ? {
-                draft: {
-                  ...draft,
-                  serverParse: { id, via, state: 'pending' },
-                },
-              }
-            : {},
-        ),
-      settleServerParse: (id, outcome) =>
+    set => {
+      // Merges what `change` returns into the draft; null keeps it as it is.
+      const patchDraft = (
+        change: (draft: ReceiptDraft) => Partial<ReceiptDraft> | null,
+      ) =>
         set(({ draft }) => {
-          if (draft?.serverParse?.id !== id) return {};
-          const { via } = draft.serverParse;
-          if (typeof outcome === 'object' && 'parsed' in outcome) {
-            const { serverParse: _asked, ...rest } = draft;
-            // The day read on the phone, before redaction, stands.
-            const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
+          const fields = draft ? change(draft) : null;
+          return draft && fields ? { draft: { ...draft, ...fields } } : {};
+        });
+      return {
+        draft: null,
+        saveDraft: draft => set({ draft }),
+        chooseLine: (index, choice) =>
+          patchDraft(({ choices }) => ({
+            choices: { ...choices, [index]: choice },
+          })),
+        markAdded: indexes =>
+          patchDraft(({ added, failed }) => ({
+            added: [...new Set([...(added ?? []), ...indexes])],
+            failed: withoutIndexes(failed, indexes),
+          })),
+        ensureCheckInIds: (indexes, sends) =>
+          patchDraft(({ checkIn }) => ({
+            checkIn: withCheckInIds(checkIn, indexes, sends),
+          })),
+        setCheckInState: state =>
+          patchDraft(({ checkIn }) =>
+            checkIn ? { checkIn: { ...checkIn, state } } : null,
+          ),
+        settleCheckIn: (checkInId, results) =>
+          set(({ draft }) => {
+            if (!draft?.checkIn?.ids.includes(checkInId)) return {};
+            const refused = new Set(
+              results
+                .filter(result => !result.success)
+                .map(result => result.index),
+            );
+            // A line counts as added once sent; one refused goes back out.
+            const added = [
+              ...new Set([
+                ...(draft.added ?? []),
+                ...results
+                  .filter(result => result.success)
+                  .map(result => result.index),
+              ]),
+            ].filter(index => !refused.has(index));
+            const failed: Partial<Record<number, ErrorCode>> = {};
+            for (const { index, success, failure } of results) {
+              if (!success && failure && isErrorCode(failure.code)) {
+                failed[index] = failure.code;
+              }
+            }
+            const stillFailed = {
+              ...withoutIndexes(draft.failed, added),
+              ...failed,
+            };
+            if (draft.checkIn.closed && Object.keys(stillFailed).length === 0) {
+              return { draft: null };
+            }
             return {
               draft: {
-                ...rest,
-                parsed: outcome.parsed,
-                parsedBy: 'server',
-                ...(purchasedOn ? { purchasedOn } : {}),
-                ...(outcome.totalsGap ? { totalsGap: outcome.totalsGap } : {}),
-                ...(outcome.printedStore
-                  ? { printedStore: outcome.printedStore }
-                  : {}),
+                ...draft,
+                added,
+                failed: stillFailed,
+                checkIn: { ...draft.checkIn, state: 'idle' },
               },
             };
-          }
-          // A photo parse that read nothing spent its photos, a limit's refusal
-          // too (the API counts photo parses against a smaller allowance of
-          // their own): a receipt with text is read from it at once.
-          if (via === 'photos' && draft.pages.length > 0) {
-            const {
-              photoKeys: _spent,
-              serverParse: _photoParse,
-              ...text
-            } = draft;
-            return { draft: text };
-          }
-          const serverParse: ServerReceiptParse =
-            typeof outcome === 'string'
-              ? { id, via, state: outcome }
-              : { id, via, state: 'limited', retryAt: outcome.retryAt };
-          return { draft: { ...draft, serverParse } };
-        }),
-      clearDraft: () => set({ draft: null }),
-    }),
+          }),
+        closeReceipt: () =>
+          set(({ draft }) => {
+            if (!draft) return {};
+            if (draft.checkIn && draft.checkIn.state !== 'idle') {
+              return {
+                draft: {
+                  ...draft,
+                  checkIn: { ...draft.checkIn, closed: true },
+                },
+              };
+            }
+            if (Object.keys(draft.failed ?? {}).length > 0) return {};
+            return { draft: null };
+          }),
+        remintCheckInId: id => {
+          const reminted = generateEntityId();
+          patchDraft(({ checkIn }) =>
+            checkIn
+              ? {
+                  checkIn: {
+                    ...checkIn,
+                    ids: checkIn.ids.map(held =>
+                      held === id ? reminted : held,
+                    ),
+                  },
+                }
+              : null,
+          );
+          return reminted;
+        },
+        setPurchasedOn: day => patchDraft(() => ({ purchasedOn: day })),
+        chooseStore: store => patchDraft(() => ({ store })),
+        recordPhotoKeys: (scannedAt, keys, masked) =>
+          patchDraft(draft =>
+            draft.scannedAt === scannedAt && !draft.parsed && !draft.serverParse
+              ? { photoKeys: keys, ...(masked ? { photosMasked: true } : {}) }
+              : null,
+          ),
+        askServerParse: (id, via) =>
+          patchDraft(({ parsed, serverParse }) =>
+            !parsed && (!serverParse || serverParse.state === 'limited')
+              ? { serverParse: { id, via, state: 'pending' } }
+              : null,
+          ),
+        settleServerParse: (id, outcome) =>
+          set(({ draft }) => {
+            if (draft?.serverParse?.id !== id) return {};
+            const { via } = draft.serverParse;
+            if (typeof outcome === 'object' && 'parsed' in outcome) {
+              const { serverParse: _asked, ...rest } = draft;
+              // The day read on the phone, before redaction, stands; a time
+              // joins it only from a reading of the same day.
+              const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
+              const purchaseTime =
+                draft.purchaseTime ??
+                (purchasedOn === outcome.purchasedOn
+                  ? outcome.purchaseTime
+                  : undefined);
+              return {
+                draft: {
+                  ...rest,
+                  parsed: outcome.parsed,
+                  parsedBy: 'server',
+                  parseId: id,
+                  ...(purchasedOn ? { purchasedOn } : {}),
+                  ...(purchaseTime ? { purchaseTime } : {}),
+                  ...(outcome.totalsGap
+                    ? { totalsGap: outcome.totalsGap }
+                    : {}),
+                  ...(outcome.printedStore
+                    ? { printedStore: outcome.printedStore }
+                    : {}),
+                },
+              };
+            }
+            // A photo parse that read nothing spent its photos, as does a limit's
+            // refusal (photo parses have a smaller allowance of their own): a
+            // receipt with text is read from it at once.
+            if (via === 'photos' && draft.pages.length > 0) {
+              const {
+                photoKeys: _spent,
+                photosMasked: _masked,
+                serverParse: _photoParse,
+                ...text
+              } = draft;
+              return { draft: text };
+            }
+            const serverParse: ServerReceiptParse =
+              typeof outcome === 'string'
+                ? { id, via, state: outcome }
+                : { id, via, state: 'limited', retryAt: outcome.retryAt };
+            return { draft: { ...draft, serverParse } };
+          }),
+        clearDraft: () => set({ draft: null }),
+      };
+    },
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
+      version: 3,
       partialize: state => ({ draft: state.draft }),
-      migrate: migrateDraft,
     },
   ),
 );

@@ -10,7 +10,7 @@ import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationS
 import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { NameInput } from '#components/molecules/NameInput';
-import { getSignUpValidationSchema } from '#/utils/validation/auth';
+import { signUpSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
@@ -31,7 +31,7 @@ export const SignUpScreen = (): React.JSX.Element => {
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
 
   const form = useForm<SignUpValues>({
-    resolver: yupResolver(getSignUpValidationSchema()),
+    resolver: yupResolver(signUpSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -57,10 +57,9 @@ export const SignUpScreen = (): React.JSX.Element => {
     }
   };
 
-  // The activation mail carries BOTH a 6-digit code and a link, and
-  // `verifyEmail` is public — it takes either one and needs no session. So the
-  // confirmation offers the code straight away rather than sending the user out
-  // to their mail client and back; the link still works untouched.
+  // The activation mail carries BOTH a code and a link, and the public
+  // `verifyEmail` takes either without a session, so the confirmation offers
+  // the code at once; the link still works.
   if (sentToEmail !== null) {
     return <CodeVerificationScreen context="signup" email={sentToEmail} />;
   }

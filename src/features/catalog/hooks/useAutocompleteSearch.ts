@@ -127,10 +127,9 @@ export function useAutocompleteSearch<TItem>(
   // is a progressive refinement of (or identical to) the last fired query.
   const apiResultsAreRelevant = lastFiredTerm !== '' && term.startsWith(fired);
 
-  // Whether the results in hand may STAND IN until the query for what is being
-  // typed lands. Forward typing narrows the last query and a backspace widens
-  // it, so either prefix direction still describes the same word; only a change
-  // of direction ("app" → "ba") makes them a different search.
+  // Whether the results in hand may STAND IN until the current term's query
+  // lands: typing on narrows and a backspace widens, so either prefix direction
+  // is the same word; only "app" → "ba" makes it a different search.
   const staleResultsUsable =
     lastFiredTerm !== '' && (term.startsWith(fired) || fired.startsWith(term));
 

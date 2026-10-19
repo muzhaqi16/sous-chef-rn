@@ -6,8 +6,6 @@ import type { RestrictionSectionProps } from '#features/profile/components/Restr
 import type { MultiSelectChipSheetProps } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock(
   '#features/profile/components/RestrictionSection/RestrictionSection',
   () => {

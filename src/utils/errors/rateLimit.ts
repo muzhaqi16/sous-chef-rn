@@ -2,10 +2,8 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 import { refusalEnvelopeOf } from './graphqlErrors';
 
-// Exact codes, never a `RATE_` prefix: OPERATION_RATE_LIMITED does not carry it,
-// so a prefix test drops every per-operation limit. Only two are declared in the
-// published enum (which admits a code once something emits it); the rest are
-// registry-only and stay literals.
+// Exact codes, never a `RATE_` prefix, which OPERATION_RATE_LIMITED lacks.
+// Only two are in the published enum; the rest are registry-only literals.
 const RATE_LIMIT_CODES: string[] = [
   'RATE_LIMITED',
   // The global budget, refused before execution: its code and `retryAfter`

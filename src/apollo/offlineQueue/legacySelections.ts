@@ -10,10 +10,9 @@ import {
 import { isOwnKey } from '#/utils/isOwnKey';
 
 /**
- * Fields the API removed that a write queued by an earlier build still
- * selects, by the type that dropped them: another type may still offer the
- * name. One unknown field fails the whole document, and the write with it, so
- * the queue drops them when it loads.
+ * Removed fields an earlier build's queued write still selects, by the type
+ * that dropped them (another type may still offer the name). One unknown field
+ * fails the whole document, so the queue drops them on load.
  */
 const REMOVED_FIELDS = {
   // The previous build's readers fragments selected these on every write that
@@ -39,11 +38,9 @@ const RESULTS_LINE = {
 };
 
 /**
- * The type a FIELD is read as, where one of the types above is reached through
- * a field rather than a type condition: `source { isAutoAdded }` sits under a
- * shopping line, and a payload names its entity by a field. Keyed by the field
- * alone: no other type in a queued mutation's selection uses these names for
- * another type.
+ * The type a FIELD reads as, where a type above is reached by field, not type
+ * condition (`source { isAutoAdded }` under a shopping line). Keyed by field
+ * alone: no queued selection uses these names for another type.
  */
 const FIELD_TYPE = {
   source: 'ShoppingListItemSource',

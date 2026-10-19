@@ -15,9 +15,6 @@ import {
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const member: HomeMemberCard_MemberFragment = {
   __typename: 'Membership',
   id: 'm-2',

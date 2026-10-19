@@ -1,9 +1,5 @@
 'use no memo';
 
-// Mock tokenScheduler and refreshToken to break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 jest.mock('#/services/performance/types', () => ({
   DEFAULT_PERFORMANCE_CONFIG: {
     enabled: true,

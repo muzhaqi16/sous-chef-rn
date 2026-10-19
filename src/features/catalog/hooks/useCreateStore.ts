@@ -1,6 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -25,18 +25,10 @@ export interface CreatedStore {
   name: string;
 }
 
-function forgetLocalStore(cache: ApolloCache, id: string): void {
-  const cacheId = cache.identify({ __typename: 'Store', id });
-  if (!cacheId) return;
-  cache.evict({ id: cacheId });
-  cache.gc();
-}
-
 /**
- * Adds a store local-first: the id is minted here and the store written to
- * the cache before the create fires, so a pick names it at once and a queued
- * create replays under it. A shop already on file merges, and the minted id
- * goes on naming it wherever a store id is taken.
+ * Adds a store local-first: its id is minted and the store cached before the
+ * create fires, so a pick names it at once and a queued create replays under it.
+ * A shop on file merges; the minted id still works wherever a store id goes.
  */
 export function useCreateStore() {
   const { t } = useTranslation();
@@ -68,7 +60,7 @@ export function useCreateStore() {
       {
         document: CreateStoreDocument,
         fallback: t('errors.generic'),
-        onFailed: () => forgetLocalStore(client.cache, id),
+        onFailed: () => safeEvict(client.cache, 'Store', id),
       },
     );
     if (settled.status === 'failed') return null;

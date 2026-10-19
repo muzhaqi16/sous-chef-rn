@@ -40,6 +40,8 @@ import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -50,6 +52,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -123,6 +127,7 @@ const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
+  const captureSources = useCaptureSources();
   const user = useUser();
   const { forkRecipe, forking } = useForkRecipe();
   const { setSubmitted, publishing } = usePublishRecipe();
@@ -171,6 +176,7 @@ const RecipeDetailScreen: React.FC = () => {
     lastCookedAt,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
+  const loadFailure = useOfflineAwareError(error ?? undefined, !!displayData);
 
   // Scroll component for FlashList instances rendered inside bottom sheets.
 
@@ -288,8 +294,23 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  // Pinned action chips for the collapsing hero bar.
+  // Favourite and meal plan lead: they stay in the bar when the rest go behind
+  // its "more".
   const headerActions: HeaderAction[] = [
+    ...(showHeartIcon
+      ? [
+          {
+            icon: isInFavorites ? 'heart' : 'heart-outline',
+            accessibilityLabel: isInFavorites
+              ? t('recipes.unfavoriteA11y')
+              : t('recipes.favoriteA11y'),
+            onPress: handleHeartPress,
+            tone: 'favorite',
+            loading: saving || updatingFolderTags,
+            testID: recipesTestIDs.heartButton,
+          } satisfies HeaderAction,
+        ]
+      : []),
     ...(recipeId
       ? [
           {
@@ -348,20 +369,6 @@ const RecipeDetailScreen: React.FC = () => {
           } satisfies HeaderAction,
         ]
       : []),
-    ...(showHeartIcon
-      ? [
-          {
-            icon: isInFavorites ? 'heart' : 'heart-outline',
-            accessibilityLabel: isInFavorites
-              ? t('recipes.unfavoriteA11y')
-              : t('recipes.favoriteA11y'),
-            onPress: handleHeartPress,
-            tone: 'favorite',
-            loading: saving || updatingFolderTags,
-            testID: recipesTestIDs.heartButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
     ...(reportTarget
       ? [
           {
@@ -375,10 +382,8 @@ const RecipeDetailScreen: React.FC = () => {
       : []),
   ];
 
-  // Only block on the full-screen loader during a true cold load. On a
-  // cache-and-network refetch `loading` is true while `displayData` is already
-  // materialized from cache — showing the loader there wipes the rendered
-  // recipe and pops it back, which is the most-felt skeleton↔content flicker.
+  // The full-screen loader only on a cold load: on a refetch `loading` is true
+  // while `displayData` is already drawn from cache.
   if (loading && !displayData) {
     // Cold load renders inside the template shell so the pinned back chip
     // stays available during a slow fetch, matching the loaded state.
@@ -412,12 +417,16 @@ const RecipeDetailScreen: React.FC = () => {
         onRefresh={handleRefresh}
       >
         <View style={styles.centerContainer}>
-          <EmptyState
-            icon="alert-circle-outline"
-            title={errorMessage}
-            description={t('errors.codes.genericRetry')}
-            action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
-          />
+          {loadFailure.offline ? (
+            <DataStateView state="offline" onRetry={handleRefresh} />
+          ) : (
+            <EmptyState
+              icon="alert-circle-outline"
+              title={errorMessage}
+              description={t('errors.codes.genericRetry')}
+              action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
+            />
+          )}
         </View>
       </CollapsingHeroDetail>
     );
@@ -598,6 +607,14 @@ const RecipeDetailScreen: React.FC = () => {
             </Text>
           </View>
         )}
+
+        {recipeId && captureSources.any ? (
+          <CaptureReviewBanner
+            recipeId={recipeId}
+            ingredients={displayData.ingredients}
+            onReview={handleEditRecipe}
+          />
+        ) : null}
 
         {/* Ingredients */}
         {displayData.ingredients.length > 0 && (

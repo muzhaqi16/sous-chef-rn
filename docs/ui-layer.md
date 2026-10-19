@@ -46,6 +46,13 @@ optional:
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
   so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
   same distance apart in both; the same test pins all of it.
+- **Three trailing slots.** Past three actions, `Header` and
+  `CollapsingHeroDetail` keep the first two and put the rest behind "more" (an
+  `ActionTray` of `ActionMenuRow`s, `src/components/organisms/HeaderActionMenu.tsx`),
+  so the offline pill and a crowded bar never squeeze the title. A text action
+  and one a spotlight measures always stay; callers lead with the most used. A
+  menu action runs once the tray has closed, so a sheet it opens never stacks on
+  one animating out.
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset
@@ -285,15 +292,13 @@ they read it.
 - **Pick the `ScrollView` by what is inside it.** RNGH's `ScrollView` is only for
   a container with RNGH gesture components inside it; plain forms and settings
   screens use RN's.
-- **A swipeable row needs an RNGH scrollable host.** RNGH cancels only v1/v2
-  handlers when a native scrollable grabs the touch
-  (`cancelAllLegacyHandlers`), and `ReanimatedSwipeable` runs on the v3
-  detectors. Over a plain RN `ScrollView` the row's pan survives the takeover,
-  accumulates horizontal drift for the whole drag, and opens rows mid-scroll. No
-  `dragOffset` value fixes this, because the drift is unbounded. An RNGH
-  scrollable restores arbitration through the orchestrator. The source chain,
-  the on-device A/B and the `dragOffset` sign constraint are in
-  [RNGH v3 handlers survive a native scroll takeover](verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover).
+- **A swipeable row sits in an RNGH scrollable host.** RNGH cancels a row's
+  pending v3 gesture when a native scrollable takes the touch, so a drifting
+  scroll no longer opens rows and a fling-stopping tap no longer presses one,
+  over either host. The RNGH host stays because RNGH's refresh control needs it
+  and the measurement covers one list outside a pager. The A/B against 3.3.0 and
+  the `dragOffset` sign constraint are in
+  [A native scroll takeover cancels a pending RNGH v3 gesture](verified-library-behaviour.md#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture).
 - **Every FlashList must decide its scroll host.**
   `sous-chef/flashlist-declares-scroll-component` makes every FlashList
   declare a `renderScrollComponent` — RNGH's, or gorhom's
@@ -601,3 +606,23 @@ tab's query are explained in [`architecture.md`](architecture.md) § Navigation:
 - why `Home` needs `'none'` for deep pushes;
 - the background work `'none'` keeps alive;
 - when to re-measure.
+
+### The tab bar's `+`
+
+A tab gives its `+` its add actions with `useTabBarAddMenu(actions)`. With two
+or more the `+` opens `AddMenu` (`src/app/FloatingTabBar/`): labelled entries
+above the `+`, which turns into the close control. One action runs on press;
+one that cannot run dims the `+`, and the press shows its reason.
+
+- **Per tab, not per focus.** A menu is keyed by the tab the hook finds at
+  focus: the focused route of the nearest tab navigator. It is removed on
+  unmount, and blur only closes it. The tab bar's active tab can lag a lazily
+  mounted tab's first focus, so the menu never reads it.
+- **Its own scrim.** `GlobalBackdrop` renders after the whole navigation tree,
+  so a claim would paint over the `+`. The menu draws its own scrim at the
+  bar's layer, ordered bar → scrim → entries → `+`, and handles Android back
+  itself.
+- **Disabled, never hidden.** An action that cannot run now carries a
+  `disabledReason`, shown under its label.
+- **Handlers are read at press.** A re-render with new closures registers
+  nothing; a changed label, icon or reason re-registers.

@@ -40,11 +40,11 @@ const selectIsPantryQueryComplete = (state: RootState) =>
 const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 
 const selectIsOnline = (state: RootState) => state.isOnline;
+const selectCachedUnits = (state: RootState) => state.cachedUnits;
 
-// No user means the auth navigator, in the SAME render the user disappears: the
-// stored value only catches up in RootNavigator's effect, and that one commit
-// re-renders the signed-in tree signed-out (every control disabled, so opacity
-// flips un-flatten views) while the root stack is already animating it out.
+// No user means the auth navigator in the SAME render: the stored value only
+// catches up in RootNavigator's effect, and that commit would re-render the
+// signed-in tree signed-out, un-flattening views as the stack animates it out.
 const selectNavigationState = (state: RootState) =>
   state.user == null && state.navigationState !== 'loading'
     ? 'auth'
@@ -135,6 +135,8 @@ export const useSelectedShoppingListId = () =>
 export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
+/** The units held on the device for offline autocomplete and lookups. */
+export const useCachedUnits = () => useAppStore(selectCachedUnits);
 export const useCanAccessDevTools = () => useAppStore(selectCanAccessDevTools);
 export const useIsHomeSelectionReady = () =>
   useAppStore(selectIsHomeSelectionReady);

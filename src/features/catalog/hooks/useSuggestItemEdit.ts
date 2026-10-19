@@ -103,9 +103,8 @@ export function useSuggestItemEdit() {
       return { status: 'imagesOnly' };
     }
 
-    // The two write paths are mutually exclusive and each hard-fails when
-    // picked wrongly, so route on the server's own predicates rather than
-    // inferring from visibility. An admin on a public item has both, and
+    // Each write path hard-fails when picked wrongly, so route on the server's
+    // own predicates, not visibility; an admin on a public item has both and
     // suggests like anyone else.
     if (writesItemDirectly(original)) {
       const settled = await settleMutation(

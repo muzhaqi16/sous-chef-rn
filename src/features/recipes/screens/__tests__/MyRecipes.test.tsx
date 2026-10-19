@@ -5,8 +5,6 @@ import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { MyRecipes } from '../MyRecipes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -23,7 +21,7 @@ function renderWithFailingSecondPage() {
         edges: [
           {
             cursor: 'page-1',
-            node: { id: 'recipe-1', name: 'Apple pie', description: null },
+            node: { id: 'recipe-1', name: 'Apple pie' },
           },
         ],
         pageInfo: { hasNextPage: true, endCursor: 'page-1' },

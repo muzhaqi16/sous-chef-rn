@@ -98,6 +98,24 @@ describe('FilterTabs', () => {
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
+  it('names an icon-only action button by its accessibility label', () => {
+    render(
+      <FilterTabs
+        {...defaultProps}
+        actionButton={{
+          icon: 'close',
+          accessibilityLabel: 'Clear all filters',
+          onPress: jest.fn(),
+          disabled: true,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Clear all filters' }),
+    ).toBeDisabled();
+  });
+
   it('uses custom tab onPress when provided instead of onTabChange', async () => {
     const user = userEvent.setup();
     const customPress = jest.fn();

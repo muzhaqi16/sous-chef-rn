@@ -2,6 +2,8 @@ name: E2E Nightly Tests
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Installs @muzhaqi16/receipt-rules from GitHub Packages (see .npmrc).
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # Run comprehensive E2E tests every night
 on:

@@ -11,10 +11,9 @@ export interface ResendBackoff {
 }
 
 /**
- * Exponential backoff for "resend the email". The cooldown is a wall-clock
- * DEADLINE, not a decrementing counter, so a blocked or backgrounded JS thread
- * cannot stretch it. Call `registerAttempt()` after every attempt, failures
- * included; `initialAttempts` covers sends made before mount.
+ * Exponential backoff for "resend the email", as a wall-clock DEADLINE so a
+ * blocked or backgrounded JS thread cannot stretch it. Call `registerAttempt()`
+ * after every attempt, failures included; `initialAttempts` covers earlier sends.
  */
 export function useResendBackoff(initialAttempts = 0): ResendBackoff {
   const [attempts, setAttempts] = useState(initialAttempts);

@@ -28,10 +28,9 @@ export const isEditMode = (mode: AddItemFormMode): boolean =>
   mode === 'edit' || mode === 'directEdit';
 
 /**
- * Only the review path needs — or can send — a note:
- * `CreateItemSuggestionInput.note` is `String!` and is the admin's sole context
- * for the diff. A direct edit has no reviewer and `UpdateItemInput` takes no
- * note, so that form omits the field.
+ * Only the review path needs, or can send, a note:
+ * `CreateItemSuggestionInput.note` is `String!` and the admin's sole context for
+ * the diff, while a direct edit's `UpdateItemInput` takes none.
  */
 export const requiresEditNote = (mode: AddItemFormMode): boolean =>
   mode === 'edit';

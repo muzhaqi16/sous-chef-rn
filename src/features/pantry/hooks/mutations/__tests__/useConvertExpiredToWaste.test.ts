@@ -26,10 +26,6 @@ import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
   optimisticDataPersistence.clearAll();

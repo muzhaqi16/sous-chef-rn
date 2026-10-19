@@ -13,9 +13,6 @@ import { NotificationSummaryDocument } from '#features/notifications/graphql/not
 import { NotificationSummaryReadersFragmentDoc } from '#/graphql/readers/notificationSummaryReaders.generated';
 import { logger } from '#/utils/environment';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: { setBadgeCount: jest.fn().mockResolvedValue(undefined) },

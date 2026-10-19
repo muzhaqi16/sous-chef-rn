@@ -5,10 +5,6 @@ import {
 } from '#/test-utils/pantryActionShared';
 import { validateDeductionQuantity } from '../validateDeductionQuantity';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 describe('validateDeductionQuantity', () => {
   beforeEach(() => jest.clearAllMocks());
 

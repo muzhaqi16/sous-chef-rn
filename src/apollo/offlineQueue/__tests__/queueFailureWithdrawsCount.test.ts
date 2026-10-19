@@ -35,9 +35,6 @@ jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');
   return { client: { cache: makeCache() } };
 });
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 jest.mock('../queueStore', () => ({
   queueStore: { removeMutation: jest.fn() },
 }));
@@ -118,6 +115,7 @@ const failure = (
   operationName: operationNameOf(CreatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'pi-local',
+  subjectType: 'PantryItem',
   variables: { input: { id: 'pi-local', pantryId: 'p-1' } },
   error: {
     type: 'server',

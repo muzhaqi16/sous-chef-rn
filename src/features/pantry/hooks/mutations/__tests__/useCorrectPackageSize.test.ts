@@ -12,9 +12,6 @@ import { CorrectPantryItemPackageSizeDocument } from '#features/pantry/graphql/p
 import { useCorrectPackageSize } from '../useCorrectPackageSize';
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 beforeEach(() => {
   jest.clearAllMocks();

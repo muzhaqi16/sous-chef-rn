@@ -32,10 +32,6 @@ jest.mock('#store/useAppStore', () => ({
   useIsHydrated: () => mockIsHydrated,
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { warning: jest.fn() },
-}));
-
 describe('useDeepLinkRouter', () => {
   beforeEach(() => {
     jest.clearAllMocks();

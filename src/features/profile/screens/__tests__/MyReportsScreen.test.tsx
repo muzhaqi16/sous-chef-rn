@@ -31,16 +31,10 @@ const CREATED_AT = '2026-10-03T09:00:00.000Z';
 
 const page = (reports: Report[], endCursor: string | null = null): Page => ({
   myUserReports: {
-    __typename: 'MyUserReportConnection',
     edges: reports.map(report => ({
-      __typename: 'MyUserReportEdge',
-      node: { __typename: 'MyUserReport', createdAt: CREATED_AT, ...report },
+      node: { createdAt: CREATED_AT, ...report },
     })),
-    pageInfo: {
-      __typename: 'PageInfo',
-      hasNextPage: endCursor !== null,
-      endCursor,
-    },
+    pageInfo: { hasNextPage: endCursor !== null, endCursor },
   },
 });
 
@@ -83,19 +77,17 @@ describe('MyReportsScreen', () => {
     });
 
     await screen.findByTestId(profileTestIDs.reportRow('report-4'));
-    const expected = [
+    const reported = `Reported ${formatShortDate(new Date(CREATED_AT))}`;
+    const expected: Array<[string, string, string, string]> = [
       ['report-4', 'Recipe report', 'Spam', 'Waiting for review'],
       ['report-3', 'Review report', 'Harassment or bullying', 'Under review'],
       ['report-2', 'Profile report', 'Impersonation', 'Upheld'],
       ['report-1', 'User report', 'Other', 'Closed'],
-    ] as const;
-    for (const [id, about, reason, status] of expected) {
-      expect(row(id).getByText(about)).toBeTruthy();
-      expect(row(id).getByText(reason)).toBeTruthy();
-      expect(row(id).getByText(status)).toBeTruthy();
-      expect(
-        row(id).getByText(`Reported ${formatShortDate(new Date(CREATED_AT))}`),
-      ).toBeTruthy();
+    ];
+    for (const [id, ...texts] of expected) {
+      for (const text of [...texts, reported]) {
+        expect(row(id).getByText(text)).toBeTruthy();
+      }
     }
   });
 

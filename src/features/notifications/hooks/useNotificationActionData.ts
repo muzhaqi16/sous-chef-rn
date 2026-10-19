@@ -12,10 +12,9 @@ export function useNotificationActionData() {
   const { syncDelete } = useNotificationSync();
 
   /**
-   * Find the expiration record behind a generic notification, by the stack the
-   * server names for it. A null there means no stack, so the payload's copy —
-   * the stack as it was when the reminder was written — stands in only for a
-   * notification that predates the field.
+   * Finds the expiration record by the stack the server names. A null there
+   * means no stack, so the payload's copy stands in only for a notification
+   * that predates the field.
    */
   const resolveExpirationLink = async (notification: DisplayNotification) => {
     const pantryItemId =

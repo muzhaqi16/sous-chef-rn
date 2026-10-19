@@ -14,9 +14,6 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { TemplateCard } from '../../../src/features/mealPlan/components/TemplateCard';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 /** A strict cell: the template is read from the cache, the prop is its key. */
 const renderCard = (
   template: MealTemplateDisplayFragment | null,

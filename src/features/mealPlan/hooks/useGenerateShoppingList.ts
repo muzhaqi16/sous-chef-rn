@@ -48,10 +48,9 @@ export interface GenerateShoppingListOptions {
 }
 
 /**
- * Why a plan cannot be derived from, in the user's words: later pages of its
- * meals are unread, or one of its recipes is over the ingredient limit and
- * holds only its first page, and the list would come out short. Null for a
- * plan read to the end.
+ * Why a plan cannot be derived from, in the user's words: its later meal pages
+ * are unread, or a recipe over the ingredient limit holds only its first page,
+ * so the list would come out short. Null for a plan read to the end.
  */
 function unreadSource(
   plan: UseGenerateShoppingList_MealPlanFragment,
@@ -86,10 +85,9 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     from: mealPlanId ? { __typename: 'MealPlan', id: mealPlanId } : null,
   });
 
-  // Cache-only: the pantry tab mounts at cold start, so its rows are already
-  // there — and a miss must read as "not checked", never as an empty pantry.
-  // Stands down while this tab is blurred (`inactiveBehavior: 'none'` keeps it
-  // mounted); the preserved connection holds the last read meanwhile.
+  // Cache-only: the pantry tab mounts at cold start, and a miss reads as "not
+  // checked", never an empty pantry. Stands down while blurred; the preserved
+  // connection holds the last read.
   const [isFocused, setIsFocused] = useState(true);
   const [onFocusChange] = useState(() => () => {
     setIsFocused(true);

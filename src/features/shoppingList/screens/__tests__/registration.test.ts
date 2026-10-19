@@ -8,6 +8,7 @@ jest.mock('../ItemDetail', () => ({ ShoppingListItemDetail: () => null }));
 jest.mock('../PurchaseHistoryScreen', () => ({
   PurchaseHistoryScreen: () => null,
 }));
+jest.mock('../StoreMode', () => ({ StoreMode: () => null }));
 
 import { expectDeclaresLinkingIntent } from '#/test-utils/screenRegistration';
 import { shoppingListDetailScreens } from '../registration';
@@ -20,6 +21,7 @@ describe('shoppingListDetailScreens', () => {
       'ListSettings',
       'PurchaseHistory',
       'ShareList',
+      'StoreMode',
     ]);
   });
 

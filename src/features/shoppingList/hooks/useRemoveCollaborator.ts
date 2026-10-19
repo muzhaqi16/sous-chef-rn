@@ -1,40 +1,68 @@
+import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { removeCollaboratorFromShoppingListCache } from '#features/shoppingList/hooks/useLeaveShoppingList';
+import { removeCollaboratorFromShoppingListCache } from '#features/shoppingList/cache/collaborators';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 
+interface LeaveCallbacks {
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+}
+
 /**
- * Drop a collaborator from a list. The cached connection is updated in place,
- * so no refetch follows; a refusal is alerted here.
+ * Takes a collaborator off a list: another member, or the viewer leaving it.
+ * The cached connection is updated in place, so no refetch follows.
  */
 export function useRemoveCollaborator(listId: string) {
   const { t } = useTranslation();
-  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [removeMember, { client }] = useMutation(RemoveCollaboratorDocument);
+  const [leaving, setLeaving] = useState(false);
 
-  /** `true` once the collaborator is removed; `false` when refused. */
-  const removeCollaborator = async (memberId: string): Promise<boolean> => {
+  const remove = async (
+    collaboratorId: string,
+    options: { fallback: string; present?: 'none' },
+  ) => {
     const settled = await settleMutation(
-      () =>
-        removeMember({
-          variables: { input: { id: memberId } },
-          update(cache, { data }) {
-            // Only evict on success — a resolved error must not remove the
-            // collaborator from the cache.
-            if (!appliedPayload(data)) return;
-            removeCollaboratorFromShoppingListCache(cache, listId, memberId, {
-              evictItem: true,
-            });
-          },
-        }),
-      {
-        document: RemoveCollaboratorDocument,
-        fallback: t('errors.removeMemberFailed'),
-      },
+      () => removeMember({ variables: { input: { id: collaboratorId } } }),
+      { document: RemoveCollaboratorDocument, removal: true, ...options },
     );
+    // A repeat answered as not found names no collaborator, so the cache is
+    // updated from the settle, not from the payload.
+    if (settled.status !== 'failed') {
+      removeCollaboratorFromShoppingListCache(
+        client.cache,
+        listId,
+        collaboratorId,
+        { evictItem: true },
+      );
+    }
+    return settled;
+  };
+
+  /** `true` once the member is removed; a refusal is alerted here. */
+  const removeCollaborator = async (memberId: string): Promise<boolean> => {
+    const settled = await remove(memberId, {
+      fallback: t('errors.removeMemberFailed'),
+    });
     return settled.status !== 'failed';
   };
 
-  return { removeCollaborator };
+  /** The viewer's own entry; the caller shows a refusal through `onError`. */
+  const leaveList = (collaboratorId: string, callbacks?: LeaveCallbacks) =>
+    executeWithLoadingState(
+      async () => {
+        const settled = await remove(collaboratorId, {
+          fallback: t('shoppingListScreens.failedToLeave'),
+          present: 'none',
+        });
+        if (settled.status === 'failed') callbacks?.onError?.(settled.failure);
+        else callbacks?.onSuccess?.();
+      },
+      setLeaving,
+      callbacks?.onError,
+    );
+
+  return { removeCollaborator, leaveList, leaving };
 }

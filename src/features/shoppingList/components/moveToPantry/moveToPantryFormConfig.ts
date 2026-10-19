@@ -7,6 +7,7 @@ import {
 } from '#/utils/validation/common';
 import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface MoveToPantryFormValues {
   pantryId: string | null;
@@ -24,6 +25,35 @@ export interface MoveToPantryFormValues {
   packageSizeInput: string;
   packageSizeUnitValue: string;
   packageSizeUnitId: string | null;
+  /** The size unit's kind; null for a typed one the catalog has not named. */
+  packageSizeUnitType: UnitType | null;
+}
+
+type PackageAmounts = Pick<
+  MoveToPantryFormValues,
+  'quantityInput' | 'unitType' | 'packageSizeInput' | 'packageSizeUnitType'
+>;
+
+/**
+ * Whether the amount and the size are stated the other way round: an amount
+ * bought (64 fl oz) and a whole count of packages in a counted unit (1 box) in
+ * the size's place. It is the same purchase as 1 box of 64 fl oz.
+ */
+export function statesPackagesAsSize({
+  quantityInput,
+  unitType,
+  packageSizeInput,
+  packageSizeUnitType,
+}: Partial<PackageAmounts>): boolean {
+  const count = parseDecimalInput(packageSizeInput ?? '');
+  return (
+    !!unitType &&
+    unitType !== UnitType.Count &&
+    packageSizeUnitType === UnitType.Count &&
+    parseFractionalInput(quantityInput ?? '') !== null &&
+    Number.isInteger(count) &&
+    count > 0
+  );
 }
 
 export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
@@ -63,6 +93,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
       lazyMessage('moveToPantry.packageSizeNeedsCount'),
       (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
         if (!value.trim()) return true;
+        if (statesPackagesAsSize(context.parent)) return true;
         const count = parseFractionalInput(context.parent.quantityInput ?? '');
         return (
           context.parent.unitType === UnitType.Count &&
@@ -79,10 +110,25 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
       (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
         const size = (context.parent.packageSizeInput ?? '').trim();
         const unitId = context.parent.packageSizeUnitId;
-        return size ? !!unitId : !unitId && !value.trim();
+        return size
+          ? !!unitId || value.trim() !== ''
+          : !unitId && !value.trim();
       },
+    )
+    // A typed unit the device and the API could not name.
+    .test(
+      'package-size-unit-known',
+      lazyMessage('moveToPantry.unknownUnit'),
+      (value, context: { parent: Partial<MoveToPantryFormValues> }) =>
+        !(context.parent.packageSizeInput ?? '').trim() ||
+        !value.trim() ||
+        !!context.parent.packageSizeUnitId,
     ),
   packageSizeUnitId: string().nullable().defined(),
+  packageSizeUnitType: mixed<UnitType>()
+    .oneOf(Object.values(UnitType))
+    .nullable()
+    .defined(),
 });
 
 export const moveToPantryDefaults = (
@@ -101,4 +147,5 @@ export const moveToPantryDefaults = (
   packageSizeInput: '',
   packageSizeUnitValue: '',
   packageSizeUnitId: null,
+  packageSizeUnitType: null,
 });

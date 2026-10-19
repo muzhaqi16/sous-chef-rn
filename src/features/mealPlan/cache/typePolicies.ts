@@ -5,9 +5,6 @@ import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
  * A plan's meals, its generated lists and a template's meals are each ONE list
  * per parent whatever page was asked for, merged by node id: a second page
  * appends, and every local writer sees the whole list.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
  */
 export const mealPlanTypePolicies: TypePolicies = {
   MealPlan: {

@@ -6,9 +6,6 @@ import { SearchResultsScreen } from '../SearchResultsScreen';
 
 type ScreenProps = React.ComponentProps<typeof SearchResultsScreen>;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockHideBottomSheet = jest.fn();

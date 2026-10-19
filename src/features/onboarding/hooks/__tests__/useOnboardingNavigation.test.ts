@@ -3,10 +3,6 @@ import { CommonActions } from '@react-navigation/native';
 import { useOnboardingNavigation } from '../useOnboardingNavigation';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
 
-// Break circular dependency chain
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockDispatch = jest.fn();
 
 jest.mock('@react-navigation/native', () => {

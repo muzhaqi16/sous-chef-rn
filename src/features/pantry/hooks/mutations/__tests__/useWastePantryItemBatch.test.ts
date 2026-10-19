@@ -9,10 +9,6 @@ import { BatchStatus, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useWastePantryItemBatch } from '../useWastePantryItemBatch';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => jest.clearAllMocks());
 
 const READ_BATCH = gql`

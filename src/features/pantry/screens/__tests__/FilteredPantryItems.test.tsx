@@ -23,9 +23,6 @@ type MockPantryItem = {
   expiresOn?: string;
 };
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));

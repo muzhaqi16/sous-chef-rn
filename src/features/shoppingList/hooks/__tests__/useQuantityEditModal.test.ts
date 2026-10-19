@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -21,26 +22,13 @@ function updateMock() {
     data: {
       updateShoppingListItem: {
         __typename: 'UpdateShoppingListItemPayload',
-        shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        shoppingListItem: { id: 'item-1' },
       },
     },
   });
 }
 
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
+const mockAlert = jest.mocked(alertService.alert);
 
 const QUANTITY = gql`
   fragment QuantityEditProbe on ShoppingListItem {
@@ -56,7 +44,13 @@ jest.mock('#utils/imageUtils', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
 });
+
+const readPersisted = () => {
+  optimisticDataPersistence.flush();
+  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
+};
 
 function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
@@ -274,7 +268,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -314,7 +308,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -329,14 +323,14 @@ describe('useQuantityEditModal', () => {
       result.current.openForItem('item-1');
     });
 
+    let persisted: Record<string, unknown> = {};
     await act(async () => {
-      await result.current.save('1,125', 'gal', 'unit-1');
+      const pending = result.current.save('1,125', 'gal', 'unit-1');
+      persisted = readPersisted();
+      await pending;
     });
 
-    const saved = (optimisticDataPersistence.save as jest.Mock).mock.calls.find(
-      call => call[2] === 'quantity',
-    );
-    expect(saved?.[3]).toBeCloseTo(1.125, 3);
+    expect(persisted.quantity).toBeCloseTo(1.125, 3);
     expect(m.fired[0]).toEqual({
       input: {
         id: 'item-1',
@@ -352,7 +346,7 @@ describe('useQuantityEditModal', () => {
       data: {
         updateShoppingListItem: {
           __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -519,18 +513,10 @@ describe('useQuantityEditModal', () => {
         quantity: 1.5,
         quantityInput: '1 1/2',
       });
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-        1.5,
-      );
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantityInput',
-        '1 1/2',
-      );
+      expect(readPersisted()).toEqual({
+        quantity: 1.5,
+        quantityInput: '1 1/2',
+      });
     });
 
     it('puts the previous quantity back and drops the record when the server refuses', async () => {
@@ -549,11 +535,7 @@ describe('useQuantityEditModal', () => {
       });
 
       expect(readQuantity()).toMatchObject({ quantity: 2, quantityInput: '2' });
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-      );
+      expect(readPersisted()).toEqual({});
     });
   });
 

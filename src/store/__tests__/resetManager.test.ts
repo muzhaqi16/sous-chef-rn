@@ -1,9 +1,5 @@
 'use no memo';
 
-// Mock tokenScheduler and refreshToken (needed transitively by store)
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 // Mock keychain. `clearCredentials` is the stored-login tier (biometric /
 // remembered login) and is mocked purely so the assertion that session end
 // never touches it has something real to watch.

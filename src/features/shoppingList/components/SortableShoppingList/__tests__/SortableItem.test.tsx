@@ -198,8 +198,7 @@ jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
 // Import after mocks
 import { SwipeableListItem } from '../SortableItem';
 import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
-import type { FragmentType } from '@apollo/client/masking';
-import type { ShoppingListRowItem } from '../types';
+import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { useSortableListActions } from '../SortableListActionsContext';
 import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
 import {
@@ -234,6 +233,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
       isPurchased: false,
       movedToPantryAt: null,
     },
+    suggestedPrice: null,
     item: null,
     ...overrides,
   };
@@ -248,21 +248,16 @@ const seedRow = (
   entry: Record<string, unknown> & { __typename: string; id: string },
 ) => seedCache([{ fragment: SortableItem_ItemFragmentDoc, data: entry }]);
 
-function rowItem(
-  entry: ReturnType<typeof seedItem>,
-  isPurchased = false,
-): ShoppingListRowItem {
-  return {
-    id: entry.id,
-    isPurchased,
-    sortOrder: 'a',
-    // The masked ref is structurally a normalized ref: __typename + id is
-    // enough for useFragment's cache lookup.
-    itemRef: { __typename: entry.__typename, id: entry.id } as FragmentType<
-      typeof SortableItem_ItemFragmentDoc
-    >,
-  };
-}
+/** Seeds `entry` and renders its row, ticked or not. */
+const renderRow = (entry: ReturnType<typeof seedItem>, isPurchased = false) =>
+  renderWithApollo(
+    <SwipeableListItem
+      item={shoppingListRowItem(entry.id, { isPurchased })}
+      index={0}
+      target="Cell"
+    />,
+    { cache: seedRow(entry) },
+  );
 
 const mockRegisterRect = jest.fn();
 
@@ -284,7 +279,11 @@ describe('SwipeableListItem (SortableItem)', () => {
 
   it('renders an empty cell while the entity is not in the cache', () => {
     renderWithApollo(
-      <SwipeableListItem item={rowItem(seedItem())} index={0} target="Cell" />,
+      <SwipeableListItem
+        item={shoppingListRowItem(seedItem().id)}
+        index={0}
+        target="Cell"
+      />,
     );
     expect(screen.queryByTestId('list-item')).toBeNull();
     expect(screen.queryByTestId('swipeable-item')).toBeNull();
@@ -292,77 +291,89 @@ describe('SwipeableListItem (SortableItem)', () => {
 
   it('renders the item title from the fragment', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
   it('renders the item subtitle derived from category', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(screen.getByText('2 liters')).toBeTruthy();
+  });
+
+  describe('the price recorded prices suggest', () => {
+    const suggestedPrice = {
+      __typename: 'PriceSuggestion',
+      amount: 1.25,
+      substitute: false,
+      currency: {
+        __typename: 'Currency',
+        id: 'cur-usd',
+        code: 'USD',
+        decimalPlaces: 2,
+      },
+    };
+
+    // Per one of the line's unit, so the line costs that times its quantity.
+    it('shows what the line would cost beside its category', () => {
+      const entry = seedItem({ quantity: 2, suggestedPrice });
+      renderRow(entry);
+      expect(screen.getByText(/^2 liters · ≈ .*2\.50/)).toBeTruthy();
+    });
+
+    it("says when it is similar products' price, not the line's own", () => {
+      const entry = seedItem({
+        suggestedPrice: { ...suggestedPrice, substitute: true },
+      });
+      renderRow(entry);
+      expect(
+        screen.getByText(/^2 liters · ≈ .*1\.25, similar products$/),
+      ).toBeTruthy();
+    });
+
+    it('shows none on a bought line', () => {
+      const entry = seedItem({
+        suggestedPrice,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+        },
+      });
+      renderRow(entry, true);
+      expect(screen.getByText('2 liters')).toBeTruthy();
+      expect(screen.queryByText(/≈/)).toBeNull();
+    });
   });
 
   it('renders a swipeable wrapper', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
   });
 
   it('renders a list item', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(screen.getByTestId('list-item')).toBeTruthy();
   });
 
   it('renders checkbox with unchecked state for unpurchased items', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(screen.getByTestId('shopping-item-checkbox-item-1')).toBeTruthy();
     expect(screen.getByText('unchecked')).toBeTruthy();
   });
 
   it('renders checkbox with checked state for purchased items', () => {
     const entry = seedItem();
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry, true)} index={0} target="Cell" />,
-      { cache: seedRow(entry) },
-    );
+    renderRow(entry, true);
     expect(screen.getByText('checked')).toBeTruthy();
   });
 
   it('renders the quantity badge with the cached quantity + unit', () => {
     const entry = seedItem({ quantity: 3, unitName: 'pcs' });
-    renderWithApollo(
-      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-      {
-        cache: seedRow(entry),
-      },
-    );
+    renderRow(entry);
     expect(
       screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
     ).toBeTruthy();
@@ -394,10 +405,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     it('marks the row as pending delivery', () => {
       const entry = seedItem();
       queueEdit(entry.id);
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       expect(
         screen.getByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
@@ -407,10 +415,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     it('leaves a row with nothing queued unmarked', () => {
       const entry = seedItem();
       queueEdit('another-item');
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       expect(
         screen.queryByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
@@ -465,10 +470,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       }));
 
       const entry = seedItem();
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       const last = swipeableProps[swipeableProps.length - 1];
       expect(last!.leftActions).toHaveLength(1);
@@ -486,10 +488,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       setActions(undefined);
 
       const entry = seedItem();
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       const last = swipeableProps[swipeableProps.length - 1];
       expect(last!.leftActions).toBeUndefined();
@@ -508,10 +507,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       );
 
       const entry = seedItem();
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       const last = swipeableProps[swipeableProps.length - 1];
       expect(last!.leftActions).toBeUndefined();
@@ -562,10 +558,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       });
 
       const entry = seedItem();
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       fireEvent.press(
         screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
@@ -582,10 +575,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       });
 
       const entry = seedItem();
-      renderWithApollo(
-        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry);
 
       fireEvent.press(
         screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
@@ -631,14 +621,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           movedToPantryAt: null,
         },
       });
-      renderWithApollo(
-        <SwipeableListItem
-          item={rowItem(entry, true)}
-          index={0}
-          target="Cell"
-        />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry, true);
 
       expect(
         screen.getByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
@@ -656,14 +639,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           movedToPantryAt: '2026-08-28T10:00:00.000Z',
         },
       });
-      renderWithApollo(
-        <SwipeableListItem
-          item={rowItem(entry, true)}
-          index={0}
-          target="Cell"
-        />,
-        { cache: seedRow(entry) },
-      );
+      renderRow(entry, true);
 
       // The bulk move filters its working set on this same stamp, so offering
       // the action would promise something that does nothing.
@@ -690,19 +666,12 @@ describe('SwipeableListItem (SortableItem)', () => {
         isActive: true,
         rects: {},
       });
-      const { rerender } = renderWithApollo(
-        <SwipeableListItem
-          item={rowItem(entry, false)}
-          index={0}
-          target="Cell"
-        />,
-        { cache: seedRow(entry) },
-      );
+      const { rerender } = renderRow(entry);
       expect(mockRegisterRect).not.toHaveBeenCalledWith('checkbox', null);
 
       rerender(
         <SwipeableListItem
-          item={rowItem(entry, true)}
+          item={shoppingListRowItem(entry.id, { isPurchased: true })}
           index={0}
           target="Cell"
         />,
@@ -717,19 +686,12 @@ describe('SwipeableListItem (SortableItem)', () => {
         isActive: true,
         rects: {},
       });
-      const { rerender } = renderWithApollo(
-        <SwipeableListItem
-          item={rowItem(entry, true)}
-          index={0}
-          target="Cell"
-        />,
-        { cache: seedRow(entry) },
-      );
+      const { rerender } = renderRow(entry, true);
       expect(mockRegisterRect).not.toHaveBeenCalledWith('archiveIcon', null);
 
       rerender(
         <SwipeableListItem
-          item={rowItem(entry, false)}
+          item={shoppingListRowItem(entry.id)}
           index={0}
           target="Cell"
         />,
@@ -744,14 +706,7 @@ describe('SwipeableListItem (SortableItem)', () => {
         isActive: true,
         rects: {},
       });
-      const { rerender } = renderWithApollo(
-        <SwipeableListItem
-          item={rowItem(entry, false)}
-          index={0}
-          target="Cell"
-        />,
-        { cache: seedRow(entry) },
-      );
+      const { rerender } = renderRow(entry);
       expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
 
       (useShoppingListTutorialState as jest.Mock).mockReturnValue({
@@ -761,7 +716,7 @@ describe('SwipeableListItem (SortableItem)', () => {
       });
       rerender(
         <SwipeableListItem
-          item={rowItem(entry, false)}
+          item={shoppingListRowItem(entry.id)}
           index={0}
           target="Cell"
         />,

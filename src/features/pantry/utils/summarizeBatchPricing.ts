@@ -17,11 +17,15 @@ export interface BatchPricingSummary {
    * currency is null precisely when the batches disagree.
    */
   lastPurchase: {
+    /** Its purchase's day (a receipt's printed one), else when it was recorded. */
     date: string;
     totalCost: number | null;
     currency: PantryItemBatchFragment['currency'];
   } | null;
 }
+
+const acquiredAt = (batch: PantryItemBatchFragment): string =>
+  batch.purchase?.purchaseDate ?? batch.createdAt;
 
 /**
  * `PantryItem.costPerUnit`/`totalCost` are the server's, derived from these same
@@ -37,14 +41,21 @@ export function summarizeBatchPricing(
   const priced = active.filter(b => b.costPerUnit != null);
 
   // ALL batches, not just active: consuming the newest would otherwise walk
-  // this back to an older acquisition.
+  // this back to an older acquisition. Newest by when it was bought, so an old
+  // receipt confirmed late doesn't pass for the latest purchase.
   const acquired = batches.filter(b => b.costPerUnit != null);
   const newest =
     acquired.length > 0
-      ? acquired.reduce((latest, b) =>
+      ? acquired.reduce((latest, b) => {
           // Instants, not strings: '.500Z' sorts below 'Z' lexicographically.
-          Date.parse(b.createdAt) > Date.parse(latest.createdAt) ? b : latest,
-        )
+          const at = Date.parse(acquiredAt(b));
+          const latestAt = Date.parse(acquiredAt(latest));
+          const later =
+            at > latestAt ||
+            (at === latestAt &&
+              Date.parse(b.createdAt) > Date.parse(latest.createdAt));
+          return later ? b : latest;
+        })
       : null;
 
   return {
@@ -52,7 +63,7 @@ export function summarizeBatchPricing(
     isRateDiluted: priced.length > 0 && priced.length < active.length,
     lastPurchase: newest
       ? {
-          date: newest.createdAt,
+          date: acquiredAt(newest),
           totalCost: newest.totalCost ?? null,
           currency: newest.currency,
         }

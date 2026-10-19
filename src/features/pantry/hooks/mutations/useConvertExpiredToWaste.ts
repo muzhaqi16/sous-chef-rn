@@ -1,10 +1,7 @@
 /**
- * Wastes a stack's expired stock as one WASTE usage record. A stack with no
- * batches is wasted whole: `condition` SPOILED + `quantity` 0, written to the
- * cache PERMANENTLY before firing (an `optimisticResponse` rolls back on the
- * queue's null result). A stack held in batches loses only the expired ones,
- * which the server recomputes, so nothing is written ahead of its answer.
- * `input.idempotencyKey` keeps a queued replay from double-counting the ledger.
+ * One WASTE record for a stack's expired stock: a batchless stack is wasted
+ * whole (SPOILED, `quantity` 0) PERMANENTLY before firing, a batched one on the
+ * server's recompute. `idempotencyKey` stops a replay double-counting.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -89,29 +86,11 @@ export function useConvertExpiredToWaste({
     };
 
     // Permanent optimistic write before firing — survives an offline/queued convert.
-    const clearQuantityPersistence = optimisticDataPersistence.track(
+    const clearPersistence = optimisticDataPersistence.trackFields(
       'PantryItem',
       pantryItemId,
-      'quantity',
-      0,
+      { quantity: 0, heldQuantity: 0, condition: ItemCondition.Spoiled },
     );
-    const clearHeldPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'heldQuantity',
-      0,
-    );
-    const clearConditionPersistence = optimisticDataPersistence.track(
-      'PantryItem',
-      pantryItemId,
-      'condition',
-      ItemCondition.Spoiled,
-    );
-    const clearPersistence = () => {
-      clearQuantityPersistence();
-      clearHeldPersistence();
-      clearConditionPersistence();
-    };
     try {
       writeState(0, 0, ItemCondition.Spoiled);
     } catch (cacheError) {

@@ -22,6 +22,12 @@ export interface ParsedReceiptLine {
   appliesToIndex?: number;
 }
 
+/** What a reading's lines add up to, against the printed figure they miss. */
+export interface ReceiptTotalsGap {
+  counted: number;
+  printed: number;
+}
+
 export interface ParsedReceipt {
   merchant?: string;
   lines: ParsedReceiptLine[];

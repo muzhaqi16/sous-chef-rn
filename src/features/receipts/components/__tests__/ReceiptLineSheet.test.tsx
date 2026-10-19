@@ -43,8 +43,36 @@ jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
   ItemAutocompleteField: () => null,
 }));
 
-jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: () => null,
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
+  const { Text, TextInput, View } = require('react-native');
+  return {
+    UnitAutocompleteField: ({
+      value,
+      onChangeText,
+      error,
+    }: {
+      value?: string;
+      onChangeText?: (text: string) => void;
+      error?: string;
+    }) => (
+      <View>
+        <TextInput
+          testID="field-unit"
+          value={value}
+          onChangeText={onChangeText}
+        />
+        {error ? <Text testID="field-unit-error">{error}</Text> : null}
+      </View>
+    ),
+  };
+});
+
+// The units the device holds: "lb" resolves, anything else does not.
+jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
+  useResolveUnit: () => ({
+    resolveUnitId: async (current: string | null, text: string) =>
+      current ?? (text === 'lb' ? 'unit-lb' : null),
+  }),
 }));
 
 jest.mock('#components/molecules/FractionInput', () => ({
@@ -78,16 +106,18 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-const INVALID_PAID = 'Enter the amount paid, like 3.49, or leave it empty.';
+const TOTAL_NEEDED = 'Enter what you paid for this line.';
 
-const renderSheet = () => {
+const MILK = { index: 0, printed: 'MILK 2%', price: 2.5 };
+
+const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
   const onSave = jest.fn();
   const onClose = jest.fn();
   render(
     <ReceiptLineSheet
       visible
-      line={{ index: 0, printed: 'MILK 2%', price: 2.5 }}
-      choice={lineChoice({ price: 2.5 })}
+      line={line}
+      choice={lineChoice({ price: line.price })}
       candidates={[]}
       listItemNameFor={() => undefined}
       onPickItem={jest.fn()}
@@ -114,7 +144,7 @@ describe('the total paid on a receipt line', () => {
 
       expect(
         await screen.findByTestId('field-Total paid-error'),
-      ).toHaveTextContent(INVALID_PAID);
+      ).toHaveTextContent(TOTAL_NEEDED);
       expect(onSave).not.toHaveBeenCalled();
     },
   );
@@ -133,15 +163,76 @@ describe('the total paid on a receipt line', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('saves a cleared total as unknown', async () => {
-    const { onSave } = renderSheet();
+  it.each(['', '0'])(
+    'asks for what was paid when the total is %p',
+    async typed => {
+      const { onSave } = renderSheet();
 
-    typeTotal('');
+      typeTotal(typed);
+      fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+      expect(
+        await screen.findByTestId('field-Total paid-error'),
+      ).toHaveTextContent(TOTAL_NEEDED);
+      expect(onSave).not.toHaveBeenCalled();
+    },
+  );
+
+  it('saves a line its discount made free at nothing paid', async () => {
+    const { onSave } = renderSheet({ ...MILK, price: 0, discount: 2.5 });
+
+    typeTotal('0');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ price: null }),
+        expect.objectContaining({ price: 0 }),
+      ),
+    );
+  });
+});
+
+describe('the unit of a receipt line', () => {
+  it('saves a typed unit as the unit it resolves to', async () => {
+    const { onSave } = renderSheet();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'lb');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ unitId: 'unit-lb', unitText: 'lb' }),
+      ),
+    );
+  });
+
+  it('refuses a unit it cannot resolve on the field, and does not save', async () => {
+    const { onSave } = renderSheet();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'tin');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    expect(await screen.findByTestId('field-unit-error')).toHaveTextContent(
+      '"tin" isn\'t a unit we recognise. Pick one from the list.',
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('a receipt line not for the pantry', () => {
+  it('saves the switch onto the line', async () => {
+    const { onSave } = renderSheet();
+
+    fireEvent(
+      screen.getByTestId(receiptsTestIDs.lineNotStocked),
+      'valueChange',
+      true,
+    );
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ notStocked: true }),
       ),
     );
   });

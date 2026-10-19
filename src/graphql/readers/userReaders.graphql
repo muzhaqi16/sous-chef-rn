@@ -74,10 +74,8 @@ fragment UserReaders on User {
   settings {
     id
     autoSync
-    betaFeatures
     compactMode
     createdAt
-    enabledFeatures
     language
     offlineMode
     personalizedAds

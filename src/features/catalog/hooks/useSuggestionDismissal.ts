@@ -14,10 +14,9 @@ interface DismissTarget {
 }
 
 /**
- * Dismiss/undismiss catalog items from a suggestion surface. The caller owns
- * the optimistic removal, so the success path does NOT refetch — that would
- * replace the cache arrays and cut the exit animation short. Refetch runs only
- * to restore the item on failure or on Undo.
+ * Dismiss/undismiss catalog items from a suggestion surface. The caller owns the
+ * optimistic removal, so success does NOT refetch (it would cut the exit
+ * animation short); a refetch restores the item on failure or Undo.
  */
 export function useSuggestionDismissal(
   surface: SuggestionSurface,
@@ -33,29 +32,25 @@ export function useSuggestionDismissal(
       {
         document: MarkSuggestionActiveDocument,
         fallback: t('addItemSheet.undoFailed'),
-        present: 'none',
+        present: 'toast',
       },
     );
     // A failed undo leaves the item dismissed server-side, so nothing refetches.
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return;
-    }
+    if (settled.failure) return;
     refetch();
   };
 
   const settleDismissal = async (itemId: string) => {
     // Success needs no refetch: the caller's optimistic removal already hid it.
-    const settled = await settleMutation(
+    await settleMutation(
       () => dismiss({ variables: { input: { itemId, surface } } }),
       {
         document: MarkSuggestionDismissedDocument,
         fallback: t('addItemSheet.dismissFailed'),
         onFailed: refetch,
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
   };
 
   const dismissSuggestion = ({ itemId, name }: DismissTarget) => {

@@ -1,6 +1,6 @@
+import { toastService } from '#/services/toastService';
 import { renderHook, act } from '@testing-library/react-native';
 import { MealType } from '#/graphql/generated/schemaTypes';
-import type { toastService } from '#/services/toastService';
 import { useAddRecipeToMealPlan } from '../useAddRecipeToMealPlan';
 
 const mockCreateItem = jest.fn();
@@ -51,21 +51,8 @@ jest.mock('../useMealPlanItemActions', () => ({
   })),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: Parameters<typeof toastService.success>) =>
-      mockToastSuccess(...args),
-    error: (...args: Parameters<typeof toastService.error>) =>
-      mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 beforeEach(() => {
   jest.clearAllMocks();

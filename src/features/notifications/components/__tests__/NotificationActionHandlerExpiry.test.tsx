@@ -26,10 +26,6 @@ import { NotificationActionHandler } from '../NotificationActionHandler';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn() },
-}));
-
 jest.mock('#store/useAppStore', () => ({
   useAppStore: <T,>(
     selector: (state: { setHomeAndPantry: jest.Mock }) => T,
@@ -233,5 +229,23 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
       operationNameOf(MarkExpirationActionDocument),
     ]);
     expect(readBadge(cache)).toBe(3);
+  });
+
+  it('sends nothing for a notification with no linked reminder', () => {
+    renderWithApollo(
+      <NotificationActionHandler>
+        {() => <MutationProbe />}
+      </NotificationActionHandler>,
+      { cache: seedFeed(3) },
+    );
+
+    act(() =>
+      mockOnActionSelected?.(
+        { ...linkedReminder, expirationNotificationId: undefined },
+        ExpirationAction.Consumed,
+      ),
+    );
+
+    expect(sentMutations()).toEqual([]);
   });
 });

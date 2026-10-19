@@ -16,9 +16,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useNotificationSettings } from '../useNotificationSettings';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ user: { id: 'user-1' } });
   return {
@@ -62,16 +59,10 @@ const mockPreferencesData: StoredPreferences = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#/services/errorService');
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 beforeEach(() => {
@@ -232,7 +223,7 @@ describe('useNotificationSettings', () => {
   it('applies the change optimistically before the server responds', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ pushEnabled: false }),
-      delay: 200,
+      held: true,
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
@@ -249,9 +240,11 @@ describe('useNotificationSettings', () => {
 
     // The mock has not replied yet — this value can only come from the
     // optimistic layer.
+    expect(update.fired).toHaveLength(1);
     expect(result.current.settings.pushEnabled).toBe(false);
 
     await act(async () => {
+      update.release();
       await pending;
     });
   });

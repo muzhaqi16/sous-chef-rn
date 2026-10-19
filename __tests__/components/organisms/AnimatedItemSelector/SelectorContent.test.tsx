@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import { SelectorContent } from '../../../../src/components/organisms/AnimatedItemSelector/SelectorContent';
 import type { SelectorConfig } from '../../../../src/components/organisms/AnimatedItemSelector/types';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../src/apollo/links/refreshToken');
-
 jest.mock(
   '../../../../src/components/organisms/AnimatedItemSelector/SelectorItemContainer',
   () => ({

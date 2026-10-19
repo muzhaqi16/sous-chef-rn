@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
+import { ItemCard } from '#components/organisms/ItemCard';
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { Reveal } from '#components/atoms/Reveal';
@@ -19,6 +20,7 @@ import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
+import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
@@ -99,6 +101,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     merchant,
     store,
     proposedStoreName,
+    storeOffer,
     storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
@@ -170,10 +173,15 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'guess':
       case 'added': {
         if (!choice) return row.printed;
-        return t('receipts.review.chosenDetail', {
-          printed: row.printed,
-          amount: formatQuantityDisplay(choice.quantity, choice.unitText),
-        });
+        return t(
+          choice.notStocked
+            ? 'receipts.review.chosenDetailNotStocked'
+            : 'receipts.review.chosenDetail',
+          {
+            printed: row.printed,
+            amount: formatQuantityDisplay(choice.quantity, choice.unitText),
+          },
+        );
       }
     }
   };
@@ -214,12 +222,23 @@ export const ReceiptReviewScreen: React.FC = () => {
         leftElement: <Icon name={icon} size="md" tone={tone} />,
         rightElement:
           price === undefined || price === null ? undefined : (
-            <Text
-              role={rowType.title}
-              tone={section === 'toAdd' ? 'primary' : 'secondary'}
-            >
-              {money(price)}
-            </Text>
+            <View style={styles.price}>
+              <Text
+                role={rowType.title}
+                tone={section === 'toAdd' ? 'primary' : 'secondary'}
+              >
+                {price === 0 && row.discount
+                  ? t('receipts.review.free')
+                  : money(price)}
+              </Text>
+              {!!row.discount && (
+                <Text role="caption" tone="success">
+                  {t('receipts.review.discountOff', {
+                    amount: money(row.discount),
+                  })}
+                </Text>
+              )}
+            </View>
           ),
         ...(at === 0
           ? { sectionTitle: sectionTitle(section, inSection.length) }
@@ -228,22 +247,37 @@ export const ReceiptReviewScreen: React.FC = () => {
     });
   });
 
+  // The check-in runs on without the review: its lines are in the pantry now.
   const handleAdd = async () => {
-    const { added, failed } = await addChosen();
-    if (failed > 0) {
-      toastService.error(t('receipts.review.someFailed', { count: failed }));
-      return;
+    const { sent, held } = await addChosen();
+    if (sent > 0) {
+      toastService.success(
+        pantryName
+          ? t('receipts.review.addedTo', { count: sent, pantry: pantryName })
+          : t('receipts.review.addedCount', { count: sent }),
+      );
     }
-    toastService.success(
-      pantryName
-        ? t('receipts.review.addedTo', { count: added, pantry: pantryName })
-        : t('receipts.review.addedCount', { count: added }),
-    );
-    // Lines still waiting for a match keep the review, to add once matched.
-    if (rows.some(row => row.status === 'pending')) return;
+    // A line that still lacks something keeps the review, saying which; so do
+    // lines still waiting for a match, to add once matched.
+    if (held > 0 || rows.some(row => row.status === 'pending')) return;
     applied.current = true;
     toPantryMain();
   };
+
+  // A day read from the receipt shows as text that opens the calendar.
+  const dateField = (
+    <DatePickerField
+      presentation={dayIsScanDay ? 'field' : 'row'}
+      label={t('receipts.review.dateLabel')}
+      value={fromDateKey(purchasedOn)}
+      onChange={date => {
+        if (date) setPurchasedOn(toDateKey(date));
+      }}
+      minimumDate={fromDateKey(EARLIEST_RECEIPT_DAY)}
+      maximumDate={fromDateKey(today)}
+      testID={receiptsTestIDs.reviewDate}
+    />
+  );
 
   const footer =
     rows.length > 0 ? (
@@ -302,32 +336,31 @@ export const ReceiptReviewScreen: React.FC = () => {
                     />
                   </View>
                 </Reveal>
+                {storeOffer ? (
+                  <ItemCard
+                    id={storeOffer.id}
+                    title={storeOffer.name}
+                    subtitle={t('receipts.review.addsAddress')}
+                    leftElement={
+                      <Icon
+                        name="storefront-outline"
+                        size="md"
+                        tone="primary"
+                      />
+                    }
+                    onPress={() => chooseStore(storeOffer)}
+                    testID={receiptsTestIDs.reviewStoreOffer}
+                  />
+                ) : null}
                 {dayIsScanDay ? (
                   <View>
-                    <DatePickerField
-                      label={t('receipts.review.dateLabel')}
-                      value={fromDateKey(purchasedOn)}
-                      onChange={date => {
-                        if (date) setPurchasedOn(toDateKey(date));
-                      }}
-                      maximumDate={fromDateKey(today)}
-                      testID={receiptsTestIDs.reviewDate}
-                    />
+                    {dateField}
                     <Text role="caption" tone="tertiary">
                       {t('receipts.review.dateScanned')}
                     </Text>
                   </View>
                 ) : (
-                  <DatePickerField
-                    presentation="row"
-                    label={t('receipts.review.dateLabel')}
-                    value={fromDateKey(purchasedOn)}
-                    onChange={date => {
-                      if (date) setPurchasedOn(toDateKey(date));
-                    }}
-                    maximumDate={fromDateKey(today)}
-                    testID={receiptsTestIDs.reviewDate}
-                  />
+                  dateField
                 )}
               </View>
               <Text role="body" tone="secondary">
@@ -413,5 +446,9 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
+  },
+  // A price over the discount that made it.
+  price: {
+    alignItems: 'flex-end',
   },
 }));

@@ -30,7 +30,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   // fallback when no unit of that system shares the ingredient's dimension.
   const converted = ingredient.convertedQuantity;
   const amount = converted?.value ?? ingredient.quantity;
-  // A zero amount is an unmeasured ingredient ("salt to taste"): show none.
+  // No amount ("salt, to taste"), or a legacy zero standing for none: show none.
   const quantity = amount ? formatQuantityForDisplay(amount) : '';
   const unitSymbol = firstNonBlank(
     converted ? converted.unit.symbol : null,

@@ -303,7 +303,7 @@ describe('IngredientMatchRow', () => {
     const onUpdate = jest.fn();
     // The sheet owns the match, so the row's update lands in the same render.
     const Sheet = () => {
-      const [editableMatch, setEditableMatch] = React.useState({
+      const [editableMatch, setEditableMatch] = React.useState<EditableMatch>({
         ...makeMatch('Flour'),
         adjustedQuantity: 2,
       });

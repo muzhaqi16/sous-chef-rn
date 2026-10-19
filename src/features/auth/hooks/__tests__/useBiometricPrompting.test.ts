@@ -2,10 +2,6 @@ import { renderHook } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import { useBiometricPrompting } from '../useBiometricPrompting';
 
-// Break circular dependency chain
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // The hook does not touch the keychain — only the session-token stubs are
 // needed to keep the import chain from reaching native code.
 jest.mock('#/storage/keychain', () => ({

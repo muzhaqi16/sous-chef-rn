@@ -5,6 +5,7 @@
 
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import {
   reconcileShoppingItemCreateUpdate,
   buildAddItemsReconcileUpdate,
@@ -110,6 +111,38 @@ describe('addLocalShoppingListItem: the row', () => {
       id: 'item-milk',
       imageUrl: 'https://cdn.example.com/milk.jpg',
     });
+  });
+
+  // The API's rule: a line made offline is shelved where its item is.
+  it("starts in its item's aisle, else OTHER", () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: gql`
+        fragment HeldDepartment on Item {
+          id
+          storeDepartment
+        }
+      `,
+      data: {
+        __typename: 'Item',
+        id: 'item-milk',
+        storeDepartment: StoreDepartment.DairyEggs,
+      },
+    });
+
+    expect(
+      writeLine(cache, {
+        shoppingListId: 'list-1',
+        itemName: 'Milk',
+        itemId: 'item-milk',
+      }),
+    ).toMatchObject({
+      storeDepartment: StoreDepartment.DairyEggs,
+      storeDepartmentOverride: null,
+    });
+    expect(
+      writeLine(makeCache(), { shoppingListId: 'list-1', itemName: 'Twine' }),
+    ).toMatchObject({ storeDepartment: StoreDepartment.Other });
   });
 });
 

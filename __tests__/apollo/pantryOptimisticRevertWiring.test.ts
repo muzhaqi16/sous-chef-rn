@@ -32,6 +32,9 @@ const OPTIMISTIC_PUBLISHERS = [
   'addToPantryItemsCache(',
   'addToPantryItemsConnection(',
   'addPantryItemLocally(',
+  // The shared add-side writer, which publishes through `addPantryItemLocally(`
+  // (proved in unconfirmedCreateWiring.test.ts).
+  'writeLocalIntake(',
 ];
 
 const stripComments = (source: string): string =>

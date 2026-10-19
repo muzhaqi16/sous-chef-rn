@@ -11,16 +11,22 @@ import {
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
+import {
+  recipeFormFragment,
+  recipeFormIngredient,
+} from '#/test-utils/fixtures/recipeFixtures';
 import { useRecipeForm } from '../useRecipeForm';
-import type { RecipeForm_RecipeFragment } from '../RecipeForm.generated';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-/** The cursor state of a whole ingredient list: a recipe within the limit. */
-const READ_TO_THE_END: RecipeForm_RecipeFragment['ingredientsConnection']['pageInfo'] =
-  { __typename: 'PageInfo', hasNextPage: false, endCursor: null };
+/** The first page of a recipe over the ingredient limit. */
+const OVER_THE_LIMIT = {
+  totalCount: 150,
+  hasNextPage: true,
+  endCursor: 'cursor-100',
+};
 
 describe('useRecipeForm', () => {
   it('initializes with default state', () => {
@@ -427,59 +433,21 @@ describe('useRecipeForm', () => {
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe: RecipeForm_RecipeFragment = {
-      __typename: 'Recipe',
-      id: 'recipe-1',
-      version: 4,
-      name: 'Existing Recipe',
-      description: 'A recipe',
-      imageUrl: 'http://img.jpg',
-      videoUrl: null,
-      servings: 2,
-      prepTimeMinutes: 10,
-      cookTimeMinutes: 20,
-      caloriesPerServing: 300,
-      difficulty: Difficulty.Easy,
-      category: RecipeCategory.MainCourse,
-      cuisines: [Cuisine.Italian],
-      status: RecipeStatus.Published,
-      diets: [Diet.Keto],
-      healthGoals: [HealthGoal.HighProtein],
-      intolerances: [Intolerance.Dairy],
-      tips: null,
-      originalAuthor: null,
-      tags: [],
-      ingredientsConnection: {
-        __typename: 'RecipeIngredientConnection',
-        edges: [
-          {
-            __typename: 'RecipeIngredientEdge',
-            node: {
-              __typename: 'RecipeIngredient',
-              id: 'ing-1',
-              name: 'Salt',
-              quantity: 1,
-              image: null,
-              unit: null,
-              item: null,
-              preparation: null,
-              section: null,
-              notes: null,
-              isOptional: false,
-              sortOrder: 0,
-            },
-          },
-        ],
-        pageInfo: READ_TO_THE_END,
-        totalCount: 1,
-      },
-      instructions: [{ text: 'Add salt' }],
-      notes: 'A note',
-      pendingRevision: null,
-    };
-
     act(() => {
-      result.current.populateFromRecipe(recipe);
+      result.current.populateFromRecipe(
+        recipeFormFragment({
+          version: 4,
+          name: 'Existing Recipe',
+          servings: 2,
+          diets: [Diet.Keto],
+          healthGoals: [HealthGoal.HighProtein],
+          intolerances: [Intolerance.Dairy],
+          ingredients: [
+            recipeFormIngredient({ id: 'ing-1', name: 'Salt', quantity: 1 }),
+          ],
+          instructions: [{ text: 'Add salt' }],
+        }),
+      );
     });
 
     expect(result.current.state.name).toBe('Existing Recipe');
@@ -500,44 +468,15 @@ describe('useRecipeForm', () => {
   it('populateFromRecipe handles { number, step } instruction format', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe: RecipeForm_RecipeFragment = {
-      __typename: 'Recipe',
-      id: 'recipe-2',
-      version: 1,
-      name: 'External Recipe',
-      description: '',
-      imageUrl: null,
-      videoUrl: null,
-      servings: 4,
-      prepTimeMinutes: null,
-      cookTimeMinutes: null,
-      caloriesPerServing: null,
-      difficulty: Difficulty.Easy,
-      category: RecipeCategory.MainCourse,
-      cuisines: [],
-      status: RecipeStatus.Published,
-      diets: [],
-      healthGoals: [],
-      intolerances: [],
-      tips: null,
-      originalAuthor: null,
-      tags: [],
-      ingredientsConnection: {
-        __typename: 'RecipeIngredientConnection',
-        edges: [],
-        pageInfo: READ_TO_THE_END,
-        totalCount: 0,
-      },
-      instructions: [
-        { number: 1, step: 'Boil the water' },
-        { number: 2, step: 'Cook the pasta' },
-      ],
-      notes: null,
-      pendingRevision: null,
-    };
-
     act(() => {
-      result.current.populateFromRecipe(recipe);
+      result.current.populateFromRecipe(
+        recipeFormFragment({
+          instructions: [
+            { number: 1, step: 'Boil the water' },
+            { number: 2, step: 'Cook the pasta' },
+          ],
+        }),
+      );
     });
 
     expect(result.current.state.steps).toHaveLength(2);
@@ -545,47 +484,56 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps[1]!.instruction).toBe('Cook the pasta');
   });
 
+  // The API matches a replaced ingredient by name, so a renamed one keeps its
+  // line as written only when the form sends it back.
+  it("keeps an ingredient's line as written and its unit through a rename", () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.populateFromRecipe(
+        recipeFormFragment({
+          ingredients: [
+            recipeFormIngredient({
+              id: 'ing-1',
+              name: 'all-purpose flour',
+              originalText: '2 ½ cups all-purpose flour, sifted',
+              unit: {
+                __typename: 'Unit',
+                id: 'u-cup',
+                name: 'cup',
+                symbol: 'cup',
+              },
+            }),
+          ],
+        }),
+      );
+    });
+    const [loaded] = result.current.state.ingredients;
+    expect(loaded?.unitLabel).toBe('cup');
+    act(() => {
+      result.current.updateIngredient(loaded!.id, { name: 'bread flour' });
+    });
+
+    expect(result.current.buildUpdateInput().ingredients?.[0]).toMatchObject({
+      name: 'bread flour',
+      originalText: '2 ½ cups all-purpose flour, sifted',
+    });
+  });
+
   // A save sends the whole form: filled from the live recipe, it would set
   // every change the pending edit holds back to the published value.
   it('populateFromRecipe reopens a pending edit from what it proposes', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe: RecipeForm_RecipeFragment = {
-      __typename: 'Recipe',
-      id: 'recipe-3',
-      version: 2,
+    const recipe = recipeFormFragment({
       name: 'Live Name',
-      description: 'Live description',
-      imageUrl: null,
-      videoUrl: null,
       servings: 2,
-      prepTimeMinutes: 10,
-      cookTimeMinutes: null,
-      caloriesPerServing: null,
-      difficulty: Difficulty.Easy,
-      category: RecipeCategory.MainCourse,
-      cuisines: [],
       status: RecipeStatus.Published,
-      diets: [],
-      healthGoals: [],
-      intolerances: [],
-      tips: null,
-      originalAuthor: null,
       tags: ['live'],
+      instructions: [{ text: 'Live step' }],
       // The live recipe is over the ingredient limit, so the device holds part
       // of its list; the proposed one below is whole.
-      ingredientsConnection: {
-        __typename: 'RecipeIngredientConnection',
-        edges: [],
-        pageInfo: {
-          __typename: 'PageInfo',
-          hasNextPage: true,
-          endCursor: 'cursor-100',
-        },
-        totalCount: 150,
-      },
-      instructions: [{ text: 'Live step' }],
-      notes: null,
+      ingredientsPage: OVER_THE_LIMIT,
       pendingRevision: {
         __typename: 'RecipeRevision',
         id: 'rev-1',
@@ -636,7 +584,7 @@ describe('useRecipeForm', () => {
           ],
         },
       },
-    };
+    });
 
     act(() => {
       result.current.populateFromRecipe(recipe);
@@ -666,45 +614,10 @@ describe('useRecipeForm', () => {
   it('populateFromRecipe marks a recipe over the ingredient limit', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe: RecipeForm_RecipeFragment = {
-      __typename: 'Recipe',
-      id: 'recipe-4',
-      version: 7,
-      name: 'Feast',
-      description: null,
-      imageUrl: null,
-      videoUrl: null,
-      servings: 12,
-      prepTimeMinutes: null,
-      cookTimeMinutes: null,
-      caloriesPerServing: null,
-      difficulty: Difficulty.Hard,
-      category: RecipeCategory.MainCourse,
-      cuisines: [],
-      status: RecipeStatus.Draft,
-      diets: [],
-      healthGoals: [],
-      intolerances: [],
-      tips: null,
-      originalAuthor: null,
-      tags: [],
-      ingredientsConnection: {
-        __typename: 'RecipeIngredientConnection',
-        edges: [],
-        pageInfo: {
-          __typename: 'PageInfo',
-          hasNextPage: true,
-          endCursor: 'cursor-100',
-        },
-        totalCount: 150,
-      },
-      instructions: [],
-      notes: null,
-      pendingRevision: null,
-    };
-
     act(() => {
-      result.current.populateFromRecipe(recipe);
+      result.current.populateFromRecipe(
+        recipeFormFragment({ version: 7, ingredientsPage: OVER_THE_LIMIT }),
+      );
     });
 
     expect(result.current.buildUpdateInput()).toEqual(

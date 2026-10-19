@@ -1139,6 +1139,15 @@ describe('direct cache helpers', () => {
 
       expect(cache.extract()).toHaveProperty('StorageLocation:server-1');
     });
+
+    it('keeps the minted row when the answer names none', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', undefined, 'client-1');
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:client-1');
+    });
   });
 });
 

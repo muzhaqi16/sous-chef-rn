@@ -42,8 +42,6 @@ jest.mock('#features/mealPlan/hooks/useMealTemplateForEdit', () => ({
   }),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockAddItem = jest.fn(async () => true);

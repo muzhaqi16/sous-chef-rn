@@ -115,4 +115,12 @@ describe('TextRecognition', () => {
 
     expect(deletePhotos).toHaveBeenCalledWith(['file:///page.jpg']);
   });
+
+  it('can mask photos only in a build whose module paints them', () => {
+    nativeModules.TextRecognitionModule = { recognizeAndDelete: jest.fn() };
+    expect(TextRecognition.canMaskPhotos()).toBe(false);
+
+    nativeModules.TextRecognitionModule = { maskPhotos: jest.fn() };
+    expect(TextRecognition.canMaskPhotos()).toBe(true);
+  });
 });

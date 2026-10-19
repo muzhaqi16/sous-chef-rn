@@ -103,7 +103,7 @@ describe('forkRecipe', () => {
     ]);
   });
 
-  it('keeps a free-text ingredient that names no catalog item', () => {
+  it('keeps a free-text ingredient that names no catalog item or amount', () => {
     const { ingredients } = forkRecipe(
       {
         ...source,
@@ -112,7 +112,7 @@ describe('forkRecipe', () => {
       { name: 'Copy' },
     );
 
-    expect(ingredients).toEqual([{ name: 'A pinch of salt', quantity: 0 }]);
+    expect(ingredients).toEqual([{ name: 'A pinch of salt' }]);
   });
 
   it('omits a field the source does not carry rather than sending null', () => {

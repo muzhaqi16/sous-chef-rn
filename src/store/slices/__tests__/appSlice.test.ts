@@ -1,9 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import type { NavigationState } from '../appSlice';
 
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 describe('appSlice', () => {
   it('initializes with default values', () => {
     const store = createTestStore();

@@ -8,9 +8,6 @@ import { alertService } from '#/services/alertService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { PerformanceDashboard } from '../PerformanceDashboard';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/services/performance/MemoryMonitor', () => ({
   MemoryMonitor: {
     start: jest.fn(),
@@ -134,10 +131,6 @@ jest.mock('#components/templates/SubScreen', () => ({
       </View>
     );
   },
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 jest.mock('#/utils/finallyHelpers', () => ({

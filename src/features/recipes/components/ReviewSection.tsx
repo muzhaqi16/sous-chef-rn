@@ -16,6 +16,7 @@ import {
   ReportContentSheet,
   type ReportTarget,
 } from '#features/profile/ui/ReportContentSheet';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];
@@ -81,16 +82,9 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     alertService.alert(
       t('recipes.deleteReviewTitle'),
       t('recipes.deleteReviewConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteReview(userReview.id);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteReview(userReview.id);
+      }),
     );
   };
 

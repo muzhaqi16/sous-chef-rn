@@ -3,10 +3,6 @@
 import { alertService } from '#/services/alertService';
 import { createPantryForHome, showPantryCreationError } from '../helpers';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

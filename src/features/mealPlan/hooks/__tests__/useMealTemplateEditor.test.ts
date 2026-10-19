@@ -16,10 +16,6 @@ import { UseMealTemplateEditor_TemplateFragmentDoc } from '../useMealTemplateEdi
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { useMealTemplateEditor } from '../useMealTemplateEditor';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const TEMPLATE = {
   __typename: 'MealTemplate',
   id: 'tpl-1',

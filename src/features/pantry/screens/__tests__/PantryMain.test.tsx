@@ -18,10 +18,6 @@ import type {
 // --- Prop capture for PantryContent ---
 let capturedPantryContentProps: Partial<PantryContentProps> = {};
 
-// --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
@@ -35,8 +31,8 @@ jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setOverlayOpen: jest.fn() }),
   useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
 }));
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 
 // --- Store (useStore for getState in focus handler) ---

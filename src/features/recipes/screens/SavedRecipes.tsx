@@ -103,11 +103,9 @@ export const SavedRecipes: React.FC = () => {
     loading: folderActionLoading,
   } = useFolderActions();
 
-  // Folder, tags AND search all filter here, never inside the cell: a
-  // virtualized list cannot absorb rows that return null — the cell, its
-  // layout slot and its fragment subscription all survive. `recipe.name` and
-  // `recipe.description` are selected on the query's node for exactly this
-  // (see recipe.graphql).
+  // Folder, tags AND search filter here, never in the cell: a cell returning
+  // null keeps its layout slot and fragment subscription. The query's node
+  // selects `name` and `description` for this.
   const filteredRecipes = (() => {
     let result = recipes;
 
@@ -127,10 +125,9 @@ export const SavedRecipes: React.FC = () => {
     ]);
   })();
 
-  // Folder, tags and search can each empty this list while the library is full,
-  // so "you haven't saved any recipes" would be false and would hide the
-  // filter. `isEmpty` above reads the UNFILTERED list; the two cases are told
-  // apart here.
+  // Folder, tags or search can empty this list over a full library, where "you
+  // haven't saved any recipes" would be false; `isEmpty` reads the UNFILTERED
+  // list.
   const savedSearchTerm = searchQuery.trim();
   const emptyProps = isSearchIncomplete
     ? {
@@ -265,6 +262,7 @@ export const SavedRecipes: React.FC = () => {
         counts={filterCounts}
         actionButton={{
           icon: 'close',
+          accessibilityLabel: t('recipeFilters.clearAllA11y'),
           onPress: handleClearFilters,
           testID: recipesTestIDs.savedRecipesClearFilters,
           disabled: !hasActiveFilters,

@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import type { AnimatedChip as AnimatedChipComponent } from '../../../src/components/molecules/AnimatedChip';
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/components/molecules/AnimatedChip', () => ({
   AnimatedChip: (props: React.ComponentProps<typeof AnimatedChipComponent>) => {
     const { Text } = require('react-native');

@@ -3,27 +3,37 @@ import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
- * The shape every denominated field arrives in — `PantryItem.costCurrency`,
- * `PantryItemBatch.currency`, `Purchase.currency`. Only the ISO code is needed
- * to format: Intl reads the minor unit from it.
+ * The shape of every denominated field (`PantryItem.costCurrency`,
+ * `Purchase.currency`, …); Intl reads the minor unit from the code alone.
  */
 export interface FigureCurrency {
   code: string;
 }
 
 /**
- * Which currency a figure is in. The API names one for a cost it recorded, and
- * that one wins — a cost paid in euros stays euros however the reader's
- * preference is set. Only an UNDENOMINATED figure falls back to the account's
- * currency, which is also what the server denominates new costs with.
+ * A figure's own currency wins: a cost paid in euros stays euros. Only an
+ * UNDENOMINATED figure falls back to the account's, which the server also
+ * denominates new costs with.
  */
 export function resolveCurrency(
   figureCurrency: FigureCurrency | null | undefined,
   preferred: string,
 ): string {
-  // A blank code is the absence of an answer, and Intl would reject it rather
-  // than fall back.
+  // Intl rejects a blank code rather than falling back.
   return firstNonBlank(figureCurrency?.code, preferred) ?? DEFAULT_CURRENCY;
+}
+
+/**
+ * Amounts in different currencies are never summed. Undefined when there are
+ * none, which a caller shows as unknown or omits, never as zero.
+ */
+export function moneyByCurrency(
+  amounts: readonly { currencyCode: string; amount: number }[],
+): string | undefined {
+  if (amounts.length === 0) return undefined;
+  return amounts
+    .map(({ currencyCode, amount }) => formatCurrency(amount, currencyCode))
+    .join(' · ');
 }
 
 /** The account's currency, mirrored from `UserSettings.preferredCurrency`. */
@@ -32,9 +42,8 @@ export function usePreferredCurrency(): string {
 }
 
 /**
- * Format money without naming a currency at the call site. An absent amount
- * reads as the unknown marker; a caller that would rather omit its row tests
- * the value itself.
+ * An absent amount reads as the unknown marker; a caller that would rather omit
+ * its row tests the value itself.
  */
 export function useMoney(): (
   amount: number | null | undefined,

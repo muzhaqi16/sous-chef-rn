@@ -26,10 +26,9 @@ export function formatQuantity(value: number): string {
 }
 
 /**
- * How a fractional value is written. `mixed` is the cooking form ("1 1/4"),
- * `fraction` the improper one ("5/4"), `decimal` the 3-place number. The two
- * fraction notations still fall back to a decimal for a value no cooking
- * fraction fits, so nothing ever reads "7/10 cup".
+ * `mixed` is the cooking form ("1 1/4"), `fraction` the improper one ("5/4"),
+ * `decimal` the 3-place number. Both fraction forms fall back to a decimal where
+ * no cooking fraction fits, so nothing reads "7/10 cup".
  */
 export type QuantityNotation = 'mixed' | 'fraction' | 'decimal';
 

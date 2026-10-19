@@ -9,9 +9,6 @@ import { ImageCropScreen } from '../ImageCropScreen';
 
 type ImageCropScreenProps = ComponentProps<typeof ImageCropScreen>;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGoBack = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: mockGoBack }),
@@ -34,11 +31,6 @@ jest.mock('#/storage/mmkv');
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 jest
   .spyOn(Image, 'getSize')
   .mockImplementation(

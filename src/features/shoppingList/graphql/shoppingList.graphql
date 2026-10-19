@@ -42,6 +42,11 @@ query GetShoppingListDetails($id: ID!) {
     unpricedItems
     currency
     priceTracking
+    # The store this trip is shopped at: a ticked line's price is recorded there.
+    targetStore {
+      id
+      name
+    }
     totalItems
     completedItems
     homeId
@@ -213,6 +218,22 @@ query GetShoppingListItemsFiltered(
             type
           }
           sortOrder
+          # Store mode groups the line under its aisle.
+          storeDepartment
+          storeDepartmentOverride
+          # Store mode adds up what is left to buy: a typed estimate, else the
+          # suggestion, as the API's suggestedTotal does.
+          priceEstimate {
+            estimated
+          }
+          suggestedPrice {
+            amount
+            currency {
+              id
+              code
+              decimalPlaces
+            }
+          }
           item {
             id
             imageUrl
@@ -221,6 +242,8 @@ query GetShoppingListItemsFiltered(
               url
               kind
             }
+            # Where a new line of this item, or a reset one, is shelved.
+            storeDepartment
           }
           ...SortableItem_item
         }
@@ -693,6 +716,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
         ...UpdateShoppingListItem_item
         ...useToggleShoppingItem_item
         ...useQuantityEditModal_updateQuantityResult
+        ...useMoveToAisleModal_item
       }
       shoppingList {
         id

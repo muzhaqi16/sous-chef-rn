@@ -15,10 +15,9 @@ import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {
-  // A locally-created item owns its id before the server does, so a fetch before
-  // the create is acknowledged can only answer that there is no such stack —
-  // and that answer never retries itself. Skipping makes the acknowledgement
-  // the fetch trigger; the optimistic entity renders the screen meanwhile.
+  // Before its create is acknowledged, a fetch can only answer that the stack
+  // does not exist, and never retries. Skipping makes the ack the fetch
+  // trigger; the optimistic entity renders meanwhile.
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
 
   // This query exists to FETCH and reconcile into the normalized entity the
@@ -51,10 +50,9 @@ export function usePantryItemDetailData(itemId: string) {
   });
   const item = livePantryItem.complete ? livePantryItem.data : null;
 
-  // A stack removed on another device reads as an explicit null, as every by-id
-  // query reports a miss (an API before that answered RESOURCE_NOT_FOUND, still
-  // read). Trusted only once the create is acknowledged — the same answer means
-  // "not told yet" while unconfirmed — and only from a settled read.
+  // A stack removed elsewhere reads as an explicit null (an older API answered
+  // RESOURCE_NOT_FOUND, still read). Trusted only from a settled read once the
+  // create is acknowledged; before that it means "not told yet".
   const answeredNoSuchItem =
     !itemLoading && !itemError && !!itemData && itemData.pantryItem === null;
   const deletedOnServer =

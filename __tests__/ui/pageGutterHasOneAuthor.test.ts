@@ -40,6 +40,8 @@ const AUTHORS: Record<string, string> = {
   // Floats over every tab's page, so its edges line up with that page's rows.
   'src/app/FloatingTabBar/FloatingTabBar.tsx':
     'floating chrome aligned to the page it covers',
+  'src/app/FloatingTabBar/AddMenu.tsx':
+    "the + menu's entries, centred over the + on the same gutter",
 
   // A section whose rules bleed through the gutter it sits in.
   'src/components/organisms/SettingsSection.tsx':
@@ -60,6 +62,8 @@ const AUTHORS: Record<string, string> = {
 
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
+    'single host, self-inset',
+  'src/features/shoppingList/components/storeMode/StoreModeHeader.tsx':
     'single host, self-inset',
   'src/features/shoppingList/components/skeletons/ShoppingListSkeleton.tsx':
     'single host, self-inset',

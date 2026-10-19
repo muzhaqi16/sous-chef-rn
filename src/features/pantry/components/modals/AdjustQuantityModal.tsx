@@ -58,10 +58,9 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     defaultValues: adjustQuantityDefaults(),
   });
 
-  // `reset` notifies mounted `Controller` children synchronously, so calling it
-  // during render updates components that are not rendering. The seed is
-  // computed here (own state only) and applied from an effect. Keyed on the
-  // item id so a cache update to the same item does not clobber typed input.
+  // `reset` notifies mounted `Controller`s synchronously, so the seed is
+  // computed during render and applied from an effect. Keyed on the item id so
+  // a cache update to the same item keeps typed input.
   const [pendingSeed, setPendingSeed] =
     useState<AdjustQuantityFormValues | null>(null);
   const [seedKey, setSeedKey] = useState<string | null>(null);

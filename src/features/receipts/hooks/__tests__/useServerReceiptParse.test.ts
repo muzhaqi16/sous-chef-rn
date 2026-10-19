@@ -33,8 +33,6 @@ import {
 } from '../useServerReceiptParse.generated';
 import { useServerReceiptParse } from '../useServerReceiptParse';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/services/errorService');
 
 const PAGES = ['WALMART\nGV WHOLE MILK 007874235186 F  3.48 N\nTOTAL  3.48'];
@@ -77,7 +75,6 @@ const MILK_RECEIPT = {
       text: 'GV WHOLE MILK 007874235186 F 3.48 N',
       kind: ReceiptLineKind.Item,
       product: 'GV WHOLE MILK',
-      code: '007874235186',
       amount: 3.48,
     },
     { text: 'TOTAL 3.48', kind: ReceiptLineKind.Total, amount: 3.48 },
@@ -142,7 +139,13 @@ describe('useServerReceiptParse', () => {
     const create = created(ReceiptParseStatus.Pending);
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
-      warnings: [],
+      warnings: [
+        {
+          code: ReceiptParseWarningCode.TotalsMismatch,
+          counted: 22.97,
+          printed: 27.94,
+        },
+      ],
       receipt: MILK_RECEIPT,
     });
     const { result } = render([create.mock, ...poll.mocks]);
@@ -170,6 +173,7 @@ describe('useServerReceiptParse', () => {
     });
     // The day the phone read before redaction stands.
     expect(draft?.purchasedOn).toBe('2026-09-30');
+    expect(draft?.totalsGap).toEqual({ counted: 22.97, printed: 27.94 });
     expect(draft?.serverParse).toBeUndefined();
     expect(result.current.readingStatus).toBe('none');
     expect(Telemetry.histogram).toHaveBeenCalledWith(
@@ -179,22 +183,13 @@ describe('useServerReceiptParse', () => {
     );
   });
 
-  it.each([
-    [
-      "takes the server's day when the phone read none",
-      '2026-09-29',
-      '2026-09-29',
-    ],
-    ['drops a day the server read in the future', '2026-12-29', undefined],
-    // OCR noise at a receipt's top (`86/9/18`) read as a day years back.
-    ['drops a day the server read years back', '2018-09-06', undefined],
-  ])('%s', async (_name, served, kept) => {
+  it("takes the server's day when the phone read none", async () => {
     jest.setSystemTime(new Date(2026, 9, 1, 12));
     seedMilkDraft({ purchasedOn: undefined });
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
       warnings: [],
-      receipt: { ...MILK_RECEIPT, purchasedOn: served },
+      receipt: MILK_RECEIPT,
     });
     render([created(ReceiptParseStatus.Pending).mock, ...poll.mocks]);
 
@@ -203,7 +198,7 @@ describe('useServerReceiptParse', () => {
 
     const draft = useReceiptDraftStore.getState().draft;
     expect(draft?.parsedBy).toBe('server');
-    expect(draft?.purchasedOn).toBe(kept);
+    expect(draft?.purchasedOn).toBe('2026-09-29');
   });
 
   it('reads a parse the server has already finished from its answer, with no poll', async () => {
@@ -244,57 +239,6 @@ describe('useServerReceiptParse', () => {
     expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
   });
 
-  it('calls a receipt the server could barely read unreadable, never an empty review', async () => {
-    seedMilkDraft();
-    const { result } = render([
-      created(ReceiptParseStatus.Pending).mock,
-      ...polledTo({
-        status: ReceiptParseStatus.Parsed,
-        warnings: [{ code: ReceiptParseWarningCode.LowText }],
-        receipt: MILK_RECEIPT,
-      }).mocks,
-    ]);
-
-    await pollOnce();
-    await pollOnce();
-
-    expect(result.current.readingStatus).toBe('unreadable');
-    expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
-  });
-
-  it.each([
-    [
-      'keeps the totals the server found do not add up',
-      { counted: 22.97, printed: 27.94 },
-      { counted: 22.97, printed: 27.94 },
-    ],
-    // An API from before its discount rule sends no figures; its check misfired.
-    [
-      'drops a mismatch the server gives no figures for',
-      { counted: null, printed: null },
-      undefined,
-    ],
-  ])('%s', async (_name, figures, kept) => {
-    seedMilkDraft();
-    render([
-      created(ReceiptParseStatus.Pending).mock,
-      ...polledTo({
-        status: ReceiptParseStatus.Parsed,
-        warnings: [
-          { code: ReceiptParseWarningCode.TotalsMismatch, ...figures },
-        ],
-        receipt: MILK_RECEIPT,
-      }).mocks,
-    ]);
-
-    await pollOnce();
-    await pollOnce();
-
-    const draft = useReceiptDraftStore.getState().draft;
-    expect(draft?.parsedBy).toBe('server');
-    expect(draft?.totalsGap).toEqual(kept);
-  });
-
   const overTheLimit = (
     retryAfter?: number,
   ): MockFor<typeof CreateReceiptParseDocument> => ({
@@ -321,6 +265,26 @@ describe('useServerReceiptParse', () => {
       input: {
         id: expect.any(String),
         photos: ['receipt-photos/u1/p1.jpg'],
+        locale: expect.any(String),
+      },
+    });
+  });
+
+  it('says the photos were masked only when every one was', async () => {
+    seedMilkDraft({
+      pages: [],
+      photoKeys: ['receipt-photos/u1/p1.jpg'],
+      photosMasked: true,
+    });
+    const create = created(ReceiptParseStatus.Pending);
+    render([create.mock]);
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    expect(create.fired[0]).toEqual({
+      input: {
+        id: expect.any(String),
+        photos: ['receipt-photos/u1/p1.jpg'],
+        photosMasked: true,
         locale: expect.any(String),
       },
     });
@@ -662,31 +626,25 @@ describe('useServerReceiptParse', () => {
     await waitFor(() => expect(timedOut.fired).toHaveLength(6));
   });
 
-  it.each([
-    ['pages', 'tooLong'],
-    ['locale', 'unavailable'],
-  ])(
-    'takes a refusal on %s as final (%s), and never sends it again',
-    async (field, status) => {
-      seedMilkDraft();
-      const refused = recordMock(CreateReceiptParseDocument, {
-        data: {
-          createReceiptParse: {
-            __typename: 'ValidationError',
-            code: ErrorCode.ValidationFailed,
-            field,
-          },
+  it('takes a refusal on pages as final (tooLong), and never sends it again', async () => {
+    seedMilkDraft();
+    const refused = recordMock(CreateReceiptParseDocument, {
+      data: {
+        createReceiptParse: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'pages',
         },
-      });
-      const { result } = render([refused.mock]);
+      },
+    });
+    const { result } = render([refused.mock]);
 
-      await waitFor(() => expect(result.current.readingStatus).toBe(status));
-      await act(async () => {
-        await jest.advanceTimersByTimeAsync(20_000);
-      });
-      expect(refused.fired).toHaveLength(1);
-    },
-  );
+    await waitFor(() => expect(result.current.readingStatus).toBe('tooLong'));
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(20_000);
+    });
+    expect(refused.fired).toHaveLength(1);
+  });
 
   it('asks nothing offline, and says the items are read once back online', async () => {
     seedMilkDraft();

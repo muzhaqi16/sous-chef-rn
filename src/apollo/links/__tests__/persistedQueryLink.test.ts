@@ -23,9 +23,6 @@ import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetHomeDocument } from '#operations/home/home.generated';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 interface ManifestOperation {
   id: string;
   name: string;

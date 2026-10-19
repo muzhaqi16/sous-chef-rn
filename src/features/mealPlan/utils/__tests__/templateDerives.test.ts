@@ -6,6 +6,11 @@ import {
   MealType,
   TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
+import {
+  leftoversLunch,
+  planSource,
+  recipeDinner,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 
 /**
  * A plan's meals carry absolute days (`LocalDate` keys) and a template's carry
@@ -226,34 +231,9 @@ describe('laying a template onto dates', () => {
 });
 
 describe('cutting a template from a plan', () => {
-  const plan = {
-    id: 'plan-1',
-    description: 'A week of food',
-    servings: 4,
-    homeId: 'home-1',
-    startDate: '2026-01-05',
-    endDate: '2026-01-11',
-    mealPlanItems: [
-      {
-        id: 'mpi-1',
-        date: '2026-01-05',
-        mealType: MealType.Dinner,
-        servings: 2,
-        notes: null,
-        customMealName: null,
-        recipe: { id: 'recipe-1' },
-      },
-      {
-        id: 'mpi-2',
-        date: '2026-01-08',
-        mealType: MealType.Lunch,
-        servings: null,
-        notes: null,
-        customMealName: 'Leftovers',
-        recipe: null,
-      },
-    ],
-  };
+  const plan = planSource({
+    mealPlanItems: [recipeDinner(), leftoversLunch({ date: '2026-01-08' })],
+  });
 
   it('turns each meal date into an offset from the plan start', () => {
     const { template } = templateFromPlan(plan, { name: 'Cut', mintId });

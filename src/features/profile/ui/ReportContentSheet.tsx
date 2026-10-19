@@ -7,13 +7,12 @@ import { useTranslation } from '#/i18n';
 import type { CreateUserReportInput } from '#/graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Button } from '#components/molecules/Button';
-import { Icon } from '#utils/iconUtils';
+import { RadioRow } from '#components/molecules/RadioRow';
 import { toastService } from '#services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -26,46 +25,13 @@ import {
   reportContentSchema,
   type ReportContentFormValues,
 } from './reportContentFormConfig';
+import { useOpening } from '#hooks/ui/useOpening';
 
 /** Who is reported and, with both content fields, which of their content. */
 export type ReportTarget = Pick<
   CreateUserReportInput,
   'reportedUserId' | 'contentType' | 'contentId'
 >;
-
-interface ReasonOptionProps {
-  label: string;
-  selected: boolean;
-  disabled: boolean;
-  onPress: () => void;
-  testID: string;
-}
-
-const ReasonOption: React.FC<ReasonOptionProps> = ({
-  label,
-  selected,
-  disabled,
-  onPress,
-  testID,
-}) => (
-  <AppPressable
-    style={styles.reason}
-    onPress={onPress}
-    disabled={disabled}
-    accessibilityRole="radio"
-    accessibilityState={{ checked: selected, disabled }}
-    testID={testID}
-  >
-    <Icon
-      name={selected ? 'radio-button-on' : 'radio-button-off'}
-      size={20}
-      tone={selected ? 'primary' : 'textTertiary'}
-    />
-    <Text role="body" style={styles.reasonLabel}>
-      {label}
-    </Text>
-  </AppPressable>
-);
 
 interface ReportContentFormProps {
   target: ReportTarget;
@@ -129,14 +95,18 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
           <View accessibilityRole="radiogroup" style={styles.field}>
             <Label required>{t('labels.reason')}</Label>
             {REPORT_REASONS.map(reason => (
-              <ReasonOption
+              <RadioRow
                 key={reason}
-                label={t(REPORT_TYPE_LABEL_KEYS[reason])}
                 selected={field.value === reason}
                 disabled={sending}
                 onPress={() => field.onChange(reason)}
+                style={styles.reason}
                 testID={profileTestIDs.reportReason(reason)}
-              />
+              >
+                <Text role="body" style={styles.reasonLabel}>
+                  {t(REPORT_TYPE_LABEL_KEYS[reason])}
+                </Text>
+              </RadioRow>
             ))}
             {fieldState.error ? (
               <Text role="error" tone="error">
@@ -199,18 +169,7 @@ export const ReportContentSheet: React.FC<ReportContentSheetProps> = ({
   onDismiss,
   target,
 }) => {
-  // A new form per opening, kept while the sheet animates out.
-  const [opening, setOpening] = useState<{
-    id: number;
-    target: ReportTarget;
-  } | null>(null);
-  const [wasVisible, setWasVisible] = useState(false);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (visible && target) {
-      setOpening({ id: (opening?.id ?? 0) + 1, target });
-    }
-  }
+  const opening = useOpening(visible && target !== null, target);
 
   return (
     <Sheet
@@ -220,13 +179,13 @@ export const ReportContentSheet: React.FC<ReportContentSheetProps> = ({
       snapPoints={['90%']}
       contentContainerStyle={styles.content}
     >
-      {!!opening && (
+      {opening?.payload ? (
         <ReportContentForm
           key={opening.id}
-          target={opening.target}
+          target={opening.payload}
           onClose={onDismiss}
         />
-      )}
+      ) : null}
     </Sheet>
   );
 };
@@ -237,12 +196,9 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.md,
   },
   field: {
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   reason: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: theme.spacing.base,
     paddingVertical: theme.spacing.smPlus,
   },

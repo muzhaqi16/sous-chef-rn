@@ -1,0 +1,21 @@
+# The reader's PENDING, unexpired list invites, for the list selector. The
+# sender is `inviterName`: `invitedBy.displayName` is null to an invitee who
+# shares nothing with the inviter yet.
+query GetPendingListInvites($first: Int!) {
+  me {
+    id
+    pendingCollaborationInvitesConnection(first: $first) {
+      edges {
+        node {
+          id
+          role
+          inviterName
+          shoppingList {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}

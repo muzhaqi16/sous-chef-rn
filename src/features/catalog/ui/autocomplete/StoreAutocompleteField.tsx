@@ -46,13 +46,15 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   const { createStore } = useCreateStore();
 
   // Any name can be a store: the typed one is offered once the search for it
-  // has answered, unless a store of that name is listed.
+  // has answered, unless a store with no address has that name. A new one has
+  // no address, so a branch of the name is another shop (the API's matchKey).
   const term = store.searchTerm.trim();
   const offersNew =
     term.length >= 2 &&
     !store.searchPending &&
     !store.displayItems.some(
-      item => item.name.trim().toLowerCase() === term.toLowerCase(),
+      item =>
+        !item.address && item.name.trim().toLowerCase() === term.toLowerCase(),
     );
 
   const choose = (id: string, name: string) => {
@@ -102,7 +104,9 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         modalTitle={t('autocomplete.selectStore')}
         modalSearchPlaceholder={t('autocomplete.storeSearch')}
         modalEmptyText={t('autocomplete.noStores')}
-        modalEmptySubtext={t('autocomplete.typeAtLeastTwo')}
+        modalEmptySubtext={
+          term.length < 2 ? t('autocomplete.typeAtLeastTwo') : undefined
+        }
         modalMinSearchLength={2}
         onSearchChange={store.handleSearchTermChange}
       />

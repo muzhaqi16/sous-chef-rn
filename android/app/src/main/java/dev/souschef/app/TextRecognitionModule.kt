@@ -2,7 +2,11 @@ package dev.souschef.app
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Point
 import android.media.ExifInterface
 import android.net.Uri
@@ -21,6 +25,7 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -103,6 +108,81 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     promise.resolve(null)
   }
 
+  /**
+   * Paints each prepared photo's masks opaque and rewrites it in place. A mask
+   * is a polygon in fractions of the photo, grown on every side by its margin,
+   * a fraction of the photo's height. A photo is replaced only once its masked
+   * copy is written.
+   */
+  @ReactMethod
+  fun maskPhotos(photos: ReadableArray, promise: Promise) {
+    val requests = (0 until photos.size()).mapNotNull { photos.getMap(it) }
+    executor.execute {
+      try {
+        val masked = Arguments.createArray()
+        for (request in requests) {
+          val path = request.getString("uri")?.let { Uri.parse(it).path }
+          val photo = File(path ?: throw IllegalArgumentException("Not a file"))
+          require(photo.absolutePath in handedOut) { "Not a prepared photo" }
+          mask(photo, request.getArray("masks"))
+          masked.pushMap(describe(photo))
+        }
+        promise.resolve(masked)
+      } catch (error: Exception) {
+        promise.reject("photo_masking_failed", error.message, error)
+      }
+    }
+  }
+
+  private fun mask(photo: File, masks: ReadableArray?) {
+    val page =
+      BitmapFactory.decodeFile(photo.absolutePath, BitmapFactory.Options().apply { inMutable = true })
+        ?: throw IllegalArgumentException("Not an image")
+    val written = File(photo.parentFile, "$PHOTO_PREFIX${UUID.randomUUID()}.jpg")
+    try {
+      val canvas = Canvas(page)
+      for (at in 0 until (masks?.size() ?: 0)) {
+        val shape = masks?.getMap(at) ?: continue
+        val points = shape.getArray("points") ?: continue
+        canvas.drawPath(pathOf(points, page.width, page.height), paintFor(shape.getDouble("margin") * page.height))
+      }
+      FileOutputStream(written).use { page.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
+    } catch (error: Exception) {
+      written.delete()
+      throw error
+    } finally {
+      page.recycle()
+    }
+    if (!written.renameTo(photo)) {
+      written.delete()
+      throw IOException("The masked photo could not replace the prepared one")
+    }
+  }
+
+  // Points past the photo's edge are clipped by the canvas.
+  private fun pathOf(points: ReadableArray, width: Int, height: Int): Path =
+    Path().apply {
+      for (at in 0 until points.size() / 2) {
+        val x = (points.getDouble(at * 2) * width).toFloat()
+        val y = (points.getDouble(at * 2 + 1) * height).toFloat()
+        if (at == 0) moveTo(x, y) else lineTo(x, y)
+      }
+      close()
+    }
+
+  // A round stroke as wide as two margins grows the filled shape by one.
+  private fun paintFor(margin: Double): Paint =
+    Paint().apply {
+      color = Color.BLACK
+      if (margin > 0) {
+        style = Paint.Style.FILL_AND_STROKE
+        strokeWidth = (margin * 2).toFloat()
+        strokeJoin = Paint.Join.ROUND
+      } else {
+        style = Paint.Style.FILL
+      }
+    }
+
   private fun describe(photo: File): WritableMap =
     Arguments.createMap().apply {
       putString("uri", Uri.fromFile(photo).toString())
@@ -116,7 +196,7 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
     val upright = decodeUpright(uri, PHOTO_EDGE)
     val photo = File(reactApplicationContext.cacheDir, "$PHOTO_PREFIX${UUID.randomUUID()}.jpg")
     try {
-      FileOutputStream(photo).use { upright.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+      FileOutputStream(photo).use { upright.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
     } finally {
       upright.recycle()
     }
@@ -232,6 +312,10 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
   companion object {
     const val NAME = "TextRecognitionModule"
     private const val PHOTO_EDGE = 2048
+
+    // Masking re-encodes at the quality the photo was written at, which loses
+    // least from the blocks it leaves unchanged.
+    private const val JPEG_QUALITY = 80
     private const val PHOTO_PREFIX = "RECEIPT_PHOTO_"
 
     // Photos still with JS (going up) are not leftovers, until [deletePhotos].

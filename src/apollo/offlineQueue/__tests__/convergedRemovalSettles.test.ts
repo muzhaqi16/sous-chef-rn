@@ -20,6 +20,7 @@ import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
@@ -27,9 +28,6 @@ import { QueueStatus } from '../types';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
-}));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 // The failure handler reads the app's client; it shares the queue's cache here.
 jest.mock('#/apollo/client', () => {
@@ -147,8 +145,11 @@ describe('a queued shopping-list delete, replayed', () => {
         entityId: 'list-1',
       }),
     );
+    // No list row is cached, as after the local delete: its input names it.
     expect(toastService.error).toHaveBeenCalledWith(
-      "A change couldn't be saved and has been undone.",
+      t('errors.queuedChangeRejectedResource', {
+        resource: t('errors.resourceNames.ShoppingList'),
+      }),
     );
     expect(queued()).toEqual([]);
   });

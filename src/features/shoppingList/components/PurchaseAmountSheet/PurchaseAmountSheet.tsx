@@ -18,9 +18,10 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import {
+  shownUnitPrice,
   totalFromUnitPrice,
-  unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { parseMoneyInput } from '#/utils/validation/common';
@@ -30,7 +31,7 @@ interface PurchaseAmountSheetItem {
   itemName: string;
   requestedQuantity: number;
   unitName: string | null;
-  /** Per unit; the sheet seeds its total from it × `requestedQuantity`. */
+  /** Per unit; the sheet hints its total from it × `requestedQuantity`. */
   estimatedPrice: number | null;
 }
 
@@ -62,9 +63,9 @@ const formatPrice = (price: number | null): string =>
   formatNumberForInput(price);
 
 /**
- * Records the actual purchased amounts, pre-filled with the requested quantity
- * and the estimated TOTAL (per-unit estimate × quantity). It asks for the total
- * paid because that is what the receipt shows; a hint gives the per-unit split.
+ * Records the actual purchased amounts, pre-filled with the requested quantity.
+ * It asks for the total paid because that is what the receipt shows; a hint
+ * gives the per-unit split.
  */
 export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   visible,
@@ -101,22 +102,19 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
       setQuantityInput(
         formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
       );
-      setPriceInput(
-        formatPrice(
-          totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity),
-        ),
-      );
+      setPriceInput('');
     }
   }
 
+  // The estimate is the field's hint, never its value: confirmed unread, it
+  // would record a guess as the price paid, which the API never counts.
+  const estimatedTotal = item
+    ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
+    : null;
+
   const parsedQty = parseQuantityInput(quantityInput);
   const parsedTotal = parseMoneyInput(priceInput);
-  // Shown only when the split is not trivial — at quantity 1 the per-unit
-  // price IS the total.
-  const perUnitPrice =
-    parsedQty != null && parsedQty > 0 && parsedQty !== 1 && parsedTotal != null
-      ? unitPriceFromTotal(parsedTotal, parsedQty)
-      : null;
+  const perUnitPrice = shownUnitPrice(parsedTotal, parsedQty);
 
   // An empty or unparseable field is NOT a quantity of zero: defaulting it
   // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
@@ -152,7 +150,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             loading,
           }}
         />
-        <View style={styles.headerSpacer} />
         <View style={styles.sections}>
           <Text role="heading" style={styles.itemName}>
             {item?.itemName ?? ''}
@@ -206,9 +203,13 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 keyboardType="decimal-pad"
                 selectTextOnFocus
                 maxLength={10}
-                placeholder={localizeNumericHint(
-                  t('purchaseAmountSheet.pricePlaceholder'),
-                )}
+                placeholder={
+                  estimatedTotal == null
+                    ? localizeNumericHint(
+                        t('purchaseAmountSheet.pricePlaceholder'),
+                      )
+                    : formatPrice(estimatedTotal)
+                }
                 accessibilityLabel={t('labels.totalPaid')}
                 testID={shoppingListTestIDs.purchasePriceInput}
               />
@@ -224,17 +225,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               </Text>
             ) : null}
             {perUnitPrice != null ? (
-              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
-                {t(
-                  item?.unitName
-                    ? 'purchaseAmountSheet.perUnitOfHint'
-                    : 'purchaseAmountSheet.perUnitHint',
-                  {
-                    price: money(perUnitPrice),
-                    unit: item?.unitName,
-                  },
-                )}
-              </Text>
+              <PerUnitHint
+                price={money(perUnitPrice)}
+                unit={item?.unitName}
+                style={styles.perUnitHint}
+              />
             ) : null}
           </View>
         </View>
@@ -250,9 +245,6 @@ const styles = StyleSheet.create(theme => ({
   // On the inner view, so the header still spans the sheet's full width.
   sections: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  headerSpacer: {
-    height: theme.spacing.md,
   },
   itemName: {
     textAlign: 'center',

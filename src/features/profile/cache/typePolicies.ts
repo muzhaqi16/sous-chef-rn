@@ -2,10 +2,9 @@ import type { Reference, StoreObject, TypePolicies } from '@apollo/client';
 import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
 
 /**
- * The signed-in user's profile merges field-wise: one query returns the display name, another the real name, and neither may blank the other.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * The signed-in user's profile merges field-wise: one query returns the display
+ * name, another the real name, and neither may blank the other. `makeCache()`
+ * throws rather than let two features overwrite each other on one field.
  */
 export const profileTypePolicies: TypePolicies = {
   User: {

@@ -1,8 +1,7 @@
 /**
- * Local-first: the id is minted here and sent as `newRecipeId`, which the server
- * passes into its own create, so a queued replay converges on one row. The
- * SERVER still forks — only it can set `forkedFromId` and carry an ingredient's
- * external sources — so the device shows a copy until the real row lands.
+ * The id is minted here as `newRecipeId`, so a queued replay converges on one
+ * row. Only the SERVER forks (it alone sets `forkedFromId` and carries external
+ * sources), so the device shows a copy until then.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';

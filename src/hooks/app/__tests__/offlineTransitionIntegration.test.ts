@@ -63,9 +63,6 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 jest.mock('#/apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),
 }));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(() => Promise.resolve(null)),
-}));
 jest.mock('#/apollo/links/apiHealthProbe', () => ({
   probeApiHealth: jest.fn(() => Promise.resolve(false)),
 }));

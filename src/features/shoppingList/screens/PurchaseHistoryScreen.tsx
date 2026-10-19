@@ -13,11 +13,18 @@ import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
-import { formatCurrency } from '#/utils/formatters/number';
-import { usePreferredCurrency } from '#/domain/money';
-import { formatDateTime } from '#/utils/formatters/date';
+import { formatCurrency, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import {
+  moneyByCurrency,
+  resolveCurrency,
+  usePreferredCurrency,
+  type FigureCurrency,
+} from '#/domain/money';
+import { formatDateTime, formatMonthDayYear } from '#/utils/formatters/date';
+import { isCalendarDayInstant, purchaseDay } from '#/utils/dateUtils';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -26,27 +33,57 @@ type RouteParams = {
   itemName: string;
 };
 
-// An `undefined` locale makes Intl use the device's own, so the field order
-// follows the reader rather than forcing US month-day.
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return formatDateTime(date);
-};
+// A receipt records its day and no time, so it shows as that day alone.
+const formatDate = (dateString: string) =>
+  isCalendarDayInstant(dateString)
+    ? formatMonthDayYear(purchaseDay(dateString))
+    : formatDateTime(new Date(dateString));
 
-// null for a missing/zero amount, so the row is omitted rather than showing
-// "$0.00" — a purchase auto-recorded at check-off carries no price. Formatted
-// from the ISO code, not by prefixing `currencySymbol`, so the symbol and
-// separator land where the locale puts them.
+// null for a missing/zero amount, so an auto-recorded purchase omits the row
+// rather than show "$0.00". Formatted from the ISO code, not `currencySymbol`,
+// so the symbol and separator land where the locale puts them.
 const formatPrice = (
   amount: number | null | undefined,
-  currencyCode: string | null | undefined,
+  currency: FigureCurrency,
   preferredCurrency: string,
 ): string | null => {
   // Only an ABSENT price has nothing to show. A price recorded as zero is a
   // price somebody entered — a comped or free line — and it is counted in the
   // totals below, so suppressing its own row would disagree with them.
   if (amount == null) return null;
-  return formatCurrency(amount, currencyCode ?? preferredCurrency);
+  return formatCurrency(amount, resolveCurrency(currency, preferredCurrency));
+};
+
+/**
+ * Spend and the average purchase per currency (never summed across), in order
+ * of first appearance. Priced purchases only: a NULL price is unknown, not zero,
+ * while a RECORDED zero was entered and counts.
+ */
+const spendByCurrency = (
+  purchases: readonly PurchaseItem[],
+  preferredCurrency: string,
+) => {
+  const tallies = new Map<string, { total: number; count: number }>();
+  for (const { totalPrice, currency } of purchases) {
+    if (totalPrice == null) continue;
+    const code = resolveCurrency(currency, preferredCurrency);
+    const tally = tallies.get(code) ?? { total: 0, count: 0 };
+    tallies.set(code, {
+      total: tally.total + totalPrice,
+      count: tally.count + 1,
+    });
+  }
+  const entries = [...tallies];
+  return {
+    totals: entries.map(([currencyCode, { total }]) => ({
+      currencyCode,
+      amount: total,
+    })),
+    averages: entries.map(([currencyCode, { total, count }]) => ({
+      currencyCode,
+      amount: total / count,
+    })),
+  };
 };
 
 type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
@@ -62,18 +99,14 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   const preferredCurrency = usePreferredCurrency();
   const priceText = formatPrice(
     purchase.totalPrice,
-    purchase.currency.code,
+    purchase.currency,
     preferredCurrency,
   );
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
   const perUnitText =
     purchase.quantity !== 1
-      ? formatPrice(
-          purchase.unitPrice,
-          purchase.currency.code,
-          preferredCurrency,
-        )
+      ? formatPrice(purchase.unitPrice, purchase.currency, preferredCurrency)
       : null;
 
   return (
@@ -119,14 +152,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
               <View style={styles.purchasePriceCell}>
                 <Text role="label">{priceText}</Text>
                 {!!perUnitText && (
-                  <Text role="caption" tone="secondary">
-                    {t(
-                      purchase.unitSymbol
-                        ? 'purchaseAmountSheet.perUnitOfHint'
-                        : 'purchaseAmountSheet.perUnitHint',
-                      { price: perUnitText, unit: purchase.unitSymbol },
-                    )}
-                  </Text>
+                  <PerUnitHint price={perUnitText} unit={purchase.unitSymbol} />
                 )}
               </View>
             </View>
@@ -168,8 +194,8 @@ const makeRenderItem =
 
 const PurchaseHistoryHeader: React.FC<{
   totalCount: number;
-  totalSpent: string | null;
-  averageSpent: string | null;
+  totalSpent: string;
+  averageSpent: string;
 }> = ({ totalCount, totalSpent, averageSpent }) => {
   const { t } = useTranslation();
   return (
@@ -180,22 +206,18 @@ const PurchaseHistoryHeader: React.FC<{
           {totalCount}
         </Text>
       </Text>
-      {!!totalSpent && (
-        <Text role="body" style={styles.statsRow}>
-          {t('purchaseHistory.totalSpent')}{' '}
-          <Text role="bodyStrong" style={styles.statsValue}>
-            {totalSpent}
-          </Text>
+      <Text role="body" style={styles.statsRow}>
+        {t('purchaseHistory.totalSpent')}{' '}
+        <Text role="bodyStrong" style={styles.statsValue}>
+          {totalSpent}
         </Text>
-      )}
-      {!!averageSpent && (
-        <Text role="body" style={styles.statsRow}>
-          {t('purchaseHistory.averagePrice')}{' '}
-          <Text role="bodyStrong" style={styles.statsValue}>
-            {averageSpent}
-          </Text>
+      </Text>
+      <Text role="body" style={styles.statsRow}>
+        {t('purchaseHistory.averagePrice')}{' '}
+        <Text role="bodyStrong" style={styles.statsValue}>
+          {averageSpent}
         </Text>
-      )}
+      </Text>
     </View>
   );
 };
@@ -217,23 +239,14 @@ export const PurchaseHistoryScreen: React.FC<
   } = useItemPurchaseHistory(itemId);
   const preferredCurrency = usePreferredCurrency();
 
-  // Priced purchases only. A price is NULL when it was never observed — a line
-  // moved to the pantry without one — which is unknown, not zero, and averaging
-  // it in would drag the mean toward zero. A price RECORDED as zero is a price
-  // somebody entered and belongs in both figures.
-  const pricedPurchases = purchases.filter(
-    (p): p is typeof p & { totalPrice: number } => p.totalPrice != null,
+  // With no priced purchase the spend is unknown, never zero. The API states no
+  // money totals, so they stay unknown until every page is loaded.
+  const spend = spendByCurrency(
+    hasNextPage ? [] : purchases,
+    preferredCurrency,
   );
-  const currencyCode = pricedPurchases[0]?.currency.code;
-  const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
-  const totalSpent = formatPrice(spent, currencyCode, preferredCurrency);
-  const averageSpent = pricedPurchases.length
-    ? formatPrice(
-        spent / pricedPurchases.length,
-        currencyCode,
-        preferredCurrency,
-      )
-    : null;
+  const totalSpent = moneyByCurrency(spend.totals) ?? UNKNOWN_AMOUNT;
+  const averageSpent = moneyByCurrency(spend.averages) ?? UNKNOWN_AMOUNT;
 
   return (
     <PaginatedHistoryScreen

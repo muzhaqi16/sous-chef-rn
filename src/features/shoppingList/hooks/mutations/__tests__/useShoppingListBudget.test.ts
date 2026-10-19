@@ -7,10 +7,6 @@ import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shopp
 import { UseShoppingListBudget_ListFragmentDoc } from '../useShoppingListBudget.generated';
 import { useShoppingListBudget } from '../useShoppingListBudget';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',

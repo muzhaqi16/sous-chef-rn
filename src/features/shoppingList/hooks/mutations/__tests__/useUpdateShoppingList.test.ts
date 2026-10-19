@@ -5,11 +5,16 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
+import { ApolloClient } from '@apollo/client';
+import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -21,6 +26,7 @@ const LIST = {
   completedShopDate: null,
   budgetAmount: null,
   currency: 'USD',
+  targetStore: null,
   version: 1,
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -129,7 +135,6 @@ describe('useUpdateShoppingList', () => {
                 updateShoppingList: {
                   __typename: 'UpdateShoppingListPayload',
                   shoppingList: {
-                    __typename: 'ShoppingList',
                     id: 'list-1',
                     name: 'Weekly Run',
                     isDefault: true,
@@ -196,6 +201,109 @@ describe('useUpdateShoppingList', () => {
     ]);
   });
 
+  // The trip's store is where a ticked line's price is recorded.
+  it('sends the store as planning.targetStoreId, shows it by name at once, and clears it with null', async () => {
+    const cache = seedList();
+    const update = recordMock(UpdateShoppingListDocument, {
+      data: { updateShoppingList: null }, // queued signature
+    });
+    const { result } = renderHookWithApollo(
+      () => useUpdateShoppingList('Failed to save'),
+      { cache, operationMocks: [update.mock] },
+    );
+    const readStore = () =>
+      cache.readFragment<{ targetStore: { id: string; name: string } | null }>({
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        fragment: UseUpdateShoppingList_ListFragmentDoc,
+        fragmentName: 'useUpdateShoppingList_list',
+      })?.targetStore;
+
+    await act(async () => {
+      const promise = result.current.updateShoppingList('list-1', {
+        name: 'Groceries',
+        targetStore: { id: 'store-1', name: 'Costco' },
+      });
+      expect(readStore()).toMatchObject({ id: 'store-1', name: 'Costco' });
+      await promise;
+    });
+    await act(async () => {
+      await result.current.updateShoppingList('list-1', {
+        name: 'Groceries',
+        targetStore: null,
+      });
+    });
+
+    expect(readStore()).toBeNull();
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: 'list-1',
+          name: 'Groceries',
+          planning: { targetStoreId: 'store-1' },
+          version: 1,
+        },
+      },
+      {
+        input: {
+          id: 'list-1',
+          name: 'Groceries',
+          planning: { targetStoreId: null },
+          version: 1,
+        },
+      },
+    ]);
+  });
+
+  // The list's store prices every line's suggestion and marks the comparison's
+  // target, and the update's response carries neither.
+  describe('what the store prices', () => {
+    const toCostco = { id: 'store-1', name: 'Costco' };
+    const saveStore = async (
+      result: MockDataFor<typeof UpdateShoppingListDocument>,
+    ) => {
+      const refetchQueries = jest.spyOn(
+        ApolloClient.prototype,
+        'refetchQueries',
+      );
+      const update = recordMock(UpdateShoppingListDocument, { data: result });
+      const hook = renderHookWithApollo(
+        () => useUpdateShoppingList('Failed to save'),
+        { cache: seedList(), operationMocks: [update.mock] },
+      );
+      await act(async () => {
+        await hook.result.current.updateShoppingList('list-1', {
+          name: 'Groceries',
+          targetStore: toCostco,
+        });
+      });
+      return refetchQueries;
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('is asked again once a new store is applied', async () => {
+      const refetchQueries = await saveStore({
+        updateShoppingList: {
+          __typename: 'UpdateShoppingListPayload',
+          shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        },
+      });
+
+      expect(refetchQueries).toHaveBeenCalledWith({
+        include: [
+          GetShoppingListItemsFilteredDocument,
+          ListStoreComparisonDocument,
+        ],
+      });
+    });
+
+    it('is not asked while the change waits in the queue', async () => {
+      const refetchQueries = await saveStore({ updateShoppingList: null });
+
+      expect(refetchQueries).not.toHaveBeenCalled();
+    });
+  });
+
   it("sends the server's bumped version on the next versioned write", async () => {
     const cache = seedCache([{ ...LIST, priceTracking: false }]);
     const update = recordMock(UpdateShoppingListDocument, {
@@ -203,7 +311,6 @@ describe('useUpdateShoppingList', () => {
         updateShoppingList: {
           __typename: 'UpdateShoppingListPayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-1',
             version: (vars.input as { version: number }).version + 1,
           },

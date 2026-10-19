@@ -1,71 +1,42 @@
-import { readReceiptDate } from '../receiptDate';
+import { printedTimeOf, purchaseMomentOf } from '../receiptDate';
 
-const TODAY = '2026-09-30';
+/** The local wall clock of an instant: what the phone's own zone reads. */
+const localClock = (iso: string) => {
+  const at = new Date(iso);
+  return [
+    at.getFullYear(),
+    at.getMonth() + 1,
+    at.getDate(),
+    at.getHours(),
+    at.getMinutes(),
+  ];
+};
 
-describe('readReceiptDate', () => {
-  it.each([
-    ['Walmart, two-digit year with a time', '09/30/26 14:22:31', '2026-09-30'],
-    ['Kroger, no leading zeros', 'DATE 9/28/2026 2:15pm', '2026-09-28'],
-    ['ISO', 'Printed 2026-09-27T18:04', '2026-09-27'],
-  ])('reads %s', (_label, line, expected) => {
-    expect(
-      readReceiptDate(['WALMART', `TOTAL 16.69\n${line}`], TODAY, 'monthFirst'),
-    ).toBe(expected);
-  });
-
-  it('skips a later date, such as the last day to return', () => {
-    expect(
-      readReceiptDate(
-        ['RETURN BY 12/29/26\n09/30/26 14:22'],
-        TODAY,
-        'monthFirst',
-      ),
-    ).toBe('2026-09-30');
-  });
-
-  it('skips what is not a real day or is too old to be this shop', () => {
-    expect(
-      readReceiptDate(['02/30/26 13/13/26 01/05/24'], TODAY, 'monthFirst'),
-    ).toBeNull();
-  });
-
-  it('finds none in a receipt that prints no date', () => {
-    expect(
-      readReceiptDate(
-        ['GV WHOLE MILK 3.48', 'TOTAL 3.48'],
-        TODAY,
-        'monthFirst',
-      ),
-    ).toBe(null);
-  });
-
-  it('takes the first date in reading order, across pages', () => {
-    expect(
-      readReceiptDate(
-        ['STORE 4412\n09/29/26 08:01', '09/30/26'],
-        TODAY,
-        'monthFirst',
-      ),
-    ).toBe('2026-09-29');
+describe('purchaseMomentOf', () => {
+  it("places the receipt's printed time on its day, on the phone's clock", () => {
+    expect(localClock(purchaseMomentOf('2026-10-17', '18:42'))).toEqual([
+      2026, 10, 17, 18, 42,
+    ]);
   });
 
   it.each([
-    ['day-first', 'dayFirst', '2026-09-05'],
-    ['month-first', 'monthFirst', '2026-05-09'],
-  ] as const)(
-    'reads a date both orders allow in a %s region',
-    (_label, order, expected) => {
-      expect(readReceiptDate(['05/09/2026 10:12'], TODAY, order)).toBe(
-        expected,
-      );
-    },
-  );
+    ['no time was read', undefined],
+    ['the time is a misread', '24:00'],
+  ])('takes noon that day when %s', (_name, time) => {
+    expect(localClock(purchaseMomentOf('2026-10-17', time))).toEqual([
+      2026, 10, 17, 12, 0,
+    ]);
+  });
+});
 
-  it.each(['dayFirst', 'monthFirst'] as const)(
-    'reads a date only one order allows in that order (%s region)',
-    order => {
-      expect(readReceiptDate(['30/09/2026'], TODAY, order)).toBe('2026-09-30');
-      expect(readReceiptDate(['13/01/26'], TODAY, order)).toBe('2026-01-13');
-    },
-  );
+describe('printedTimeOf', () => {
+  it.each([
+    ['00:05', '00:05'],
+    ['23:59', '23:59'],
+    ['24:00', undefined],
+    ['9:15', undefined],
+    [null, undefined],
+  ])('reads %s as %s', (value, time) => {
+    expect(printedTimeOf(value)).toBe(time);
+  });
 });

@@ -1,39 +1,59 @@
 import { useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/useToday';
+import { errorService } from '#/services/errorService';
+import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
+import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
+import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { useOpenListLinesFor } from '#features/shoppingList/hooks/useOpenListLinesFor';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import {
   useReceiptDraft,
   useReceiptDraftActions,
+  useReceiptDraftStore,
   type ReceiptLineChoice,
 } from '../store/receiptDraftStore';
 import {
+  orderDiscountOf,
   receiptReviewLines,
   seedChoice,
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
-import { receiptTotalsGap } from '../utils/receiptTotalsGap';
+import { checkInLineOf, type CheckInLineNeed } from '../utils/checkInLine';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
   listLineFor,
   type ListMatchKey,
 } from '../utils/linkReceiptLines';
-import { useApplyReceipt } from './useApplyReceipt';
+import {
+  LINES_PER_CHECK_IN,
+  useReceiptCheckIn,
+  type CheckInLineToSend,
+} from './useReceiptCheckIn';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import { useHeldStores } from './useHeldStores';
+import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
+import { storeOfferOf } from '../utils/storeOfferOf';
+import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { toDateKey } from '#/utils/dateUtils';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
 
+const NEED_COPY: Record<CheckInLineNeed, TranslationKey> = {
+  item: 'errors.itemNameRequired',
+  unit: 'receipts.review.needsUnit',
+  price: 'receipts.review.totalNeeded',
+};
+
 /**
  * What adding does with a line: `add` it, add the API's unsure `guess` unless
- * the user picks another, or retry it after it `failed`; it is `added` already;
- * it waits for the API's match (`pending`); or it stays out as a line with no
- * match (`unmatched`) or one the user left out (`skipped`).
+ * the user picks another, retry it once `failed`; or nothing: `added` already,
+ * `pending` the API's match, `unmatched`, or `skipped` by the user.
  */
 export type ReceiptRowStatus =
   | 'add'
@@ -61,9 +81,15 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
  * it matches, and the step that adds the chosen ones to the current pantry.
  */
 export function useReceiptReview() {
+  const { t } = useTranslation();
   const draft = useReceiptDraft();
-  const { chooseLine, setPurchasedOn, chooseStore, clearDraft } =
-    useReceiptDraftActions();
+  const {
+    chooseLine,
+    setPurchasedOn,
+    chooseStore,
+    ensureCheckInIds,
+    closeReceipt,
+  } = useReceiptDraftActions();
   const today = useToday();
   const client = useApolloClient();
   // The product being picked in a line's sheet, asked about before it is saved.
@@ -71,26 +97,37 @@ export function useReceiptReview() {
   // The list the user works in, checked against the lists they still have.
   const { lists, loading: listsLoading } = useShoppingListsLite();
   const listId = useActiveShoppingListId(lists);
-  const { pantryName, applying, failures, apply } = useApplyReceipt(listId);
+  const { pantry } = useCurrentPantry();
+  const pantryId = pantry?.id;
+  const { heldUnitOf } = usePantryIntake(pantryId);
+  const { resolveUnitId } = useResolveUnit();
+  const { checkIn } = useReceiptCheckIn(listId);
+  // What the lines held back at the last Add still lack, by line index.
+  const [needs, setNeeds] = useState<Partial<Record<number, CheckInLineNeed>>>(
+    {},
+  );
+  const [preparing, setPreparing] = useState(false);
 
   const lines = draft?.parsed ? receiptReviewLines(draft.parsed) : [];
   const [firstPage = ''] = draft?.pages ?? [];
+  // A receipt sent as photos keeps no pages: the merchant the server read stands in.
+  const merchantHeader =
+    firstPage.split('\n').slice(0, HEADER_LINES).join('\n') ||
+    draft?.parsed?.merchant;
   const {
     matchFor,
     matchState,
     retryMatching,
     resolvedStore,
     proposedStore,
-    recordConfirmed,
+    completableStore,
   } = useReceiptMatches(
     lines.map(line => ({
       index: line.index,
       text: line.printed,
       code: line.code,
     })),
-    // A receipt sent as photos keeps no pages: the merchant the server read stands in.
-    firstPage.split('\n').slice(0, HEADER_LINES).join('\n') ||
-      draft?.parsed?.merchant,
+    merchantHeader,
     draft?.parsedBy,
     draft?.store?.id,
     draft?.printedStore,
@@ -140,20 +177,36 @@ export function useReceiptReview() {
     }),
   );
   const { createStore } = useCreateStore();
-  // Adding is busy from the store's create on: a second tap would add every line twice.
-  const [placingStore, setPlacingStore] = useState(false);
   // What the user picked, else the store the receipt's header names.
   const store =
     draft?.store ??
     (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
-  // The server judges its own reading by the rule its lines follow, which
-  // knows a discount it found was never taken off.
-  const totalsGap =
-    draft?.parsedBy === 'server'
-      ? draft.totalsGap ?? null
-      : draft?.parsed
-      ? receiptTotalsGap(draft.parsed)
-      : null;
+  // The server's reading, which the check-in locates an unlocated store from.
+  const receiptParseId =
+    draft?.parsedBy === 'server' ? draft.parseId : undefined;
+  const heldStores = useHeldStores(listId);
+  // Offered, never placed.
+  const storeOffer = storeOfferOf(
+    { parseId: receiptParseId, store },
+    matchState,
+    {
+      api: completableStore
+        ? { id: completableStore.id, name: completableStore.name }
+        : null,
+      device: unlocatedStoreNamed(
+        [
+          draft?.parsed?.merchant,
+          draft?.printedStore?.name,
+          proposedStore?.name,
+          proposedStore?.chain?.name,
+        ],
+        heldStores,
+      ),
+    },
+  );
+  // Judged where it was read, by the rule its lines follow: the server's, or
+  // the same rules on the phone, which know a discount never taken off.
+  const totalsGap = draft?.totalsGap ?? null;
   // A receipt that printed no readable day was bought the day it was scanned.
   const purchasedOn =
     draft?.purchasedOn ??
@@ -181,11 +234,20 @@ export function useReceiptReview() {
     return 'unmatched';
   };
 
+  // Why a line did not land: what it still lacks, else the API's refusal,
+  // told from its code.
+  const failureOf = (index: number): string | undefined => {
+    const need = needs[index];
+    if (need) return t(NEED_COPY[need]);
+    const code = draft?.failed?.[index];
+    return code
+      ? errorService.messageForCode(code, t, t('errors.addItemFailedRetry'))
+      : undefined;
+  };
+
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
     const { line, match, choice } = entry;
-    const failure = failures.find(
-      failed => failed.index === line.index,
-    )?.reason;
+    const failure = failureOf(line.index);
     return {
       ...line,
       status: statusOf(entry, failure),
@@ -223,24 +285,86 @@ export function useReceiptReview() {
     return created?.id;
   };
 
-  const addChosen = async () => {
-    setPlacingStore(true);
-    const storeId = store?.id ?? (await addProposedStore());
-    setPlacingStore(false);
-    const outcome = await apply(
-      pending.map(line => ({ ...line, listLine: links.get(line.index) })),
-      { purchasedOn, ...(storeId ? { storeId } : {}) },
+  /**
+   * Records the chosen lines in one check-in, without waiting on the API: every
+   * line shows in the pantry before this returns. A line that still lacks its
+   * product, unit or price stays, saying which.
+   */
+  const addChosen = async (): Promise<{ sent: number; held: number }> => {
+    if (!pantryId) return { sent: 0, held: pending.length };
+    setPreparing(true);
+    // A typed unit goes as the unit it names, from the device's units first.
+    const resolved = await Promise.all(
+      pending.map(async entry => ({
+        ...entry,
+        choice: {
+          ...entry.choice,
+          unitId: await resolveUnitId(
+            entry.choice.unitId,
+            entry.choice.unitText,
+          ),
+        },
+      })),
     );
-    // Only catalog items can be remembered: a typed name has no id yet.
-    void recordConfirmed(
-      pending.flatMap(({ index, printed, choice }) =>
-        choice.itemId && outcome.addedIndexes.includes(index)
-          ? [{ index, text: printed, itemId: choice.itemId }]
-          : [],
-      ),
-      storeId,
+    setPreparing(false);
+    ensureCheckInIds(
+      resolved.map(entry => entry.index),
+      Math.max(1, Math.ceil(resolved.length / LINES_PER_CHECK_IN)),
     );
-    return { added: outcome.addedIndexes.length, failed: outcome.failed };
+    const minted = useReceiptDraftStore.getState().draft?.checkIn;
+    if (!minted) return { sent: 0, held: pending.length };
+
+    const toSend: CheckInLineToSend[] = [];
+    const lacking: Partial<Record<number, CheckInLineNeed>> = {};
+    for (const entry of resolved) {
+      const ids = minted.lines[entry.index];
+      const line = lines.find(candidate => candidate.index === entry.index);
+      if (!ids || !line) continue;
+      const listLine = links.get(entry.index);
+      const itemId = entry.choice.itemId ?? listLine?.item?.id;
+      const match = matchFor(entry.index);
+      const built = checkInLineOf({
+        line,
+        choice: entry.choice,
+        ids,
+        listLine,
+        heldUnit: itemId ? heldUnitOf(itemId) : null,
+        proposed: match?.preselect ?? match?.guess,
+      });
+      if ('needs' in built) {
+        lacking[entry.index] = built.needs;
+        continue;
+      }
+      toSend.push({
+        index: entry.index,
+        input: built.input,
+        itemName: entry.choice.itemName,
+        ...(listLine ? { listLine } : {}),
+      });
+    }
+    setNeeds(lacking);
+
+    const orderDiscount = draft?.parsed ? orderDiscountOf(draft.parsed) : 0;
+    if (toSend.length > 0) {
+      checkIn(
+        {
+          checkInIds: minted.ids,
+          pantryId,
+          purchasedOn,
+          purchasedAt: purchaseMomentOf(purchasedOn, draft?.purchaseTime),
+          // Online, the check-in waits for the store's create; its lines don't.
+          storeId: store?.id ?? addProposedStore(),
+          ...(listId && links.size > 0 ? { shoppingListId: listId } : {}),
+          ...(receiptParseId ? { receiptParseId } : {}),
+          ...(!store && merchantHeader ? { merchantHeader } : {}),
+          ...(orderDiscount ? { orderDiscount } : {}),
+        },
+        toSend,
+      ).catch((error: unknown) => {
+        errorService.reportError(error, { operation: 'Check in a receipt' });
+      });
+    }
+    return { sent: toSend.length, held: Object.keys(lacking).length };
   };
 
   return {
@@ -250,6 +374,11 @@ export function useReceiptReview() {
     store,
     /** The shop the receipt names that is not on file; added on confirm. */
     proposedStoreName: proposedStore?.name ?? null,
+    /**
+     * A store on file with no address that this receipt's address would
+     * complete, offered before adding a new one; picked with `chooseStore`.
+     */
+    storeOffer,
     /** Neither the receipt nor the API names the shop, so the user is asked for it. */
     storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */
@@ -263,9 +392,10 @@ export function useReceiptReview() {
     /** Whether the API has matched the lines, is matching them, or could not be asked. */
     matchState,
     retryMatching,
-    pantryName,
+    pantryName: pantry?.name ?? null,
     pendingCount: pending.length,
-    applying: applying || placingStore,
+    /** Resolving the lines' units before they are sent. */
+    applying: preparing,
     /** Later list pages are still loading: adding now could miss a list line. */
     listLoading: openLinesLoading || (listsLoading && lists.length === 0),
     /** The list is longer than the review can see, so a line may miss its list line. */
@@ -276,10 +406,16 @@ export function useReceiptReview() {
     /** Names the product a line's sheet has picked, or null once it closes. */
     pickItem: setPickingItemId,
     addChosen,
+    /**
+     * The review is done. A receipt still landing, or with a refused line to
+     * retry, stays saved; one that went keeps no lookups behind it.
+     */
     finish: () => {
-      const parseId = draft?.serverParse?.id;
-      clearDraft();
-      forgetReceipt(client.cache, parseId);
+      const parseId = draft?.parseId ?? draft?.serverParse?.id;
+      closeReceipt();
+      if (!useReceiptDraftStore.getState().draft) {
+        forgetReceipt(client.cache, parseId);
+      }
     },
   };
 }

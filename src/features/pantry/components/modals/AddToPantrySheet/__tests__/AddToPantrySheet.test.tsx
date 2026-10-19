@@ -18,9 +18,6 @@ import { toastService } from '#/services/toastService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
@@ -57,12 +54,6 @@ jest.mock('#domain/pantryItemDuplicate', () => {
     ),
   };
 });
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn() },
-}));
 
 /**
  * The quick-add handlers are props on `AddItemSheet`, which is mocked away —

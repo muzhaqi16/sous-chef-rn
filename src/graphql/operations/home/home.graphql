@@ -344,6 +344,12 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
         }
         ...HomeMemberCard_member
       }
+      # The list the invite names, joined with the home: written like any read
+      # of it, so the lists tab shows it before its own query runs.
+      landingShoppingList {
+        id
+        ...ShoppingListReaders
+      }
     }
     ... on Error {
       code
@@ -484,6 +490,11 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
           totalCount
         }
         ...HomeCard_home
+      }
+      # The list the join code names, joined with the home.
+      landingShoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {

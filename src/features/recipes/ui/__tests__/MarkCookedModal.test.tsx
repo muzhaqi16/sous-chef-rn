@@ -57,12 +57,16 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
-const renderModal = (onConfirm = jest.fn()) => {
+const renderModal = (
+  onConfirm = jest.fn(),
+  { wholeServings = false }: { wholeServings?: boolean } = {},
+) => {
   render(
     <MarkCookedModal
       visible
       recipeName="Soup"
       defaultServings={4}
+      wholeServings={wholeServings}
       onClose={jest.fn()}
       onConfirm={onConfirm}
     />,
@@ -122,11 +126,36 @@ describe('MarkCookedModal servings', () => {
     );
   });
 
-  // `servingsMade` is an Int: a fraction refuses the whole request.
+  // A recipe cook's servings are a Float: half a batch scales the deduction.
+  it.each([
+    ['1.5', 1.5],
+    ['1 1/2', 1.5],
+  ])('cooks %s servings of a recipe', (fractional, servings) => {
+    const onConfirm = renderModal();
+
+    fireEvent.changeText(screen.getByTestId('servings'), fractional);
+    fireEvent.press(screen.getByTestId('confirm'));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ servings }),
+    );
+  });
+
+  it('refuses zero servings on the field', () => {
+    const onConfirm = renderModal();
+
+    fireEvent.changeText(screen.getByTestId('servings'), '0');
+
+    expect(screen.getByTestId('servings-error')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('confirm'));
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  // A planned meal's servings are an Int: a fraction refuses the whole request.
   it.each(['1.5', '1 1/2'])(
-    'refuses %s servings on the field and disables confirm',
+    'refuses %s servings of a planned meal on the field and disables confirm',
     fractional => {
-      const onConfirm = renderModal();
+      const onConfirm = renderModal(jest.fn(), { wholeServings: true });
 
       fireEvent.changeText(screen.getByTestId('servings'), fractional);
 

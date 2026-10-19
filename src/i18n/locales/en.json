@@ -11,7 +11,7 @@
       "emailAlreadyExists": "An account with this email already exists.",
       "emailAlreadyVerified": "This email address is already verified.",
       "emailNotVerified": "Please verify your email before continuing",
-      "featureDisabled": "This feature is currently disabled",
+      "featureDisabled": "This isn't available on your account right now.",
       "fieldInvalid": "Invalid field value",
       "fieldRequired": "Required field is missing",
       "forbidden": "You don't have permission to perform this action",
@@ -55,6 +55,8 @@
       "unexpected": "An unexpected error occurred",
       "uniqueConstraint": "This value already exists",
       "unitInvalid": "That unit cannot be used here.",
+      "unstatedAmount": "The recipe doesn't state an amount for this ingredient, so nothing was deducted.",
+      "premiumRequired": "This needs a Premium plan.",
       "validationFailed": "Please check your input and try again",
       "versionConflict": "This changed somewhere else after you opened it. Please refresh and try again.",
       "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."
@@ -126,6 +128,7 @@
       "Notification": "notification"
     },
     "queuedChangeRejected": "A change couldn't be saved and has been undone.",
+    "queuedChangeRejectedResource": "Your change to the {{resource}} couldn't be saved and has been undone.",
     "offlineNoMorePages": "You're offline, so there's nothing more to load yet.",
     "offlineSearchUnavailable": "Recipe search needs a connection. Your saved recipes are still here.",
     "queuedChangeOverwrittenResource": "Your change to the {{resource}} was overwritten by a newer one and has been undone.",
@@ -151,6 +154,7 @@
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
     "changedElsewhereTitle": "Changed Elsewhere",
+    "changedElsewhereLatestShown": "This changed somewhere else after you opened it, so your change wasn't saved. The latest version is shown now.",
     "entityHome": "Home",
     "entityMember": "Member",
     "entityInvite": "Invite",
@@ -180,6 +184,7 @@
       "newPassword": "That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.",
       "currentPassword": "That current password isn’t right. Check it and try again.",
       "servingsMade": "Enter a whole number of servings greater than zero",
+      "servings": "Enter a number of servings greater than zero",
       "key": "That image could not be confirmed. Pick it again and retry.",
       "imageUrl": "Enter the full image URL, starting with http:// or https://",
       "videoUrl": "Enter the full video URL, starting with http:// or https://",
@@ -248,6 +253,7 @@
     "deleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "logout": "Are you sure you want to log out?",
     "discardChanges": "Are you sure you want to discard your changes?",
+    "discardChangesTitle": "Discard changes?",
     "logoutWithPending_one": "You have {{count}} change that hasn't synced yet. Signing out will discard it.",
     "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them.",
     "deleteHomeTitle": "Delete Home",
@@ -303,6 +309,7 @@
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",
+    "open": "Open",
     "commaSeparated": "Comma-separated",
     "condition": "Condition",
     "confirm": "Confirm",
@@ -575,7 +582,6 @@
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
-    "betaFeaturesEnabled": "Beta Features Enabled",
     "experience": "Experience",
     "hapticFeedback": "Haptic Feedback",
     "hapticFeedbackDesc": "Vibration feedback for interactions and alerts",
@@ -583,6 +589,8 @@
     "navigationLabelsDesc": "Show text labels below navigation icons",
     "shoppingListImages": "Shopping List Images",
     "shoppingListImagesDesc": "Show product images in shopping lists",
+    "storeMode": "Store mode",
+    "storeModeDesc": "Shop a list aisle by aisle from the store icon on the shopping list",
     "shareUsageData": "Share Usage Data",
     "shareUsageDataDesc": "Help improve {{appName}} by sharing anonymous usage statistics",
     "resetSection": "Reset",
@@ -602,8 +610,7 @@
     "placeholder": "Select an option"
   },
   "searchBar": {
-    "placeholder": "Search…",
-    "actionFallback": "{{icon}} button"
+    "placeholder": "Search…"
   },
   "settingRow": {
     "enabled": "enabled",
@@ -685,7 +692,8 @@
   },
   "tabBar": {
     "actionButton": "Action button",
-    "actionButtonHint": "Opens the action for the current tab"
+    "actionButtonHint": "Opens the action for the current tab",
+    "addMenuHint": "Opens the ways to add"
   },
   "swipeActions": {
     "markUnpurchased": "Mark as unpurchased",
@@ -700,7 +708,6 @@
     "year": "Year"
   },
   "a11y": {
-    "actionButton": "{{name}} button",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "{{label}} value",
     "quantityValue": "Quantity value",

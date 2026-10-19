@@ -1,31 +1,60 @@
-import { useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from '#features/shoppingList/screens/ItemDetail.generated';
+import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
+import { useDataState } from '#hooks/data/useDataState';
 
-/**
- * The item a detail screen shows. `cache-and-network` because the detail selects
- * fields the list never caches, and `cache-first` would skip the fetch whenever
- * a partial entity looks complete, leaving the screen blank.
- */
+/** The line a detail screen shows: what the cache holds now, the rest once fetched. */
 export function useShoppingListItemDetail(itemId: string) {
-  const { data } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
-  });
+  // A line created on this device owns its id before the server does, so a
+  // fetch before the create lands could only answer that there is no such line.
+  const isUnconfirmed = useIsCreateUnconfirmed(itemId);
 
-  // Subscribes to the entity record, so an edit made elsewhere (AddEditItem)
-  // refreshes the detail view without a refetch.
-  const itemRef = data?.shoppingListItem ?? null;
-  const result = useFragment({
+  // Fetches the detail-only fields into the entity read below. Its own `data`
+  // is read only for a miss: the list's row is a subset of the detail, so the
+  // query reads nothing from the cache until it has answered once.
+  const { data, loading, error, refetch } = useQuery(
+    GetShoppingListItemDocument,
+    isUnconfirmed
+      ? skipToken
+      : { variables: { id: itemId }, fetchPolicy: 'cache-and-network' },
+  );
+
+  // Keyed by ENTITY, so the row the list cached renders at once — offline too —
+  // and a write made elsewhere (AddEditItem) refreshes it without a refetch.
+  // Partial until the detail answers; without a name nothing was cached.
+  const live = useFragment({
     fragment: ItemDetail_ShoppingListItemFragmentDoc,
     fragmentName: 'ItemDetail_shoppingListItem',
-    from: itemRef,
+    from: { __typename: 'ShoppingListItem', id: itemId },
+  });
+  const item =
+    live.complete || live.data.itemName !== undefined ? live.data : null;
+
+  // Every by-id query reports a removed line as an explicit null. Trusted only
+  // once the create is acknowledged, and only from a settled read.
+  const notFound =
+    !isUnconfirmed && !loading && !error && data?.shoppingListItem === null;
+
+  const state = useDataState({
+    // Skipped while unconfirmed: the acknowledgement is what fires the fetch.
+    loading: loading || isUnconfirmed,
+    error,
+    hasResult: item !== null,
+    isEmpty: item === null,
   });
 
+  const retry = () => {
+    if (isUnconfirmed) return;
+    void refetch();
+  };
+
   return {
-    item: itemRef && result.complete ? result.data : null,
-    // Whether the query has answered at all — a missing item and one still
-    // being fetched read the same on `item` alone.
-    hasLoaded: data !== undefined,
+    item,
+    // For a section made only of fields the list's row never caches.
+    detail: live.complete ? live.data : null,
+    notFound,
+    state,
+    retry,
   };
 }

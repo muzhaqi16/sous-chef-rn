@@ -1,0 +1,82 @@
+# Polled until it leaves PENDING. `failureReason` is the server's English and
+# is never shown: copy comes from `failure`.
+query RecipeCapture($id: ID!) {
+  recipeCapture(id: $id) {
+    id
+    status
+    source
+    alreadySaved
+    failure
+    recipe {
+      id
+      name
+    }
+    measurementRegion {
+      region
+      basis
+    }
+    warnings {
+      code
+    }
+    draft {
+      name
+      description
+      servings
+      prepTimeMinutes
+      cookTimeMinutes
+      imageUrl
+      sourceName
+      author
+      lines {
+        originalText
+        name
+        quantity
+        unit {
+          id
+          name
+          symbol
+        }
+        preparation
+        note
+        isOptional
+        section
+        confidence
+        item {
+          id
+        }
+        candidates {
+          score
+          item {
+            id
+            name
+          }
+        }
+      }
+      steps {
+        step
+        text
+        section
+      }
+    }
+  }
+}
+
+# Queued with a client-minted id: a resend returns the same capture.
+mutation CreateRecipeCapture($input: CreateRecipeCaptureInput!) {
+  createRecipeCapture(input: $input) {
+    __typename
+    ... on CreateRecipeCapturePayload {
+      capture {
+        id
+        ...RecipeCaptureReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

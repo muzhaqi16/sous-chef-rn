@@ -65,11 +65,9 @@ const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
   other: 'other',
 };
 
-// The model copies the printed words, so a Walmart line keeps its price, its
-// codes and the flag after them at the line's end (`SH FN 2CT BK 071641180510
-// 888849007170 F 6.96 Y`), and Costco's `E 1234567 KS WATER` its flag and item
-// number; all are read from the line on their own. A short word after a code
-// mid-line is the name's (Costco's `KS`).
+// The model copies printed words, so a product keeps trailing codes and a flag
+// (`… 071641180510 888849007170 F`), read from the line on their own; a short
+// word after a code mid-line is the name's (`E 1234567 KS WATER`).
 const TRAILING_CODES = /(?:\s+\d{4,14})+(?:\s+[A-Z]{1,2})?\s*$/;
 
 const cleanProduct = (product: string, code: string | undefined) => {
@@ -149,10 +147,9 @@ const comparable = (text: string) =>
   text.replace(/\s+/g, ' ').trim().toUpperCase();
 
 /**
- * Each label on its line. The model drifts from the line numbers it was given
- * (a Walmart receipt's labels two, then four lines early), so a label lands
- * where its product words print, nearest the drift, or keeps the drift without
- * them. A line found by words is not searched again, and wins over drift.
+ * Each label on its line. The model drifts from the line numbers it was given,
+ * so a label lands where its product words print nearest the drift, else keeps
+ * the drift; a line found by words is not searched again and wins over drift.
  */
 function alignLabels(
   lines: readonly string[],
@@ -314,27 +311,4 @@ export function structureReceipt(
     ({ reading: _reading, isDetail: _isDetail, ...line }) => line,
   );
   return merchant ? { merchant, lines: parsed } : { lines: parsed };
-}
-
-// The model skips lines that carry no words (a lone `F`, a price on its own
-// row): it labelled 19 of a skewed Walmart photo's 23. Aligned by their words,
-// the labels it gave still read the receipt; far fewer is a run that failed.
-const MIN_PLACED = 0.75;
-
-/**
- * Worth keeping: the model placed most lines, and at least one item has a
- * price. Anything less goes back to the draft's plain text.
- */
-export function isUsableReceipt(
-  parsed: ParsedReceipt,
-  labels: ReceiptLineLabels,
-): boolean {
-  const placed = new Set(labels.lines.map(line => line.line)).size;
-  const covered = parsed.lines.length === 0 ? 0 : placed / parsed.lines.length;
-  return (
-    covered >= MIN_PLACED &&
-    parsed.lines.some(
-      line => line.kind === 'item' && line.lineTotal !== undefined,
-    )
-  );
 }

@@ -24,7 +24,7 @@ import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSum
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
@@ -244,14 +244,21 @@ const MealPlanMainInner: React.FC = () => {
     }
   };
 
-  // Register add button - opens add meal sheet (only if user can edit)
-  useTabBarAddButton(
+  // A viewer who cannot edit gets no add action.
+  useTabBarAddMenu(
     permissions.canEdit
-      ? () => {
-          setAddMealType(undefined);
-          setAddMealVisible(true);
-        }
-      : undefined,
+      ? [
+          {
+            key: 'meal',
+            label: t('mealTemplateBuilder.addMeal'),
+            icon: 'add',
+            onPress: () => {
+              setAddMealType(undefined);
+              setAddMealVisible(true);
+            },
+          },
+        ]
+      : [],
   );
 
   const handleToggleCompleted = (
@@ -424,11 +431,9 @@ const MealPlanMainInner: React.FC = () => {
     title: t('labels.mealPlan'),
   };
 
-  // Cold start with nothing cached: stay on the skeleton until the plan list
-  // arrives. Rendering the calendar here would show a week strip and an empty
-  // day for a plan that may not exist, then swap to the empty state a moment
-  // later. A refetch over existing plans keeps `initialLoading` false, so the
-  // skeleton never covers content that is already on screen.
+  // Cold start, nothing cached: the skeleton holds until the plan list arrives,
+  // not a calendar for a plan that may not exist. A refetch keeps
+  // `initialLoading` false, so it never covers content.
   if (plansInitialLoading) {
     return <MealPlanMainFallback />;
   }
@@ -586,10 +591,9 @@ const MealPlanMainInner: React.FC = () => {
       <SaveAsTemplateSheet
         visible={saveTemplateVisible}
         mealPlanId={activePlanId}
-        // Both from the ACTIVE plan. `currentPlan` is the SELECTED one, and
-        // `useActiveMealPlan` falls back when that is deleted or unshared — so
-        // naming from it builds one plan's template under another's name. The
-        // header already shows `activeMealPlan?.name`.
+        // Both from the ACTIVE plan: `currentPlan` is the SELECTED one, which
+        // `useActiveMealPlan` falls back from when it is deleted or unshared,
+        // so naming from it labels one plan's template with another's name.
         mealPlanName={activeMealPlan?.name}
         homeName={activeMealPlan?.home?.name}
         onClose={() => setSaveTemplateVisible(false)}
@@ -626,10 +630,9 @@ const MealPlanMainInner: React.FC = () => {
       {/* Duplicate Plan Sheet */}
       <DuplicatePlanSheet
         visible={duplicateVisible}
-        // The ACTIVE plan — the one whose settings opened this sheet, and whose
-        // name the header shows. `currentPlan` is the SELECTED one, which is a
-        // different plan whenever the active-plan fallback has fired, so
-        // duplicating it copies a plan the user is not looking at.
+        // The ACTIVE plan, whose settings opened this sheet: `currentPlan` is
+        // the SELECTED one, a different plan once the active-plan fallback
+        // fires.
         mealPlan={activePlanForDisplay}
         onClose={() => setDuplicateVisible(false)}
         onDuplicate={handleDuplicatePlan}
@@ -641,6 +644,7 @@ const MealPlanMainInner: React.FC = () => {
         visible={markCookedVisible}
         recipeName={pendingCook?.recipeName ?? ''}
         defaultServings={pendingCook?.defaultServings ?? 1}
+        wholeServings
         onClose={() => {
           setMarkCookedVisible(false);
           setPendingCook(null);

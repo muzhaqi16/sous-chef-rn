@@ -15,11 +15,6 @@ import {
 import { alertService } from '#/services/alertService';
 import { usePantryIntake } from '../usePantryIntake';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const PANTRY_ID = 'p-1';
 
 // Args are load-bearing: the connection is keyed on them.
@@ -169,6 +164,93 @@ describe('usePantryIntake', () => {
       unit: { id: 'unit-bag' },
       acquisitionMethod: AcquisitionMethod.BarcodeScan,
     });
+  });
+
+  it('sends a typed item under a minted id, which the row names at once', async () => {
+    const cache = makeCache();
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+      operationMocks: [create.mock],
+    });
+
+    let named: unknown;
+    await act(async () => {
+      const added = result.current.addItem('Cubanelle pepper', {
+        item: { inline: { name: 'Cubanelle pepper', brand: 'Farm' } },
+        quantity: 1,
+      });
+      const [published] = Object.keys(cache.extract()).filter(key =>
+        key.startsWith('PantryItem:'),
+      );
+      named = published ? cache.extract()[published]?.item : undefined;
+      await added;
+    });
+
+    const [fired] = create.fired;
+    const sent = (fired?.input as { item: { inline: { id?: string } } }).item;
+    expect(sent).toEqual({
+      inline: {
+        id: expect.any(String),
+        name: 'Cubanelle pepper',
+        brand: 'Farm',
+      },
+    });
+    expect(named).toEqual({ __ref: `Item:${sent.inline.id}` });
+  });
+
+  it('keeps an item id the caller already minted', async () => {
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      operationMocks: [create.mock],
+    });
+
+    await act(async () => {
+      await result.current.addItem('Mayonnaise', {
+        item: { inline: { id: 'item-receipt', name: 'Mayonnaise' } },
+        quantity: 1,
+      });
+    });
+
+    expect(create.fired[0]?.input).toMatchObject({
+      item: { inline: { id: 'item-receipt', name: 'Mayonnaise' } },
+    });
+  });
+
+  it('re-points a typed item the API matched to one it holds', async () => {
+    const cache = makeCache();
+    const create = recordMock(CreatePantryItemDocument, {
+      dataFor: (vars): MockDataFor<typeof CreatePantryItemDocument> => ({
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: String((vars.input as { id: string } | undefined)?.id),
+            item: { __typename: 'Item', id: 'item-held' },
+          },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+      operationMocks: [create.mock],
+    });
+
+    await act(async () => {
+      await result.current.addItem('Cubanelle pepper', {
+        item: { inline: { name: 'Cubanelle pepper' } },
+        quantity: 1,
+      });
+    });
+
+    const input = create.fired[0]?.input as {
+      id: string;
+      item: { inline: { id: string } };
+    };
+    expect(cache.extract()[`PantryItem:${input.id}`]?.item).toEqual({
+      __ref: 'Item:item-held',
+    });
+    expect(cache.extract()).not.toHaveProperty(`Item:${input.item.inline.id}`);
   });
 
   it('drops the minted row when the server answers with the stack it holds', async () => {

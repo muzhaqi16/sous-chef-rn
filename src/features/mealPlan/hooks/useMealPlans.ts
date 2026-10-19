@@ -109,11 +109,9 @@ export function useMealPlanDisplay(
 export function useMealPlans() {
   const list = useMealPlanList(undefined);
 
-  // `filters.startDate` keeps plans ending today or later; ascending, started
-  // plans lead and the nearest upcoming follows, so the current plan is on page
-  // one unless a full page of plans overlaps today.
-  // Skipped only when the list's page holds a plan ACTIVE today: that beats any
-  // upcoming one. A merely upcoming plan on page one may not be the nearest.
+  // `filters.startDate` keeps plans ending today or later, ascending, so the
+  // current plan is on page one unless a full page overlaps today. Skipped once
+  // the list holds a plan ACTIVE today, which beats any upcoming one.
   const today = useToday();
   const listActive = list.mealPlans.some(plan => isPlanActiveOn(plan, today));
   const current = useMealPlanList(

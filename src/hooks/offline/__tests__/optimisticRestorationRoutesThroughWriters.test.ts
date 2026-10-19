@@ -13,9 +13,6 @@ import { renderHook } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
 import { useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGetAllForType = jest.fn<
   Map<string, Record<string, unknown>>,
   [string]

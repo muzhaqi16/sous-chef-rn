@@ -195,10 +195,9 @@ async function readKeyFromKeychain(): Promise<string | null> {
 }
 
 /**
- * Write the device key to the keychain with hardware-backed storage.
- * No access control is set — the key must be readable on every cold start
- * without prompting the user. WHEN_UNLOCKED_THIS_DEVICE_ONLY already ensures
- * the key is only accessible while the device is unlocked.
+ * Hardware-backed, with no access control: the key is read on every cold start
+ * without a prompt, and WHEN_UNLOCKED_THIS_DEVICE_ONLY already limits it to an
+ * unlocked device.
  */
 async function writeKeyToKeychain(key: string): Promise<boolean> {
   const hardwareOptions = {

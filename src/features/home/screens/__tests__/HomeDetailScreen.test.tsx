@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockSaveName = jest.fn();
@@ -72,8 +69,6 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
@@ -194,10 +189,6 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 beforeEach(() => {

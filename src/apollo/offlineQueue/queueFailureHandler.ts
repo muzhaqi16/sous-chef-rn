@@ -14,13 +14,19 @@ import type {
 } from '#/apollo/offlineQueue/types';
 
 /**
- * Withdraws a locally-applied change the server permanently rejected. An evict
- * rather than a field-level revert, because the queue keeps no pre-change
- * snapshot: a create's row disappears, an update's entity is dropped and read
- * back from the server. An unidentifiable entity is skipped and heals the same way.
+ * Withdraws a change the server permanently rejected by evicting it, as the
+ * queue keeps no pre-change snapshot: a create's row goes, an update's entity
+ * is read back from the server. An unidentifiable entity heals the same way.
  */
 export function handleQueueFailure(info: FailedMutationInfo): void {
-  const { mutationId, entityType, entityId, operationName, error } = info;
+  const {
+    mutationId,
+    entityType,
+    entityId,
+    subjectType,
+    operationName,
+    error,
+  } = info;
 
   logger.warn(
     `Queue: withdrawing locally-applied ${operationName} after permanent failure`,
@@ -60,11 +66,9 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     }
   }
 
-  // The app's own words, not the server's: `error.message` is written for
-  // developers and can carry operation names and identifiers. A conflict gets
-  // its own sentence — "someone got there first" is a different thing for the
-  // user to know than "this failed".
-  toastService.error(withdrawalMessage(error.type, entityType));
+  // The app's own words: `error.message` is written for developers and can
+  // carry operation names and identifiers. A conflict gets its own sentence.
+  toastService.error(withdrawalMessage(error.type, entityType ?? subjectType));
 
   // Withdrawn, so it records nothing; left in place it would pad every drain
   // scan and persisted write until `cleanupTerminal` ages it out 24h later.
@@ -96,10 +100,8 @@ function reread(): Promise<unknown> {
 }
 
 /**
- * One read of the screens once the queue has drained: a refused update's row
- * is back with the server's value and a refused create's stays gone. The read
- * is network-only for every active query, so while any write is still queued
- * it is owed rather than run — it would put the server's older value over it.
+ * One network-only read of the screens once the queue drains: run while a
+ * write is still queued, it would put the server's older value over it.
  */
 function scheduleReread(): void {
   if (rereadScheduled) return;
@@ -132,14 +134,18 @@ function withdrawalMessage(
   type: QueueError['type'],
   entityType: string | null,
 ): string {
-  if (type !== 'conflict') return t('errors.queuedChangeRejected');
-  if (!entityType) return t('errors.queuedChangeOverwritten');
-
   // A persisted entry's typename; only the loaded copy knows which have a name.
-  const resourceKey = `errors.resourceNames.${entityType}`;
-  return isTranslationKey(resourceKey)
-    ? t('errors.queuedChangeOverwrittenResource', { resource: t(resourceKey) })
-    : t('errors.queuedChangeOverwritten');
+  const resourceKey = `errors.resourceNames.${entityType ?? ''}`;
+  const resource = isTranslationKey(resourceKey) ? t(resourceKey) : null;
+
+  if (type === 'conflict') {
+    return resource
+      ? t('errors.queuedChangeOverwrittenResource', { resource })
+      : t('errors.queuedChangeOverwritten');
+  }
+  return resource
+    ? t('errors.queuedChangeRejectedResource', { resource })
+    : t('errors.queuedChangeRejected');
 }
 
 /**

@@ -90,10 +90,9 @@ function scanCachedPantryItems(
 }
 
 /**
- * The server's key is `(pantryId, itemId, unitId)` among active rows. `itemId`
- * reproduces the item half; `itemName` is the fallback for the details form,
- * which has no catalog id, and a name match only ever drives a prompt. Without
- * a `unitId` any unit matches, which reads "stocks this item at all".
+ * The server's key is `(pantryId, itemId, unitId)` among active rows;
+ * `itemName` stands in for the details form, which has no catalog id, and only
+ * drives a prompt. No `unitId` matches any unit.
  */
 export function findCachedPantryItemDuplicate(
   cache: ApolloCache,
@@ -151,10 +150,8 @@ function cachedPantryItems(
   }
 
   const edges = pantry?.itemsConnection.edges;
-  // A miss on the client-mode key is not "no duplicate": in server mode the
-  // field is keyed on the live filter and sort, so the rows are cached under a
-  // key this fragment cannot name. Without this the same duplicate prompts on
-  // a small pantry and not on a large one.
+  // A client-mode miss is not "no duplicate": in server mode the rows are
+  // cached under the live filter and sort, a key this fragment cannot name.
   return edges
     ? edges.map(edge => edge.node)
     : scanCachedPantryItems(cache, pantryCacheId);

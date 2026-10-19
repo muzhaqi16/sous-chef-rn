@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
@@ -13,11 +12,11 @@ import {
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useStore } from '#store';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
@@ -25,6 +24,7 @@ import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { useReceiptPhotoConsent } from '#features/receipts/hooks/useReceiptPhotoConsent';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -50,12 +50,9 @@ export const AppSettingsScreen: React.FC = () => {
     isEmpty: false,
   });
 
-  // Offline mode renders from the STORE, not from `settings`. The store is what
-  // actually drives the policy (`offlineModeLink` reads it, and it's the value
-  // mirrored to MMKV) — the server copy is a cross-device mirror. Binding the
-  // switch to the store makes the flip synchronous and independent of an Apollo
-  // broadcast, which matters most in exactly the case where the server can't be
-  // reached.
+  // Offline mode renders from the STORE, which `offlineModeLink` reads; the
+  // server copy is a cross-device mirror. So the flip is synchronous and needs
+  // no Apollo broadcast, exactly when the server can't be reached.
   const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
   const setOfflineModeEnabled = useAppStore(
     state => state.setOfflineModeEnabled,
@@ -79,6 +76,7 @@ export const AppSettingsScreen: React.FC = () => {
     updatePreference,
     resetPreferences: resetUserPreferences,
   } = useUserPreferences();
+  const storeModeOffered = useFeatureFlag('storeMode');
 
   const { consent: receiptPhotoConsent, setConsent: setReceiptPhotoConsent } =
     useReceiptPhotoConsent();
@@ -96,9 +94,8 @@ export const AppSettingsScreen: React.FC = () => {
 
   /**
    * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`,
-   * which kills the control for a frame and drops the taps landing there.
-   * Nothing waits on the request — the change is cached before firing and
-   * queues for replay. `updating` is kept for the reset row, a one-shot command.
+   * dropping taps for a frame, and the change is cached before it fires.
+   * `updating` is kept for the reset row, a one-shot command.
    */
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
@@ -114,10 +111,9 @@ export const AppSettingsScreen: React.FC = () => {
   };
 
   /**
-   * The LOCAL write is the one that matters — it drives the link policy and
-   * persists to MMKV, and cannot depend on a round-trip unavailable exactly
-   * when this switch is reached for. `immediate` because this is the one caller
-   * that IS a user gesture: a switch is not flapping, so no dwell is needed.
+   * The LOCAL write drives the link policy and cannot wait on a round trip.
+   * `immediate`: the one caller that IS a user gesture, so not flapping, needs
+   * no dwell.
    */
   const handleOfflineModeChange = (value: boolean) => {
     setOfflineModeEnabled(value, true);
@@ -132,40 +128,32 @@ export const AppSettingsScreen: React.FC = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
       t('settings.resetConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('settings.resetSection'),
-          style: 'destructive',
-          onPress: () => {
-            setUpdating('reset');
-            void executeAsyncWithCleanup(
-              async () => {
-                const success = await resetToDefaults();
-                // Also reset feature hints/tutorials and per-user preferences
-                resetAllFeatureHints();
-                resetUserPreferences();
-                // Only the success path alerts — `resetToDefaults` already
-                // surfaces its own failure with `errors.resetSettingsFailed`.
-                if (success) {
-                  alertService.alert(
-                    t('labels.success'),
-                    t('settings.resetSuccess'),
-                  );
-                }
-              },
-              () => setUpdating(null),
-            );
+      destructiveConfirm(t('settings.resetSection'), () => {
+        setUpdating('reset');
+        void executeAsyncWithCleanup(
+          async () => {
+            const success = await resetToDefaults();
+            // Also reset feature hints/tutorials and per-user preferences
+            resetAllFeatureHints();
+            resetUserPreferences();
+            // Only the success path alerts — `resetToDefaults` already
+            // surfaces its own failure with `errors.resetSettingsFailed`.
+            if (success) {
+              alertService.alert(
+                t('labels.success'),
+                t('settings.resetSuccess'),
+              );
+            }
           },
-        },
-      ],
+          () => setUpdating(null),
+        );
+      }),
     );
   };
 
-  // In-app `ModalPicker`, NOT `@react-native-picker/picker`: on Android that
-  // one's dropdown is a DIALOG themed from the Activity theme, so it follows
-  // the OS `uiMode` and ignores the app's light/dark preference, unreachable
-  // from RN. `Alert.alert` and the date pickers share the limit.
+  // `ModalPicker`, NOT `@react-native-picker/picker`: on Android its dropdown is
+  // an Activity-themed DIALOG that follows the OS `uiMode`, not the app's theme
+  // (so do `Alert.alert` and the date pickers).
   const unitSystemOptions = [
     { label: t('settings.unitMetric'), value: UnitSystem.Metric },
     { label: t('settings.unitImperial'), value: UnitSystem.Imperial },
@@ -277,23 +265,6 @@ export const AppSettingsScreen: React.FC = () => {
             setReceiptPhotoConsent(value ? 'granted' : 'declined')
           }
         />
-
-        {settings.betaFeatures.length > 0 && (
-          <View style={styles.betaFeaturesContainer}>
-            <Text role="bodyStrong" tone="secondary">
-              {t('settings.betaFeaturesEnabled')}
-            </Text>
-            <View style={styles.chipContainer}>
-              {settings.betaFeatures.map((feature, index) => (
-                <View key={index} style={[commonStyles.chip, styles.betaChip]}>
-                  <Text role="label" style={commonStyles.chipText}>
-                    {feature}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
       </SettingsSection>
 
       <SettingsSection variant="inset" title={t('settings.experience')}>
@@ -320,6 +291,15 @@ export const AppSettingsScreen: React.FC = () => {
             updatePreference({ showShoppingListImages: value })
           }
         />
+        {storeModeOffered ? (
+          <SettingSwitch
+            testID={profileTestIDs.settingsStoreModeSwitch}
+            title={t('settings.storeMode')}
+            description={t('settings.storeModeDesc')}
+            value={userPrefs.storeMode ?? false}
+            onValueChange={value => updatePreference({ storeMode: value })}
+          />
+        ) : null}
         <SettingSwitch
           testID={profileTestIDs.settingsShareUsageDataSwitch}
           title={t('settings.shareUsageData')}
@@ -352,23 +332,6 @@ const styles = StyleSheet.create(theme => ({
   },
   picker: {
     marginTop: theme.spacing.sm,
-  },
-  betaFeaturesContainer: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    marginTop: theme.spacing.sm,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  betaChip: {
-    marginRight: 0,
-    backgroundColor: theme.colors.warning + '20',
   },
 }));
 

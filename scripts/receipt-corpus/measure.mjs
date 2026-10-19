@@ -6,9 +6,9 @@
  *
  *   node scripts/receipt-corpus/measure.mjs [corpus-dir]
  *
- * No receipt is hand-labelled, so a receipt "adds up" when its items, after
- * their discounts, come to the printed subtotal: the proxy for every item being
- * found and priced.
+ * No receipt is hand-labelled, so a reading counts when the rules' check
+ * accepts it (`checkOnPhone`, the app's own): its lines, as printed, meet a
+ * subtotal or total the receipt prints.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { register } from 'node:module';
@@ -24,13 +24,13 @@ const UTILS = join(REPO, 'src/features/receipts/utils');
 const corpus =
   process.argv[2] ?? join(tmpdir(), 'sous-chef-receipt-corpus', 'corpus');
 
-const { isUsableReceipt, linesThroughTotal, structureReceipt } = await import(
+const { linesThroughTotal, structureReceipt } = await import(
   `${UTILS}/structureReceipt.ts`
 );
 const { receiptReviewLines } = await import(`${UTILS}/receiptReviewLines.ts`);
-const { receiptTotalsGap } = await import(`${UTILS}/receiptTotalsGap.ts`);
+const { checkOnPhone } = await import(`${UTILS}/phoneReading.ts`);
 
-const totals = { receipts: 0, usable: 0, addsUp: 0, items: 0, priced: 0 };
+const totals = { receipts: 0, accepted: 0, items: 0, priced: 0 };
 
 for (const file of readdirSync(corpus).filter(name => name.endsWith('.json'))) {
   const receipt = JSON.parse(readFileSync(join(corpus, file), 'utf8'));
@@ -46,33 +46,24 @@ for (const file of readdirSync(corpus).filter(name => name.endsWith('.json'))) {
   const parsed = structureReceipt(lines, receipt.onDevice);
   const review = receiptReviewLines(parsed);
   const priced = review.filter(line => line.price !== undefined).length;
-  const gap = receiptTotalsGap(parsed);
-  const printsTotal = parsed.lines.some(
-    line =>
-      (line.kind === 'subtotal' || line.kind === 'total') && line.lineTotal,
-  );
-  const usable = isUsableReceipt(parsed, receipt.onDevice);
+  const checked = checkOnPhone(parsed, receipt.pages);
+  const gap = checked?.totalsGap;
 
-  totals.usable += usable ? 1 : 0;
-  totals.addsUp += usable && printsTotal && !gap ? 1 : 0;
+  totals.accepted += checked?.accepted ? 1 : 0;
   totals.items += review.length;
   totals.priced += priced;
   console.log(
     [
       name,
-      usable ? 'usable  ' : 'dropped ',
+      checked?.accepted ? 'accepted' : 'refused ',
       `items ${String(review.length).padStart(2)}`,
       `priced ${String(priced).padStart(2)}`,
-      gap
-        ? `counted ${gap.counted} vs ${gap.printed}`
-        : printsTotal
-        ? 'adds up'
-        : 'no total read',
+      gap ? `counted ${gap.counted} vs ${gap.printed}` : '',
     ].join('  '),
   );
 }
 
 console.log(
-  `\n${totals.receipts} receipts: ${totals.usable} usable, ${totals.addsUp} add up; ` +
+  `\n${totals.receipts} receipts: ${totals.accepted} accepted; ` +
     `${totals.priced} of ${totals.items} items priced`,
 );

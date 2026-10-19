@@ -22,8 +22,6 @@
  * all been resolved by the module system rather than by a pattern.
  */
 
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
 jest.mock('#/storage/mmkv');
 
 import fs from 'fs';

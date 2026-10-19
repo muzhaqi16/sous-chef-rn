@@ -39,7 +39,6 @@ describe('TabBarActionsContext', () => {
     it('returns setter functions', () => {
       const { result } = renderHook(() => useTabBarSetters(), { wrapper });
       expect(typeof result.current.setScannerProps).toBe('function');
-      expect(typeof result.current.setAddProps).toBe('function');
       expect(typeof result.current.setActiveTab).toBe('function');
       expect(typeof result.current.setOverlayOpen).toBe('function');
     });
@@ -58,7 +57,6 @@ describe('TabBarActionsContext', () => {
       expect(result.current.showAddButton).toBe(false);
       expect(result.current.activeTab).toBe('');
       expect(result.current.isOverlayOpen).toBe(false);
-      expect(result.current.isAddButtonDisabled).toBe(false);
     });
   });
 
@@ -134,19 +132,60 @@ describe('TabBarActionsContext', () => {
     });
   });
 
-  describe('setAddProps', () => {
-    it('sets add handler and disabled state', () => {
+  describe('setAddMenu', () => {
+    const menu = [
+      { key: 'link', label: 'Link', icon: 'link', onPress: jest.fn() },
+      { key: 'manual', label: 'Manual', icon: 'create', onPress: jest.fn() },
+    ];
+
+    it("exposes a tab's menu only while that tab is active", () => {
       const { result } = renderHook(() => useTabBarActions(), { wrapper });
-      const onAdd = jest.fn();
 
       act(() => {
-        result.current.setActiveTab('ShoppingList');
-        result.current.setAddProps(onAdd, true, 'No list selected');
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+      });
+      expect(result.current.addMenu).toBe(menu);
+
+      act(() => {
+        result.current.setActiveTab('Pantry');
+      });
+      expect(result.current.addMenu).toBeUndefined();
+
+      act(() => {
+        result.current.setActiveTab('Recipe');
+      });
+      expect(result.current.addMenu).toBe(menu);
+    });
+
+    it('removes a menu set to undefined', () => {
+      const { result } = renderHook(() => useTabBarActions(), { wrapper });
+
+      act(() => {
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+      });
+      act(() => {
+        result.current.setAddMenu('Recipe', undefined);
       });
 
-      expect(result.current.onAddPress).toBe(onAdd);
-      expect(result.current.isAddButtonDisabled).toBe(true);
-      expect(result.current.addButtonDisabledMessage).toBe('No list selected');
+      expect(result.current.addMenu).toBeUndefined();
+    });
+
+    it('closes an open menu when the tab changes', () => {
+      const { result } = renderHook(() => useTabBarActions(), { wrapper });
+      act(() => {
+        result.current.setActiveTab('Recipe');
+        result.current.setAddMenu('Recipe', menu);
+        result.current.setAddMenuOpen(true);
+      });
+      expect(result.current.isAddMenuOpen).toBe(true);
+
+      act(() => {
+        result.current.setActiveTab('Pantry');
+      });
+
+      expect(result.current.isAddMenuOpen).toBe(false);
     });
   });
 

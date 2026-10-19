@@ -12,9 +12,6 @@ import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantr
 import { useUpdatePantryItemQuantity } from '../useUpdatePantryItemQuantity';
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 const QUANTITY = gql`
   fragment UpdateQuantityProbe on PantryItem {

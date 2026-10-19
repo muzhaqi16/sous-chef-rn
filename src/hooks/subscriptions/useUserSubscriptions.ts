@@ -1,7 +1,6 @@
 /**
- * ONE consolidated `userEvents(userId)` stream — account, profile and lifecycle
- * events discriminated by `subtype` — because the server caps concurrent
- * subscriptions per user cluster-wide. ACCOUNT_UPDATED / PROFILE_CHANGED
+ * ONE `userEvents(userId)` stream routed by `subtype`, because the server caps
+ * concurrent subscriptions per user. ACCOUNT_UPDATED / PROFILE_CHANGED
  * normalize by id; lifecycle subtypes carry their context on the envelope.
  */
 
@@ -35,6 +34,10 @@ import { useSubscriptionTransportRecovery } from './useSubscriptionTransportReco
 
 type UserEventPayload = UserEventsSubscription['userEvents'];
 
+/** A leave arrives as a removal the user made themselves; it is not news. */
+const removedThemselves = (payload: UserEventPayload) =>
+  !!payload.actorUserId && payload.actorUserId === payload.userId;
+
 function handleRemovedFromHome(
   payload: UserEventPayload,
   client: SubscriptionApolloClient,
@@ -67,7 +70,9 @@ function handleRemovedFromHome(
     store.setSelectedMealPlanId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromHome'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromHome'));
+  }
 }
 
 /** `ownAccept`: the echo of an invite this device just accepted. */
@@ -93,7 +98,9 @@ function handleRemovedFromShoppingList(
     store.setSelectedShoppingListId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromShoppingList'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromShoppingList'));
+  }
 }
 
 function handleAddedToShoppingList(ownAccept: boolean) {
@@ -101,10 +108,9 @@ function handleAddedToShoppingList(ownAccept: boolean) {
 }
 
 /**
- * The event's `reason` is a moderator's own English, so no toast shows it. The
- * copy comes from `reasonCode`, which separates the two states the user needs
- * told apart: the failed-login lockout lifts by itself, a moderator's decision
- * does not.
+ * `reason` is a moderator's own English, so no toast shows it; `reasonCode`
+ * tells the failed-login lockout, which lifts by itself, from a moderator's
+ * decision, which does not.
  */
 function handleBannedOrSuspended(payload: UserEventPayload) {
   const message =
@@ -124,10 +130,8 @@ function handleBannedOrSuspended(payload: UserEventPayload) {
 }
 
 /**
- * Initialize user subscriptions for multi-device profile/settings sync
- * and lifecycle events (membership changes, moderation actions).
- *
- * @param userId - Current user ID for deduplication and subscription scoping
+ * Multi-device profile/settings sync and lifecycle events (membership changes,
+ * moderation actions).
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();

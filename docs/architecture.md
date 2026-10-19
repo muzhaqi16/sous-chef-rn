@@ -151,7 +151,28 @@ exception list.
 `src/config/appConfig.ts` is the fork-point: identity, deep links, brand colour,
 the keychain namespace, which locales ship, and `features` — a per-feature
 `false` that drops it from `FEATURE_REGISTRY`'s enabled set without touching the
-feature. The keychain strings are pinned by
+feature.
+
+A capability inside a feature is switched by `featureFlags` instead
+(`src/config/featureFlags.ts`): a closed `FeatureFlag` union with a default
+each. The fork's `appConfig.featureFlags` overrides the default, and a build's
+`FEATURE_FLAGS` env value (`pantrySuggestions=off`) overrides both. Code reads a
+flag only through `useFeatureFlag`. A flag the server owns
+(`src/config/serverFeatureFlags.ts` maps each `FeatureFlagName`) is on only where
+the build allows it AND the user's `myFeatureFlags` entry is `enabled`, which is
+true exactly when its state is `ON`: a feature that needs a plan the user lacks
+(`UPGRADE_REQUIRED`) reads as off. It is off until the first answer, and the
+cached answer holds offline; a `FEATURE_DISABLED` or `PREMIUM_REQUIRED` refusal
+re-reads it (`errorLink`). A flagged capability is a seam, not a branch in the
+code it extends:
+
+- the existing component takes it as an optional prop, and renders as before
+  without it (`RecipeIngredientList`'s `onPasteIngredients`);
+- or a selector picks between the code that predates it and the new code, each
+  a separate hook (`useRecipeDiscovery` over `useSpoonacularDiscovery` and
+  `useServerRecipeSuggestions`).
+
+With the flag off, the feature does what it did before the capability existed. The keychain strings are pinned by
 `src/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
 service name, so changing one on a shipped app signs every user out silently.
 
@@ -460,23 +481,38 @@ seam has one home, and a new source extends it rather than adding a parallel
 path. The API and the admin app own the server side; this client never edits
 those repos.
 
-| Seam                                                                                                                                                    | A new source                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver                                                      | sends `today` from its intake hook; supplies shelf-life data to the resolver                                                                                     |
-| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                                                                      | adds one resolution step                                                                                                                                         |
-| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue                                                                 | adds a mapper and its precedence entries                                                                                                                         |
-| The barcode miss/result flow; the embedding model                                                                                                       | reaches the scan through a resolution step, never its own lookup                                                                                                 |
-| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`                                                                  | implements `ReceiptParser`                                                                                                                                       |
-| Stock writes: `stockAmountOf` / `boughtAmountOf` (`src/domain/stockAmount.ts`), the one create `usePantryIntake` and the one restock `usePantryRestock` | states what was bought through `stockAmount.ts` and writes through those two hooks, never its own mutation; a count naming no unit goes through `boughtAmountOf` |
-| Per-language names and search; the language header; the `languageChanged` resync event                                                                  | adds names as synonyms in their language                                                                                                                         |
+| Seam                                                                                                                                                    | A new source                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver                                                      | sends `today` from its intake hook; supplies shelf-life data to the resolver                                                                                                                                             |
+| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                                                                      | adds one resolution step                                                                                                                                                                                                 |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue                                                                 | adds a mapper and its precedence entries                                                                                                                                                                                 |
+| The barcode miss/result flow; the embedding model                                                                                                       | reaches the scan through a resolution step, never its own lookup                                                                                                                                                         |
+| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`                                                                  | implements `ReceiptParser`                                                                                                                                                                                               |
+| Stock writes: `stockAmountOf` / `boughtAmountOf` (`src/domain/stockAmount.ts`), the one create `usePantryIntake` and the one restock `usePantryRestock` | states what was bought through `stockAmount.ts` and writes through those two hooks, never its own mutation (a confirmed receipt alone goes as one check-in, below); a count naming no unit goes through `boughtAmountOf` |
+| Per-language names and search; the language header; the `languageChanged` resync event                                                                  | adds names as synonyms in their language                                                                                                                                                                                 |
 
-**Receipt reading.** The server's reading of a receipt is the one reading: `fromServerReceipt` copies its lines and adds none of its own.
+**Receipt reading.** The phone reads a receipt first, by the rules the server reads with (`@muzhaqi16/receipt-rules`, pinned to an exact version), and the server reads only what they refuse. Every reading is in the API's shape, and `fromServerReceipt` copies its lines and adds none of its own.
 
+- The rules read the redacted pages (`readOnPhone`), the text their corpus holds. The day is read before redaction, by the package's `readReceiptDate`, because tills print it below the payment block.
+- Where the `deviceReceiptModel` flag is on (off by default) and the phone's model is available, the model reads at the same time. Its reading is held to the same check (`checkOnPhone`, the package's `checkReading`).
+- The first reading that adds up is the receipt's (`parsedBy: 'device'`), its store taken from the reading's merchant. The draft is then parsed, so no server parse is asked, and any photos prepared for it are deleted unsent. The rules answer in milliseconds, so the model is waited for only once they refuse.
+- A reading's verdict is stored with it (`draft.totalsGap`): the server's `TOTALS_MISMATCH`, or the rules' refusal. The review shows it and never adds up the lines itself. With the server's reading off (`receiptParsing`), a reading the rules refused is kept anyway, with its gap.
+- `deviceReceiptReading` turns reading on the phone off, and every receipt then goes to the server.
+- A new version of the package is pinned only after `scripts/receipt-rules/hermes-check.mjs` passes. Run against the dev app with the receipt scan screen open, it reads the package's corpus under the app's Hermes and in Node. It fails when a reading differs between the two, or an accepted reading departs from its receipt. Installing needs `NODE_AUTH_TOKEN` (`docs/development.md`).
 - A scan is at most four pages (`MAX_PHOTOS`), the most the API reads as photos: Android's scanner stops there. iOS's takes no limit, so a longer scan is read from its text, and one the phone cannot read is not sent in part.
 - With the user's one-time consent (`receiptPhotoConsentStore`, session-scoped) and a connection, a scan of up to four pages sends photos (`createReceiptParse { photos }`).
-- `TextRecognition.preparePhotos({ keepPages })` prepares the photos first, and they go up together, within one time limit, while `recognizeAndDelete` reads the text from the same pages. The native side runs calls in order, so the pages are never deleted under the preparation.
+- `TextRecognition.preparePhotos({ keepPages })` prepares the photos first, and `recognizeAndDelete` then reads the text from the same pages. The native side runs calls in order, so the pages are never deleted under the preparation. The photos go up together, within one time limit, only once the text is read and the phone could not read the receipt: their masks come from the text.
+- `receiptPhotoMasks` covers what the phone read as personal: the payment block as a full-width band along its rows from its first payment row after an item to the receipt's end, its date rows left open, and above it each row redaction drops or masks, an email, and a phone below the header, line by line. `TextRecognition.maskPhotos` paints them into the prepared JPEG (Android; a build without it sends the photos as they are). A parse sends `photosMasked: true` only when every photo was masked, and with no payment block read nothing is masked: the API lets only a marked photo reach a hosted model.
 - The redacted text stays beside the photos as the fallback: offline, a failed upload, or a photo parse that reads nothing. The draft records which one a parse read (`serverParse.via`).
-- The phone's text is scored stage by stage against the corpus answer key by `scripts/receipt-corpus/text-fidelity.mjs`. A recognition or assembly change ships only if no item is lost there.
+- `assembleReceiptRows` rebuilds the printed rows from the recognised lines' geometry. A tilted page is read along its slope. A level page is read by height, with its price column moved back by the offset at least three of its prices agree on: ML Kit can read every price a fraction of a row above or below its name. The offset is looked for within half a row of what the page's tilt predicts, because on evenly spaced rows a column a whole row away agrees as well.
+- The phone's text is scored stage by stage against the corpus answer key by `scripts/receipt-corpus/text-fidelity.mjs`: Vision's from `ocr-variants.mjs`, and ML Kit's laid out by `mlkit-root.mjs` from a device run and the API's receipt corpus. A recognition or assembly change ships only if no item is lost there.
+
+**Receipt check-in.** A confirmed receipt is recorded by one `createReceiptCheckIn` per 100 lines (`useReceiptCheckIn`), never by a write per line.
+
+- Its ids are minted once and kept in the draft (`receiptDraftStore.checkIn`): the check-in's own, and each line's purchase, stack and typed item. A retry, a restart and a replay send the same ids, so nothing is recorded twice.
+- Every line's local rows are written before the call fires, by the writers the pantry add and the list move use (`writeLocalIntake`, `writeLocalMove`). `applyReceiptCheckIn` settles each line from its result: a refused line withdraws only its own writes, and a merged stack or a matched item is adopted.
+- Queued, it replays through `reconcileReceiptCheckInReplay`, which also settles the saved receipt. Refused for good, `withdrawReceiptCheckIn` and `restoreReceiptCheckInListLines` undo every line.
+- A line that still lacks its product, unit or price is held back and named on the review. A refused line stays on the saved receipt with its cause, and Add sends only the lines not yet recorded.
 
 Four rules keep parallel work apart:
 

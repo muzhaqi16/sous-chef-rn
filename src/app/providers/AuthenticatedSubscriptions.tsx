@@ -5,7 +5,8 @@ import { useHomeSubscriptions } from '#features/home/hooks/useHomeSubscriptions'
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 
 import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
-import { useQuietHoursTimezoneSync } from '#features/notifications/hooks/useQuietHoursTimezoneSync';
+import { useDeviceTimezoneSync } from '#features/notifications/hooks/useDeviceTimezoneSync';
+import { useAccountCurrencySync } from '#features/profile/hooks/useAccountCurrencySync';
 
 interface AuthenticatedSubscriptionsProps {
   userId: string;
@@ -29,10 +30,11 @@ export const AuthenticatedSubscriptions: React.FC<
 
   useUserSubscriptions(userId);
 
-  // Not a subscription, but it needs the same app-wide authenticated mount: the
-  // notification screens are the only other place it would run, and a user who
-  // travels has no reason to open one.
-  useQuietHoursTimezoneSync();
+  // Not subscriptions, but they need the same app-wide authenticated mount: a
+  // traveller has no reason to open a settings screen, and a currency changed
+  // on another device reaches this one only through the resync's re-read.
+  useDeviceTimezoneSync();
+  useAccountCurrencySync();
 
   // This component doesn't render anything - it just runs subscription hooks
   return null;

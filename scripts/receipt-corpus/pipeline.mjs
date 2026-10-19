@@ -17,9 +17,9 @@
  *
  * With `--labels <dir>` (what `device-labels.mjs` wrote) it runs the on-device
  * half instead (design.md § D6 of the `on-device-receipt-recognition` change),
- * writing to `<dir>/pipeline/`. As in `parseReceiptOnDevice`, a receipt the
- * model failed, was too slow for or left unusable goes to the server, so it
- * keeps the server run's result: run without `--labels` first.
+ * writing to `<dir>/pipeline/`. As in the app, a receipt the model failed,
+ * was too slow for or read in a way the rules' check refuses goes to the
+ * server, so it keeps the server run's result: run without `--labels` first.
  */
 import { createId } from '@paralleldrive/cuid2';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -46,8 +46,8 @@ mkdirSync(outDir, { recursive: true });
 
 const { fromServerReceipt } = await import(`${UTILS}/fromServerReceipt.ts`);
 const { receiptReviewLines } = await import(`${UTILS}/receiptReviewLines.ts`);
-const { receiptTotalsGap } = await import(`${UTILS}/receiptTotalsGap.ts`);
-const { isUsableReceipt, linesThroughTotal, structureReceipt } = await import(
+const { checkOnPhone } = await import(`${UTILS}/phoneReading.ts`);
+const { linesThroughTotal, structureReceipt } = await import(
   `${UTILS}/structureReceipt.ts`
 );
 const { LABELLING_TIMEOUT_MS } = await import(
@@ -130,7 +130,7 @@ const PARSE = `query ReceiptParse($id: ID!) {
   receiptParse(id: $id) {
     id
     status
-    warnings { code }
+    warnings { code counted printed }
     receipt {
       merchant { name }
       purchasedOn
@@ -247,7 +247,13 @@ const serverRun = async (token, receipt) => {
   }
   result.parse.warnings = parse.warnings.map(warning => warning.code);
   result.parse.kinds = kinds;
-  result.totalsGap = receiptTotalsGap(parsed);
+  const mismatch = parse.warnings.find(
+    warning => warning.code === 'TOTALS_MISMATCH',
+  );
+  result.totalsGap =
+    mismatch?.counted == null
+      ? null
+      : { counted: mismatch.counted, printed: mismatch.printed };
   const review = receiptReviewLines(parsed);
   return {
     ...result,
@@ -261,20 +267,22 @@ const deviceRun = async (token, receipt, file) => {
     receipt.pages.flatMap(page => page.split('\n')),
   );
   const parsed = labels.error ? null : structureReceipt(lines, labels);
+  // The app keeps the reading as the rules' check settles it, or none.
+  const kept = parsed ? checkOnPhone(parsed, receipt.pages) : null;
   const fallback = !parsed
     ? 'failed'
     : labels.seconds * 1000 > LABELLING_TIMEOUT_MS
     ? 'too slow'
-    : isUsableReceipt(parsed, labels)
+    : kept?.accepted
     ? null
-    : 'unusable';
+    : 'refused';
   if (fallback) {
     return { ...readJson(join(corpus, 'pipeline', file)), fallback };
   }
 
-  const review = receiptReviewLines(parsed);
+  const review = receiptReviewLines(kept.parsed);
   const kinds = {};
-  for (const line of parsed.lines) {
+  for (const line of kept.parsed.lines) {
     const kind = line.kind.toUpperCase();
     kinds[kind] = (kinds[kind] ?? 0) + 1;
   }
@@ -287,7 +295,7 @@ const deviceRun = async (token, receipt, file) => {
       ...review.map(line => line.printed),
     ]),
     parse: { status: 'PARSED', by: 'DEVICE', ms: labels.seconds * 1000, kinds },
-    totalsGap: receiptTotalsGap(parsed),
+    totalsGap: null,
     ...(await resolveLines(token, receipt, review, 'DEVICE')),
   };
 };

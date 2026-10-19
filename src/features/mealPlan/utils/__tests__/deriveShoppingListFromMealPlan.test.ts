@@ -5,10 +5,10 @@ import {
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 
 /**
- * The rules here are the server's, read out of
- * `MealPlanService.generateShoppingListFromMealPlan`. A derived list and a
- * server-generated one have to produce the same rows from the same plan, so
- * each case pins one of its decisions rather than this function's preferences.
+ * The rules here are the server's, read out of the retired
+ * `MealPlanService.generateShoppingListFromMealPlan`, and, for an amount a
+ * recipe does not state, the API's `recipe-ingredient-amounts` rule. Each case
+ * pins one of those decisions rather than this function's preferences.
  */
 
 let next = 0;
@@ -375,5 +375,91 @@ describe('honouring checkPantry from cached rows', () => {
       deriveShoppingListFromMealPlan(meals, { ...base, checkPantry: false })
         .pantryChecked,
     ).toBe(true);
+  });
+});
+
+describe('an amount the recipe does not state', () => {
+  const salt = (id: string, itemId: string | null = 'i-salt') => ({
+    id,
+    name: 'Salt',
+    quantity: null,
+    isOptional: false,
+    itemId,
+    unitId: null,
+  });
+
+  it('adds the item once, with no quantity or unit, however many meals name it', () => {
+    const meals = [
+      meal('mpi-1', 8, { id: 'r-1', servings: 2, ingredients: [salt('ri-1')] }),
+      meal('mpi-2', 2, { id: 'r-2', servings: 2, ingredients: [salt('ri-2')] }),
+    ];
+
+    const { inputs, skipped } = deriveShoppingListFromMealPlan(meals, base);
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]?.item).toEqual({ itemId: 'i-salt' });
+    expect(inputs[0]).not.toHaveProperty('quantity');
+    expect(inputs[0]).not.toHaveProperty('unit');
+    expect(inputs[0]?.recipeContext?.recipeIngredientId).toBe('ri-1');
+    expect(skipped).toEqual([]);
+  });
+
+  it('leaves the item off when the pantry holds any of it, in any unit', () => {
+    const meals = [
+      meal('mpi-1', 1, { id: 'r-1', servings: 1, ingredients: [salt('ri-1')] }),
+    ];
+
+    const { inputs, skipped } = deriveShoppingListFromMealPlan(meals, {
+      ...base,
+      checkPantry: true,
+      pantryRows: [{ itemId: 'i-salt', unitId: 'u-gram', quantity: 0.5 }],
+    });
+
+    expect(inputs).toHaveLength(0);
+    expect(skipped).toEqual([
+      { sourceId: 'ri-1', reason: 'covered-by-pantry' },
+    ]);
+  });
+
+  it('adds nothing more when another meal states an amount of the item', () => {
+    const meals = [
+      meal('mpi-1', 1, { id: 'r-1', servings: 1, ingredients: [salt('ri-1')] }),
+      meal('mpi-2', 1, {
+        id: 'r-2',
+        servings: 1,
+        ingredients: [
+          {
+            id: 'ri-2',
+            name: 'Salt',
+            quantity: 5,
+            isOptional: false,
+            itemId: 'i-salt',
+            unitId: 'u-gram',
+          },
+        ],
+      }),
+    ];
+
+    const { inputs } = deriveShoppingListFromMealPlan(meals, base);
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]?.quantity).toBe(5);
+  });
+
+  it('reports one with no catalog item instead of adding free text', () => {
+    const meals = [
+      meal('mpi-1', 1, {
+        id: 'r-1',
+        servings: 1,
+        ingredients: [salt('ri-1', null)],
+      }),
+    ];
+
+    const { inputs, skipped } = deriveShoppingListFromMealPlan(meals, base);
+
+    expect(inputs).toHaveLength(0);
+    expect(skipped).toEqual([
+      { sourceId: 'ri-1', reason: 'ingredient-not-in-catalog' },
+    ]);
   });
 });

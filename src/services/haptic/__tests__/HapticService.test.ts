@@ -1,8 +1,3 @@
-// Mock tokenScheduler and refreshToken to break circular dependency chain
-// (same pattern used by store slice tests)
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 const mockTrigger = jest.fn();
 jest.mock('react-native-haptic-feedback', () => ({
   trigger: (...args: unknown[]) => mockTrigger(...args),

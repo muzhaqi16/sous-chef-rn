@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import { moneyByCurrency } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
@@ -18,7 +19,6 @@ import {
   OfflineTabState,
   TopItemsBarChart,
   money,
-  moneyByCurrency,
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';

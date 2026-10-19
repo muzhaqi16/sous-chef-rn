@@ -14,13 +14,8 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ReviewCard } from '../ReviewCard';
 import { ReviewSection } from '../ReviewSection';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
-}));
-jest.mock('#services/toastService', () => ({
-  toastService: { success: jest.fn(), info: jest.fn() },
 }));
 
 const VIEWER = {
@@ -88,16 +83,16 @@ describe('reporting a review from its card', () => {
     expect(onReport).toHaveBeenCalledWith('author');
   });
 
-  it("offers none on the viewer's own review", () => {
-    renderCard(review('review-1', VIEWER.id));
+  it.each([
+    { name: "offers none on the viewer's own review", authorId: VIEWER.id },
+    {
+      name: 'offers none once the author deleted their account',
+      authorId: null,
+    },
+  ])('$name', ({ authorId }) => {
+    renderCard(review('review-1', authorId));
 
     expect(reportButton('review-1')).toBeNull();
-  });
-
-  it('offers none once the author deleted their account', () => {
-    renderCard(review('review-3', null));
-
-    expect(reportButton('review-3')).toBeNull();
   });
 });
 

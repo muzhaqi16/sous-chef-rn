@@ -6,7 +6,7 @@ import { carriesListTotals } from '#features/shoppingList/cache/items';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { adoptServerEntityId, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
 
@@ -21,12 +21,13 @@ const serverRow = (value: unknown): { id: string; version?: number } | null =>
       }
     : null;
 
+const idOf = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
+
 /**
- * Every batch-add copy replays as itself and can apply while refusing rows
- * inside `results`. Each result is paired to its row by the `index` the server
- * echoes; a refused row is withdrawn. A row the server merged into the list's
- * existing one (`outcome: MERGED`) goes too: the kept row is linked uncounted
- * (the minted one was counted already) and later writes move to it.
+ * A batch-add replay can apply while refusing rows (paired by echoed `index`):
+ * a refused row is withdrawn; a MERGED one too, its kept row linked uncounted and
+ * taking later writes; a matched typed item takes over from the one minted for it.
  */
 export const reconcileShoppingAddReplay: Reconciler = (
   cache,
@@ -68,6 +69,10 @@ export const reconcileShoppingAddReplay: Reconciler = (
     } else if (item && item.id !== row.id) {
       withdrawn.push(row.id);
       merged.push({ mintedId: row.id, item });
+    }
+    if (result.success !== false && isRecord(result.item)) {
+      const sent = isRecord(row.item) ? idOf(row.item.inline) : undefined;
+      adoptServerEntityId(cache, 'Item', idOf(result.item.item), sent);
     }
   });
   withdrawShoppingListItems(cache, shoppingListId, withdrawn, {

@@ -46,10 +46,9 @@ export function hasMealPlanFilter(filters: MealPlanFilterState): boolean {
 }
 
 /**
- * The server's `MealPlanFilters` for the selector state, or `undefined` when no
- * filter is set. Unset keys are omitted, not `undefined`: `filters` is the
- * connection's cache key, and one state must name one stored variant.
- * `isActive` is judged on the day the device states, so it carries `today`.
+ * The server's `MealPlanFilters` for the selector state, `undefined` when none
+ * is set. Unset keys are omitted, not `undefined`: `filters` is the cache key,
+ * so one state names one variant. `isActive` reads `today`.
  */
 export function toMealPlanServerFilters(
   filters: MealPlanFilterState,
@@ -65,10 +64,9 @@ export function toMealPlanServerFilters(
 }
 
 /**
- * The selector filters applied to plans already in hand, with the server's
- * semantics (substring of name or description, `isActive` as today within the
- * plan's range). It also re-checks server results, since a local create lands
- * in every cached filter variant and an `isActive` page goes stale.
+ * The selector filters with the server's semantics (name or description
+ * substring; `isActive` = today in range), re-checking server results too: a
+ * local create lands in every variant, and an `isActive` page goes stale.
  */
 export function filterMealPlans<T extends FilterablePlan>(
   plans: readonly T[],

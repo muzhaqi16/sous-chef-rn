@@ -34,7 +34,8 @@ export interface SearchBarAction {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   library?: string;
   style?: StyleProp<ViewStyle>;
-  accessibilityLabel?: string;
+  /** What the button does; its icon's name is no label. */
+  accessibilityLabel: string;
   animated?: boolean;
   isHighlighted?: boolean;
   testID?: string; // Optional testID for E2E testing
@@ -60,10 +61,9 @@ export interface SearchBarRef {
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
   /**
-   * CONTROLLED mode. Omit it together with `debounceMs` for the debounced
-   * mode, where the field owns its own text: a controlled field re-renders on
-   * every keystroke and the cursor jumps to the end while the debounce is in
-   * flight.
+   * CONTROLLED mode; omit it when passing `debounceMs`, where the field owns its
+   * text: a controlled field re-renders per keystroke and its cursor jumps to
+   * the end while the debounce is in flight.
    */
   value?: string;
   onChangeText: (text: string) => void;
@@ -93,10 +93,8 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
 const ThemedActionButton = withUnistyles(ActionButton);
 
 /**
- * Wrapper that measures an action button's screen position for spotlight tutorials.
- * ActionButton has marginLeft which shifts the visual button right of the layout
- * origin. We measure the wrapper then trim the margin so the reported rect
- * matches only the visible button area.
+ * Measures an action button's rect for spotlight tutorials, trimming the
+ * ActionButton's `marginLeft` so the rect covers only the visible button.
  */
 const MeasuredAction: FC<{
   onButtonLayout: (rect: {
@@ -107,11 +105,8 @@ const MeasuredAction: FC<{
   }) => void;
   children: ReactNode;
 }> = ({ onButtonLayout, children }) => {
-  // Subscribe to theme changes so the reported rect stays in sync with the
-  // density/spacing override applied by `useAppearance`. Reading
-  // `theme.spacing.sm` here (a) makes the dependency explicit to the React
-  // Compiler / Unistyles tracker and (b) gives us a stable closure value
-  // for the effect that triggers a fresh measure when spacing shifts.
+  // Reads the theme so the trimmed margin follows `useAppearance`'s spacing
+  // override.
   const { theme } = useUnistyles();
   const margin = theme.spacing.sm;
 
@@ -123,11 +118,8 @@ const MeasuredAction: FC<{
     }),
   );
 
-  // Force a re-measure whenever spacing changes — the inner button's
-  // dimensions usually shift along with theme spacing and re-fire onLayout
-  // naturally, but this guarantees the rect stays correct even when they
-  // don't (e.g. high-contrast toggle that only changes colors). `measure`
-  // changes exactly when `margin` or `onButtonLayout` does.
+  // `measure` changes exactly when `margin` or `onButtonLayout` does: a spacing
+  // change need not resize the button, so onLayout may not re-fire.
   useEffect(() => {
     measure();
   }, [measure]);
@@ -244,9 +236,6 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
         <View style={styles.actionsContainer}>
           {actions.map((action, index) => {
             const key = `${side}-${index}-${action.icon}`;
-            const fallbackLabel = t('searchBar.actionFallback', {
-              icon: action.icon,
-            });
             const button = (
               <ThemedActionButton
                 key={key}
@@ -259,7 +248,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
                     action.backgroundColor ?? theme.colors.primary,
                 })}
                 size={action.size}
-                accessibilityLabel={action.accessibilityLabel ?? fallbackLabel}
+                accessibilityLabel={action.accessibilityLabel}
                 isHighlighted={action.animated ? action.isHighlighted : false}
                 testID={action.testID}
               />

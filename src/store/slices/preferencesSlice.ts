@@ -36,10 +36,13 @@ export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {
   showShoppingListImages: boolean;
+  /** Store mode offered on the shopping list; absent on preferences saved before it. */
+  storeMode?: boolean;
 }
 
-export const defaultUserPreferences: UserPreferences = {
+export const defaultUserPreferences: Required<UserPreferences> = {
   showShoppingListImages: true,
+  storeMode: false,
 };
 
 export interface PreferencesState {
@@ -163,10 +166,8 @@ export const createPreferencesSlice: StateCreator<
   },
 
   setPrimaryColorOverride: color => {
-    // Apply to the Unistyles runtime BEFORE the Zustand notification so the
-    // ShadowTree updates synchronously with the state — picking a swatch in
-    // AppearanceScreen reflects on the next frame instead of waiting for the
-    // useAppearance effect to re-fire on the next render.
+    // Apply to the Unistyles runtime BEFORE the Zustand notification, so a
+    // picked swatch shows on the next frame, not after the useAppearance effect.
     applyAppearanceToRuntime({
       primaryColorOverride: color,
       densityPreference: get().densityPreference,

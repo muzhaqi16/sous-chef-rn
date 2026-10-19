@@ -35,6 +35,23 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     type
   }
   sortOrder
+  # The row reads it; a write that leaves it out blanks the row.
+  suggestedPrice {
+    amount
+    substitute
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
+  # Store mode totals it before suggestedPrice.
+  priceEstimate {
+    estimated
+  }
+  # Store mode groups by it; a write that leaves it out blanks the row.
+  storeDepartment
+  storeDepartmentOverride
   item {
     id
     imageUrl
@@ -43,6 +60,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       url
       kind
     }
+    storeDepartment
   }
 }
 

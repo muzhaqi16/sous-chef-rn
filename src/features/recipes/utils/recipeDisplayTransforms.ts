@@ -1,6 +1,7 @@
 import type { Translate } from '#/i18n/types';
 import { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
+  RecipeInformation,
   SearchRecipesResult,
   RecipeSearchResult,
 } from '#/services/spoonacular/types';
@@ -23,22 +24,30 @@ export type LocalRecipeNode =
 export type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
 
 /**
- * A search result as it is kept: the row a source returned, with no copy
- * written. The list writes its copy when it renders, so it reads in the
+ * A search result or suggestion as it is kept: the row a source returned, with
+ * no copy written. The list writes its copy when it renders, so it reads in the
  * language it is shown in, not the one it was fetched in.
  */
-export type RecipeSearchRow =
+export type RecipeRow =
   | { source: 'spoonacular'; recipe: SpoonacularRecipe }
   | {
       source: 'local';
       node: LocalRecipeNode;
       match: SpoonacularRecipe | undefined;
+    }
+  /** A suggestion for an empty pantry. */
+  | { source: 'random'; recipe: RecipeInformation }
+  /** A suggestion the pantry can make, with its cook time once enriched. */
+  | {
+      source: 'pantry';
+      recipe: RecipeSearchResult;
+      info: RecipeInformation | undefined;
     };
 
 export const spoonacularRows = (
   results: readonly SpoonacularRecipe[],
-): RecipeSearchRow[] =>
-  results.map((recipe): RecipeSearchRow => ({ source: 'spoonacular', recipe }));
+): RecipeRow[] =>
+  results.map((recipe): RecipeRow => ({ source: 'spoonacular', recipe }));
 
 /**
  * Imported recipes carry no time or likes, so `enrichmentFor` lends each row
@@ -47,9 +56,9 @@ export const spoonacularRows = (
 export const localRows = (
   nodes: readonly LocalRecipeNode[],
   enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,
-): RecipeSearchRow[] =>
+): RecipeRow[] =>
   nodes.map(
-    (node): RecipeSearchRow => ({
+    (node): RecipeRow => ({
       source: 'local',
       node,
       match: enrichmentFor(node),
@@ -72,10 +81,9 @@ const spoonacularDisplayItem = (
   };
 };
 
-/** Spoonacular's popularity count — `likes` on ingredient-search results,
- * `aggregateLikes` on text-search results. `usedIngredientCount` is the
- * required field that distinguishes the two shapes (same discriminant as
- * recipeTransform). */
+/** Spoonacular's popularity: `likes` on ingredient-search results,
+ * `aggregateLikes` on text-search ones, told apart by the required
+ * `usedIngredientCount` (as in recipeTransform). */
 function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
   return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
 }
@@ -105,10 +113,9 @@ const localDisplayItem = (
     );
   }
 
-  // Saved recipes keep the green "Saved" badge; otherwise borrow the live
-  // Spoonacular like count so the row carries the same ❤️ as its twin.
-  // Backend search results are the app's recipe corpus, not the user's own,
-  // so an unconditional "My recipe" badge would mislabel them.
+  // A saved recipe keeps its "Saved" badge, else borrows its Spoonacular twin's
+  // like count. Backend results are the app's corpus, not the user's, so no "My
+  // recipe" badge.
   const badge: DisplayItem['badge'] = node.isSaved
     ? { text: translate('recipes.savedBadge'), variant: 'success' }
     : matchLikes && matchLikes > 0
@@ -124,13 +131,101 @@ const localDisplayItem = (
   };
 };
 
+function randomDisplayItem(
+  recipe: RecipeInformation,
+  translate: Translate,
+): DisplayItem {
+  const subtitleParts: string[] = [];
+  if (recipe.servings) {
+    subtitleParts.push(
+      translate('recipes.servingsCount', { count: recipe.servings }),
+    );
+  }
+  const totalTime =
+    recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
+  if (totalTime) {
+    subtitleParts.push(translate('labels.min', { count: totalTime }));
+  }
+
+  return {
+    id: String(recipe.id),
+    title: recipe.title,
+    subtitle: subtitleParts.join(' \u2022 '),
+    badge: { text: translate('labels.suggested') },
+    imageUrl: recipe.image,
+  };
+}
+
+function pantryDisplayItem(
+  recipe: RecipeSearchResult,
+  info: RecipeInformation | undefined,
+  translate: Translate,
+): DisplayItem {
+  const totalIngredients =
+    recipe.usedIngredientCount + recipe.missedIngredientCount;
+
+  const subtitleParts: string[] = [];
+  if (recipe.likes) {
+    subtitleParts.push(`❤️ ${recipe.likes}`);
+  }
+  if (info?.servings) {
+    subtitleParts.push(
+      translate('recipes.servingsCount', { count: info.servings }),
+    );
+  }
+  // Spoonacular reports an unknown duration as 0, so a zero falls through.
+  const totalTime = [
+    info?.readyInMinutes,
+    info?.preparationMinutes,
+    info?.cookingMinutes,
+  ].find(minutes => minutes !== undefined && minutes !== 0);
+  if (totalTime) {
+    subtitleParts.push(translate('labels.min', { count: totalTime }));
+  }
+
+  return {
+    id: String(recipe.id),
+    title: recipe.title,
+    subtitle:
+      subtitleParts.join(' • ') ||
+      translate('recipes.ingredientCount', { count: totalIngredients }),
+    badge: {
+      text: translate('recipes.pantryMatchLabel', {
+        used: recipe.usedIngredientCount,
+        count: totalIngredients,
+        missing: recipe.missedIngredientCount,
+      }),
+      lines: [
+        {
+          icon: 'checkmark-circle',
+          text: String(recipe.usedIngredientCount),
+          variant: 'success',
+        },
+        {
+          icon: 'cart-outline',
+          text: String(recipe.missedIngredientCount),
+          variant: 'warning',
+        },
+      ],
+    },
+    imageUrl: recipe.image,
+  };
+}
+
 /** The rows as the list shows them, in the language of the caller's `t`. */
 export const toDisplayItems = (
-  rows: readonly RecipeSearchRow[],
+  rows: readonly RecipeRow[],
   translate: Translate,
 ): DisplayItem[] =>
-  rows.map(row =>
-    row.source === 'local'
-      ? localDisplayItem(row.node, row.match, translate)
-      : spoonacularDisplayItem(row.recipe, translate),
-  );
+  rows.map(row => {
+    switch (row.source) {
+      case 'local':
+        return localDisplayItem(row.node, row.match, translate);
+      case 'spoonacular':
+        return spoonacularDisplayItem(row.recipe, translate);
+      case 'random':
+        return randomDisplayItem(row.recipe, translate);
+      case 'pantry':
+        return pantryDisplayItem(row.recipe, row.info, translate);
+    }
+  });

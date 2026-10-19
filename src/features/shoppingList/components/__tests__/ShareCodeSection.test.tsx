@@ -5,13 +5,6 @@ import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppi
 import { alertService } from '#/services/alertService';
 import { ShareCodeSection } from '../ShareCodeSection';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#hooks/auth/useEmailVerification', () => ({
   useVerifiedEmailGate: () => ({
     requireVerifiedEmail: () => true,
@@ -80,7 +73,6 @@ describe('ShareCodeSection', () => {
         shareShoppingList: {
           __typename: 'ShareShoppingListPayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-1',
             isPublic: true,
             shareCode: 'ABC123',

@@ -6,7 +6,7 @@
  *   1. raw: what Vision returned, before assembly. Recognition returns columns
  *      apart, so this stage asks only whether the name and the amount were read
  *      at all;
- *   2. assembled: `assembleReceiptLines`;
+ *   2. assembled: `assembleReceiptRows`;
  *   3. redacted: `redactReceiptText`;
  *   4. pages: the 10-page cap, which is what the app keeps and sends.
  * An item not whole in the pages is put down to the first stage that lost or

@@ -8,10 +8,6 @@ type MockStoreState = {
   setUserNavigationState: RootState['setUserNavigationState'];
 };
 
-// Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 const mockSetUserNavigationState = jest.fn();
 
 let mockUser: MockUser = { id: 'u1', email: 'test@test.com' } as MockUser;

@@ -1,3 +1,4 @@
+jest.unmock('../tokenScheduler');
 import { jwtDecode } from 'jwt-decode';
 
 // Mock jwt-decode before importing the module under test

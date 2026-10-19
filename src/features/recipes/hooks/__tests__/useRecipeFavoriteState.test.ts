@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -17,16 +18,8 @@ import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { makeCache } from '#/apollo/cache';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 // The SavedRecipe's permanent id is client-minted; a known one lets the cache
 // assertions name it.
@@ -152,12 +145,10 @@ const favoriteMock = (
           : {
               __typename: 'AddRecipeToFavoritesPayload',
               savedRecipe: {
-                __typename: 'SavedRecipe',
                 id: outcome === 'divergent' ? SERVER_SAVED_ID : SAVED_RECIPE_ID,
                 recipeId: 'backend-1',
                 folder: null,
-                tags: [],
-                recipe: { __typename: 'Recipe', id: 'backend-1' },
+                recipe: { id: 'backend-1' },
               },
             },
     },
@@ -298,10 +289,9 @@ describe('useRecipeFavoriteState', () => {
           addRecipeToFavorites: {
             __typename: 'AddRecipeToFavoritesPayload',
             savedRecipe: {
-              __typename: 'SavedRecipe',
               id: SAVED_RECIPE_ID,
               folder: 'Weeknight',
-              recipe: { __typename: 'Recipe', id: 'backend-1' },
+              recipe: { id: 'backend-1' },
             },
           },
         },

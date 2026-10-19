@@ -45,10 +45,8 @@ interface HomeMemberCardProps {
 }
 
 /**
- * HomeMemberCard - Displays individual member with role badge and actions.
- *
- * Subscribes to its Membership cache entry via `useFragment` so it re-renders
- * independently when this member's role changes.
+ * Reads its Membership through `useFragment`, so it re-renders alone when this
+ * member's role changes.
  */
 export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   memberRef,
@@ -72,10 +70,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 
   if (!complete) return null;
 
-  // Only show actions if:
-  // 1. Current user has canManageHome permission (OWNER/ADMIN)
-  // 2. Target member is not the current user
-  // 3. Target member is not OWNER (owners cannot be removed/demoted)
+  // An owner can be neither removed nor demoted.
   const canManageMember =
     canManageHome && !isCurrentUser && member.role !== MembershipRole.Owner;
   return (
@@ -174,11 +169,9 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // `commonStyles.card` supplies padding and `marginBottom`; only the border is
-  // this card's own. Re-declaring the margin as `marginVertical` would double
-  // the gap, since RN margins do not collapse. `gap` rather than trailing
-  // margins on the children: both the actions row and the permissions list are
-  // conditional, so a trailing margin becomes dead space when neither renders.
+  // `commonStyles.card` supplies padding and `marginBottom`; RN margins do not
+  // collapse, so no `marginVertical` here. `gap`, not trailing margins: both
+  // children are conditional, and a margin is dead space when neither renders.
   memberCard: {
     gap: theme.spacing.sm,
     borderWidth: theme.borderWidth.hairline,
@@ -212,11 +205,8 @@ const styles = StyleSheet.create(theme => ({
     borderTopColor: theme.colors.border,
   },
   actionButton: {
-    // Two per row, not four. Sharing one row between four actions left each
-    // label about 70px — too narrow for "Permissions" to fit at all, so it
-    // broke mid-word and the icon ended up centred against a two-line block.
-    // A basis just under half keeps every label on one line beside its icon,
-    // and `flexGrow` lets a lone third action fill its row.
+    // Two per row: at four, "Permissions" breaks mid-word. `flexGrow` lets a
+    // lone third action fill its row.
     flexBasis: '48%',
     flexGrow: 1,
     flexDirection: 'row',

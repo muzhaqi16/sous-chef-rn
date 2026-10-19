@@ -21,8 +21,6 @@ const PLAN_PAGES = {
   ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
 };
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 describe('useMealPlan', () => {
   it('skips the detail query until the local-first create is acknowledged', async () => {
     // The row does not exist server-side yet, so this read could only come back

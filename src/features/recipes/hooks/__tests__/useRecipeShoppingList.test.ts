@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -28,21 +29,11 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => undefined),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: jest.fn(),
-  },
-}));
-
-// `gen-id-1`, `gen-id-2`, … in the order the rows are derived: a batch mints one
-// id per row, and a constant would fold every row onto one cache record.
+// `gen-id-1`, `gen-id-2`, … in the order they are minted: a batch mints one id
+// per row, and a constant would fold every row onto one cache record.
 let mockMinted = 0;
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => {
@@ -67,27 +58,9 @@ const shoppingListsMock = (
   result: {
     data: {
       shoppingLists: {
-        __typename: 'ShoppingListConnection',
         edges: listIds.map(id => ({
-          __typename: 'ShoppingListEdge',
-          cursor: id,
-          node: {
-            __typename: 'ShoppingList',
-            id,
-            name: 'My List',
-            isDefault: true,
-            totalItems: 0,
-            completedItems: 0,
-            homeId: 'home-1',
-            home: { __typename: 'Home', id: 'home-1', name: 'Home' },
-            ownerships: [],
-          },
+          node: { id, name: 'My List', isDefault: true, totalItems: 0 },
         })),
-        pageInfo: {
-          __typename: 'PageInfo',
-          hasNextPage: false,
-          endCursor: null,
-        },
         totalCount: listIds.length,
       },
     },
@@ -101,6 +74,7 @@ const ingredient = (
   id: 'ing-1',
   name: 'Flour',
   quantity: 2,
+  originalText: null,
   estimatedPrice: null,
   item: null,
   unit: { __typename: 'Unit', id: 'unit-cup', name: 'cup', symbol: 'cup' },
@@ -187,10 +161,17 @@ type AddPayload = Extract<
 >;
 type AddResult = NonNullable<NonNullable<AddPayload['results']>[number]>;
 
-/** The row as the batch input carries it, for an ingredient with no catalog item. */
-const sentRow = (id: string, recipeIngredientId: string) => ({
-  id,
-  item: { itemName: 'Flour' },
+/**
+ * The id the `n`th ingredient with no catalog item is added under: each mints
+ * its row's id, then the id its typed name is sent under.
+ */
+const rowId = (n: number) => `gen-id-${2 * n - 1}`;
+const typedItemId = (n: number) => `gen-id-${2 * n}`;
+
+/** The `n`th row as the batch input carries it, for an ingredient with no catalog item. */
+const sentRow = (n: number, recipeIngredientId: string) => ({
+  id: rowId(n),
+  item: { inline: { id: typedItemId(n), name: 'Flour' } },
   quantity: 2,
   unit: { id: 'unit-cup' },
   recipeContext: {
@@ -206,34 +187,20 @@ const accepted = (
   itemId: string,
   outcome: CreateOutcome = CreateOutcome.Created,
 ): AddResult => ({
-  __typename: 'BatchAddShoppingListItemResult',
   index,
   success: true,
   outcome,
   failure: null,
-  item: {
-    __typename: 'ShoppingListItem',
-    id: itemId,
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
-    },
-  },
+  item: { id: itemId, purchaseInfo: { isPurchased: false } },
 });
 
 /** One entry the service refused inside a batch it otherwise applied. */
 const refusedEntry = (index: number): AddResult => ({
-  __typename: 'BatchAddShoppingListItemResult',
   index,
   success: false,
   outcome: null,
   item: null,
-  failure: {
-    __typename: 'BatchElementFailure',
-    code: ErrorCode.ValidationFailed,
-    reason: 'Quantity must be greater than 0',
-    errorId: null,
-  },
+  failure: { code: ErrorCode.ValidationFailed },
 });
 
 const appliedAdd = (results: AddResult[], list?: AddPayload['shoppingList']) =>
@@ -260,7 +227,6 @@ const refusedAdd = () =>
       addItemsToShoppingList: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        message: 'Quantity must be greater than 0',
         field: 'quantity',
       },
     },
@@ -276,6 +242,15 @@ const cachedRow = (cache: InMemoryCache, id: string) =>
 const cachedTotal = (cache: InMemoryCache) =>
   (cache.extract()['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
 
+/** Adds one ingredient on its own, as its row's add button does. */
+const addOne = (
+  result: { current: ReturnType<typeof useRecipeShoppingList> },
+  overrides: Partial<DisplayIngredient> = {},
+) =>
+  act(async () => {
+    await result.current.handleAddSingleIngredient(ingredient(overrides));
+  });
+
 // --- one ingredient ---------------------------------------------------------
 
 describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
@@ -283,17 +258,13 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     const add = queuedAdd();
     const { result } = await renderShopping({ operationMocks: [add.mock] });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({ id: 'ing-7' }),
-      );
-    });
+    await addOne(result, { id: 'ing-7' });
 
     expect(add.fired).toEqual([
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-7')],
+          items: [sentRow(1, 'ing-7')],
         },
       },
     ]);
@@ -303,22 +274,18 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     const add = queuedAdd();
     const { result } = await renderShopping({ operationMocks: [add.mock] });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({
-          id: 'ing-salt',
-          name: 'Salt',
-          isOptional: true,
-          quantity: 0,
-          unit: null,
-          item: {
-            __typename: 'Item',
-            id: 'item-salt',
-            name: 'Salt',
-            imageUrl: null,
-          },
-        }),
-      );
+    await addOne(result, {
+      id: 'ing-salt',
+      name: 'Salt',
+      isOptional: true,
+      quantity: 0,
+      unit: null,
+      item: {
+        __typename: 'Item',
+        id: 'item-salt',
+        name: 'Salt',
+        imageUrl: null,
+      },
     });
 
     expect(add.fired).toEqual([
@@ -351,17 +318,15 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({ id: 'ing-9', name: 'Flour', quantity: 2 }),
-      );
-    });
+    await addOne(result, { id: 'ing-9', name: 'Flour', quantity: 2 });
 
-    expect(cachedRow(cache, 'gen-id-1')).toEqual(
+    expect(cachedRow(cache, rowId(1))).toEqual(
       expect.objectContaining({
         itemName: 'Flour',
         quantity: 2,
         unitName: 'cup',
+        // The item the request sends the typed name under.
+        item: { __ref: `Item:${typedItemId(1)}` },
       }),
     );
     expect(cachedTotal(cache)).toBe(1);
@@ -374,18 +339,14 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     // The optimistic add counts the row; the reconcile only re-wires the edge.
     const cache = makeCache();
     const { result } = await renderShopping({
-      operationMocks: [appliedAdd([accepted(0, 'gen-id-1')]).mock],
+      operationMocks: [appliedAdd([accepted(0, rowId(1))]).mock],
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({ id: 'ing-11' }),
-      );
-    });
+    await addOne(result, { id: 'ing-11' });
 
     expect(result.current.addedIngredients.has('ing-11')).toBe(true);
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedTotal(cache)).toBe(1);
   });
 
@@ -400,14 +361,10 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({ id: 'ing-12' }),
-      );
-    });
+    await addOne(result, { id: 'ing-12' });
 
     expect(result.current.addedIngredients.has('ing-12')).toBe(true);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedRow(cache, 'sli-server')).toBeDefined();
     expect(cachedTotal(cache)).toBe(0);
   });
@@ -420,16 +377,14 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
+    await addOne(result);
 
     expect(add.fired).toHaveLength(1);
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
@@ -441,23 +396,11 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
+    await addOne(result);
 
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
-  });
-
-  it('does not call an entry the service refused added', async () => {
-    const { result } = await renderShopping({
-      operationMocks: [appliedAdd([refusedEntry(0)]).mock],
-    });
-
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
-
+    // Nor is it called added.
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
   });
@@ -473,9 +416,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       cache,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
+    await addOne(result);
 
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
@@ -483,7 +424,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
   });
 
   it('asks for a list first when there is none to add to', async () => {
@@ -493,9 +434,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       listIds: [],
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
+    await addOne(result);
 
     expect(mockToastError).toHaveBeenCalledWith(
       'Please create a shopping list first.',
@@ -511,9 +450,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       withoutRecipeId: true,
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(ingredient());
-    });
+    await addOne(result);
 
     expect(mockToastError).toHaveBeenCalledWith(
       'No ingredients available to add.',
@@ -626,7 +563,7 @@ describe('useRecipeShoppingList — Add All', () => {
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-1'), sentRow('gen-id-2', 'ing-3')],
+          items: [sentRow(1, 'ing-1'), sentRow(2, 'ing-3')],
         },
       },
     ]);
@@ -639,9 +576,9 @@ describe('useRecipeShoppingList — Add All', () => {
     const { result } = await renderShopping({
       operationMocks: [
         appliedAdd([
-          accepted(0, 'gen-id-1'),
+          accepted(0, rowId(1)),
           accepted(1, 'sli-live', CreateOutcome.Merged),
-          accepted(2, 'gen-id-3'),
+          accepted(2, rowId(3)),
         ]).mock,
       ],
       cache,
@@ -666,58 +603,40 @@ describe('useRecipeShoppingList — Add All', () => {
     ]);
   });
 
-  /** One created, one merged onto a listed line, one onto a bought line. */
-  const mixedOutcomes = () =>
-    appliedAdd([
-      accepted(0, 'gen-id-1'),
-      accepted(1, 'sli-live', CreateOutcome.Merged),
-      accepted(2, 'sli-bought', CreateOutcome.Merged),
-    ]);
-  const threeIngredients = () =>
-    recipeWith([
-      ingredient({ id: 'ing-1' }),
-      ingredient({ id: 'ing-2' }),
-      ingredient({ id: 'ing-3' }),
-    ]);
-
   it('folds each merged row onto the line the server names', async () => {
     const cache = makeCache();
     seedListedLines(cache);
     const { result } = await renderShopping({
-      operationMocks: [mixedOutcomes().mock],
+      // One created, one merged onto a listed line, one onto a bought line.
+      operationMocks: [
+        appliedAdd([
+          accepted(0, rowId(1)),
+          accepted(1, 'sli-live', CreateOutcome.Merged),
+          accepted(2, 'sli-bought', CreateOutcome.Merged),
+        ]).mock,
+      ],
       cache,
-      backendRecipe: threeIngredients(),
+      backendRecipe: recipeWith([
+        ingredient({ id: 'ing-1' }),
+        ingredient({ id: 'ing-2' }),
+        ingredient({ id: 'ing-3' }),
+      ]),
     });
 
     await addAllTo(result);
 
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
     // The two merged rows never came to exist under their minted ids.
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
-    expect(cachedRow(cache, 'gen-id-3')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
+    expect(cachedRow(cache, rowId(3))).toBeUndefined();
     // The bought line the server reused is back among the lines to buy.
     expect(listedIds(cache)).toEqual({
-      active: ['gen-id-1', 'sli-bought', 'sli-live'],
+      active: [rowId(1), 'sli-bought', 'sli-live'],
       bought: [],
     });
-  });
-
-  it('counts a reused bought line as added, and a line still on the list as updated', async () => {
-    // The server answers MERGED for both, each line now to buy: a bought line
-    // it reuses reappears on the list, so only the line the list already
-    // showed took an update.
-    const cache = makeCache();
-    seedListedLines(cache);
-    const { result } = await renderShopping({
-      operationMocks: [mixedOutcomes().mock],
-      cache,
-      backendRecipe: threeIngredients(),
-    });
-
-    await addAllTo(result);
-
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    // So it counts as added; only the line the list already showed took an
+    // update.
     expect(mockToastSuccess).toHaveBeenCalledWith(
       'Added 2 items to "My List", updated 1',
     );
@@ -727,7 +646,7 @@ describe('useRecipeShoppingList — Add All', () => {
     const cache = makeCache();
     const { result } = await renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), accepted(1, 'gen-id-2')]).mock,
+        appliedAdd([accepted(0, rowId(1)), accepted(1, rowId(2))]).mock,
       ],
       cache,
       backendRecipe: recipeWith([
@@ -750,8 +669,7 @@ describe('useRecipeShoppingList — Add All', () => {
     const cache = makeCache();
     const { result } = await renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), accepted(1, 'gen-id-2')], {
-          __typename: 'ShoppingList',
+        appliedAdd([accepted(0, rowId(1)), accepted(1, rowId(2))], {
           id: 'sl-1',
           totalItems: 7,
         }).mock,
@@ -789,8 +707,8 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Added 3 items to "My List"');
     expect(mockToastError).not.toHaveBeenCalled();
     expect(
-      ['gen-id-1', 'gen-id-2', 'gen-id-3'].map(
-        id => (cachedRow(cache, id) as { itemName: string }).itemName,
+      [1, 2, 3].map(
+        n => (cachedRow(cache, rowId(n)) as { itemName: string }).itemName,
       ),
     ).toEqual(['Flour', 'Sugar', 'Butter']);
     expect(cachedTotal(cache)).toBe(3);
@@ -830,9 +748,9 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
     expect(addAll.fired.map(vars => itemsOf(vars).length)).toEqual([50, 1]);
-    expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe('gen-id-1');
-    expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe('gen-id-50');
-    expect(itemsOf(addAll.fired[1]!)).toEqual([sentRow('gen-id-51', 'ing-51')]);
+    expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe(rowId(1));
+    expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe(rowId(50));
+    expect(itemsOf(addAll.fired[1]!)).toEqual([sentRow(51, 'ing-51')]);
     expect(addAll.fired.map(vars => inputOf(vars).shoppingListId)).toEqual([
       'sl-1',
       'sl-1',
@@ -869,7 +787,7 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(addAll.fired).toHaveLength(0);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
@@ -909,17 +827,13 @@ describe('useRecipeShoppingList — Add All', () => {
       }),
     });
 
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        ingredient({ id: 'ing-1' }),
-      );
-    });
+    await addOne(result, { id: 'ing-1' });
 
     expect(add.fired).toEqual([
       {
         input: {
           shoppingListId: 'sl-1',
-          items: [sentRow('gen-id-1', 'ing-1')],
+          items: [sentRow(1, 'ing-1')],
         },
       },
     ]);
@@ -945,7 +859,6 @@ describe('useRecipeShoppingList — Add All', () => {
             addItemsToShoppingList: {
               __typename: 'ValidationError',
               code: ErrorCode.ValidationFailed,
-              message: 'Quantity must be greater than 0',
               field: 'quantity',
             },
           };
@@ -970,16 +883,17 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
     // The 50 that landed are on the list and marked; the refused one is neither.
     expect(cachedTotal(cache)).toBe(50);
-    expect(cachedRow(cache, 'gen-id-51')).toBeUndefined();
+    expect(cachedRow(cache, rowId(51))).toBeUndefined();
     expect(result.current.addedIngredients.size).toBe(50);
     expect(result.current.addedIngredients.has('ing-51')).toBe(false);
   });
 
-  /** A batch the service applied in part: its second entry was refused. */
-  const renderPartlyRefused = (cache?: InMemoryCache) =>
-    renderShopping({
+  it('leaves an entry the service refused out of the count and the list', async () => {
+    const cache = makeCache();
+    // The service applied the batch in part: its second entry was refused.
+    const { result } = await renderShopping({
       operationMocks: [
-        appliedAdd([accepted(0, 'gen-id-1'), refusedEntry(1)]).mock,
+        appliedAdd([accepted(0, rowId(1)), refusedEntry(1)]).mock,
       ],
       cache,
       backendRecipe: recipeWith([
@@ -988,10 +902,6 @@ describe('useRecipeShoppingList — Add All', () => {
       ]),
     });
 
-  it('leaves an entry the service refused out of the count and the list', async () => {
-    const cache = makeCache();
-    const { result } = await renderPartlyRefused(cache);
-
     await addAllTo(result);
 
     await waitFor(() =>
@@ -999,17 +909,10 @@ describe('useRecipeShoppingList — Add All', () => {
         'Added 1 items to "My List"',
       ),
     );
-    expect(cachedRow(cache, 'gen-id-1')).toBeDefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeDefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(1);
-  });
-
-  it('leaves an entry the service refused unmarked, so it can be added on its own', async () => {
-    const { result } = await renderPartlyRefused();
-
-    await addAllTo(result);
-
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    // Unmarked, so it can be added on its own.
     expect([...result.current.addedIngredients]).toEqual(['ing-1']);
   });
 
@@ -1030,14 +933,23 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cachedRow(cache, 'gen-id-1')).toBeUndefined();
-    expect(cachedRow(cache, 'gen-id-2')).toBeUndefined();
+    expect(cachedRow(cache, rowId(1))).toBeUndefined();
+    expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(0);
   });
 
-  it('adds nothing while there is no recipe yet', async () => {
+  it.each([
+    { name: 'adds nothing while there is no recipe yet', backendRecipe: null },
+    {
+      name: 'adds nothing for a recipe whose every ingredient is optional',
+      backendRecipe: recipeWith([ingredient({ isOptional: true })]),
+    },
+  ])('$name', async ({ backendRecipe }) => {
     const addAll = queuedAdd();
-    const { result } = await renderShopping({ operationMocks: [addAll.mock] });
+    const { result } = await renderShopping({
+      operationMocks: [addAll.mock],
+      backendRecipe,
+    });
 
     await addAllTo(result);
 
@@ -1047,23 +959,6 @@ describe('useRecipeShoppingList — Add All', () => {
     );
     expect(addAll.fired).toHaveLength(0);
     expect(mockToastSuccess).not.toHaveBeenCalled();
-  });
-
-  it('adds nothing for a recipe whose every ingredient is optional', async () => {
-    const addAll = queuedAdd();
-    const { result } = await renderShopping({
-      operationMocks: [addAll.mock],
-      backendRecipe: recipeWith([ingredient({ isOptional: true })]),
-    });
-
-    await addAllTo(result);
-
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith(
-        'No ingredients available to add.',
-      ),
-    );
-    expect(addAll.fired).toHaveLength(0);
   });
 });
 
@@ -1113,12 +1008,9 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
         createShoppingList: {
           __typename: 'CreateShoppingListPayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'sl-new',
-            name: 'Dinner',
             homeId: 'home-a',
-            home: { __typename: 'Home', id: 'home-a', name: 'Home A' },
-            ownerships: [],
+            home: { id: 'home-a' },
           },
         },
       },

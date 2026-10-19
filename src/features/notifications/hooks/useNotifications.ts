@@ -33,10 +33,7 @@ import {
   isNotificationPayload,
   type NotificationPayload,
 } from '#features/notifications/types';
-import {
-  isExpectedTransportError,
-  reportSubscriptionError,
-} from '#utils/subscriptionErrorHandler';
+import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import {
   addNotificationToFeed,
   evictNotification,
@@ -48,6 +45,7 @@ import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubsc
 import { logger } from '#/utils/environment';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 // The listener needs the signed-in user and nothing else from the store; the
@@ -61,10 +59,9 @@ interface NotificationConfig {
 }
 
 /**
- * Coalesces the badge re-read (`Query.notificationSummary`), so a burst of
- * events costs one round trip. An aggregate event re-reads the unread feed
- * instead, whose rows it changed without naming them; that query states the
- * badge too.
+ * Coalesces the badge re-read so a burst of events costs one round trip. An
+ * aggregate event re-reads the unread feed instead (its rows changed unnamed),
+ * which states the badge too.
  */
 const RESEED_DEBOUNCE_MS = 300;
 let reseedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,20 +113,17 @@ export const cancelPendingUnreadReseed = (): void => {
 registerSessionTeardown('notification-reseed', cancelPendingUnreadReseed);
 
 /**
- * Opens the consolidated `NotificationEvents` subscription and processes its
- * events. Must be mounted exactly ONCE (by NotificationProvider): the server
- * caps concurrent subscriptions and Apollo does not dedupe them, so a second
- * mount double-processes every event. Screens read via `useNotifications`.
+ * Mounted exactly ONCE (by NotificationProvider): the server caps concurrent
+ * subscriptions and Apollo does not dedupe them, so a second mount
+ * double-processes every event. Screens read via `useNotifications`.
  */
 export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  // Server-delivered transitions RESEED rather than apply a delta: Apollo
-  // normalizes the event's `node` before `onData` runs, so the "was it unread?"
-  // guard that makes local writes idempotent already sees the new value. The
-  // badge also counts notifications this device never paged in, which a local
-  // ±1 could only ever approximate.
+  // Server events RESEED rather than apply a delta: Apollo normalizes `node`
+  // before `onData`, so the "was it unread?" guard already sees the new value,
+  // and the badge counts rows this device never paged in.
   const reseedUnreadCount = () => scheduleUnreadReseed(client, 'badge');
 
   // A ref, not state: AppState changes must not re-render this listener.
@@ -158,6 +152,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       case NotificationType.ItemDeleted:
         return userPreferences.pantryChanges;
       case NotificationType.LowStock:
+      case NotificationType.RunningLow:
         return userPreferences.lowStockAlerts;
       case NotificationType.ExpiryReminder:
         return userPreferences.expirationNotifications;
@@ -295,7 +290,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // Transport churn auto-reconnects; only other failures are warned about.
   const handleError = (error: Error) => {
     const subscriptionName = operationNameOf(NotificationEventsDocument);
-    if (!isExpectedTransportError(error)) {
+    if (!isNetworkError(error)) {
       logger.warn(`${subscriptionName} subscription error:`, error.message);
     }
     reportSubscriptionError(subscriptionName, error);
@@ -310,11 +305,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       const event = data.data?.notificationEvents;
       if (!event) return;
 
-      // Aggregate transitions (mark-all-read / clear-read / bulk-expire, e.g.
-      // performed on another device) arrive with a null `node` and only an
-      // `affectedCount` — the affected rows are unknown client-side, so
-      // re-sync the unread feed rather than guessing which local entries
-      // changed.
+      // Aggregate transitions carry a null `node` and only an `affectedCount`,
+      // so the unread feed re-syncs rather than guessing which rows changed.
       if (
         event.subtype === NotificationSubtype.BulkRead ||
         event.subtype === NotificationSubtype.BulkCleared ||
@@ -414,11 +406,9 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     return () => subscription.remove();
   }, []);
 
-  // Taps on OS-displayed pushes (FCM/APNs, each platform-guarded); taps on
-  // data-only pushes we drew go through Notifee. Gated on authentication —
-  // registering consumes the one-shot cold-start tap synchronously, and while
-  // logged out there is no session to route it into. It stays cached until this
-  // effect re-runs.
+  // Taps on OS-displayed pushes; data-only pushes go through Notifee. Gated on
+  // a session: registering consumes the one-shot cold-start tap, which stays
+  // cached until this effect re-runs.
   useEffect(() => {
     if (config.skip || !user?.id) return;
     const unsubscribeFcm = registerFcmTapHandlers();
@@ -431,10 +421,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
 };
 
 /**
- * useNotifications — notification state + server-synced actions for screens.
- *
- * Reads the store only; does NOT open subscriptions. Real-time events are
- * delivered by `useNotificationListener`, mounted once in NotificationProvider.
+ * Opens NO subscription: events arrive through `useNotificationListener`,
+ * mounted once in NotificationProvider.
  */
 export const useNotifications = () => {
   // Actions only. The feed comes from `useNotificationHistory`, which reads the

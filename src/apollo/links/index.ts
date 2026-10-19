@@ -66,9 +66,8 @@ export function createLink() {
   const queueLink = createQueueLink();
 
   // Order matters: offlineModeLink first, so blocked queries never reach
-  // retryLink/errorLink and produce doomed requests; then retryLink (queries
-  // only), errorLink, and queueLink for mutations. Query deduplication is
-  // Apollo's own `queryDeduplication: true`.
+  // retryLink/errorLink as doomed requests. Deduplication is Apollo's own
+  // `queryDeduplication: true`.
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)

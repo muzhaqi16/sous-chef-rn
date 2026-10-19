@@ -29,7 +29,7 @@ const openedMock = () =>
     data: {
       upsertExternalRecipe: {
         __typename: 'UpsertExternalRecipePayload',
-        recipe: { __typename: 'Recipe', id: 'recipe-1' },
+        recipe: { id: 'recipe-1' },
       },
     },
   });
@@ -112,7 +112,7 @@ describe('useOpenCatalogRecipe', () => {
   it('reads a removed recipe as not found', async () => {
     const m = recordMock(OpenCatalogRecipeDocument, {
       data: {
-        upsertExternalRecipe: { __typename: 'NotFoundError', message: 'gone' },
+        upsertExternalRecipe: { __typename: 'NotFoundError' },
       },
     });
 

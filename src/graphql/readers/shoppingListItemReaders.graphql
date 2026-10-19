@@ -77,6 +77,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
         url
       }
     }
+    storeDepartment
   }
   itemName
   lastEditedBy {
@@ -109,6 +110,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     purchaseDate
     purchasedBy {
       id
+      displayName
       profile {
         id
         avatar
@@ -128,11 +130,22 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     addedContext
     isFromMealPlan
   }
+  storeDepartment
+  storeDepartmentOverride
   storeInfo {
     preferredStore {
       id
       name
     }
+  }
+  suggestedPrice {
+    amount
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    substitute
   }
   unit {
     id

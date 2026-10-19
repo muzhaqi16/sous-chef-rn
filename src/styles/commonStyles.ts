@@ -1,10 +1,9 @@
 import { StyleSheet } from 'react-native-unistyles';
 
 /**
- * All primitives live INSIDE one `StyleSheet.create` factory: the Unistyles
- * babel plugin AST-analyzes the factory body for `theme.*` reads, and a read
- * inside an imported helper is opaque to it — those styles freeze at their
- * initial values. Do not split this into helper files.
+ * One `StyleSheet.create` factory: the Unistyles babel plugin finds `theme.*`
+ * reads in its body, and a read inside an imported helper freezes at its
+ * initial value.
  */
 
 export const commonStyles = StyleSheet.create(theme => ({
@@ -51,10 +50,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
   },
 
-  // A bar's inset puts its first and last GLYPH on the page gutter: the
-  // touch target's slack around the icon is subtracted, so the back arrow
-  // starts where the content does. Computed, because the gutter scales with
-  // density and the touch target does not.
+  // A bar's first and last GLYPH sit on the page gutter, the touch target's
+  // slack subtracted. Computed, as the gutter scales with density and the
+  // touch target does not.
   barInset: {
     paddingHorizontal:
       theme.layout.pageGutter -
@@ -171,11 +169,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     resizeMode: 'cover',
   },
-  // The list row, defined once for the four shells that compose one:
-  // `rowWrapper` is its place in the list, `rowSurface` the card, `rowContent`
-  // the slots inside it. Its text roles are `rowType` in `theme/foundations`.
-  // No horizontal inset: the list that renders the row owns the page gutter,
-  // so a row placing itself would be the second author of one edge.
+  // The list row: `rowWrapper` its place in the list, `rowSurface` the card,
+  // `rowContent` its slots. No horizontal inset: the list that renders the row
+  // owns the page gutter.
   rowWrapper: {
     marginBottom: theme.layout.rowGap,
   },
@@ -304,17 +300,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     ...theme.type.bodyStrong,
   },
 
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.chipBackground,
-    marginRight: theme.spacing.sm,
-  },
-  chipText: {
-    ...theme.type.label,
-    color: theme.colors.chipText,
-  },
   caption: {
     ...theme.type.caption,
     color: theme.colors.textSecondary,

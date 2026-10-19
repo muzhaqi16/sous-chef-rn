@@ -6,7 +6,7 @@ const tails = new WeakMap<ApolloCache, Map<string, Promise<void>>>();
 
 const noop = () => {};
 
-const cachedVersion = (
+export const cachedVersion = (
   cache: ApolloCache,
   id: string,
   typename: string,
@@ -17,12 +17,9 @@ const cachedVersion = (
   })?.version ?? undefined;
 
 /**
- * Sends a write to `entity` once every earlier one sent through here has
- * settled, with the `version` the cache holds at that moment. An earlier
- * write's answer carries the version it moved the row to, so two writes inside
- * one round trip do not both send N and refuse the user's own second edit as
- * changed elsewhere. The caller's local write stays immediate; only the send
- * waits. A queued write settles at once: the queue rebases its own.
+ * Sends once every earlier write through here settles, at the `version` the
+ * cache then holds: two writes in one round trip must not both send N. Only the
+ * send waits, and a queued write settles at once, as the queue rebases its own.
  */
 export function chainEntityWrite<T>(
   cache: ApolloCache,

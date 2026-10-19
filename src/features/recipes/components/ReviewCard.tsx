@@ -40,10 +40,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const viewer = useUser();
-  // Per-entity cache subscription: re-renders only when this review's
-  // RecipeReviewFragment fields change (e.g., helpful count after a
-  // toggleHelpful mutation, or comment/rating after an updateReview).
-  // Falls back to the source prop on cache miss so list cells never blank out.
+  // Re-renders only when this review's fragment fields change, and falls back
+  // to the prop on a cache miss so a list cell never blanks.
   const fragmentResult = useFragment({
     fragment: RecipeReviewFragmentDoc,
     fragmentName: 'RecipeReviewFragment',

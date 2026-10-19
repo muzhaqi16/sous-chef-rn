@@ -11,15 +11,6 @@ import { alertService } from '#/services/alertService';
 import { ItemPhotoCarousel_ItemPhotoFragmentDoc } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-// Passthrough auto-mock — real behavior, but overridable per test to force the
-// `false` return that a genuine throw produces. errorPolicy: 'all' means Apollo
-// resolves rather than throws, so it can't be provoked through a mocked link.
-jest.mock('#/utils/finallyHelpers');
-
 const renderHook = (operationMocks: MockedResponse[]) =>
   renderHookWithApollo(() => useMarkPrimaryItemImage(), { operationMocks });
 
@@ -49,7 +40,6 @@ describe('useMarkPrimaryItemImage', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-2.jpg',
             photos: [photo('photo-2', true), photo('photo-1', false)],
@@ -145,7 +135,6 @@ describe('useMarkPrimaryItemImage', () => {
         markPrimaryItemImage: {
           __typename: 'MarkPrimaryItemImagePayload',
           item: {
-            __typename: 'Item',
             id: 'item-1',
             imageUrl: 'https://cdn.test/photo-2.jpg',
             photos: [photo('photo-2', true), photo('photo-1', false)],

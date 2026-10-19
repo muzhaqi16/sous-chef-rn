@@ -5,10 +5,9 @@ const subscribe = (onStoreChange: () => void) =>
   unconfirmedCreates.subscribe(onStoreChange);
 
 /**
- * Whether `id` names a local-first create the server hasn't acknowledged. Detail
- * queries and event subscriptions on a client-minted id pass this to `skip` —
- * the row does not exist server-side yet, so the read could only answer that
- * there is no such row (null data) and the subscription `FORBIDDEN`.
+ * Whether `id` names a local-first create the server hasn't acknowledged. A
+ * detail query or subscription on it skips: the server would answer null data
+ * or `FORBIDDEN` for a row it lacks.
  */
 export const useIsCreateUnconfirmed = (
   id: string | null | undefined,

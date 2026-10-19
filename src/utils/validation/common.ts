@@ -38,10 +38,9 @@ export function logValidationErrors(errors: FieldErrors<FieldValues>) {
 
 // --- shared rules ------------------------------------------------------------
 
-// The API's EmailAddress scalar: zod's email format, at most 254 characters. An
-// address it refuses fails before any resolver runs, with no field to put the
-// message on, so every email field holds this line. `a@b` and `a..b@c.com` pass
-// yup's own `.email()`.
+// The API's EmailAddress scalar (zod's format, at most 254 characters) refuses
+// before any resolver, with no field for the message, so every email field
+// holds this line; yup's `.email()` passes `a@b` and `a..b@c.com`.
 const EMAIL_ADDRESS =
   /^(?!\.)(?!.*\.\.)[\w'+.-]*[\w+-]@([A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
 
@@ -52,19 +51,15 @@ export const emailRule = string()
   .test('email', lazyMessage('commonValidation.emailInvalid'), isEmailAddress)
   .required(lazyMessage('commonValidation.emailRequired'));
 
-// Sign-in reads back a password the user ALREADY has, so a policy rule here
-// refuses a password the account really has, with no way in — the reset flow
-// needs the account it cannot reach. The server agrees: its login schema is
-// non-empty plus the 72 cap, and nothing else. The cap is bcrypt's limit rather
-// than a policy, so it holds on every path and no stored password can exceed it.
+// Sign-in reads back a password the user ALREADY has, so no policy rule: like
+// the server's login schema, only non-empty plus bcrypt's 72 cap, which no
+// stored password can exceed.
 export const passwordRule = string()
   .required(lazyMessage('commonValidation.passwordRequired'))
   .max(72, lazyMessage('commonValidation.passwordMax'));
 
-// The server's own policy, for a password being SET: 8-72 characters with a
-// lowercase letter, an uppercase letter and a digit. Checked here so a password
-// that cannot succeed never costs a round trip — and so the user is told which
-// rule they missed instead of reading a generic refusal.
+// The server's policy for a password being SET, checked here so the user is
+// told which rule they missed instead of a generic refusal.
 export const newPasswordRule = string()
   .required(lazyMessage('commonValidation.passwordRequired'))
   .min(8, lazyMessage('commonValidation.passwordMin'))

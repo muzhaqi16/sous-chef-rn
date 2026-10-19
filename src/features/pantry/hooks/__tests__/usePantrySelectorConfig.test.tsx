@@ -3,8 +3,6 @@ import React from 'react';
 import { renderHook } from '@testing-library/react-native';
 import { usePantrySelectorConfig } from '../usePantrySelectorConfig';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({
     name,

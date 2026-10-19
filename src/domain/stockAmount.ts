@@ -62,10 +62,9 @@ export function boughtAmountOf(
 }
 
 /**
- * The row's amount until the server answers. Packages counted in a named unit,
- * on a counted line or on a line with no unit are that many of it; on a weighed
- * line only the server can turn packages into grams, so the row shows the
- * line's own amount meanwhile.
+ * The row's amount until the server answers. Only the server turns packages
+ * into grams, so a weighed line counted in packages keeps its own amount
+ * meanwhile; every other count is that many of the unit.
  */
 export function localQuantity(
   amount: StockAmountInput,

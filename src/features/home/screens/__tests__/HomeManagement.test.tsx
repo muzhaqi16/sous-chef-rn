@@ -6,10 +6,6 @@ import { kitTestIDs } from '#components/testIDs';
 import { homeTestIDs } from '#features/home/testIDs';
 import { HomeManagement } from '../HomeManagement';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -121,10 +117,6 @@ jest.mock('#features/home/components/HomeCard', () => ({
   },
 }));
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
-
 jest.mock('#/services/errorService');
 
 jest.mock('#/styles/commonStyles', () => ({
@@ -133,8 +125,6 @@ jest.mock('#/styles/commonStyles', () => ({
     cardWithShadow: {},
   },
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 /** The `useHomeManagement` surface this screen reads, in one place. */
 const baseHookReturn = {

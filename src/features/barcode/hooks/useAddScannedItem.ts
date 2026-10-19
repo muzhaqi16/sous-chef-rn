@@ -5,17 +5,12 @@ import {
   AcquisitionMethod,
   type PackageSizeInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  addLocalShoppingListItem,
-  buildAddItemsReconcileUpdate,
-  createLocalShoppingListItem,
-  reconcileShoppingCreate,
-} from '#features/shoppingList/cache/items';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
 import { refByIdOrName } from '#/utils/refInput';
+import { useTranslation } from '#/i18n';
 
 /** A scanned item is always one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;
@@ -51,6 +46,7 @@ export function useAddScannedItem({
   shoppingListId,
 }: UseAddScannedItemArgs) {
   const client = useApolloClient();
+  const { t } = useTranslation();
   const { addItem } = usePantryIntake(pantryId);
   const { restock } = usePantryRestock(pantryId);
 
@@ -62,10 +58,9 @@ export function useAddScannedItem({
     },
   );
 
-  // No `unit`, and `netWeight` only when the record states no pack size and the
-  // user entered one: the scan's own figure is the record's to store, and one
-  // sent here is kept as the user's. A refusal of an add carrying that size is
-  // left to the caller, whose prompt can show it on the size.
+  // No `unit`, and `netWeight` only for a size the user entered where the record
+  // states none: one sent here is kept as the user's, not the record's. A refusal
+  // of an add carrying it is left to the caller, whose prompt shows it on the size.
   const addToPantry = (item: ScannedItem, packageSize?: PackageSizeInput) =>
     addItem(
       item.name,
@@ -85,10 +80,9 @@ export function useAddScannedItem({
     );
 
   /**
-   * Restock the row the duplicate check named by one container, of the size
-   * the user entered when the record states none; with no size at all it goes
-   * as a forced add (`usePantryRestock`). Resolves whether it stands, having
-   * told the user when it does not.
+   * Restock the duplicate check's row by one container, of the user's size
+   * when the record states none; with no size at all it goes as a forced add
+   * (`usePantryRestock`). Resolves whether it stands, the user told if not.
    */
   const restockDuplicate = async (
     item: ScannedItem,
@@ -114,56 +108,28 @@ export function useAddScannedItem({
     item: ScannedItem,
   ): Promise<ScannedListOutcome> => {
     if (!shoppingListId) return 'reverted';
-    const id = generateEntityId();
-
-    // Built before the try: `?.`/`??` are value blocks, and one inside a try
-    // body bails the React Compiler out of the whole function.
-    const optimisticListItem = createLocalShoppingListItem(id, {
-      shoppingListId,
-      itemName: item.name,
-      quantity: SCANNED_QUANTITY,
-      itemId: item.id,
-      unitId: scannedUnitId(item),
-      unitName: item.trackingUnit?.symbol,
-    });
-    try {
-      addLocalShoppingListItem(
-        client.cache,
-        shoppingListId,
-        optimisticListItem,
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    const variables = {
-      input: {
-        shoppingListId,
-        items: [
-          {
-            id,
-            item: scannedListItemRef(item),
-            quantity: SCANNED_QUANTITY,
-            // A record brings its own brand; one sent here would replace it.
-            brand: item.variationId
-              ? undefined
-              : refByIdOrName(item.brandId, item.brandName),
-          },
-        ],
+    const { outcome } = await createShoppingListRow(client.cache, {
+      listId: shoppingListId,
+      row: {
+        itemName: item.name,
+        quantity: SCANNED_QUANTITY,
+        itemId: item.id,
+        unitId: scannedUnitId(item),
+        unitName: item.trackingUnit?.symbol,
       },
-    };
-
-    const result = await addToShoppingListMutation({
-      variables,
+      line: {
+        item: scannedListItemRef(item),
+        quantity: SCANNED_QUANTITY,
+        // A record brings its own brand; one sent here would replace it.
+        brand: item.variationId
+          ? undefined
+          : refByIdOrName(item.brandId, item.brandName),
+      },
+      send: addToShoppingListMutation,
+      document: BarcodeAddItemToShoppingListDocument,
+      fallback: t('errors.addItemFailed'),
     });
-
-    // A queued create (offline / API down) resolves with no data and no error —
-    // that is success, it replays. `errorPolicy: 'all'` delivers rejections to
-    // the resolved result, so the reconciler classifies it (and fully reverts
-    // the item — entity plus list-stat scalars) rather than relying on a throw.
-    return reconcileShoppingCreate(client.cache, shoppingListId, id, result);
+    return outcome;
   };
 
   return {

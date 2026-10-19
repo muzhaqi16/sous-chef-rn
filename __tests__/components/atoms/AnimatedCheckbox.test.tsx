@@ -4,9 +4,6 @@ import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('@shopify/flash-list', () => ({
   FlashList: require('react-native').FlatList,
   MasonryFlashList: require('react-native').FlatList,

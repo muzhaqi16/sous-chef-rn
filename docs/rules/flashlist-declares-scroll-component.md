@@ -9,7 +9,13 @@ Every FlashList declares which scroll component it renders through.
 
 ## Why
 
-RNGH answers a native view grabbing the touch stream with `cancelAllLegacyHandlers()`, which — per its own docblock — cancels handlers created with API v1 and v2. `ReanimatedSwipeable` and RNGH's `Pressable` are on the v3 detectors, so over a plain RN `ScrollView` **their handlers survive the takeover**: a row's pan keeps accumulating horizontal travel until it opens mid-scroll, and a press fires on a finger that only stopped a fling (RNGH #4432 / #4441). Confirmed by A/B on device — removing the prop from one list reproduced it immediately.
+A list inside a bottom sheet needs gorhom's scrollable, which coordinates its scroll with the sheet's own pan; no other gate makes a new sheet list choose it.
+
+A list whose rows carry RNGH gestures needs an RNGH scroll host:
+
+- **Pull-to-refresh.** `ThemedRefreshControl` is RNGH's control, which throws outside an RNGH host, and RN's control inside one silently loses the scroll↔refresh arbitration (`sous-chef/rngh-refresh-control-matches-host`).
+- **`nestedScrollEnabled={false}`.** `SwipeAwareScrollComponent` is the one place the parked-spinner override lives.
+- **Arbitration.** Inside an RNGH host the orchestrator decides between the scroll and a row's swipe or press. Over React Native's `ScrollView` only RNGH's takeover cancellation does — which keeps the pantry's rows shut on 3.4.0, but is measured on that one list ([A native scroll takeover cancels a pending RNGH v3 gesture](../verified-library-behaviour.md#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture)).
 
 The failure is silent: the prop is simply absent and nothing throws. That is exactly how the repo lost `dragOffsetFromLeftEdge` when RNGH renamed it in 3.x.
 

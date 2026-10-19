@@ -42,10 +42,8 @@ export const descriptionRule = string()
   .max(500, msg('descriptionMax', { count: 500 }))
   .optional();
 
-// UPC validation (replaces barcode)
-// Transform: empty string -> undefined so the optional flag actually kicks in.
-// Without this, `.min(8)` and `.matches()` run on '' and fail, which blocks
-// form submission for any flow that doesn't start with a scanned barcode.
+// '' becomes undefined so `.optional()` applies; else `.min(8)` and `.matches()`
+// refuse it and block every submit that didn't start from a scanned barcode.
 export const upcRule = string()
   .transform((value: unknown) =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
@@ -259,10 +257,9 @@ export const createItemSchema = object({
 export type CreateItemFormData = InferType<typeof createItemSchema>;
 
 /**
- * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`,
- * and the reviewing admin has nothing else to judge the diff against. The
- * direct-edit path (the viewer's own private item) has no reviewer, so it keeps
- * `createItemSchema` and omits the field.
+ * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`
+ * and the reviewer's only context. A direct edit (the viewer's own private
+ * item) has no reviewer, so it keeps `createItemSchema`.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,

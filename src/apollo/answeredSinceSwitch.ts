@@ -1,12 +1,9 @@
 import { canonicalStringify } from '@apollo/client/utilities';
 
 /**
- * The queries the network answered in the app's language since the last
- * switch, by name and variables, each with how many answers in a row carried
- * errors: none is answered whole, and the language catch-up skips it, whether
- * a resync or a mounting screen asked. Per switch, not per language: the names
- * are shared entities, so a screen paused through `en` → `es` → `en` holds
- * what the `es` screens wrote. Nothing is held before a first switch.
+ * Answers since the last language switch, by name and variables, counting the
+ * erred ones in a row. Per switch, not per language: names are shared entities,
+ * so a screen paused through `en` → `es` → `en` holds what `es` screens wrote.
  */
 let answered: Map<string, number> | null = null;
 

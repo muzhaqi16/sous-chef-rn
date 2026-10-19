@@ -2,7 +2,7 @@ import {
   loginSchema,
   signUpSchema,
   forgotPasswordSchema,
-  getEmailVerificationValidationSchema,
+  emailVerificationSchema,
   resetPasswordSchema,
   changePasswordSchema,
 } from '../auth';
@@ -95,10 +95,9 @@ describe('forgotPasswordSchema', () => {
   });
 });
 
-describe('getEmailVerificationValidationSchema', () => {
+describe('emailVerificationSchema', () => {
   // No translate function is threaded in; the schema resolves its messages
   // lazily from the active locale (English in tests).
-  const emailVerificationSchema = getEmailVerificationValidationSchema();
 
   it('validates 6-digit code', async () => {
     await expect(

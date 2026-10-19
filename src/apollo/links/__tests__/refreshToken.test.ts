@@ -1,4 +1,6 @@
 // Mock jwt-decode
+jest.unmock('../refreshToken');
+
 jest.mock('jwt-decode', () => ({
   jwtDecode: jest.fn(),
 }));

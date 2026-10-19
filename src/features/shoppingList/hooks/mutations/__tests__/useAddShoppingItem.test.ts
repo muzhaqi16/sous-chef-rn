@@ -14,10 +14,6 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // The response mirrors the real batch payload the hook reads
 // (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
 // it as a success and keeps the optimistic row. `variables: () => true` because
@@ -29,9 +25,8 @@ const addItemMock = () =>
         __typename: 'AddItemsToShoppingListPayload',
         results: [
           {
-            __typename: 'BatchAddShoppingListItemResult',
             success: true,
-            item: { __typename: 'ShoppingListItem', id: 'srv-1' },
+            item: { id: 'srv-1' },
           },
         ],
       },
@@ -109,6 +104,31 @@ describe('useAddShoppingItem', () => {
 
     // The create mutation was then fired.
     expect(created.fired).toHaveLength(1);
+  });
+
+  it('sends the typed name inline under a minted item id, which the row names at once', async () => {
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
+    );
+
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Oat milk', quantity: 1 });
+    });
+
+    const [fired] = created.fired;
+    const [line] = (
+      fired?.input as { items: { item: { inline?: { id: string } } }[] }
+    ).items;
+    const mintedItemId = line?.item.inline?.id;
+    expect(line?.item).toEqual({
+      inline: { id: expect.any(String), name: 'Oat milk' },
+    });
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ itemId: mintedItemId }),
+    );
   });
 
   it('gives the optimistic row the fraction the form typed, not its leading number', async () => {
