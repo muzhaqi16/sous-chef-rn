@@ -12,6 +12,7 @@ import type {
   ToastType,
 } from '#platform/presenters';
 import { TOAST } from '#/constants/animations';
+import { HapticService } from '#services/haptic/HapticService';
 
 // `_setToastDispatch` is the ONLY way into the provider, so the mock captures
 // what it registers rather than discarding it; the helpers below fire through
@@ -88,6 +89,38 @@ describe('ToastProvider', () => {
       </ToastProvider>,
     );
     expect(screen.getByText('Child Content')).toBeTruthy();
+  });
+
+  it.each([
+    ['success', 'success'],
+    ['error', 'error'],
+    ['warning', 'warning'],
+  ] as const)('pairs a %s toast with its haptic', (type, haptic) => {
+    const fired = jest.spyOn(HapticService, haptic).mockImplementation();
+    render(
+      <ToastProvider>
+        <ToastTrigger message="Outcome" type={type} />
+      </ToastProvider>,
+    );
+
+    expect(fired).toHaveBeenCalledTimes(1);
+    fired.mockRestore();
+  });
+
+  it('keeps an info toast silent', () => {
+    const haptics = (['success', 'error', 'warning'] as const).map(type =>
+      jest.spyOn(HapticService, type).mockImplementation(),
+    );
+    render(
+      <ToastProvider>
+        <ToastTrigger message="FYI" type="info" />
+      </ToastProvider>,
+    );
+
+    for (const haptic of haptics) {
+      expect(haptic).not.toHaveBeenCalled();
+      haptic.mockRestore();
+    }
   });
 
   it('shows a toast fired through the registered dispatch', () => {

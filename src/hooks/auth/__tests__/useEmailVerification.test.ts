@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
+import { memoryIntents } from '#/test-utils/memoryPlatform';
 import { alertService } from '#/services/alertService';
 import {
   useEmailVerificationActions,
@@ -21,10 +22,7 @@ jest.mock('#store/useAppStore', () => ({
   useHasUnverifiedEmail: () => mockHasUnverifiedEmail,
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = jest
-  .requireMock('#hooks/navigation/useAppNavigation')
-  .useAppNavigation();
+const toVerifyEmail = jest.spyOn(memoryIntents(), 'toVerifyEmail');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -90,7 +88,7 @@ describe('useVerifiedEmailGate', () => {
     // A PUSH over the app, never the root navigator's `verification` group:
     // swapping groups here would strand the user on Home after verifying and
     // leave sign-out as the only way back.
-    expect(mockNav.toVerifyEmail).toHaveBeenCalledTimes(1);
+    expect(toVerifyEmail).toHaveBeenCalledTimes(1);
     expect(mockSetNavigationState).not.toHaveBeenCalled();
   });
 });

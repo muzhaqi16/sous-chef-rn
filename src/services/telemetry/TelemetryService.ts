@@ -621,7 +621,7 @@ export class TelemetryService {
   private setupErrorHandlers(): void {
     // HermesInternal is a Hermes engine-specific global not in the RN type defs;
     // narrow it to just the API we touch instead of casting through `any`.
-    const hermesGlobal = global as typeof globalThis & {
+    const hermesGlobal = globalThis as typeof globalThis & {
       HermesInternal?: {
         enablePromiseRejectionTracker?: (options: {
           allRejections: boolean;
@@ -629,7 +629,7 @@ export class TelemetryService {
         }) => void;
       };
     };
-    if (typeof global !== 'undefined' && hermesGlobal.HermesInternal) {
+    if (hermesGlobal.HermesInternal) {
       hermesGlobal.HermesInternal.enablePromiseRejectionTracker?.({
         allRejections: true,
         onUnhandled: (id: unknown, reason: unknown) => {

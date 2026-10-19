@@ -1,5 +1,4 @@
 import { toastService } from '#/services/toastService';
-import { HapticService } from '#services/haptic/HapticService';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
@@ -21,7 +20,6 @@ async function executeTogglePurchase(
   itemId: string,
 ): Promise<void> {
   try {
-    HapticService.selection();
     await toggleItem(itemId);
     Telemetry.trackEvent('toggle_item_purchase_success');
   } catch (error) {
@@ -38,7 +36,6 @@ async function executeDeleteItem(
   itemId: string,
 ): Promise<void> {
   try {
-    HapticService.warning();
     // A refusal is reported by `removeItem` itself; only a removal that took
     // effect counts as a success.
     if (await removeItem(itemId)) Telemetry.trackEvent('delete_item_success');
@@ -56,14 +53,16 @@ async function executeClearItems(
   purchased: boolean,
 ): Promise<void> {
   try {
-    HapticService.warning();
     await clearItems(purchased);
   } catch {
     toastService.error(t('shoppingListScreens.failedToClear'));
   }
 }
 
-/** Sort-order updates are NOT here — `useItemReordering` is the one handler. */
+/**
+ * Sort-order updates are NOT here — `useItemReordering` is the one handler. The
+ * haptic before each action is fired where it is pressed.
+ */
 export function useShoppingListActions({
   currentListId,
   unpurchasedItems,

@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { memoryScreen } from '#/test-utils/memoryPlatform';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useSpoonacularDiscovery } from '../useSpoonacularDiscovery';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
@@ -30,31 +31,17 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   usePantryManagement: (...args: unknown[]) => mockUsePantryManagement(...args),
 }));
 
-// The hook gates its pantry watch on screen focus through `useFocusEffect`.
-// Capture the callback so tests can drive focus/blur; it is never invoked
-// automatically, so a rendered hook starts in its initial (focused) state.
-type FocusCallback = () => (() => void) | void;
-let focusCallback: FocusCallback | undefined;
-let blurCleanup: (() => void) | void;
-const mockUseFocusEffect = jest.fn((cb: FocusCallback) => {
-  focusCallback = cb;
-});
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (cb: FocusCallback) => mockUseFocusEffect(cb),
-}));
+// The hook gates its pantry watch on screen focus; the memory screen drives it.
 const focus = () => {
-  act(() => {
-    blurCleanup = focusCallback?.();
-  });
+  act(() => memoryScreen().setFocused(true));
 };
 const blur = () => {
-  act(() => {
-    if (typeof blurCleanup === 'function') blurCleanup();
-  });
+  act(() => memoryScreen().setFocused(false));
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  memoryScreen().setFocused(true);
   useRecipeCacheStore.getState().clearAllCache();
 
   // Default: signed in, home selected, no pantry items, not loading

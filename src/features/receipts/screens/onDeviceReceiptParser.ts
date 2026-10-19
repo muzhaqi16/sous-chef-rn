@@ -1,8 +1,8 @@
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import { withinMs } from '#/utils/withinMs';
-import { LABELLING_TIMEOUT_MS } from './onDeviceStructuring';
-import { linesThroughTotal, structureReceipt } from './structureReceipt';
-import type { ParsedReceipt } from './parsedReceipt';
+import { LABELLING_TIMEOUT_MS } from '../utils/onDeviceStructuring';
+import { linesThroughTotal, structureReceipt } from '../utils/structureReceipt';
+import type { ParsedReceipt } from '../utils/parsedReceipt';
 
 /**
  * Structures the draft's pages with the phone's own model, or answers null:

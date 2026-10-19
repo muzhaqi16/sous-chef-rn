@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { requirePlatform } from '#platform/install';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
@@ -16,10 +17,9 @@ jest.mock('#utils/imageUtils', () => ({
     item?.imageUrl ? `https://cdn.test/${item.imageUrl}` : null,
 }));
 
-const mockPreloadImages = jest.fn();
-jest.mock('#components/atoms/CachedImage', () => ({
-  preloadImages: (...args: unknown[]) => mockPreloadImages(...args),
-}));
+const mockPreloadImages = jest
+  .spyOn(requirePlatform('imagePrefetch'), 'prefetch')
+  .mockImplementation();
 
 type Sections = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']

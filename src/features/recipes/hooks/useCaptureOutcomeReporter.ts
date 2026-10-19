@@ -2,7 +2,7 @@ import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { toastService } from '#/services/toastService';
 import { TOAST } from '#constants/animations';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents } from '#platform/screen';
 import { forgetMyRecipesLists } from '#features/recipes/utils/recipeCacheWriters';
 import type { CaptureOutcome } from '#features/recipes/utils/recipeCaptureOutcome';
 import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
@@ -14,7 +14,7 @@ import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureSt
 export function useCaptureOutcomeReporter() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { toRecipeDetail, toRecipeCreate } = useAppNavigation();
+  const { toRecipeDetail, toRecipeCreate } = useNavigationIntents();
   const { settle, markIncomplete } = useRecipeCaptureActions();
 
   return (captureId: string, outcome: CaptureOutcome) => {

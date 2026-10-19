@@ -6,7 +6,7 @@ import {
 } from '#features/pantry/components/PantryContent.generated';
 import { IMAGE_PRELOAD_COUNT } from '#features/pantry/components/pantryDisplay/constants';
 import type { PantryListNode } from '#features/pantry/components/pantryDisplay/renderItem';
-import { preloadImages } from '#components/atoms/CachedImage';
+import { requirePlatform } from '#platform/install';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -34,7 +34,7 @@ export function usePantryImagePreload(nodes: readonly PantryListNode[]) {
         if (url) urls.push(url);
       }
       if (urls.length > 0) {
-        preloadImages(urls);
+        requirePlatform('imagePrefetch').prefetch(urls);
       }
     });
     return () => cancelIdleCallback(handle);

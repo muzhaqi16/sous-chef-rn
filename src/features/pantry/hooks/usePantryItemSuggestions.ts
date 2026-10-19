@@ -5,7 +5,7 @@ import {
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { preloadImages } from '#components/atoms/CachedImage';
+import { requirePlatform } from '#platform/install';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
@@ -116,7 +116,7 @@ export function usePantryItemSuggestions({
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
     if (urls.length > 0) {
-      preloadImages(urls);
+      requirePlatform('imagePrefetch').prefetch(urls);
     }
   }, [sections]);
 

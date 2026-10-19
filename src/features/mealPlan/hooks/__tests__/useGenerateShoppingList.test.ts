@@ -1,14 +1,5 @@
 'use no memo';
 
-// Captured, never invoked automatically: a rendered hook starts focused.
-type FocusCallback = () => (() => void) | void;
-let focusCallback: FocusCallback | undefined;
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (cb: FocusCallback) => {
-    focusCallback = cb;
-  },
-}));
-
 const mockUsePantryQuery = jest.fn();
 jest.mock('#features/pantry/hooks/usePantryQuery', () => {
   const actual = jest.requireActual<
@@ -22,6 +13,7 @@ jest.mock('#features/pantry/hooks/usePantryQuery', () => {
   };
 });
 
+import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
   recordMock,
   renderHookWithApollo,
@@ -182,6 +174,7 @@ function linkMock() {
 describe('generating a shopping list from a cached meal plan', () => {
   afterEach(() => {
     useStore.setState({ apiReachable: true, isOnline: true });
+    memoryScreen().setFocused(true);
     jest.clearAllMocks();
   });
 
@@ -224,13 +217,7 @@ describe('generating a shopping list from a cached meal plan', () => {
       { skip: false, fetchPolicy: 'cache-only' },
     );
 
-    let blur: (() => void) | void;
-    act(() => {
-      blur = focusCallback?.();
-    });
-    act(() => {
-      if (typeof blur === 'function') blur();
-    });
+    act(() => memoryScreen().setFocused(false));
 
     expect(mockUsePantryQuery).toHaveBeenLastCalledWith(
       undefined,

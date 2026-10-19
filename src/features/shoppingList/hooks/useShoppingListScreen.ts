@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 
 import { useUser } from '#store/useAppStore';
-import { preloadImages } from '#components/atoms/CachedImage';
+import { requirePlatform } from '#platform/install';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
@@ -135,7 +135,7 @@ export function useShoppingListScreen() {
         .filter((url): url is string => !!url);
       if (urls.length > 0) {
         const handle = requestIdleCallback(() => {
-          preloadImages(urls);
+          requirePlatform('imagePrefetch').prefetch(urls);
         });
         return () => cancelIdleCallback(handle);
       }

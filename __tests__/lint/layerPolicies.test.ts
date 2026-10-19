@@ -19,7 +19,7 @@ type Case = {
 
 const VALUE_USE = 'export const y: unknown = x;\n';
 const ENFORCED_CORE = 'src/i18n/featureLocales.ts';
-const UNENFORCED_CORE = 'src/utils/dedupeById.ts';
+const UNENFORCED_CORE = 'src/features/recipes/hooks/useRecipeDetail.ts';
 
 const CASES: Case[] = [
   {

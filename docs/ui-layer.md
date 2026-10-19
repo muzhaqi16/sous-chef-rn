@@ -98,6 +98,27 @@ optional:
 - **`FormScreen`** is a screen with a form's chrome. The name is the only thing
   it shares with a modal.
 
+## Presenters: toasts, alerts and the screen
+
+Core code asks; the mobile host presents. `toastService` and `alertService` are
+core and have no React Native in them. A host registers what shows them:
+
+- **Toasts:** `ToastProvider` registers itself through `_setToastDispatch` and
+  pairs each outcome type with its haptic (success, error, warning; `info` is
+  silent). No caller fires a haptic beside a toast
+  (`outcomeHapticHasOneOwner.test.ts`).
+- **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
+  alert raised before the app renders still shows. `AlertProvider` replaces it
+  with the app's dialog once it mounts.
+- **Haptics before an action** (a toggle, a delete) fire where it is pressed,
+  in the component, not in the data hook.
+- **Navigation and focus:** a core hook navigates with `useNavigationIntents()`
+  (`toRecipeDetail`, `goBack`, …) and reads focus with `useIsScreenFocused()` or
+  `useScreenFocusEffect()`, all from `#platform/screen`. On mobile they are
+  `useAppNavigation` and React Navigation's `useIsFocused` / `useFocusEffect`
+  (`src/hooks/navigation/screenHooks.ts`), called in the same screen, so their
+  meaning is unchanged. A UI component keeps using `useAppNavigation` directly.
+
 ## The list row
 
 Four shells compose one row — `BaseItemCard` (pantry), `ListItem` (shopping list,

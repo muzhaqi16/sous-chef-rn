@@ -17,6 +17,7 @@ import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';
+import { HapticService } from '#services/haptic/HapticService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import type { IconName } from '#components/atoms/Icon';
@@ -27,6 +28,14 @@ import type {
   ToastPresenter,
   ToastType,
 } from '#platform/presenters';
+
+// Every toast of an outcome type carries its haptic, so no caller fires its
+// own beside it. `info` is neutral and deliberately silent.
+const TOAST_HAPTICS: Partial<Record<ToastType, () => void>> = {
+  success: () => HapticService.success(),
+  error: () => HapticService.error(),
+  warning: () => HapticService.warning(),
+};
 
 const TOAST_ICONS: Partial<Record<ToastType, IconName>> = {
   success: 'checkmark-circle',
@@ -245,6 +254,7 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   // LAST call, not a sequential parade. A replaced toast's action lapses with
   // it; the change it offered to undo stands.
   const showToast: ToastPresenter = opts => {
+    if (opts.type) TOAST_HAPTICS[opts.type]?.();
     setQueue(prev => {
       const waiting = prev.queue.filter(q => !replaces(q, opts));
       if (!prev.current || replaces(prev.current, opts))

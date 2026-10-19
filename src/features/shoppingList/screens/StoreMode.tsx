@@ -8,6 +8,7 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { HapticService } from '#services/haptic/HapticService';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -90,6 +91,7 @@ const StoreModeBody: React.FC<{
             if (!inCart) openPurchaseAmount(id);
             return;
           }
+          HapticService.selection();
           void actions.toggleLine(id);
         }}
         onQuantityPress={inCart ? undefined : openQuantityEdit}

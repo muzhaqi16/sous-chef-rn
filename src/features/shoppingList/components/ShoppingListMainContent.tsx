@@ -2,6 +2,7 @@ import {
   deleteAction,
   editAction,
 } from '#components/organisms/SwipeableItem/commonActions';
+import { HapticService } from '#services/haptic/HapticService';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -205,7 +206,18 @@ export const ShoppingListMainContent: React.FC<
       if (isUnpurchased) openPurchaseAmount(itemId);
       return;
     }
+    HapticService.selection();
     void handleTogglePurchase(itemId);
+  };
+
+  // A warning before a clear that will remove something; an empty side is a no-op.
+  const clearAllPurchased = async () => {
+    if (rawPurchasedItems.length > 0) HapticService.warning();
+    await handleClearAllPurchased();
+  };
+  const clearAllShopping = async () => {
+    if (rawUnpurchasedItems.length > 0) HapticService.warning();
+    await handleClearAllShopping();
   };
 
   // --- Batch Move to Pantry Hook ---
@@ -333,8 +345,8 @@ export const ShoppingListMainContent: React.FC<
     onQuantityPress: openQuantityEdit,
     onSortOrderUpdate: handleSortOrderUpdate,
     // `onRefresh` is NOT here: the template injects it from its own prop.
-    onClearAllPurchased: handleClearAllPurchased,
-    onClearAllShopping: handleClearAllShopping,
+    onClearAllPurchased: clearAllPurchased,
+    onClearAllShopping: clearAllShopping,
     onSwipeableWillOpen: handleSwipeableWillOpen,
     onSwipeableClose: handleSwipeableClose,
     onCloseAllSwipeables: closeAll,
@@ -536,6 +548,7 @@ export const ShoppingListMainContent: React.FC<
             right: [
               {
                 ...deleteAction(() => {
+                  HapticService.warning();
                   void handleDeleteItem(id);
                 }),
                 removesRow: true,

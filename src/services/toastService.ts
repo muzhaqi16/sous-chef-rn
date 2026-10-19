@@ -1,5 +1,4 @@
 import type { ToastOptions, ToastPresenter } from '#platform/presenters';
-import { HapticService } from '#services/haptic/HapticService';
 import { logger } from '#/utils/environment';
 
 /**
@@ -16,21 +15,14 @@ export const _setToastDispatch = (fn: ToastPresenter) => {
 
 type ShortOpts = Omit<ToastOptions, 'message' | 'type'>;
 
-// Haptics are paired with the toast type here so every consumer gets them.
-// `info` is neutral and deliberately stays silent.
+/** A host pairs each toast type with its own feedback (the mobile one, a haptic). */
 export const toastService = {
-  success: (message: string, opts?: ShortOpts) => {
-    HapticService.success();
-    return dispatch({ ...opts, message, type: 'success' });
-  },
-  error: (message: string, opts?: ShortOpts) => {
-    HapticService.error();
-    return dispatch({ ...opts, message, type: 'error' });
-  },
+  success: (message: string, opts?: ShortOpts) =>
+    dispatch({ ...opts, message, type: 'success' }),
+  error: (message: string, opts?: ShortOpts) =>
+    dispatch({ ...opts, message, type: 'error' }),
   info: (message: string, opts?: ShortOpts) =>
     dispatch({ ...opts, message, type: 'info' }),
-  warning: (message: string, opts?: ShortOpts) => {
-    HapticService.warning();
-    return dispatch({ ...opts, message, type: 'warning' });
-  },
+  warning: (message: string, opts?: ShortOpts) =>
+    dispatch({ ...opts, message, type: 'warning' }),
 };

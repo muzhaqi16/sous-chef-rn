@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useScreenFocusEffect } from '#platform/screen';
 import { errorService } from '#/services/errorService';
 
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
@@ -9,7 +10,6 @@ import type {
   RecipeSearchResult,
   RecipeInformation,
 } from '#/services/spoonacular/types';
-import { useFocusEffect } from '@react-navigation/native';
 import { defaultPantryOf } from '#domain/homePantries';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useTranslation } from '#/i18n';
@@ -297,7 +297,7 @@ export function useSpoonacularDiscovery(
     setIsFocused(true);
     return () => setIsFocused(false);
   });
-  useFocusEffect(onFocusChange);
+  useScreenFocusEffect(onFocusChange);
 
   const {
     state: {

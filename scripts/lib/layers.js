@@ -34,7 +34,7 @@ const LAYERS = [
     name: 'domain',
     layer: 'core',
     patterns: ['src/domain/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'graphql',
@@ -51,11 +51,11 @@ const LAYERS = [
   },
   { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: true },
   { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: true },
-  { name: 'utils', layer: 'core', patterns: ['src/utils/**'], enforced: false },
+  { name: 'utils', layer: 'core', patterns: ['src/utils/**'], enforced: true },
   {
     name: 'services/auth',
     layer: 'core',
-    patterns: ['src/services/auth/**'],
+    patterns: ['src/services/auth/**', 'src/services/authService.ts'],
     enforced: false,
   },
   {
@@ -63,16 +63,22 @@ const LAYERS = [
     layer: 'core',
     patterns: [
       'src/services/{subscriptions,spoonacular,telemetry}/**',
-      'src/services/{alertService,authService,destructiveConfirm,errorService,toastService}.ts',
+      'src/services/{alertService,destructiveConfirm,errorService,toastService}.ts',
     ],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'hooks',
     layer: 'core',
     patterns: [
-      'src/hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}/**',
+      'src/hooks/{apollo,auth,data,deepLink,search,settings,utils}/**',
     ],
+    enforced: true,
+  },
+  {
+    name: 'hooks/session',
+    layer: 'core',
+    patterns: ['src/hooks/{app,offline,subscriptions}/**'],
     enforced: false,
   },
   {

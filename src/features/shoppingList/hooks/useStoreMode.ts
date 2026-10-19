@@ -6,11 +6,8 @@ import {
   type ShoppingListEntry,
   type ShoppingListRowItem,
 } from '#features/shoppingList/components/SortableShoppingList/types';
-import {
-  aisleAfter,
-  linesInAisle,
-  type AisleTab,
-} from '#features/shoppingList/utils/aisles';
+import { aisleAfter, type AisleTab } from '#features/shoppingList/utils/aisles';
+import { linesInAisle } from '#features/shoppingList/components/SortableShoppingList/aisleRows';
 import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 import { useShoppingListManagement } from './useShoppingListManagement';

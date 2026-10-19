@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents } from '#platform/screen';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { sleep } from '#/utils/backoff';
 import { useRecipeData } from './useRecipeData';
@@ -77,7 +77,7 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
  */
 export function useRecipeDetail() {
   const { recipeId: routeRecipeId, catalog } = useRoute('RecipeDetail').params;
-  const { goBack } = useAppNavigation();
+  const { goBack } = useNavigationIntents();
 
   const catalogHint = routeRecipeId ? undefined : catalog;
   const catalogOpen = useOpenedCatalogRecipe(catalogHint);

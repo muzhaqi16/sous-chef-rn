@@ -11,6 +11,9 @@ import {
   applyThemeToRuntime,
 } from '#/theme/applyAppearance';
 import { preloadImages } from '#components/atoms/CachedImage';
+import { alertService } from '#/services/alertService';
+import { presentNativeAlert } from '#native/nativeAlert';
+import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 
 const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
   status === 'extension' ? 'unknown' : status;
@@ -47,5 +50,9 @@ installPlatform({
     apply: settings => applyAppearanceToRuntime(settings),
   },
   clock: { now: () => performance.now() },
-  imagePrefetch: uris => preloadImages(uris),
+  imagePrefetch: { prefetch: uris => preloadImages(uris) },
+  screen: reactNavigationScreenHooks,
 });
+
+// Until AlertProvider mounts and takes over, an alert is the OS's own.
+alertService.init(presentNativeAlert);

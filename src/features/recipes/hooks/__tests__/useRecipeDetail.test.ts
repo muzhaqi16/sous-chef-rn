@@ -10,18 +10,15 @@ import type {
   OpenedCatalogRecipe,
 } from '../useOpenCatalogRecipe';
 import { useRecipeDetail } from '../useRecipeDetail';
+import { memoryIntents } from '#/test-utils/memoryPlatform';
 
 type RecipeData = ReturnType<typeof useRecipeData>;
 type BackendRecipe = RecipeData['backendRecipe'];
 
-const mockGoBack = jest.fn();
+const mockGoBack = jest.spyOn(memoryIntents(), 'goBack');
 
 jest.mock('@react-navigation/native', () => ({
   useRoute: jest.fn(() => ({ params: {} })),
-}));
-
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack }),
 }));
 
 const mockOpenCatalogRecipe = jest.fn<

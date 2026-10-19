@@ -15,8 +15,8 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('../useAisleView', () => {
   const { groupByAisle } = jest.requireActual<
-    typeof import('#features/shoppingList/utils/aisles')
-  >('#features/shoppingList/utils/aisles');
+    typeof import('#features/shoppingList/components/SortableShoppingList/aisleRows')
+  >('#features/shoppingList/components/SortableShoppingList/aisleRows');
   return {
     useAisleView: (_list: string, _store: unknown, rows: never) => ({
       aisleEntries: groupByAisle(rows, ['PRODUCE', 'DAIRY_EGGS', 'FROZEN']),

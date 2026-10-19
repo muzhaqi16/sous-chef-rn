@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useScreenFocusEffect } from '#platform/screen';
 import type { ApolloCache } from '@apollo/client';
 import {
   useApolloClient,
@@ -93,7 +93,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     setIsFocused(true);
     return () => setIsFocused(false);
   });
-  useFocusEffect(onFocusChange);
+  useScreenFocusEffect(onFocusChange);
   const pantry = usePantryQuery(pantryId ?? undefined, null, null, undefined, {
     skip: !isFocused,
     fetchPolicy: 'cache-only',

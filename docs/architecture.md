@@ -97,16 +97,17 @@ with `installPlatform()`. A core module reads one with
 `requirePlatform('<name>')`, which throws `PlatformServiceMissing` naming the
 service if the install has not happened, so nothing degrades silently.
 
-| Service         | What it is                                                 | Mobile adapter                                |
-| --------------- | ---------------------------------------------------------- | --------------------------------------------- |
-| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv` |
-| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)         |
-| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)       |
-| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info          |
-| `appLifecycle`  | Foreground state and its changes                           | `AppState`                                    |
-| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                         |
-| `clock`         | A monotonic `now()` for durations                          | react-native-performance                      |
-| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`               |
+| Service         | What it is                                                 | Mobile adapter                                     |
+| --------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv`      |
+| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)              |
+| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)            |
+| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info               |
+| `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
+| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
+| `clock`         | A monotonic `now()` for durations                          | react-native-performance                           |
+| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
+| `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
 
 `src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`
 imports it right after the startup clock, the startup profiler and the crypto
@@ -116,7 +117,12 @@ its first use, not during the install. `jest.setup.js` installs the in-memory
 platform (`__tests__/helpers/memoryPlatform.ts`) the same way.
 
 **Presenters** are what the core asks a host to show: toast and alert requests
-(`platform/presenters.ts`), which a mounted host registers.
+(`platform/presenters.ts`), which a host registers. `docs/ui-layer.md`
+§ Presenters has the mobile side.
+
+The `screen` service is hooks rather than an object to call: a screen calls a
+data hook in its own body, above anything a context provider in it could wrap,
+so the host supplies the hooks themselves. `#platform/screen` exports them.
 
 ---
 

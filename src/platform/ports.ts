@@ -1,3 +1,4 @@
+import type { EffectCallback } from 'react';
 import type {
   DensityPreference,
   FontScalePreference,
@@ -135,7 +136,36 @@ export interface Clock {
   now(): number;
 }
 
-export type ImagePrefetch = (uris: string[]) => void;
+export interface ImagePrefetch {
+  /** Warms the image cache; never throws. */
+  prefetch(uris: string[]): void;
+}
+
+/**
+ * Where the core asks to go, named by destination rather than by route. The
+ * host maps each onto its own navigation; the core never names a screen.
+ */
+export interface NavigationIntents {
+  /** Back, when there is somewhere to go back to. */
+  goBack(): void;
+  toAuth(): void;
+  toVerifyEmail(): void;
+  toJoinHomeByCode(joinCode?: string): void;
+  toJoinByShareCode(shareCode: string): void;
+  toRecipeDetail(params: { recipeId: string }): void;
+  toRecipeCreate(params?: { captureId?: string }): void;
+}
+
+/**
+ * Hooks over the host's navigator, called inside a screen: the screen a hook
+ * runs in is the one it navigates from and whose focus it reads.
+ */
+export interface ScreenHooks {
+  useNavigationIntents(): NavigationIntents;
+  useIsScreenFocused(): boolean;
+  /** Runs while the screen is focused; a new `effect` identity re-runs it. */
+  useScreenFocusEffect(effect: EffectCallback): void;
+}
 
 export interface PlatformServices {
   environment: Env;
@@ -146,4 +176,5 @@ export interface PlatformServices {
   appearance: Appearance;
   clock: Clock;
   imagePrefetch: ImagePrefetch;
+  screen: ScreenHooks;
 }

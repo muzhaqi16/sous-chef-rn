@@ -5,7 +5,7 @@ import type {
   ShoppingListEntry,
   ShoppingListRowItem,
 } from '#features/shoppingList/components/SortableShoppingList/types';
-import { groupByAisle } from '#features/shoppingList/utils/aisles';
+import { groupByAisle } from '#features/shoppingList/components/SortableShoppingList/aisleRows';
 import { AisleViewRouteDocument } from './useAisleView.generated';
 
 /** Where a learned walking order came from, for the line above the aisles. */
