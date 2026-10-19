@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
-import { dateOrderOf, readReceiptDate } from '@muzhaqi16/receipt-rules';
+import {
+  dateOrderOf,
+  readReceiptDate,
+  readReceiptTime,
+} from '@muzhaqi16/receipt-rules';
 import DocumentScanner, {
   ResponseType,
   ScanDocumentResponseStatus,
@@ -20,6 +24,7 @@ import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useIsOnline } from '#store/useAppStore';
 import type { ImageFile } from '#/types/media';
 import { hasItemLines } from '../utils/hasItemLines';
+import { printedTimeOf } from '../utils/receiptDate';
 import { MAX_PHOTOS, receiptText } from '../utils/receiptText';
 import {
   checkOnPhone,
@@ -177,17 +182,20 @@ export function useReceiptScan({
     pages,
   }: ReturnType<typeof receiptText>): ReceiptDraft | null => {
     // Read before redaction: receipts print the day below the payment block,
-    // which redaction cuts. Only the day is kept from it.
-    const purchasedOn = readReceiptDate(
-      assembled.map(page => page.join('\n')),
-      todayKey(),
-      dateOrderOf(null),
-    );
+    // which redaction cuts. Only the day and its time are kept from it.
+    const unredacted = assembled.map(page => page.join('\n'));
+    const today = todayKey();
+    const order = dateOrderOf(null);
+    const purchasedOn = readReceiptDate(unredacted, today, order);
+    const purchaseTime = purchasedOn
+      ? printedTimeOf(readReceiptTime(unredacted, today, order))
+      : undefined;
     if (!hasItemLines(redacted)) return null;
     return {
       pages,
       scannedAt: new Date().toISOString(),
       ...(purchasedOn ? { purchasedOn } : {}),
+      ...(purchaseTime ? { purchaseTime } : {}),
     };
   };
 

@@ -55,6 +55,7 @@ export type ServerParseOutcome =
   | {
       parsed: ParsedReceipt;
       purchasedOn?: string;
+      purchaseTime?: string;
       totalsGap?: ReceiptTotalsGap;
       printedStore?: PrintedStore;
     };
@@ -110,6 +111,11 @@ export interface ReceiptDraft {
    * cut it, or set by the user in the review.
    */
   purchasedOn?: string;
+  /**
+   * The time of the sale printed with that day (HH:MM, the store's clock). It
+   * stays when the user changes the day.
+   */
+  purchaseTime?: string;
   /** The store the user picked in the review, over the one the API resolved. */
   store?: { id: string; name: string };
   /** Read on the phone, by the rules or its model, else by the server. */
@@ -319,8 +325,14 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
             const { via } = draft.serverParse;
             if (typeof outcome === 'object' && 'parsed' in outcome) {
               const { serverParse: _asked, ...rest } = draft;
-              // The day read on the phone, before redaction, stands.
+              // The day read on the phone, before redaction, stands; a time
+              // joins it only from a reading of the same day.
               const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
+              const purchaseTime =
+                draft.purchaseTime ??
+                (purchasedOn === outcome.purchasedOn
+                  ? outcome.purchaseTime
+                  : undefined);
               return {
                 draft: {
                   ...rest,
@@ -328,6 +340,7 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
                   parsedBy: 'server',
                   parseId: id,
                   ...(purchasedOn ? { purchasedOn } : {}),
+                  ...(purchaseTime ? { purchaseTime } : {}),
                   ...(outcome.totalsGap
                     ? { totalsGap: outcome.totalsGap }
                     : {}),

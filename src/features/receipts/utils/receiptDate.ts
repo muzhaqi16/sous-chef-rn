@@ -1,5 +1,5 @@
 import { isWithinInterval, subDays } from 'date-fns';
-import { fromDateKey } from '#/utils/dateUtils';
+import { dayAsInstant, fromDateKey } from '#/utils/dateUtils';
 
 // US receipts print the month first, `09/30/26 14:22` or `9/30/2026`; most
 // others the day first, `30/09/2026`; a few print ISO.
@@ -26,4 +26,28 @@ export function isPlausibleReceiptDay(key: string, today: string): boolean {
     start: subDays(latest, OLDEST_DAYS),
     end: latest,
   });
+}
+
+const PRINTED_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** A read time of the sale (HH:MM, 24-hour), or nothing for a misread. */
+export const printedTimeOf = (
+  value: string | null | undefined,
+): string | undefined =>
+  value && PRINTED_TIME.test(value) ? value : undefined;
+
+/**
+ * The moment of a shop, as a check-in sends it: the receipt's printed time on
+ * its day in the phone's own zone, noon when none was read. The API dates every
+ * line by it and refuses one that falls on the day in no time zone.
+ */
+export function purchaseMomentOf(
+  dayKey: string,
+  time: string | undefined,
+): string {
+  const day = fromDateKey(dayKey);
+  const [, hours, minutes] = PRINTED_TIME.exec(time ?? '') ?? [];
+  if (!hours || !minutes) return dayAsInstant(day);
+  day.setHours(Number(hours), Number(minutes));
+  return day.toISOString();
 }

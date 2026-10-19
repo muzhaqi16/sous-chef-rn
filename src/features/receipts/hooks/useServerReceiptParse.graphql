@@ -36,6 +36,7 @@ query ReceiptParse($id: ID!) {
         storeNumber
       }
       purchasedOn
+      purchaseTime
       lines {
         text
         kind

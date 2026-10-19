@@ -194,6 +194,7 @@ describe('fromServerReceipt', () => {
       receipt: {
         __typename: 'ParsedReceipt',
         purchasedOn: null,
+        purchaseTime: null,
         merchant: merchant('KROGER'),
         lines: [
           line({
@@ -268,9 +269,11 @@ describe('outcomeOf', () => {
   const parsed = ({
     warnings = [],
     purchasedOn = null,
+    purchaseTime = null,
   }: {
     warnings?: Warning[];
     purchasedOn?: string | null;
+    purchaseTime?: string | null;
   } = {}): ReceiptParseReadersFragment => ({
     __typename: 'ReceiptParse',
     id: 'rp-1',
@@ -279,6 +282,7 @@ describe('outcomeOf', () => {
     receipt: {
       __typename: 'ParsedReceipt',
       purchasedOn,
+      purchaseTime,
       merchant: merchant('WALMART'),
       lines: [
         line({
@@ -325,6 +329,23 @@ describe('outcomeOf', () => {
 
     expect(outcome).toMatchObject({ parsed: expect.anything() });
     expect(outcome).not.toHaveProperty('purchasedOn');
+  });
+
+  it('keeps the time printed with the day', () => {
+    expect(
+      outcomeOf(parsed({ purchasedOn: '2026-09-30', purchaseTime: '18:42' })),
+    ).toMatchObject({ purchasedOn: '2026-09-30', purchaseTime: '18:42' });
+  });
+
+  it.each([
+    ['without a day it can date', { purchaseTime: '18:42' }],
+    [
+      'with a day it drops',
+      { purchasedOn: '2026-12-29', purchaseTime: '18:42' },
+    ],
+    ['that is no time', { purchasedOn: '2026-09-30', purchaseTime: '25:61' }],
+  ])('drops a time %s', (_name, read) => {
+    expect(outcomeOf(parsed(read))).not.toHaveProperty('purchaseTime');
   });
 });
 

@@ -158,8 +158,8 @@ describe('useReceiptScan', () => {
   });
 
   // Receipts print the day under the payment block, which redaction cuts, so it
-  // is read first; the cut lines still never reach the draft.
-  it('keeps the day the receipt printed below its payment block', async () => {
+  // is read first; the rest of the cut lines still never reach the draft.
+  it('keeps the day and time the receipt printed below its payment block', async () => {
     const today = new Date();
     const printed = [
       today.getMonth() + 1,
@@ -188,7 +188,9 @@ describe('useReceiptScan', () => {
     expect(draft?.pages).toEqual([
       'WALMART\nGV WHOLE MILK  3.48 N\nCHANGE DUE  0.00',
     ]);
-    expect(JSON.stringify(draft)).not.toMatch(/TC#|14:22/);
+    const { purchaseTime, ...rest } = draft ?? {};
+    expect(purchaseTime).toBe('14:22');
+    expect(JSON.stringify(rest)).not.toMatch(/TC#|14:22/);
   });
 
   it("reads the printed day in the device region's order", async () => {

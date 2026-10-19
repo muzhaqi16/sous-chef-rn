@@ -425,6 +425,8 @@ describe('useReceiptReview', () => {
         id: ids?.ids[0],
         pantryId: 'p1',
         purchasedOn: '2026-09-28',
+        // No time was read: noon that day, on the phone's clock.
+        purchasedAt: new Date(2026, 8, 28, 12).toISOString(),
         today: expect.any(String),
         // No store is on file for it: the API places the receipt by its header.
         merchantHeader: 'KROGER',
@@ -591,6 +593,28 @@ describe('useReceiptReview', () => {
 
     expect(fired(checkIn)).toEqual([
       expect.objectContaining({ purchasedOn: '2026-09-26' }),
+    ]);
+  });
+
+  it("sends the receipt's printed time on the day, also a day the user sets", async () => {
+    const seeded = useReceiptDraftStore.getState().draft;
+    if (!seeded) throw new Error('no draft');
+    useReceiptDraftStore.setState({
+      draft: { ...seeded, purchaseTime: '18:42' },
+    });
+    const { result, checkIn, addChosen } = await setup();
+
+    await act(async () => {
+      result.current.review.setPurchasedOn('2026-09-26');
+      result.current.review.chooseLine(1, MILK);
+    });
+    await addChosen();
+
+    expect(fired(checkIn)).toEqual([
+      expect.objectContaining({
+        purchasedOn: '2026-09-26',
+        purchasedAt: new Date(2026, 8, 26, 18, 42).toISOString(),
+      }),
     ]);
   });
 

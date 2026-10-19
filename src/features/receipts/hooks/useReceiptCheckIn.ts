@@ -54,6 +54,7 @@ export interface ReceiptToCheckIn
     CreateReceiptCheckInInput,
     | 'pantryId'
     | 'purchasedOn'
+    | 'purchasedAt'
     | 'shoppingListId'
     | 'receiptParseId'
     | 'merchantHeader'

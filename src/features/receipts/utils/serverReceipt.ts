@@ -10,7 +10,7 @@ import {
 } from '#domain/serverJobRefusals';
 import type { ReceiptParseQuery } from '../hooks/useServerReceiptParse.generated';
 import type { ServerParseOutcome } from '../store/receiptDraftStore';
-import { isPlausibleReceiptDay } from './receiptDate';
+import { isPlausibleReceiptDay, printedTimeOf } from './receiptDate';
 import { receiptReviewLines } from './receiptReviewLines';
 import type { ReceiptTotalsGap } from './parsedReceipt';
 import { fromServerReceipt, printedStoreOf } from './fromServerReceipt';
@@ -59,9 +59,14 @@ export function outcomeOf(parse: ServerParse): ServerParseOutcome | undefined {
         isPlausibleReceiptDay(receipt.purchasedOn, todayKey())
           ? receipt.purchasedOn
           : undefined;
+      // The time is of that day: without it, it dates nothing.
+      const purchaseTime = purchasedOn
+        ? printedTimeOf(receipt.purchaseTime)
+        : undefined;
       return {
         parsed,
         ...(purchasedOn ? { purchasedOn } : {}),
+        ...(purchaseTime ? { purchaseTime } : {}),
         ...(totalsGap ? { totalsGap } : {}),
         ...(printedStore ? { printedStore } : {}),
       };

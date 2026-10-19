@@ -1,6 +1,9 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useReceiptDraftStore } from '../receiptDraftStore';
-import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
+import {
+  parsedReceipt,
+  seedDraft,
+} from '../../__tests__/helpers/receiptFixtures';
 
 const PHOTOS = ['receipt-photos/u1/p1.jpg'];
 const actions = () => useReceiptDraftStore.getState();
@@ -103,6 +106,53 @@ describe('receiptDraftStore', () => {
 
       expect(draft()?.photoKeys).toEqual(PHOTOS);
       expect(draft()?.serverParse?.state).toBe('failed');
+    });
+  });
+
+  describe('settling a parse that read the receipt', () => {
+    const settleRead = (read: {
+      purchasedOn?: string;
+      purchaseTime?: string;
+    }) => {
+      actions().askServerParse('p1', 'text');
+      actions().settleServerParse('p1', { parsed: parsedReceipt([]), ...read });
+    };
+
+    it('takes the day and time the server read', () => {
+      seedDraft();
+      settleRead({ purchasedOn: '2026-09-30', purchaseTime: '18:42' });
+
+      expect(draft()).toMatchObject({
+        purchasedOn: '2026-09-30',
+        purchaseTime: '18:42',
+      });
+    });
+
+    // The phone reads the day before redaction cuts it; a time is only ever
+    // of the day it was printed with.
+    it("keeps the phone's day, joined by the server's time of that same day", () => {
+      seedDraft({ purchasedOn: '2026-09-30' });
+      settleRead({ purchasedOn: '2026-09-30', purchaseTime: '18:42' });
+
+      expect(draft()?.purchaseTime).toBe('18:42');
+    });
+
+    it("takes no time from a reading of another day than the phone's", () => {
+      seedDraft({ purchasedOn: '2026-09-30' });
+      settleRead({ purchasedOn: '2026-09-29', purchaseTime: '18:42' });
+
+      expect(draft()?.purchasedOn).toBe('2026-09-30');
+      expect(draft()?.purchaseTime).toBeUndefined();
+    });
+  });
+
+  it('keeps the time when the user sets another day', () => {
+    seedDraft({ purchasedOn: '2026-09-30', purchaseTime: '18:42' });
+    actions().setPurchasedOn('2026-09-29');
+
+    expect(draft()).toMatchObject({
+      purchasedOn: '2026-09-29',
+      purchaseTime: '18:42',
     });
   });
 

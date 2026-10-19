@@ -89,7 +89,7 @@
     "@callstack/liquid-glass": "^0.8.1",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^5.2.2",
-    "@muzhaqi16/receipt-rules": "1.2.0",
+    "@muzhaqi16/receipt-rules": "1.3.0",
     "@notifee/react-native": "^9.1.8",
     "@paralleldrive/cuid2": "^3.3.0",
     "@react-native-clipboard/clipboard": "^1.16.3",

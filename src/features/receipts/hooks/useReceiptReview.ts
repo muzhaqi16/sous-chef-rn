@@ -37,6 +37,7 @@ import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
 import { useHeldStores } from './useHeldStores';
 import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
 import { storeOfferOf } from '../utils/storeOfferOf';
+import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { toDateKey } from '#/utils/dateUtils';
 
@@ -350,6 +351,7 @@ export function useReceiptReview() {
           checkInIds: minted.ids,
           pantryId,
           purchasedOn,
+          purchasedAt: purchaseMomentOf(purchasedOn, draft?.purchaseTime),
           // Online, the check-in waits for the store's create; its lines don't.
           storeId: store?.id ?? addProposedStore(),
           ...(listId && links.size > 0 ? { shoppingListId: listId } : {}),
