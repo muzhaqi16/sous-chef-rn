@@ -1,7 +1,7 @@
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import type { Client } from 'graphql-ws';
 import { createClient } from 'graphql-ws';
-import { AppState, Platform } from 'react-native';
+import { requirePlatform } from '#platform/install';
 import { env } from '#/config/env';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -23,33 +23,21 @@ import {
   WS_CLOSE_TERMINATED,
   WS_CLOSE_UPGRADE_REQUIRED,
 } from './wsCloseCodes';
-import { LaunchArguments } from 'react-native-launch-arguments';
 
-// RN's WebSocket takes a third `options` argument that graphql-ws, which
-// constructs the socket as `new Impl(url, protocols)`, never passes.
-type WebSocketWithHeaders = new (
-  url: string,
-  protocols?: string | string[],
-  options?: { headers: Record<string, string> },
-) => WebSocket;
+/**
+ * The socket the host dials with. A host that must send headers on the
+ * upgrade request (the client key, on mobile) passes its own subclass.
+ */
+export interface WebSocketTransport {
+  /** The constructor graphql-ws dials with; the runtime's `WebSocket` by default. */
+  webSocketImpl: unknown;
+  /** Ping interval in ms; 12 s when unset. */
+  keepAliveMs?: number;
+}
 
-const BaseWebSocket: WebSocketWithHeaders =
-  Platform.OS === 'web'
-    ? WebSocket // for RN-Web
-    : global.WebSocket; // for iOS & Android
+const DEFAULT_KEEP_ALIVE_MS = 12_000;
 
-// The key has to ride the upgrade REQUEST. `connectionParams` reaches the
-// server only once the socket is open, so a dial an intermediary re-issues
-// without its upgrade headers arrives anonymous and is refused as a scanner.
-const upgradeHeaders: Record<string, string> = env.API_KEY
-  ? { 'x-api-key': env.API_KEY }
-  : {};
-
-const webSocketImpl: WebSocketWithHeaders = class extends BaseWebSocket {
-  constructor(url: string, protocols?: string | string[]) {
-    super(url, protocols, { headers: upgradeHeaders });
-  }
-};
+let transport: WebSocketTransport = { webSocketImpl: globalThis.WebSocket };
 
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
 const WS_URL = env.WEB_SOCKET_URL ?? Environment.getApiConfig().wsUrl;
@@ -178,7 +166,7 @@ const reportDialFailedBeforeOpen = (
   // `apiReachabilityBreaker` discounts the same case.
   if (
     !isApiUnavailable({ isOnline, apiReachable }) &&
-    AppState.currentState === 'active'
+    requirePlatform('appLifecycle').current() === 'active'
   ) {
     dialFailureStreak++;
   }
@@ -288,26 +276,6 @@ const awaitDialPermission = async (): Promise<void> => {
 };
 
 /**
- * Get the keepAlive interval. In Detox E2E mode, use a long interval (5 min)
- * to prevent frequent pings from blocking Detox idle detection.
- */
-const getKeepAliveInterval = (): number => {
-  if (__DEV__) {
-    try {
-      const args = LaunchArguments.value<{
-        detoxDisableBackgroundServices?: string;
-      }>();
-      if (args.detoxDisableBackgroundServices) {
-        return 300_000; // 5 minutes — effectively disables pings during tests
-      }
-    } catch {
-      // No launch args available
-    }
-  }
-  return 12_000; // 12 seconds — normal operation
-};
-
-/**
  * Persist a token pair the server rotated during the handshake. The ack is the
  * ONLY delivery of that pair; an ordinary accept carries no payload, so absence
  * means nothing changed rather than something failed.
@@ -335,9 +303,9 @@ const createWsClient = () => {
       await awaitDialPermission();
       return WS_URL;
     },
-    webSocketImpl, // ← critical for RN
+    webSocketImpl: transport.webSocketImpl,
     lazy: true, // only connect on first subscribe
-    keepAlive: getKeepAliveInterval(),
+    keepAlive: transport.keepAliveMs ?? DEFAULT_KEEP_ALIVE_MS,
     // Unbounded: `awaitDialPermission` paces every dial, and a cap would end
     // real-time delivery for good after an outage longer than it.
     retryAttempts: Infinity,
@@ -603,6 +571,15 @@ const getOrCreateClient = (): Client => {
 };
 
 currentClient = createWsClient();
+
+/**
+ * Dial through the host's transport. Runs when the Apollo client is built,
+ * before anything subscribes; the lazy client it replaces never connected.
+ */
+export const setWebSocketTransport = (next: WebSocketTransport): void => {
+  transport = next;
+  currentClient = createWsClient();
+};
 
 /**
  * `dispose()` rejects with the RAW WebSocket event, no `message`, beyond a

@@ -4,7 +4,8 @@
  * against the schema through the real queue store and failure handler, so a
  * withdrawal would show as the toast it raises.
  */
-import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import type { ApolloClient } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -30,19 +31,12 @@ jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
 }));
 // The failure handler reads the app's client; it shares the queue's cache here.
-jest.mock('#/apollo/client', () => {
-  const { makeCache } = jest.requireActual('#/apollo/cache');
-  return {
-    client: {
-      cache: makeCache(),
-      refetchQueries: jest.fn(() => Promise.resolve([])),
-    },
-  };
-});
 
-const appClient = jest.requireMock<{
-  client: { cache: InMemoryCache; refetchQueries: jest.Mock };
-}>('#/apollo/client').client;
+const appClient = {
+  cache: makeCache(),
+  refetchQueries: jest.fn(() => Promise.resolve([])),
+};
+registerApolloClient(appClient as unknown as ApolloClient);
 
 interface DeleteArgs {
   input: { id: string };

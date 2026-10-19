@@ -11,7 +11,10 @@
  * Uses the REAL cache: the sibling suite mocks it wholesale and so can only
  * assert which helpers were called, never what the store ends up holding.
  */
-import { gql, type InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { handleQueueFailure } from '../queueFailureHandler';
 import type { FailedMutationInfo } from '../types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -25,16 +28,12 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { stampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { readMovedToPantryAt } from '#features/shoppingList/cache/purchase';
 
-jest.mock('#/apollo/client', () => {
-  const { makeCache } = jest.requireActual('#/apollo/cache');
-  return { client: { cache: makeCache() } };
-});
 jest.mock('../queueStore', () => ({
   queueStore: { removeMutation: jest.fn() },
 }));
@@ -42,9 +41,8 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
 }));
 
-const { cache } = jest.requireMock<{ client: { cache: InMemoryCache } }>(
-  '#/apollo/client',
-).client;
+const cache = makeCache();
+registerApolloClient({ cache } as unknown as ApolloClient);
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {

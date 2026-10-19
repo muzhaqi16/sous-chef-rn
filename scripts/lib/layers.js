@@ -28,7 +28,7 @@ const LAYERS = [
     name: 'apollo',
     layer: 'core',
     patterns: ['src/apollo/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'domain',

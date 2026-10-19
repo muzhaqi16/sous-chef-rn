@@ -6,10 +6,6 @@
 const mockMutate = jest.fn().mockResolvedValue({ data: {} });
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    query: (...args: unknown[]) => mockQuery(...args),
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -72,10 +68,18 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
 import { MOCK_DEVICE_ID as DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
+} as unknown as ApolloClient);
 
 /** Variables of the one mutate call whose input carries `key`. */
 const inputWith = (key: string) =>

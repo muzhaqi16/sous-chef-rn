@@ -5,7 +5,7 @@ import {
   type ObservableQuery,
   type RefetchEvents,
 } from '@apollo/client';
-import { AppState } from 'react-native';
+import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueManager } from './offlineQueue/queueManager';
@@ -28,13 +28,13 @@ type RefetchSource = keyof RefetchEvents;
  */
 const appForeground = () =>
   new Observable<void>(observer => {
-    let lastState = AppState.currentState;
-    const subscription = AppState.addEventListener('change', nextState => {
-      const wasAway = /inactive|background/.test(lastState);
+    const lifecycle = requirePlatform('appLifecycle');
+    let lastState = lifecycle.current();
+    return lifecycle.subscribe(nextState => {
+      const wasAway = lastState === 'inactive' || lastState === 'background';
       lastState = nextState;
       if (nextState === 'active' && wasAway) observer.next();
     });
-    return () => subscription.remove();
   });
 
 const apiReachable = () =>
@@ -208,8 +208,8 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 
 /**
  * Called once at app start, not from `client.ts`: a source subscribes as it is
- * set, and importing the client must not subscribe to the store, AppState and
- * the socket.
+ * set, and importing the client must not subscribe to the store, the app
+ * lifecycle and the socket.
  */
 export const connectResyncSources = (
   client: ApolloClient,

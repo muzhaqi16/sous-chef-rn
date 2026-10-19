@@ -1,4 +1,4 @@
-import { AppState } from 'react-native';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { apiReachabilityBreaker } from '../apiReachabilityBreaker';
 import { useStore } from '#store';
 import { queueManager } from '../../offlineQueue/queueManager';
@@ -15,17 +15,8 @@ const mockedProbe = probeApiHealth as jest.Mock;
 const setApiReachable = jest.fn();
 const INITIAL_PROBE_MS = 20_000;
 
-/**
- * The RN jest mock leaves AppState.currentState as a jest.fn() — pin it to a
- * real status string. (jest.replaceProperty refuses function-valued props, and
- * the module registry is per test file, so no restore is needed.)
- */
 function setAppState(state: 'active' | 'background') {
-  Object.defineProperty(AppState, 'currentState', {
-    configurable: true,
-    writable: true,
-    value: state,
-  });
+  memoryLifecycle().moveTo(state);
 }
 
 function mockState(apiReachable: boolean | null = true, isOnline = true) {

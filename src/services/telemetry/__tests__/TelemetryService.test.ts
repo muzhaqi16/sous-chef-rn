@@ -1,16 +1,14 @@
-import { TelemetryService } from '../TelemetryService';
+import { TelemetryService, setTelemetryStateSource } from '../TelemetryService';
 import { TransportSendError } from '../types';
 
 // Mutable so individual tests can simulate consent being granted/denied and
-// the device going offline. Names are `mock`-prefixed so they may be
-// referenced inside the jest.mock factory.
+// the device going offline.
 let mockUserConsent: boolean | null = null;
 let mockIsOnline = true;
-jest.mock('#store', () => ({
-  useStore: {
-    getState: () => ({ userConsent: mockUserConsent, isOnline: mockIsOnline }),
-  },
-}));
+setTelemetryStateSource({
+  userConsent: () => mockUserConsent,
+  isOnline: () => mockIsOnline,
+});
 
 const mockSendLogs = jest.fn().mockResolvedValue(undefined);
 const mockSendMetrics = jest.fn().mockResolvedValue(undefined);
@@ -370,6 +368,27 @@ describe('TelemetryService', () => {
       });
 
       service.log('error', 'should not ship'); // error would normally auto-flush
+      service.incrementCounter('should_not_ship_total');
+      await service.flush();
+
+      expect(mockSendLogs).not.toHaveBeenCalled();
+      expect(mockSendMetrics).not.toHaveBeenCalled();
+    });
+
+    // A declined consent is unread until then, so nothing may record.
+    it('emits nothing before the store supplies its state', async () => {
+      let Unconnected!: typeof TelemetryService;
+      jest.isolateModules(() => {
+        ({ TelemetryService: Unconnected } =
+          require('../TelemetryService') as typeof import('../TelemetryService'));
+      });
+      const service = new Unconnected({
+        enabled: true,
+        enableLogs: true,
+        enableMetrics: true,
+      });
+
+      service.log('error', 'should not ship');
       service.incrementCounter('should_not_ship_total');
       await service.flush();
 

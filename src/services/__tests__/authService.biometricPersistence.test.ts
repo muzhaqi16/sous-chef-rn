@@ -24,10 +24,6 @@
 const mockMutate = jest.fn();
 const mockQuery = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    query: (...args: unknown[]) => mockQuery(...args),
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -73,6 +69,8 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/services/auth/deviceId');
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { ensureDeviceId } from '#/services/auth/deviceId';
@@ -108,6 +106,12 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
 
 import { logger } from '#/utils/environment';
 import { authService } from '#/services/authService';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
+} as unknown as ApolloClient);
 
 const keychainMock = () =>
   jest.requireMock<{

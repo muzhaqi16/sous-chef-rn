@@ -14,7 +14,6 @@
 
 const mockMutate = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: { mutate: (...args: unknown[]) => mockMutate(...args) },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -49,8 +48,15 @@ jest.mock('#native/storage/keychain', () => ({
 
 const mockToastError = jest.mocked(toastService.error);
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+} as unknown as ApolloClient);
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };
 

@@ -4,7 +4,7 @@
  * toastService, errorService, the Zustand store via `getState()`, and keychain.
  */
 
-import { client } from '#/apollo/client';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -119,7 +119,7 @@ async function applyRegionCurrencyDefault(
   try {
     // Not `localFirst`: a queued write would leave the money on screen in a
     // currency the account does not hold until some later replay.
-    result = await client.mutate({
+    result = await requireApolloClient().mutate({
       mutation: UpdateUserPreferencesDocument,
       variables: { input: { regional: { preferredCurrency: inferred } } },
     });
@@ -183,7 +183,7 @@ function unmaskAuthPayload<
     user: { __typename: 'User'; id: string };
   },
 >(payload: T): ResolvedAuthPayload | null {
-  const user = client.cache.readFragment<LoginUserFragment>({
+  const user = requireApolloClient().cache.readFragment<LoginUserFragment>({
     fragment: LoginUserFragmentDoc,
     fragmentName: 'LoginUser',
     from: payload.user,
@@ -437,7 +437,7 @@ async function login(
     // `authLink` sends the id it already holds. A session minted without it is
     // bound to no device, and the server pushes only to a bound session.
     await ensureDeviceId();
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: LoginDocument,
       variables: { input },
     });
@@ -524,7 +524,11 @@ async function register(
   // Bound to the device, as `login` explains.
   await ensureDeviceId();
   const settled = await settleMutation(
-    () => client.mutate({ mutation: RegisterDocument, variables: { input } }),
+    () =>
+      requireApolloClient().mutate({
+        mutation: RegisterDocument,
+        variables: { input },
+      }),
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
@@ -686,7 +690,7 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     logger.info('Exchanging the stored device credential');
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: ExchangeDeviceCredentialDocument,
       variables: { input: { credential, deviceId } },
     });
@@ -806,7 +810,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
     // Both round trips belong to the sign-out, which sets `isLoggingOut`
     // before they can finish on a slow link — without the opt-in `authLink`
     // refuses the cleanup the sign-out is waiting for.
-    const listed = await client.query({
+    const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'network-only',
       context: { allowDuringLogout: true },
@@ -818,7 +822,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
     );
     if (!mine) return true;
 
-    const revoked = await client.mutate({
+    const revoked = await requireApolloClient().mutate({
       mutation: RevokeDeviceCredentialDocument,
       variables: { input: { id: mine.id } },
       context: { allowDuringLogout: true },
@@ -869,7 +873,7 @@ async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
       return 'unsaved';
     }
 
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: IssueDeviceCredentialDocument,
       variables: { input: { deviceId } },
     });

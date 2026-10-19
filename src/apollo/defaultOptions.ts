@@ -1,7 +1,6 @@
-// Its own module, not an export from `client.ts`: that file builds the client
-// singleton and registers it with the refresh-token link at import time, so
-// importing this constant from there drags those side effects into any test
-// that wants it. A constant should not pull a singleton behind it.
+// Its own module, not an export from `client.ts`: that file imports the whole
+// link chain and the cache persistence, and a constant should not pull them
+// into every test that wants it.
 
 import type { ApolloClient } from '@apollo/client';
 

@@ -166,6 +166,14 @@ export function installMemoryPlatform(): void {
 export const memoryIntents = (): NavigationIntents =>
   requirePlatform('screen').useNavigationIntents();
 
+/** The installed app lifecycle, to move between foreground and background. */
+export const memoryLifecycle = (): ReturnType<
+  typeof createMemoryAppLifecycle
+> =>
+  requirePlatform('appLifecycle') as ReturnType<
+    typeof createMemoryAppLifecycle
+  >;
+
 /** The installed screen hooks, to blur and refocus every screen. */
 export const memoryScreen = (): MemoryScreen =>
   requirePlatform('screen') as MemoryScreen;

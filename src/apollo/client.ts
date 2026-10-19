@@ -9,6 +9,7 @@ import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { proactiveTokenRefresh } from './links/refreshToken';
 import { registerApolloClient } from './clientRegistry';
+import { setWebSocketTransport, type WebSocketTransport } from './links/wsLink';
 import {
   cancelTokenRefresh,
   scheduleTokenRefresh,
@@ -86,11 +87,22 @@ export function restorePersistedCache(): void {
   });
 }
 
+/** What differs between hosts when building the client. */
+export interface ApolloClientOptions {
+  /** The socket subscriptions dial with; the runtime's `WebSocket` when absent. */
+  webSocket?: WebSocketTransport;
+}
+
 /**
- * Initialize Apollo Client with cache persistence
+ * Build the Apollo client, with cache persistence, and register it: the
+ * modules that cannot import a client read it from `clientRegistry`. Each host
+ * calls this once, from its composition root; nothing is built at import.
  */
-function initializeClient() {
+export function createApolloClient(
+  options: ApolloClientOptions = {},
+): ApolloClient {
   logger.info('🚀 Apollo: Initializing client with cache persistence');
+  if (options.webSocket) setWebSocketTransport(options.webSocket);
 
   // Create cache instance
   const cache = makeCache();
@@ -122,6 +134,7 @@ function initializeClient() {
 
   // Set up cache persistence
   setupCachePersistence(client, cache);
+  registerClientBridges(client);
 
   logger.info('✅ Apollo: Client initialized with cache persistence');
   return client;
@@ -217,34 +230,31 @@ function setupCachePersistence(
   logger.info('✅ Apollo: Cache persistence enabled');
 }
 
-// Initialize client synchronously
-export const client = initializeClient();
+function registerClientBridges(client: ApolloClient): void {
+  // Read at call time by the modules that would close an import cycle.
+  registerApolloClient(client);
 
-// Inject the client into the token-refresh module. refreshToken can't import
-// this singleton directly without forming a circular dependency, so it reads
-// the reference we register here at call time.
-registerApolloClient(client);
-
-// Same inversion in the other direction: `authSlice` schedules a proactive
-// refresh from synchronous actions and cannot import the scheduler without
-// closing store → authSlice → links → store.
-registerTokenRefreshBridge({
-  schedule: accessToken =>
-    scheduleTokenRefresh(accessToken, async () => {
+  // Same inversion in the other direction: `authSlice` schedules a proactive
+  // refresh from synchronous actions and cannot import the scheduler without
+  // closing store → authSlice → links → store.
+  registerTokenRefreshBridge({
+    schedule: accessToken =>
+      scheduleTokenRefresh(accessToken, async () => {
+        await proactiveTokenRefresh();
+      }),
+    cancel: cancelTokenRefresh,
+    refreshNow: async () => {
       await proactiveTokenRefresh();
-    }),
-  cancel: cancelTokenRefresh,
-  refreshNow: async () => {
-    await proactiveTokenRefresh();
-  },
-});
+    },
+  });
 
-// What a session end does to Apollo. Registered rather than imported by the
-// store, for the same cycle — and so each step stays reachable from a test.
-registerApolloResetBridge({
-  cancelTokenRefresh,
-  clearPersistedCache: () => apolloCachePersistence.clear(),
-  clearStore: async () => {
-    await client.clearStore();
-  },
-});
+  // What a session end does to Apollo. Registered rather than imported by the
+  // store, for the same cycle — and so each step stays reachable from a test.
+  registerApolloResetBridge({
+    cancelTokenRefresh,
+    clearPersistedCache: () => apolloCachePersistence.clear(),
+    clearStore: async () => {
+      await client.clearStore();
+    },
+  });
+}

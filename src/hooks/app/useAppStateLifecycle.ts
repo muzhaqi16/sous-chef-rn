@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { requirePlatform } from '#platform/install';
+import type { AppLifecycleState } from '#platform/ports';
 import { Telemetry } from '#services/telemetry';
 import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -10,7 +11,7 @@ import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 import { logger } from '#/utils/environment';
 
 /**
- * Session and persistence work on AppState changes; the resync's own listener
+ * Session and persistence work on app lifecycle changes; the resync's own listener
  * lives in `src/apollo/refetchEvents.ts`. The previous state is tracked in a closure so
  * the resume branch fires only on a real background → active transition, not on
  * launch. Gated on `isHydrated`: an earlier `active` event reaches
@@ -22,11 +23,13 @@ export function useAppStateLifecycle(): void {
   useEffect(() => {
     if (!isHydrated) return;
 
-    let lastAppState: AppStateStatus = AppState.currentState;
+    const lifecycle = requirePlatform('appLifecycle');
+    let lastAppState = lifecycle.current();
 
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = async (nextAppState: AppLifecycleState) => {
       Telemetry.trackEvent('app_state_change', { state: nextAppState });
-      const wasBackgrounded = /inactive|background/.test(lastAppState);
+      const wasBackgrounded =
+        lastAppState === 'inactive' || lastAppState === 'background';
       lastAppState = nextAppState;
 
       if (nextAppState === 'active') {
@@ -50,12 +53,8 @@ export function useAppStateLifecycle(): void {
       }
     };
 
-    const subscription = AppState.addEventListener('change', nextAppState => {
+    return lifecycle.subscribe(nextAppState => {
       void handleAppStateChange(nextAppState);
     });
-
-    return () => {
-      subscription.remove();
-    };
   }, [isHydrated]);
 }

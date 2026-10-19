@@ -12,6 +12,7 @@ const mockClient = {
 };
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

@@ -1,4 +1,4 @@
-import { client } from '#/apollo/client';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -36,7 +36,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawCount = COUNT_WITHDRAWALS[operationName];
   if (withdrawCount) {
     try {
-      withdrawCount(client.cache, info.variables, entityId);
+      withdrawCount(requireApolloClient().cache, info.variables, entityId);
     } catch (countError) {
       errorService.reportError(countError, {
         operation: `Withdraw ${operationName}'s count`,
@@ -45,7 +45,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   }
 
   if (entityType && entityId) {
-    safeEvict(client.cache, entityType, entityId);
+    safeEvict(requireApolloClient().cache, entityType, entityId);
     // Otherwise the optimistic value is replayed over the server's on the next
     // restoration pass and the change comes back from the dead.
     optimisticDataPersistence.clearEntity(entityType, entityId);
@@ -58,7 +58,7 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   const withdrawUnlink = UNLINK_WITHDRAWALS[operationName];
   if (withdrawUnlink) {
     try {
-      withdrawUnlink(client.cache, info.variables);
+      withdrawUnlink(requireApolloClient().cache, info.variables);
     } catch (withdrawError) {
       errorService.reportError(withdrawError, {
         operation: `Withdraw ${operationName}'s unlink`,
@@ -90,7 +90,7 @@ function hasQueuedWork(): boolean {
 
 function reread(): Promise<unknown> {
   rereadOwed = false;
-  return client
+  return requireApolloClient()
     .refetchQueries({ include: 'active' })
     .catch((rereadError: unknown) => {
       errorService.reportError(rereadError, {

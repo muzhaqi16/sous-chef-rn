@@ -22,7 +22,7 @@ jest.mock('@notifee/react-native', () => ({
 // load time, which is before `mockCache` is assigned. Reading it lazily is what
 // lets each test start from a fresh cache.
 let mockCache: InMemoryCache;
-jest.mock('#/apollo/client', () => ({
+jest.mock('#/app/apolloClient', () => ({
   get client() {
     return { cache: mockCache };
   },

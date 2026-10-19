@@ -2,7 +2,7 @@ import type {
   RegisterDeviceInput,
   UpdateDeviceInput,
 } from '#/graphql/generated/schemaTypes';
-import { client } from '#/apollo/client';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import { logger } from '#/utils/environment';
 import {
   DeviceByDeviceIdDocument,
@@ -185,7 +185,7 @@ async function updateDevice(
 ): Promise<DeviceUpdateOutcome> {
   try {
     // The response is a bare `device { id }` nothing reads.
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: UpdateDeviceDocument,
       variables: { input },
       fetchPolicy: 'no-cache',
@@ -199,7 +199,7 @@ async function updateDevice(
 /** Removes a device row; a row already gone answers as done (`converged`). */
 async function deleteDevice(id: string): Promise<DeviceUpdateOutcome> {
   try {
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: DeleteDeviceDocument,
       variables: { input: { id } },
       fetchPolicy: 'no-cache',
@@ -251,7 +251,7 @@ async function retireLegacyDeviceRow(): Promise<void> {
 
   let found;
   try {
-    found = await client.query({
+    found = await requireApolloClient().query({
       query: DeviceByDeviceIdDocument,
       variables: { deviceId: legacy },
       fetchPolicy: 'network-only',
@@ -313,7 +313,7 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     const permissionGranted = notificationStatus === 'granted';
     const acquiredToken = permissionGranted ? await acquirePushToken() : null;
 
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: RegisterDeviceDocument,
       variables: {
         input: buildDeviceInput(
@@ -358,7 +358,7 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     // Until a session's first registration lands, or after the device's locale
     // changes, the pickers answered a "Device default" user in the wrong system.
     if (recordRegisteredLocale(deviceInfo.language)) {
-      dropUnitSystemAnswers(client.cache);
+      dropUnitSystemAnswers(requireApolloClient().cache);
     }
     await retireLegacyDeviceRow();
     return 'ok';

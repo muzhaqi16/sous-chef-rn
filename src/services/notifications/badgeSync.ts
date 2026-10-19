@@ -7,7 +7,7 @@
  */
 
 import notifee from '@notifee/react-native';
-import { client } from '#/apollo/client';
+import { client } from '#/app/apolloClient';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import { logger } from '#/utils/environment';
 

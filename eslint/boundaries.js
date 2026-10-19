@@ -166,6 +166,7 @@ const CORE_EXTERNALS = [
   'react',
   '@apollo/client',
   '@apollo/persisted-query-lists',
+  'rxjs',
   'graphql',
   'graphql-ws',
   'zustand',

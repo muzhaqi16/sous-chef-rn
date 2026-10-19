@@ -52,7 +52,7 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
@@ -91,6 +91,7 @@ const mockClient = {
 };
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

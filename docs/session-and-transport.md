@@ -243,6 +243,13 @@ connects once and then refuses every retry — silently. `disposeWebSocket()`
 (`src/apollo/links/wsLink.ts`) therefore clears the reference so the next
 `enableAutoReconnect()` builds a fresh one.
 
+**Every socket client comes from the host's transport.** A rebuilt client
+dials with the same `WebSocketTransport` the host passed to
+`createApolloClient()`. On mobile that is React Native's `WebSocket` with
+`x-api-key` on the upgrade, so a rebuilt socket authenticates like the first.
+Whether the app is in the foreground comes from the `appLifecycle` port. See
+[Apollo client patterns § Building the client](apollo-client-patterns.md#building-the-client).
+
 ## See also
 
 - [Apollo client patterns](apollo-client-patterns.md) — subscription cache

@@ -9,7 +9,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { alertService } from '#/services/alertService';
 import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';

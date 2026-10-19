@@ -10,10 +10,6 @@
 const mockMutate = jest.fn();
 const mockReadFragment = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -88,8 +84,16 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 }));
 jest.mock('#/services/auth/deviceId');
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
+} as unknown as ApolloClient);
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };
 const USER_ID = 'u1';

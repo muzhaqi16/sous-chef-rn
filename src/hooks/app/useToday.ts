@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { AppState } from 'react-native';
+import { requirePlatform } from '#platform/install';
 import { todayKey } from '#/utils/dateUtils';
 
 const listeners = new Set<() => void>();
@@ -7,7 +7,7 @@ let stopWatching: (() => void) | null = null;
 
 const notify = () => listeners.forEach(listener => listener());
 
-/** One midnight timer and one AppState listener, however many readers. */
+/** One midnight timer and one lifecycle listener, however many readers. */
 const startWatching = () => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const armForMidnight = () => {
@@ -26,12 +26,12 @@ const startWatching = () => {
   };
   armForMidnight();
   // A backgrounded timer may not have fired.
-  const subscription = AppState.addEventListener('change', state => {
+  const unsubscribe = requirePlatform('appLifecycle').subscribe(state => {
     if (state === 'active') notify();
   });
   return () => {
     clearTimeout(timer);
-    subscription.remove();
+    unsubscribe();
   };
 };
 

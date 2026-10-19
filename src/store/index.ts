@@ -47,8 +47,8 @@ import { STORAGE_KEY } from '#/store/persistedKeys';
 import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
 import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
-// Type-only: a value import would close the telemetry→useStore cycle.
-import type { ErrorService } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
+import { setTelemetryStateSource } from '#services/telemetry/TelemetryService';
 
 const secureStore = requirePlatform('secureStore');
 
@@ -113,11 +113,6 @@ export const handleStoreRehydration = (
   if (error) {
     // Recover first, so a throw in reporting cannot block the boot.
     useStore.getState().setHydrated(true);
-    // Deferred require: telemetry imports `useStore`, so a static import would
-    // close the module-load cycle.
-    const { errorService } = require('#/services/errorService') as {
-      errorService: ErrorService;
-    };
     errorService.reportError(error, { operation: 'storeHydration' });
     return;
   }
@@ -507,6 +502,11 @@ export const useStore = create<RootState>()(
     ),
   ),
 );
+
+setTelemetryStateSource({
+  userConsent: () => useStore.getState().userConsent,
+  isOnline: () => useStore.getState().isOnline,
+});
 
 /**
  * The store under a non-hook name: the React Compiler refuses a `use*` binding

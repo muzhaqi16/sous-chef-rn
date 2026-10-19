@@ -14,14 +14,6 @@ const mockMutate = jest.fn();
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
 const mockCache = { evict: jest.fn(), gc: jest.fn() };
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    query: (...args: unknown[]) => mockQuery(...args),
-    // A getter: the factory runs before `mockCache` is initialised.
-    get cache() {
-      return mockCache;
-    },
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -76,6 +68,8 @@ jest.mock('#native/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
 import { logger } from '#/utils/environment';
 import {
@@ -87,6 +81,16 @@ import {
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { DeleteDeviceDocument } from '#operations/auth/device.generated';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
+  // A getter: the factory runs before `mockCache` is initialised.
+  get cache() {
+    return mockCache;
+  },
+} as unknown as ApolloClient);
 
 /**
  * Route client.mutate: DeleteDevice by its document (its input is a bare

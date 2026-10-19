@@ -37,8 +37,8 @@ import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hook
 import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import { reconcileAddRecipeToFavoritesReplay } from '#features/recipes/offline/replayReconcilers';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import {
   CreateMealPlanItemDocument,

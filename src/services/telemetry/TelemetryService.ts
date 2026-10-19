@@ -18,7 +18,6 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { backoffDelay } from '#/utils/backoff';
 import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
-import { useStore } from '#store';
 
 /**
  * One id per app process. Distinguishes runs of the same install — a counter
@@ -96,6 +95,19 @@ interface FlushBackoff {
 // retryable — dropping data needs an explicit permanent verdict.
 const isRetryableReason = (reason: unknown): boolean =>
   reason instanceof TransportSendError ? reason.retryable : true;
+
+/** The app state telemetry gates on. The store supplies it as it is created,
+ * so telemetry never imports the store back. */
+export interface TelemetryStateSource {
+  userConsent(): boolean | null;
+  isOnline(): boolean;
+}
+
+let stateSource: TelemetryStateSource | null = null;
+
+export function setTelemetryStateSource(source: TelemetryStateSource): void {
+  stateSource = source;
+}
 
 export class TelemetryService {
   private config: TelemetryConfig;
@@ -243,8 +255,9 @@ export class TelemetryService {
 
   // Read live on every emit, so revoked consent holds before updateConfig
   // reflects it (a cold start before setup). Mirrors the telemetryLink guard.
+  // Before the store supplies its state, consent is unread: nothing records.
   private isConsentDenied(): boolean {
-    return useStore.getState().userConsent === false;
+    return !stateSource || stateSource.userConsent() === false;
   }
 
   incrementCounter(
@@ -453,7 +466,7 @@ export class TelemetryService {
    * to Loki/Mimir, whose health the flush backoff handles.
    */
   private isDeviceOffline(): boolean {
-    return useStore.getState().isOnline === false;
+    return stateSource?.isOnline() === false;
   }
 
   private inBackoff(backoff: FlushBackoff): boolean {

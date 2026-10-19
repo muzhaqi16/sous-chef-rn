@@ -257,8 +257,11 @@ service name, so changing one on a shipped app signs every user out silently.
 
 `src/app/` is the composition root: the modules whose whole job is to know which
 features exist — the provider that mounts each feature's subscriptions, the
-offline tab preloader. They are not reusable and a sibling app writes its own, so
-they sit outside the kit rather than being excused from its rule.
+offline tab preloader — and the ones that assemble the host: the platform
+install, the Apollo client built over the native socket (`apolloClient.ts`),
+and the startup bootstrap (`useStartupInit`). They are not reusable and a
+sibling app writes its own, so they sit outside the kit rather than being
+excused from its rule.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
 app reuses wholesale. It does not import `#features/…` (a

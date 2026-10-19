@@ -4,7 +4,7 @@ import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from './usePantryItemDetailActions.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';

@@ -33,13 +33,6 @@ jest.mock('../wsLink', () => ({
   registerRefreshInFlightCheck: jest.fn(),
 }));
 
-// Mock Apollo client
-jest.mock('../../client', () => ({
-  client: {
-    mutate: jest.fn(),
-  },
-}));
-
 import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
@@ -49,7 +42,7 @@ import {
   proactiveTokenRefresh,
 } from '../refreshToken';
 import { useStore } from '#store';
-import { client } from '../../client';
+import type { ApolloClient } from '@apollo/client';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { reconnectWebSocket } from '../wsLink';
 import { registerApolloClient } from '#/apollo/clientRegistry';
@@ -58,7 +51,9 @@ import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
-const mockedClient = client as jest.Mocked<typeof client>;
+const mockedClient = {
+  mutate: jest.fn(),
+} as unknown as jest.Mocked<ApolloClient>;
 const mockedUseStore = useStore as jest.Mocked<typeof useStore>;
 const mockedIsNetworkError = isNetworkError as jest.MockedFunction<
   typeof isNetworkError
