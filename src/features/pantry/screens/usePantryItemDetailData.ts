@@ -1,14 +1,12 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import {
-  GetPantryItemDocument,
-  GetPantryItemBatchesDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from './usePantryItemDetailData.generated';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
-import { PantryItemDetail_PantryItemFragmentDoc } from '#features/pantry/screens/PantryItemDetail.generated';
+import { PantryItemDetail_PantryItemFragmentDoc } from './PantryItemDetail.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';

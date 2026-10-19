@@ -1,10 +1,8 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetHomeDocument } from '#operations/home/home.generated';
-import {
-  GetPantryDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import { PantryItemForm_PantryItemFragmentDoc } from '#features/pantry/components/form/PantryItemForm.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantryItemForm_PantryItemFragmentDoc } from './PantryItemForm.generated';
+import { PantryItemForEditDocument } from './usePantryItemFormData.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
@@ -35,7 +33,7 @@ export function usePantryItemFormData({
   // which renders as the dead-end "item not found" state.
   const fetchedItemId = itemId && !isUnconfirmed ? itemId : null;
   const { loading: itemLoading, refetch } = useQuery(
-    GetPantryItemDocument,
+    PantryItemForEditDocument,
     fetchedItemId ? { variables: { id: fetchedItemId } } : skipToken,
   );
   const refetchItem = () => (fetchedItemId ? refetch() : Promise.resolve());

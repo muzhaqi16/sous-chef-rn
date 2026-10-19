@@ -999,6 +999,12 @@
       "body": "subscription PantryEvents($pantryId: ID!) {\n  pantryEvents(pantryId: $pantryId) {\n    originatorClientId\n    actorUserId\n    mutation\n    subtype\n    pantryId\n    timestamp\n    node {\n      __typename\n      ... on PantryItem {\n        id\n        __typename\n      }\n      ... on Pantry {\n        id\n        __typename\n      }\n      ... on PantryItemUsage {\n        id\n        __typename\n      }\n      ... on ExpirationNotification {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "5afa57b6b0316f3360f5e319f7845cfdb8e7c9ace5d4b2394a52ab278404320e",
+      "name": "PantryItemForEdit",
+      "type": "query",
+      "body": "query PantryItemForEdit($id: ID!) {\n  pantryItem(id: $id) {\n    id\n    ...PantryItemForm_pantryItem\n    __typename\n  }\n}\n\nfragment PantryItemForm_pantryItem on PantryItem {\n  id\n  pantryId\n  itemName\n  quantity\n  minQuantity\n  restockQuantity\n  storageState\n  condition\n  storageNotes\n  expiresOn\n  netWeight\n  lastUsedAt\n  activeBatchCount\n  tags\n  unit {\n    id\n    name\n    symbol\n    type\n    __typename\n  }\n  displayAmount {\n    quantity\n    unit {\n      id\n      symbol\n      __typename\n    }\n    __typename\n  }\n  displayUnit {\n    id\n    name\n    symbol\n    type\n    conversionFactor\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  brand {\n    id\n    name\n    __typename\n  }\n  item {\n    id\n    categories {\n      id\n      isPrimary\n      category {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "4708c7ba7b8ea0574cf98558ca9aed2354a8fa19d99a3da7c2f81214a56ded6e",
       "name": "PantryItemForEvent",
       "type": "query",

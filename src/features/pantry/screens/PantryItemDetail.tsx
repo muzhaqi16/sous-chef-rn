@@ -13,7 +13,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
-import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
+import { usePantryItemDetailData } from './usePantryItemDetailData';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,

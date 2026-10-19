@@ -7,7 +7,7 @@
  * each test.
  */
 import type { Unmasked } from '@apollo/client/masking';
-import type { GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
+import type { GetPantryItemQuery } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import {
   StorageState,
   StorageType,

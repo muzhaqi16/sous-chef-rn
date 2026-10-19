@@ -127,13 +127,6 @@ query GetPantry(
   }
 }
 
-query GetPantryItem($id: ID!) {
-  pantryItem(id: $id) {
-    id
-    ...PantryItemDetail_pantryItem
-  }
-}
-
 # One call returns every section: the server places an item only in the first
 # section that offers it, which separate per-section calls cannot do. `limit`
 # is per section, generous enough to back the drill-down. Rows select only what

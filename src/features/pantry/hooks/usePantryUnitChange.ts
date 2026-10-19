@@ -11,10 +11,7 @@ import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import {
-  GetPantryItemBatchesDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   ChangePantryItemUnitDocument,
   PreviewPantryItemUnitChangeDocument,
@@ -83,8 +80,13 @@ export function usePantryUnitChange() {
     );
     if (settled.status !== 'failed') {
       // Every batch is restated in the new unit; the response carries none.
+      // The stack's own screens are named: their queries belong to their UI.
       void client.refetchQueries({
-        include: [GetPantryItemDocument, GetPantryItemBatchesDocument],
+        include: [
+          'GetPantryItem',
+          'PantryItemForEdit',
+          GetPantryItemBatchesDocument,
+        ],
       });
       return { status: 'changed' };
     }

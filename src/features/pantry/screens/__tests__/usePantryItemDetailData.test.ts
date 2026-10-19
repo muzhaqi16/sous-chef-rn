@@ -6,10 +6,8 @@ import {
   type MockFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import {
-  GetPantryItemBatchesDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import {
   BatchStatus,
   ErrorCode,

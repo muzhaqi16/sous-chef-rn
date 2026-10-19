@@ -85,11 +85,11 @@ import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
-  GetPantryItemDocument,
   GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';

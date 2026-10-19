@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
 
 /**

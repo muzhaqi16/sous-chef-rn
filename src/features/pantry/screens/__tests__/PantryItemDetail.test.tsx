@@ -6,10 +6,8 @@ import { kitTestIDs } from '#components/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import {
-  GetPantryItemBatchesDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import {
   pantryItemData,

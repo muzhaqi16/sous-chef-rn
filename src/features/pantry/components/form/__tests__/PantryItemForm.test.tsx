@@ -7,10 +7,8 @@ import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#operations/home/home.generated';
-import {
-  GetPantryDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
 import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
@@ -329,7 +327,7 @@ function buildCache(opts: {
 
   if (opts.itemId) {
     cache.writeQuery({
-      query: GetPantryItemDocument,
+      query: PantryItemForEditDocument,
       variables: { id: opts.itemId },
       data: pantryItemData({
         id: opts.itemId,
@@ -413,7 +411,7 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm itemId="missing" />, {
       cache: buildCache({}),
       operationMocks: [
-        recordMock(GetPantryItemDocument, {
+        recordMock(PantryItemForEditDocument, {
           data: { __typename: 'Query', pantryItem: null },
         }).mock,
       ],
@@ -436,8 +434,8 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache,
       operationMocks: [
-        recordMock(GetPantryItemDocument, {
-          data: pantryItemData({ id: 'item-1', itemName: 'Bread flour' }),
+        recordMock(PantryItemForEditDocument, {
+          data: { pantryItem: { id: 'item-1', itemName: 'Bread flour' } },
         }).mock,
       ],
     });
@@ -458,8 +456,8 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({}),
       operationMocks: [
-        recordMock(GetPantryItemDocument, {
-          data: pantryItemData({ id: 'item-1' }),
+        recordMock(PantryItemForEditDocument, {
+          data: { pantryItem: { id: 'item-1' } },
         }).mock,
       ],
     });
