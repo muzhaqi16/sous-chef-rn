@@ -207,9 +207,12 @@ const proposing = (
   });
 
 // Adds the store a confirm creates, under the id the client minted.
-const creating = (store: { name: string; address?: string }, delay = 0) =>
+const creating = (
+  store: { name: string; address?: string },
+  { held = false }: { held?: boolean } = {},
+) =>
   recordMock(CreateStoreDocument, {
-    delay,
+    held,
     dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
       createStore: {
         __typename: 'CreateStorePayload',
@@ -227,7 +230,7 @@ async function setup({
   resolveAgain,
   storeCreate,
   held = PANTRY,
-  listDelay,
+  listHeld = false,
   listFor = listItems,
   cache = makeCache(),
 }: {
@@ -237,8 +240,8 @@ async function setup({
   listFor?: (
     vars: Record<string, unknown>,
   ) => MockDataFor<typeof GetShoppingListItemsFilteredDocument>;
-  /** How long each page of the list takes to answer. */
-  listDelay?: number;
+  /** The list answers only once the test calls `list.release()`. */
+  listHeld?: boolean;
   /** What the check-in answers; it records every line by default. */
   checkIn?: ReturnType<typeof recordMock>;
   resolve?: ReturnType<typeof recordMock>;
@@ -252,7 +255,7 @@ async function setup({
   const getPantry = recordMock(GetPantryDocument, { data: held });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
     dataFor: listFor,
-    ...(listDelay !== undefined ? { delay: listDelay } : {}),
+    held: listHeld,
   });
   // The user's lists: list-1 while a test has selected it, else none.
   const lists = recordMock(GetShoppingListsLiteDocument, {
@@ -923,7 +926,7 @@ describe('useReceiptReview', () => {
             })),
           },
         },
-        delay: 100,
+        held: true,
       });
       const { result } = await setup({
         resolve: recordMock(ResolveReceiptLinesDocument, {
@@ -954,6 +957,7 @@ describe('useReceiptReview', () => {
         'guess',
       ]);
 
+      await act(async () => resolveAgain.release());
       await waitFor(() =>
         expect(result.current.review.rows.map(row => row.status)).toEqual([
           'add',
@@ -1075,25 +1079,32 @@ describe('useReceiptReview', () => {
         draft: { ...draft, printedStore: { name: 'Corner Deli' } },
       });
       const resolve = proposing({ name: 'Corner Deli' });
-      const storeCreate = creating({ name: 'Corner Deli' }, 50);
-      const { result, cache, checkIn, addChosen } = await setup({
+      const storeCreate = creating({ name: 'Corner Deli' }, { held: true });
+      const { result, cache, checkIn } = await setup({
         resolve,
         storeCreate,
       });
       await waitFor(() =>
         expect(result.current.review.matchState).toBe('done'),
       );
+      const confirm = async () => {
+        let outcome: unknown;
+        await act(async () => {
+          outcome = await result.current.review.addChosen();
+        });
+        return outcome;
+      };
 
-      await act(async () => {
-        await result.current.review.addChosen();
-      });
+      await confirm();
 
       // The lines show while the store is still being added.
       expect(storeCreate.fired).toHaveLength(1);
       expect(checkIn.fired).toHaveLength(0);
       expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
       // A second tap sends nothing, and adds no second store.
-      expect(await addChosen()).toEqual({ sent: 0, held: 0 });
+      expect(await confirm()).toEqual({ sent: 0, held: 0 });
+
+      await act(async () => storeCreate.release());
       await waitFor(() => expect(checkIn.fired).toHaveLength(1));
       expect(storeCreate.fired).toHaveLength(1);
     });
@@ -1310,20 +1321,15 @@ describe('useReceiptReview', () => {
     });
 
     it('holds the add until the list lines have loaded', async () => {
-      const { result } = await setup({ listDelay: 300 });
+      const { result, list } = await setup({ listHeld: true });
       await act(async () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(
-        () => expect(result.current.review.listLoading).toBe(true),
-        {
-          timeout: 3000,
-        },
-      );
-      await waitFor(
-        () => expect(result.current.review.listLoading).toBe(false),
-        { timeout: 3000 },
+      await waitFor(() => expect(result.current.review.listLoading).toBe(true));
+      await act(async () => list.release());
+      await waitFor(() =>
+        expect(result.current.review.listLoading).toBe(false),
       );
     });
 

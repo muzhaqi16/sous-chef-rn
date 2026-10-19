@@ -322,11 +322,15 @@ code relies on.
 
 **Helper shortcuts (`#/test-utils/apolloMockProvider`):**
 
-- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — the
-  variables spy. Returns `{ mock, fired }`: `mock` goes
+- **`recordMock(query, { data, error?, held?, maxUsageCount? })`** — the
+  variables spy. Returns `{ mock, fired, release }`: `mock` goes
   into `operationMocks`; `fired` is an array of every variables payload Apollo
   observed for that operation, in order. Assert via
   `expect(fired).toContainEqual({ … })`.
+- **An in-flight assertion holds the answer, never delays it.** `held: true`
+  records the request at once and answers only after `release()`, so what
+  stands while it is in flight is asserted however slow the runner; a `delay`
+  only makes the window likely, and a loaded CI runner closes it.
 - **`seedCache(entries)`** — pre-writes entities into a fresh PRODUCTION cache
   (`makeCache()`, not a bare `InMemoryCache`) so hooks that call
   `useApolloClient().cache.readFragment(…)` find them, and find them through the
