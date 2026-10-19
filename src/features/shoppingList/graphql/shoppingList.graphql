@@ -256,18 +256,6 @@ query GetShoppingListItemsFiltered(
   }
 }
 
-query GetShoppingListItem($id: ID!) {
-  shoppingListItem(id: $id) {
-    # Select id at the top level (outside the fragments) so that under
-    # dataMasking the returned shoppingListItem ref still carries its key field.
-    # useFragment / cache.identify needs it to locate the entity; without it the
-    # masked ref is just { __typename } and identification throws.
-    id
-    ...ItemDetail_shoppingListItem
-    ...useShoppingListItemForm_item
-  }
-}
-
 # Paginated purchase history for a single item. The PurchaseHistory screen
 # fetches this on demand so ItemDetail only needs the lightweight
 # purchaseHistory summary (count / last date), not the full purchase list.

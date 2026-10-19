@@ -1,6 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
-import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ItemDetail_ShoppingListItemFragmentDoc } from '#features/shoppingList/screens/ItemDetail.generated';
+import { GetShoppingListItemDocument } from './useShoppingListItemDetail.generated';
+import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { useDataState } from '#hooks/data/useDataState';
 

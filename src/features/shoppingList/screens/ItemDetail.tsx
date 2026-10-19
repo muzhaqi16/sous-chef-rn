@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#utils/formatQuantity';
-import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
+import { useShoppingListItemDetail } from './useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#components/atoms/Icon';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
