@@ -107,7 +107,7 @@ const savedRecipeNodes = [
   },
 ];
 
-jest.mock('#features/recipes/hooks/useSavedRecipes', () => ({
+jest.mock('#features/recipes/screens/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(),
 }));
 
@@ -187,7 +187,7 @@ const defaultProps = {
 
 const { useSavedRecipes: mockUseSavedRecipes } = jest.requireMock<{
   useSavedRecipes: jest.Mock;
-}>('#features/recipes/hooks/useSavedRecipes');
+}>('#features/recipes/screens/useSavedRecipes');
 
 describe('AddMealSheet', () => {
   beforeEach(() => {

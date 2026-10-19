@@ -2,7 +2,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+} from '#features/recipes/screens/useSavedRecipes.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';

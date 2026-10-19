@@ -10,10 +10,12 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   AddRecipeToFavoritesDocument,
-  MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
-  type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/screens/useSavedRecipes.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { makeCache } from '#/apollo/cache';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';

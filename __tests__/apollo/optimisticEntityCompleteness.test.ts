@@ -121,11 +121,13 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   AddRecipeToFavoritesDocument,
-  MySavedRecipesDocument,
   GetRecipeDocument,
   type GetRecipeQuery,
-  type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/screens/useSavedRecipes.generated';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,

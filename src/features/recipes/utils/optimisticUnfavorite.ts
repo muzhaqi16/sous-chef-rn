@@ -1,9 +1,8 @@
 import type { ApolloClient, Reference } from '@apollo/client';
-import {
-  MySavedRecipesDocument,
-  RemoveRecipeFromFavoritesDocument,
-  type MySavedRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import type { ModifierDetails } from '@apollo/client/cache';
+import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
+import { readViewerId } from '#features/recipes/cache/favorites';
+import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type SettledFailure,
@@ -11,6 +10,9 @@ import {
 
 // The mutate result settled here. Not generic: nothing here reads the payload.
 type UnfavoriteResult = { data?: unknown; error?: unknown };
+
+/** The saved list as the cache stores it: `null` where the server said so. */
+type StoredList = ConnectionData | null | undefined;
 
 interface OptimisticUnfavoriteArgs {
   client: ApolloClient;
@@ -25,10 +27,10 @@ interface OptimisticUnfavoriteArgs {
 }
 
 /**
- * Un-saves a recipe optimistically. Snapshots `MySavedRecipes` and the recipe's
- * `savedDetails`, then drops the edge before firing so the removal sticks
- * offline and replays idempotently. A failure reverts and is reported once; a
- * queued removal stands. Returns whether the removal was kept.
+ * Un-saves a recipe optimistically. Snapshots the viewer's saved list and the
+ * recipe's `savedDetails`, then drops the edge before firing so the removal
+ * sticks offline and replays idempotently. A failure reverts and is reported
+ * once; a queued removal stands. Returns whether the removal was kept.
  */
 export async function performOptimisticUnfavorite({
   client,
@@ -42,33 +44,37 @@ export async function performOptimisticUnfavorite({
     id: recipeId,
   });
 
-  const savedRecipesSnapshot = client.cache.readQuery<MySavedRecipesQuery>({
-    query: MySavedRecipesDocument,
-  });
+  const viewerId = readViewerId(client.cache);
+  const viewerCacheId = viewerId
+    ? client.cache.identify({ __typename: 'User', id: viewerId })
+    : undefined;
+  // Every cached variant of the list as it was, keyed by its store field.
+  const listSnapshots = new Map<string, StoredList>();
   let savedDetailsSnapshot: Reference | null = null;
 
-  client.cache.updateQuery<MySavedRecipesQuery>(
-    { query: MySavedRecipesDocument },
-    existing => {
-      if (!existing?.me) return existing;
-      return {
-        ...existing,
-        me: {
-          ...existing.me,
-          savedRecipesConnection: {
-            ...existing.me.savedRecipesConnection,
-            edges: existing.me.savedRecipesConnection.edges.filter(
-              edge => edge.node.recipeId !== recipeId,
+  if (viewerCacheId) {
+    // The total falls by one whether or not the recipe's edge is in a loaded
+    // page: the server's count does.
+    client.cache.modify({
+      id: viewerCacheId,
+      fields: {
+        savedRecipesConnection: (
+          existing: StoredList,
+          { readField, storeFieldName }: ModifierDetails,
+        ) => {
+          listSnapshots.set(storeFieldName, existing);
+          if (!existing) return existing;
+          return {
+            ...existing,
+            edges: (existing.edges ?? []).filter(
+              edge => readField('recipeId', edge.node) !== recipeId,
             ),
-            totalCount: Math.max(
-              0,
-              (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-            ),
-          },
+            totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
+          };
         },
-      };
-    },
-  );
+      },
+    });
+  }
   if (recipeCacheId) {
     client.cache.modify<{ savedDetails: Reference | null }>({
       id: recipeCacheId,
@@ -82,10 +88,18 @@ export async function performOptimisticUnfavorite({
   }
 
   const revert = () => {
-    if (savedRecipesSnapshot) {
-      client.cache.writeQuery({
-        query: MySavedRecipesDocument,
-        data: savedRecipesSnapshot,
+    if (viewerCacheId) {
+      client.cache.modify({
+        id: viewerCacheId,
+        fields: {
+          savedRecipesConnection: (
+            existing: StoredList,
+            { storeFieldName }: ModifierDetails,
+          ) =>
+            listSnapshots.has(storeFieldName)
+              ? listSnapshots.get(storeFieldName)
+              : existing,
+        },
       });
     }
     if (recipeCacheId) {

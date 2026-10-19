@@ -23,7 +23,7 @@ import {
 import {
   useSavedRecipes,
   type SavedRecipeNode,
-} from '#features/recipes/hooks/useSavedRecipes';
+} from '#features/recipes/screens/useSavedRecipes';
 import { SavedRecipeRow } from './SavedRecipeRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';

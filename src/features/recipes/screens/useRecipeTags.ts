@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client/react';
-import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
-import { SAVED_RECIPES_PAGE_SIZE } from '#features/recipes/hooks/useSavedRecipes';
+import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
+import { SAVED_RECIPES_PAGE_SIZE } from '#features/recipes/screens/useSavedRecipes';
 
 /**
  * Hook to extract unique tags from user's saved recipes

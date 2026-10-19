@@ -56,7 +56,7 @@ jest.mock('#features/recipes/hooks/useRecipeFolders', () => ({
   useRecipeFolders: jest.fn(() => ({ folders: [] })),
 }));
 
-jest.mock('#features/recipes/hooks/useRecipeTags', () => ({
+jest.mock('#features/recipes/screens/useRecipeTags', () => ({
   useRecipeTags: jest.fn(() => ({ tags: [] })),
 }));
 

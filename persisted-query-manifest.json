@@ -441,6 +441,12 @@
       "body": "query ExpirationNotificationForEvent($id: ID!) {\n  expirationNotification(id: $id) {\n    id\n    ...usePantrySubscriptions_expirationNotification\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_expirationNotification on ExpirationNotification {\n  id\n  expiresOn\n  actionTaken\n  genericNotificationId\n  pantryItem {\n    id\n    item {\n      id\n      name\n      imageUrl\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
+      "id": "60f4de5542df1ee36050dfddff2405e12f14ca69a0c30c99e69cd2c8084df945",
+      "name": "FavoritesViewer",
+      "type": "query",
+      "body": "query FavoritesViewer {\n  me {\n    id\n    __typename\n  }\n}"
+    },
+    {
       "id": "c3fab8637be3bdb75441dcdbc11f43363b365637ad0e731c39e0a2c552ec5679",
       "name": "ForkRecipe",
       "type": "mutation",

@@ -26,7 +26,7 @@ import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeS
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 import { useAddToMealPlanSheet } from '#features/mealPlan/hooks/useAddToMealPlanSheet';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
-import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
+import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 

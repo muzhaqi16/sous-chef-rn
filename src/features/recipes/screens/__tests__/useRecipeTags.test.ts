@@ -3,7 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { useRecipeTags } from '../useRecipeTags';
 
 beforeEach(() => {

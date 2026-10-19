@@ -5,7 +5,7 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+} from '#features/recipes/screens/useSavedRecipes.generated';
 import {
   SavedRecipeCard_SavedRecipeFragmentDoc,
   type SavedRecipeCard_SavedRecipeFragment,
