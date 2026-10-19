@@ -114,8 +114,9 @@ const PRESIGN_FIELDS = [
   { name: 'x-amz-signature', value: 'sig' },
 ];
 
-const recordPresign = () =>
+const recordPresign = ({ held = false }: { held?: boolean } = {}) =>
   recordMock(CreateImageUploadUrlDocument, {
+    held,
     data: {
       createImageUploadUrl: {
         __typename: 'CreateImageUploadUrlPayload',
@@ -286,9 +287,9 @@ describe('useImageUpload', () => {
     });
 
     it('starts no transfer when the screen goes during the presign', async () => {
-      const presign = recordPresign();
+      const presign = recordPresign({ held: true });
       const { result, unmount } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [{ ...presign.mock, delay: 20 }],
+        operationMocks: [presign.mock],
       });
 
       let uploading: Promise<string | null> = Promise.resolve(null);
@@ -298,7 +299,9 @@ describe('useImageUpload', () => {
           ImageUploadPurpose.ReceiptPhoto,
         );
       });
+      await waitFor(() => expect(presign.fired).toHaveLength(1));
       unmount();
+      presign.release();
 
       await expect(uploading).rejects.toThrow('Upload was cancelled');
       expect(mockXhr.open).not.toHaveBeenCalled();

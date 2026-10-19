@@ -41,15 +41,15 @@ const found = (
   },
 });
 
-/** Answers the store search for `term` only, after `delay` ms when given. */
+/** Answers the store search for `term` only; a `held` one, never. */
 const searchFor = (
   term: string,
   stores: MockDataFor<typeof SearchStoresDocument>,
-  delay?: number,
+  { held = false }: { held?: boolean } = {},
 ): RecordedMock =>
   recordMock(SearchStoresDocument, {
     data: stores,
-    delay,
+    held,
     match: vars => vars.search === term,
   });
 
@@ -183,7 +183,7 @@ describe('StoreAutocompleteField', () => {
   });
 
   it('offers nothing while the search for the typed name runs', async () => {
-    const running = searchFor('East End', found(), Infinity);
+    const running = searchFor('East End', found(), { held: true });
     renderField('inline', searchFor('Ea', found('Eastgate')), running);
     const input = screen.getByTestId('store-field');
 

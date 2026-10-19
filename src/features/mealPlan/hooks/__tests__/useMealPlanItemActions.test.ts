@@ -599,7 +599,7 @@ describe('useMealPlanItemActions', () => {
   });
 
   describe('deleteItem', () => {
-    const deleted = (delay?: number) =>
+    const deleted = (held = false) =>
       recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
@@ -607,7 +607,7 @@ describe('useMealPlanItemActions', () => {
             mealPlanItem: { id: 'mpi-1' },
           },
         },
-        ...(delay === undefined ? {} : { delay }),
+        held,
       });
 
     it('claims the row against subscription echoes while the delete is in flight', async () => {
@@ -615,7 +615,7 @@ describe('useMealPlanItemActions', () => {
       // because this registers; without it a stale ITEM_ADDED for the same id
       // re-adds the meal after the optimistic removal.
       const claim = jest.spyOn(subscriptionService, 'registerPendingDelete');
-      const del = deleted(20);
+      const del = deleted(true);
 
       const { result } = renderActions([del.mock]);
 
@@ -638,6 +638,7 @@ describe('useMealPlanItemActions', () => {
       expect(MEAL_PLAN_ITEMS_FIELD).toBe('mealPlanItemsConnection');
 
       await act(async () => {
+        del.release();
         await pending;
       });
 
@@ -646,7 +647,7 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('takes the meal off the plan before the server answers, and returns true on success', async () => {
-      const del = deleted(20);
+      const del = deleted(true);
       const cache = seedPlan([fullItem(), fullItem({ id: 'mpi-2' })]);
       const { result } = renderActions([del.mock], cache);
 
@@ -659,6 +660,7 @@ describe('useMealPlanItemActions', () => {
 
       let removed: boolean | undefined;
       await act(async () => {
+        del.release();
         removed = await pending;
       });
 

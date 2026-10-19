@@ -7,6 +7,7 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import {
+  holdMock,
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
@@ -47,12 +48,8 @@ const weekPlan = (name: string): CreateMealPlanInput => ({
 
 const createAnswering = (
   createMealPlan: MockDataFor<typeof CreateMealPlanDocument>['createMealPlan'],
-  delay?: number,
-) =>
-  recordMock(CreateMealPlanDocument, {
-    data: { createMealPlan },
-    ...(delay === undefined ? {} : { delay }),
-  });
+  { held = false }: { held?: boolean } = {},
+) => recordMock(CreateMealPlanDocument, { data: { createMealPlan }, held });
 
 const deleteAnswering = (
   deleteMealPlan: MockDataFor<typeof DeleteMealPlanDocument>['deleteMealPlan'],
@@ -97,10 +94,9 @@ describe('useMealPlanActions', () => {
   });
 
   it('createMealPlan holds the minted id unconfirmed until the server answers', async () => {
-    // Well past waitFor's 50ms poll, so the in-flight read lands before the answer.
     const create = createAnswering(
       { __typename: 'CreateMealPlanPayload' },
-      1000,
+      { held: true },
     );
     const { result } = renderActions([create.mock]);
 
@@ -117,6 +113,7 @@ describe('useMealPlanActions', () => {
     expect(unconfirmedCreates.has(id)).toBe(true);
 
     await act(async () => {
+      create.release();
       await pending;
     });
 
@@ -216,12 +213,15 @@ describe('useMealPlanActions', () => {
     expect(readPlan(cache)).toMatchObject({ name: 'Updated', version: 4 });
   });
 
-  /** A hand-built answer to `UpdateMealPlan`, recording what it was sent. */
+  /**
+   * A hand-built answer to `UpdateMealPlan`, recording what it was sent and
+   * held until `release()`.
+   */
   const updateAnswering = (
     result: MockFor<typeof UpdateMealPlanDocument>['result'],
   ) => {
     const fired: Array<Record<string, unknown>> = [];
-    const mock: MockFor<typeof UpdateMealPlanDocument> = {
+    const { mock, release } = holdMock<MockFor<typeof UpdateMealPlanDocument>>({
       request: {
         query: UpdateMealPlanDocument,
         variables: vars => {
@@ -229,10 +229,9 @@ describe('useMealPlanActions', () => {
           return true;
         },
       },
-      delay: 20,
       result,
-    };
-    return { fired, mock };
+    });
+    return { fired, mock, release };
   };
 
   /** The plan as the server reads it back, holding no meals. */
@@ -318,9 +317,11 @@ describe('useMealPlanActions', () => {
       });
       // Local-first: the rename shows before the server answers.
       await waitFor(() => expect(readPlan(cache)?.name).toBe('Renamed'));
+      expect(update.fired).toHaveLength(1);
 
       let updated: boolean | undefined;
       await act(async () => {
+        update.release();
         updated = await pending;
       });
 

@@ -2,7 +2,11 @@
 
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type RecordedMock,
+} from '#/test-utils/apolloMockProvider';
 import {
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
@@ -255,40 +259,27 @@ describe('usePaginatedShoppingItems', () => {
   });
 
   describe('switching to a list that is not held', () => {
-    const listOneMock = (
-      isPurchased: boolean,
-    ): MockFor<typeof GetShoppingListItemsFilteredDocument> => ({
-      request: {
-        query: GetShoppingListItemsFilteredDocument,
-        variables: vars =>
-          vars.id === 'list-1' && vars.isPurchased === isPurchased,
-      },
-      maxUsageCount: Number.POSITIVE_INFINITY,
-      result: {
+    const listOneMock = (isPurchased: boolean) =>
+      recordMock(GetShoppingListItemsFilteredDocument, {
+        match: vars => vars.id === 'list-1' && vars.isPurchased === isPurchased,
         data: buildConnectionData(
           [{ id: isPurchased ? 'p1' : 'u1', itemName: 'Old', sortOrder: 'a' }],
           undefined,
           undefined,
           isPurchased,
         ),
-      },
-    });
+      }).mock;
 
     const listTwo = (
       isPurchased: boolean,
-      response: { delay: number } | { error: Error },
-    ): MockFor<typeof GetShoppingListItemsFilteredDocument> => ({
-      request: {
-        query: GetShoppingListItemsFilteredDocument,
-        variables: vars =>
-          vars.id === 'list-2' && vars.isPurchased === isPurchased,
-      },
-      maxUsageCount: Number.POSITIVE_INFINITY,
-      ...('error' in response
-        ? { error: response.error }
-        : {
-            delay: response.delay,
-            result: {
+      { held = false, error }: { held?: boolean; error?: Error } = {},
+    ) =>
+      recordMock(GetShoppingListItemsFilteredDocument, {
+        match: vars => vars.id === 'list-2' && vars.isPurchased === isPurchased,
+        held,
+        ...(error
+          ? { error }
+          : {
               data: buildConnectionData(
                 [{ id: 'n1', itemName: 'New', sortOrder: 'a' }],
                 undefined,
@@ -296,13 +287,10 @@ describe('usePaginatedShoppingItems', () => {
                 isPurchased,
                 'list-2',
               ),
-            },
-          }),
-    });
+            }),
+      });
 
-    const renderSwitch = (
-      listTwoMocks: MockFor<typeof GetShoppingListItemsFilteredDocument>[],
-    ) =>
+    const renderSwitch = (listTwoMocks: RecordedMock[]) =>
       renderHookWithApollo(
         ({ listId }: { listId: string }) =>
           usePaginatedShoppingItems({ listId }),
@@ -310,17 +298,16 @@ describe('usePaginatedShoppingItems', () => {
           operationMocks: [
             listOneMock(false),
             listOneMock(true),
-            ...listTwoMocks,
+            ...listTwoMocks.map(page => page.mock),
           ],
           initialProps: { listId: 'list-1' },
         },
       );
 
     it('shows none of the old list while the new one loads', async () => {
-      const { result, rerender } = renderSwitch([
-        listTwo(false, { delay: 50 }),
-        listTwo(true, { delay: 50 }),
-      ]);
+      const unpurchased = listTwo(false, { held: true });
+      const purchased = listTwo(true, { held: true });
+      const { result, rerender } = renderSwitch([unpurchased, purchased]);
       await waitFor(() =>
         expect(result.current.state.purchased.items).toHaveLength(1),
       );
@@ -331,6 +318,10 @@ describe('usePaginatedShoppingItems', () => {
       expect(result.current.state.purchased.items).toEqual([]);
       expect(result.current.state.isTransitioning).toBe(true);
 
+      await act(async () => {
+        unpurchased.release();
+        purchased.release();
+      });
       await waitFor(() =>
         expect(result.current.state.unpurchased.items.map(i => i.id)).toEqual([
           'n1',

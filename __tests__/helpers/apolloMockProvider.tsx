@@ -337,8 +337,6 @@ function isPartial(mock: MockedResponse): boolean {
   return partiallyMockedResponses.has(mock);
 }
 
-/** Mocks whose answers wait for the test's `release()`. */
-const heldMocks = new WeakSet<object>();
 /** The operation `holdingLink` is handing to the mocks, while they match it. */
 let matching: object | null = null;
 /** Each operation a held mock matched, and the release its answer waits for. */
@@ -379,6 +377,14 @@ function holdingLink(): ApolloLink {
       return () => subscription.unsubscribe();
     });
   });
+}
+
+/** The mocks as a link, honouring held ones; for a test that builds its own client too. */
+export function testMockLink(
+  responses: ReadonlyArray<MockedResponse>,
+  options?: MockLink.Options,
+): ApolloLink {
+  return ApolloLink.from([holdingLink(), new MockLink(responses, options)]);
 }
 
 const futureValueMocks = new WeakSet<object>();
@@ -617,19 +623,14 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
     for (const mock of operationMocks) {
       assertDocumentMatchesSchema(mock.request.query);
     }
-    const completed = operationMocks.map(completeMockedResponse);
-    const heldLink = operationMocks.some(mock => heldMocks.has(mock))
-      ? ApolloLink.from([
-          holdingLink(),
-          new MockLink(completed, { showWarnings: false }),
-        ])
-      : undefined;
+    const link = testMockLink(operationMocks.map(completeMockedResponse), {
+      showWarnings: false,
+    });
     return function Wrapper({ children }: { children: ReactNode }) {
       return (
         <MockedProvider
-          {...(heldLink ? { link: heldLink } : { mocks: completed })}
+          link={link}
           cache={cache}
-          showWarnings={false}
           defaultOptions={TEST_DEFAULT_OPTIONS}
         >
           {children as React.ReactElement}
@@ -796,12 +797,10 @@ export interface RecordMockOptions<TData = Record<string, unknown>> {
   dataFor?: (vars: Record<string, unknown>) => DeepPartial<Unmasked<TData>>;
   /** Simulate a network error instead of returning data. */
   error?: Error;
-  /** Delay (ms) before resolving. For an in-flight assertion, `held` instead. */
-  delay?: number;
   /**
    * Answer nothing until the returned `release()`: the request is recorded at
    * once, so a test can assert what stands while it is in flight, however
-   * slow the runner. A delay only makes the window likely.
+   * slow the runner.
    */
   held?: boolean;
   /** Cap on how many times this mock can match. Default: unbounded. */
@@ -1391,8 +1390,7 @@ export function recordMock<
   options: RecordMockOptions<TData> = {},
 ): RecordedMock {
   const fired: Array<Record<string, unknown>> = [];
-  const { data, dataFor, error, delay, held, maxUsageCount, match, partial } =
-    options;
+  const { data, dataFor, error, held, maxUsageCount, match, partial } = options;
 
   // Completion happens per invocation because it needs the variables the
   // operation actually fired with, so `result` is a function even when the
@@ -1406,31 +1404,54 @@ export function recordMock<
     ? { data }
     : undefined;
 
-  let release = () => {};
-  const released = held
-    ? new Promise<void>(resolve => {
-        release = resolve;
-      })
-    : null;
-
-  const mock: MockedResponse = {
+  const recorded: MockedResponse = {
     request: {
       query,
       variables: vars => {
         if (match && !match(vars)) return false;
         fired.push(vars);
-        if (released && matching) heldAnswers.set(matching, released);
         return true;
       },
     },
     maxUsageCount: maxUsageCount ?? Number.POSITIVE_INFINITY,
-    ...(delay !== undefined ? { delay } : {}),
     ...(error ? { error } : { result: result as MockedResponse['result'] }),
   };
 
+  const { mock, release } = held
+    ? holdMock(recorded)
+    : { mock: recorded, release: () => {} };
   if (partial) markPartial(mock);
-  if (held) heldMocks.add(mock);
   return { fired, mock, release };
+}
+
+/**
+ * A hand-built mock whose answers wait for `release()`, as `recordMock`'s
+ * `held` does: for a response `recordMock` cannot state, such as top-level
+ * `errors`. It must match by function, the form a held answer is claimed in.
+ */
+export function holdMock<T extends MockedResponse>(
+  mock: T,
+): { mock: T; release: () => void } {
+  const { variables } = mock.request;
+  if (typeof variables !== 'function') {
+    throw new Error('holdMock needs a mock that matches by a variables function');
+  }
+  let release = () => {};
+  const released = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const held: T = {
+    ...mock,
+    request: {
+      ...mock.request,
+      variables: (vars: Record<string, unknown>) => {
+        const matches = variables(vars);
+        if (matches && matching) heldAnswers.set(matching, released);
+        return matches;
+      },
+    },
+  };
+  return { mock: held, release };
 }
 
 /** The `input` an operation fired with; throws when it fired without one. */

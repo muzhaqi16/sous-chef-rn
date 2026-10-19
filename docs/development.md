@@ -329,8 +329,10 @@ code relies on.
   `expect(fired).toContainEqual({ … })`.
 - **An in-flight assertion holds the answer, never delays it.** `held: true`
   records the request at once and answers only after `release()`, so what
-  stands while it is in flight is asserted however slow the runner; a `delay`
-  only makes the window likely, and a loaded CI runner closes it.
+  stands while it is in flight is asserted however slow the runner; a delay
+  only makes the window likely, and a loaded CI runner closes it. A hand-built
+  mock (top-level `errors`) is held with `holdMock(mock)`; a test that builds
+  its own client takes `testMockLink(responses)`.
 - **`seedCache(entries)`** — pre-writes entities into a fresh PRODUCTION cache
   (`makeCache()`, not a bare `InMemoryCache`) so hooks that call
   `useApolloClient().cache.readFragment(…)` find them, and find them through the

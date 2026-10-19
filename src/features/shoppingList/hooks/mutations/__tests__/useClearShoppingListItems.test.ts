@@ -1,7 +1,9 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { act } from '@testing-library/react-native';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
@@ -35,78 +37,35 @@ function createItem(overrides: Partial<TestClearItem> = {}): TestClearItem {
   };
 }
 
-function createClearMock(
-  recorded: Array<Record<string, unknown>>,
-  delay = 0,
-): MockFor<typeof RemoveItemsFromShoppingListDocument> {
-  return {
-    request: {
-      query: RemoveItemsFromShoppingListDocument,
-      variables: vars => {
-        recorded.push(vars);
-        return true;
+const clearing = ({ held = false }: { held?: boolean } = {}) =>
+  recordMock(RemoveItemsFromShoppingListDocument, {
+    held,
+    data: {
+      removeItemsFromShoppingList: {
+        __typename: 'RemoveItemsFromShoppingListPayload',
+        summary: { total: 1, succeeded: 1, failed: 0, skipped: 0 },
+        shoppingListItems: [{ id: 'item-1' }],
       },
     },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-    delay,
-    result: {
-      data: {
-        removeItemsFromShoppingList: {
-          __typename: 'RemoveItemsFromShoppingListPayload',
-          summary: {
-            total: 1,
-            succeeded: 1,
-            failed: 0,
-            skipped: 0,
-            executionTime: 0,
-          },
-          shoppingListItems: [{ id: 'item-1' }],
-        },
-      },
-    },
-  };
-}
+  });
 
-function createRejectedClearMock(): MockFor<
-  typeof RemoveItemsFromShoppingListDocument
-> {
-  return {
-    request: {
-      query: RemoveItemsFromShoppingListDocument,
-      variables: () => true,
-    },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-    result: {
-      data: {
-        removeItemsFromShoppingList: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          message: 'nope',
-          field: 'ids',
-        },
+const refusedClear = () =>
+  recordMock(RemoveItemsFromShoppingListDocument, {
+    data: {
+      removeItemsFromShoppingList: {
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        message: 'nope',
+        field: 'ids',
       },
     },
-  };
-}
+  }).mock;
 
 describe('useClearShoppingListItems', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
-  it('returns clearItems function', () => {
-    const { result } = renderHookWithApollo(() =>
-      useClearShoppingListItems({
-        listId: 'list-1',
-        unpurchasedItems: [],
-        purchasedItems: [],
-        refetch: mockRefetch,
-      }),
-    );
-
-    expect(typeof result.current.clearItems).toBe('function');
-  });
-
   it('does nothing when listId is null', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
+    const clear = clearing();
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -115,19 +74,19 @@ describe('useClearShoppingListItems', () => {
           purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createClearMock(recorded)] },
+      { operationMocks: [clear.mock] },
     );
 
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    expect(recorded).toEqual([]);
+    expect(clear.fired).toEqual([]);
     expect(mockClearAllPurchased).not.toHaveBeenCalled();
   });
 
   it('does nothing when no target items exist (purchased=true but none purchased)', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
+    const clear = clearing();
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -138,19 +97,19 @@ describe('useClearShoppingListItems', () => {
           purchasedItems: [],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createClearMock(recorded)] },
+      { operationMocks: [clear.mock] },
     );
 
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    expect(recorded).toEqual([]);
+    expect(clear.fired).toEqual([]);
     expect(mockClearAllPurchased).not.toHaveBeenCalled();
   });
 
   it('clears purchased items from cache and fires mutation', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
+    const clear = clearing();
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -164,7 +123,7 @@ describe('useClearShoppingListItems', () => {
           ],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createClearMock(recorded)] },
+      { operationMocks: [clear.mock] },
     );
 
     await act(async () => {
@@ -179,7 +138,7 @@ describe('useClearShoppingListItems', () => {
 
     // P2-16: the mutation replays the exact captured ids (matching the
     // optimistically-cleared set), not a re-evaluated `purchased` filter.
-    expect(recorded).toContainEqual({
+    expect(clear.fired).toContainEqual({
       input: {
         shoppingListId: 'list-1',
         ids: ['item-1', 'item-3'],
@@ -188,7 +147,7 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('clears unpurchased items from cache and fires mutation', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
+    const clear = clearing();
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -202,7 +161,7 @@ describe('useClearShoppingListItems', () => {
           ],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createClearMock(recorded)] },
+      { operationMocks: [clear.mock] },
     );
 
     await act(async () => {
@@ -216,7 +175,7 @@ describe('useClearShoppingListItems', () => {
     );
 
     // P2-16: id-based replay, matching the optimistically-cleared set.
-    expect(recorded).toContainEqual({
+    expect(clear.fired).toContainEqual({
       input: {
         shoppingListId: 'list-1',
         ids: ['item-1', 'item-3'],
@@ -225,10 +184,9 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('prevents concurrent calls via isClearingRef guard', async () => {
-    // Use a long delay on the mock so the first call is in flight when the
-    // second call tries to start. The isClearingRef guard should reject the
-    // second call without firing a second mutation.
-    const recorded: Array<Record<string, unknown>> = [];
+    // The first clear is held in flight while the second starts: the
+    // isClearingRef guard rejects it without firing a second mutation.
+    const clear = clearing({ held: true });
     const { result } = renderHookWithApollo(
       () =>
         useClearShoppingListItems({
@@ -239,20 +197,24 @@ describe('useClearShoppingListItems', () => {
           ],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createClearMock(recorded, 100)] },
+      { operationMocks: [clear.mock] },
     );
 
-    const firstCall = act(async () => {
-      await result.current.clearItems(true);
+    let first: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      first = result.current.clearItems(true);
     });
+    await waitFor(() => expect(clear.fired).toHaveLength(1));
 
     await act(async () => {
       await result.current.clearItems(true);
     });
+    await act(async () => {
+      clear.release();
+      await first;
+    });
 
-    await firstCall;
-
-    expect(recorded).toHaveLength(1);
+    expect(clear.fired).toHaveLength(1);
   });
 
   it('alerts and refetches when the clear is rejected (union error)', async () => {
@@ -266,7 +228,7 @@ describe('useClearShoppingListItems', () => {
           ],
           refetch: mockRefetch,
         }),
-      { operationMocks: [createRejectedClearMock()] },
+      { operationMocks: [refusedClear()] },
     );
 
     await act(async () => {

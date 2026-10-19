@@ -97,8 +97,8 @@ describe('usePantryItemDetailData', () => {
 });
 
 describe('usePantryItemDetailData: an item the server holds nothing for', () => {
-  const noSuchItem = (delay?: number) =>
-    recordMock(GetPantryItemDocument, { data: { pantryItem: null }, delay });
+  const noSuchItem = (held = false) =>
+    recordMock(GetPantryItemDocument, { data: { pantryItem: null }, held });
 
   /** The read refused top-level, with no data. */
   const refusedWith = (
@@ -144,11 +144,13 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
   });
 
   it('waits for the read to settle before calling the item removed', async () => {
-    const { result } = renderDetail(noSuchItem(30).mock);
+    const item = noSuchItem(true);
+    const { result } = renderDetail(item.mock);
 
     expect(result.current.itemLoading).toBe(true);
     expect(result.current.deletedOnServer).toBe(false);
 
+    await act(async () => item.release());
     await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
   });
 

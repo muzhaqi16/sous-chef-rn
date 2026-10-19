@@ -98,7 +98,7 @@ const DEFAULT_HOME_DATA: HomeData = {
 
 function getHomeMock(
   data: HomeData = DEFAULT_HOME_DATA,
-  options: { delay?: number } = {},
+  options: { held?: boolean } = {},
 ): MockedResponse {
   return recordMock(GetHomeDocument, { data, ...options }).mock;
 }
@@ -256,7 +256,7 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('transferOwnership', () => {
-    const refusedTransfer = (delay?: number) =>
+    const refusedTransfer = (held = false) =>
       recordMock(TransferHomeOwnershipDocument, {
         data: {
           transferHomeOwnership: {
@@ -264,7 +264,7 @@ describe('useHomeDetailManagement', () => {
             code: ErrorCode.Forbidden,
           },
         },
-        ...(delay === undefined ? {} : { delay }),
+        held,
       });
 
     it('fires transferHomeOwnership and returns false on a rejection', async () => {
@@ -283,7 +283,7 @@ describe('useHomeDetailManagement', () => {
     });
 
     it('refuses a second transfer while the first is in flight', async () => {
-      const transfer = refusedTransfer(50);
+      const transfer = refusedTransfer(true);
       const { result } = await renderLoaded([transfer.mock]);
       expect(result.current.transferringOwnership).toBe(false);
 
@@ -298,6 +298,7 @@ describe('useHomeDetailManagement', () => {
       expect(result.current.transferringOwnership).toBe(true);
 
       await act(async () => {
+        transfer.release();
         await first;
       });
 
@@ -655,7 +656,7 @@ describe('useHomeDetailManagement', () => {
     it('returns loading true when query is loading', () => {
       const { result } = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
-        { operationMocks: [getHomeMock(DEFAULT_HOME_DATA, { delay: 1000 })] },
+        { operationMocks: [getHomeMock(DEFAULT_HOME_DATA, { held: true })] },
       );
 
       expect(result.current.loading).toBe(true);

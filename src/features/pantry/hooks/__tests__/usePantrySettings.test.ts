@@ -125,7 +125,7 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
           pantry: { __typename: 'Pantry', id: 'pantry-1', version: 6 },
         },
       },
-      delay: 20,
+      held: true,
     });
     const save = recordMock(UpdatePantryDocument, {
       dataFor: (vars): MockDataFor<typeof UpdatePantryDocument> => ({
@@ -144,14 +144,23 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
       { operationMocks: [markDefaultMock.mock, save.mock], cache },
     );
 
+    let both: Promise<unknown> = Promise.resolve();
     await act(async () => {
-      await Promise.all([
+      both = Promise.all([
         result.current.setDefault('pantry-1'),
         result.current.savePantryFields('pantry-1', {
           name: 'Kitchen',
           description: '',
         }),
       ]);
+    });
+    // The save waits for the toggle's answer.
+    expect(markDefaultMock.fired).toHaveLength(1);
+    expect(save.fired).toEqual([]);
+
+    await act(async () => {
+      markDefaultMock.release();
+      await both;
     });
 
     expect(save.fired).toEqual([

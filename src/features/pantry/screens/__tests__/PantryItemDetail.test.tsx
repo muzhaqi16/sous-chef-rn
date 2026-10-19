@@ -457,7 +457,7 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [
         recordMock(GetPantryItemDocument, {
           data: pantryItemData(fullItem),
-          delay: 1000,
+          held: true,
         }).mock,
       ],
     });

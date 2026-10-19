@@ -66,7 +66,7 @@ beforeEach(() => {
 function lookupMock(
   by: 'upc' | 'sku',
   answer: LookupNode[] | Error,
-  options: { delay?: number; maxUsageCount?: number } = {},
+  options: { held?: boolean; maxUsageCount?: number } = {},
 ) {
   return recordMock(ItemByLookupDocument, {
     match: vars =>
@@ -326,7 +326,7 @@ describe('useSearchResults', () => {
     // Between the UPC miss and the SKU answer nothing is known yet: neither an
     // empty result nor a miss may show.
     it('stays loading until the SKU lookup answers', async () => {
-      const sku = lookupMock('sku', [], { delay: 200 });
+      const sku = lookupMock('sku', [], { held: true });
       const { result } = renderHookWithApollo(
         () => useSearchResults('UNKNOWN'),
         { operationMocks: [lookupMock('upc', []).mock, sku.mock] },
@@ -336,6 +336,7 @@ describe('useSearchResults', () => {
       expect(result.current.loading).toBe(true);
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
 
+      await act(async () => sku.release());
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(mockShowBottomSheet).toHaveBeenCalled();
     });
