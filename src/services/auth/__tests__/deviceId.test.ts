@@ -1,82 +1,90 @@
-import { isStorageReady, isRecoveryStorage, storage } from '#/storage/mmkv';
-import { loadDeviceId, saveDeviceId } from '#/storage/keychain';
+import { storage } from '#/store/deviceStorage';
+import { requirePlatform } from '#platform/install';
 
-jest.mock('#/storage/mmkv');
-jest.mock('#/storage/keychain', () => ({
-  loadDeviceId: jest.fn(),
-  saveDeviceId: jest.fn(),
-}));
+const storageReady = jest.spyOn(storage, 'isReady');
+const recoveryMode = jest.spyOn(storage, 'isRecovery');
+const storageSet = jest.spyOn(storage, 'set');
 
-const { __mockStore } = jest.requireMock<{
-  __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
-}>('#/storage/mmkv');
+/** What device storage holds, seeded without counting as the code's write. */
+const disk = {
+  seed: (key: string, value: string) => {
+    storage.set(key, value);
+    storageSet.mockClear();
+  },
+  get: (key: string) => storage.getString(key),
+  has: (key: string) => storage.contains(key),
+  size: () => storage.getAllKeys().length,
+};
 
-const mockLoad = loadDeviceId as jest.MockedFunction<typeof loadDeviceId>;
-const mockSave = saveDeviceId as jest.MockedFunction<typeof saveDeviceId>;
+const secureStore = requirePlatform('secureStore');
+const mockLoad = jest.spyOn(secureStore, 'loadDeviceId');
+const mockSave = jest.spyOn(secureStore, 'saveDeviceId');
 
 // The module memoizes, so each case re-imports it to start from a cold cache.
 const loadModule = () => {
-  let mod!: typeof import('#/storage/deviceId');
+  let mod!: typeof import('#/services/auth/deviceId');
   jest.isolateModules(() => {
-    mod = require('#/storage/deviceId');
+    mod = require('#/services/auth/deviceId');
   });
   return mod;
 };
 
 beforeEach(() => {
-  __mockStore.clear();
+  storage.clearAll();
   jest.clearAllMocks();
-  (isStorageReady as jest.Mock).mockReturnValue(true);
-  (isRecoveryStorage as jest.Mock).mockReturnValue(false);
+  storageReady.mockReturnValue(true);
+  recoveryMode.mockReturnValue(false);
   mockLoad.mockResolvedValue({ status: 'absent' });
   mockSave.mockResolvedValue(true);
 });
 
 describe('getDeviceId', () => {
   it('returns null before storage opens', () => {
-    (isStorageReady as jest.Mock).mockReturnValue(false);
+    storageReady.mockReturnValue(false);
 
     expect(loadModule().getDeviceId()).toBeNull();
   });
 
   it('mints nothing, so a cold cache reads as absent rather than as a new device', () => {
     expect(loadModule().getDeviceId()).toBeNull();
-    expect(storage.set).not.toHaveBeenCalled();
-    expect(__mockStore.size).toBe(0);
+    expect(storageSet).not.toHaveBeenCalled();
+    expect(disk.size()).toBe(0);
   });
 
   it('reads back a value an earlier launch stored', () => {
-    __mockStore.set('device_id', 'device_stored');
+    disk.seed('device_id', 'device_stored');
 
     expect(loadModule().getDeviceId()).toBe('device_stored');
-    expect(storage.set).not.toHaveBeenCalled();
+    expect(storageSet).not.toHaveBeenCalled();
   });
 
   it('memoizes, so the header path pays one storage read per launch', () => {
-    __mockStore.set('device_id', 'device_stored');
+    disk.seed('device_id', 'device_stored');
     const { getDeviceId } = loadModule();
+    const read = jest.spyOn(storage, 'getString');
 
     expect(getDeviceId()).toBe(getDeviceId());
-    expect(storage.getString).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    read.mockRestore();
   });
 
   // The recovery instance opens unencrypted when the device key is unavailable
   // and is erased on the next healthy launch, so a value read or written there
   // belongs to no install.
   it('reports absent on the recovery instance rather than reading it', () => {
-    __mockStore.set('device_id', 'device_from_a_discarded_file');
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    disk.seed('device_id', 'device_from_a_discarded_file');
+    recoveryMode.mockReturnValue(true);
 
     expect(loadModule().getDeviceId()).toBeNull();
   });
 
   it('writes nothing to the recovery instance', () => {
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    recoveryMode.mockReturnValue(true);
 
     loadModule().getDeviceId();
 
-    expect(storage.set).not.toHaveBeenCalled();
-    expect(__mockStore.size).toBe(0);
+    expect(storageSet).not.toHaveBeenCalled();
+    expect(disk.size()).toBe(0);
   });
 
   it('is at most 128 characters, past which the server reads it as absent', async () => {
@@ -91,21 +99,21 @@ describe('ensureDeviceId', () => {
     const id = await loadModule().ensureDeviceId();
 
     expect(id).toEqual(expect.stringMatching(/^device_/));
-    expect(__mockStore.get('device_id')).toBe(id);
+    expect(disk.get('device_id')).toBe(id);
     expect(mockSave).toHaveBeenCalledWith(id);
   });
 
   it('reaches durable storage before it reaches the mirror', async () => {
     let mirroredAtSaveTime: boolean | null = null;
     mockSave.mockImplementation(async () => {
-      mirroredAtSaveTime = __mockStore.has('device_id');
+      mirroredAtSaveTime = disk.has('device_id');
       return true;
     });
 
     const id = await loadModule().ensureDeviceId();
 
     expect(mirroredAtSaveTime).toBe(false);
-    expect(__mockStore.get('device_id')).toBe(id);
+    expect(disk.get('device_id')).toBe(id);
   });
 
   it('restores the identifier the keychain holds when the mirror is empty', async () => {
@@ -114,12 +122,12 @@ describe('ensureDeviceId', () => {
     const id = await loadModule().ensureDeviceId();
 
     expect(id).toBe('device_durable');
-    expect(__mockStore.get('device_id')).toBe('device_durable');
+    expect(disk.get('device_id')).toBe('device_durable');
     expect(mockSave).not.toHaveBeenCalled();
   });
 
   it('writes an install that predates the keychain copy through to it', async () => {
-    __mockStore.set('device_id', 'device_stored');
+    disk.seed('device_id', 'device_stored');
 
     const id = await loadModule().ensureDeviceId();
 
@@ -129,13 +137,13 @@ describe('ensureDeviceId', () => {
   });
 
   it('serves the durable identifier during a storage outage without mirroring it', async () => {
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    recoveryMode.mockReturnValue(true);
     mockLoad.mockResolvedValue({ status: 'ok', deviceId: 'device_durable' });
 
     const id = await loadModule().ensureDeviceId();
 
     expect(id).toBe('device_durable');
-    expect(storage.set).not.toHaveBeenCalled();
+    expect(storageSet).not.toHaveBeenCalled();
   });
 
   it('does not mint when the durable read fails', async () => {
@@ -143,8 +151,8 @@ describe('ensureDeviceId', () => {
 
     expect(await loadModule().ensureDeviceId()).toBeNull();
     expect(mockSave).not.toHaveBeenCalled();
-    expect(storage.set).not.toHaveBeenCalled();
-    expect(__mockStore.size).toBe(0);
+    expect(storageSet).not.toHaveBeenCalled();
+    expect(disk.size()).toBe(0);
   });
 
   it('presents the identifier the device already had once the read recovers', async () => {
@@ -160,11 +168,11 @@ describe('ensureDeviceId', () => {
   });
 
   it('does not mint when neither store would hold the value', async () => {
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    recoveryMode.mockReturnValue(true);
     mockSave.mockResolvedValue(false);
 
     expect(await loadModule().ensureDeviceId()).toBeNull();
-    expect(storage.set).not.toHaveBeenCalled();
+    expect(storageSet).not.toHaveBeenCalled();
   });
 
   it('mints once for concurrent callers', async () => {
@@ -182,12 +190,12 @@ describe('ensureDeviceId', () => {
   });
 
   it('retries after a hydration that resolved nothing', async () => {
-    (isStorageReady as jest.Mock).mockReturnValue(false);
+    storageReady.mockReturnValue(false);
     mockSave.mockResolvedValue(false);
     const { ensureDeviceId } = loadModule();
     expect(await ensureDeviceId()).toBeNull();
 
-    (isStorageReady as jest.Mock).mockReturnValue(true);
+    storageReady.mockReturnValue(true);
     mockSave.mockResolvedValue(true);
 
     expect(await ensureDeviceId()).toEqual(expect.stringMatching(/^device_/));
@@ -205,7 +213,7 @@ describe('ensureDeviceId', () => {
 
 describe('the superseded identifier', () => {
   it('is readable while the row it named still exists', () => {
-    __mockStore.set('device_fingerprint', 'android-oldfingerprint');
+    disk.seed('device_fingerprint', 'android-oldfingerprint');
 
     expect(loadModule().readLegacyDeviceFingerprint()).toBe(
       'android-oldfingerprint',
@@ -217,20 +225,20 @@ describe('the superseded identifier', () => {
   });
 
   it('reads as absent from a store whose contents are discarded', () => {
-    __mockStore.set('device_fingerprint', 'android-oldfingerprint');
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    disk.seed('device_fingerprint', 'android-oldfingerprint');
+    recoveryMode.mockReturnValue(true);
 
     expect(loadModule().readLegacyDeviceFingerprint()).toBeNull();
   });
 
   it('is removed once the row it named is retired', () => {
-    __mockStore.set('device_fingerprint', 'android-oldfingerprint');
+    disk.seed('device_fingerprint', 'android-oldfingerprint');
     const mod = loadModule();
 
     mod.clearLegacyDeviceFingerprint();
 
     expect(mod.readLegacyDeviceFingerprint()).toBeNull();
-    expect(__mockStore.has('device_fingerprint')).toBe(false);
+    expect(disk.has('device_fingerprint')).toBe(false);
   });
 });
 
@@ -266,7 +274,7 @@ describe('the registered locale', () => {
   });
 
   it('is always new where nothing survives to compare with', () => {
-    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    recoveryMode.mockReturnValue(true);
     const mod = loadModule();
 
     expect(mod.recordRegisteredLocale('en-US')).toBe(true);

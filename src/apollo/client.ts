@@ -17,7 +17,7 @@ import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
-import { isStorageReady } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
 import { createRefetchEventManager } from './refetchEvents';
@@ -55,12 +55,12 @@ let cacheRestored = false;
 
 /**
  * Restore the persisted cache. Idempotent — the first call finding storage ready
- * does the work; it cannot run at module load, since `initializeSecureStorage()`
- * is async and this module is imported inside that window. Must run BEFORE
+ * does the work; it cannot run at module load, since device storage opens
+ * asynchronously and this module is imported inside that window. Must run BEFORE
  * `ApolloProvider` mounts, as `restore()` replaces contents wholesale.
  */
 export function restorePersistedCache(): void {
-  if (cacheRestored || !cacheInstance || !isStorageReady()) {
+  if (cacheRestored || !cacheInstance || !storage.isReady()) {
     return;
   }
   cacheRestored = true;

@@ -18,7 +18,7 @@ jest.mock('#store', () => ({
 jest.mock('#/config/env', () => ({
   env: { API_KEY: 'test-api-key' },
 }));
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 jest.mock('../../logoutCleanup', () => ({
@@ -33,7 +33,7 @@ import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { proactiveTokenRefresh } from '../refreshToken';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import {
   LoginDocument,
   RefreshTokenDocument,

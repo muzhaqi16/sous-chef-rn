@@ -65,7 +65,7 @@ import {
   validateDeviceInformation,
   type DeviceInformation,
 } from '../deviceInfo';
-import { storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 
 describe('deviceInfo', () => {
   const originalPlatformOS = Platform.OS;

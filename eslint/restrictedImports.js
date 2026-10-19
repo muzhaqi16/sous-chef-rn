@@ -10,11 +10,11 @@ const MMKV_MESSAGE =
 
 const RESTRICTED_IMPORT_PATHS = [
   {
-    name: '#storage/mmkv',
+    name: '#store/deviceStorage',
     message: MMKV_MESSAGE,
   },
   {
-    name: '#/storage/mmkv',
+    name: '#/store/deviceStorage',
     message: MMKV_MESSAGE,
   },
   // The raw scroller gives a sheet the keyboard offset but NOT the input

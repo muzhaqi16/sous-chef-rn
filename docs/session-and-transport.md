@@ -65,16 +65,22 @@ delivery with no re-registration.
 What the server cannot see is a session the client drops without telling it.
 The `refresh-token-revoke` step (`src/services/auth/refreshTokenRevocation.ts`)
 therefore parks the refresh token (plus the access token, which `/revoke`
-denylists) in the keychain and then `POST /revoke`s it. Parking comes first, so
+denylists) in the platform's secure store and then `POST /revoke`s it. Parking comes first, so
 a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
 network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
 parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
 time, stopping at the first unanswered request. The step is fire-and-forget: a
 sign-out never waits on the network. `/revoke` needs no access token and is
 idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`
-end, for one, can leave the lineage live. A launch that finds keychain tokens
+end, for one, can leave the lineage live. A launch that finds stored tokens
 behind an empty store (an iOS reinstall) parks them the same way before clearing
 them.
+
+Session tokens, the durable copy of the device id and the parked revocations
+all go through the `secureStore` platform service (`requirePlatform('secureStore')`).
+On mobile it is the OS keychain (`src/native/storage/keychain.ts`, adapted in
+`secureStore.ts` beside it); stored logins and biometrics stay in that module
+and are mobile-only.
 
 `/revoke` deliberately leaves the device credential exchangeable, so the
 settings sign-out keeps biometric sign-in working.

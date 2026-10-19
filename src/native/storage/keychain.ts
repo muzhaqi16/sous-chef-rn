@@ -11,7 +11,12 @@ import {
   resetInternetCredentials,
   type SetOptions,
 } from 'react-native-keychain';
-import { jwtDecode } from 'jwt-decode';
+import type {
+  DeviceIdLoadResult,
+  PendingRevocation,
+  SessionTokenLoadResult,
+  SessionTokens,
+} from '#platform/ports';
 import { logger } from '#/utils/environment';
 import { backoffDelay, sleep } from '#/utils/backoff';
 import { t } from '#/i18n';
@@ -387,42 +392,6 @@ export async function clearTempRegistrationPassword(): Promise<void> {
 // start reads them unprompted; AFTER_FIRST_UNLOCK lets background work read
 // them while the device is locked.
 
-export interface SessionTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export type SessionTokenLoadResult =
-  | { status: 'ok'; tokens: SessionTokens }
-  | { status: 'absent' }
-  | { status: 'error' };
-
-/** Issue time (`iat`, seconds) of a refresh-token JWT; 0 when undecodable. */
-const refreshTokenIssuedAt = (refreshToken: string): number => {
-  try {
-    const { iat } = jwtDecode<{ iat?: number }>(refreshToken);
-    return typeof iat === 'number' ? iat : 0;
-  } catch {
-    return 0;
-  }
-};
-
-/**
- * The fresher of two token pairs, by refresh-token issue time. A failed keychain
- * write can strand an already-rotated pair there while MMKV holds the newer one,
- * and restoring the stale pair 401s into a logout. Ties favour `primary`.
- */
-export const pickFresherSessionTokens = (
-  primary: SessionTokens,
-  fallback: SessionTokens | null,
-): SessionTokens => {
-  if (!fallback) return primary;
-  return refreshTokenIssuedAt(fallback.refreshToken) >
-    refreshTokenIssuedAt(primary.refreshToken)
-    ? fallback
-    : primary;
-};
-
 // Serialized pair confirmed to be in the keychain. Lets saveSessionTokens
 // skip re-writing identical data — setGenericPassword is the slowest
 // keychain op, and the hydration path re-saves the pair it just loaded.
@@ -566,16 +535,6 @@ export async function saveDeviceId(deviceId: string): Promise<boolean> {
   });
 }
 
-/**
- * A read that FAILED is not a read that found nothing: only `absent` may lead to
- * minting, because minting over a durable entry the device still holds strands
- * the credential bound to it.
- */
-export type DeviceIdLoadResult =
-  | { status: 'ok'; deviceId: string }
-  | { status: 'absent' }
-  | { status: 'error' };
-
 async function readDeviceIdOnce(): Promise<RetryableRead<DeviceIdLoadResult>> {
   return queueOperation<RetryableRead<DeviceIdLoadResult>>(async () => {
     let entry;
@@ -605,11 +564,6 @@ export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
 // Refresh tokens of sessions that ended before the server heard: push delivery
 // follows a LIVE session, so each stays a push target until `POST /revoke`
 // lands. Outlives the session on purpose; bounded, oldest dropped.
-
-export interface PendingRevocation {
-  refreshToken: string;
-  accessToken: string | null;
-}
 
 const PENDING_REVOCATIONS_CAP = 10;
 

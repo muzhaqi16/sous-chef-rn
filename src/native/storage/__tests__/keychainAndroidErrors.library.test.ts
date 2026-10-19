@@ -20,7 +20,7 @@ import { join } from 'path';
 
 const ANDROID_SRC = join(
   __dirname,
-  '../../../node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain',
+  '../../../../node_modules/react-native-keychain/android/src/main/java/com/oblador/keychain',
 );
 
 const read = (relative: string): string =>

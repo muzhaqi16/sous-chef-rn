@@ -26,7 +26,6 @@ import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptPhotoConsentStore } from '../../store/receiptPhotoConsentStore';
 import { useReceiptScan } from '../useReceiptScan';
 
-jest.mock('#/storage/mmkv');
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: {
     recognizeAndDelete: jest.fn(),

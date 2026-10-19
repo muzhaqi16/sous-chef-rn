@@ -1,4 +1,4 @@
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { logger } from '#/utils/environment';
 import { isOwnKey } from '#/utils/isOwnKey';
 import type {

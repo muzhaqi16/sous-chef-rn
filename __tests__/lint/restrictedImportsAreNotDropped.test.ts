@@ -60,8 +60,8 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     'react-native-permissions#*',
     'react-native-turbo-image#*',
     // A test asserting on what device storage HOLDS has to read it.
-    '#storage/mmkv#*',
-    '#/storage/mmkv#*',
+    '#store/deviceStorage#*',
+    '#/store/deviceStorage#*',
     // A test computes its expected value with the raw library.
     'fraction.js#*',
     'date-fns#format',
@@ -100,7 +100,10 @@ const ALLOWED_DROPS: Record<string, string[]> = {
   ],
   'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
   // Device storage's writers.
-  'src/apollo/**/*.{ts,tsx}': ['#storage/mmkv#*', '#/storage/mmkv#*'],
+  'src/apollo/**/*.{ts,tsx}': [
+    '#store/deviceStorage#*',
+    '#/store/deviceStorage#*',
+  ],
   // This file IS the wrapper: it composes the raw scroller with the input
   // context, which is the whole reason every other sheet is banned from it.
   'src/components/atoms/BottomSheetFormScrollView.tsx': [

@@ -57,7 +57,7 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),

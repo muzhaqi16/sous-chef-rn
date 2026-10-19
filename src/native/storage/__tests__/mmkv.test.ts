@@ -1,10 +1,4 @@
-import {
-  STORAGE_KEY,
-  storage,
-  zustandStorage,
-  getStorage,
-  initializeSecureStorage,
-} from '../mmkv';
+import { STORAGE_KEY, storage, initializeSecureStorage } from '../mmkv';
 
 // Mock DeviceKeyManager
 jest.mock('#native/storage/deviceKey', () => ({
@@ -44,21 +38,6 @@ describe('mmkv storage', () => {
 
     it('returns undefined for non-existent keys', () => {
       expect(storage.getString('nonexistent')).toBeUndefined();
-    });
-  });
-
-  describe('getStorage', () => {
-    it('returns an MMKV instance', async () => {
-      const instance = await getStorage();
-      expect(instance).toBeDefined();
-      expect(typeof instance.set).toBe('function');
-      expect(typeof instance.getString).toBe('function');
-    });
-
-    it('returns the same instance on subsequent calls (singleton)', async () => {
-      const first = await getStorage();
-      const second = await getStorage();
-      expect(first).toBe(second);
     });
   });
 
@@ -303,32 +282,6 @@ describe('mmkv storage', () => {
       await jest.runAllTimersAsync();
 
       expect(clearAll).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('zustandStorage', () => {
-    it('has setItem, getItem, removeItem methods', () => {
-      expect(typeof zustandStorage.setItem).toBe('function');
-      expect(typeof zustandStorage.getItem).toBe('function');
-      expect(typeof zustandStorage.removeItem).toBe('function');
-    });
-
-    it('setItem stores a value', async () => {
-      await zustandStorage.setItem('zustand-key', 'zustand-value');
-      const value = await zustandStorage.getItem('zustand-key');
-      expect(value).toBe('zustand-value');
-    });
-
-    it('getItem returns null for non-existent keys', async () => {
-      const value = await zustandStorage.getItem('nonexistent-zustand');
-      expect(value).toBeNull();
-    });
-
-    it('removeItem removes a value', async () => {
-      await zustandStorage.setItem('to-remove', 'value');
-      await zustandStorage.removeItem('to-remove');
-      const value = await zustandStorage.getItem('to-remove');
-      expect(value).toBeNull();
     });
   });
 });

@@ -1,18 +1,12 @@
-import { storage, isRecoveryStorage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import type { QueueStore as QueueStoreType } from '#/apollo/offlineQueue/queueStore';
+import { QueueStore } from '#/apollo/offlineQueue/queueStore';
 import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 
-jest.mock('#/storage/mmkv');
-
-const { __mockStore } = jest.requireMock<{
-  __mockStore: Map<string, unknown>;
-}>('#/storage/mmkv');
-
-const recoveryMode = isRecoveryStorage as jest.Mock;
-const setSpy = storage.set as jest.Mock;
+const recoveryMode = jest.spyOn(storage, 'isRecovery');
+const setSpy = jest.spyOn(storage, 'set');
 
 function makeMutation(): QueuedMutation {
   return {
@@ -30,31 +24,15 @@ function makeMutation(): QueuedMutation {
 }
 
 /**
- * When the device key cannot be read the session runs on an UNENCRYPTED MMKV
- * file. The session is allowed to continue there; what must not follow it onto
- * disk is the cache of server data and the queue of pending writes, which carry
- * names, emails, household membership and full mutation variables.
+ * When the device key cannot be read the session runs on an UNENCRYPTED store
+ * (`storage.isRecovery()`). The session is allowed to continue there; what must
+ * not follow it onto disk is the cache of server data and the queue of pending
+ * writes, which carry names, emails, household membership and full mutation
+ * variables.
  */
-
-/**
- * A FRESH evaluation, so the module binds the mocked storage. `queueStore.ts`
- * exports a module-scope singleton, which jest evaluates while loading the
- * setup graph — before this file's `jest.mock` is registered — so the
- * top-level import holds a build wired to the real module and every spy
- * assertion would read an instance nothing under test touches.
- */
-const freshQueueStore = (): QueueStoreType => {
-  let Store!: new () => QueueStoreType;
-  jest.isolateModules(() => {
-    Store = jest.requireActual<{ QueueStore: new () => QueueStoreType }>(
-      '#/apollo/offlineQueue/queueStore',
-    ).QueueStore;
-  });
-  return new Store();
-};
 describe('recovery storage keeps data off disk', () => {
   beforeEach(() => {
-    __mockStore.clear();
+    storage.clearAll();
     jest.clearAllMocks();
     recoveryMode.mockReturnValue(false);
   });
@@ -103,7 +81,7 @@ describe('recovery storage keeps data off disk', () => {
 
   describe('the offline queue', () => {
     it('is persisted on the encrypted instance', () => {
-      freshQueueStore().addMutation(makeMutation());
+      new QueueStore().addMutation(makeMutation());
 
       expect(setSpy).toHaveBeenCalled();
       const written = setSpy.mock.calls
@@ -115,14 +93,14 @@ describe('recovery storage keeps data off disk', () => {
     it('is not persisted on the recovery instance', () => {
       recoveryMode.mockReturnValue(true);
 
-      freshQueueStore().addMutation(makeMutation());
+      new QueueStore().addMutation(makeMutation());
 
       expect(setSpy).not.toHaveBeenCalled();
     });
 
     it('still queues in memory so the session keeps working', () => {
       recoveryMode.mockReturnValue(true);
-      const store = freshQueueStore();
+      const store = new QueueStore();
 
       store.setCurrentUserId('user-1');
       store.addMutation(makeMutation());
@@ -135,7 +113,7 @@ describe('recovery storage keeps data off disk', () => {
 
     it('does not write the current user id on the recovery instance', () => {
       recoveryMode.mockReturnValue(true);
-      const store = freshQueueStore();
+      const store = new QueueStore();
 
       store.setCurrentUserId('user-1');
 
@@ -144,7 +122,7 @@ describe('recovery storage keeps data off disk', () => {
     });
 
     it('writes the current user id on the encrypted instance', () => {
-      const store = freshQueueStore();
+      const store = new QueueStore();
 
       store.setCurrentUserId('user-1');
 

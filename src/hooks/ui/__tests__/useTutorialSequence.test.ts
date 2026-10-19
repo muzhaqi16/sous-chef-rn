@@ -2,8 +2,6 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useTutorialSequence } from '../useTutorialSequence';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
-jest.mock('#/storage/mmkv');
-
 import { useStore } from '#store';
 
 /** The hint record the store keeps, in the shape these assertions read. */

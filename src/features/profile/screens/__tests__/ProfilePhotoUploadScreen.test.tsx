@@ -49,8 +49,6 @@ jest.mock('react-native-permissions', () => ({
   },
 }));
 
-jest.mock('#/storage/mmkv');
-
 jest.mock('#/services/errorService');
 
 jest.mock('#components/atoms/Icon', () => ({

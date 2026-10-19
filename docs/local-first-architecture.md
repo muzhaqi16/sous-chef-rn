@@ -13,6 +13,12 @@ notes; where the implementation diverged from the plan, the divergence is called
 
 ---
 
+Everything below that is "on disk" — the persisted cache, the offline queue,
+the store's persisted slices — is written through `storage` and `zustandStorage`
+from `src/store/deviceStorage.ts`, the platform's key-value store. On mobile
+that is the encrypted MMKV instance (`src/native/storage/mmkv.ts`, adapted in
+`keyValueStore.ts` beside it), so "MMKV" below means device storage there.
+
 ## 1. Read path — local-first
 
 - Apollo `InMemoryCache` is persisted to MMKV as-is (`ApolloCachePersistence.ts`): `cache.extract()` /

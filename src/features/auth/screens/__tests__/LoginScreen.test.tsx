@@ -302,7 +302,7 @@ describe('LoginScreen remembering the sign-in', () => {
 
   it('says so when the sign-in could not be saved, and still enters the app', async () => {
     jest
-      .spyOn(jest.requireActual('#/storage/deviceId'), 'ensureDeviceId')
+      .spyOn(jest.requireActual('#/services/auth/deviceId'), 'ensureDeviceId')
       .mockResolvedValue(null);
     const alert = jest.mocked(alertService.alert);
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });

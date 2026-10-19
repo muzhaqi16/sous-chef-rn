@@ -516,8 +516,8 @@ const overrides = [
           '#/i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,
-          '#storage/mmkv': true,
-          '#/storage/mmkv': true,
+          '#store/deviceStorage': true,
+          '#/store/deviceStorage': true,
           'date-fns': true,
           'fraction.js': true,
         },
@@ -706,21 +706,18 @@ const overrides = [
     },
   },
   {
-    // Device storage's writers: the kernel persisters, the reset manager and
-    // the feature caches that register with it, and the composition root that
-    // adapts it to the key-value store port.
+    // Device storage's writers: the kernel persisters, the reset manager, the
+    // device id's mirror and the feature caches that register with it.
     files: [
-      'src/app/installNativePlatform.ts',
       'src/apollo/**/*.{ts,tsx}',
-      'src/storage/**/*.{ts,tsx}',
+      'src/services/auth/deviceId.ts',
       'src/store/**/*.{ts,tsx}',
       'src/features/*/store/**/*.{ts,tsx}',
-      'src/storage/__mocks__/**/*.{ts,tsx}',
     ],
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': restrictedImports({
-        allow: { '#storage/mmkv': true, '#/storage/mmkv': true },
+        allow: { '#store/deviceStorage': true, '#/store/deviceStorage': true },
       }),
     },
   },

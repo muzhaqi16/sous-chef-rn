@@ -1,7 +1,7 @@
 /**
- * Shared test mock for `#/storage/deviceId`.
+ * Shared test mock for `#/services/auth/deviceId`.
  *
- * Activated per-suite via a bare `jest.mock('#/storage/deviceId')` (no
+ * Activated per-suite via a bare `jest.mock('#/services/auth/deviceId')` (no
  * factory). Both accessors answer with the SAME value, so a suite cannot pass
  * by presenting one identity synchronously and another asynchronously — the
  * divergence this module exists to prevent.

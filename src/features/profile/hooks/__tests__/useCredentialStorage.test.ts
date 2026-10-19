@@ -6,9 +6,9 @@ const mockHasCredentials = jest.fn();
 const mockClearCredentials = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
-type KeychainModule = typeof import('#/storage/keychain');
+type KeychainModule = typeof import('#native/storage/keychain');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),

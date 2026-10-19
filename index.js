@@ -98,7 +98,7 @@ registerFcmBackgroundHandler();
 import { AppRegistry } from 'react-native';
 import { enableScreens } from 'react-native-screens';
 import './src/theme/unistyles';
-import { initializeSecureStorage } from './src/storage/mmkv';
+import { initializeSecureStorage } from './src/native/storage/mmkv';
 
 // Activate native screen reuse. Native-stack's own `inactiveBehavior`
 // (default 'pause') is driven by React's Activity/Offscreen primitive and

@@ -2,7 +2,7 @@ import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from '#/utils/environment';
 import { getDeviceLocale } from '#/utils/deviceLocale';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
 export interface DeviceInformation {

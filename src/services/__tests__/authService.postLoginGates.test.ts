@@ -46,7 +46,7 @@ const mockToastError = jest.mocked(toastService.error);
 
 const mockGetBiometricCapability = jest.fn();
 const mockHasCredentials = jest.fn();
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   getBiometricCapability: () => mockGetBiometricCapability(),
   hasCredentials: (...args: unknown[]) => mockHasCredentials(...args),
   getLastBiometricEmail: jest.fn(),
@@ -86,7 +86,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
   queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
 }));
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';

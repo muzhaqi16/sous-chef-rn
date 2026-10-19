@@ -1,6 +1,8 @@
-import { storage, isStorageReady, isRecoveryStorage } from '#/storage/mmkv';
-import { loadDeviceId, saveDeviceId } from '#/storage/keychain';
+import { storage } from '#/store/deviceStorage';
+import { requirePlatform } from '#platform/install';
 import { generateId } from '#/utils/generateId';
+
+const secureStore = requirePlatform('secureStore');
 
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_FINGERPRINT_KEY = 'device_fingerprint';
@@ -13,7 +15,8 @@ let hydration: Promise<string | null> | null = null;
 // The recovery instance is not this install's store: it opens unencrypted when
 // the device key is unavailable and `purgeRecoveryStorage` erases it on the next
 // healthy launch, so a value mirrored there is gone by the launch that reads it.
-const mirrorIsUsable = (): boolean => isStorageReady() && !isRecoveryStorage();
+const mirrorIsUsable = (): boolean =>
+  storage.isReady() && !storage.isRecovery();
 
 /** Mirror where a mirror will survive, then memoize for the synchronous readers. */
 function commit(deviceId: string): string {
@@ -45,11 +48,11 @@ async function hydrate(): Promise<string | null> {
     // An install that predates the keychain copy has the identifier in MMKV
     // only. Write through, so it and the credential bound to it now share a
     // lifetime; the value does not change.
-    await saveDeviceId(mirrored);
+    await secureStore.saveDeviceId(mirrored);
     return mirrored;
   }
 
-  const durable = await loadDeviceId();
+  const durable = await secureStore.loadDeviceId();
   if (durable.status === 'ok') return commit(durable.deviceId);
   // A read that failed says nothing about what the keychain holds. Minting here
   // would write over a surviving identifier and orphan the credential bound to
@@ -57,7 +60,7 @@ async function hydrate(): Promise<string | null> {
   if (durable.status === 'error') return null;
 
   const minted = `device_${generateId()}`;
-  const persisted = await saveDeviceId(minted);
+  const persisted = await secureStore.saveDeviceId(minted);
   // Nothing would hold it: presenting it would register a device this launch
   // and a different one on the next.
   if (!persisted && !mirrorIsUsable()) return null;

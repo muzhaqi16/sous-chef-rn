@@ -3,13 +3,11 @@ import { getApiRestUrl } from '#/apollo/links/apiHealthProbe';
 import { useStore } from '#store';
 import { isNetworkWithheld } from '#store/slices/networkSlice';
 import { registerSessionTeardown } from '#store/sessionTeardown';
-import {
-  addPendingRevocation,
-  loadPendingRevocations,
-  removePendingRevocation,
-  type PendingRevocation,
-} from '#/storage/keychain';
+import { requirePlatform } from '#platform/install';
+import type { PendingRevocation } from '#platform/ports';
 import { logger } from '#/utils/environment';
+
+const secureStore = requirePlatform('secureStore');
 
 // Push delivery follows a LIVE session bound to this device, so a session the
 // client drops without `POST /revoke` keeps receiving the account's pushes until
@@ -57,13 +55,13 @@ async function postRevoke(
 let drainInFlight: Promise<void> | null = null;
 
 async function drainOnce(): Promise<void> {
-  const pending = await loadPendingRevocations();
+  const pending = await secureStore.loadPendingRevocations();
   for (const revocation of pending) {
     if (isNetworkWithheld(useStore.getState())) return;
     const outcome = await postRevoke(revocation);
     // The API is not answering; the next reconnect retries the rest.
     if (outcome === 'retry') return;
-    await removePendingRevocation(revocation.refreshToken);
+    await secureStore.removePendingRevocation(revocation.refreshToken);
   }
 }
 
@@ -81,7 +79,7 @@ export function drainPendingRevocations(): Promise<void> {
 async function revokeEndedSession(
   revocation: PendingRevocation,
 ): Promise<void> {
-  const parked = await addPendingRevocation(revocation);
+  const parked = await secureStore.addPendingRevocation(revocation);
   if (!parked) {
     // Nothing durable holds it, so this attempt is the only one.
     const outcome = await postRevoke(revocation);

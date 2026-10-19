@@ -39,7 +39,7 @@ jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
 
 const mockKeychainWrites = jest.fn();
 jest.mock(
-  '#/storage/keychain',
+  '#native/storage/keychain',
   () =>
     new Proxy(
       {},
@@ -64,7 +64,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
   queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
 }));
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
 const mockToastError = jest.mocked(toastService.error);
 

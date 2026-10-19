@@ -35,9 +35,9 @@ const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 const mockHasCredentials = jest.fn().mockResolvedValue(true);
 const mockLoadCredentials = jest.fn();
 const mockGetLastBiometricEmail = jest.fn();
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...args: unknown[]) => mockClearCredentials(...args),
   hasCredentials: (...args: unknown[]) => mockHasCredentials(...args),
   loadCredentials: (...args: unknown[]) => mockLoadCredentials(...args),
@@ -136,7 +136,7 @@ describe('authService.login — LoginResult union', () => {
 // sends the id it already holds — null on a cold identity.
 describe('authService.login — device binding', () => {
   it('resolves the device id before the session is minted', async () => {
-    const { ensureDeviceId } = require('#/storage/deviceId');
+    const { ensureDeviceId } = require('#/services/auth/deviceId');
     const order: string[] = [];
     (ensureDeviceId as jest.Mock).mockImplementationOnce(() => {
       order.push('ensureDeviceId');

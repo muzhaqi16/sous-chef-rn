@@ -4,7 +4,7 @@ import { print } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import {
   makeQueuedMutation,
   queuedMutationFor,

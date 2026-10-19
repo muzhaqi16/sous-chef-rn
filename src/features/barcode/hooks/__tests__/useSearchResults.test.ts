@@ -53,8 +53,6 @@ jest.mock('#hooks/device/useImageUpload', () => ({
   })),
 }));
 
-jest.mock('#/storage/mmkv');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

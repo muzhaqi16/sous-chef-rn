@@ -9,7 +9,7 @@ import { Telemetry } from '#/services/telemetry';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { backoffDelay, sleep } from '#/utils/backoff';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import {

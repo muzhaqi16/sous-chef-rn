@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { zustandStorage } from '#/storage/mmkv';
+import { zustandStorage } from '#/store/deviceStorage';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 
 /** The server reads a capture as UNAVAILABLE past ten minutes; a minute's grace. */

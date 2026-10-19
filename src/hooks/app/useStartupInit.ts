@@ -19,8 +19,8 @@ import {
   hasCredentials,
   getLastBiometricEmail,
   clearTempRegistrationPassword,
-} from '#storage/keychain';
-import { ensureDeviceId } from '#/storage/deviceId';
+} from '#native/storage/keychain';
+import { ensureDeviceId } from '#/services/auth/deviceId';
 import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 import type { AuthUserInput } from '#store/slices/authSlice';

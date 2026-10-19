@@ -1,5 +1,5 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage, isStorageReady, isRecoveryStorage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
@@ -82,7 +82,7 @@ class ApolloCachePersistence {
 
   /** Null when nothing is stored or the stored blob is not this shape. */
   load(): NormalizedCacheObject | null {
-    if (!isStorageReady()) return null;
+    if (!storage.isReady()) return null;
     try {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
@@ -123,7 +123,7 @@ class ApolloCachePersistence {
    * instance, so that check comes BEFORE the timer: nothing is left to fire.
    */
   scheduleExtractAndSave(extractor: Extractor): void {
-    if (isRecoveryStorage()) return;
+    if (storage.isRecovery()) return;
     this.pendingExtractor = extractor;
     this.clearHandles();
     this.saveTimeout = setTimeout(() => {
@@ -167,7 +167,7 @@ class ApolloCachePersistence {
 
   /** Leaves nothing a later `load()` could restore. */
   clear(): void {
-    if (!isStorageReady()) return;
+    if (!storage.isReady()) return;
     try {
       this.cancel();
       for (const key of [
@@ -201,7 +201,7 @@ class ApolloCachePersistence {
     const extractor = this.pendingExtractor;
     this.pendingExtractor = null;
     // Storage can fall back to the recovery instance after the schedule.
-    if (!extractor || isRecoveryStorage()) return;
+    if (!extractor || storage.isRecovery()) return;
     try {
       const t0 = performance.now();
       const cache = extractor();

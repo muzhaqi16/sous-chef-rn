@@ -1,12 +1,10 @@
 import type { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
 import { TRANSIENT_UI_STATE } from './slices/uiSlice';
-import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
-import { storage } from '#/storage/mmkv';
-import {
-  clearTempRegistrationPassword,
-  clearSessionTokens,
-} from '#/storage/keychain';
+import { storage, zustandStorage } from '#/store/deviceStorage';
+import { STORAGE_KEY } from '#/store/persistedKeys';
+import { clearTempRegistrationPassword } from '#native/storage/keychain';
+import { requirePlatform } from '#platform/install';
 import { runSessionTeardown } from './sessionTeardown';
 import { whileSessionEnds } from './sessionEnding';
 import { resetSessionScopedStores } from './sessionScopedStores';
@@ -14,6 +12,8 @@ import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 import { isRecord } from '#/utils/isRecord';
+
+const secureStore = requirePlatform('secureStore');
 
 /**
  * Which server verdict ended the session — log line only; `endSession` performs
@@ -238,7 +238,7 @@ const clearAuthFromStorage = async () => {
     // Biometric keychain credentials deliberately survive a logout; only a full
     // reset or an explicit user action clears them.
     await clearTempRegistrationPassword();
-    await clearSessionTokens();
+    await secureStore.clearSessionTokens();
 
     storage.remove('accessToken');
     storage.remove('refreshToken');

@@ -17,9 +17,7 @@
  * their real persist config — the opposite premise, so it lives in its own file.
  */
 
-jest.mock('#/storage/mmkv');
-
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
@@ -40,15 +38,11 @@ import {
   registeredSessionScopedStores,
   SESSION_SCOPED_PERSISTED_KEYS,
 } from '#store/sessionScopedStores';
-import { storage } from '#/storage/mmkv';
-
-const { __mockStore } = jest.requireMock<{
-  __mockStore: Map<string, unknown>;
-}>('#/storage/mmkv');
+import { storage } from '#/store/deviceStorage';
 
 describe('session end clears persisted feature stores that were never loaded', () => {
   beforeEach(() => {
-    __mockStore.clear();
+    storage.clearAll();
     jest.clearAllMocks();
   });
 
@@ -60,25 +54,21 @@ describe('session end clears persisted feature stores that were never loaded', (
 
   it('deletes every session-scoped persisted key', () => {
     for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
-      __mockStore.set(
-        key,
-        JSON.stringify({ state: { recentScans: ['milk'] } }),
-      );
+      storage.set(key, JSON.stringify({ state: { recentScans: ['milk'] } }));
     }
     // Something that must survive: this is a device-level preference.
-    __mockStore.set('sous-chef-theme', 'dark');
+    storage.set('sous-chef-theme', 'dark');
 
     resetSessionScopedStores();
 
     for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
-      expect(storage.remove).toHaveBeenCalledWith(key);
-      expect(__mockStore.has(key)).toBe(false);
+      expect(storage.contains(key)).toBe(false);
     }
-    expect(__mockStore.get('sous-chef-theme')).toBe('dark');
+    expect(storage.getString('sous-chef-theme')).toBe('dark');
   });
 
   it('clears the retired scanner history, which carries item names, brands and UPCs', () => {
-    __mockStore.set(
+    storage.set(
       'sous-chef-barcode',
       JSON.stringify({
         state: {
@@ -89,16 +79,16 @@ describe('session end clears persisted feature stores that were never loaded', (
 
     resetSessionScopedStores();
 
-    expect(__mockStore.has('sous-chef-barcode')).toBe(false);
+    expect(storage.contains('sous-chef-barcode')).toBe(false);
   });
 
   it('clears the two recipe caches that had the identical hole', () => {
-    __mockStore.set('recipe-search-cache', '{"state":{"searches":["pasta"]}}');
-    __mockStore.set('recipe-suggestions-cache', '{"state":{"items":[1]}}');
+    storage.set('recipe-search-cache', '{"state":{"searches":["pasta"]}}');
+    storage.set('recipe-suggestions-cache', '{"state":{"items":[1]}}');
 
     resetSessionScopedStores();
 
-    expect(__mockStore.has('recipe-search-cache')).toBe(false);
-    expect(__mockStore.has('recipe-suggestions-cache')).toBe(false);
+    expect(storage.contains('recipe-search-cache')).toBe(false);
+    expect(storage.contains('recipe-suggestions-cache')).toBe(false);
   });
 });

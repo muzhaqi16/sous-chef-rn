@@ -27,8 +27,6 @@ jest.mock('@react-native-community/image-editor', () => ({
   default: { cropImage: jest.fn().mockResolvedValue({ uri: 'cropped-uri' }) },
 }));
 
-jest.mock('#/storage/mmkv');
-
 jest.mock('#/services/errorService');
 
 jest

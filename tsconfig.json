@@ -39,8 +39,6 @@
       "#screens/*": ["./src/screens/*"],
       "#services": ["./src/services"],
       "#services/*": ["./src/services/*"],
-      "#storage": ["./src/storage"],
-      "#storage/*": ["./src/storage/*"],
       "#store": ["./src/store"],
       "#store/*": ["./src/store/*"],
       "#styles": ["./src/styles"],

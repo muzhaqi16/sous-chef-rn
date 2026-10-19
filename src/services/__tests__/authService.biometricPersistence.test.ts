@@ -72,12 +72,12 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 }));
 
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 import { toastService } from '#/services/toastService';
-import { MOCK_DEVICE_ID } from '#/storage/__mocks__/deviceId';
-import { ensureDeviceId } from '#/storage/deviceId';
+import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
+import { ensureDeviceId } from '#/services/auth/deviceId';
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...a: unknown[]) => mockClearCredentials(...a),
   // The keychain's own shape; `dc1:` marks a slot holding a device credential
   // rather than a password. Without a loadable slot the exchange is never
@@ -113,7 +113,7 @@ const keychainMock = () =>
   jest.requireMock<{
     loadCredentials: jest.Mock;
     saveCredentials: jest.Mock;
-  }>('#/storage/keychain');
+  }>('#native/storage/keychain');
 const STORED_SLOT = { username: 'chef@example.com', password: 'dc1:secret' };
 const setHasStoredCredentials = () =>
   mockStoreState.setHasStoredCredentials as jest.Mock;

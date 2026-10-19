@@ -59,8 +59,8 @@ const mockStore: MockStore = {
 };
 jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
 
-jest.mock('#/storage/deviceId');
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#/services/auth/deviceId');
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(),
   hasCredentials: jest.fn().mockResolvedValue(false),
   loadCredentials: jest.fn(),

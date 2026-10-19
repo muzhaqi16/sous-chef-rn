@@ -69,9 +69,9 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
 }));
 
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   removeBiometricCredentials: jest.fn().mockResolvedValue(true),
   clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
@@ -84,8 +84,8 @@ import {
   ensureDeviceId,
   readLegacyDeviceFingerprint,
   recordRegisteredLocale,
-} from '#/storage/deviceId';
-import { MOCK_DEVICE_ID } from '#/storage/__mocks__/deviceId';
+} from '#/services/auth/deviceId';
+import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { DeleteDeviceDocument } from '#operations/auth/device.generated';
 
 /**
@@ -644,7 +644,7 @@ describe('a session end leaves the push registration to the server', () => {
   });
 
   it('removes the retired device-row key', async () => {
-    const { clearRetiredDeviceRow } = require('#/storage/deviceId');
+    const { clearRetiredDeviceRow } = require('#/services/auth/deviceId');
 
     await teardown();
 

@@ -4,7 +4,7 @@
  * are written to the queue itself, so a restart mid-drain keeps them.
  */
 import { makeCache } from '#/apollo/cache';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { useStore } from '#store';
 import {
   makeQueuedMutation,

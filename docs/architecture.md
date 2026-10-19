@@ -59,7 +59,7 @@ Every production file in `src/` belongs to one of two layers:
 
 | Core                                                                                                                                                                                      | Mobile                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `storage`, `styles` |
+| `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `styles`            |
 | `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance}`, `NavigationService.ts`                        |
 | `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
 | `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
@@ -100,8 +100,8 @@ service if the install has not happened, so nothing degrades silently.
 | Service         | What it is                                                 | Mobile adapter                                |
 | --------------- | ---------------------------------------------------------- | --------------------------------------------- |
 | `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv` |
-| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`storage/mmkv`)                         |
-| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`storage/keychain`)                 |
+| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)         |
+| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)       |
 | `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info          |
 | `appLifecycle`  | Foreground state and its changes                           | `AppState`                                    |
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                         |
@@ -246,7 +246,7 @@ code it extends:
   `useServerRecipeSuggestions`).
 
 With the flag off, the feature does what it did before the capability existed. The keychain strings are pinned by
-`src/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
+`src/native/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
 service name, so changing one on a shipped app signs every user out silently.
 
 `src/app/` is the composition root: the modules whose whole job is to know which
@@ -862,13 +862,13 @@ src/
 │                    apollo, offline, ui, search, auth, performance,
 │                    navigation, autocomplete, subscriptions, …
 ├── i18n/            i18next config + locale JSON
-├── native/          Native module bindings, React Native ambient types
+├── native/          Native module bindings, the storage adapters, React
+│                    Native ambient types
 ├── platform/        Ports the core reaches the device through (§ Layers)
 ├── navigation/      RootNavigator, stacks, layouts
 ├── screens/         SplashScreen and NotFoundScreen only
 ├── services/        Push, subscriptions, telemetry, Spoonacular,
 │                    haptics, permissions, performance, alerts, errors, toasts
-├── storage/         MMKV wrappers
 ├── store/           Zustand store, slices, reset manager
 ├── styles/
 ├── theme/           Design tokens, themes, appearance system

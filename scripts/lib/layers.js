@@ -119,7 +119,7 @@ const LAYERS = [
     name: 'app shell',
     layer: 'mobile',
     patterns: [
-      'src/{app,assets,components,constants,context,native,navigation,screens,storage,styles}/**',
+      'src/{app,assets,components,constants,context,native,navigation,screens,styles}/**',
     ],
     enforced: false,
   },

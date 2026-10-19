@@ -14,7 +14,7 @@ jest.mock('#/apollo/client', () => ({
   flushCachePersistence: jest.fn(),
 }));
 
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
 const mockStoreState: Record<string, unknown> = {
   isOnline: true,
@@ -30,7 +30,7 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStoreState },
 }));
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn().mockResolvedValue(undefined),
   loadCredentials: jest.fn().mockResolvedValue({
     username: 'chef@example.com',
@@ -73,7 +73,7 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
 }));
 
 import { authService } from '#/services/authService';
-import { MOCK_DEVICE_ID as DEVICE_ID } from '#/storage/__mocks__/deviceId';
+import { MOCK_DEVICE_ID as DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
 

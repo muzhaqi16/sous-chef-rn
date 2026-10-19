@@ -1,10 +1,10 @@
+import { storage } from '#/store/deviceStorage';
+
 // The mocks are referenced through `mock*` bindings declared here rather than
 // through the imported module objects, so they survive the `jest.resetModules()`
 // that `freshLaunch()` uses — a re-registered factory closes over the same spies.
 const mockAlert = jest.fn();
 const mockToast = jest.fn();
-const mockStore = new Map<string, string>();
-let mockStorageReady = true;
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: mockAlert },
@@ -19,15 +19,10 @@ jest.mock('../clientIdentity', () => ({
   CLIENT_VERSION: '4.2.1',
   CLIENT_NAME: 'sous-chef-app',
 }));
-jest.mock('#/storage/mmkv', () => ({
-  isStorageReady: () => mockStorageReady,
-  storage: {
-    getString: (key: string) => mockStore.get(key),
-    set: (key: string, value: string) => {
-      mockStore.set(key, value);
-    },
-  },
-}));
+
+// Device storage is the installed platform's, which outlives a module reset
+// the way a device's storage outlives a relaunch.
+const storageReady = jest.spyOn(storage, 'isReady');
 
 const STORAGE_KEY = 'clientUpgradeNotice.announcedForVersion';
 const RECOMMENDED_KEY = 'clientUpgradeNotice.announcedRecommended';
@@ -37,9 +32,9 @@ const RECOMMENDED_KEY = 'clientUpgradeNotice.announcedRecommended';
  *
  * Both notices guard against repeats with module-level state that deliberately
  * outlives every call within a launch, so exercising the across-launch behaviour
- * means discarding the module rather than resetting it. Persisted storage is the
- * test-scoped `mockStore`, so it survives — which is the whole distinction under
- * test: the in-memory guard is gone, the persisted one is not.
+ * means discarding the module rather than resetting it. Device storage survives
+ * it — which is the whole distinction under test: the in-memory guard is gone,
+ * the persisted one is not.
  */
 const freshLaunch = (): typeof import('../clientUpgradeNotice') => {
   jest.resetModules();
@@ -48,8 +43,8 @@ const freshLaunch = (): typeof import('../clientUpgradeNotice') => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockStorageReady = true;
-  mockStore.clear();
+  storageReady.mockReturnValue(true);
+  storage.clearAll();
 });
 
 describe('announceClientUpgradeRequired', () => {
@@ -93,18 +88,18 @@ describe('announceClientUpgradeRequired', () => {
     });
 
     it('announces again after the user updates to a build still below the floor', () => {
-      mockStore.set(STORAGE_KEY, '4.1.0');
+      storage.set(STORAGE_KEY, '4.1.0');
 
       freshLaunch().announceClientUpgradeRequired();
 
       expect(mockAlert).toHaveBeenCalledTimes(1);
-      expect(mockStore.get(STORAGE_KEY)).toBe('4.2.1');
+      expect(storage.getString(STORAGE_KEY)).toBe('4.2.1');
     });
   });
 
   // Announcing twice beats throwing inside the link chain.
   it('still announces when storage is not initialized yet', () => {
-    mockStorageReady = false;
+    storageReady.mockReturnValue(false);
 
     freshLaunch().announceClientUpgradeRequired();
 
@@ -115,13 +110,13 @@ describe('announceClientUpgradeRequired', () => {
   // spent on a notice the user never saw.
   it('records the announced build only after the alert is raised', () => {
     mockAlert.mockImplementationOnce(() => {
-      expect(mockStore.get(STORAGE_KEY)).toBeUndefined();
+      expect(storage.getString(STORAGE_KEY)).toBeUndefined();
     });
 
     freshLaunch().announceClientUpgradeRequired();
 
     expect(mockAlert).toHaveBeenCalledTimes(1);
-    expect(mockStore.get(STORAGE_KEY)).toBe('4.2.1');
+    expect(storage.getString(STORAGE_KEY)).toBe('4.2.1');
   });
 });
 
@@ -143,7 +138,7 @@ describe('announceClientReleaseAvailable', () => {
     notice.announceClientReleaseAvailable('4.3.0');
 
     expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(mockStore.get(RECOMMENDED_KEY)).toBe('4.3.0');
+    expect(storage.getString(RECOMMENDED_KEY)).toBe('4.3.0');
   });
 
   it('stays quiet on relaunch for a release already nudged', () => {
@@ -154,18 +149,18 @@ describe('announceClientReleaseAvailable', () => {
   });
 
   it('nudges again when the server recommends a newer release', () => {
-    mockStore.set(RECOMMENDED_KEY, '4.3.0');
+    storage.set(RECOMMENDED_KEY, '4.3.0');
 
     freshLaunch().announceClientReleaseAvailable('4.4.0');
 
     expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(mockStore.get(RECOMMENDED_KEY)).toBe('4.4.0');
+    expect(storage.getString(RECOMMENDED_KEY)).toBe('4.4.0');
   });
 
   // Opposite of the hard notice, deliberately: a duplicate nudge for a build
   // that still works is pure annoyance, so this one fails toward silence.
   it('stays silent when storage is not initialized yet', () => {
-    mockStorageReady = false;
+    storageReady.mockReturnValue(false);
 
     freshLaunch().announceClientReleaseAvailable('4.3.0');
 

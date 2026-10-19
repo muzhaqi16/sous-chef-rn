@@ -1,7 +1,7 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
-import type { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
 import { sleep } from '#/utils/backoff';
+import { RETIRED_PERSISTED_KEYS } from '#/store/persistedKeys';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,
@@ -13,12 +13,6 @@ export const STORAGE_KEY = 'sous-chef-storage';
 // decrypt, so a keychain outage quarantines the session here and leaves the
 // encrypted file intact for the next launch.
 export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
-
-/** Keys a removed store persisted under, still on disk for older installs. */
-export const RETIRED_PERSISTED_KEYS: readonly string[] = [
-  // The barcode scanner's scan history (item names, brands, UPCs), before 4.7.0.
-  'sous-chef-barcode',
-];
 
 // DeviceKeyManager already retries keychain reads internally; run that whole
 // cycle a second time after a pause before quarantining the session.
@@ -177,11 +171,6 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
   return initPromise;
 };
 
-/**
- * Async getter — preferred for new code. Triggers init if not yet started.
- */
-export const getStorage = async (): Promise<MMKV> => initializeSecureStorage();
-
 /** The synchronous surface; the async getters hand out the whole instance. */
 export type SyncStorage = Pick<
   MMKV,
@@ -242,19 +231,3 @@ export function isRecoveryStorage(): boolean {
 export function openedWithEmptyStore(): boolean {
   return openedEmptyStore;
 }
-
-export const zustandStorage: StateStorage = {
-  setItem: async (name, value) => {
-    const s = await initializeSecureStorage();
-    return s.set(name, value);
-  },
-  getItem: async name => {
-    const s = await initializeSecureStorage();
-    const value = s.getString(name);
-    return value ?? null;
-  },
-  removeItem: async name => {
-    const s = await initializeSecureStorage();
-    return s.remove(name);
-  },
-};

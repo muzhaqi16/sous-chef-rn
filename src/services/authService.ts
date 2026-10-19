@@ -28,7 +28,7 @@ import {
   RegisterDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
-import { ensureDeviceId } from '#/storage/deviceId';
+import { ensureDeviceId } from '#/services/auth/deviceId';
 import {
   deviceRegionCurrency,
   isUnchosenCurrency,
@@ -45,7 +45,7 @@ import {
   hasCredentials,
   getBiometricCapability,
   getLastBiometricEmail,
-} from '#/storage/keychain';
+} from '#native/storage/keychain';
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';

@@ -1,5 +1,6 @@
 import { createMMKV, existsMMKV } from 'react-native-mmkv';
-import { purgeRecoveryStorage } from '#/storage/mmkv';
+import { RETIRED_PERSISTED_KEYS } from '#/store/persistedKeys';
+import { purgeRecoveryStorage } from '../mmkv';
 
 jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {
@@ -53,7 +54,7 @@ describe('startup cleanup', () => {
       requestIdleCallback: (callback: () => void) => callback(),
     });
     const remove = jest.fn();
-    let mmkv!: typeof import('#/storage/mmkv');
+    let mmkv!: typeof import('../mmkv');
     // Test mode opens the instance eagerly; a launch opens it through init.
     const env = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
@@ -66,15 +67,14 @@ describe('startup cleanup', () => {
       jest
         .mocked(native.createMMKV)
         .mockReturnValue({ getAllKeys: () => ['k'], remove } as never);
-      mmkv =
-        jest.requireActual<typeof import('#/storage/mmkv')>('#/storage/mmkv');
+      mmkv = jest.requireActual<typeof import('../mmkv')>('../mmkv');
     });
     process.env.NODE_ENV = env;
 
     await mmkv.initializeSecureStorage();
 
-    expect(mmkv.RETIRED_PERSISTED_KEYS.length).toBeGreaterThan(0);
-    for (const key of mmkv.RETIRED_PERSISTED_KEYS) {
+    expect(RETIRED_PERSISTED_KEYS.length).toBeGreaterThan(0);
+    for (const key of RETIRED_PERSISTED_KEYS) {
       expect(remove).toHaveBeenCalledWith(key);
     }
   });

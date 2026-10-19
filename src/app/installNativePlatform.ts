@@ -4,23 +4,8 @@ import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
 import { generatedEnv } from '#native/generatedEnv';
-import {
-  initializeSecureStorage,
-  isRecoveryStorage,
-  isStorageReady,
-  openedWithEmptyStore,
-  storage,
-} from '#/storage/mmkv';
-import {
-  addPendingRevocation,
-  clearSessionTokens,
-  loadDeviceId,
-  loadPendingRevocations,
-  loadSessionTokens,
-  removePendingRevocation,
-  saveDeviceId,
-  saveSessionTokens,
-} from '#/storage/keychain';
+import { mmkvKeyValueStore } from '#native/storage/keyValueStore';
+import { keychainSecureStore } from '#native/storage/secureStore';
 import { applyThemePreferenceToRuntime } from '#store/slices/preferencesSlice';
 import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
 import { preloadImages } from '#components/atoms/CachedImage';
@@ -33,33 +18,8 @@ const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
 // which runs before the rest of the app has started.
 installPlatform({
   environment: generatedEnv,
-  keyValueStore: {
-    set: (key, value) => storage.set(key, value),
-    getString: key => storage.getString(key),
-    getNumber: key => storage.getNumber(key),
-    getBoolean: key => storage.getBoolean(key),
-    contains: key => storage.contains(key),
-    remove: key => storage.remove(key),
-    getAllKeys: () => storage.getAllKeys(),
-    clearAll: () => storage.clearAll(),
-    ready: async () => {
-      await initializeSecureStorage();
-    },
-    isReady: () => isStorageReady(),
-    isRecovery: () => isRecoveryStorage(),
-    openedWithEmptyStore: () => openedWithEmptyStore(),
-  },
-  secureStore: {
-    saveSessionTokens: tokens => saveSessionTokens(tokens),
-    loadSessionTokens: () => loadSessionTokens(),
-    clearSessionTokens: () => clearSessionTokens(),
-    saveDeviceId: deviceId => saveDeviceId(deviceId),
-    loadDeviceId: () => loadDeviceId(),
-    addPendingRevocation: revocation => addPendingRevocation(revocation),
-    loadPendingRevocations: () => loadPendingRevocations(),
-    removePendingRevocation: refreshToken =>
-      removePendingRevocation(refreshToken),
-  },
+  keyValueStore: mmkvKeyValueStore,
+  secureStore: keychainSecureStore,
   platformInfo: {
     get os() {
       return Platform.OS === 'ios' ? 'ios' : 'android';

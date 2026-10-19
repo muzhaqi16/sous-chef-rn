@@ -6,7 +6,7 @@ import {
   hasCredentials,
   clearCredentials,
   getBiometricCapability,
-} from '#/storage/keychain';
+} from '#native/storage/keychain';
 
 /**
  * What the biometric slot holds: a device-bound credential issued by

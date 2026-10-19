@@ -7,8 +7,6 @@ import {
   useShoppingListTutorialState,
 } from '../ShoppingListTutorialContext';
 
-jest.mock('#/storage/mmkv');
-
 import { useStore } from '#store';
 
 /** The hint record the store keeps, in the shape these assertions read. */

@@ -12,7 +12,7 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import { generateId } from '#/utils/generateId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { backoffDelay } from '#/utils/backoff';

@@ -1,6 +1,6 @@
 'use no memo';
 
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import {
   optimisticDataPersistence,
   type PersistedEntityType,

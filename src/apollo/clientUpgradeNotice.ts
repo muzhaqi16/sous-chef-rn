@@ -1,7 +1,7 @@
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
-import { storage, isStorageReady } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { logger } from '#/utils/environment';
 import { CLIENT_VERSION } from './clientIdentity';
 
@@ -21,7 +21,7 @@ export function announceClientUpgradeRequired(): void {
 
   // Defensive only — index.js initializes storage before any React code. Fails
   // toward announcing: a duplicate alert beats a link-layer throw.
-  const storageReady = isStorageReady();
+  const storageReady = storage.isReady();
   if (storageReady) {
     if (storage.getString(ANNOUNCED_VERSION_KEY) === CLIENT_VERSION) return;
   } else {
@@ -53,7 +53,7 @@ export function announceClientReleaseAvailable(recommended: string): void {
 
   // Fails toward SILENCE, unlike the hard notice: a duplicate nudge for a
   // build that still works is pure annoyance.
-  if (!isStorageReady()) return;
+  if (!storage.isReady()) return;
   if (storage.getString(ANNOUNCED_RECOMMENDED_KEY) === recommended) return;
 
   logger.info(

@@ -29,7 +29,7 @@ import {
   ensureDeviceId,
   readLegacyDeviceFingerprint,
   recordRegisteredLocale,
-} from '#/storage/deviceId';
+} from '#/services/auth/deviceId';
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';

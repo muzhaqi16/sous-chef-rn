@@ -2,7 +2,7 @@ import {
   hasCredentials,
   clearCredentials,
   getBiometricCapability,
-} from '#/storage/keychain';
+} from '#native/storage/keychain';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 

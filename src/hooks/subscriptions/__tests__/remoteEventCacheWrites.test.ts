@@ -46,7 +46,7 @@ import { ShoppingListItemForEventDocument } from '#features/shoppingList/hooks/u
 import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
 
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'device_this'),
 }));
 
