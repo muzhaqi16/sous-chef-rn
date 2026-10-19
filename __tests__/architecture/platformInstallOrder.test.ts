@@ -31,6 +31,30 @@ describe('platform install order', () => {
     ]);
   });
 
+  // Jest evaluates every import eagerly, which Metro's inline requires do not,
+  // so this is the stricter of the two: nothing on the path reads a service.
+  it('loads what precedes the install without reading a platform service', () => {
+    const INSTALLED = Symbol.for('sous-chef.platform');
+    const registry = globalThis as { [INSTALLED]?: unknown };
+    const installed = registry[INSTALLED];
+    delete registry[INSTALLED];
+    let thrown: unknown;
+    jest.isolateModules(() => {
+      try {
+        for (const specifier of BEFORE_INSTALL.filter(own =>
+          own.startsWith('./src/'),
+        )) {
+          require(path.join(ROOT, specifier));
+        }
+      } catch (error) {
+        thrown = error;
+      }
+    });
+    registry[INSTALLED] = installed;
+
+    expect(thrown).toBeUndefined();
+  });
+
   it('reads the imports of index.js', () => {
     expect(imports).toEqual(
       expect.arrayContaining(['./src/i18n/config', './App']),
