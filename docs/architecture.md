@@ -60,7 +60,7 @@ Every production file in `src/` belongs to one of two layers:
 | Core                                                                                                                                                                                      | Mobile                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `styles`            |
-| `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance}`, `NavigationService.ts`                        |
+| `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance,biometric,device}`, `NavigationService.ts`       |
 | `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
 | `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
 | `features/*/{hooks,cache,offline,graphql,utils,store,locales,constants}`, `manifest.static.ts`, `types.ts`, `pushCopy.ts`, and `features/{registry.static,registry.cache,staticTypes}.ts` | `features/*/{screens,components,ui,context}`, `manifest.ts`, `testIDs.ts`, and `features/{registry,types}.ts` |
@@ -132,15 +132,23 @@ Everything user-facing lives in a self-contained module under `src/features/`:
 
 ```
 src/features/pantry/
-├── screens/       # Navigation entry points
-├── components/    # Feature UI
-├── hooks/         # Data + behavior
+├── screens/       # Navigation entry points, and the hooks only they use
+├── components/    # Feature UI, and the hooks only it uses
+├── hooks/         # Data + behavior (core)
 │   └── mutations/ # Internal mutation primitives
 ├── graphql/       # Operations and shared fragments
 ├── context/       # Feature-scoped React context
 ├── utils/         # Feature-specific helpers
+├── types.ts       # Shapes the core produces and the UI renders
 └── manifest.ts    # What this feature contributes to navigation
 ```
+
+A feature splits along the layers too (§ Layers). `hooks/` is core, so a hook
+that renders, picks an icon, shapes FlashList rows or reaches a device API sits
+beside the screen or component that uses it, and runs that UI's display query
+there (`COLOCATED_DATA_HOOKS` in `eslint/boundaries.js`). A shape both sides
+read, such as a form's values or a unit a picker lists, is declared in the
+feature's `types.ts`, never in the component that renders it.
 
 Each feature declares itself through a **manifest**, and
 `src/features/registry.ts` holds the canonical list. Navigation iterates the

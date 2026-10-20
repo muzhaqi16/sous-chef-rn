@@ -13,10 +13,7 @@ import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback'
 import { WasteReason } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import {
-  PantryActionModal,
-  type PantryActionSharedState,
-} from '#features/pantry/components/modals/PantryActionModal';
+import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -24,6 +21,7 @@ import {
   formatQuantityForInput,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;

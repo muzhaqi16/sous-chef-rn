@@ -9,7 +9,6 @@ import { requirePlatform } from '#platform/install';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
-import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
@@ -18,6 +17,7 @@ import {
   formatQuantityDisplay,
   getUnitDisplayText,
 } from '#utils/formatQuantity';
+import type { SuggestionsHookResult } from '#features/catalog/types';
 
 /**
  * Per-section limit. The sheet shows a small preview of each section that drills

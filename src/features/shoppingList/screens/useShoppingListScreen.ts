@@ -7,10 +7,10 @@ import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpe
 import { resolveImageUrl } from '#utils/imageUtils';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
-import { useShoppingListsQuery } from './useShoppingListsQuery';
-import { useShoppingListSelection } from './useShoppingListSelection';
+import { useShoppingListsQuery } from '../hooks/useShoppingListsQuery';
+import { useShoppingListSelection } from '../hooks/useShoppingListSelection';
 import { useShoppingListTransformMulti } from './useShoppingListTransform';
-import { useShoppingListManagement } from './useShoppingListManagement';
+import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
 
 /** Facade for the shopping list screen: lists, selection, items, transform. */
 export function useShoppingListScreen() {

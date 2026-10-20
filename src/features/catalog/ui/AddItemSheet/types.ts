@@ -3,17 +3,10 @@ import type { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet';
 import type { SearchBarRef } from '#components/molecules/SearchBar';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';
-import type { DataState } from '#hooks/data/useDataState';
-
-export interface BaseSuggestionItem {
-  id: string;
-  itemId: string;
-  name: string;
-  category?: string | null | undefined;
-  imageUrl?: string | null | undefined;
-  /** The row's own context ("2 L left"), shown in place of the category. */
-  subtitle?: string | null | undefined;
-}
+import type {
+  BaseSuggestionItem,
+  SuggestionsHookResult,
+} from '#features/catalog/types';
 
 export interface SuggestionGroupConfig<
   T extends BaseSuggestionItem = BaseSuggestionItem,
@@ -64,15 +57,6 @@ export interface AddItemSheetConfig<
   addManuallyPosition: 'top' | 'bottom';
   emptyStateMessageKey: TranslationKey;
   emptyStateSubtextKey: TranslationKey;
-}
-
-export interface SuggestionsHookResult<
-  T extends BaseSuggestionItem = BaseSuggestionItem,
-> {
-  grouped: Record<string, T[]>;
-  /** A failed or offline read is its own state, never "No suggestions yet". */
-  state: DataState;
-  refetch: () => void;
 }
 
 export interface AddItemSheetProps<

@@ -17,7 +17,7 @@ import {
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { ROLE_PERMISSIONS } from '#features/shoppingList/constants/collaboratorRoles';
+import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';

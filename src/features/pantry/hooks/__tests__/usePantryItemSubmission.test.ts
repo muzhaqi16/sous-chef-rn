@@ -18,11 +18,9 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { alertService } from '#/services/alertService';
-import {
-  addPantryItemDefaults,
-  type AddPantryItemFormData,
-} from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
+import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
+import type { AddPantryItemFormData } from '#features/pantry/types';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),

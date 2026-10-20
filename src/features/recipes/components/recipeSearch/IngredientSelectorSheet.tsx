@@ -16,7 +16,7 @@ import {
   renderIngredientItem,
   ingredientKeyExtractor,
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
-import type { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
+import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
 

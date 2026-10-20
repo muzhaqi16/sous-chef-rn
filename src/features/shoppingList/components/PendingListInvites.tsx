@@ -6,7 +6,7 @@ import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { commonStyles } from '#/styles/commonStyles';
 import { rowType } from '#/theme/foundations/type';
-import { ROLE_PERMISSIONS } from '#features/shoppingList/constants/collaboratorRoles';
+import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import {
   usePendingListInvites,
   type PendingListInvitesOptions,

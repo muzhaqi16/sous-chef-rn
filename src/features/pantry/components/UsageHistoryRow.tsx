@@ -8,16 +8,7 @@ import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-
-export interface UsageRecord {
-  id: string;
-  usedAt: string;
-  quantityUsed: number;
-  purpose: UsagePurpose;
-  adjustmentKind?: AdjustmentKind | null;
-  adjustmentReason?: string | null;
-  usageUnit?: { symbol?: string | null } | null;
-}
+import type { UsageRecord } from '#features/pantry/types';
 
 /** Local copy for the kinds the server writes itself. */
 const SYSTEM_REASON_KEY: Record<AdjustmentKind, TranslationKey | null> = {

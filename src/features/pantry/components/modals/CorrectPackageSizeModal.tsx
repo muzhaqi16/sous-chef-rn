@@ -29,12 +29,7 @@ import {
   type CorrectWeightFormValues,
 } from './correctWeightFormConfig';
 import { logValidationErrors } from '#/utils/validation/common';
-
-export interface PackageSizeCorrectionInput {
-  netWeight: number;
-  netWeightUnitId: string;
-  reason: string;
-}
+import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 
 interface CorrectPackageSizeModalProps {
   visible: boolean;

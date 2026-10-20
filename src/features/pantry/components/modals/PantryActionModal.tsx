@@ -23,53 +23,10 @@ import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { usePantryActionItem } from '#features/pantry/components/modals/usePantryActionItem';
 import { shownStock } from '#domain/stockDisplay';
-
-/** An amount and the unit it reads in: "11 pc", "2 doz". */
-export interface ShownQuantity {
-  quantity: number;
-  unitSymbol: string;
-  /** The unit's own notation; null where a fraction wins. */
-  displayAsFraction: boolean | null;
-}
-
-export interface PantryActionSharedState {
-  selectedUnitInfo: SelectedUnitInfo | null;
-  setSelectedUnitInfo: (unit: SelectedUnitInfo) => void;
-  notes: string;
-  setNotes: (notes: string) => void;
-  /** Available quantity in the tracking unit, which is always the base. */
-  trackingQuantity: number;
-  trackingUnitSymbol: string;
-  trackingUnitId: string | undefined;
-  /** A unit's own notation; null where its flag is unknown. */
-  displayAsFractionOf: (unitId: string | undefined) => boolean | null;
-  /** Selected unit, falling back to the tracking unit. */
-  activeUnitSymbol: string;
-  activeUnitId: string | undefined;
-  /** A non-tracking unit is selected, so quantities need conversion. */
-  isConvertedUnit: boolean;
-  /**
-   * Tracking units per selected unit when no conversion is needed: 1 for the
-   * tracking unit, 12 for a dozen of it. Null for any other unit, and on a
-   * dual-tracked stack, whose count moves by whole packages.
-   */
-  exactFactor: number | null;
-  /** A tracking-unit amount as the stack shows it: "2 doz", "11 pc". */
-  showStock: (held: number) => ShownQuantity;
-  pantryItemId: string | undefined;
-  /** Resolved from the ranked-units API, along with the two below. */
-  defaultUnit: SelectedUnitInfo | null;
-  defaultIncrement: number | null;
-  commonFractions: number[] | null;
-  /** Null when the unit is the same or the conversion failed. */
-  availableInSelectedUnit: number | null;
-  availableLoading: boolean;
-  /** Dual-tracked items only. */
-  remainingNetWeight: number | null;
-  netWeightUnitSymbol: string | undefined;
-  netWeightUnitId: string | undefined;
-  isDualTracked: boolean;
-}
+import type {
+  PantryActionSharedState,
+  ShownQuantity,
+} from '#features/pantry/types';
 
 interface PantryActionModalProps {
   visible: boolean;

@@ -17,7 +17,7 @@ import {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
-import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { alertService } from '#/services/alertService';
 
 const mockUploadItemImages = jest

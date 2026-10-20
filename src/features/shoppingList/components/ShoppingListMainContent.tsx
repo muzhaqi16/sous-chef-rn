@@ -21,7 +21,7 @@ import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/Spo
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import type { useShoppingListScreen } from '#features/shoppingList/hooks/useShoppingListScreen';
+import type { useShoppingListScreen } from '#features/shoppingList/screens/useShoppingListScreen';
 import { useShoppingListActions } from '#features/shoppingList/hooks/useShoppingListActions';
 import { useBatchMoveToPantry } from '#features/shoppingList/hooks/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#features/shoppingList/components/useShoppingListSelectorModal';

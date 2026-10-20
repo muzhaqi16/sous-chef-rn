@@ -28,7 +28,7 @@ import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/Spo
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { useTranslation } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
-import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
+import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';

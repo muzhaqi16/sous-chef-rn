@@ -8,10 +8,10 @@ import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
-import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/motion';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import type { PickableUnit } from '#features/pantry/types';
 
 export interface PickableUnitGroup {
   type: UnitType;

@@ -1,7 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import {
   ConsumptionUnitsForPantryItemDocument,
   RestockUnitsForPantryItemDocument,
@@ -11,17 +10,15 @@ import {
 import type { UnitRole } from '#/graphql/generated/schemaTypes';
 import { UnitType, type UnitSource } from '#/graphql/generated/schemaTypes';
 import { countFactorOver } from '#domain/stockDisplay';
+import type { PickableUnit } from '#features/pantry/types';
+
 export enum PantryOperation {
   Consume = 'CONSUME',
   Waste = 'WASTE',
   Restock = 'RESTOCK',
 }
 
-/**
- * What this hook selects, and exactly what `UnitPicker` accepts. The shape is
- * the component's — see `#features/pantry/components/unitPickerTypes` for why
- * the dependency points that way.
- */
+/** What this hook selects, and exactly what `UnitPicker` accepts. */
 export type SelectedUnitInfo = PickableUnit;
 
 export interface RankedUnitInfo {

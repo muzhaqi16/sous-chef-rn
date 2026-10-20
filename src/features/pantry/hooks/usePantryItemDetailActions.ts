@@ -11,13 +11,13 @@ import { createShoppingListRow } from '#features/shoppingList/cache/createShoppi
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
-import type { PackageSizeCorrectionInput } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
+import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 
 type PantryItemForActions =
   | {

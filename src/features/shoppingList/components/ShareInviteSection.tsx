@@ -15,7 +15,7 @@ import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import {
   ROLE_PERMISSIONS,
   INVITE_ROLES,
-} from '#features/shoppingList/constants/collaboratorRoles';
+} from '#features/shoppingList/components/collaboratorRoles';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';

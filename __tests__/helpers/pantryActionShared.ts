@@ -1,6 +1,6 @@
 import { UnitType } from '#/graphql/generated/schemaTypes';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 import { shownStock } from '#domain/stockDisplay';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 const PIECE = { id: 'pc', symbol: 'pc' };
 const DOZEN = {

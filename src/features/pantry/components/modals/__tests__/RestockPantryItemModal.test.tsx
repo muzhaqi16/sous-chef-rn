@@ -2,8 +2,8 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 import { eggsShared } from '#/test-utils/pantryActionShared';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 // Minimal stand-ins for the props the mocked PantryActionModal feeds back to
 // `renderActionFields`; matches exactly what this stub constructs.

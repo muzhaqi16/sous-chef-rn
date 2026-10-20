@@ -109,7 +109,7 @@ const LAYERS = [
     name: 'features/data',
     layer: 'core',
     patterns: ['src/features/*/{hooks,offline,store,locales,constants}/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'features/declarations',

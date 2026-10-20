@@ -28,7 +28,7 @@ jest.mock('#hooks/settings/useUserPreferences', () => ({
   useShowShoppingListImages: () => false,
 }));
 
-jest.mock('../useShoppingListsQuery', () => ({
+jest.mock('../../hooks/useShoppingListsQuery', () => ({
   useShoppingListsQuery: () => ({
     lists: [{ id: 'list-1', name: 'Groceries' }],
     loading: false,
@@ -37,7 +37,7 @@ jest.mock('../useShoppingListsQuery', () => ({
   }),
 }));
 
-jest.mock('../useShoppingListSelection', () => ({
+jest.mock('../../hooks/useShoppingListSelection', () => ({
   useShoppingListSelection: () => ({
     selectedListId: 'list-1',
     currentListId: 'list-1',
@@ -70,7 +70,7 @@ const managementState = {
   itemsLoading: false,
 };
 
-jest.mock('../useShoppingListManagement', () => ({
+jest.mock('../../hooks/useShoppingListManagement', () => ({
   useShoppingListManagement: () => ({
     ...managementState,
     shoppingList: { id: 'list-1' },

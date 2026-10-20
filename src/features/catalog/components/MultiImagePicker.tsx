@@ -8,16 +8,11 @@ import { Icon } from '#components/atoms/Icon';
 import { getPerspectiveLabel, CAPTURE_PERSPECTIVES } from '#utils/imageUtils';
 import { ImagePicker } from '#features/catalog/components/ImagePicker';
 import type { ImageFile } from '#/types/media';
+import type { SelectedImage } from '#features/catalog/types';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { hitSlop } from '#/theme/foundations/sizes';
-
-export interface SelectedImage extends ImageFile {
-  perspective: string;
-  /** The hero once uploaded. Set only under `allowPrimarySelection`, on exactly one image. */
-  isPrimary?: boolean;
-}
 
 interface MultiImagePickerProps {
   images: SelectedImage[];

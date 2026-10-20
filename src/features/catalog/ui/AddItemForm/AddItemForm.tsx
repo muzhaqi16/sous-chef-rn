@@ -17,10 +17,11 @@ import {
   StorageState,
   ItemType,
 } from '#/graphql/generated/schemaTypes';
-import {
-  MultiImagePicker,
-  type SelectedImage,
-} from '#features/catalog/components/MultiImagePicker';
+import { MultiImagePicker } from '#features/catalog/components/MultiImagePicker';
+import type {
+  AddItemSubmitPayload,
+  SelectedImage,
+} from '#features/catalog/types';
 import {
   UnitEntryList,
   type UnitEntry,
@@ -31,10 +32,7 @@ import {
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import type {
-  AddItemFormData,
-  AddItemFormInitialData,
-} from '#/utils/items/createItemMapping';
+import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
@@ -65,15 +63,6 @@ export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 const ITEM_TYPES = Object.values(ItemType);
 const STORAGE_STATES = Object.values(StorageState);
 const BASE_DIMENSIONS = Object.values(BaseDimension);
-
-/**
- * The flat payload AddItemForm emits on submit; `mapFormToCreateItemInput`
- * turns it into the nested `CreateItemInput`. `AddItemFormData`'s index
- * signature is what lets extra fields (e.g. `editReason`) pass through.
- */
-export type AddItemSubmitPayload = AddItemFormData & {
-  selectedImages: SelectedImage[];
-};
 
 /**
  * Editor rows → the shape `createItemSchema` validates. An empty row (the one

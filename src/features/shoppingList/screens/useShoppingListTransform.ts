@@ -1,5 +1,5 @@
 import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
-import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
+import type { ShoppingListItemNode } from '../hooks/usePaginatedShoppingItems';
 import { logger } from '#/utils/environment';
 
 const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];

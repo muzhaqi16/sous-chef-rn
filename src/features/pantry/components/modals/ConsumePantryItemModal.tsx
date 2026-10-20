@@ -14,14 +14,12 @@ import {
   PantryOperation,
   type SelectedUnitInfo,
 } from '#features/pantry/hooks/useOperationUnits';
-import {
-  PantryActionModal,
-  type PantryActionSharedState,
-} from '#features/pantry/components/modals/PantryActionModal';
+import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;

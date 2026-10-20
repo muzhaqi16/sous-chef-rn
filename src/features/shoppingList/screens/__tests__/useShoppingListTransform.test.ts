@@ -1,6 +1,6 @@
 'use no memo';
 import { renderHook } from '@testing-library/react-native';
-import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
+import type { ShoppingListItemNode } from '../../hooks/usePaginatedShoppingItems';
 import { useShoppingListTransformMulti } from '../useShoppingListTransform';
 
 /**

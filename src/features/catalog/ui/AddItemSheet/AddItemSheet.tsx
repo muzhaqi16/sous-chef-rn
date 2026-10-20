@@ -15,11 +15,7 @@ import { SuggestionListItem } from '#features/catalog/components/SuggestionListI
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
-import type {
-  AddItemSheetProps,
-  BaseSuggestionItem,
-  SuggestionGroupConfig,
-} from './types';
+import type { AddItemSheetProps, SuggestionGroupConfig } from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
 import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
@@ -27,6 +23,7 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
+import type { BaseSuggestionItem } from '#features/catalog/types';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance

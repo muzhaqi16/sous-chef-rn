@@ -8,11 +8,11 @@ import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { AddItemSheet } from '../AddItemSheet';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { kitTestIDs } from '#components/testIDs';
+import type { AddItemSheetConfig } from '../types';
 import type {
-  AddItemSheetConfig,
-  SuggestionsHookResult,
   BaseSuggestionItem,
-} from '../types';
+  SuggestionsHookResult,
+} from '#features/catalog/types';
 
 // Mock useSharedBottomSheetConfigs
 jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({

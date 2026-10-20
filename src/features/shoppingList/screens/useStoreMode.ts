@@ -11,7 +11,7 @@ import { linesInAisle } from '#features/shoppingList/components/SortableShopping
 import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { ShoppingListItemNode } from '../hooks/usePaginatedShoppingItems';
 import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
-import { useShoppingListTransformMulti } from '../hooks/useShoppingListTransform';
+import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListPermissions } from '../hooks/useShoppingListPermissions';
 import { useShoppingListActions } from '../hooks/useShoppingListActions';
 import { useAisleView } from './useAisleView';

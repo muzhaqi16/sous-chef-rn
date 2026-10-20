@@ -17,7 +17,7 @@ import {
   type EditableItemSnapshot,
 } from '#utils/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { errorService } from '#/services/errorService';
 import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { presentFailure } from '#/utils/errors/presentFailure';

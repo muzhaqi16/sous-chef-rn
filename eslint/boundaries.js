@@ -191,6 +191,7 @@ const CORE_EXTERNALS = [
   'react-i18next',
   'yup',
   'react-hook-form',
+  '@hookform/resolvers',
   'date-fns',
   'fraction.js',
   'fractional-indexing',

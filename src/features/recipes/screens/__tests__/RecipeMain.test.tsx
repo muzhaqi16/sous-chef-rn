@@ -86,7 +86,7 @@ jest.mock('#hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
 }));
 
-jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
+jest.mock('#features/recipes/screens/useRecipeScreen', () => ({
   useRecipeScreen: jest.fn(() => ({
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },
     pantryItems: [],
@@ -215,7 +215,7 @@ jest.mock('../../context/IngredientSelectionContext', () => ({
 // Helper to create a useRecipeScreen mock with overrides
 function mockScreenWith(overrides: Record<string, unknown>) {
   const { useRecipeScreen } = jest.requireMock(
-    '#features/recipes/hooks/useRecipeScreen',
+    '#features/recipes/screens/useRecipeScreen',
   );
   useRecipeScreen.mockReturnValue({
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },

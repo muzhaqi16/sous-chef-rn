@@ -109,7 +109,7 @@ path alone.
   cover the deferred value's one-render lag) and its test are gone.
 - `src/components/organisms/ItemList.tsx` — `items` passed directly; the data-reference
   tracker label is now `ItemList.items`.
-- `src/features/shoppingList/hooks/useShoppingListScreen.ts` — the transform output is
+- `src/features/shoppingList/screens/useShoppingListScreen.ts` — the transform output is
   returned as-is. `isLoadingInitial` keeps its `hasRawData` term (its comment explains
   what it still covers); that is a separate clean-up.
 - `DRAW_DISTANCE`'s comment in `pantryDisplay/constants.ts` no longer cites the deferral
