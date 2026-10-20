@@ -93,16 +93,26 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
   });
 
   it('opens the session the server issued and routes into the app', async () => {
-    await authService.handleLogin(
-      { user: USER, accessToken: ACCESS_TOKEN, refreshToken: 'refresh-token' },
-      undefined,
-      { email: EMAIL },
-    );
+    const signInsBefore = useStore.getState().loginCounts[USER.id] ?? 0;
+
+    // `login()` reports success exactly when this resolves.
+    await expect(
+      authService.handleLogin(
+        {
+          user: USER,
+          accessToken: ACCESS_TOKEN,
+          refreshToken: 'refresh-token',
+        },
+        undefined,
+        { email: EMAIL },
+      ),
+    ).resolves.toBe(false);
 
     const state = useStore.getState();
     expect(state.user?.id).toBe(USER.id);
     expect(state.accessToken).toBe(ACCESS_TOKEN);
     expect(state.navigationState).toBe('main_app');
+    expect(state.loginCounts[USER.id]).toBe(signInsBefore + 1);
     expect(reportedSteps(report)).toEqual([
       'sessionHost.postSignInGate',
       'sessionHost.afterSignIn',

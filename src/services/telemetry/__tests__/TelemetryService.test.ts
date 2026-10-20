@@ -414,6 +414,24 @@ describe('TelemetryService', () => {
         ]);
       });
 
+      it('drops the oldest held log first when it holds more than the buffer allows', async () => {
+        mockConsentKnown = false;
+        const service = createService();
+
+        for (let at = 0; at <= 1000; at++) {
+          service.log('warn', `held ${at}`);
+        }
+        await service.flush();
+        expect(mockSendLogs).not.toHaveBeenCalled();
+        readSavedConsent(null);
+        await service.flush();
+
+        const [[sent]] = mockSendLogs.mock.calls;
+        expect(sent).toHaveLength(1000);
+        expect(sent[0].message).toBe('held 1');
+        expect(sent[999].message).toBe('held 1000');
+      });
+
       it('discards everything held once consent is read as declined', async () => {
         mockConsentKnown = false;
         const service = createService();
