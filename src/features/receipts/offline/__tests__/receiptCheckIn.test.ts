@@ -11,6 +11,7 @@ import {
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
+import { forgetReceipt } from '../../utils/forgetReceipt';
 import {
   applyReceiptCheckIn,
   reconcileReceiptCheckInReplay,
@@ -21,6 +22,7 @@ import {
 jest.mock('#features/pantry/cache/items');
 jest.mock('#features/shoppingList/cache/localMove');
 jest.mock('#features/shoppingList/cache/purchase');
+jest.mock('../../utils/forgetReceipt');
 
 const cache = new InMemoryCache();
 
@@ -29,10 +31,10 @@ const INPUT = {
   pantryId: 'pantry-1',
   shoppingListId: 'list-1',
   lines: [
-    { pantryItemId: 'pi-0' },
-    { pantryItemId: 'pi-1', shoppingListItemId: 'line-eggs' },
-    { pantryItemId: 'pi-2' },
-    {},
+    { clientId: '0', pantryItemId: 'pi-0' },
+    { clientId: '1', pantryItemId: 'pi-1', shoppingListItemId: 'line-eggs' },
+    { clientId: '2', pantryItemId: 'pi-2' },
+    { clientId: '3' },
   ],
 };
 
@@ -202,6 +204,60 @@ describe('a queued check-in', () => {
     expect(draft?.added).toEqual([0]);
     expect(draft?.failed).toEqual({ 2: 'VALIDATION_FAILED' });
     expect(draft?.checkIn?.state).toBe('idle');
+  });
+
+  it('settles the receipt lines it sent, not their places in the send', () => {
+    useReceiptDraftStore.getState().ensureCheckInIds([3, 7, 9], 1);
+    const lines = [3, 7, 9].map(index => ({
+      clientId: String(index),
+      pantryItemId: `pi-${index}`,
+    }));
+
+    reconcileReceiptCheckInReplay(
+      cache,
+      { input: { ...queuedInput(), lines } },
+      {
+        createReceiptCheckIn: {
+          __typename: 'CreateReceiptCheckInPayload',
+          results: [
+            { index: 0, success: true, pantryItem: { id: 'pi-3' } },
+            {
+              index: 1,
+              success: false,
+              failure: { code: 'VALIDATION_FAILED' },
+            },
+            { index: 2, success: true, pantryItem: { id: 'pi-9' } },
+          ],
+        },
+      },
+    );
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.added).toEqual([3, 9]);
+    expect(draft?.failed).toEqual({ 7: 'VALIDATION_FAILED' });
+  });
+
+  it('ends a receipt whose review closed, and forgets its lookups', () => {
+    useReceiptDraftStore.setState({ draft: null });
+    seedDraft({ parseId: 'parse-1' });
+    const store = useReceiptDraftStore.getState();
+    store.ensureCheckInIds([0], 1);
+    store.setCheckInState('queued');
+    store.closeReceipt();
+
+    reconcileReceiptCheckInReplay(
+      cache,
+      { input: { ...queuedInput(), lines: [INPUT.lines[0]] } },
+      {
+        createReceiptCheckIn: {
+          __typename: 'CreateReceiptCheckInPayload',
+          results: [{ index: 0, success: true, pantryItem: { id: 'pi-0' } }],
+        },
+      },
+    );
+
+    expect(useReceiptDraftStore.getState().draft).toBeNull();
+    expect(forgetReceipt).toHaveBeenCalledWith(cache, 'parse-1');
   });
 
   it('leaves a newer receipt alone', () => {

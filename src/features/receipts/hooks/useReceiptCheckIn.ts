@@ -23,6 +23,8 @@ import { useTranslation } from '#/i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
 import {
   applyReceiptCheckIn,
+  receiptLineOutcomes,
+  settleReceiptCheckIn,
   type CheckInLineResult,
   type WrittenLine,
 } from '../offline/receiptCheckIn';
@@ -143,7 +145,7 @@ const releaseLines = (lines: readonly CheckInLineToSend[]) => {
 export function useReceiptCheckIn(listId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { setCheckInState, settleCheckIn, remintCheckInId, markAdded } =
+  const { setCheckInState, remintCheckInId, markAdded } =
     useReceiptDraftActions();
   const [createCheckIn] = useMutation(CreateReceiptCheckInDocument, {
     context: { localFirst: true },
@@ -296,7 +298,8 @@ export function useReceiptCheckIn(listId: string | undefined) {
       if (settled.status === 'failed') {
         // Refused whole: every line it withdrew is back to send again.
         const code = settled.failure?.code;
-        settleCheckIn(
+        settleReceiptCheckIn(
+          client.cache,
           input.id,
           lines.map(line => ({
             index: line.index,
@@ -330,11 +333,8 @@ export function useReceiptCheckIn(listId: string | undefined) {
           operation: 'Settle receipt check-in',
         });
       }
-      const results = sentResults.flatMap(result => {
-        const line = chunk[result.index];
-        return line ? [{ ...result, index: line.index }] : [];
-      });
-      settleCheckIn(input.id, results);
+      const results = receiptLineOutcomes(input, sentResults);
+      settleReceiptCheckIn(client.cache, input.id, results);
       reportFailed(chunk, results);
       for (const result of results) {
         (result.success ? added : failed).push(result.index);

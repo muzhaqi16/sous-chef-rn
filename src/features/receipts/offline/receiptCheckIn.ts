@@ -24,6 +24,7 @@ import {
   useReceiptDraftStore,
   type CheckInLineOutcome,
 } from '../store/receiptDraftStore';
+import { forgetReceipt } from '../utils/forgetReceipt';
 
 /**
  * What a check-in's settle reads from what was sent: true of the input this
@@ -34,6 +35,8 @@ export interface CheckInSent {
   pantryId: string;
   shoppingListId?: string | null;
   lines: readonly {
+    /** The receipt line it is, as a string. */
+    clientId?: string | null;
     pantryItemId?: string | null;
     shoppingListItemId?: string | null;
     item?: { inline?: { id?: string | null } | null } | null;
@@ -135,6 +138,38 @@ export function applyReceiptCheckIn(
   return { exact, adopted };
 }
 
+/**
+ * Results as the receipt lines they answer: a result's `index` is its place in
+ * the send, and the line sent there names its receipt line by `clientId`.
+ */
+export function receiptLineOutcomes<Result extends CheckInLineOutcome>(
+  input: CheckInSent,
+  results: readonly Result[],
+): Result[] {
+  return results.flatMap(result => {
+    const clientId = input.lines[result.index]?.clientId;
+    const index = clientId ? Number(clientId) : Number.NaN;
+    return Number.isInteger(index) ? [{ ...result, index }] : [];
+  });
+}
+
+/**
+ * Settles the saved receipt holding `checkInId`. One this ends drops its
+ * lookups, as leaving its review does.
+ */
+export function settleReceiptCheckIn(
+  cache: ApolloCache,
+  checkInId: string,
+  outcomes: readonly CheckInLineOutcome[],
+): void {
+  const { draft, settleCheckIn } = useReceiptDraftStore.getState();
+  if (!draft?.checkIn?.ids.includes(checkInId)) return;
+  settleCheckIn(checkInId, outcomes);
+  if (!useReceiptDraftStore.getState().draft) {
+    forgetReceipt(cache, draft.parseId ?? draft.serverParse?.id);
+  }
+}
+
 const idOrNull = (value: unknown) => (typeof value === 'string' ? value : null);
 
 const refOf = (value: unknown) =>
@@ -161,6 +196,7 @@ const checkInSentOf = (variables: { input?: unknown }): CheckInSent | null => {
     lines: input.lines.map((line: unknown) =>
       isRecord(line)
         ? {
+            clientId: idOrNull(line.clientId),
             pantryItemId: idOrNull(line.pantryItemId),
             shoppingListItemId: idOrNull(line.shoppingListItemId),
             item: inlineOf(line.item),
@@ -210,7 +246,7 @@ export const reconcileReceiptCheckInReplay: ReplayReconcilerTable[string] = (
   const results = resultsOf(data);
   const { adopted } = applyReceiptCheckIn(cache, input, results);
   for (const adoption of adopted) adopt?.(adoption);
-  useReceiptDraftStore.getState().settleCheckIn(input.id, results);
+  settleReceiptCheckIn(cache, input.id, receiptLineOutcomes(input, results));
 };
 
 /** A queued check-in refused for good: every stack it wrote goes, uncounted. */
