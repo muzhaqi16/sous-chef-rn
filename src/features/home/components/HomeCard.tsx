@@ -9,6 +9,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useFragment } from '@apollo/client/react';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 
 import { Icon } from '#components/atoms/Icon';
 import { HomeActions } from './HomeActions';
@@ -44,11 +45,16 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Home's
   // fields change. `GetHomes` fetches them through `home_listed`.
-  const { data: home, complete } = useFragment({
+  const {
+    data: home,
+    complete,
+    missing,
+  } = useFragment({
     fragment: HomeCard_HomeFragmentDoc,
     fragmentName: 'HomeCard_home',
     from: { __typename: 'Home', id: homeId },
   });
+  useIncompleteCellReport('HomeCard_home', missing);
 
   // Animated value for highlight effect
   const highlightOpacity = useSharedValue(0);

@@ -6,6 +6,7 @@ import { View } from 'react-native';
 // doesn't also fire the row's onPress (which would navigate to details).
 import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -54,11 +55,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 }) => {
   // Per-entity subscription: this row re-renders only for its own cache record.
   // A recycled cell's undefined item is dropped by the list's `renderItem`.
-  const { data, complete } = useFragment({
+  const { data, complete, missing } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
     from: { __typename: 'ShoppingListItem', id: rowItem.id },
   });
+  useIncompleteCellReport('SortableItem_item', missing);
 
   // One list-level useUnistyles, rather than a theme subscription per row.
   const themeColors = useSortableListTheme();

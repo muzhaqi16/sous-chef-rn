@@ -51,8 +51,12 @@ A core document includes only core fragments
 `...<Type>Readers`, and a list a core hook runs (`GetHomes`, `GetPantry`,
 `GetShoppingListItemsFiltered`) spreads a core `<entity>_listed` fragment of
 what its rows show. Each cell of such a list reads its own fragment by id
-(`from: { __typename, id }`), and `listedFragmentsCoverCells.test.ts` holds the
-listed fragment to every cell fragment that reads through it.
+(`from: { __typename, id }`). `listedFragmentsCoverCells.test.ts` finds every
+read by id in the source and holds it to a query that selects it whole, and
+holds each listed fragment to the cells its header names. At runtime a strict
+cell calls `useIncompleteCellReport`, which warns once per fragment when its
+entity is cached without a field it reads; a row missing whole, as one deleted
+mid-update is, is not reported.
 
 ---
 

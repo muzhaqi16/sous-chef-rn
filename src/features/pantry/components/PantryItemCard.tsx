@@ -13,6 +13,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
@@ -151,11 +152,16 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   pantryItemId,
 }) => {
   const { t } = useTranslation();
-  const { data: pantryItem, complete } = useFragment({
+  const {
+    data: pantryItem,
+    complete,
+    missing,
+  } = useFragment({
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
     from: { __typename: 'PantryItem', id: pantryItemId },
   });
+  useIncompleteCellReport('PantryItemCard_pantryItem', missing);
 
   const { actions, swipeable } = usePantryActions();
 
