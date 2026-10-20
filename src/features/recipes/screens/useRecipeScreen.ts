@@ -19,6 +19,10 @@ import type { IconName } from '#components/atoms/Icon';
 import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import { isLifestyleDiet } from '#domain/dietary';
+import {
+  MAX_CATALOG_INGREDIENTS,
+  acceptedIngredientNames,
+} from '#domain/catalogRecipes';
 import { toDisplayItems, type DisplayItem } from './recipeDisplayItems';
 
 /** Says why a search showed less than it could, in the screen's words. */
@@ -156,6 +160,17 @@ export function useRecipeScreen() {
 
   // ── Actions ──
   const toggleIngredient = (name: string) => {
+    // Counted as the API counts them, so a pick that adds no new name is kept.
+    if (
+      !selectedIngredients.has(name) &&
+      acceptedIngredientNames([...selectedIngredients, name]).length >
+        MAX_CATALOG_INGREDIENTS
+    ) {
+      toastService.info(
+        t('recipes.ingredientLimitReached', { count: MAX_CATALOG_INGREDIENTS }),
+      );
+      return;
+    }
     setSelectedIngredients(prev => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -177,7 +192,8 @@ export function useRecipeScreen() {
   };
 
   const handleIngredientSearch = async () => {
-    if (selectedIngredients.size === 0) {
+    // A name the API would refuse is left out, so it alone cannot be searched.
+    if (acceptedIngredientNames([...selectedIngredients]).length === 0) {
       alertService.alert(
         tGlobal('recipes.noIngredientsSelectedTitle'),
         tGlobal('recipes.selectAtLeastOneIngredient'),
@@ -191,16 +207,17 @@ export function useRecipeScreen() {
     );
   };
 
+  // The partial-results toast says to pull down, so a pull repeats any search.
   const handleRefresh = async () => {
     if (searchPerformed) {
-      if (searchQuery.trim()) {
-        presentSearchOutcome(
-          await recipeSearch.search(searchQuery, activeFilters),
-        );
-      }
+      presentSearchOutcome(await recipeSearch.rerun(activeFilters));
     } else {
       await discovery.refresh();
     }
+  };
+
+  const loadMoreSearch = async () => {
+    presentSearchOutcome(await recipeSearch.loadMore());
   };
 
   // ── Empty state ──
@@ -244,6 +261,12 @@ export function useRecipeScreen() {
         title: t('recipes.noRecipesFoundTitle'),
         description: t('recipes.noRecipesFoundDescription'),
       }
+    : discovery.failed
+    ? {
+        icon: 'alert-circle-outline',
+        title: t('recipes.discoveryFailedTitle'),
+        description: t('recipes.discoveryFailedDescription'),
+      }
     : {
         icon: 'restaurant-outline',
         title: t('recipes.discoverTitle'),
@@ -269,7 +292,7 @@ export function useRecipeScreen() {
     searchLoading,
     searchLoadingMore,
     searchHasMore,
-    loadMoreSearch: recipeSearch.loadMore,
+    loadMoreSearch,
     selectedIngredients,
     ingredientSearchQuery,
     setIngredientSearchQuery,

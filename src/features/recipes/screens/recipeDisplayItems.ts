@@ -4,18 +4,16 @@ import {
   catalogHintOf,
   type RecipeTarget,
 } from '#features/recipes/hooks/useOpenCatalogRecipe';
-import type {
-  FoundHit,
-  FoundRecipe,
-  IngredientMatchEdge,
-  RandomHit,
-  RecipeRow,
-  RecipeSuggestionEdge,
-} from '#features/recipes/utils/recipeRows';
 import {
-  catalogKey,
-  timeAndServings,
-} from '#features/recipes/utils/recipeCardText';
+  rowKey,
+  type FoundHit,
+  type FoundRecipe,
+  type IngredientMatchEdge,
+  type RandomHit,
+  type RecipeRow,
+  type RecipeSuggestionEdge,
+} from '#features/recipes/utils/recipeRows';
+import { timeAndServings } from '#features/recipes/utils/recipeCardText';
 
 export interface DisplayItem {
   id: string;
@@ -26,14 +24,16 @@ export interface DisplayItem {
   target: RecipeTarget;
 }
 
+/** A card's content; its id is the row's key. */
+type CardContent = Omit<DisplayItem, 'id'>;
+
 const recipeTarget = (id: string): RecipeTarget => ({ recipeId: id });
 
 /** A recipe the API holds. Its "Saved" badge is the user's own mark. */
 const recipeDisplayItem = (
   recipe: FoundRecipe,
   translate: Translate,
-): DisplayItem => ({
-  id: `recipe-${recipe.id}`,
+): CardContent => ({
   title: recipe.name,
   subtitle: timeAndServings(
     recipe.totalTimeMinutes,
@@ -51,8 +51,7 @@ const recipeDisplayItem = (
 const catalogDisplayItem = (
   hit: FoundHit,
   translate: Translate,
-): DisplayItem => ({
-  id: catalogKey(hit),
+): CardContent => ({
   title: hit.name,
   subtitle: timeAndServings(hit.totalTimeMinutes, hit.servings, translate).join(
     ' • ',
@@ -65,9 +64,8 @@ const catalogDisplayItem = (
   target: { catalog: catalogHintOf(hit) },
 });
 
-function randomDisplayItem(hit: RandomHit, translate: Translate): DisplayItem {
+function randomDisplayItem(hit: RandomHit, translate: Translate): CardContent {
   return {
-    id: catalogKey(hit),
     title: hit.name,
     subtitle: timeAndServings(
       hit.totalTimeMinutes,
@@ -84,7 +82,7 @@ function randomDisplayItem(hit: RandomHit, translate: Translate): DisplayItem {
 function pantryDisplayItem(
   edge: IngredientMatchEdge,
   translate: Translate,
-): DisplayItem {
+): CardContent {
   const { node: hit, usedIngredientCount, missedIngredientCount } = edge;
   const totalIngredients = usedIngredientCount + missedIngredientCount;
   const subtitleParts: string[] = [];
@@ -96,7 +94,6 @@ function pantryDisplayItem(
   );
 
   return {
-    id: catalogKey(hit),
     title: hit.name,
     subtitle: subtitleParts.join(' • '),
     badge: {
@@ -127,7 +124,7 @@ function pantryDisplayItem(
 function suggestionDisplayItem(
   edge: RecipeSuggestionEdge,
   translate: Translate,
-): DisplayItem {
+): CardContent {
   const { node, coverage } = edge;
   // One name per item: two stacks of milk are still "Uses milk".
   const named = new Set<string>();
@@ -158,7 +155,6 @@ function suggestionDisplayItem(
   }
 
   return {
-    id: `recipe-${node.id}`,
     title: node.name,
     subtitle: subtitleParts.join(' • '),
     badge: {
@@ -176,22 +172,24 @@ function suggestionDisplayItem(
   };
 }
 
+function cardContent(row: RecipeRow, translate: Translate): CardContent {
+  switch (row.source) {
+    case 'recipe':
+      return recipeDisplayItem(row.recipe, translate);
+    case 'catalog':
+      return catalogDisplayItem(row.hit, translate);
+    case 'random':
+      return randomDisplayItem(row.hit, translate);
+    case 'pantry':
+      return pantryDisplayItem(row.edge, translate);
+    case 'suggestion':
+      return suggestionDisplayItem(row.edge, translate);
+  }
+}
+
 /** The rows as the list shows them, in the language of the caller's `t`. */
 export const toDisplayItems = (
   rows: readonly RecipeRow[],
   translate: Translate,
 ): DisplayItem[] =>
-  rows.map(row => {
-    switch (row.source) {
-      case 'recipe':
-        return recipeDisplayItem(row.recipe, translate);
-      case 'catalog':
-        return catalogDisplayItem(row.hit, translate);
-      case 'random':
-        return randomDisplayItem(row.hit, translate);
-      case 'pantry':
-        return pantryDisplayItem(row.edge, translate);
-      case 'suggestion':
-        return suggestionDisplayItem(row.edge, translate);
-    }
-  });
+  rows.map(row => ({ id: rowKey(row), ...cardContent(row, translate) }));

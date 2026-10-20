@@ -59,6 +59,7 @@ import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
+import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
 
 /**
@@ -486,7 +487,7 @@ export const PantryItemDetail: React.FC<
             >
               {suggestedRecipes.map(recipe => (
                 <AppPressable
-                  key={`${recipe.provider}-${recipe.providerRecipeId}`}
+                  key={catalogKey(recipe)}
                   style={styles.recipeCard}
                   onPress={() => handleRecipePress(recipe)}
                 >

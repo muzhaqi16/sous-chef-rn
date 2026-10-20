@@ -1,3 +1,4 @@
+import { catalogKey } from '#domain/catalogRecipes';
 import type { SearchRecipesQuery } from '#features/recipes/hooks/useRecipeSearch.generated';
 import type {
   CatalogRecipesByIngredientsQuery,
@@ -42,3 +43,18 @@ export const foundRow = (node: FoundNode): RecipeRow =>
   node.__typename === 'Recipe'
     ? { source: 'recipe', recipe: node }
     : { source: 'catalog', hit: node };
+
+/** A row's list key: one per recipe, whichever source listed it. */
+export function rowKey(row: RecipeRow): string {
+  switch (row.source) {
+    case 'recipe':
+      return `recipe-${row.recipe.id}`;
+    case 'suggestion':
+      return `recipe-${row.edge.node.id}`;
+    case 'catalog':
+    case 'random':
+      return catalogKey(row.hit);
+    case 'pantry':
+      return catalogKey(row.edge.node);
+  }
+}

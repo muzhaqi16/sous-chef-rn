@@ -31,7 +31,11 @@ jest.mock('#components/molecules/SearchBar', () => {
   return {
     SearchBar: R.forwardRef(
       (
-        props: { placeholder?: string; onChangeText?: (text: string) => void },
+        props: {
+          placeholder?: string;
+          onChangeText?: (text: string) => void;
+          maxLength?: number;
+        },
         ref: React.Ref<{
           clear: () => void;
           focus: () => void;
@@ -51,6 +55,7 @@ jest.mock('#components/molecules/SearchBar', () => {
           <TextInput
             placeholder={props.placeholder}
             onChangeText={props.onChangeText}
+            maxLength={props.maxLength}
             testID="search-bar"
           />
         );
@@ -195,6 +200,11 @@ describe('AddMealSheet', () => {
   it('renders the header title', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Add a meal')).toBeTruthy();
+  });
+
+  it('stops the search at the longest query the API takes', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByTestId('search-bar').props.maxLength).toBe(200);
   });
 
   it('renders all meal type chips', () => {
@@ -427,6 +437,7 @@ describe('AddMealSheet', () => {
       servings: 4,
       totalTimeMinutes: 20,
       diets: [Diet.Vegetarian],
+      freeOf: [],
       isSaved: false,
     });
 
@@ -463,6 +474,19 @@ describe('AddMealSheet', () => {
 
       expect(await screen.findByText('Pasta Bake')).toBeTruthy();
       expect(screen.getAllByText('Pasta Carbonara')).toHaveLength(1);
+    });
+
+    it('is listed once when it is saved but its name does not hold the search', async () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />, [
+        searchAnswering([held('r2', 'Chicken Salad')]).mock,
+      ]);
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+        'chiken',
+      );
+
+      expect(await screen.findByText('Chicken Salad')).toBeTruthy();
+      expect(screen.getAllByText('Chicken Salad')).toHaveLength(1);
     });
   });
 });

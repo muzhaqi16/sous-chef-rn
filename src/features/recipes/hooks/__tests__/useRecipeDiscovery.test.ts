@@ -47,6 +47,7 @@ const catalog: CatalogDiscoveryResult = {
   mode: 'random',
   rows: [randomRow('7', 'Catalog stew')],
   loading: false,
+  failed: false,
   refresh: jest.fn(),
   pantryItems: [],
   hasPantryItems: false,

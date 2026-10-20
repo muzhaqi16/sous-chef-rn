@@ -8,10 +8,8 @@ import {
   SearchRecipesDocument,
   type SearchRecipesQuery,
 } from './useRecipeSearch.generated';
-import {
-  catalogKey,
-  timeAndServings,
-} from '#features/recipes/utils/recipeCardText';
+import { catalogKey } from '#domain/catalogRecipes';
+import { timeAndServings } from '#features/recipes/utils/recipeCardText';
 import { catalogHintOf, type RecipeTarget } from './useOpenCatalogRecipe';
 
 const MIN_QUERY_LENGTH = 3;
@@ -58,7 +56,7 @@ function pickerRecipeOf(node: FoundNode, translate: Translate): PickerRecipe {
     return {
       ...shown,
       key: `recipe-${node.id}`,
-      dietTags: dietTagsOf(node.diets, []),
+      dietTags: dietTagsOf(node.diets, node.freeOf),
       target: { recipeId: node.id },
     };
   }
@@ -79,7 +77,8 @@ async function firstPage(
     const result = await client.query({
       query: SearchRecipesDocument,
       variables: { query, first: PICKER_PAGE_SIZE },
-      fetchPolicy: 'network-only',
+      // Nothing reads a search back from the cache, so it is never written.
+      fetchPolicy: 'no-cache',
     });
     return result.data?.findRecipes.edges.map(edge => edge.node) ?? [];
   } catch {

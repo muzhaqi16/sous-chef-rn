@@ -123,10 +123,10 @@
       "body": "query CatalogRecipesByIngredients($ingredients: [String!]!, $first: Int) {\n  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {\n    edges {\n      cursor\n      usedIngredientCount\n      missedIngredientCount\n      node {\n        provider\n        providerRecipeId\n        name\n        imageUrl\n        servings\n        totalTimeMinutes\n        likes\n        __typename\n      }\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
     },
     {
-      "id": "a5b322afadaa00541153979c963a4e58f288995543cc69a6bf5e18765f4bb08d",
+      "id": "72a5e86d24b0d08e16683d0339556528050b243970a32b97daef8e11d791d6fa",
       "name": "CatalogRecipesForItem",
       "type": "query",
-      "body": "query CatalogRecipesForItem($ingredients: [String!]!, $first: Int) {\n  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {\n    edges {\n      cursor\n      node {\n        provider\n        providerRecipeId\n        name\n        imageUrl\n        totalTimeMinutes\n        servings\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query CatalogRecipesForItem($ingredients: [String!]!, $first: Int) {\n  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {\n    edges {\n      cursor\n      node {\n        provider\n        providerRecipeId\n        name\n        imageUrl\n        totalTimeMinutes\n        servings\n        __typename\n      }\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
     },
     {
       "id": "b310512260547507a040ac70d98b8d2d6a7ddf8fdcec5e9c60f277f8bfd0a31c",
@@ -1203,10 +1203,10 @@
       "body": "query SearchItemsSemantic($prompt: String!, $first: Int, $maxDistance: Float, $filters: SemanticItemFilters) {\n  searchItemsSemantic(\n    prompt: $prompt\n    first: $first\n    maxDistance: $maxDistance\n    filters: $filters\n  ) {\n    edges {\n      node {\n        id\n        name\n        type\n        level\n        imageUrl\n        netWeight\n        defaultConsumeUnit {\n          id\n          name\n          symbol\n          type\n          __typename\n        }\n        brands {\n          id\n          brand {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        categories {\n          id\n          isPrimary\n          category {\n            id\n            name\n            type\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "a994897d78fee3a5743cba4233ff151dfc3b85bd45428f6efbbbe20b52ccb133",
+      "id": "c9feee51cb580f21834d5ffb063bede8f42c9a03612dcf106ddf2ab8d7c9197a",
       "name": "SearchRecipes",
       "type": "query",
-      "body": "query SearchRecipes($query: String!, $filters: RecipeFilters, $first: Int, $after: String) {\n  findRecipes(query: $query, filters: $filters, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        __typename\n        ... on Recipe {\n          id\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          isSaved\n          __typename\n        }\n        ... on CatalogRecipeHit {\n          provider\n          providerRecipeId\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          likes\n          __typename\n        }\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
+      "body": "query SearchRecipes($query: String!, $filters: RecipeFilters, $first: Int, $after: String) {\n  findRecipes(query: $query, filters: $filters, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        __typename\n        ... on Recipe {\n          id\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          isSaved\n          __typename\n        }\n        ... on CatalogRecipeHit {\n          provider\n          providerRecipeId\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          likes\n          __typename\n        }\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
     },
     {
       "id": "a81602f18b992f5994a15dd2bcd57ea85b0690b57b26d23dbacdb2f4667032e8",

@@ -27,6 +27,7 @@ import {
 import { SavedRecipeRow } from './SavedRecipeRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
+import { MAX_RECIPE_QUERY_LENGTH } from '#domain/catalogRecipes';
 import { useOpenCatalogRecipe } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import {
   useRecipeTextSearch,
@@ -187,8 +188,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     searchQuery,
     [r => r.recipe?.name],
   );
-  // A saved recipe the search also finds is listed once, with the saved ones.
-  const savedIds = new Set(recipes.map(r => r.recipe?.id));
+  // A saved recipe the search also finds is listed once: with the saved ones
+  // when its name matches, else with the results, which the API matches by
+  // more than the name.
+  const savedIds = new Set(filteredRecipes.map(r => r.recipe?.id));
   const otherResults = searchResults.filter(
     item => !('recipeId' in item.target) || !savedIds.has(item.target.recipeId),
   );
@@ -232,6 +235,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             isLoading={searchingApi}
             debounceMs={500}
             autoCapitalize="none"
+            maxLength={MAX_RECIPE_QUERY_LENGTH}
           />
         </View>
 

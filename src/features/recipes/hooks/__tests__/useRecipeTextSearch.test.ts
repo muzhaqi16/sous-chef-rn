@@ -21,6 +21,7 @@ const heldRecipe: FoundRecipe = {
   servings: 4,
   totalTimeMinutes: 25,
   diets: [Diet.Vegetarian, Diet.Vegan],
+  freeOf: [],
   isSaved: false,
 };
 
@@ -93,10 +94,22 @@ describe('useRecipeTextSearch', () => {
       title: 'Pasta al Forno',
       subtitle: '⏱ 25 min • 4 servings',
       imageUrl: 'https://cdn.example.com/forno.jpg',
-      // Vegan wins over vegetarian; a held recipe states no dairy-free.
+      // Vegan wins over vegetarian.
       dietTags: ['vegan'],
       target: { recipeId: 'recipe-1' },
     });
+  });
+
+  it('tags a held recipe dairy-free as its catalog hit is tagged', async () => {
+    const m = searchMock([
+      { ...heldRecipe, diets: [], freeOf: [Intolerance.Dairy] },
+    ]);
+    const { result } = renderSearch([m.mock]);
+
+    act(() => result.current.search('pasta'));
+    await waitFor(() => expect(result.current.results).toHaveLength(1));
+
+    expect(result.current.results[0]?.dietTags).toEqual(['dairyFree']);
   });
 
   it('opens a catalog hit through the API by its provider and id', async () => {

@@ -7,14 +7,17 @@ import { errorService } from '#/services/errorService';
 import { isRateLimitError } from '#/utils/errors/rateLimit';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { RecipeFilters as RecipeFiltersInput } from '#/graphql/generated/schemaTypes';
+import { catalogIngredientNames } from '#domain/catalogRecipes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
-import { foundRow, type RecipeRow } from '#features/recipes/utils/recipeRows';
+import {
+  foundRow,
+  rowKey,
+  type RecipeRow,
+} from '#features/recipes/utils/recipeRows';
 import { SearchRecipesDocument } from './useRecipeSearch.generated';
 import { CatalogRecipesByIngredientsDocument } from './useCatalogDiscovery.generated';
 
 const SEARCH_PAGE_SIZE = 25;
-/** The most ingredient names the API takes in one search. */
-export const MAX_SEARCH_INGREDIENTS = 20;
 
 /** Why a search showed nothing; the caller says it in its own words. */
 export type SearchFailure = 'offline' | 'rateLimited' | 'failed';
@@ -22,11 +25,16 @@ export type SearchFailure = 'offline' | 'rateLimited' | 'failed';
 export type SearchOutcome =
   /** `partial`: the catalog could not be searched, so only held recipes show. */
   | { status: 'shown'; partial: boolean }
-  /** A newer search or a clear replaced it before it committed. */
+  /** Nothing to say: a newer search or a clear replaced it, or no page came. */
   | { status: 'superseded' }
   | { status: 'failed'; failure: SearchFailure };
 
 const SUPERSEDED: SearchOutcome = { status: 'superseded' };
+
+/** What a search asked for, so a pull can ask it again. */
+type LastSearch =
+  | { kind: 'text'; query: string }
+  | { kind: 'ingredients'; names: string[] };
 
 /** Where a text search's next page starts; null when it has none. */
 interface NextPage {
@@ -80,7 +88,8 @@ async function fetchTextPage(
         first: SEARCH_PAGE_SIZE,
         after,
       },
-      fetchPolicy: 'network-only',
+      // Nothing reads a search back from the cache, so it is never written.
+      fetchPolicy: 'no-cache',
     });
     const found = result.data?.findRecipes;
     if (!found) return { error: result.error };
@@ -102,16 +111,13 @@ async function fetchTextPage(
 
 async function fetchIngredientPage(
   client: ApolloClient,
-  ingredients: readonly string[],
+  ingredients: string[],
 ): Promise<Fetched> {
   try {
     const result = await client.query({
       query: CatalogRecipesByIngredientsDocument,
-      variables: {
-        ingredients: ingredients.slice(0, MAX_SEARCH_INGREDIENTS),
-        first: SEARCH_PAGE_SIZE,
-      },
-      fetchPolicy: 'network-only',
+      variables: { ingredients, first: SEARCH_PAGE_SIZE },
+      fetchPolicy: 'no-cache',
     });
     const found = result.data?.catalogRecipesByIngredients;
     if (!found) return { error: result.error };
@@ -158,8 +164,7 @@ export function useRecipeSearch() {
   // Each search captures it and commits only while it is still current, so a
   // newer search or a clear supersedes one in flight.
   const generationRef = useRef(0);
-  const [query, setQuery] = useState('');
-  const [performed, setPerformed] = useState(false);
+  const [last, setLast] = useState<LastSearch | null>(null);
   const [loading, setLoading] = useState(false);
   // Drops re-entrant load-mores: onEndReached fires again before a page lands.
   const [loadingMore, setLoadingMore] = useState(false);
@@ -177,11 +182,12 @@ export function useRecipeSearch() {
   };
 
   const run = async (
+    searched: LastSearch,
     fetchPage: () => Promise<Fetched>,
   ): Promise<SearchOutcome> => {
     const isCurrent = supersede();
     setLoading(true);
-    setPerformed(true);
+    setLast(searched);
     const fetched = await fetchPage();
     // A newer search fired mid-flight: discard this response whole, so it
     // cannot clobber the newer results or the loading flag it now owns.
@@ -195,52 +201,69 @@ export function useRecipeSearch() {
     return { status: 'shown', partial: fetched.page.partial };
   };
 
-  const search = (text: string, filters: RecipeFilters) => {
-    setQuery(text);
-    return run(() => fetchTextPage(client, text, filters, null));
-  };
+  const search = (text: string, filters: RecipeFilters) =>
+    run({ kind: 'text', query: text }, () =>
+      fetchTextPage(client, text, filters, null),
+    );
 
   // One page, with no filters: the API ranks by the ingredients alone.
   const searchByIngredients = (ingredients: readonly string[]) => {
-    setQuery('');
-    return run(() => fetchIngredientPage(client, ingredients));
+    const names = catalogIngredientNames(ingredients);
+    return run({ kind: 'ingredients', names }, () =>
+      fetchIngredientPage(client, names),
+    );
+  };
+
+  /** The last search again; filters apply to a text search only. */
+  const rerun = (filters: RecipeFilters): Promise<SearchOutcome> => {
+    if (last === null) return Promise.resolve(SUPERSEDED);
+    return last.kind === 'text'
+      ? search(last.query, filters)
+      : searchByIngredients(last.names);
   };
 
   const { next } = results;
 
-  const loadMore = async () => {
-    if (!next || loadingMore) return;
+  const loadMore = async (): Promise<SearchOutcome> => {
+    if (!next || loadingMore) return SUPERSEDED;
+    const generation = generationRef.current;
+    let outcome: SearchOutcome = SUPERSEDED;
     await executeWithLoadingState(async () => {
       const page = await fetchNextPage(client, next);
-      if (!page) return;
       // A new search or clear mid-flight replaced `next`; this page belongs to
       // the old query.
-      setResults(prev =>
-        prev.next === next
-          ? { rows: [...prev.rows, ...page.rows], next: page.next }
-          : prev,
-      );
+      if (!page || generation !== generationRef.current) return;
+      outcome = { status: 'shown', partial: page.partial };
+      // The API caches the catalog's results a block at a time, so blocks
+      // fetched at different times can repeat a hit an earlier page listed.
+      setResults(prev => {
+        if (prev.next !== next) return prev;
+        const listed = new Set(prev.rows.map(rowKey));
+        const added = page.rows.filter(row => !listed.has(rowKey(row)));
+        return { rows: [...prev.rows, ...added], next: page.next };
+      });
     }, setLoadingMore);
+    return outcome;
   };
 
   const clear = () => {
     supersede();
-    setQuery('');
-    setPerformed(false);
+    setLast(null);
     setResults({ rows: [], next: null });
     // A search cleared mid-flight would otherwise leave loading stuck on.
     setLoading(false);
   };
 
   return {
-    query,
+    query: last?.kind === 'text' ? last.query : '',
     rows: results.rows,
-    performed,
+    performed: last !== null,
     loading,
     loadingMore,
     hasMore: next !== null,
     search,
     searchByIngredients,
+    rerun,
     loadMore,
     clear,
   };

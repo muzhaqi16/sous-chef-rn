@@ -12,5 +12,6 @@ query CatalogRecipesForItem($ingredients: [String!]!, $first: Int) {
         servings
       }
     }
+    catalogAvailable
   }
 }

@@ -166,9 +166,13 @@ const mockDeferredScreen = jest.fn(
 jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
-jest.mock('#features/recipes/components/skeletons/RecipeSkeleton', () => ({
-  RecipeSkeleton: () => 'RecipeSkeleton',
-}));
+jest.mock('#features/recipes/components/skeletons/RecipeSkeleton', () => {
+  const R = require('react');
+  const { Text } = require('react-native');
+  return {
+    RecipeSkeleton: () => R.createElement(Text, null, 'RecipeSkeleton'),
+  };
+});
 jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({ title, actions }: TabScreenHeaderMockProps) => {
     const R = require('react');
@@ -360,6 +364,35 @@ describe('RecipeMain', () => {
     render(<RecipeMain />);
     expect(capturedItems!.length).toBe(1);
     expect(capturedItems![0]!.title).toBe('Soup');
+  });
+
+  it('keeps shown discovery rows on screen while discovery loads again', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({
+      showDiscovery: true,
+      discovery: {
+        mode: 'pantry',
+        loading: true,
+        refresh: jest.fn(),
+        pantryItems: [],
+        hasPantryItems: true,
+      },
+      items: [{ id: '1', title: 'Soup', subtitle: '4 servings' }],
+    });
+    let capturedItems: RecipeMainItem[] | undefined;
+    mockItemListImpl = (props: ItemListMockProps) => {
+      capturedItems = props.items;
+      return null;
+    };
+
+    const screen = render(<RecipeMain />);
+
+    expect(screen.queryByText('RecipeSkeleton')).toBeNull();
+    expect(capturedItems?.map(item => item.title)).toEqual(['Soup']);
   });
 
   it('shows pantry discovery header', () => {

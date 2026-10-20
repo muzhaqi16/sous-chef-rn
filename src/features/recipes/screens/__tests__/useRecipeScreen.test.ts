@@ -69,6 +69,7 @@ function makeDiscovery(overrides: Record<string, unknown> = {}) {
     mode: 'random',
     rows: [],
     loading: false,
+    failed: false,
     refresh: mockDiscoveryRefresh,
     pantryItems: [],
     hasPantryItems: false,
@@ -183,6 +184,7 @@ const ingredientsAnswering = (
     name: string;
   }>,
   waitForRelease = false,
+  catalogAvailable = true,
 ) =>
   recordMock(CatalogRecipesByIngredientsDocument, {
     data: {
@@ -196,7 +198,7 @@ const ingredientsAnswering = (
             name: edge.name,
           },
         })),
-        catalogAvailable: true,
+        catalogAvailable,
       },
     },
     held: waitForRelease,
@@ -338,6 +340,47 @@ describe('useRecipeScreen', () => {
       result.current.clearSelectedIngredients();
     });
     expect(result.current.selectedIngredients.size).toBe(0);
+  });
+
+  it('stops the ingredient picker at what one search takes, and says so', () => {
+    const { result } = renderRecipeScreen();
+    act(() => {
+      for (let i = 0; i < 20; i += 1)
+        result.current.toggleIngredient(`item ${i}`);
+    });
+    expect(result.current.selectedIngredients.size).toBe(20);
+
+    act(() => {
+      result.current.toggleIngredient('Basil');
+    });
+
+    expect(result.current.selectedIngredients.has('Basil')).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'One search takes up to 20 ingredients.',
+    );
+
+    // The API counts "ITEM 3" as the "item 3" already picked: no new name.
+    mockToastInfo.mockClear();
+    act(() => {
+      result.current.toggleIngredient('ITEM 3');
+    });
+    expect(result.current.selectedIngredients.has('ITEM 3')).toBe(true);
+    expect(mockToastInfo).not.toHaveBeenCalled();
+  });
+
+  it('counts a name with commas as the names the API reads in it', () => {
+    const { result } = renderRecipeScreen();
+    act(() => {
+      for (let i = 0; i < 19; i += 1)
+        result.current.toggleIngredient(`item ${i}`);
+    });
+
+    act(() => {
+      result.current.toggleIngredient('Beans, black');
+    });
+
+    expect(result.current.selectedIngredients.has('Beans, black')).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledTimes(1);
   });
 
   it('handleTextSearch lists the recipes the API holds, each opening its recipe', async () => {
@@ -516,15 +559,31 @@ describe('useRecipeScreen', () => {
 
     expect(byIngredients.fired).toHaveLength(1);
     const [fired] = byIngredients.fired;
-    expect(
-      [...((fired?.ingredients as string[] | undefined) ?? [])].sort(),
-    ).toEqual(['Basil', 'Tomato']);
+    expect(fired?.ingredients).toEqual(['basil', 'tomato']);
     const [card] = result.current.searchResults;
     expect(card?.id).toBe('catalog-SPOONACULAR-8001');
     expect(card?.title).toBe('Tomato Soup');
     expect(card?.badge?.text).toBe(
       '2 of 3 ingredients in your pantry, 1 to buy',
     );
+  });
+
+  it('handleIngredientSearch alerts when no selected name can be searched', async () => {
+    const byIngredients = ingredientsAnswering([]);
+    const { result } = renderRecipeScreen([byIngredients.mock]);
+
+    act(() => {
+      result.current.toggleIngredient('x'.repeat(150));
+    });
+    await act(async () => {
+      await result.current.handleIngredientSearch();
+    });
+
+    expect(mockAlert).toHaveBeenCalledWith(
+      'No Ingredients Selected',
+      expect.stringContaining('Please select'),
+    );
+    expect(byIngredients.fired).toEqual([]);
   });
 
   it('clearSearch resets search state but preserves discovery', async () => {
@@ -571,6 +630,34 @@ describe('useRecipeScreen', () => {
     expect(mockDiscoveryRefresh).not.toHaveBeenCalled();
   });
 
+  it('handleRefresh repeats an ingredient search, as the partial toast promises', async () => {
+    const byIngredients = ingredientsAnswering(
+      [{ used: 1, missed: 0, providerRecipeId: '8001', name: 'Tomato Soup' }],
+      false,
+      false,
+    );
+    const { result } = renderRecipeScreen([byIngredients.mock]);
+    act(() => {
+      result.current.toggleIngredient('Tomato');
+    });
+    await act(async () => {
+      await result.current.handleIngredientSearch();
+    });
+    expect(mockToastInfo).toHaveBeenLastCalledWith(
+      "Some recipes couldn't be loaded right now. Pull down to try again.",
+    );
+
+    await act(async () => {
+      await result.current.handleRefresh();
+    });
+
+    expect(byIngredients.fired).toEqual([
+      { ingredients: ['tomato'], first: 25 },
+      { ingredients: ['tomato'], first: 25 },
+    ]);
+    expect(mockDiscoveryRefresh).not.toHaveBeenCalled();
+  });
+
   it('handleRefresh delegates to discovery.refresh when no search performed', async () => {
     const search = searchAnswering(page([]));
     const { result } = renderRecipeScreen([search.mock]);
@@ -581,6 +668,17 @@ describe('useRecipeScreen', () => {
 
     expect(mockDiscoveryRefresh).toHaveBeenCalledTimes(1);
     expect(search.fired).toEqual([]);
+  });
+
+  it('says discovery could not load, and that pulling down retries', () => {
+    mockUseRecipeDiscovery.mockReturnValue(makeDiscovery({ failed: true }));
+
+    const { result } = renderRecipeScreen();
+
+    expect(result.current.emptyStateConfig).toMatchObject({
+      title: "Recipes couldn't be loaded",
+      description: 'Pull down to try again.',
+    });
   });
 
   it('emptyStateConfig reflects loading and post-search empty states', async () => {
@@ -641,6 +739,33 @@ describe('useRecipeScreen', () => {
       ]);
       expect(result.current.searchHasMore).toBe(false);
       expect(result.current.searchLoadingMore).toBe(false);
+    });
+
+    it('says so when a later page comes back without the catalog', async () => {
+      const search = recordMock(SearchRecipesDocument, {
+        dataFor: vars =>
+          vars.after === 'cursor-1'
+            ? page([held('r2', 'Second')], { catalogAvailable: false })
+            : page([held('r1', 'First')], {
+                endCursor: 'cursor-1',
+                hasNextPage: true,
+              }),
+      });
+      const { result } = renderRecipeScreen([search.mock]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('lasagna');
+      });
+      expect(mockToastInfo).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+
+      expect(mockToastInfo).toHaveBeenCalledWith(
+        "Some recipes couldn't be loaded right now. Pull down to try again.",
+      );
+      expect(result.current.searchHasMore).toBe(false);
     });
 
     it('searchHasMore follows pageInfo.hasNextPage', async () => {

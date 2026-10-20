@@ -19,6 +19,7 @@ query SearchRecipes(
           servings
           totalTimeMinutes
           diets
+          freeOf
           isSaved
         }
         ... on CatalogRecipeHit {

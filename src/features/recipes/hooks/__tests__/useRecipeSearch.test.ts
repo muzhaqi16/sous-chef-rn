@@ -1,5 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -59,8 +60,21 @@ const page = (
   },
 });
 
-const renderSearch = (operationMocks: MockedResponse[]) =>
-  renderHookWithApollo(() => useRecipeSearch(), { operationMocks });
+const renderSearch = (operationMocks: MockedResponse[], cache = makeCache()) =>
+  renderHookWithApollo(() => useRecipeSearch(), { operationMocks, cache });
+
+const ingredientPage = (providerRecipeId: string, name: string) => ({
+  catalogRecipesByIngredients: {
+    edges: [
+      {
+        usedIngredientCount: 2,
+        missedIngredientCount: 1,
+        node: { providerRecipeId, name },
+      },
+    ],
+    catalogAvailable: true,
+  },
+});
 
 const rateLimited = () =>
   new CombinedGraphQLErrors({
@@ -165,6 +179,117 @@ describe('useRecipeSearch', () => {
     ]);
     expect(result.current.hasMore).toBe(false);
     expect(result.current.loadingMore).toBe(false);
+  });
+
+  it('lists a hit a later page repeats once', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      dataFor: vars =>
+        vars.after === 'cursor-1'
+          ? page([hit('716429', 'Lentil soup'), hit('8001', 'Lentil salad')])
+          : page([held('r-1', 'Lentil stew'), hit('716429', 'Lentil soup')], {
+              endCursor: 'cursor-1',
+              hasNextPage: true,
+            }),
+    });
+    const { result } = renderSearch([search.mock]);
+
+    await act(async () => {
+      await result.current.search('lentil', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(
+      result.current.rows.map(row =>
+        row.source === 'catalog' ? row.hit.providerRecipeId : row.source,
+      ),
+    ).toEqual(['recipe', '716429', '8001']);
+  });
+
+  it('says a later page the catalog could not answer is partial', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      dataFor: vars =>
+        vars.after === 'cursor-1'
+          ? page([held('r-2', 'Second')], { catalogAvailable: false })
+          : page([held('r-1', 'First')], {
+              endCursor: 'cursor-1',
+              hasNextPage: true,
+            }),
+    });
+    const { result } = renderSearch([search.mock]);
+
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    let outcome: SearchOutcome | undefined;
+    await act(async () => {
+      outcome = await result.current.loadMore();
+    });
+
+    expect(outcome).toEqual({ status: 'shown', partial: true });
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('has nothing to say for a later page that belongs to a replaced search', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      data: page([held('r-1', 'First')], {
+        endCursor: 'cursor-1',
+        hasNextPage: true,
+      }),
+      match: vars => vars.after !== 'cursor-1',
+    });
+    const later = recordMock(SearchRecipesDocument, {
+      data: page([held('r-2', 'Second')], { catalogAvailable: false }),
+      match: vars => vars.after === 'cursor-1',
+      held: true,
+    });
+    const { result } = renderSearch([search.mock, later.mock]);
+
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    let pending: Promise<SearchOutcome> | undefined;
+    act(() => {
+      pending = result.current.loadMore();
+    });
+    act(() => {
+      result.current.clear();
+    });
+    let outcome: SearchOutcome | undefined;
+    await act(async () => {
+      later.release();
+      outcome = await pending;
+    });
+
+    expect(outcome).toEqual({ status: 'superseded' });
+    expect(result.current.rows).toEqual([]);
+  });
+
+  it('keeps no search in the cache', async () => {
+    const cache = makeCache();
+    const search = recordMock(SearchRecipesDocument, {
+      data: page([held('r-1', 'Lentil stew')]),
+    });
+    const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: ingredientPage('42', 'Tomato pasta'),
+    });
+    const { result } = renderSearch([search.mock, byIngredients.mock], cache);
+
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.searchByIngredients(['tomato']);
+    });
+
+    expect(result.current.rows).toHaveLength(1);
+    expect(Object.keys(cache.extract().ROOT_QUERY ?? {})).not.toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^(findRecipes|catalogRecipesByIngredients)/),
+      ]),
+    );
   });
 
   it('reports a page the catalog could not answer as partial', async () => {
@@ -290,18 +415,7 @@ describe('useRecipeSearch', () => {
 
   it('searches by ingredients: one page of what they can make, no filters', async () => {
     const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
-      data: {
-        catalogRecipesByIngredients: {
-          edges: [
-            {
-              usedIngredientCount: 2,
-              missedIngredientCount: 1,
-              node: { providerRecipeId: '42', name: 'Tomato pasta' },
-            },
-          ],
-          catalogAvailable: true,
-        },
-      },
+      data: ingredientPage('42', 'Tomato pasta'),
     });
     const { result } = renderSearch([byIngredients.mock]);
     const names = Array.from({ length: 25 }, (_, i) => `item-${i}`);
@@ -313,12 +427,59 @@ describe('useRecipeSearch', () => {
 
     expect(outcome).toEqual({ status: 'shown', partial: false });
     expect(byIngredients.fired).toEqual([
-      { ingredients: names.slice(0, 20), first: 25 },
+      { ingredients: names.slice(0, 20).sort(), first: 25 },
     ]);
     const [row] = result.current.rows;
     expect(row?.source === 'pantry' && row.edge.usedIngredientCount).toBe(2);
     expect(result.current.query).toBe('');
     expect(result.current.hasMore).toBe(false);
+  });
+
+  it('names ingredients the way the API counts them', async () => {
+    const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: ingredientPage('42', 'Bean chili'),
+    });
+    const { result } = renderSearch([byIngredients.mock]);
+
+    await act(async () => {
+      await result.current.searchByIngredients(['Beans, black', 'Onion']);
+    });
+
+    expect(byIngredients.fired).toEqual([
+      { ingredients: ['beans', 'black', 'onion'], first: 25 },
+    ]);
+  });
+
+  it('runs the last search again, an ingredient search included', async () => {
+    const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: ingredientPage('42', 'Tomato pasta'),
+    });
+    const search = recordMock(SearchRecipesDocument, {
+      data: page([held('r-1', 'Lentil stew')]),
+    });
+    const { result } = renderSearch([byIngredients.mock, search.mock]);
+
+    await act(async () => {
+      await result.current.searchByIngredients(['Tomato']);
+    });
+    await act(async () => {
+      await result.current.rerun(DEFAULT_FILTERS);
+    });
+    expect(byIngredients.fired).toEqual([
+      { ingredients: ['tomato'], first: 25 },
+      { ingredients: ['tomato'], first: 25 },
+    ]);
+
+    await act(async () => {
+      await result.current.search('lentil', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.rerun({ ...DEFAULT_FILTERS, diet: [Diet.Vegan] });
+    });
+    expect(search.fired[1]).toMatchObject({
+      query: 'lentil',
+      filters: { diets: [Diet.Vegan] },
+    });
   });
 
   it('drops a search cleared while in flight', async () => {
