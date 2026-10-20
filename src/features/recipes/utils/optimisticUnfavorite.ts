@@ -53,8 +53,9 @@ export async function performOptimisticUnfavorite({
   let savedDetailsSnapshot: Reference | null = null;
 
   if (viewerCacheId) {
-    // The total falls by one whether or not the recipe's edge is in a loaded
-    // page: the server's count does.
+    // A held total falls by one whether or not the recipe's edge is in a loaded
+    // page: the server's count does. One never held stays absent, or the next
+    // query selecting it would read a made-up count as a cache hit.
     client.cache.modify({
       id: viewerCacheId,
       fields: {
@@ -64,12 +65,15 @@ export async function performOptimisticUnfavorite({
         ) => {
           listSnapshots.set(storeFieldName, existing);
           if (!existing) return existing;
+          const { totalCount } = existing;
           return {
             ...existing,
             edges: (existing.edges ?? []).filter(
               edge => readField('recipeId', edge.node) !== recipeId,
             ),
-            totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
+            ...(typeof totalCount === 'number' && {
+              totalCount: Math.max(0, totalCount - 1),
+            }),
           };
         },
       },

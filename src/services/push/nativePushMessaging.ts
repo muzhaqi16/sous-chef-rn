@@ -21,6 +21,7 @@ import { logger } from '#/utils/environment';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
+import { registerTelemetryStateLoader } from '#services/telemetry/telemetryState';
 import { routeNotificationTap } from './pushNotificationRouting';
 
 /**
@@ -67,6 +68,12 @@ const toDisplayableNotification = (
   };
 };
 
+const loadStoreForTelemetry = (): void => {
+  import('#store').catch((error: unknown) =>
+    logger.warn('Loading the store for telemetry failed', error),
+  );
+};
+
 /**
  * MUST be called from index.js, synchronously and outside the React tree, so the
  * headless task that wakes the app can invoke it.
@@ -75,6 +82,11 @@ export const registerFcmBackgroundHandler = (): void => {
   if (Platform.OS !== 'android') return;
   try {
     setBackgroundMessageHandler(getMessaging(), async message => {
+      // A push handled with the app closed never renders App, so nothing else
+      // loads the store that tells telemetry the person's consent. Registered
+      // here, not at launch, so a foreground start keeps the store off its
+      // entry path.
+      registerTelemetryStateLoader(loadStoreForTelemetry);
       const displayable = toDisplayableNotification(message);
       if (displayable) {
         await showLocalNotification(displayable);

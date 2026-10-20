@@ -18,6 +18,7 @@ import type {
   SessionTokens,
 } from '#platform/ports';
 import { logger } from '#/utils/environment';
+import { errorService } from '#/services/errorService';
 import { backoffDelay, sleep } from '#/utils/backoff';
 import { t } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
@@ -281,16 +282,24 @@ export async function hasCredentials(email: string): Promise<boolean> {
           credentialsExistCache.set(account, result);
 
           return result;
-        } catch {
+        } catch (retryErr) {
           // Don't cache errors
+          reportCredentialCheckFailure(retryErr);
           return false;
         }
       }
       // Don't cache errors
+      reportCredentialCheckFailure(err);
       return false;
     }
   });
 }
+
+// A failed read answers "nothing stored", which the sign-in and Settings
+// screens show as such; only the report tells a keychain regression apart.
+const reportCredentialCheckFailure = (error: unknown): void => {
+  errorService.reportError(error, { operation: 'checkCredentials' });
+};
 
 /**
  * Clear a specific account's protected credentials and unprotected indicator.

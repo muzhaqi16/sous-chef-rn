@@ -10,16 +10,24 @@ import * as typescriptParser from '@typescript-eslint/parser';
 const {
   PRODUCTION_SYNTAX,
   FEATURE_HOOK_SYNTAX,
+  ACTION_CALLER_SYNTAX,
   TEST_SYNTAX,
   restrictedSyntax,
   restrictedSyntaxForFeatureHooks,
+  restrictedSyntaxForActionCallers,
   restrictedSyntaxForTests,
 } = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   FEATURE_HOOK_SYNTAX: Array<{ id: string; selector: string; message: string }>;
+  ACTION_CALLER_SYNTAX: Array<{
+    id: string;
+    selector: string;
+    message: string;
+  }>;
   TEST_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   restrictedSyntax: (o?: { allow?: string[] }) => unknown[];
   restrictedSyntaxForFeatureHooks: () => unknown[];
+  restrictedSyntaxForActionCallers: () => unknown[];
   restrictedSyntaxForTests: () => unknown[];
 };
 
@@ -280,6 +288,20 @@ const FEATURE_HOOK_FIXTURES: Fixture[] = [
   },
 ];
 
+const ACTION_CALLER_FIXTURES: Fixture[] = [
+  {
+    id: 'actionHapticAtCaller',
+    invalid: [
+      'const onToggle = () => { HapticService.selection(); void toggle(id); };',
+      'const onDelete = () => { HapticService.warning(); void remove(id); };',
+    ],
+    valid: [
+      'const onToggle = () => { void toggle(id); };',
+      'const onPressIn = () => { HapticService.light(); };',
+    ],
+  },
+];
+
 const suites = [
   {
     label: 'production',
@@ -292,6 +314,12 @@ const suites = [
     list: FEATURE_HOOK_SYNTAX,
     fixtures: FEATURE_HOOK_FIXTURES,
     entries: restrictedSyntaxForFeatureHooks(),
+  },
+  {
+    label: 'action-caller',
+    list: ACTION_CALLER_SYNTAX,
+    fixtures: ACTION_CALLER_FIXTURES,
+    entries: restrictedSyntaxForActionCallers(),
   },
   {
     label: 'test-only',

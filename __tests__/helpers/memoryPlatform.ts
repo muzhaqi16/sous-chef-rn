@@ -153,6 +153,7 @@ export function createMemoryPlatform(): PlatformServices {
     appLifecycle: createMemoryAppLifecycle(),
     appearance: { applyTheme: () => {}, apply: () => {} },
     imagePrefetch: { prefetch: () => {} },
+    haptics: { selection: () => {}, warning: () => {} },
     fileParts: streamedFileParts,
     screen: createMemoryScreen(),
   };

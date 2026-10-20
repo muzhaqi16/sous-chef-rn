@@ -1,4 +1,6 @@
 const { jestModuleNameMapper } = require('./scripts/lib/aliases');
+const { dependenciesOutsideCore } = require('./scripts/lib/layers');
+const { dependencies } = require('./package.json');
 
 // `testPathIgnorePatterns` decides what becomes a test SUITE; it does
 // not reach the haste crawler. `modulePathIgnorePatterns` is the one that
@@ -112,7 +114,15 @@ const corePortability = {
   testMatch: ['<rootDir>/__tests__/core-portability/**/*.test.ts'],
   globals: { __DEV__: true },
   setupFiles: ['<rootDir>/__tests__/core-portability/setup.js'],
-  moduleNameMapper: jestModuleNameMapper(),
+  moduleNameMapper: {
+    ...jestModuleNameMapper(),
+    // `setup.js` makes each of these throw by name; a subpath of one is a
+    // different specifier, which this sends to a stub that throws too.
+    [`^(${dependenciesOutsideCore(dependencies)
+      .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|')})/.+$`]:
+      '<rootDir>/__tests__/core-portability/unloadableSubpath.js',
+  },
   modulePathIgnorePatterns,
   transformIgnorePatterns,
 };

@@ -132,6 +132,12 @@ export interface ImagePrefetch {
   prefetch(uris: string[]): void;
 }
 
+/** The feedback an action gives when it runs; a host without it does nothing. */
+export interface Haptics {
+  selection(): void;
+  warning(): void;
+}
+
 /** How a picked file joins a multipart body. */
 export interface FileParts {
   append(form: FormData, name: string, file: ImageFile, mimeType: string): void;
@@ -170,6 +176,7 @@ export interface PlatformServices {
   appLifecycle: AppLifecycle;
   appearance: Appearance;
   imagePrefetch: ImagePrefetch;
+  haptics: Haptics;
   fileParts: FileParts;
   screen: ScreenHooks;
 }

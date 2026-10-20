@@ -23,9 +23,9 @@ import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
 import { createRefetchEventManager } from './refetchEvents';
 
-// Lazy histogram emit — defers loading of the telemetry singleton (which
-// touches Environment + device ID at module init) so this module remains
-// cheap to import in tests + cold start. Fire-and-forget.
+// Loaded at the first emit, not with this module, so the telemetry service and
+// its transports stay off the client's import graph, which tests and the cold
+// start load. Fire-and-forget.
 const emitHistogram = (
   name: string,
   value: number,

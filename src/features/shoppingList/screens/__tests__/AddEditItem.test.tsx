@@ -305,7 +305,6 @@ function buildUpdatedShoppingListItem(id: string) {
   };
 }
 
-/** The shape `GetShoppingListItem` returns — detail fields, no `sortOrder`. */
 /** The line the edit form opens on: exactly what its query selects. */
 function buildItemForEdit(id: string) {
   return {

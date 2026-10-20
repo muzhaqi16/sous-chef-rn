@@ -171,6 +171,39 @@ function globToRegExp(glob) {
   return new RegExp(`^${out}$`);
 }
 
+// What the core may import from node_modules: modules that run without React
+// Native. Lint holds the core to it, and the core-portability project makes
+// every other dependency throw when loaded.
+const CORE_EXTERNALS = [
+  'react',
+  '@apollo/client',
+  '@apollo/persisted-query-lists',
+  'rxjs',
+  'graphql',
+  'graphql-ws',
+  'zustand',
+  'immer',
+  'i18next',
+  'react-i18next',
+  'yup',
+  'react-hook-form',
+  '@hookform/resolvers',
+  'date-fns',
+  'fraction.js',
+  'fractional-indexing',
+  'fuse.js',
+  '@paralleldrive/cuid2',
+  'uuid',
+  'jwt-decode',
+  'js-sha256',
+  'chroma-js',
+  '@muzhaqi16/receipt-rules',
+];
+
+/** The dependencies the core may not load: every one outside CORE_EXTERNALS. */
+const dependenciesOutsideCore = dependencies =>
+  Object.keys(dependencies).filter(name => !CORE_EXTERNALS.includes(name));
+
 /** Test and mock files, and docs, belong to no layer. */
 const isProductionFile = file =>
   !/(^|\/)(__tests__|__mocks__)\//.test(file) &&
@@ -184,4 +217,10 @@ function matchingEntries(file, entries = LAYERS) {
   );
 }
 
-module.exports = { LAYERS, isProductionFile, matchingEntries };
+module.exports = {
+  CORE_EXTERNALS,
+  LAYERS,
+  dependenciesOutsideCore,
+  isProductionFile,
+  matchingEntries,
+};

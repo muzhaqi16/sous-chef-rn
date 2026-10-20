@@ -18,6 +18,11 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { backoffDelay } from '#/utils/backoff';
 import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
+import {
+  isTelemetryDeviceOffline,
+  onTelemetryConsentKnown,
+  telemetryConsent,
+} from './telemetryState';
 
 /**
  * One id per app process. Distinguishes runs of the same install — a counter
@@ -96,19 +101,6 @@ interface FlushBackoff {
 const isRetryableReason = (reason: unknown): boolean =>
   reason instanceof TransportSendError ? reason.retryable : true;
 
-/** The app state telemetry gates on. The store supplies it as it is created,
- * so telemetry never imports the store back. */
-export interface TelemetryStateSource {
-  userConsent(): boolean | null;
-  isOnline(): boolean;
-}
-
-let stateSource: TelemetryStateSource | null = null;
-
-export function setTelemetryStateSource(source: TelemetryStateSource): void {
-  stateSource = source;
-}
-
 export class TelemetryService {
   private config: TelemetryConfig;
   private transports: TelemetryTransport[] = [];
@@ -136,6 +128,7 @@ export class TelemetryService {
   // cumulative accumulators, so the retry must flush even with an empty buffer
   // (re-buffering the entries instead would double-count them).
   private metricsRetryPending = false;
+  private awaitingConsent = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -258,9 +251,35 @@ export class TelemetryService {
 
   // Read live on every emit, so revoked consent holds before updateConfig
   // reflects it (a cold start before setup). Mirrors the telemetryLink guard.
-  // Before the store supplies its state, consent is unread: nothing records.
+  // An unknown consent records: the flush holds it until consent is known.
   private isConsentDenied(): boolean {
-    return !stateSource || stateSource.userConsent() === false;
+    return telemetryConsent() === 'declined';
+  }
+
+  /** Judged at send time too, so a consent withdrawn mid-session sends nothing held. */
+  private consentAllowsSending(): boolean {
+    const consent = telemetryConsent();
+    if (consent === 'declined') {
+      this.discardHeld();
+      return false;
+    }
+    if (consent === 'unknown') {
+      if (!this.awaitingConsent) {
+        this.awaitingConsent = true;
+        onTelemetryConsentKnown(() => {
+          this.awaitingConsent = false;
+          void this.flush();
+        });
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private discardHeld(): void {
+    this.logBuffer = [];
+    this.metricBuffer = [];
+    this.metricsRetryPending = false;
   }
 
   incrementCounter(
@@ -469,7 +488,7 @@ export class TelemetryService {
    * to Loki/Mimir, whose health the flush backoff handles.
    */
   private isDeviceOffline(): boolean {
-    return stateSource?.isOnline() === false;
+    return isTelemetryDeviceOffline();
   }
 
   private inBackoff(backoff: FlushBackoff): boolean {
@@ -512,6 +531,9 @@ export class TelemetryService {
 
   private async flushLogs(): Promise<void> {
     if (this.logBuffer.length === 0 || this.logFlushInFlight) {
+      return;
+    }
+    if (!this.consentAllowsSending()) {
       return;
     }
     // Keep buffering (capped) instead of firing requests that cannot succeed.
@@ -583,6 +605,9 @@ export class TelemetryService {
     // failed send the retry payload lives in HttpTransport's cumulative
     // accumulators, not in this buffer.
     if (this.metricBuffer.length === 0 && !this.metricsRetryPending) {
+      return;
+    }
+    if (!this.consentAllowsSending()) {
       return;
     }
     if (this.isDeviceOffline() || this.inBackoff(this.metricsBackoff)) {

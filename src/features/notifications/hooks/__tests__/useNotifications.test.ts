@@ -234,6 +234,9 @@ const unreadFeedData: MockDataFor<typeof GetUnreadNotificationsDocument> = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 'user-1' };
+  // The installed lifecycle is shared by the file; a test that moved it and
+  // failed before moving it back would otherwise run every later test away.
+  memoryLifecycle().moveTo('active');
 });
 
 // A cache the hook can write through. Seeded with the badge so there is a
@@ -406,7 +409,33 @@ describe('useNotificationListener', () => {
         }),
       ),
     );
-    memoryLifecycle().moveTo('active');
+  });
+
+  // In the foreground the feed shows it; nothing is drawn in the tray.
+  it('hands nothing over while the app is active', async () => {
+    const onArrivedWhileAway = jest.fn();
+    const summary = recordMock(NotificationSummaryDocument, {
+      data: summaryData,
+    });
+
+    renderHookWithApollo(
+      () => useNotificationListener({ onArrivedWhileAway }),
+      {
+        cache: seededCache(),
+        operationMocks: [
+          buildNotificationSubscriptionMock({
+            id: 'notif-foreground',
+            type: NotificationType.LowStock,
+            title: 'Low Stock Alert',
+            message: 'Milk is running low',
+          }),
+          summary.mock,
+        ],
+      },
+    );
+
+    await waitFor(() => expect(summary.fired).toHaveLength(1));
+    expect(onArrivedWhileAway).not.toHaveBeenCalled();
   });
 
   it('a CREATED event lands in the cache and re-reads the count', async () => {

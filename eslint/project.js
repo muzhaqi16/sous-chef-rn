@@ -13,6 +13,7 @@ const {
   restrictedSyntax,
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
+  restrictedSyntaxForActionCallers,
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
@@ -231,6 +232,13 @@ const overrides = [
       'src/features/*/hooks/mutations/**',
     ],
     rules: { 'no-restricted-syntax': restrictedSyntaxForFeatureHooks() },
+  },
+  {
+    // The shopping list's actions fire their own haptic through the
+    // `haptics` port (useShoppingListActions); its UI only runs them.
+    files: ['src/features/shoppingList/{components,screens}/**/*.tsx'],
+    ignores: TEST_FILES,
+    rules: { 'no-restricted-syntax': restrictedSyntaxForActionCallers() },
   },
   {
     // The queue BUILDS and replays these writes; it is not one of their
