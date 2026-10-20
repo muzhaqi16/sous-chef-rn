@@ -149,7 +149,10 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   hold part of it; a screen or component calling `useQuery`/`useMutation`/the
   client directly is caught only by review. `useFragment` and masking types stay allowed.
 - **Fragments**: a component or hook owns a sibling `<Consumer>_<entity>`
-  fragment; screens spread children's, queries the screen's.
+  fragment; screens spread children's, queries the screen's. A core document
+  spreads only core fragments (`documentOwnership.test.ts`), so a list a core
+  hook runs spreads `<entity>_listed` and its cells read their fragment by id
+  (`listedFragmentsCoverCells.test.ts`).
 - **Never `readFragment` while rendering**: a masked result keeps its identity
   when only masked fields change, so the read freezes. `useFragment`
   (`from: x ?? null`), or `useFragmentList` for a list (`renderTimeReadFragment`).

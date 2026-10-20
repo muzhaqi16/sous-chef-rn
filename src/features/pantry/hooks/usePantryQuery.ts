@@ -22,10 +22,7 @@ import {
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { useToday } from '#hooks/app/useToday';
 
-/**
- * Direct fields the screen-level hooks need, plus an opaque
- * `PantryItemCard_pantryItem` ref the leaf cell unmasks via `useFragment`.
- */
+/** Direct fields the screen-level hooks need; each cell reads itself by id. */
 export type PantryListItemNode = NonNullable<
   NonNullable<GetPantryQuery['pantry']>['itemsConnection']['edges'][number]
 >['node'];

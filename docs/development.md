@@ -500,12 +500,13 @@ entry in `eslint/` (the `sous-chef/*` catalog is `docs/rules/`) or a convention 
 
 The core/mobile split (`docs/architecture.md` § Layers) is held by:
 
-| Gate                                               | Holds                                                                                                                                                  |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `__tests__/architecture/layerMembership.test.ts`   | every production file in `src/` matches exactly one entry of `scripts/lib/layers.js`                                                                   |
-| `boundaries/dependencies` (`eslint/boundaries.js`) | a core file imports no mobile file, type imports included, and only the packages in `CORE_EXTERNALS`; `__tests__/lint/layerPolicies.test.ts` pins this |
-| `core-portability` (Jest project)                  | every core file loads in node with React Native unloadable, and the flows a second host relies on run there: sign-out, the meal-plan writes            |
-| `scripts/lib/sourceRoots.js`                       | one list of production and operation roots, read by codegen, the manifest, readers, GraphQL lint, the bailout check and the GraphQL scanner tests      |
+| Gate                                               | Holds                                                                                                                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `__tests__/architecture/layerMembership.test.ts`   | every production file in `src/` matches exactly one entry of `scripts/lib/layers.js`                                                                                                                    |
+| `boundaries/dependencies` (`eslint/boundaries.js`) | a core file imports no mobile file, type imports included, and only the packages in `CORE_EXTERNALS`; `__tests__/lint/layerPolicies.test.ts` pins this                                                  |
+| `core-portability` (Jest project)                  | every core file loads in node with React Native unloadable, and the flows a second host relies on run there: sign-out, the meal-plan writes                                                             |
+| `__tests__/architecture/documentOwnership.test.ts` | no core GraphQL document spreads a fragment a mobile file defines; a list a core hook runs spreads its `<entity>_listed` fragment instead, which `listedFragmentsCoverCells.test.ts` holds to its cells |
+| `scripts/lib/sourceRoots.js`                       | one list of production and operation roots, read by codegen, the manifest, readers, GraphQL lint, the bailout check and the GraphQL scanner tests                                                       |
 
 `core-portability` runs inside `npm test`; the others run with `npm run lint`
 and `npm test`.

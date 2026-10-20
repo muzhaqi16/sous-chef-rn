@@ -97,7 +97,7 @@ const LAYERS = [
     name: 'features/graphql',
     layer: 'core',
     patterns: ['src/features/*/graphql/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'features/cache',

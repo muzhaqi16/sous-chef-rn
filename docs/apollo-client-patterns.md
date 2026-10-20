@@ -46,6 +46,14 @@ type in it or one property down.
 on, a cell subscribing to one entity is the documented pattern
 ([Fragment Composition & Data Masking](#fragment-composition--data-masking)).
 
+A core document includes only core fragments
+(`__tests__/architecture/documentOwnership.test.ts`): a write spreads
+`...<Type>Readers`, and a list a core hook runs (`GetHomes`, `GetPantry`,
+`GetShoppingListItemsFiltered`) spreads a core `<entity>_listed` fragment of
+what its rows show. Each cell of such a list reads its own fragment by id
+(`from: { __typename, id }`), and `listedFragmentsCoverCells.test.ts` holds the
+listed fragment to every cell fragment that reads through it.
+
 ---
 
 ## Building the client

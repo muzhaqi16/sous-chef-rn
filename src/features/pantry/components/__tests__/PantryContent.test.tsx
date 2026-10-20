@@ -250,16 +250,23 @@ jest.mock('../PantrySortModal', () => ({
 }));
 
 jest.mock('../PantryItemCard', () => ({
-  // The ref is the raw cache entity at runtime, so `id` / `itemName` read off it directly.
-  PantryItemCard: ({
-    pantryItemRef,
-  }: {
-    pantryItemRef?: Pick<PantryItemCard_PantryItemFragment, 'id' | 'itemName'>;
-  }) => {
+  // Reads its row from the cache by id, as the real card does.
+  PantryItemCard: ({ pantryItemId }: { pantryItemId: string }) => {
     const { Text, View } = require('react-native');
+    const { useFragment } = jest.requireActual<
+      typeof import('@apollo/client/react')
+    >('@apollo/client/react');
+    const generated = jest.requireActual<
+      typeof import('../PantryItemCard.generated')
+    >('../PantryItemCard.generated');
+    const { data } = useFragment({
+      fragment: generated.PantryItemCard_PantryItemFragmentDoc,
+      fragmentName: 'PantryItemCard_pantryItem',
+      from: { __typename: 'PantryItem', id: pantryItemId },
+    });
     return (
-      <View testID={`pantry-item-${pantryItemRef?.id}`}>
-        <Text>{pantryItemRef?.itemName}</Text>
+      <View testID={`pantry-item-${pantryItemId}`}>
+        <Text>{data.itemName}</Text>
       </View>
     );
   },

@@ -13,7 +13,6 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
-import type { FragmentType } from '@apollo/client/masking';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
@@ -140,7 +139,7 @@ const SlideAnimatedWrapper: React.FC<{
 };
 
 interface PantryItemCardProps {
-  pantryItemRef: FragmentType<typeof PantryItemCard_PantryItemFragmentDoc>;
+  pantryItemId: string;
 }
 
 /**
@@ -149,13 +148,13 @@ interface PantryItemCardProps {
  * React Compiler memoizes them, so no module-level cache is needed.
  */
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
-  pantryItemRef,
+  pantryItemId,
 }) => {
   const { t } = useTranslation();
   const { data: pantryItem, complete } = useFragment({
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
-    from: pantryItemRef,
+    from: { __typename: 'PantryItem', id: pantryItemId },
   });
 
   const { actions, swipeable } = usePantryActions();

@@ -1,8 +1,6 @@
 import type { ReactElement } from 'react';
 import type { ScrollViewProps } from 'react-native';
 import type { FlashListProps } from '@shopify/flash-list';
-import type { FragmentType } from '@apollo/client/masking';
-import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import type {
   SwipeableRef,
   SwipeAction,
@@ -20,8 +18,7 @@ export interface GroupBoundary {
 
 /**
  * Row wrapper for the shopping-list FlashList: only the primitives the list
- * itself needs, plus a masked ref the row unwraps with
- * `useFragment(SortableItem_item)` to subscribe to its cache record.
+ * itself needs. The row reads the rest by `id` with `useFragment(SortableItem_item)`.
  */
 export interface ShoppingListRowItem {
   id: string;
@@ -31,7 +28,6 @@ export interface ShoppingListRowItem {
   sortOrder: string | null;
   /** The aisle Store mode groups it under. */
   storeDepartment: StoreDepartment;
-  itemRef: FragmentType<typeof SortableItem_ItemFragmentDoc>;
 }
 
 /** The heading over one aisle's lines in Store mode. */

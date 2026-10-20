@@ -115,7 +115,7 @@ describe('useShoppingListTransformMulti', () => {
     expect(result.current.unpurchasedItems[0]!.sortOrder).toBe('zzz');
   });
 
-  it('exposes the node as a fragment ref on `itemRef`', () => {
+  it("carries the line's id, by which the row reads itself", () => {
     const n = node({ id: '1' });
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
@@ -124,7 +124,7 @@ describe('useShoppingListTransformMulti', () => {
       }),
     );
 
-    expect(result.current.unpurchasedItems[0]!.itemRef).toBe(n);
+    expect(result.current.unpurchasedItems[0]!.id).toBe(n.id);
   });
 
   it('returns stable arrays when input arrays are stable', () => {

@@ -52,14 +52,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item: rowItem,
   index,
 }) => {
-  // A recycled cell's undefined item is dropped by the list's `renderItem`.
-  const itemRef = rowItem.itemRef;
-
   // Per-entity subscription: this row re-renders only for its own cache record.
+  // A recycled cell's undefined item is dropped by the list's `renderItem`.
   const { data, complete } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
-    from: itemRef,
+    from: { __typename: 'ShoppingListItem', id: rowItem.id },
   });
 
   // One list-level useUnistyles, rather than a theme subscription per row.
