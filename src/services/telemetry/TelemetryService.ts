@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import type {
   TelemetryConfig,
   LogEntry,
@@ -13,13 +12,17 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import { generateId } from '#/utils/generateId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { backoffDelay } from '#/utils/backoff';
-import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
-import { useStore } from '#store';
+import {
+  isTelemetryDeviceOffline,
+  onTelemetryConsentKnown,
+  telemetryConsent,
+} from './telemetryState';
 
 /**
  * One id per app process. Distinguishes runs of the same install — a counter
@@ -34,7 +37,10 @@ const SESSION_ID = generateId();
  */
 let appVersion: string | undefined;
 function resolveAppVersion(): string {
-  appVersion ??= safeNativeRead(getVersion, 'unknown');
+  appVersion ??= safeNativeRead(
+    () => requirePlatform('platformInfo').appVersion,
+    'unknown',
+  );
   return appVersion;
 }
 
@@ -45,15 +51,16 @@ function resolveAppVersion(): string {
 let deviceType: string | undefined;
 function resolveDeviceType(): string {
   deviceType ??= safeNativeRead(
-    () => (isEmulatorSync() ? 'emulator' : 'physical'),
+    () =>
+      requirePlatform('platformInfo').isEmulator ? 'emulator' : 'physical',
     'unknown',
   );
   return deviceType;
 }
 
 /**
- * Both readers are blocking SYNCHRONOUS bridge calls (a binder IPC on Android),
- * so they stay lazy, out of the startup window this service measures. A throw
+ * On mobile both readers are blocking SYNCHRONOUS bridge calls (a binder IPC on
+ * Android), so they stay lazy, out of the startup window this service measures. A throw
  * is swallowed: a missing label beats breaking every `import { Telemetry }`.
  */
 function safeNativeRead<T>(read: () => T, fallback: T): T {
@@ -100,7 +107,10 @@ export class TelemetryService {
   private logBuffer: LogEntry[] = [];
   private metricBuffer: MetricEntry[] = [];
   private isInitialized = false;
-  private flushTimers: { logs?: NodeJS.Timeout; metrics?: NodeJS.Timeout } = {};
+  private flushTimers: {
+    logs?: ReturnType<typeof setInterval>;
+    metrics?: ReturnType<typeof setInterval>;
+  } = {};
   // Guards against overlapping log flushes (the error-triggered immediate flush
   // can race the interval timer); without it, concurrent flushes fire
   // duplicate failing requests and invert the re-buffer order.
@@ -118,6 +128,7 @@ export class TelemetryService {
   // cumulative accumulators, so the retry must flush even with an empty buffer
   // (re-buffering the entries instead would double-count them).
   private metricsRetryPending = false;
+  private awaitingConsent = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -140,7 +151,7 @@ export class TelemetryService {
     this.isInitialized = true;
 
     this.trackEvent('app_telemetry_initialized', {
-      platform: Platform.OS,
+      platform: requirePlatform('platformInfo').os,
       environment: this.config.environment,
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
@@ -203,7 +214,7 @@ export class TelemetryService {
       message: scrubString(message),
       timestamp: new Date().toISOString(),
       extra: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         ...scrubLogExtra(extra),
         // Last, so a caller's `extra` cannot shadow it. BODY fields, not Loki
@@ -240,8 +251,35 @@ export class TelemetryService {
 
   // Read live on every emit, so revoked consent holds before updateConfig
   // reflects it (a cold start before setup). Mirrors the telemetryLink guard.
+  // An unknown consent records: the flush holds it until consent is known.
   private isConsentDenied(): boolean {
-    return useStore.getState().userConsent === false;
+    return telemetryConsent() === 'declined';
+  }
+
+  /** Judged at send time too, so a consent withdrawn mid-session sends nothing held. */
+  private consentAllowsSending(): boolean {
+    const consent = telemetryConsent();
+    if (consent === 'declined') {
+      this.discardHeld();
+      return false;
+    }
+    if (consent === 'unknown') {
+      if (!this.awaitingConsent) {
+        this.awaitingConsent = true;
+        onTelemetryConsentKnown(() => {
+          this.awaitingConsent = false;
+          void this.flush();
+        });
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private discardHeld(): void {
+    this.logBuffer = [];
+    this.metricBuffer = [];
+    this.metricsRetryPending = false;
   }
 
   incrementCounter(
@@ -261,7 +299,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),
@@ -289,7 +327,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),
@@ -318,7 +356,7 @@ export class TelemetryService {
       name,
       value,
       labels: {
-        platform: Platform.OS,
+        platform: requirePlatform('platformInfo').os,
         env: this.config.environment,
         version: resolveAppVersion(),
         device_type: resolveDeviceType(),
@@ -450,7 +488,7 @@ export class TelemetryService {
    * to Loki/Mimir, whose health the flush backoff handles.
    */
   private isDeviceOffline(): boolean {
-    return useStore.getState().isOnline === false;
+    return isTelemetryDeviceOffline();
   }
 
   private inBackoff(backoff: FlushBackoff): boolean {
@@ -493,6 +531,9 @@ export class TelemetryService {
 
   private async flushLogs(): Promise<void> {
     if (this.logBuffer.length === 0 || this.logFlushInFlight) {
+      return;
+    }
+    if (!this.consentAllowsSending()) {
       return;
     }
     // Keep buffering (capped) instead of firing requests that cannot succeed.
@@ -566,6 +607,9 @@ export class TelemetryService {
     if (this.metricBuffer.length === 0 && !this.metricsRetryPending) {
       return;
     }
+    if (!this.consentAllowsSending()) {
+      return;
+    }
     if (this.isDeviceOffline() || this.inBackoff(this.metricsBackoff)) {
       return;
     }
@@ -618,7 +662,7 @@ export class TelemetryService {
   private setupErrorHandlers(): void {
     // HermesInternal is a Hermes engine-specific global not in the RN type defs;
     // narrow it to just the API we touch instead of casting through `any`.
-    const hermesGlobal = global as typeof globalThis & {
+    const hermesGlobal = globalThis as typeof globalThis & {
       HermesInternal?: {
         enablePromiseRejectionTracker?: (options: {
           allRejections: boolean;
@@ -626,7 +670,7 @@ export class TelemetryService {
         }) => void;
       };
     };
-    if (typeof global !== 'undefined' && hermesGlobal.HermesInternal) {
+    if (hermesGlobal.HermesInternal) {
       hermesGlobal.HermesInternal.enablePromiseRejectionTracker?.({
         allRejections: true,
         onUnhandled: (id: unknown, reason: unknown) => {

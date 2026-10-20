@@ -1,5 +1,6 @@
 'use no memo';
 
+import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
 import {
@@ -30,14 +31,14 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 }));
 
 const mockToPantryMain = jest.fn();
-const mockToAuth = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => ({
     goBack: mockGoBack,
     toPantryMain: mockToPantryMain,
-    toAuth: mockToAuth,
   })),
 }));
+// The sign-in redirect is the core link gate's, so it goes through the intents.
+const mockToAuth = jest.spyOn(memoryIntents(), 'toAuth');
 
 const mockUseIsLoggedOut = jest.fn(() => false);
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({

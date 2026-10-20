@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface InlineFolderChooserProps {

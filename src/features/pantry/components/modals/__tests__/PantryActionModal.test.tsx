@@ -1,16 +1,14 @@
 import React from 'react';
 import type { ViewProps } from 'react-native';
 import { screen, userEvent } from '@testing-library/react-native';
-import {
-  PantryActionModal,
-  type PantryActionSharedState,
-} from '#features/pantry/components/modals/PantryActionModal';
+import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import type { PantryActionModal_PantryItemFragment } from '../PantryActionModal.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
@@ -105,7 +103,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

@@ -11,8 +11,8 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
-  GetMyPendingInvitesDocument,
 } from '#operations/home/home.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
 import type { InvitationData } from '#features/notifications/types';
 import { useInvitationActions } from '../useInvitationActions';
 

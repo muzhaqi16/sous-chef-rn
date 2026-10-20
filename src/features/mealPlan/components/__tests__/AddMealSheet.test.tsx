@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { AddMealSheet } from '../AddMealSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
@@ -17,7 +17,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -107,7 +107,7 @@ const savedRecipeNodes = [
   },
 ];
 
-jest.mock('#features/recipes/hooks/useSavedRecipes', () => ({
+jest.mock('#features/recipes/screens/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(),
 }));
 
@@ -187,7 +187,7 @@ const defaultProps = {
 
 const { useSavedRecipes: mockUseSavedRecipes } = jest.requireMock<{
   useSavedRecipes: jest.Mock;
-}>('#features/recipes/hooks/useSavedRecipes');
+}>('#features/recipes/screens/useSavedRecipes');
 
 describe('AddMealSheet', () => {
   beforeEach(() => {

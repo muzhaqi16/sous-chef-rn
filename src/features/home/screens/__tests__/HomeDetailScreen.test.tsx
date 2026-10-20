@@ -23,7 +23,7 @@ const mockRolePickerState = {
   memberName: '',
 };
 
-jest.mock('#features/home/hooks/useHomeDetailManagement', () => ({
+jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
   useHomeDetailManagement: jest.fn(() => ({
     home: {
       id: 'home-1',
@@ -187,7 +187,7 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -196,7 +196,7 @@ beforeEach(() => {
   // Restore default mock implementations after clearAllMocks
   const {
     useHomeDetailManagement,
-  } = require('#features/home/hooks/useHomeDetailManagement');
+  } = require('#features/home/screens/useHomeDetailManagement');
   useHomeDetailManagement.mockReturnValue({
     home: {
       id: 'home-1',
@@ -248,7 +248,7 @@ describe('HomeDetailScreen', () => {
   it('renders the cached home while a background refresh is in flight', () => {
     const {
       useHomeDetailManagement,
-    } = require('#features/home/hooks/useHomeDetailManagement');
+    } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       ...useHomeDetailManagement(),
       loading: true,
@@ -294,7 +294,7 @@ describe('HomeDetailScreen', () => {
   it('shows loading state when loading', () => {
     const {
       useHomeDetailManagement,
-    } = require('#features/home/hooks/useHomeDetailManagement');
+    } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: null,
       loading: true,
@@ -318,7 +318,7 @@ describe('HomeDetailScreen', () => {
   it('shows leave home button for non-owner member', () => {
     const {
       useHomeDetailManagement,
-    } = require('#features/home/hooks/useHomeDetailManagement');
+    } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: {
         id: 'home-1',

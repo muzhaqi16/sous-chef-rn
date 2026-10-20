@@ -18,7 +18,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#components/atoms/InfoRow';
@@ -33,7 +33,7 @@ import { CookingPreferencesSheet } from '#features/profile/components/CookingPre
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
 import { errorService } from '#/services/errorService';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 export const DietaryProfileScreen: React.FC = () => {

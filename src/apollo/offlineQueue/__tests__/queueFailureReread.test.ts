@@ -24,10 +24,10 @@ import { queueStore } from '../queueStore';
 import { makeQueuedMutation } from '#/test-utils/queuedMutation';
 
 const mockClientHolder: { client: ApolloClient | null } = { client: null };
-jest.mock('#/apollo/client', () => ({
-  get client() {
-    return mockClientHolder.client;
-  },
+// The handler reads the client at call time, so each test's holds.
+jest.mock('#/apollo/clientRegistry', () => ({
+  ...jest.requireActual('#/apollo/clientRegistry'),
+  requireApolloClient: () => mockClientHolder.client,
 }));
 
 const variables = { id: 'list-1', first: 25, isPurchased: false };

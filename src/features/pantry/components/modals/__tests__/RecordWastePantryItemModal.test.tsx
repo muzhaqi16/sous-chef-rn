@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { RecordWastePantryItemModal } from '#features/pantry/components/modals/RecordWastePantryItemModal';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 // The mock supplies a simplified subset of the real shared state / pantry item
 // that the consumer's renderActionFields reads. Pick the fields it provides plus
@@ -35,7 +35,7 @@ type MockSharedState = Pick<
 };
 type MockPantryItem = { id: string; quantity: number };
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;

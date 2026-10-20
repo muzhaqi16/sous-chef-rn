@@ -10,10 +10,10 @@ import {
 
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import type { IconName } from '#utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { formatDayOfMonth, formatWeekdayShort } from '#/utils/formatters/date';
 import { toDateKey } from '#/utils/dateUtils';

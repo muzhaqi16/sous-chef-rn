@@ -9,6 +9,7 @@ import {
   ACQUISITION_METHOD_OPTIONS,
   type OfferedAcquisitionMethod,
 } from '#features/pantry/utils/itemEnumLabels';
+import type { AddPantryItemFormData } from '#features/pantry/types';
 
 // Shape, defaults and validation for the four-page Add-to-Pantry sheet.
 // Validation renders ON the field; `usePantryItemSubmission` only submits.
@@ -24,42 +25,6 @@ type NetWeightSiblings = Partial<
     | 'weightUnitId'
   >
 >;
-
-export type AddPantryItemFormData = {
-  // Page 1 — Main
-  itemName: string;
-  brand: string;
-  category: string;
-  expirationDate: Date | null;
-  storageState: StorageState;
-  // Page 2 — Details
-  quantityInput: string;
-  unit: string;
-  unitId: string | null;
-  pantryNetWeight: string;
-  pantryNetWeightUnit: string;
-  pantryNetWeightUnitId: string | null;
-  showPackageDetails: boolean;
-  packageSize: string;
-  contentUnit: string;
-  contentUnitId: string | null;
-  itemNetWeight: string;
-  weightUnit: string;
-  weightUnitId: string | null;
-  // Page 3 — Storage
-  storageLocation: string;
-  selectedStorageLocationId: string | null;
-  storageNotes: string;
-  condition: ItemCondition;
-  tags: string;
-  // Page 4 — Stock + Purchase
-  minQuantity: string;
-  restockQuantity: string;
-  storeName: string;
-  storeId: string | null;
-  costPerUnit: string;
-  acquisitionMethod: OfferedAcquisitionMethod;
-};
 
 /** Which page each validated field lives on, so a failure can navigate to it. */
 export const FIELD_PAGE: Partial<Record<keyof AddPantryItemFormData, number>> =

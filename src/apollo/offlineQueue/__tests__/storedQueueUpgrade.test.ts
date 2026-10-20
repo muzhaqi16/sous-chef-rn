@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { ApolloClient, gql, type DocumentNode } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { buildSchema, parse, print, validate } from 'graphql';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -35,6 +35,7 @@ import refusedAsStored from './fixtures/mutationsRefusedAsStored.json';
 let mockClient: ApolloClient | null = null;
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

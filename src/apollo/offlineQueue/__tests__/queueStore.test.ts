@@ -2,7 +2,7 @@ import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
 import type { QueueError, QueuedMutation } from '../types';
 import { QueueCapacityError, QueueStatus } from '../types';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -17,8 +17,8 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 
-// The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
-// which means `storage` from '#storage/mmkv' is backed by that Map mock.
+// `storage` is the in-memory platform's key-value store, which jest.setup.js
+// installs.
 
 /** Helper to build a QueuedMutation with sensible defaults */
 function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {

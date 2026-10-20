@@ -2,10 +2,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
-import {
-  UsageHistoryRow,
-  type UsageRecord,
-} from '#features/pantry/components/UsageHistoryRow';
+import { UsageHistoryRow } from '#features/pantry/components/UsageHistoryRow';
+import type { UsageRecord } from '#features/pantry/types';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatDate: jest.fn((d: string) => `formatted:${d}`),

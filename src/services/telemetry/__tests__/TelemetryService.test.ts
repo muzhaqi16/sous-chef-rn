@@ -1,16 +1,28 @@
 import { TelemetryService } from '../TelemetryService';
+import { setTelemetryStateSource } from '../telemetryState';
 import { TransportSendError } from '../types';
 
-// Mutable so individual tests can simulate consent being granted/denied and
-// the device going offline. Names are `mock`-prefixed so they may be
-// referenced inside the jest.mock factory.
+// Mutable so individual tests can simulate consent being granted/denied, not
+// yet read, and the device going offline.
 let mockUserConsent: boolean | null = null;
 let mockIsOnline = true;
-jest.mock('#store', () => ({
-  useStore: {
-    getState: () => ({ userConsent: mockUserConsent, isOnline: mockIsOnline }),
+let mockConsentKnown = true;
+let mockAnnounceConsentKnown: (() => void) | undefined;
+setTelemetryStateSource({
+  consentKnown: () => mockConsentKnown,
+  onConsentKnown: listener => {
+    mockAnnounceConsentKnown = listener;
   },
-}));
+  userConsent: () => mockUserConsent,
+  isOnline: () => mockIsOnline,
+});
+
+/** The saved choices finish loading, as the store announces it. */
+const readSavedConsent = (consent: boolean | null): void => {
+  mockUserConsent = consent;
+  mockConsentKnown = true;
+  mockAnnounceConsentKnown?.();
+};
 
 const mockSendLogs = jest.fn().mockResolvedValue(undefined);
 const mockSendMetrics = jest.fn().mockResolvedValue(undefined);
@@ -40,6 +52,7 @@ describe('TelemetryService', () => {
     jest.useFakeTimers();
     mockUserConsent = null; // default: consent not denied
     mockIsOnline = true; // default: device online
+    mockConsentKnown = true; // default: the saved choices are read
   });
 
   afterEach(() => {
@@ -371,6 +384,129 @@ describe('TelemetryService', () => {
 
       service.log('error', 'should not ship'); // error would normally auto-flush
       service.incrementCounter('should_not_ship_total');
+      await service.flush();
+
+      expect(mockSendLogs).not.toHaveBeenCalled();
+      expect(mockSendMetrics).not.toHaveBeenCalled();
+    });
+
+    describe('before the saved consent is read', () => {
+      const createService = (): TelemetryService =>
+        new TelemetryService({
+          enabled: true,
+          enableLogs: true,
+          enableMetrics: true,
+        });
+
+      it('holds an error, then sends it once consent is read as not declined', async () => {
+        mockConsentKnown = false;
+        const service = createService();
+
+        service.log('error', 'early failure'); // error would normally auto-flush
+        await service.flush();
+        expect(mockSendLogs).not.toHaveBeenCalled();
+
+        readSavedConsent(null);
+        await jest.runOnlyPendingTimersAsync();
+
+        expect(mockSendLogs).toHaveBeenCalledWith([
+          expect.objectContaining({ message: 'early failure' }),
+        ]);
+      });
+
+      it('drops the oldest held log first when it holds more than the buffer allows', async () => {
+        mockConsentKnown = false;
+        const service = createService();
+
+        for (let at = 0; at <= 1000; at++) {
+          service.log('warn', `held ${at}`);
+        }
+        await service.flush();
+        expect(mockSendLogs).not.toHaveBeenCalled();
+        readSavedConsent(null);
+        await service.flush();
+
+        const [[sent]] = mockSendLogs.mock.calls;
+        expect(sent).toHaveLength(1000);
+        expect(sent[0].message).toBe('held 1');
+        expect(sent[999].message).toBe('held 1000');
+      });
+
+      it('discards everything held once consent is read as declined', async () => {
+        mockConsentKnown = false;
+        const service = createService();
+
+        service.log('error', 'should not ship');
+        service.incrementCounter('should_not_ship_total');
+        readSavedConsent(false);
+        await jest.runOnlyPendingTimersAsync();
+
+        mockUserConsent = null;
+        await service.flush();
+        expect(mockSendLogs).not.toHaveBeenCalled();
+        expect(mockSendMetrics).not.toHaveBeenCalled();
+      });
+
+      // A push handled with the app closed: nothing else loads the store.
+      it('holds before the store supplies its state, and asks the host to load it once', async () => {
+        let Unconnected!: typeof TelemetryService;
+        let state!: typeof import('../telemetryState');
+        jest.isolateModules(() => {
+          state =
+            require('../telemetryState') as typeof import('../telemetryState');
+          ({ TelemetryService: Unconnected } =
+            require('../TelemetryService') as typeof import('../TelemetryService'));
+        });
+        const loadStore = jest.fn();
+        state.registerTelemetryStateLoader(loadStore);
+        const service = new Unconnected({
+          enabled: true,
+          enableLogs: true,
+          enableMetrics: true,
+        });
+
+        service.log('error', 'background failure');
+        service.incrementCounter('background_total');
+        await service.flush();
+        expect(mockSendLogs).not.toHaveBeenCalled();
+        expect(loadStore).toHaveBeenCalledTimes(1);
+
+        let announce: (() => void) | undefined;
+        state.setTelemetryStateSource({
+          consentKnown: () => announce !== undefined,
+          onConsentKnown: listener => {
+            announce = listener;
+          },
+          userConsent: () => null,
+          isOnline: () => true,
+        });
+        announce?.();
+        await jest.runOnlyPendingTimersAsync();
+
+        expect(loadStore).toHaveBeenCalledTimes(1);
+        expect(mockSendLogs).toHaveBeenCalledWith([
+          expect.objectContaining({ message: 'background failure' }),
+        ]);
+        expect(mockSendMetrics).toHaveBeenCalled();
+      });
+    });
+
+    it('sends nothing it held once consent is withdrawn mid-session', async () => {
+      mockIsOnline = false; // the flush keeps what it holds
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+        enableMetrics: true,
+      });
+
+      service.log('warn', 'recorded under consent');
+      service.incrementCounter('recorded_total');
+      await service.flush();
+
+      mockUserConsent = false;
+      mockIsOnline = true;
+      await service.flush();
+      mockUserConsent = null;
       await service.flush();
 
       expect(mockSendLogs).not.toHaveBeenCalled();

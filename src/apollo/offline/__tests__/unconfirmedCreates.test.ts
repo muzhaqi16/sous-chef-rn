@@ -1,7 +1,7 @@
 import { unconfirmedCreates } from '../unconfirmedCreates';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { CreateMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 

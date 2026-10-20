@@ -7,14 +7,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
 
 // RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
 // Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
 // separate gesture system, so the tap fires both toggle and row navigation.
 import { Pressable } from 'react-native-gesture-handler';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 type AnimatedCheckboxProps = {
   checked: boolean;

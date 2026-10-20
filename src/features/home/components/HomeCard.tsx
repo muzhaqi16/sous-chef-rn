@@ -9,18 +9,18 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useFragment } from '@apollo/client/react';
-import type { FragmentType } from '@apollo/client/masking';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface HomeCardProps {
-  homeRef: FragmentType<typeof HomeCard_HomeFragmentDoc>;
+  homeId: string;
   isDefault: boolean;
   isHighlighted?: boolean;
   canInvite?: boolean;
@@ -32,7 +32,7 @@ interface HomeCardProps {
 }
 
 export const HomeCard: React.FC<HomeCardProps> = ({
-  homeRef,
+  homeId,
   isDefault,
   isHighlighted = false,
   canInvite,
@@ -44,12 +44,17 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 }) => {
   const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Home's
-  // fields change.
-  const { data: home, complete } = useFragment({
+  // fields change. `GetHomes` fetches them through `home_listed`.
+  const {
+    data: home,
+    complete,
+    missing,
+  } = useFragment({
     fragment: HomeCard_HomeFragmentDoc,
     fragmentName: 'HomeCard_home',
-    from: homeRef,
+    from: { __typename: 'Home', id: homeId },
   });
+  useIncompleteCellReport('HomeCard_home', missing);
 
   // Animated value for highlight effect
   const highlightOpacity = useSharedValue(0);

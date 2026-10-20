@@ -1,0 +1,154 @@
+import { act, waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { MyRecipesDocument } from '../useRecipeManagement.generated';
+import {
+  MyRecipeCard_RecipeFragmentDoc,
+  type MyRecipeCard_RecipeFragment,
+} from '#features/recipes/components/MyRecipeCard.generated';
+import { useRecipeManagement } from '../useRecipeManagement';
+
+jest.mock('#hooks/auth/useIsLoggedOut', () => ({
+  useIsLoggedOut: () => false,
+}));
+
+jest.mock('#/utils/finallyHelpers', () => ({
+  executeMutation: jest.fn((fn: () => unknown) => fn()),
+}));
+
+jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
+  useApolloErrorLogger: jest.fn(),
+}));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+const edge = (cursor: string, id: string, name: string) => ({
+  cursor,
+  node: { id, name },
+});
+
+function recipesMock() {
+  return recordMock(MyRecipesDocument, {
+    data: {
+      recipes: {
+        edges: [
+          edge('c1', 'r1', 'Pasta'),
+          edge('c2', 'r2', 'Salad'),
+          edge('c3', 'r3', 'Soup'),
+        ],
+        pageInfo: { hasNextPage: false, endCursor: null },
+        totalCount: 3,
+      },
+    },
+  });
+}
+
+// Page one ends at `page-1`; asking past it returns the last recipe.
+function pagedRecipesMock() {
+  return recordMock(MyRecipesDocument, {
+    dataFor: (
+      vars: Record<string, unknown>,
+    ): MockDataFor<typeof MyRecipesDocument> => {
+      const secondPage = vars.cursor === 'page-1';
+      return {
+        recipes: {
+          edges: [
+            secondPage
+              ? edge('c2', 'r2', 'Lasagne')
+              : edge('c1', 'r1', 'Pasta'),
+          ],
+          pageInfo: {
+            hasNextPage: !secondPage,
+            endCursor: secondPage ? null : 'page-1',
+          },
+          totalCount: 2,
+        },
+      };
+    },
+  });
+}
+
+function useRecipeManagementWithClient() {
+  const state = useRecipeManagement();
+  const client = useApolloClient();
+  return { ...state, client };
+}
+
+async function renderReady() {
+  const { result } = renderHookWithApollo(
+    () => useRecipeManagementWithClient(),
+    {
+      operationMocks: [recipesMock().mock],
+    },
+  );
+  await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+  return result;
+}
+
+function readName(
+  result: { current: ReturnType<typeof useRecipeManagementWithClient> },
+  recipeId: string,
+): string | undefined {
+  const ref = result.current.state.recipes.find(r => r.id === recipeId);
+  if (!ref) return undefined;
+  return result.current.client.cache.readFragment<MyRecipeCard_RecipeFragment>({
+    fragment: MyRecipeCard_RecipeFragmentDoc,
+    fragmentName: 'MyRecipeCard_recipe',
+    from: ref,
+  })?.name;
+}
+
+describe('useRecipeManagement', () => {
+  it('returns recipes from query data', async () => {
+    const result = await renderReady();
+    expect(readName(result, 'r1')).toBe('Pasta');
+  });
+
+  it('returns loading and error state', async () => {
+    const result = await renderReady();
+    expect(result.current.state.loading).toBe(false);
+    expect(result.current.state.error).toBeUndefined();
+  });
+
+  it('stops at the first page until the list asks for more', async () => {
+    const { result } = renderHookWithApollo(() => useRecipeManagement(), {
+      operationMocks: [pagedRecipesMock().mock],
+    });
+
+    await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+    expect(result.current.state.hasMore).toBe(true);
+
+    await act(async () => {
+      await result.current.actions.loadMore();
+    });
+
+    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    expect(result.current.state.hasMore).toBe(false);
+  });
+
+  it('loadAllPages pages through the rest, so a search sees every recipe', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeManagement({ loadAllPages: true }),
+      { operationMocks: [pagedRecipesMock().mock] },
+    );
+
+    await waitFor(() =>
+      expect(result.current.state.recipes.map(r => r.name)).toEqual([
+        'Pasta',
+        'Lasagne',
+      ]),
+    );
+    expect(result.current.state.isLoadingRemainingPages).toBe(false);
+  });
+
+  it('exposes refetch function', async () => {
+    const result = await renderReady();
+    expect(typeof result.current.actions.refetch).toBe('function');
+  });
+});

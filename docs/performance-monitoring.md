@@ -317,7 +317,7 @@ export const ImageHeavyComponent: React.FC = () => {
 ### 4. Access Performance Data
 
 ```typescript
-import { usePerformanceStore } from '#/store/performanceStore';
+import { usePerformanceStore } from '#/services/performance/performanceStore';
 
 const MyComponent = () => {
   const getSlowestComponents = usePerformanceStore(

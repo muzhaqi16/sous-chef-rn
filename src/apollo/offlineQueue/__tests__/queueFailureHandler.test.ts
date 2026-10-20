@@ -15,7 +15,8 @@ import { classifyError } from '../queueErrorPolicy';
 import { subjectTypeOf } from '../queuedSubject';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { client } from '#/apollo/client';
+import type { ApolloClient } from '@apollo/client';
+import { registerApolloClient } from '#/apollo/clientRegistry';
 import { errorService } from '#/services/errorService';
 import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -29,9 +30,11 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
-jest.mock('#/apollo/client', () => ({
-  client: { cache: {}, refetchQueries: jest.fn(() => Promise.resolve([])) },
-}));
+const client = {
+  cache: {},
+  refetchQueries: jest.fn(() => Promise.resolve([])),
+} as unknown as jest.Mocked<ApolloClient>;
+registerApolloClient(client);
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));

@@ -1,0 +1,175 @@
+import { useEffect, useRef } from 'react';
+import { useApolloClient } from '@apollo/client/react';
+import {
+  GetBrandsDocument,
+  GetCategoriesDocument,
+} from '#operations/item/item.generated';
+import { GetStoresDocument } from '#operations/store/store.generated';
+import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
+import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
+import { useStore } from '#store';
+import { fromServer } from '#/apollo/utils/fromServer';
+import {
+  useAppStore,
+  useIsOnline,
+  useIsPantryQueryComplete,
+} from '#store/useAppStore';
+import { errorService } from '#/services/errorService';
+import { scheduleIdle } from '#/utils/scheduleIdle';
+
+/**
+ * Warms reference data into Zustand so autocomplete serves offline matches.
+ * Gated on core data (after first paint) and `isOnline`, by the home signal
+ * rather than the pantry one, so any landing tab warms the caches.
+ */
+const REFERENCE_DATA_TTL = 24 * 60 * 60 * 1000; // 24h
+
+function isStale(lastFetchedAt: number | null, now: number): boolean {
+  return lastFetchedAt === null || now - lastFetchedAt >= REFERENCE_DATA_TTL;
+}
+
+/**
+ * A failed fetch (`rows === undefined`) leaves the timestamp null so the next
+ * online tick retries. `setCached` drives the element type (`NoInfer` on `rows`)
+ * so an inline `__typename` narrows against the setter's parameter type.
+ */
+function commitWarm<T>(
+  rows: NoInfer<T>[] | undefined,
+  setCached: (rows: T[]) => void,
+  setFetchedAt: (timestamp: number) => void,
+): void {
+  if (rows === undefined) return;
+  if (rows.length > 0) setCached(rows);
+  setFetchedAt(Date.now());
+}
+
+export function useDataPreloading() {
+  const isOnline = useIsOnline();
+  // Either signal means core data has loaded; the home signal is app-wide so
+  // warming isn't limited to users who open the pantry tab.
+  const hasInitializedHomeData = useAppStore(
+    state => state.hasInitializedHomeData,
+  );
+  const isPantryQueryComplete = useIsPantryQueryComplete();
+  const isReady = hasInitializedHomeData || isPantryQueryComplete;
+
+  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const lastCategoriesFetchedAt = useAppStore(
+    state => state.lastCategoriesFetchedAt,
+  );
+  const lastBrandsFetchedAt = useAppStore(state => state.lastBrandsFetchedAt);
+  const lastStoresFetchedAt = useAppStore(state => state.lastStoresFetchedAt);
+
+  const client = useApolloClient();
+
+  // Guards a dataset from being re-fetched before its timestamp updates.
+  const inFlightRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isReady || !isOnline) return;
+
+    const now = Date.now();
+    const inFlight = inFlightRef.current;
+
+    const warm = (
+      key: string,
+      lastFetchedAt: number | null,
+      run: () => Promise<void>,
+    ) => {
+      if (inFlight.has(key) || !isStale(lastFetchedAt, now)) return;
+      inFlight.add(key);
+      scheduleIdle(() => {
+        run()
+          .catch(error => {
+            // A failed warm skips `commitWarm` entirely, which leaves the
+            // timestamp null so the next online tick retries — the same
+            // outcome `commitWarm(undefined, …)` produced.
+            errorService.reportError(error, { operation: `preload ${key}` });
+          })
+          .finally(() => inFlight.delete(key));
+      });
+    };
+
+    // `commitWarm` stamps only a server answer (`map` over `undefined` edges
+    // yields `undefined`), leaving anything else null to retry next online tick.
+    warm('units', lastUnitsFetchedAt, async () => {
+      const data = await fromServer(() =>
+        client.query({
+          query: GetCommonUnitsDocument,
+          fetchPolicy: 'network-only',
+        }),
+      );
+      const store = useStore.getState();
+      commitWarm(
+        data?.units,
+        store.setCachedUnits,
+        store.setLastUnitsFetchedAt,
+      );
+    });
+
+    warm('categories', lastCategoriesFetchedAt, async () => {
+      const data = await fromServer(() =>
+        client.query({
+          query: GetCategoriesDocument,
+          fetchPolicy: 'network-only',
+        }),
+      );
+      const store = useStore.getState();
+      commitWarm(
+        data?.categories.edges.map(
+          (edge): CategorySuggestion => ({
+            __typename: 'CategorySuggestion',
+            id: edge.node.id,
+            name: edge.node.name,
+            type: edge.node.type,
+            icon: edge.node.icon,
+            color: edge.node.color,
+            slug: edge.node.slug,
+          }),
+        ),
+        store.setCachedCategories,
+        store.setLastCategoriesFetchedAt,
+      );
+    });
+
+    warm('brands', lastBrandsFetchedAt, async () => {
+      const data = await fromServer(() =>
+        client.query({ query: GetBrandsDocument, fetchPolicy: 'network-only' }),
+      );
+      const store = useStore.getState();
+      commitWarm(
+        data?.brands.edges.map(edge => ({
+          id: edge.node.id,
+          name: edge.node.name,
+        })),
+        store.setCachedBrands,
+        store.setLastBrandsFetchedAt,
+      );
+    });
+
+    warm('stores', lastStoresFetchedAt, async () => {
+      const data = await fromServer(() =>
+        client.query({ query: GetStoresDocument, fetchPolicy: 'network-only' }),
+      );
+      const store = useStore.getState();
+      commitWarm(
+        data?.stores.edges.map(edge => ({
+          id: edge.node.id,
+          name: edge.node.name,
+          address: edge.node.address,
+          storeNumber: edge.node.storeNumber,
+        })),
+        store.setCachedStores,
+        store.setLastStoresFetchedAt,
+      );
+    });
+  }, [
+    isReady,
+    isOnline,
+    lastUnitsFetchedAt,
+    lastCategoriesFetchedAt,
+    lastBrandsFetchedAt,
+    lastStoresFetchedAt,
+    client,
+  ]);
+}

@@ -19,7 +19,7 @@ StyleSheet.configure({
   settings: {
     // Runs synchronously at config time — UnistylesRuntime.colorScheme is
     // available from the native layer before any component renders. After
-    // rehydration the stored preference drives it (`applyThemePreferenceToRuntime`).
+    // rehydration the stored preference drives it (`applyThemeToRuntime`).
     initialTheme: () => {
       // The library does not export its ColorScheme enum; compare the string it holds.
       const scheme: string = UnistylesRuntime.colorScheme;

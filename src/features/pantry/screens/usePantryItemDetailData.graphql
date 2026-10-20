@@ -1,0 +1,6 @@
+query GetPantryItem($id: ID!) {
+  pantryItem(id: $id) {
+    id
+    ...PantryItemDetail_pantryItem
+  }
+}

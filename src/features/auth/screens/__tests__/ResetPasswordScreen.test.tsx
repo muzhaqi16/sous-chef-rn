@@ -49,7 +49,7 @@ jest.mock('#store/useAppStore', () => ({
     }),
 }));
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
   }),
@@ -57,7 +57,7 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

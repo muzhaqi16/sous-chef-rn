@@ -11,7 +11,10 @@ import {
   DensityPreference,
   FontScalePreference,
 } from '#store/slices/preferenceTypes';
-import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
+import {
+  DENSITY_META,
+  FONT_SCALE_META,
+} from '#/theme/foundations/appearanceConfig';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';

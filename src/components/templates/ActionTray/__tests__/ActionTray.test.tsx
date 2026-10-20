@@ -8,7 +8,7 @@ import {
 } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import { ActionTray } from '../ActionTray';
 import type { ActionTrayRef } from '../types';
 
@@ -21,7 +21,7 @@ jest.mock('#components/providers/OverlayBackdropProvider', () => ({
   useBackdropClaim: jest.fn(),
 }));
 
-jest.mock('#hooks/useBottomSheetBackHandler', () => ({
+jest.mock('#hooks/ui/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 

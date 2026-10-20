@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { localizedErrorMessage } from '#/services/errorService';

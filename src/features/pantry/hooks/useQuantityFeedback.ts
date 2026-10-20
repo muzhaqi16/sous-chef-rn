@@ -2,12 +2,12 @@ import {
   useConversionPreview,
   type UseConversionPreviewOptions,
 } from './useConversionPreview';
+import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
+import { inCountedUnit } from '#domain/stockDisplay';
 import type {
   PantryActionSharedState,
   ShownQuantity,
-} from '#features/pantry/components/modals/PantryActionModal';
-import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
-import { inCountedUnit } from '#domain/stockDisplay';
+} from '#features/pantry/types';
 
 interface QuantityFeedbackResult {
   /** Conversion preview (text, loading state, raw value, server certainty) */

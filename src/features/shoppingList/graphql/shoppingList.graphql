@@ -167,8 +167,8 @@ query GetShoppingListTemplates(
 # The `node` selects scalar meta fields inline (id, itemName, category,
 # sortOrder, version, purchaseInfo, item, etc.) so the hook layer can read
 # them directly without a `cache.readFragment` materialize round-trip.
-# The masked `...SortableItem_item` ref flows to the row component, which
-# calls `useFragment` to get a per-entity cache subscription.
+# `shoppingListItem_listed` carries what the row component reads, by id, for
+# its per-entity cache subscription.
 # `itemIds` narrows to the lines naming those catalog items (a receipt's); left
 # out, the field keys exactly as the list tab's own.
 query GetShoppingListItemsFiltered(
@@ -245,7 +245,7 @@ query GetShoppingListItemsFiltered(
             # Where a new line of this item, or a reset one, is shelved.
             storeDepartment
           }
-          ...SortableItem_item
+          ...shoppingListItem_listed
         }
       }
       pageInfo {
@@ -253,18 +253,6 @@ query GetShoppingListItemsFiltered(
         endCursor
       }
     }
-  }
-}
-
-query GetShoppingListItem($id: ID!) {
-  shoppingListItem(id: $id) {
-    # Select id at the top level (outside the fragments) so that under
-    # dataMasking the returned shoppingListItem ref still carries its key field.
-    # useFragment / cache.identify needs it to locate the entity; without it the
-    # masked ref is just { __typename } and identification throws.
-    id
-    ...ItemDetail_shoppingListItem
-    ...useShoppingListItemForm_item
   }
 }
 

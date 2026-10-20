@@ -9,8 +9,11 @@
  * this one uses the REAL cache, because the rules being skipped live in the
  * writer and the type policy.
  */
+import { makeCache } from '#/apollo/cache';
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { renderHook } from '@testing-library/react-native';
-import { gql, type InMemoryCache } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
 
 const mockGetAllForType = jest.fn<
@@ -21,10 +24,6 @@ const mockGetAllForType = jest.fn<
 // The factory owns the cache: `jest.mock` is hoisted above every const in this
 // file, so a cache built at module scope is still in its temporal dead zone
 // when the factory runs.
-jest.mock('#/apollo/client', () => {
-  const { makeCache } = jest.requireActual('#/apollo/cache');
-  return { client: { cache: makeCache() } };
-});
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
     getAllForType: (entityType: string) => mockGetAllForType(entityType),
@@ -41,9 +40,8 @@ jest
     if (typeof fn === 'function') fn();
   });
 
-const { cache } = jest.requireMock<{ client: { cache: InMemoryCache } }>(
-  '#/apollo/client',
-).client;
+const cache = makeCache();
+registerApolloClient({ cache } as unknown as ApolloClient);
 
 const ROW = gql`
   fragment RestoreProbe on ShoppingListItem {

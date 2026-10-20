@@ -8,7 +8,7 @@ import { SelectPantryItems } from '../SelectPantryItems';
 
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     navigateToPreviousStep: mockNavigateToPreviousStep,

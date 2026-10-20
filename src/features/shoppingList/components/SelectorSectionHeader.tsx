@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, type IconName } from '#utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 
 interface SelectorSectionHeaderProps {

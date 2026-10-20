@@ -13,13 +13,21 @@ const {
   restrictedSyntax,
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
+  restrictedSyntaxForActionCallers,
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
+  COLOCATED_DATA_HOOKS,
+  COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
+  LAYER_FILES,
+  LAYER_POLICIES,
+  CORE_RESTRICTED_GLOBALS,
+  CORE_PATTERNS,
 } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
+const { operationGlobs } = require('../scripts/lib/sourceRoots');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -60,6 +68,7 @@ const base = {
       },
     },
     'boundaries/elements': BOUNDARY_ELEMENTS,
+    'boundaries/files': LAYER_FILES,
   },
   rules: {
     'no-barrel-files/no-barrel-files': 'error',
@@ -73,9 +82,15 @@ const base = {
     'no-restricted-syntax': restrictedSyntax(),
 
     'import/no-restricted-paths': ['error', { zones: BOUNDARY_ZONES }],
+    // `checkAllOrigins` brings package imports under the policies too; only
+    // the layer policies select one.
     'boundaries/dependencies': [
       'error',
-      { default: 'allow', policies: BOUNDARY_POLICIES },
+      {
+        default: 'allow',
+        checkAllOrigins: true,
+        policies: [...BOUNDARY_POLICIES, ...LAYER_POLICIES],
+      },
     ],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
     // specifier; it still loads the module, so it reads as a side-effect import.
@@ -190,21 +205,40 @@ const overrides = [
   {
     // A hook's return type is the other half of the data-layer boundary: the
     // import rule cannot see a screen coupled by TYPE alone.
-    files: ['src/features/*/hooks/**/*.{ts,tsx}'],
+    files: ['src/features/*/hooks/**/*.{ts,tsx}', ...COLOCATED_DATA_HOOKS],
     ignores: [...TEST_FILES, '**/__mocks__/**', '**/*.generated.ts'],
     languageOptions: { parserOptions: TYPED },
     rules: { 'sous-chef/hook-returns-no-library-type': 'error' },
   },
   {
+    // A hook beside the UI that owns its query reads the data layer like any
+    // feature hook; the rest of the boundary still holds.
+    files: COLOCATED_DATA_HOOKS,
+    ignores: [...TEST_FILES, '**/__mocks__/**'],
+    rules: {
+      'import/no-restricted-paths': [
+        'error',
+        { zones: COLOCATED_DATA_HOOK_ZONES },
+      ],
+    },
+  },
+  {
     // What a feature hook reads while rendering must re-render when the cache
     // changes. Mutation hooks read the cache to write it.
-    files: ['src/features/**/hooks/**/*.{ts,tsx}'],
+    files: ['src/features/**/hooks/**/*.{ts,tsx}', ...COLOCATED_DATA_HOOKS],
     ignores: [
       ...TEST_FILES,
       '**/__mocks__/**',
       'src/features/*/hooks/mutations/**',
     ],
     rules: { 'no-restricted-syntax': restrictedSyntaxForFeatureHooks() },
+  },
+  {
+    // The shopping list's actions fire their own haptic through the
+    // `haptics` port (useShoppingListActions); its UI only runs them.
+    files: ['src/features/shoppingList/{components,screens}/**/*.tsx'],
+    ignores: TEST_FILES,
+    rules: { 'no-restricted-syntax': restrictedSyntaxForActionCallers() },
   },
   {
     // The queue BUILDS and replays these writes; it is not one of their
@@ -256,7 +290,7 @@ const overrides = [
           schema: './src/graphql/generated/schema.graphql',
           // The cross-document rules (unused fragments, undefined variables,
           // fragment spreads) need the whole operation set, not one file.
-          documents: ['src/**/*.graphql'],
+          documents: operationGlobs(),
         },
       },
     },
@@ -413,6 +447,26 @@ const overrides = [
     },
   },
   {
+    // React Native Testing Library renders every mobile suite on
+    // react-test-renderer. The core-portability project cannot load it (it
+    // requires React Native), so it calls that renderer's `create` itself.
+    files: ['__tests__/core-portability/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-deprecated': [
+        'error',
+        {
+          allow: [
+            {
+              from: 'package',
+              package: 'react-test-renderer',
+              name: 'create',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/jest.setup.js', '__tests__/setup/**/*.js'],
     languageOptions: {
       globals: {
@@ -459,14 +513,14 @@ const overrides = [
   {
     // The gorhom re-export site and its circular-import helper.
     files: [
-      'src/hooks/useStandardBottomSheet.tsx',
-      'src/hooks/useBottomSheetBackHandler.ts',
+      'src/hooks/ui/useStandardBottomSheet.tsx',
+      'src/hooks/ui/useBottomSheetBackHandler.ts',
     ],
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: {
           '@gorhom/bottom-sheet': true,
-          '#hooks/useBottomSheetBackdropClaim': true,
+          '#hooks/ui/useBottomSheetBackdropClaim': true,
         },
         add: [
           {
@@ -505,8 +559,8 @@ const overrides = [
           '#/i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,
-          '#storage/mmkv': true,
-          '#/storage/mmkv': true,
+          '#store/deviceStorage': true,
+          '#/store/deviceStorage': true,
           'date-fns': true,
           'fraction.js': true,
         },
@@ -553,7 +607,7 @@ const overrides = [
     // `createAnimatedComponent`; Toast's glyph colour is a runtime theme lookup.
     files: [
       'src/services/permissions/PermissionService.ts',
-      'src/utils/iconUtils.tsx',
+      'src/components/atoms/Icon.tsx',
       'src/components/atoms/CachedImage.tsx',
       'src/features/recipes/components/recipeDetail/RecipeHeroImage.tsx',
       'src/components/molecules/Toast.tsx',
@@ -673,6 +727,7 @@ const overrides = [
       'src/components/atoms/ThemedStatusBar.tsx',
       'src/components/molecules/Loading.tsx',
       'src/components/atoms/CachedImage.tsx',
+      'src/components/atoms/Icon.tsx',
       'src/components/molecules/Toast.tsx',
       'src/components/atoms/BottomSheetFormScrollView.tsx',
     ],
@@ -694,19 +749,27 @@ const overrides = [
     },
   },
   {
-    // Device storage's writers: the kernel persisters, the reset manager and
-    // the feature caches that register with it.
+    // Device storage's writers: the kernel persisters, the reset manager, the
+    // device id's mirror and the feature caches that register with it.
     files: [
       'src/apollo/**/*.{ts,tsx}',
-      'src/storage/**/*.{ts,tsx}',
+      'src/services/auth/deviceId.ts',
       'src/store/**/*.{ts,tsx}',
       'src/features/*/store/**/*.{ts,tsx}',
-      'src/storage/__mocks__/**/*.{ts,tsx}',
     ],
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': restrictedImports({
-        allow: { '#storage/mmkv': true, '#/storage/mmkv': true },
+        allow: { '#store/deviceStorage': true, '#/store/deviceStorage': true },
+      }),
+    },
+  },
+  {
+    // The composition root installs the device's key-value store as the port.
+    files: ['src/app/installNativePlatform.ts'],
+    rules: {
+      'no-restricted-imports': restrictedImports({
+        allow: { '#native/storage/keyValueStore': true },
       }),
     },
   },
@@ -715,9 +778,9 @@ const overrides = [
     // points callers at. FolderPicker hands off between two STACKED sheets in
     // an order a `visible` boolean cannot express.
     files: [
-      'src/hooks/useStandardBottomSheet.tsx',
-      'src/hooks/useBottomSheetBackHandler.ts',
-      'src/hooks/useBottomSheetBackdropClaim.ts',
+      'src/hooks/ui/useStandardBottomSheet.tsx',
+      'src/hooks/ui/useBottomSheetBackHandler.ts',
+      'src/hooks/ui/useBottomSheetBackdropClaim.ts',
       'src/components/templates/ActionTray/ActionTray.tsx',
       'src/features/recipes/components/FolderPicker.tsx',
     ],
@@ -861,6 +924,12 @@ const overrides = [
       'sous-chef/no-raw-color': 'off',
       'sous-chef/no-raw-spacing': 'off',
     },
+  },
+  {
+    // Core runs in every host, so it names no host-only global.
+    files: CORE_PATTERNS,
+    ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
+    rules: { 'no-restricted-globals': ['error', ...CORE_RESTRICTED_GLOBALS] },
   },
   {
     // The one module that reads message text: each predicate there is a library

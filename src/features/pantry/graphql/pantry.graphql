@@ -54,11 +54,9 @@ query GetPantry(
           # expiresOn, quantity, createdAt), local search (itemName),
           # location filtering (storageState, storageLocation.id), stats
           # (isLowStock), and `FilteredPantryItems`' subtitle (unit.symbol).
-          # Leaf rendering lives in the masked `PantryItemCard_pantryItem`
-          # spread; the Consume/Waste/Restock action modals (opened from this
-          # list) read the cache via `PantryActionModal_pantryItem`, so it is
-          # spread here too — otherwise those modals open with an incomplete
-          # cache read and render blank.
+          # `pantryItem_listed` carries what the cells read by id: the card,
+          # and the Consume/Waste/Restock modals opened from this list, which
+          # would otherwise open on an incomplete cache read and render blank.
           id
           itemName
           # The CATALOG item's id, which is what a shopping-list add sends —
@@ -86,8 +84,7 @@ query GetPantry(
             id
             symbol
           }
-          ...PantryItemCard_pantryItem
-          ...PantryActionModal_pantryItem
+          ...pantryItem_listed
         }
         cursor
       }
@@ -124,13 +121,6 @@ query GetPantry(
       }
       totalCount
     }
-  }
-}
-
-query GetPantryItem($id: ID!) {
-  pantryItem(id: $id) {
-    id
-    ...PantryItemDetail_pantryItem
   }
 }
 

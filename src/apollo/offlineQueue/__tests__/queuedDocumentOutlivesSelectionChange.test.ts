@@ -4,7 +4,7 @@ import { print } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -23,6 +23,7 @@ import { QueueStore } from '../queueStore';
 let mockClient: ApolloClient | null = null;
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

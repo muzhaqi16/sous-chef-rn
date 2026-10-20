@@ -6,11 +6,11 @@ import {
   formatQuantityForInput,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
+import { inCountedUnit } from '#domain/stockDisplay';
 import type {
   PantryActionSharedState,
   ShownQuantity,
-} from '#features/pantry/components/modals/PantryActionModal';
-import { inCountedUnit } from '#domain/stockDisplay';
+} from '#features/pantry/types';
 
 function alertExceeds(
   actionVerb: 'consume' | 'waste',

@@ -1,0 +1,108 @@
+# The recipe as an edit session loads it: what the form's `populateFromRecipe`
+# reads to open on it, and what `useForkRecipe` copies.
+fragment useRecipeFormWrites_recipe on Recipe {
+  id
+  # Sent back on save, so an edit made elsewhere since is refused.
+  version
+  name
+  description
+  imageUrl
+  videoUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  caloriesPerServing
+  difficulty
+  category
+  cuisines
+  status
+  diets
+  healthGoals
+  intolerances
+  notes
+  tips
+  originalAuthor
+  tags
+  instructions
+  # The same argument as every other selection of this field in the operations
+  # that spread this fragment.
+  ingredientsConnection(first: $ingredientsFirst) {
+    edges {
+      node {
+        id
+        name
+        quantity
+        originalText
+        item {
+          id
+          name
+          imageUrl
+        }
+        unit {
+          id
+          name
+          symbol
+        }
+        image
+        isOptional
+        notes
+        preparation
+        sortOrder
+        section
+      }
+    }
+    # A save replaces the whole list, and a copy takes all of it: neither runs
+    # on a recipe over the ingredient limit, which `hasNextPage` marks.
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  # The author's edit waiting for review. The editor reopens from `proposed`,
+  # never from the live fields above: a save sends the whole form, and live
+  # values would set every pending change back.
+  pendingRevision {
+    id
+    proposed {
+      name
+      description
+      imageUrl
+      videoUrl
+      servings
+      prepTimeMinutes
+      cookTimeMinutes
+      caloriesPerServing
+      difficulty
+      category
+      cuisines
+      diets
+      healthGoals
+      intolerances
+      notes
+      tips
+      originalAuthor
+      tags
+      instructions
+      ingredients {
+        name
+        quantity
+        item {
+          id
+          name
+          imageUrl
+        }
+        unit {
+          id
+          name
+          symbol
+        }
+        isOptional
+        notes
+        preparation
+        sortOrder
+        section
+      }
+    }
+  }
+}

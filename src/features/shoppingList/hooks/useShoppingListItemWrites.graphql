@@ -1,0 +1,8 @@
+# The line the edit form opens on, fetched into the entity the form subscribes
+# to.
+query ShoppingListItemForEdit($id: ID!) {
+  shoppingListItem(id: $id) {
+    id
+    ...useShoppingListItemForm_item
+  }
+}

@@ -15,7 +15,7 @@ jest.mock('../src/navigation/RootNavigator', () => ({
 }));
 
 // Hooks / services that pull in native SDKs
-jest.mock('../src/hooks/useNetworkStatus', () => ({
+jest.mock('../src/hooks/device/useNetworkStatus', () => ({
   useNetworkStatus: jest.fn(),
 }));
 jest.mock('../src/services/performance/MemoryMonitor', () => ({
@@ -31,6 +31,10 @@ jest.mock('react-native-screens', () => ({
 
 // Apollo client creates WebSocket links / polling timers that keep Jest alive
 jest.mock('../src/apollo/client', () => ({
+  restorePersistedCache: jest.fn(),
+  flushCachePersistence: jest.fn(),
+}));
+jest.mock('../src/app/apolloClient', () => ({
   client: {
     watchQuery: jest.fn(),
     query: jest.fn(),

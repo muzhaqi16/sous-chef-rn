@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { NavigationState, Route } from 'react-native-tab-view';
 import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { FilterTabItem } from './FilterTabItem';

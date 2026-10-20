@@ -8,7 +8,7 @@ import {
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
 
-jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
+jest.mock('../../../src/hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },
     modalProps: {},

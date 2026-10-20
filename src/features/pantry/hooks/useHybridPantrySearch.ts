@@ -11,12 +11,10 @@ import {
   type UseHybridSearchReturn,
 } from '#features/pantry/hooks/useHybridSearch';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
-// Connection nodes carry direct fields (id, itemName, expiresOn, …) plus an
-// opaque `PantryItemCard_pantryItem` fragment ref. The leaf cell unmasks the
-// ref via `useFragment`; the hook layer only needs the direct fields for
-// local search / sort.
+// Connection nodes carry direct fields (id, itemName, expiresOn, …), all the
+// hook layer needs for local search / sort; each cell reads itself by id.
 type PantryItem = PantryListItemNode;
 
 export interface UseHybridPantrySearchParams {

@@ -25,7 +25,7 @@ import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated'
 import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { todayKey } from '#/utils/dateUtils';
 
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'device_this'),
 }));
 

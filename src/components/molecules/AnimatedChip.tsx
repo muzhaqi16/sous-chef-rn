@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { HapticService } from '#services/haptic/HapticService';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

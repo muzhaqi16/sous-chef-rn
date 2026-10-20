@@ -5,7 +5,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { TextEditBottomSheet } from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { RIPPLE } from '#constants/ripple';

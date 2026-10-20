@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';

@@ -3,10 +3,10 @@ import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
-import { hasFeatureHintBeenShown } from '#/hooks/useFeatureHint';
+import { hasFeatureHintBeenShown } from '#/hooks/settings/useFeatureHint';
 import { storeApi } from '#store';
 
-// Same key shape as `#hooks/useFeatureHint`'s helpers, so resetAllFeatureHints()
+// Same key shape as `#hooks/settings/useFeatureHint`'s helpers, so resetAllFeatureHints()
 // and hasFeatureHintBeenShown() see these steps. Per-account scoping so
 // tutorials re-show when a different user logs in.
 const HINT_PREFIX = 'feature_hint_shown_';

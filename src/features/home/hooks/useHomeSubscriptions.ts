@@ -9,9 +9,7 @@ import { useSelectedHomeId } from '#store/useAppStore';
 import type { ApolloCache } from '@apollo/client';
 import { useSubscription } from '@apollo/client/react';
 import {
-  GetHomeDocument,
   GetHomesDocument,
-  GetMyPendingInvitesDocument,
   HomeEventsDocument,
   type HomeEventsSubscription,
 } from '#operations/home/home.generated';
@@ -98,7 +96,8 @@ export function useHomeSubscriptions(userId?: string) {
       switch (payload.subtype) {
         // A membership change is a change to the member list, which no
         // single-entity read expresses — refetch the query that owns it, which
-        // is watched only while a home screen is open. `GetHomes` stays mounted
+        // is watched only while a home screen is open. Named: the screens'
+        // queries belong to their UI. `GetHomes` stays mounted
         // all session and carries the `myMembership` flags the pantry's
         // permissions read, so it is refetched only for the viewer's own row:
         // an owner's grant or revoke lands live, and another member's change
@@ -113,8 +112,8 @@ export function useHomeSubscriptions(userId?: string) {
               payload.homeId,
               payload.node.id,
             )
-              ? [GetHomeDocument, GetHomesDocument]
-              : [GetHomeDocument],
+              ? ['GetHome', GetHomesDocument]
+              : ['GetHome'],
           });
           break;
 
@@ -124,7 +123,7 @@ export function useHomeSubscriptions(userId?: string) {
         // blank the list, so both are read back rather than written partial.
         case HomeSubtype.InviteCreated:
           void client.refetchQueries({
-            include: [GetMyPendingInvitesDocument],
+            include: ['GetMyPendingInvites'],
           });
           void fetchEventEntity(
             client,

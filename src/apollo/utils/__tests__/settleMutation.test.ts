@@ -1,5 +1,6 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';

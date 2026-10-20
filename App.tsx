@@ -9,7 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
-import { client, restorePersistedCache } from '#/apollo/client';
+import { restorePersistedCache } from '#/apollo/client';
+import { client } from '#/app/apolloClient';
 import { connectResyncSources } from '#/apollo/refetchEvents';
 import { Navigation } from '#navigation/RootNavigator';
 import { navigationRef } from '#services/NavigationService';
@@ -30,10 +31,11 @@ import {
   GlobalBackdrop,
 } from '#/components/providers/OverlayBackdropProvider';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+import { setupGlobalErrorHandler } from '#/app/globalErrorHandler';
 import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
 import { nativePushProvider } from '#/services/push/nativePushProvider';
 import { iosPushProvider } from '#/services/push/iosPushProvider';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
@@ -44,6 +46,10 @@ setupGlobalErrorHandler();
 setPushTokenProvider(
   Platform.OS === 'ios' ? iosPushProvider : nativePushProvider,
 );
+
+// Device registration and the biometric slot, which a session runs on this
+// device beyond the core. Before the first sign-in, which this module precedes.
+registerMobileSessionHost();
 
 // Foreground, API-reachable, socket-reconnect and language triggers for the
 // client's resync (`src/apollo/refetchEvents.ts`); navigation paces the

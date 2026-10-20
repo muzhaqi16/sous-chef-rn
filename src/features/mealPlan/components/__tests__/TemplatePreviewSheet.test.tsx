@@ -12,7 +12,7 @@ import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';
 import { format } from 'date-fns';
 
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
 
@@ -92,7 +92,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplate', () => ({
   useMealTemplate: jest.fn(() => mockLoadedEmptyTemplate()),
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(

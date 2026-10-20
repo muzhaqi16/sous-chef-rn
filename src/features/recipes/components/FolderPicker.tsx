@@ -11,16 +11,16 @@ import {
 import {
   BottomSheetModal,
   type BottomSheetModalRef,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { FolderListItem } from '#features/recipes/components/FolderPicker/FolderListItem';
 import { ManageFolderSheet } from '#features/recipes/components/FolderPicker/ManageFolderSheet';

@@ -4,9 +4,9 @@ import { useTranslation } from '#/i18n';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { Icon, type IconName } from '#/utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { Card } from '#components/atoms/Card';
 
 interface HomeStatsProps {

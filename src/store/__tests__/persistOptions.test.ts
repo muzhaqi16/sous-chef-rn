@@ -15,19 +15,15 @@
  * (visible, one-line fix) instead of silently poisoning the blob.
  */
 
-// Keep the real MMKV module (zustandStorage, STORAGE_KEY) but make the
-// recovery-instance signal controllable so the plaintext-token guard in
-// partialize can be exercised without provoking a real device-key failure.
-jest.mock('#/storage/mmkv', () => ({
-  ...jest.requireActual('#/storage/mmkv'),
-  isRecoveryStorage: jest.fn(() => false),
-}));
-
 import { useStore, PERSISTED_KEYS } from '#store';
-import { isRecoveryStorage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
+
+// The recovery signal is controllable, so the plaintext-token guard in
+// partialize is exercised without provoking a real device-key failure.
+const recoveryMode = jest.spyOn(storage, 'isRecovery');
 
 afterEach(() => {
-  (isRecoveryStorage as jest.Mock).mockReturnValue(false);
+  recoveryMode.mockReturnValue(false);
 });
 
 const partializedKeys = (): string[] => {
@@ -135,7 +131,7 @@ describe('store persist options', () => {
 
     it('never persists tokens to the unencrypted recovery instance', () => {
       const { partialize } = useStore.persist.getOptions();
-      (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+      recoveryMode.mockReturnValue(true);
 
       // Same doubly-degraded preconditions that would otherwise trip the
       // keychain-fallback: unconfirmed keychain copy + both tokens present.
@@ -304,7 +300,6 @@ describe('store persist options', () => {
     });
 
     it('carries feature hints and login counts out of the old MMKV keys', async () => {
-      const { storage } = require('#/storage/mmkv');
       storage.set('feature_hint_shown_user-1_pantry_swipe', true);
       storage.set('feature_hint_shown_user-1_list_reorder', true);
       storage.set('login_count_user-1', 7);
@@ -320,7 +315,6 @@ describe('store persist options', () => {
     });
 
     it('removes the old keys once they are carried', async () => {
-      const { storage } = require('#/storage/mmkv');
       storage.set('feature_hint_shown_user-2_thing', true);
 
       const { migrate } = useStore.persist.getOptions();
@@ -332,7 +326,6 @@ describe('store persist options', () => {
     });
 
     it('leaves a v16 blob untouched', async () => {
-      const { storage } = require('#/storage/mmkv');
       storage.set('feature_hint_shown_user-3_thing', true);
 
       const { migrate } = useStore.persist.getOptions();

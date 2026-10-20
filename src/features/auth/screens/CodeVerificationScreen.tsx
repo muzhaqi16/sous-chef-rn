@@ -17,7 +17,7 @@ import { authService } from '#/services/authService';
 import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { emailVerificationSchema } from '#/utils/validation/auth';

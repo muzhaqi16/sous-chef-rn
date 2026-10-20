@@ -1,10 +1,10 @@
 /**
  * Integration test: a persisted preference survives an "app restart".
  *
- * Boundary under test: Zustand's `persist` middleware ↔ MMKV (mocked at the
- * native-module boundary). The contract is "writing a preference to the
- * store flushes through the storage adapter, and a freshly-built store on
- * the next launch sees the persisted value after rehydration."
+ * Boundary under test: Zustand's `persist` middleware ↔ device storage. The
+ * contract is "writing a preference to the store flushes through the storage
+ * adapter, and a freshly-built store on the next launch sees the persisted
+ * value after rehydration."
  *
  * Real implementations on both sides:
  *  - Zustand: a real `create(...)` with the same `persist + immer +
@@ -12,14 +12,12 @@
  *    `createTestStore` skips `persist` (by design — it's for slice-level
  *    isolation), so this test rebuilds the persist layer inline. That gap
  *    is documented in the README.
- *  - Storage: the production `zustandStorage` adapter, backed by the
- *    mocked MMKV instance. The mock keeps an in-memory `Map`, so writes
- *    from the first store are visible to the second store within the same
- *    Jest process — exactly the model needed to simulate a restart.
+ *  - Storage: the production `zustandStorage` adapter, over the in-memory
+ *    platform's key-value store that `jest.setup.js` installs. Writes from the
+ *    first store are visible to the second within the same Jest process —
+ *    exactly the model needed to simulate a restart.
  *
- * Mocks live only at the I/O boundary: MMKV is mocked globally in
- * `__tests__/setup/mocks/react-native-mmkv.js`. Nothing about Zustand,
- * persist, or the preferences slice itself is mocked.
+ * Nothing about Zustand, persist, or the preferences slice itself is mocked.
  */
 
 'use no memo';
@@ -39,7 +37,8 @@ import {
   ThemePreference,
   PantrySortOption,
 } from '#/store/slices/preferenceTypes';
-import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
+import { zustandStorage } from '#/store/deviceStorage';
+import { STORAGE_KEY } from '#/store/persistedKeys';
 
 function createPersistedStore(testKey: string) {
   return create<PreferencesState>()(

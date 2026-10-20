@@ -1,0 +1,38 @@
+# What a listed shopping-list line shows: every field the list's row cell
+# reads (`SortableItem_item`), so `GetShoppingListItemsFiltered` fetches them
+# and each row reads its own fragment by id
+# (`listedFragmentsCoverCells.test.ts`).
+fragment shoppingListItem_listed on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  category
+  unitName
+  unit {
+    id
+    symbol
+  }
+  purchaseInfo {
+    isPurchased
+    movedToPantryAt
+  }
+  suggestedPrice {
+    amount
+    substitute
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
+  item {
+    id
+    imageUrl
+    images {
+      id
+      url
+      kind
+    }
+  }
+}

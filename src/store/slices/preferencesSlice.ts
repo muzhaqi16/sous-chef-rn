@@ -1,8 +1,7 @@
 import type { StateCreator } from 'zustand';
-import { UnistylesRuntime } from 'react-native-unistyles';
 import { changeLanguage } from '#/i18n';
-import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
-import { ThemePreference, PREFERENCE_DEFAULTS } from './preferenceTypes';
+import { requirePlatform } from '#platform/install';
+import { PREFERENCE_DEFAULTS, type ThemePreference } from './preferenceTypes';
 import type {
   FontScalePreference,
   DensityPreference,
@@ -10,28 +9,7 @@ import type {
   PantrySortDirection,
 } from './preferenceTypes';
 import type { RootState } from '../index';
-import { logger } from '#/utils/environment';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
-
-/**
- * The one preference → `UnistylesRuntime` translation, shared by the `setTheme`
- * action and the post-rehydration sync, so the two cannot diverge.
- */
-export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
-  try {
-    if (theme === ThemePreference.SYSTEM) {
-      UnistylesRuntime.setAdaptiveThemes(true);
-    } else {
-      UnistylesRuntime.setAdaptiveThemes(false);
-      const target = theme === ThemePreference.DARK ? 'dark' : 'light';
-      if (UnistylesRuntime.themeName !== target) {
-        UnistylesRuntime.setTheme(target);
-      }
-    }
-  } catch (e) {
-    if (__DEV__) logger.warn('[applyThemePreferenceToRuntime] error:', e);
-  }
-}
 
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {
@@ -128,9 +106,9 @@ export const createPreferencesSlice: StateCreator<
   userPreferences: {},
 
   setTheme: theme => {
-    // Apply native theme BEFORE Zustand notifies subscribers, so all components
-    // render with correct StyleSheet colors on the first pass.
-    applyThemePreferenceToRuntime(theme);
+    // Applied BEFORE Zustand notifies subscribers, so every component renders
+    // with the new colors on the first pass.
+    requirePlatform('appearance').applyTheme(theme);
     set({ theme });
   },
   setLanguage: language => {
@@ -166,9 +144,9 @@ export const createPreferencesSlice: StateCreator<
   },
 
   setPrimaryColorOverride: color => {
-    // Apply to the Unistyles runtime BEFORE the Zustand notification, so a
-    // picked swatch shows on the next frame, not after the useAppearance effect.
-    applyAppearanceToRuntime({
+    // Applied BEFORE the Zustand notification, so a picked swatch shows on the
+    // next frame, not after the useAppearance effect.
+    requirePlatform('appearance').apply({
       primaryColorOverride: color,
       densityPreference: get().densityPreference,
       fontScalePreference: get().fontScalePreference,
@@ -177,7 +155,7 @@ export const createPreferencesSlice: StateCreator<
     set({ primaryColorOverride: color });
   },
   setDensityPreference: density => {
-    applyAppearanceToRuntime({
+    requirePlatform('appearance').apply({
       primaryColorOverride: get().primaryColorOverride,
       densityPreference: density,
       fontScalePreference: get().fontScalePreference,
@@ -186,7 +164,7 @@ export const createPreferencesSlice: StateCreator<
     set({ densityPreference: density });
   },
   setFontScalePreference: scale => {
-    applyAppearanceToRuntime({
+    requirePlatform('appearance').apply({
       primaryColorOverride: get().primaryColorOverride,
       densityPreference: get().densityPreference,
       fontScalePreference: scale,
@@ -195,7 +173,7 @@ export const createPreferencesSlice: StateCreator<
     set({ fontScalePreference: scale });
   },
   setHighContrast: enabled => {
-    applyAppearanceToRuntime({
+    requirePlatform('appearance').apply({
       primaryColorOverride: get().primaryColorOverride,
       densityPreference: get().densityPreference,
       fontScalePreference: get().fontScalePreference,

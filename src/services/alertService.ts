@@ -1,40 +1,27 @@
 /**
- * Imperative modal alert with Alert.alert()'s signature, callable from outside
- * the React tree. AlertProvider bridges this singleton to the React tree.
+ * Imperative modal alert, callable from outside the React tree. The host
+ * registers a presenter: on mobile the native alert at startup, replaced by
+ * AlertProvider's dialog once it mounts.
  */
 
-import { Alert } from 'react-native';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
-
-export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
-
-export interface AlertButton {
-  text: string;
-  style?: AlertButtonStyle;
-  onPress?: () => void;
-}
-
-export interface AlertEntry {
-  id: number;
-  title: string;
-  message?: string;
-  buttons: AlertButton[];
-}
-
-type ShowAlertFn = (entry: AlertEntry) => void;
+import type {
+  AlertButton,
+  AlertEntry,
+  AlertPresenter,
+} from '#platform/presenters';
 
 class AlertService {
-  private showAlertFn: ShowAlertFn | null = null;
+  private showAlertFn: AlertPresenter | null = null;
   private nextId = 1;
 
-  /** Called once by AlertProvider on mount. */
-  init(showAlert: ShowAlertFn) {
+  /** The host's presenter; a later registration replaces an earlier one. */
+  init(showAlert: AlertPresenter) {
     this.showAlertFn = showAlert;
   }
 
-  /** No buttons means a single "OK"; falls back to native Alert before the
-   * provider mounts. */
+  /** No buttons means a single "OK". Without a presenter it is dropped. */
   alert(title: string, message?: string, buttons?: AlertButton[]) {
     const resolvedButtons: AlertButton[] =
       buttons && buttons.length > 0
@@ -42,19 +29,7 @@ class AlertService {
         : [{ text: t('labels.ok'), style: 'default' }];
 
     if (!this.showAlertFn) {
-      // Fallback to native alert before provider mounts
-      logger.warn(
-        '[AlertService] Not initialized, falling back to native Alert.',
-      );
-      Alert.alert(
-        title,
-        message,
-        resolvedButtons.map(b => ({
-          text: b.text,
-          style: b.style,
-          onPress: b.onPress,
-        })),
-      );
+      logger.warn('[AlertService] No alert presenter registered:', title);
       return;
     }
 

@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import {

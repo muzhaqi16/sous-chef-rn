@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { HapticService } from '#services/haptic/HapticService';
 import { Label } from '#components/atoms/Label';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 const identity = <T extends string>(v: T): string => v;
 

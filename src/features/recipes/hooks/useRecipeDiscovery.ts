@@ -1,4 +1,4 @@
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useServerRecipeSuggestions } from './useServerRecipeSuggestions';
 import {
   useSpoonacularDiscovery,
@@ -22,11 +22,11 @@ export function useRecipeDiscovery(
   });
 
   if (!serverEnabled) return spoonacular;
-  if (server.items.length > 0) {
+  if (server.rows.length > 0) {
     return {
       ...spoonacular,
       mode: 'pantry',
-      items: server.items,
+      rows: server.rows,
       loading: server.loading,
       refresh: server.refresh,
       discoveryHasMore: false,

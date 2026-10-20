@@ -11,10 +11,10 @@ import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Icon } from '#utils/iconUtils';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Icon } from '#components/atoms/Icon';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
@@ -23,7 +23,7 @@ import {
 import {
   useSavedRecipes,
   type SavedRecipeNode,
-} from '#features/recipes/hooks/useSavedRecipes';
+} from '#features/recipes/screens/useSavedRecipes';
 import { SavedRecipeRow } from './SavedRecipeRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';

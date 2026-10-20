@@ -10,7 +10,10 @@ import type {
   RecipeIngredientInput,
 } from '#/graphql/generated/schemaTypes';
 
-/** One ingredient of the recipe being forked, as `RecipeForm_recipe` caches it. */
+/**
+ * One ingredient of the recipe being forked, as `useRecipeFormWrites_recipe`
+ * caches it.
+ */
 export interface ForkableIngredient {
   id: string;
   name: string;
@@ -25,7 +28,7 @@ export interface ForkableIngredient {
   unit?: { id: string } | null;
 }
 
-/** The recipe being forked, as `RecipeForm_recipe` caches it. */
+/** The recipe being forked, as `useRecipeFormWrites_recipe` caches it. */
 export interface ForkableRecipe {
   id: string;
   name: string;

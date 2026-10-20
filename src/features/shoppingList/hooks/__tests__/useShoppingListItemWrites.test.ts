@@ -9,10 +9,10 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   AddItemToShoppingListDocument,
-  GetShoppingListItemDocument,
   UpdateShoppingListItemDocument,
   type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ShoppingListItemForEditDocument } from '../useShoppingListItemWrites.generated';
 import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
@@ -61,7 +61,7 @@ function setup(outcome: 'applied' | 'refused') {
       version: 3,
     },
   ]);
-  const itemQuery = recordMock(GetShoppingListItemDocument, {
+  const itemQuery = recordMock(ShoppingListItemForEditDocument, {
     data: {
       shoppingListItem: { id: 'item-1' },
     },

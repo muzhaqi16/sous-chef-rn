@@ -1,4 +1,5 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
+import { OPERATION_ROOTS } from './scripts/lib/sourceRoots.js';
 
 // Apollo Client v4 codegen setup, per
 // https://www.apollographql.com/docs/react/development-testing/graphql-codegen
@@ -17,11 +18,11 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 //   need, and `FragmentType<typeof Doc>` from `@apollo/client` works directly
 //   with our outputs once `dataMasking: true` is enabled.
 
-const ALL_OPERATIONS = [
-  'src/**/*.{graphql,gql}',
-  '!src/graphql/generated/**/*.{ts,tsx}',
-  '!src/**/node_modules/**',
-];
+const ALL_OPERATIONS = OPERATION_ROOTS.flatMap(root => [
+  `${root}/**/*.{graphql,gql}`,
+  `!${root}/graphql/generated/**/*.{ts,tsx}`,
+  `!${root}/**/node_modules/**`,
+]);
 
 const SCALARS = {
   DateTime: 'string',

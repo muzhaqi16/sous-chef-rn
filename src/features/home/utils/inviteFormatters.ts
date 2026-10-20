@@ -1,6 +1,5 @@
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import type { Translate } from '#/i18n/types';
-import type { TextTone } from '#components/atoms/Text';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** The `theme.colors.status` key an invite's border and badge fill are drawn in. */
@@ -20,15 +19,6 @@ export function getInviteStatusKey(status: InviteStatus): InviteStatusKey {
       return 'expired';
   }
 }
-
-export const INVITE_STATUS_TONE: Record<InviteStatus, TextTone> = {
-  [InviteStatus.Pending]: 'warning',
-  [InviteStatus.Accepted]: 'success',
-  [InviteStatus.Declined]: 'danger',
-  [InviteStatus.Expired]: 'tertiary',
-  [InviteStatus.Revoked]: 'tertiary',
-  [InviteStatus.Used]: 'tertiary',
-};
 
 export function formatInviteStatus(status: InviteStatus, t: Translate): string {
   return t(`inviteStatus.${status}`);

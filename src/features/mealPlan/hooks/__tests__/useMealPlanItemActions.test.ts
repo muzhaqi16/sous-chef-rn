@@ -16,8 +16,8 @@ import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
-  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import {
   ErrorCode,
   MealType,
@@ -35,7 +35,7 @@ import {
   planSource,
   seedPlanSource,
 } from '#/test-utils/fixtures/mealPlanFixtures';
-import { useMealPlan } from '../useMealPlan';
+import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import {
   MealPlanItemActions_OptimisticFullItemFragmentDoc,

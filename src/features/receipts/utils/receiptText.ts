@@ -1,7 +1,7 @@
-import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptRows } from './assembleReceiptRows';
 import { receiptPhotoMasks } from './receiptPhotoMasks';
 import { redactReceiptText } from './redactReceiptText';
+import type { RecognizedPage } from '#/types/textRecognition';
 
 // The most pages the API reads as text. iOS's scanner takes any number, so the
 // text of later shots continues the last page sent.

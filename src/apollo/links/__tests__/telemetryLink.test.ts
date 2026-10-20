@@ -1,7 +1,6 @@
 import type { ApolloLink } from '@apollo/client';
 import { Observable } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -36,7 +35,7 @@ import { createTelemetryLink } from '../telemetryLink';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 const mockedEnvironment = Environment as jest.Mocked<typeof Environment>;
-const mockedPerformance = performance as jest.Mocked<typeof performance>;
+const clockNow = jest.spyOn(performance, 'now');
 
 // The mock operation/forward are intentionally partial fixtures.
 interface MockOperation {
@@ -104,9 +103,9 @@ const runRequest = (
 describe('createTelemetryLink', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset performance.now to return incrementing values
+    // Reset the clock to return incrementing values
     let time = 1000;
-    mockedPerformance.now.mockImplementation(() => {
+    clockNow.mockImplementation(() => {
       time += 50;
       return time;
     });
@@ -380,39 +379,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    /**
-     * Replaced a test that asserted the mark/measure pair was placed and
-     * cleared. That pair is gone: nothing read a `gql:*` measure, while
-     * `clearMarks` is a full-array `entries.filter()` and every `measure`
-     * appended an entry that was never cleared — making per-operation cost grow
-     * with session length, inside the response handler.
-     */
-    it('creates no performance marks or measures per operation', done => {
-      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
-      mockedEnvironment.isDevelopment.mockReturnValue(true);
-
-      const link = createTelemetryLink();
-      const operation = createMockOperation('GetItems');
-      const forward = createMockForward();
-
-      const result = runRequest(link, operation, forward);
-      result.subscribe({
-        next: () => {},
-        complete: () => {
-          expect(performance.mark).not.toHaveBeenCalledWith(
-            expect.stringContaining('gql:GetItems'),
-          );
-          expect(performance.measure).not.toHaveBeenCalledWith(
-            expect.stringContaining('gql:GetItems'),
-            expect.anything(),
-          );
-          expect(performance.clearMarks).not.toHaveBeenCalled();
-          done();
-        },
-      });
-    });
-
-    it('reports the duration without placing a performance mark', done => {
+    it('reports the duration from the operation start', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -423,8 +390,6 @@ describe('createTelemetryLink', () => {
       runRequest(link, operation, forward).subscribe({
         next: () => {},
         complete: () => {
-          // Duration comes from the stored `startTime`, which is what it always
-          // came from — the mark was never an input to it.
           expect(Telemetry.histogram).toHaveBeenCalledWith(
             'graphql_request_duration_ms',
             expect.any(Number),
@@ -433,41 +398,6 @@ describe('createTelemetryLink', () => {
           done();
         },
       });
-    });
-
-    it('does not touch the performance buffer more as the session grows', () => {
-      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
-      mockedEnvironment.isDevelopment.mockReturnValue(true);
-
-      const link = createTelemetryLink();
-
-      const perfCallsFor = (operationCount: number) => {
-        (performance.mark as jest.Mock).mockClear();
-        (performance.measure as jest.Mock).mockClear();
-        (performance.clearMarks as jest.Mock).mockClear();
-
-        for (let i = 0; i < operationCount; i++) {
-          runRequest(
-            link,
-            createMockOperation(`GetItems${i}`),
-            createMockForward(),
-          ).subscribe({ next: () => {} });
-        }
-
-        return (
-          (performance.mark as jest.Mock).mock.calls.length +
-          (performance.measure as jest.Mock).mock.calls.length +
-          (performance.clearMarks as jest.Mock).mock.calls.length
-        );
-      };
-
-      // The cost that grew was per-operation work against an unbounded buffer:
-      // `clearMarks` filters the whole entries array, and every `measure`
-      // appended an entry that was never removed. Ten times the operations must
-      // not cost more than ten times as much — here it costs nothing at all,
-      // because the link does not touch that buffer at all.
-      expect(perfCallsFor(10)).toBe(0);
-      expect(perfCallsFor(100)).toBe(0);
     });
 
     it('releases the timing entry when an operation is cancelled', () => {
@@ -490,7 +420,6 @@ describe('createTelemetryLink', () => {
       // retained for the whole session and lengthens the work every later
       // operation performs.
       expect(() => subscription.unsubscribe()).not.toThrow();
-      expect(performance.clearMarks).not.toHaveBeenCalled();
     });
 
     it('reports errors in response', done => {
@@ -530,9 +459,9 @@ describe('createTelemetryLink', () => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
-      // Make performance.now return values 1500ms apart
+      // Make the clock return values 1500ms apart
       let callCount = 0;
-      mockedPerformance.now.mockImplementation(() => {
+      clockNow.mockImplementation(() => {
         callCount++;
         return callCount === 1 ? 0 : 1500;
       });

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { formatTime } from '#features/devtools/utils/formatMetrics';
-import type { StartupMetrics } from '#features/devtools/hooks/usePerformanceDashboard';
+import type { StartupMetrics } from '#features/devtools/screens/usePerformanceDashboard';
 import { MetricCard, MetricPanel, MetricRow } from './MetricCard';
 
 export const StartupCard: React.FC<{ metrics: StartupMetrics }> = ({

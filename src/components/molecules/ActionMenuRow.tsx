@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { Icon, type IconName, type IconLibrary } from '#utils/iconUtils';
+import { Icon, type IconName, type IconLibrary } from '#components/atoms/Icon';
 
 type RowLook = 'plain' | 'destructive' | 'disabled';
 

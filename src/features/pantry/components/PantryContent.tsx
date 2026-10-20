@@ -11,7 +11,7 @@ import {
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
   PantrySortDirection,
@@ -29,13 +29,13 @@ import { usePantrySorting } from './hooks/usePantrySorting';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { usePantryImagePreload } from '#features/pantry/hooks/usePantryImagePreload';
+import { usePantryImagePreload } from '#features/pantry/components/usePantryImagePreload';
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 
 import {
   DRAW_DISTANCE,

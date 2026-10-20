@@ -12,7 +12,7 @@ import {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Theme-reactive Skia primitives. The mapper takes the consumer-facing
 // `tone` prop and resolves it to the appropriate icon color from the active

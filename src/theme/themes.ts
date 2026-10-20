@@ -13,7 +13,7 @@ import { brand } from './foundations/brand';
  * derives its own in `applyAppearance`, where the swatches span light and dark.
  */
 const onBrand = colors.neutral[0];
-import { onColor } from './derivePalette';
+import { onColor } from './foundations/derivePalette';
 import { spacing, layout } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
@@ -21,7 +21,7 @@ import { borderWidth } from './foundations/borderWidth';
 import { shadows, darkShadows } from './foundations/shadows';
 import { sizes } from './foundations/sizes';
 import { zIndex } from './foundations/zIndex';
-import { motion } from './foundations/motion';
+import { motion } from './motion';
 import { type, MAX_FONT_SCALE } from './foundations/type';
 
 /**

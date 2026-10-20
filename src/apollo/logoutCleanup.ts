@@ -1,7 +1,7 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
 import type { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
-import { storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 import { cancelTokenRefresh } from './links/tokenScheduler';
@@ -187,17 +187,6 @@ export class LogoutCleanup {
       storage.remove('navigation_state');
       storage.remove('apollo-client-cache');
       storage.remove('persisted-queries');
-
-      // Get secure storage and clear auth-related data
-      try {
-        const { getStorage } = await import('#/storage/mmkv');
-        const secureStorage = await getStorage();
-        secureStorage.remove('apollo-cache');
-        secureStorage.remove('navigation_state');
-        secureStorage.remove('apollo-client-cache');
-      } catch (storageError) {
-        logger.warn('Failed to clear secure storage:', storageError);
-      }
 
       logger.info('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {

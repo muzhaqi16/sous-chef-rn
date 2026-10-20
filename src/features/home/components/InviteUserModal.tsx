@@ -10,7 +10,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { localizedErrorMessage } from '#/services/errorService';

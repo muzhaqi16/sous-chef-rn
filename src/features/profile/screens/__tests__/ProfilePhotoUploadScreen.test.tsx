@@ -19,7 +19,7 @@ const mockUploadProfileImage = jest
   .fn()
   .mockResolvedValue('https://example.com/photo.jpg');
 const mockUpdateProfileAvatarUrl = jest.fn().mockResolvedValue(true);
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({
     uploadProfileImage: mockUploadProfileImage,
     updateProfileAvatarUrl: mockUpdateProfileAvatarUrl,
@@ -49,11 +49,9 @@ jest.mock('react-native-permissions', () => ({
   },
 }));
 
-jest.mock('#/storage/mmkv');
-
 jest.mock('#/services/errorService');
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

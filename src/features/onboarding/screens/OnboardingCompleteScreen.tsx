@@ -8,7 +8,7 @@ import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 export const OnboardingCompleteScreen = () => {

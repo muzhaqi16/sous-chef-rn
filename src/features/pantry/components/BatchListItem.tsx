@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,
@@ -20,7 +20,7 @@ import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;

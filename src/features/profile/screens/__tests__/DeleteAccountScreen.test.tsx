@@ -20,7 +20,7 @@ const mockNav = jest
 jest.mock('#/services/errorService');
 const { errorCopy } = jest.requireMock('#/services/errorService');
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

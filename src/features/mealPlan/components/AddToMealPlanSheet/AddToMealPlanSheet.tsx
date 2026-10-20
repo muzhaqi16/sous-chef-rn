@@ -7,9 +7,9 @@ import {
 } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { parseISO, startOfDay } from 'date-fns';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {

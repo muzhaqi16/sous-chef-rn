@@ -4,7 +4,7 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 import type { BarcodeSource } from '#features/barcode/types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -48,7 +48,7 @@ jest.mock('react-native-vision-camera', () => ({
 
 // The screen reads from our platform-shimmed hook, not the underlying
 // vision-camera packages, so mocking this single module is enough.
-jest.mock('../../hooks/useBarcodeOutput', () => ({
+jest.mock('../useBarcodeOutput', () => ({
   useBarcodeOutput: jest.fn(() => ({})),
 }));
 

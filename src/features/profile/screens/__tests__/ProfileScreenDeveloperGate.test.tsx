@@ -47,7 +47,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 }));
 
 // Mirrors what the real hook emits: `key` is the config section's stable id.
-jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
+jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
   useConfigurableSettings: () => ({
     sections: [
       {
@@ -94,7 +94,7 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
+jest.mock('#components/atoms/Icon', () => ({ Icon: 'Icon' }));
 
 jest.mock('#features/profile/components/ProfileHero', () => {
   const { View } = require('react-native');

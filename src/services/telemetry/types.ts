@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { requirePlatform } from '#platform/install';
 
 export interface TelemetryConfig {
   enabled: boolean;
@@ -133,7 +133,7 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
   minLogLevel: 'debug',
   appName: 'sous-chef-app',
   environment: 'development',
-  platform: Platform.OS,
+  platform: requirePlatform('platformInfo').os,
   flushIntervals: {
     metrics: 10000,
     logs: 5000,

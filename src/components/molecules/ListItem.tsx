@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import type { Icon } from '#utils/iconUtils';
+import type { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge, BadgeStack, type BadgeContent } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';

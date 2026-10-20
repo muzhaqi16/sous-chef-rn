@@ -1,0 +1,10 @@
+query GetShoppingListItem($id: ID!) {
+  shoppingListItem(id: $id) {
+    # Select id at the top level (outside the fragment) so that under
+    # dataMasking the returned shoppingListItem ref still carries its key field.
+    # useFragment / cache.identify needs it to locate the entity; without it the
+    # masked ref is just { __typename } and identification throws.
+    id
+    ...ItemDetail_shoppingListItem
+  }
+}

@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import type { IconLibrary } from '#utils/iconUtils';
+import type { IconLibrary } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';

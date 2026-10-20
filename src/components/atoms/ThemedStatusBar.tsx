@@ -12,7 +12,7 @@ export const ThemedStatusBar = () => {
   const userThemePreference = useTheme();
 
   // Resolved from the stored preference and the system scheme — the inputs
-  // `applyThemePreferenceToRuntime` resolves — rather than read back from
+  // `applyThemeToRuntime` resolves — rather than read back from
   // `rt.themeName`.
   const resolvedTheme: 'light' | 'dark' =
     userThemePreference === ThemePreference.DARK

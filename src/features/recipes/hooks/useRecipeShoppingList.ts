@@ -8,7 +8,7 @@ import {
   AddItemsToShoppingListFromRecipeDocument,
   CreateShoppingListForRecipeDocument,
   type AddItemsToShoppingListFromRecipeMutation,
-} from './useRecipeDetail.generated';
+} from './useRecipeShoppingList.generated';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import { useAppStore } from '#store/useAppStore';

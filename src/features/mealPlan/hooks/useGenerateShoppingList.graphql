@@ -129,3 +129,30 @@ mutation LinkDerivedListToMealPlan($input: LinkShoppingListToMealPlanInput!) {
     }
   }
 }
+
+# The plan read afresh for ingredient links an import job wrote after the plan
+# was cached.
+query GenerateShoppingListPlan(
+  $id: ID!
+  $mealsFirst: Int!
+  $mealsAfter: String
+  $ingredientsFirst: Int!
+) {
+  mealPlan(id: $id) {
+    id
+    ...useGenerateShoppingList_mealPlan
+    # It replaces the plan's one cached list of meals, which the plan screen
+    # reads too, so it writes what any reader takes from a meal and the cursor.
+    mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+      pageInfo {
+        endCursor
+      }
+      edges {
+        node {
+          id
+          ...MealPlanItemReaders
+        }
+      }
+    }
+  }
+}

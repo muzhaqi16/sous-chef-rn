@@ -30,7 +30,7 @@
  * Reads the generated SDL, so run `npm run codegen` first if the schema is stale.
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, resolve, relative, sep } from 'path';
+import { dirname, join, resolve, relative, sep } from 'path';
 import {
   parse,
   Kind,
@@ -42,6 +42,7 @@ import {
 // The production rule itself, so this guards the code rather than a restatement
 // of it that could be relaxed independently.
 import { isErrorTypename } from '#/utils/errors/mutationPayload';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const SRC = resolve(__dirname, '..', '..', 'src');
 const SCHEMA_PATH = join(SRC, 'graphql', 'generated', 'schema.graphql');
@@ -104,7 +105,9 @@ interface MutationOp {
 }
 
 const mutationOps: MutationOp[] = [];
-for (const file of collectGraphqlFiles(SRC)) {
+for (const file of OPERATION_ROOT_DIRS.flatMap(dir =>
+  collectGraphqlFiles(dir),
+)) {
   let doc: DocumentNode;
   try {
     doc = parse(readFileSync(file, 'utf8'), { noLocation: true });
@@ -119,7 +122,7 @@ for (const file of collectGraphqlFiles(SRC)) {
       continue;
     }
     mutationOps.push({
-      file: relative(SRC, file),
+      file: relative(dirname(SRC), file),
       name: def.name?.value ?? '(anonymous)',
       rootFields: def.selectionSet.selections
         .filter(s => s.kind === Kind.FIELD)

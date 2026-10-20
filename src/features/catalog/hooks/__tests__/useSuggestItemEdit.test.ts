@@ -17,7 +17,7 @@ import {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
-import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { alertService } from '#/services/alertService';
 
 const mockUploadItemImages = jest
@@ -27,7 +27,7 @@ const mockUploadItemImages = jest
 // path runs no mutation, so it is the only thing that can gate the submit
 // button while bytes are in flight.
 let mockUploading = false;
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: () => ({
     uploadItemImages: mockUploadItemImages,
     get uploading() {

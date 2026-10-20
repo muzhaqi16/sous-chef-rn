@@ -5,7 +5,7 @@ import Animated, { FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // A screenful is enough, and each shimmer is a UI-thread animation running
 // during the row-mount window.

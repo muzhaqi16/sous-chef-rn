@@ -1,0 +1,14 @@
+query GetMyPendingInvites {
+  me {
+    id
+    pendingHomeInvitesConnection {
+      edges {
+        node {
+          id
+          role
+          ...InviteCard_invite
+        }
+      }
+    }
+  }
+}

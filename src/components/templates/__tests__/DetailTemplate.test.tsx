@@ -3,7 +3,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { DetailTemplate } from '../DetailTemplate';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import type { IconName } from '#utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 
 jest.mock('#components/organisms/Header', () => {
   const { View, Text: RNText, Pressable } = require('react-native');
@@ -53,7 +53,7 @@ jest.mock('#components/molecules/Button', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

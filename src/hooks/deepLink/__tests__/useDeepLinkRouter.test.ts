@@ -3,16 +3,10 @@ import type { RootState } from '#store/index';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { useDeepLinkRouter } from '../useDeepLinkRouter';
 import { getI18n } from '#/i18n/config';
+import { memoryIntents } from '#/test-utils/memoryPlatform';
 
-const mockToJoinHomeByCode = jest.fn();
-const mockToJoinByShareCode = jest.fn();
-
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    toJoinHomeByCode: mockToJoinHomeByCode,
-    toJoinByShareCode: mockToJoinByShareCode,
-  }),
-}));
+const mockToJoinHomeByCode = jest.spyOn(memoryIntents(), 'toJoinHomeByCode');
+const mockToJoinByShareCode = jest.spyOn(memoryIntents(), 'toJoinByShareCode');
 
 const mockClearPending = jest.fn();
 let mockIsHydrated = true;

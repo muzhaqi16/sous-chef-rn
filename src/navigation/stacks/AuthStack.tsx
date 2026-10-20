@@ -2,7 +2,7 @@ import type { StaticParamList } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { authScreens } from '#features/auth/screens/registration';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 export const AuthStack = createNativeStackNavigator({
   // Per-screen top inset (see TopInsetLayout); nothing immersive here.

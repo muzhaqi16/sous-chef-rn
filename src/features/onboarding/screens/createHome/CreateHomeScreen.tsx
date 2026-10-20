@@ -27,7 +27,7 @@ import {
   type CreatePantryFn,
 } from '#features/pantry/hooks/useCreatePantry';
 import type { CreateHomeFn } from '#features/home/hooks/useCreateHome';
-import { useCreateHomeFlow } from '#features/onboarding/hooks/useCreateHomeFlow';
+import { useCreateHomeFlow } from '#features/onboarding/screens/createHome/useCreateHomeFlow';
 
 import {
   useAppStore,
@@ -39,7 +39,7 @@ import {
 import {
   useOnboardingNavigation,
   type OnboardingStepId,
-} from '#features/onboarding/hooks/useOnboardingNavigation';
+} from '#features/onboarding/screens/useOnboardingNavigation';
 
 import { getCreateHomeSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#/utils/validation/common';

@@ -50,7 +50,7 @@ jest.mock('#/services/errorService');
 
 jest.mock('#constants/animations', () => ({}));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

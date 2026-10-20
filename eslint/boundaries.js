@@ -13,6 +13,8 @@
  * `docs/architecture.md` § The public API boundary carries the reasoning.
  */
 
+const { CORE_EXTERNALS, LAYERS } = require('../scripts/lib/layers');
+
 // A feature's public surface is `screens/`, `manifest.ts`, `testIDs.ts` and its
 // top-level `hooks/`; the catalog also publishes `ui/`. Everything below is not.
 // Each internal group is its own TYPE rather than one type with a captured
@@ -96,6 +98,29 @@ const BOUNDARY_POLICIES = [
   },
 ];
 
+// ── The data layer stays out of what renders ──
+const DATA_LAYER_ZONE = {
+  target: [
+    './src/features/*/screens/**',
+    './src/features/*/components/**',
+    './src/features/*/ui/**',
+    './src/screens/**',
+    './src/components/**',
+  ],
+  from: './src/apollo',
+  message:
+    "A screen, sheet or list cell must not import the data layer. Move the cache read/write into a hook in the feature's hooks/ directory, or one beside the UI that owns its query, and return plain values and callbacks. See CLAUDE.md and openspec data-layer-boundary.",
+};
+
+/**
+ * A data hook beside the UI whose query it runs: a display query belongs to
+ * that UI, so its hook does too. It is held to the feature-hook rules, and the
+ * data-layer zone does not apply to it.
+ */
+const COLOCATED_DATA_HOOKS = [
+  'src/features/*/{screens,components,ui}/**/use*.{ts,tsx}',
+];
+
 const BOUNDARY_ZONES = [
   // ── Composition direction inside the kit ──
   //
@@ -132,19 +157,88 @@ const BOUNDARY_ZONES = [
       'A molecule composes atoms. Importing an organism inverts the composition order — move the consumer up to organisms/. See src/components/atoms/README.md.',
   },
 
-  // ── The data layer stays out of what renders ──
+  DATA_LAYER_ZONE,
+];
+
+/** Every zone but the data layer's, for `COLOCATED_DATA_HOOKS`. */
+const COLOCATED_DATA_HOOK_ZONES = BOUNDARY_ZONES.filter(
+  zone => zone !== DATA_LAYER_ZONE,
+);
+
+// ── Layers ──
+//
+// File categories, independent of the elements above: `core` or `mobile` for
+// every src file, from `scripts/lib/layers.js`. `docs/architecture.md` § Layers.
+const LAYER_FILES = LAYERS.flatMap(entry =>
+  entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
+);
+
+// No `dependency.kind`: a type import ties core to mobile as surely as a value.
+const LAYER_POLICIES = [
   {
-    target: [
-      './src/features/*/screens/**',
-      './src/features/*/components/**',
-      './src/features/*/ui/**',
-      './src/screens/**',
-      './src/components/**',
-    ],
-    from: './src/apollo',
+    from: { file: { categories: 'core' } },
+    disallow: { to: { file: { categories: 'mobile' } } },
     message:
-      "A screen, sheet or list cell must not import the data layer. Move the cache read/write into a hook in the feature's hooks/ directory and return plain values and callbacks. See CLAUDE.md and openspec data-layer-boundary.",
+      'Core code runs without React Native and imports only core. Reach the device through a port in src/platform/, or move this file to the mobile layer. See docs/architecture.md § Layers.',
+  },
+  {
+    from: { file: { categories: 'core' } },
+    disallow: {
+      to: {
+        module: {
+          origin: 'external',
+          source: `!{${CORE_EXTERNALS.join(',')}}`,
+        },
+      },
+    },
+    message:
+      'Core code imports only external modules that run without React Native (CORE_EXTERNALS in scripts/lib/layers.js). Reach the device through a port in src/platform/.',
   },
 ];
 
-module.exports = { BOUNDARY_ZONES, BOUNDARY_ELEMENTS, BOUNDARY_POLICIES };
+const restrictedGlobals = (names, message) =>
+  names.map(name => ({ name, message }));
+
+const CORE_RESTRICTED_GLOBALS = [
+  // Globals one host has and another lacks; `globalThis` is the portable spelling.
+  ...restrictedGlobals(
+    [
+      'window',
+      'document',
+      'navigator',
+      'localStorage',
+      'sessionStorage',
+      'location',
+      'alert',
+      'confirm',
+      'global',
+    ],
+    'Core code runs in every host. Use `globalThis`, or reach the host through a port in src/platform/.',
+  ),
+  // React Native and most browsers have them; Safari and node do not.
+  ...restrictedGlobals(
+    ['requestIdleCallback', 'cancelIdleCallback'],
+    'Safari and node have no idle callbacks. Use `scheduleIdle` from #/utils/scheduleIdle.',
+  ),
+  // Node's own globals, which React Native does not have.
+  ...restrictedGlobals(
+    ['process', 'Buffer', 'setImmediate', '__dirname', '__filename', 'require'],
+    'Core code runs without Node. Read build values through the `environment` port, and import modules with `import`.',
+  ),
+];
+
+const CORE_PATTERNS = LAYERS.filter(entry => entry.layer === 'core').flatMap(
+  entry => entry.patterns,
+);
+
+module.exports = {
+  BOUNDARY_ZONES,
+  COLOCATED_DATA_HOOKS,
+  COLOCATED_DATA_HOOK_ZONES,
+  BOUNDARY_ELEMENTS,
+  BOUNDARY_POLICIES,
+  LAYER_FILES,
+  LAYER_POLICIES,
+  CORE_RESTRICTED_GLOBALS,
+  CORE_PATTERNS,
+};

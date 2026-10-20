@@ -1,0 +1,536 @@
+import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import {
+  validateImageFile,
+  getMimeTypeFromUri,
+  normalizeImageMimeType,
+  sniffImageMimeType,
+  createImageValidationError,
+} from '#utils/imageValidation';
+import { useMutation } from '@apollo/client/react';
+import {
+  CreateImageUploadUrlDocument,
+  ConfirmProfileImageUploadDocument,
+  ConfirmItemImageUploadDocument,
+} from '#operations/image/imageUpload.generated';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { toImagePerspective } from '#utils/imageUtils';
+import {
+  MAX_IMAGE_SIZE,
+  MAX_PROFILE_SIZE,
+  type ImageValidationError,
+} from '#utils/imageValidation';
+import { useStore } from '#store';
+import {
+  isRateLimitError,
+  getRateLimitMessage,
+} from '#/utils/errors/rateLimit';
+import { logger } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import {
+  appliedPayload,
+  validationFieldName,
+} from '#/utils/errors/mutationPayload';
+import type { Translate } from '#/i18n/types';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import type { ImageFile } from '#/types/media';
+import { requirePlatform } from '#platform/install';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+
+/**
+ * An upload failure whose message is already localized and safe to show. Used
+ * for the presign rate limit, where the server's `retryAfter` is the whole
+ * point of the message and the generic copy would discard it.
+ */
+class UserFacingUploadError extends Error {
+  readonly userMessage: string;
+  constructor(userMessage: string) {
+    super(userMessage);
+    this.userMessage = userMessage;
+  }
+}
+
+/**
+ * The ONE mapping from an upload failure to copy, shared with pick-time
+ * `validateImageFile`. Branch on `ImageValidationError.code`: `error.message` is
+ * an English control-flow signal, NEVER shown.
+ */
+export const imageErrorMessage = (
+  t: Translate,
+  error: unknown,
+  isProfileImage: boolean,
+): string => {
+  // Already-localized copy wins — it carries detail (like a retry countdown)
+  // that none of the code branches below can reconstruct.
+  if (error instanceof UserFacingUploadError) return error.userMessage;
+
+  const code = (error as Partial<ImageValidationError> | null)?.code;
+  switch (code) {
+    case 'INVALID_TYPE':
+      return t('imageUpload.invalidTypeBody');
+    case 'FILE_TOO_LARGE':
+      return isProfileImage
+        ? t('imageUpload.profileTooLargeBody', {
+            size: MAX_PROFILE_SIZE / 1024 / 1024,
+          })
+        : t('imageUpload.itemTooLargeBody', {
+            size: MAX_IMAGE_SIZE / 1024 / 1024,
+          });
+    case 'CONTENT_MISMATCH':
+      return t('imageUpload.contentMismatchBody');
+    case 'UNKNOWN_ERROR':
+      return t('imageUpload.unreadableBody');
+    case undefined:
+    default:
+      return t('imageUpload.failedBody');
+  }
+};
+
+/**
+ * The server reports a magic-byte mismatch with the key's extension as a field
+ * error on `key`, a field the person never filled in, so it needs copy about
+ * the FILE they picked.
+ */
+function confirmRefusalError(data: unknown): ImageValidationError {
+  const isByteMismatch = validationFieldName(data) === 'key';
+  return createImageValidationError(
+    isByteMismatch
+      ? 'Uploaded bytes do not match the key extension'
+      : 'Failed to confirm upload',
+    isByteMismatch ? 'CONTENT_MISMATCH' : 'UNKNOWN_ERROR',
+  );
+}
+
+export interface PresignedUploadData {
+  url: string;
+  key: string;
+  /** The presigned POST policy — opaque to us, forwarded verbatim. */
+  fields: ReadonlyArray<{ name: string; value: string }>;
+}
+
+export interface ImageUploadOptions {
+  onProgress?: (progress: number) => void;
+  onSuccess?: (imageUrl: string) => void;
+  onError?: (error: Error) => void;
+  /**
+   * Skip the per-call failure alert, for a batch that reports once. Here, not
+   * on the item options: `uploadImage`'s offline short-circuit alerts before
+   * any item-specific code runs.
+   */
+  suppressAlert?: boolean;
+  /** Stops the upload where it is: before the presign, or mid-transfer. */
+  signal?: AbortSignal;
+}
+
+export interface ItemImageUploadOptions extends ImageUploadOptions {
+  /**
+   * Which angle the photo shows ('front', 'nutrition_label', …). Drives the
+   * gallery's ordering and its per-photo label; an untagged photo sorts last.
+   */
+  perspective?: string;
+  /**
+   * Honoured only once APPROVED and only if the caller may edit the item, so a
+   * PENDING submission keeps the existing hero. A first photo is primary anyway.
+   */
+  makePrimary?: boolean;
+}
+
+export const useImageUpload = () => {
+  const { t } = useTranslation();
+  const [uploading, setUploading] = useState(false);
+
+  // Every transfer in flight: a receipt's photos go up together.
+  const activeXhrs = useRef(new Set<XMLHttpRequest>());
+  // A presign that answers after unmount must not start a transfer.
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    const active = activeXhrs.current;
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      for (const xhr of active) xhr.abort();
+      active.clear();
+    };
+  }, []);
+
+  const [createUploadUrl] = useMutation(CreateImageUploadUrlDocument);
+  const [confirmProfileUpload] = useMutation(ConfirmProfileImageUploadDocument);
+  const [confirmItemUpload] = useMutation(ConfirmItemImageUploadDocument);
+  const [updateProfile] = useMutation(UpdateUserProfileDocument);
+
+  /**
+   * `uploadData.fields` MUST precede the file, whose part is named `file` and
+   * comes last, or storage answers 400. Content-Type stays unset, so the runtime
+   * authors a boundary matching the body.
+   */
+  const uploadToObjectStorage = async (
+    file: ImageFile,
+    uploadData: PresignedUploadData,
+    // The type the KEY was minted for. The bytes must go up labelled the same
+    // way, or object storage stores a content-type the confirm step then reads
+    // back as a mismatch.
+    mimeType: string,
+    onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    const form = new FormData();
+    for (const field of uploadData.fields) {
+      form.append(field.name, field.value);
+    }
+    requirePlatform('fileParts').append(form, 'file', file, mimeType);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const active = activeXhrs.current;
+      active.add(xhr);
+      signal?.addEventListener('abort', () => xhr.abort());
+
+      xhr.onload = () => {
+        active.delete(xhr);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          // Status only: the presigned URL and response body can carry signed
+          // request context. A 400 is an oversized body or a mismatched mime.
+          logger.error(`Image upload failed: status=${xhr.status}`);
+          const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
+          reject(new Error(`Upload failed: ${xhr.status}${statusText}`));
+        }
+      };
+
+      xhr.onerror = () => {
+        active.delete(xhr);
+        reject(new NetworkRequestError('Network request failed during upload'));
+      };
+
+      xhr.ontimeout = () => {
+        active.delete(xhr);
+        reject(new TimeoutError('Upload request timed out', xhr.timeout));
+      };
+
+      xhr.onabort = () => {
+        active.delete(xhr);
+        reject(new Error('Upload was cancelled'));
+      };
+
+      if (onProgress) {
+        xhr.upload.onprogress = event => {
+          if (event.lengthComputable) {
+            const uploadProgress = event.loaded / event.total;
+            onProgress(uploadProgress);
+          }
+        };
+      }
+
+      xhr.open('POST', uploadData.url);
+      xhr.timeout = 60000; // 60 second timeout
+      xhr.send(form);
+    });
+  };
+
+  const uploadImage = async (
+    file: ImageFile,
+    purpose: ImageUploadPurpose,
+    isProfileImage: boolean,
+    itemId: string | undefined,
+    confirmUploadFn: (key: string) => Promise<string | null>,
+    options: ImageUploadOptions = {},
+  ): Promise<string | null> => {
+    const { onProgress, onSuccess, onError, suppressAlert, signal } = options;
+
+    // Check if online before attempting upload
+    const state = useStore.getState();
+    if (!state.isOnline) {
+      // UserFacingUploadError, not a bare Error: being offline is fatal for a
+      // whole batch, and the batch runner recognises this type as "stop now".
+      // Every remaining photo would take this same branch and alert again.
+      const offlineError = new UserFacingUploadError(
+        t('imageUpload.offlineBody'),
+      );
+      onError?.(offlineError);
+      if (!suppressAlert) {
+        alertService.alert(
+          t('imageUpload.offlineTitle'),
+          t('imageUpload.offlineBody'),
+        );
+      }
+      return null;
+    }
+
+    setUploading(true);
+
+    // A local runner, so the try below holds one plain call: a `?.`/`??`/ternary
+    // in a try body bails the React Compiler out of this hook.
+    const runUpload = async () => {
+      // For profile images, handle missing file size gracefully
+      let fileToUpload = { ...file };
+      if (isProfileImage && !fileToUpload.fileSize) {
+        logger.warn('File size missing, attempting to determine it...');
+        logger.warn('Proceeding without file size - server will validate');
+      }
+
+      // Validate the image file
+      validateImageFile(fileToUpload, isProfileImage);
+      if (signal?.aborted) throw new Error('Upload was cancelled');
+
+      onProgress?.(10);
+
+      // Presign for the type the BYTES say: confirm checks them against the
+      // key's extension, so presigning from the picker's report fails only
+      // after the whole file has transferred.
+      const sniffed = await sniffImageMimeType(fileToUpload.uri);
+      if (!sniffed) {
+        // NOT a refusal: unsupported bytes and a blob the platform cannot slice
+        // both arrive as `Network request failed`, and the server still checks
+        // the bytes (docs/verified-library-behaviour.md).
+        logger.warn(
+          'Image type not determined from bytes; using reported type',
+        );
+      }
+      const mimeType =
+        sniffed ??
+        normalizeImageMimeType(
+          firstNonBlank(fileToUpload.type) ??
+            getMimeTypeFromUri(fileToUpload.uri),
+        );
+      const { data: uploadData, error: uploadUrlError } = await createUploadUrl(
+        {
+          variables: {
+            input: {
+              mime: mimeType,
+              purpose: purpose,
+              itemId: itemId,
+            },
+          },
+        },
+      );
+
+      const uploadPayload = appliedPayload(uploadData);
+      if (!uploadPayload) {
+        // Presign's per-user ceiling arrives as a top-level GraphQL error, not
+        // a union member, so it lands here with no payload; keep its retryAfter.
+        if (isRateLimitError(uploadUrlError)) {
+          throw new UserFacingUploadError(getRateLimitMessage(uploadUrlError));
+        }
+        throw new Error('Failed to get upload URL');
+      }
+      const uploadResult = uploadPayload;
+      if (!mounted.current || signal?.aborted) {
+        throw new Error('Upload was cancelled');
+      }
+
+      onProgress?.(30);
+
+      // Step 2: Upload the bytes with the presigned POST
+      await uploadToObjectStorage(
+        fileToUpload,
+        uploadResult,
+        mimeType,
+        uploadProgress => {
+          onProgress?.(30 + uploadProgress * 0.5);
+        },
+        signal,
+      );
+
+      onProgress?.(80);
+
+      // Step 3: Confirm upload
+      const finalImageUrl = await confirmUploadFn(uploadResult.key);
+      if (!finalImageUrl) {
+        throw new Error('Failed to confirm upload');
+      }
+
+      onProgress?.(100);
+      onSuccess?.(finalImageUrl);
+
+      setUploading(false);
+      return finalImageUrl;
+    };
+
+    let result;
+    try {
+      result = await runUpload();
+    } catch (error) {
+      setUploading(false);
+      throw error;
+    }
+
+    return result || null;
+  };
+
+  const uploadProfileImage = async (
+    file: ImageFile,
+    purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
+    options: ImageUploadOptions = {},
+  ): Promise<string | null> => {
+    let result;
+    try {
+      result = await uploadImage(
+        file,
+        purpose,
+        true,
+        undefined,
+        async (key: string) => {
+          const { data } = await confirmProfileUpload({
+            variables: { input: { key } },
+          });
+          const payload = appliedPayload(data);
+          if (payload) return payload.url;
+          throw confirmRefusalError(data);
+        },
+        options,
+      );
+    } catch (error) {
+      logger.error('Profile image upload failed:', error);
+      const userErrorMessage = imageErrorMessage(t, error, true);
+      options.onError?.(new Error(userErrorMessage));
+      alertService.alert(t('errors.uploadFailedTitle'), userErrorMessage);
+    }
+    return result ?? null;
+  };
+
+  const uploadItemImage = async (
+    file: ImageFile,
+    itemId: string,
+    options: ItemImageUploadOptions = {},
+  ): Promise<string | null> => {
+    // The angle and the hero flag are both set on confirm, not on the presign:
+    // until the object is confirmed there is no ItemImage row to tag.
+    const perspective = toImagePerspective(options.perspective);
+    const { makePrimary } = options;
+    let result;
+    try {
+      result = await uploadImage(
+        file,
+        ImageUploadPurpose.ItemImage,
+        false,
+        itemId,
+        async (key: string) => {
+          const { data } = await confirmItemUpload({
+            variables: {
+              input: { itemId, key, perspective, makePrimary },
+            },
+          });
+          const payload = appliedPayload(data);
+          if (payload) return payload.url;
+          throw confirmRefusalError(data);
+        },
+        options,
+      );
+    } catch (error) {
+      logger.error('Item image upload failed:', error);
+      const errorMessage = imageErrorMessage(t, error, false);
+      // Forward the original when it is already user-facing: `uploadItemImages`
+      // needs to tell a rate limit (retry later, stop now) apart from one bad
+      // file (skip it, keep going).
+      options.onError?.(
+        error instanceof UserFacingUploadError
+          ? error
+          : new Error(errorMessage),
+      );
+      if (!options.suppressAlert) {
+        alertService.alert(t('errors.uploadFailedTitle'), errorMessage);
+      }
+    }
+    return result ?? null;
+  };
+
+  /**
+   * Sequential: a rate limit or an outage fails every remaining photo alike, so
+   * the run stops and reports ONCE; any other failure skips that photo. Returns
+   * what uploaded, so callers MUST check the length.
+   */
+  const uploadItemImages = async (
+    files: Array<ImageFile & { perspective?: string; isPrimary?: boolean }>,
+    itemId: string,
+    options: ImageUploadOptions = {},
+  ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
+    const results: Array<{ imageUrl: string; perspective: string }> = [];
+    // Written from `onError`, which control-flow narrowing cannot see into.
+    const stop: { fatal: UserFacingUploadError | null } = { fatal: null };
+
+    for (const [index, file] of files.entries()) {
+      const imageUrl = await uploadItemImage(file, itemId, {
+        onProgress: p => options.onProgress?.((index + p) / files.length),
+        perspective: file.perspective,
+        makePrimary: file.isPrimary,
+        suppressAlert: true,
+        onError: error => {
+          if (error instanceof UserFacingUploadError) stop.fatal = error;
+        },
+      });
+      if (imageUrl) {
+        results.push({ imageUrl, perspective: file.perspective ?? 'front' });
+      }
+      if (stop.fatal) break;
+    }
+
+    const { fatal } = stop;
+    if (fatal) {
+      const remaining = files.length - results.length;
+      options.onError?.(fatal);
+      alertService.alert(
+        t('errors.uploadFailedTitle'),
+        t('imageUpload.batchThrottledBody', {
+          count: remaining,
+          reason: fatal.userMessage,
+        }),
+      );
+    } else if (results.length < files.length) {
+      options.onError?.(new Error('Some images failed to upload'));
+      alertService.alert(
+        t('errors.uploadFailedTitle'),
+        t('imageUpload.batchPartialBody', {
+          count: files.length - results.length,
+        }),
+      );
+    }
+
+    return results;
+  };
+
+  /**
+   * A photo a mutation takes by key (a receipt for `createReceiptParse`):
+   * presigned and posted like any photo but never confirmed, since its
+   * consumer owns it from there. Null offline; a failure throws, unreported.
+   */
+  const uploadUnconfirmed = (
+    file: ImageFile,
+    purpose: ImageUploadPurpose,
+    { signal }: Pick<ImageUploadOptions, 'signal'> = {},
+  ): Promise<string | null> =>
+    uploadImage(file, purpose, false, undefined, key => Promise.resolve(key), {
+      suppressAlert: true,
+      signal,
+    });
+
+  const updateProfileAvatarUrl = async (avatarUrl: string) => {
+    const settled = await settleMutation(
+      () => updateProfile({ variables: { input: { avatar: avatarUrl } } }),
+      {
+        document: UpdateUserProfileDocument,
+        title: t('imageUpload.updateFailedTitle'),
+        fallback: t('imageUpload.avatarUpdateFailedBody'),
+      },
+    );
+    const payload = appliedPayload(settled.data);
+    if (!payload) return null;
+
+    // Sync avatar to Zustand store so screens reading from the store
+    // (e.g. Pantry header) reflect the change immediately.
+    useStore.getState().updateUser({ profilePicture: avatarUrl });
+    return payload.userProfile;
+  };
+
+  return {
+    uploading,
+    uploadProfileImage,
+    uploadItemImages,
+    uploadUnconfirmed,
+    updateProfileAvatarUrl,
+  };
+};

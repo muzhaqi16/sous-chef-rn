@@ -10,16 +10,16 @@ import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
-import { Icon, type IconName } from '#utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 interface ExpirationActionSheetProps {
   visible: boolean;

@@ -1,5 +1,6 @@
-// The gates `handleLogin` resolves after a SUCCESSFUL sign-in, and what `login`
-// reports when it cannot open a session at all.
+// The gates `handleLogin` resolves after a SUCCESSFUL sign-in, through the
+// steps the mobile app registers, and what `login` reports when it cannot open
+// a session at all.
 //
 // The other authService suites drive refusals, so neither reaches this path.
 // Both defects here are invisible from a refusal: the RememberMe gate offers
@@ -10,10 +11,6 @@
 const mockMutate = jest.fn();
 const mockReadFragment = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -46,7 +43,7 @@ const mockToastError = jest.mocked(toastService.error);
 
 const mockGetBiometricCapability = jest.fn();
 const mockHasCredentials = jest.fn();
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   getBiometricCapability: () => mockGetBiometricCapability(),
   hasCredentials: (...args: unknown[]) => mockHasCredentials(...args),
   getLastBiometricEmail: jest.fn(),
@@ -57,7 +54,7 @@ jest.mock('#/storage/keychain', () => ({
 }));
 
 const mockCheckStoredCredentials = jest.fn();
-jest.mock('#/services/auth/credentials', () => ({
+jest.mock('#/services/biometric/credentials', () => ({
   checkStoredCredentials: (...args: unknown[]) =>
     mockCheckStoredCredentials(...args),
   getBiometricInfo: jest.fn(),
@@ -68,10 +65,12 @@ jest.mock('#/services/auth/credentials', () => ({
   storeCredentials: jest.fn(),
 }));
 
-jest.mock('#/services/auth/deviceRegistration', () => ({
+jest.mock('#/services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
-jest.mock('#/hooks/useFeatureHint', () => ({ incrementLoginCount: jest.fn() }));
+jest.mock('#/hooks/settings/useFeatureHint', () => ({
+  incrementLoginCount: jest.fn(),
+}));
 jest.mock('#/apollo/logoutCleanup', () => ({
   LogoutCleanup: {
     performLogoutCleanup: jest.fn().mockResolvedValue(undefined),
@@ -84,10 +83,21 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
   queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
 }));
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+
+registerMobileSessionHost();
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
+} as unknown as ApolloClient);
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };
 const USER_ID = 'u1';

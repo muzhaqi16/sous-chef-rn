@@ -18,7 +18,7 @@ jest.mock('#store', () => ({
 jest.mock('#/config/env', () => ({
   env: { API_KEY: 'test-api-key' },
 }));
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 jest.mock('../../logoutCleanup', () => ({
@@ -33,15 +33,15 @@ import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { proactiveTokenRefresh } from '../refreshToken';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import {
   LoginDocument,
   RefreshTokenDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
 import { UpdateDeviceDocument } from '#operations/auth/device.generated';
-import { GetHomeDocument } from '#operations/home/home.generated';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';

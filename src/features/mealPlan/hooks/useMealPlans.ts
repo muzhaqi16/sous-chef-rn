@@ -1,5 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {

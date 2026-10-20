@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
-import { storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 
 const OFFLINE_MODE_KEY = 'user_offline_mode';
 
@@ -261,8 +261,8 @@ export const createNetworkSlice: StateCreator<
 };
 
 /**
- * Out of the slice's initial state because the `storage` Proxy throws before
- * `initializeSecureStorage()`, and the slice is built at module load. The
+ * Out of the slice's initial state because `storage` throws before it is
+ * ready, and the slice is built at module load. The
  * persist `onRehydrateStorage` callback runs after init, so the read is safe.
  */
 export const hydrateOfflineModeFromStorage = (

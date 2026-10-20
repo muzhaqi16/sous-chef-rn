@@ -4,7 +4,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import { Text } from '#components/atoms/Text';
 import {

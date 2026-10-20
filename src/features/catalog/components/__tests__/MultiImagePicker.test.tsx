@@ -1,13 +1,11 @@
 'use no memo';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import {
-  MultiImagePicker,
-  type SelectedImage,
-} from '#features/catalog/components/MultiImagePicker';
+import { MultiImagePicker } from '#features/catalog/components/MultiImagePicker';
+import type { SelectedImage } from '#features/catalog/types';
 import type { ImageFile } from '#/types/media';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

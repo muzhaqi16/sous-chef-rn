@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
-import { ONBOARDING_STEPS } from '#features/onboarding/hooks/useOnboardingNavigation';
+import { ONBOARDING_STEPS } from '#features/onboarding/screens/useOnboardingNavigation';
 import { kitTestIDs } from '#components/testIDs';
 
 let mockRouteName = 'CreateHome';

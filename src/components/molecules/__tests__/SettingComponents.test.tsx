@@ -4,7 +4,7 @@ import { Text } from '#components/atoms/Text';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { SettingSwitch } from '../SettingSwitch';
 
-jest.mock('#utils/iconUtils', () => {
+jest.mock('#components/atoms/Icon', () => {
   const R = require('react');
   const RN = require('react-native');
   return {

@@ -2,10 +2,8 @@ import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import {
-  MySavedRecipesDocument,
-  SavedRecipeFoldersDocument,
-} from '#features/recipes/graphql/recipe.generated';
+import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
+import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import type { TagPickerProps } from '#features/recipes/components/TagPicker';
 import { kitTestIDs } from '#components/testIDs';
 import { recipesTestIDs } from '#features/recipes/testIDs';

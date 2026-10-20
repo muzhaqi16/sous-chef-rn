@@ -9,7 +9,7 @@ import {
   RecipeStatus,
   type Cuisine,
 } from '#/graphql/generated/schemaTypes';
-import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { RecipeFormState } from '#features/recipes/types';
 import { CuisineChips } from '#features/recipes/ui/CuisineChips';
 
 interface RecipeCategoryFieldsProps {

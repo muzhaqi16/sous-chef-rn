@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { memoryScreen } from '#/test-utils/memoryPlatform';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useSpoonacularDiscovery } from '../useSpoonacularDiscovery';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
@@ -11,6 +12,12 @@ import type {
   RecipeSearchResult,
   SearchRecipesResult,
 } from '#/services/spoonacular/types';
+import { getI18n } from '#/i18n/config';
+import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
+
+// The rows as the list shows them, in the copy of en.json.
+const shown = (rows: RecipeRow[]) => toDisplayItems(rows, getI18n().t);
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
@@ -30,31 +37,17 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   usePantryManagement: (...args: unknown[]) => mockUsePantryManagement(...args),
 }));
 
-// The hook gates its pantry watch on screen focus through `useFocusEffect`.
-// Capture the callback so tests can drive focus/blur; it is never invoked
-// automatically, so a rendered hook starts in its initial (focused) state.
-type FocusCallback = () => (() => void) | void;
-let focusCallback: FocusCallback | undefined;
-let blurCleanup: (() => void) | void;
-const mockUseFocusEffect = jest.fn((cb: FocusCallback) => {
-  focusCallback = cb;
-});
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (cb: FocusCallback) => mockUseFocusEffect(cb),
-}));
+// The hook gates its pantry watch on screen focus; the memory screen drives it.
 const focus = () => {
-  act(() => {
-    blurCleanup = focusCallback?.();
-  });
+  act(() => memoryScreen().setFocused(true));
 };
 const blur = () => {
-  act(() => {
-    if (typeof blurCleanup === 'function') blurCleanup();
-  });
+  act(() => memoryScreen().setFocused(false));
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  memoryScreen().setFocused(true);
   useRecipeCacheStore.getState().clearAllCache();
 
   // Default: signed in, home selected, no pantry items, not loading
@@ -91,7 +84,7 @@ describe('useSpoonacularDiscovery', () => {
     const { result } = renderHookWithApollo(() => useSpoonacularDiscovery());
 
     expect(result.current.loading).toBe(true);
-    expect(result.current.items).toEqual([]);
+    expect(result.current.rows).toEqual([]);
     expect(result.current.mode).toBe('none');
   });
 
@@ -121,8 +114,8 @@ describe('useSpoonacularDiscovery', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.mode).toBe('random');
-    expect(result.current.items).toHaveLength(2);
-    expect(result.current.items[0]).toEqual(
+    expect(result.current.rows).toHaveLength(2);
+    expect(shown(result.current.rows)[0]).toEqual(
       expect.objectContaining({
         title: 'Random Recipe 1',
         badge: { text: 'Suggested' },
@@ -167,8 +160,8 @@ describe('useSpoonacularDiscovery', () => {
 
     expect(result.current.mode).toBe('pantry');
     expect(result.current.hasPantryItems).toBe(true);
-    expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0]).toEqual(
+    expect(result.current.rows).toHaveLength(1);
+    expect(shown(result.current.rows)[0]).toEqual(
       expect.objectContaining({
         title: 'Tomato Pasta',
         badge: {
@@ -203,8 +196,8 @@ describe('useSpoonacularDiscovery', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(spoonacularService.getRandomRecipes).not.toHaveBeenCalled();
-    expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0]?.title).toBe('Cached Random');
+    expect(result.current.rows).toHaveLength(1);
+    expect(shown(result.current.rows)[0]?.title).toBe('Cached Random');
   });
 
   it('exposes pantry pagination flags', () => {
@@ -244,7 +237,7 @@ describe('useSpoonacularDiscovery', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.items).toEqual([]);
+    expect(result.current.rows).toEqual([]);
     expect(result.current.mode).toBe('none');
     consoleSpy.mockRestore();
   });
@@ -266,15 +259,13 @@ describe('useSpoonacularDiscovery', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.items).toHaveLength(15);
+    expect(result.current.rows).toHaveLength(15);
     expect(result.current.discoveryHasMore).toBe(true);
 
     result.current.loadMoreDiscovery();
 
-    await waitFor(() =>
-      expect(result.current.items.length).toBeGreaterThan(15),
-    );
-    expect(result.current.items).toHaveLength(20);
+    await waitFor(() => expect(result.current.rows.length).toBeGreaterThan(15));
+    expect(result.current.rows).toHaveLength(20);
     expect(result.current.discoveryHasMore).toBe(false);
   });
 });
@@ -443,13 +434,15 @@ describe('useSpoonacularDiscovery: refresh', () => {
 
     const rendered = renderHookWithApollo(() => useSpoonacularDiscovery());
     await waitFor(() => expect(rendered.result.current.loading).toBe(false));
-    expect(rendered.result.current.items[0]?.subtitle).toContain('4 servings');
+    expect(shown(rendered.result.current.rows)[0]?.subtitle).toContain(
+      '4 servings',
+    );
     return rendered;
   }
 
   it('keeps the rows on screen until their replacements are enriched', async () => {
     const { result } = await renderWithEnrichedRows();
-    const before = result.current.items;
+    const before = result.current.rows;
 
     const search = deferred<RecipeSearchResult[]>();
     const bulk = deferred<RecipeInformation[]>();
@@ -464,20 +457,20 @@ describe('useSpoonacularDiscovery: refresh', () => {
     act(() => {
       refreshed = result.current.refresh();
     });
-    expect(result.current.items).toBe(before);
+    expect(result.current.rows).toBe(before);
 
     await act(async () => {
       search.resolve([tomatoPasta, tomatoSoup]);
       await Promise.resolve();
     });
-    expect(result.current.items).toBe(before);
+    expect(result.current.rows).toBe(before);
 
     await act(async () => {
       bulk.resolve([info(201, 2)]);
       await refreshed;
     });
 
-    expect(result.current.items.map(item => item.subtitle)).toEqual([
+    expect(shown(result.current.rows).map(item => item.subtitle)).toEqual([
       expect.stringContaining('4 servings'),
       expect.stringContaining('2 servings'),
     ]);
@@ -491,7 +484,7 @@ describe('useSpoonacularDiscovery: refresh', () => {
 
   it('keeps the rows and the cached entry when the refresh fails', async () => {
     const { result } = await renderWithEnrichedRows();
-    const before = result.current.items;
+    const before = result.current.rows;
     (
       spoonacularService.searchRecipesByIngredients as jest.Mock
     ).mockRejectedValue(new Error('Spoonacular down'));
@@ -500,7 +493,7 @@ describe('useSpoonacularDiscovery: refresh', () => {
       await result.current.refresh();
     });
 
-    expect(result.current.items).toBe(before);
+    expect(result.current.rows).toBe(before);
     expect(result.current.loading).toBe(false);
     expect(
       useRecipeCacheStore.getState().getCached(ingredientCacheKey('tomato'))

@@ -1,21 +1,11 @@
 import { isRecord } from '#/utils/isRecord';
+import type {
+  LabeledLine,
+  ReceiptLineLabel,
+  ReceiptLineLabels,
+  StructuringAvailability,
+} from '#/types/receiptStructuring';
 import { nativeMethod, parseList } from './nativeModule';
-
-export type StructuringAvailability =
-  | 'available'
-  | 'downloading'
-  | 'unavailable';
-
-export type ReceiptLineLabel =
-  | 'item'
-  | 'itemDetail'
-  | 'discount'
-  | 'tax'
-  | 'subtotal'
-  | 'total'
-  | 'payment'
-  | 'header'
-  | 'other';
 
 // A record so a label added to the union must be added here too.
 const LABELS: Record<ReceiptLineLabel, true> = {
@@ -29,19 +19,6 @@ const LABELS: Record<ReceiptLineLabel, true> = {
   header: true,
   other: true,
 };
-
-export interface LabeledLine {
-  /** Index into the lines passed in. */
-  line: number;
-  label: ReceiptLineLabel;
-  /** An item line's product words as printed. */
-  product?: string;
-}
-
-export interface ReceiptLineLabels {
-  storeName?: string;
-  lines: LabeledLine[];
-}
 
 const MODULE = 'ReceiptStructuringModule';
 

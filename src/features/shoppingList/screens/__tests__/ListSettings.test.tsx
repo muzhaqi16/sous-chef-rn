@@ -1,5 +1,6 @@
 'use no memo';
 
+import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { TextInputProps } from 'react-native';
@@ -463,8 +464,7 @@ describe('ListSettings', () => {
       collaborators: [],
     }));
 
-    const { useAppNavigation } = require('#hooks/navigation/useAppNavigation');
-    const { goBack } = useAppNavigation();
+    const goBack = jest.spyOn(memoryIntents(), 'goBack');
 
     render(<ListSettings route={editRoute} />);
     expect(goBack).toHaveBeenCalled();
@@ -556,10 +556,7 @@ describe('ListSettings', () => {
     });
 
     it('creates from the template and opens the new list', async () => {
-      const {
-        useAppNavigation,
-      } = require('#hooks/navigation/useAppNavigation');
-      const { goBack } = useAppNavigation();
+      const goBack = jest.spyOn(memoryIntents(), 'goBack');
 
       render(<ListSettings route={createRoute} />);
       fireEvent.press(screen.getByText('None (Blank List)'));

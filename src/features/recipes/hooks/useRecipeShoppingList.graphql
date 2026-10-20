@@ -8,3 +8,73 @@ fragment useRecipeShoppingList_addedItem on ShoppingListItem {
   id
   ...AddedShoppingListItemFields
 }
+
+# Local copies of shoppingList operations per the Feature API Boundary Convention.
+# The shoppingList feature's graphql/ folder is internal.
+# A single ingredient is added via this same batch mutation with a one-element
+# `items` array — there is no separate single-add operation.
+mutation AddItemsToShoppingListFromRecipe(
+  $input: AddItemsToShoppingListInput!
+) {
+  addItemsToShoppingList(input: $input) {
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
+      results {
+        index
+        clientId
+        success
+        # MERGED: the line landed on one the list already held.
+        outcome
+        failure {
+          code
+          reason
+          errorId
+        }
+        item {
+          id
+          ...ShoppingListItemReaders
+          ...useRecipeShoppingList_addedItem
+        }
+      }
+      summary {
+        succeeded
+        failed
+        skipped
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+# Locally-named copy per the Feature API Boundary Convention. The NAME must be
+# unique across the document set: codegen emits a shared name only once, and
+# the persisted-query manifest keys by it.
+mutation CreateShoppingListForRecipe($input: CreateShoppingListInput!) {
+  createShoppingList(input: $input) {
+    __typename
+    ... on CreateShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

@@ -65,29 +65,6 @@ query SearchRecipes(
   }
 }
 
-query MyRecipes($cursor: String, $first: Int = 25) {
-  recipes(after: $cursor, first: $first) {
-    edges {
-      node {
-        id
-        # Selected at the parent so the screen can filter the connection
-        # without materializing each masked node. Already fetched inside
-        # MyRecipeCard_recipe — this only keeps it visible after masking,
-        # so it costs nothing on the wire.
-        name
-        description
-        ...MyRecipeCard_recipe
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 # `$ingredientsFirst` is the server's largest page and the most a recipe holds,
 # so one request is the whole list. No cursor: a recipe over the limit stays
 # marked `hasNextPage`, which every derived write refuses.
@@ -95,7 +72,7 @@ query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
   recipe(id: $id) {
     id
     ...useRecipeData_recipe
-    ...RecipeForm_recipe
+    ...useRecipeFormWrites_recipe
   }
 }
 
@@ -108,40 +85,6 @@ query GetRecipeReviews($id: ID!) {
           id
           ...RecipeReviewFragment
         }
-      }
-      totalCount
-    }
-  }
-}
-
-query MySavedRecipes($first: Int, $after: String) {
-  me {
-    id
-    savedRecipesConnection(first: $first, after: $after) {
-      edges {
-        node {
-          id
-          recipeId
-          folder
-          tags
-          createdAt
-          updatedAt
-          recipe {
-            id
-            # Selected at the parent so consumers can filter the connection
-            # without materializing each masked node. Already fetched inside
-            # SavedRecipeCard_savedRecipe — this only keeps it visible after
-            # masking, so it costs nothing on the wire.
-            name
-            description
-          }
-          ...SavedRecipeCard_savedRecipe
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
       }
       totalCount
     }
@@ -193,7 +136,6 @@ mutation OpenCatalogRecipe(
         id
         ...RecipeReaders
         ...useRecipeData_recipe
-        ...RecipeForm_recipe
       }
       created
     }
@@ -215,7 +157,6 @@ mutation UpdateRecipe($input: UpdateRecipeInput!, $ingredientsFirst: Int!) {
         id
         ...RecipeReaders
         ...useRecipeData_recipe
-        ...RecipeForm_recipe
         ingredientsConnection(first: $ingredientsFirst) {
           edges {
             node {

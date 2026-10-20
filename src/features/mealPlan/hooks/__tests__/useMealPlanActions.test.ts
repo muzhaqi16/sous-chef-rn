@@ -18,14 +18,14 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
-  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
-import { useMealPlan } from '../useMealPlan';
+import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
 import { useMealPlanActions } from '../useMealPlanActions';
 
 /** The actions beside the screen's own watcher of the plan, as on MealPlanMain. */

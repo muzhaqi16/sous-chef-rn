@@ -17,7 +17,7 @@ import {
   MAX_PROFILE_SIZE,
   MAX_IMAGE_SIZE,
 } from '#/utils/imageValidation';
-import { imageErrorMessage } from '#hooks/useImageUpload';
+import { imageErrorMessage } from '#hooks/data/useImageUpload';
 import { mergedLocale } from '#/test-utils/mergedLocales';
 
 /** The real English copy, so a wrong key is visible rather than plausible. */

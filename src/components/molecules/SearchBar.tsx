@@ -23,7 +23,7 @@ import type {
 import { ActionButton } from '#components/atoms/ActionButton';
 import { commonStyles } from '#/styles/commonStyles';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 
 export interface SearchBarAction {
   icon: string;

@@ -6,15 +6,11 @@
 const mockMutate = jest.fn().mockResolvedValue({ data: {} });
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    query: (...args: unknown[]) => mockQuery(...args),
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
 const mockStoreState: Record<string, unknown> = {
   isOnline: true,
@@ -30,7 +26,7 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStoreState },
 }));
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn().mockResolvedValue(undefined),
   loadCredentials: jest.fn().mockResolvedValue({
     username: 'chef@example.com',
@@ -67,15 +63,23 @@ jest.mock('#/services/push/pushTokenProvider', () => ({
   onPushTokenRefresh: () => jest.fn(),
 }));
 
-jest.mock('#/hooks/useFeatureHint', () => ({
+jest.mock('#/hooks/settings/useFeatureHint', () => ({
   incrementLoginCount: jest.fn(),
   resetAllFeatureHints: jest.fn(),
 }));
 
-import { authService } from '#/services/authService';
-import { MOCK_DEVICE_ID as DEVICE_ID } from '#/storage/__mocks__/deviceId';
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
+import { biometricService } from '#/services/biometric/deviceCredential';
+import { MOCK_DEVICE_ID as DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
+} as unknown as ApolloClient);
 
 /** Variables of the one mutate call whose input carries `key`. */
 const inputWith = (key: string) =>
@@ -91,7 +95,7 @@ beforeEach(() => {
 
 describe('every identity surface presents one value', () => {
   it('issuing a device credential binds it to the same device', async () => {
-    await authService.enrolDeviceCredential('chef@example.com');
+    await biometricService.enrolDeviceCredential('chef@example.com');
 
     expect(inputWith('deviceId')).toEqual(
       expect.objectContaining({ deviceId: DEVICE_ID }),
@@ -99,7 +103,7 @@ describe('every identity surface presents one value', () => {
   });
 
   it('exchanging a device credential presents the same device', async () => {
-    await authService.signInWithDeviceCredential('chef@example.com');
+    await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(inputWith('credential')).toEqual(
       expect.objectContaining({ deviceId: DEVICE_ID }),
@@ -120,7 +124,7 @@ describe('every identity surface presents one value', () => {
       },
     });
 
-    await authService.revokeDeviceCredentialForThisDevice();
+    await biometricService.revokeDeviceCredentialForThisDevice();
 
     expect(inputWith('id')).toEqual(expect.objectContaining({ id: 'mine' }));
   });

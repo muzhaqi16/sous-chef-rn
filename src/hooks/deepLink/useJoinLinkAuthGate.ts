@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents } from '#platform/screen';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useStore } from '#store';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
@@ -21,7 +21,7 @@ const SIGN_IN_MESSAGE_KEY: Record<JoinLinkType, TranslationKey> = {
  */
 export function useJoinLinkAuthGate(type: JoinLinkType, code: string): boolean {
   const { t } = useTranslation();
-  const { toAuth } = useAppNavigation();
+  const { toAuth } = useNavigationIntents();
   const isLoggedOut = useIsLoggedOut();
 
   useEffect(() => {

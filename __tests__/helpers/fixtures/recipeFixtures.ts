@@ -3,11 +3,11 @@ import {
   RecipeCategory,
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
-import type { RecipeForm_RecipeFragment } from '#features/recipes/screens/RecipeForm/RecipeForm.generated';
+import type { UseRecipeFormWrites_RecipeFragment } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import { typedConnectionOf } from './connectionOf';
 
 type RecipeFormIngredient =
-  RecipeForm_RecipeFragment['ingredientsConnection']['edges'][number]['node'];
+  UseRecipeFormWrites_RecipeFragment['ingredientsConnection']['edges'][number]['node'];
 
 /** An ingredient line as the editor selects it: unlinked and unitless unless stated. */
 export const recipeFormIngredient = (
@@ -29,7 +29,9 @@ export const recipeFormIngredient = (
 });
 
 interface RecipeFormFixture
-  extends Partial<Omit<RecipeForm_RecipeFragment, 'ingredientsConnection'>> {
+  extends Partial<
+    Omit<UseRecipeFormWrites_RecipeFragment, 'ingredientsConnection'>
+  > {
   ingredients?: RecipeFormIngredient[];
   /** The page the device holds; a recipe over the ingredient limit has a next one. */
   ingredientsPage?: {
@@ -40,7 +42,7 @@ interface RecipeFormFixture
 }
 
 /**
- * `RecipeForm_recipe` complete, for the editor's own reads and for a
+ * `useRecipeFormWrites_recipe` complete, for the editor's own reads and for a
  * `seedCache` held to that fragment: a draft with no optional field set and its
  * whole ingredient list on the device, unless stated.
  */
@@ -48,7 +50,7 @@ export const recipeFormFragment = ({
   ingredients = [],
   ingredientsPage,
   ...overrides
-}: RecipeFormFixture = {}): RecipeForm_RecipeFragment => ({
+}: RecipeFormFixture = {}): UseRecipeFormWrites_RecipeFragment => ({
   __typename: 'Recipe',
   id: 'recipe-1',
   version: 1,

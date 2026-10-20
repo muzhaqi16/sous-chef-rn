@@ -1,9 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import { useRememberMe } from '../useRememberMe';
 
 const mockMarkCredentialPromptDeclined = jest.fn();
-jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#/hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markCredentialPromptDeclined: mockMarkCredentialPromptDeclined,
   }),

@@ -5,8 +5,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { localizedErrorMessage } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { Icon } from '#utils/iconUtils';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Icon } from '#components/atoms/Icon';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -17,8 +17,8 @@ import {
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { ROLE_PERMISSIONS } from '#features/shoppingList/constants/collaboratorRoles';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
 

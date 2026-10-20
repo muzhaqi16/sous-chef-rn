@@ -6,11 +6,9 @@ import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetHomeDocument } from '#operations/home/home.generated';
-import {
-  GetPantryDocument,
-  GetPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
 import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
@@ -35,7 +33,7 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -136,7 +134,7 @@ function buildCache(): InMemoryCache {
     data: pantryData({ id: 'p1' }),
   });
   cache.writeQuery({
-    query: GetPantryItemDocument,
+    query: PantryItemForEditDocument,
     variables: { id: 'item-1' },
     data: pantryItemData({ id: 'item-1', quantity: 5 }),
   });

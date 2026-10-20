@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from '#components/atoms/Text';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { Reveal } from '../Reveal';
 
 const layOut = (text: string) =>

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 
 import { LoadingBranded } from '#components/molecules/Loading';
 import { ErrorState } from '#components/molecules/ErrorState';
@@ -12,8 +12,8 @@ import { ItemNotFound } from '../components/ItemNotFound';
 import { SearchResults } from '../components/SearchResults';
 import AddItemForm, {
   type AddItemFormMode,
-  type AddItemFormInitialData,
 } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';

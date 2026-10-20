@@ -24,7 +24,7 @@ import {
 } from 'graphql';
 import {
   KEY_FIELDS,
-  documentsRoot,
+  documentRoots,
   isEntity,
   isOwnedElsewhere,
   loadDocuments,
@@ -57,9 +57,10 @@ const PARENT_FIELDS = {
  * parent type is owed unless it is the type the noun names (`deleteShoppingList`).
  */
 const REMOVAL = /^(?:delete|remove|purge|decline|revoke|leave)([A-Z]\w*)$/;
-const srcRoot = documentsRoot();
+const roots = documentRoots();
+const [coreRoot] = roots;
 const schema = loadSchema('find-stale-cache-fields');
-const documents = loadDocuments(srcRoot);
+const documents = loadDocuments(roots);
 const { fragments, operations } = documents;
 
 /** Replaces every fragment spread with its selections, guarding cycles. */
@@ -211,7 +212,11 @@ for (const op of operations) {
   const written = collect(op.ast);
   const entities = returnedEntities(op.ast);
   const returned = new Set(entities.map(e => e.type));
-  const file = relative(srcRoot, op.file);
+  // Relative to the tree that holds it.
+  const file = relative(
+    roots.find(root => op.file.startsWith(`${root}/`)) ?? coreRoot,
+    op.file,
+  );
 
   const noun = REMOVAL.exec(op.ast.selectionSet.selections[0].name.value)?.[1];
   const removed = new Set(
@@ -295,7 +300,7 @@ const describe = f =>
       : ''
   }`;
 const gaps = findings;
-const { stale } = staleReadersFiles(schema, documents, readersDirOf(srcRoot));
+const { stale } = staleReadersFiles(schema, documents, readersDirOf(coreRoot));
 
 const print = (log, list) => {
   let family = null;

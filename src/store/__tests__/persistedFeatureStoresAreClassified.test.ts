@@ -22,8 +22,6 @@
  * all been resolved by the module system rather than by a pattern.
  */
 
-jest.mock('#/storage/mmkv');
-
 import fs from 'fs';
 import os from 'os';
 import path from 'path';

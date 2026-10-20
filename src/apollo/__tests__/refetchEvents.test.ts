@@ -6,7 +6,7 @@ import {
   gql,
   type ObservableQuery,
 } from '@apollo/client';
-import { AppState, type AppStateStatus } from 'react-native';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { act, waitFor } from '@testing-library/react-native';
 import { Telemetry } from '#/services/telemetry';
 import type { StoreApi } from 'zustand';
@@ -107,18 +107,10 @@ const deferred = () => {
   return { promise, resolve };
 };
 
-const appStateListeners = () =>
-  (AppState.addEventListener as jest.Mock).mock.calls
-    .filter(([event]) => event === 'change')
-    .map(([, listener]) => listener as (next: AppStateStatus) => void);
-
-const emitAppState = (next: AppStateStatus) =>
-  appStateListeners().forEach(listener => listener(next));
-
 const triggers = {
   appForeground: () => {
-    emitAppState('background');
-    emitAppState('active');
+    memoryLifecycle().moveTo('background');
+    memoryLifecycle().moveTo('active');
   },
   apiReachable: () => {
     useStore.setState({ apiReachable: false });

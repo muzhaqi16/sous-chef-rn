@@ -5,10 +5,8 @@ import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { usePantryUsageHistory } from '#features/pantry/hooks/usePantryUsageHistory';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { Text } from '#components/atoms/Text';
-import {
-  UsageHistoryRow,
-  type UsageRecord,
-} from '#features/pantry/components/UsageHistoryRow';
+import { UsageHistoryRow } from '#features/pantry/components/UsageHistoryRow';
+import type { UsageRecord } from '#features/pantry/types';
 
 const keyExtractor = (item: UsageRecord) => item.id;
 const getItemType = () => 'usage';

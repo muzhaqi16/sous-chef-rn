@@ -13,7 +13,8 @@ import {
 } from '#hooks/utils/useConnectionData';
 import { errorService } from '#/services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
-import type { HookReturn } from '#hooks/types';
+import type { HookReturn } from '#hooks/utils/types';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 /**
  * Carries inline meta fields for direct hook-layer access plus the masked
@@ -70,8 +71,7 @@ export function usePaginatedShoppingItems({
 
   useEffect(() => {
     if (shouldSkip) return;
-    const id = requestIdleCallback(() => setPurchasedReadyFor(listId));
-    return () => cancelIdleCallback(id);
+    return scheduleIdle(() => setPurchasedReadyFor(listId));
   }, [shouldSkip, listId]);
 
   const unpurchasedListId = !shouldSkip && listId ? listId : null;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { MyRecipesDocument } from '../useRecipeManagement.generated';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { MyRecipes } from '../MyRecipes';
 

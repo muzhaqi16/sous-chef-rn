@@ -3,7 +3,8 @@
  * the ROOT store). With `inlineRequires` an unused module never registers, so
  * PERSISTED keys are declared as DATA below and deleted without their module.
  */
-import { RETIRED_PERSISTED_KEYS, storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
+import { RETIRED_PERSISTED_KEYS } from '#/store/persistedKeys';
 import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;

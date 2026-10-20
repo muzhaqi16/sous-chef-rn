@@ -62,7 +62,7 @@ jest.mock('#/utils/errorSerialization', () => ({
 }));
 
 // Mock deviceId
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 
@@ -70,7 +70,7 @@ jest.mock('#/storage/deviceId', () => ({
 // registerTokenRefresh (in the app, refreshToken.ts registers
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
-import { AppState } from 'react-native';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { Telemetry } from '#/services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import { wsLink } from '../wsLink';
@@ -1087,13 +1087,9 @@ describe('wsLink', () => {
     disposeWebSocket();
   });
   describe('a dial that closes before the socket opens', () => {
-    // The RN jest mock leaves AppState.currentState a jest.fn(); the report
-    // discounts a failure the OS caused by backgrounding, so it has to be real.
+    // The report discounts a failure the OS caused by backgrounding.
     const setAppState = (state: 'active' | 'background') => {
-      Object.defineProperty(AppState, 'currentState', {
-        configurable: true,
-        get: () => state,
-      });
+      memoryLifecycle().moveTo(state);
     };
 
     const seedStore = (over: Record<string, unknown> = {}) => {

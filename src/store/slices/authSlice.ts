@@ -8,9 +8,11 @@ import {
 import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { retryCooldownMs } from '#/utils/backoff';
-import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
+import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
 import type { UserRole } from '#/graphql/generated/schemaTypes';
+
+const secureStore = requirePlatform('secureStore');
 
 // A resume is worth a refresh only when the token is about to stop working.
 const RESUME_REFRESH_BUFFER_MS = 60 * 1000;
@@ -172,11 +174,13 @@ export const createAuthSlice: StateCreator<
     refreshToken: string | null,
   ): void => {
     if (!(accessToken && refreshToken)) return;
-    void saveSessionTokens({ accessToken, refreshToken }).then(saved => {
-      set(state => {
-        state.sessionTokensInKeychain = saved;
+    void secureStore
+      .saveSessionTokens({ accessToken, refreshToken })
+      .then(saved => {
+        set(state => {
+          state.sessionTokensInKeychain = saved;
+        });
       });
-    });
   };
 
   return {
@@ -310,7 +314,7 @@ export const createAuthSlice: StateCreator<
 
       // clearSessionTokens reports failure via its own logging; a false result
       // means the pair may still be readable on the next launch.
-      void clearSessionTokens();
+      void secureStore.clearSessionTokens();
     },
 
     setHasStoredCredentials: has => {

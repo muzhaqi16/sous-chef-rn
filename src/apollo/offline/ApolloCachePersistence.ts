@@ -1,7 +1,8 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage, isStorageReady, isRecoveryStorage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
@@ -75,14 +76,14 @@ class ApolloCachePersistence {
   private burstOpen = false;
   private burstOwed = false;
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
-  private idleCallbackId: number | null = null;
+  private cancelIdleSave: (() => void) | null = null;
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
   private pendingExtractor: Extractor | null = null;
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
 
   /** Null when nothing is stored or the stored blob is not this shape. */
   load(): NormalizedCacheObject | null {
-    if (!isStorageReady()) return null;
+    if (!storage.isReady()) return null;
     try {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
@@ -123,13 +124,13 @@ class ApolloCachePersistence {
    * instance, so that check comes BEFORE the timer: nothing is left to fire.
    */
   scheduleExtractAndSave(extractor: Extractor): void {
-    if (isRecoveryStorage()) return;
+    if (storage.isRecovery()) return;
     this.pendingExtractor = extractor;
     this.clearHandles();
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
-      this.idleCallbackId = requestIdleCallback(() => {
-        this.idleCallbackId = null;
+      this.cancelIdleSave = scheduleIdle(() => {
+        this.cancelIdleSave = null;
         this.persist();
       });
     }, DEBOUNCE_MS);
@@ -167,7 +168,7 @@ class ApolloCachePersistence {
 
   /** Leaves nothing a later `load()` could restore. */
   clear(): void {
-    if (!isStorageReady()) return;
+    if (!storage.isReady()) return;
     try {
       this.cancel();
       for (const key of [
@@ -191,17 +192,15 @@ class ApolloCachePersistence {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    if (this.idleCallbackId !== null) {
-      cancelIdleCallback(this.idleCallbackId);
-      this.idleCallbackId = null;
-    }
+    this.cancelIdleSave?.();
+    this.cancelIdleSave = null;
   }
 
   private persist(): void {
     const extractor = this.pendingExtractor;
     this.pendingExtractor = null;
     // Storage can fall back to the recovery instance after the schedule.
-    if (!extractor || isRecoveryStorage()) return;
+    if (!extractor || storage.isRecovery()) return;
     try {
       const t0 = performance.now();
       const cache = extractor();

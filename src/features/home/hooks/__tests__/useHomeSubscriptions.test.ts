@@ -11,11 +11,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
-import {
-  GetHomeDocument,
-  GetHomesDocument,
-  GetMyPendingInvitesDocument,
-} from '#operations/home/home.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { HomeInvitesForEventDocument } from '../useHomeSubscriptions.generated';
 import { useStore } from '#store/index';
@@ -94,7 +92,7 @@ describe('useHomeSubscriptions', () => {
       );
 
       expect(refetchQueries).toHaveBeenCalledWith({
-        include: [GetHomeDocument, GetHomesDocument],
+        include: ['GetHome', GetHomesDocument],
       });
     },
   );
@@ -114,7 +112,7 @@ describe('useHomeSubscriptions', () => {
     );
 
     expect(refetchQueries).toHaveBeenCalledWith({
-      include: [GetHomeDocument],
+      include: ['GetHome'],
     });
   });
 
@@ -126,7 +124,7 @@ describe('useHomeSubscriptions', () => {
     );
 
     expect(refetchQueries).toHaveBeenCalledWith({
-      include: [GetHomeDocument, GetHomesDocument],
+      include: ['GetHome', GetHomesDocument],
     });
   });
 });

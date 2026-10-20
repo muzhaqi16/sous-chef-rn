@@ -2,7 +2,7 @@ import React from 'react';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { PressableScale } from '#components/atoms/PressableScale';
 import type { AddButtonProps } from './types';
 import { kitTestIDs } from '#components/testIDs';

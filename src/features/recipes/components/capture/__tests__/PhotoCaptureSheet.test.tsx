@@ -30,7 +30,7 @@ let mockPhotos = {
   upload: jest.fn(),
   discard: jest.fn(),
 };
-jest.mock('#features/recipes/hooks/useCapturePhotos', () => ({
+jest.mock('#features/recipes/components/capture/useCapturePhotos', () => ({
   useCapturePhotos: () => mockPhotos,
 }));
 

@@ -1,11 +1,11 @@
 import {
   adoptServerEntityId,
   createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import type { ApolloCache, Reference } from '@apollo/client';
 import {
-  MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
@@ -13,6 +13,7 @@ import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import {
   Favorites_RowFragmentDoc,
   Favorites_SavedDetailsFragmentDoc,
+  FavoritesViewerDocument,
 } from './favorites.generated';
 import {
   NEUTRAL_LOCAL_SAVED_RECIPE,
@@ -56,6 +57,15 @@ const addToSavedRecipes = createAddToParentConnectionUpdater<{
   __typename: 'SavedRecipe';
   id: string;
 }>('User', 'savedRecipesConnection', 'SavedRecipe');
+const removeFromSavedRecipes = createRemoveFromParentConnectionUpdater(
+  'User',
+  'savedRecipesConnection',
+  'SavedRecipe',
+);
+
+/** The signed-in user's id, once anything has cached `me`. */
+export const readViewerId = (cache: ApolloCache): string | null =>
+  cache.readQuery({ query: FavoritesViewerDocument })?.me?.id ?? null;
 
 /** The `SavedRecipe` a save's response names, read off the written row. */
 export interface SavedFavorite {
@@ -74,11 +84,11 @@ export const linkSavedFavorite = (
   saved: SavedFavorite,
   clientId: string | null | undefined,
 ): void => {
-  const me = cache.readQuery({ query: MySavedRecipesDocument })?.me;
-  if (me) {
+  const viewerId = readViewerId(cache);
+  if (viewerId) {
     addToSavedRecipes(
       cache,
-      me.id,
+      viewerId,
       { __typename: 'SavedRecipe', id: saved.id },
       { position: 'end' },
     );
@@ -166,24 +176,18 @@ export const writeLocalFavorite = (
     });
   }
 
-  // (c) List the row first in MySavedRecipes, snapshotting the query for revert.
-  const savedRecipesSnapshot = cache.readQuery({
-    query: MySavedRecipesDocument,
-  });
-  if (savedRecipesSnapshot?.me) {
-    addToSavedRecipes(cache, savedRecipesSnapshot.me.id, {
+  // (c) List the row first in the saved list; the id is minted here, so the
+  //     undo removes exactly the edge this added.
+  const viewerId = readViewerId(cache);
+  if (viewerId) {
+    addToSavedRecipes(cache, viewerId, {
       __typename: 'SavedRecipe',
       id: savedRecipeId,
     });
   }
 
   return () => {
-    if (savedRecipesSnapshot) {
-      cache.writeQuery({
-        query: MySavedRecipesDocument,
-        data: savedRecipesSnapshot,
-      });
-    }
+    if (viewerId) removeFromSavedRecipes(cache, viewerId, savedRecipeId);
     if (recipeCacheId) {
       // `modify` stores what it is given as is: a plain object stays embedded.
       cache.modify<{ savedDetails: Reference | null }>({

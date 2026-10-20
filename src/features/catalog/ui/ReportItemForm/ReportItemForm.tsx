@@ -7,7 +7,7 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 import { MIN_EDIT_REASON_LENGTH } from '#features/catalog/utils/itemValidation';

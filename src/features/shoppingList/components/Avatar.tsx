@@ -8,7 +8,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { getInitials } from '#features/shoppingList/utils/ownershipHelpers';
 import { Text } from '#components/atoms/Text';
 

@@ -13,7 +13,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
-import type { FragmentType } from '@apollo/client/masking';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
@@ -26,10 +26,10 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -140,7 +140,7 @@ const SlideAnimatedWrapper: React.FC<{
 };
 
 interface PantryItemCardProps {
-  pantryItemRef: FragmentType<typeof PantryItemCard_PantryItemFragmentDoc>;
+  pantryItemId: string;
 }
 
 /**
@@ -149,14 +149,19 @@ interface PantryItemCardProps {
  * React Compiler memoizes them, so no module-level cache is needed.
  */
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
-  pantryItemRef,
+  pantryItemId,
 }) => {
   const { t } = useTranslation();
-  const { data: pantryItem, complete } = useFragment({
+  const {
+    data: pantryItem,
+    complete,
+    missing,
+  } = useFragment({
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
-    from: pantryItemRef,
+    from: { __typename: 'PantryItem', id: pantryItemId },
   });
+  useIncompleteCellReport('PantryItemCard_pantryItem', missing);
 
   const { actions, swipeable } = usePantryActions();
 

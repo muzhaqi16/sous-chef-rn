@@ -9,7 +9,7 @@ import {
 import type { NetWeightEntry } from '../NetWeightEntryList';
 import { NetWeightEntryList } from '../NetWeightEntryList';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

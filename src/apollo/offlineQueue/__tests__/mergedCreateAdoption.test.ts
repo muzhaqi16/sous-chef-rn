@@ -4,7 +4,7 @@
  * are written to the queue itself, so a restart mid-drain keeps them.
  */
 import { makeCache } from '#/apollo/cache';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { useStore } from '#store';
 import {
   makeQueuedMutation,
@@ -52,15 +52,9 @@ const mockClient = {
 };
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
-}));
-// The failure handler withdraws through the app's client; here it is the same
-// one, read lazily since the handler's import runs before `mockClient` exists.
-jest.mock('#/apollo/client', () => ({
-  get client() {
-    return mockClient;
-  },
 }));
 
 // Within the queue's 90-day horizon, in the order the writes were made.

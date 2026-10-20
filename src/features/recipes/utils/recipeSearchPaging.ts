@@ -1,21 +1,25 @@
+/**
+ * One page of recipe search from both sources: the local connection pages by
+ * cursor and Spoonacular by offset, so a page advances both and dedupes across
+ * them, and the cursor state travels as one value.
+ */
+
 import { errorService } from '#/services/errorService';
-import type { ApolloClient } from '@apollo/client';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import type { ApolloClient, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { t as tGlobal } from '#/i18n';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import {
-  SearchRecipesDocument,
-  type SearchRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import type { SearchRecipesQueryVariables } from '#features/recipes/graphql/recipe.generated';
 import {
   useRecipeCacheStore,
   textSearchCacheKey,
   ingredientCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type {
+  Diet,
+  Intolerance,
+  PageInfo,
+} from '#/graphql/generated/schemaTypes';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   type RecipeFilters,
@@ -25,46 +29,67 @@ import {
 } from '#features/recipes/utils/recipeFilterMaps';
 import {
   type RecipeRow,
-  type LocalRecipeNode,
+  type SearchedRecipe,
   type SpoonacularRecipe,
   spoonacularRows,
   localRows,
-} from '#features/recipes/utils/recipeDisplayTransforms';
+} from '#features/recipes/utils/recipeRows';
 
 /**
- * One page of recipe search from both sources: the local connection pages by
- * cursor and Spoonacular by offset, so a page advances both and dedupes across
- * them, and the cursor state travels as one value.
+ * The connection search pages through, as any caller's document selects it. A
+ * document without `endCursor` does not compile: load-more would refetch page 1.
  */
-export function handleSearchError(error: unknown, label: string): void {
+export interface RecipeSearchData<TNode extends SearchedRecipe> {
+  searchRecipes: {
+    edges: ReadonlyArray<{ node: TNode }>;
+    pageInfo: Pick<PageInfo, 'endCursor' | 'hasNextPage'>;
+  };
+}
+
+/** A caller's `searchRecipes` query: its cards' fields, search's variables. */
+export type RecipeSearchDocument<TNode extends SearchedRecipe> =
+  TypedDocumentNode<RecipeSearchData<TNode>, SearchRecipesQueryVariables>;
+
+/** Why a search showed nothing; the caller says it in its own words. */
+export type SearchFailure =
+  | 'offline'
+  | 'quotaExceeded'
+  | 'rateLimited'
+  | 'failed';
+
+export type SearchOutcome =
+  | { status: 'shown' }
+  /** A newer search or a clear replaced it before it committed. */
+  | { status: 'superseded' }
+  | { status: 'failed'; failure: SearchFailure };
+
+const SHOWN: SearchOutcome = { status: 'shown' };
+const SUPERSEDED: SearchOutcome = { status: 'superseded' };
+
+function failedSearch(error: unknown, label: string): SearchOutcome {
   const err = error as {
     isQuotaExceeded?: boolean;
     isRateLimitError?: boolean;
   };
   errorService.reportError(error, { operation: label });
-  // Offline is a state, not a failure: a modal covers the screen and its copy
-  // ("search failed") says nothing the reader can act on. The search surface
-  // shows its own offline state instead.
+  // Offline is a state, not a failure: the search surface shows its own
+  // offline state rather than "search failed", which the reader cannot act on.
   if (isApiUnavailable(useStore.getState())) {
-    toastService.info(tGlobal('errors.offlineSearchUnavailable'));
-    return;
+    return { status: 'failed', failure: 'offline' };
   }
-  if (err.isQuotaExceeded) {
-    alertService.alert(
-      tGlobal('recipes.apiLimitTitle'),
-      tGlobal('recipes.apiLimitMessage'),
-    );
-  } else if (err.isRateLimitError) {
-    alertService.alert(
-      tGlobal('recipes.rateLimitTitle'),
-      tGlobal('recipes.rateLimitMessage'),
-    );
-  } else {
-    alertService.alert(
-      tGlobal('errors.searchFailed'),
-      tGlobal('recipes.searchErrorMessage'),
-    );
-  }
+  if (err.isQuotaExceeded)
+    return { status: 'failed', failure: 'quotaExceeded' };
+  if (err.isRateLimitError) return { status: 'failed', failure: 'rateLimited' };
+  return { status: 'failed', failure: 'failed' };
+}
+
+/** Where a search commits, and whether it still may. */
+export interface SearchCommits<TNode extends SearchedRecipe> {
+  setLoading: (loading: boolean) => void;
+  setPerformed: (performed: boolean) => void;
+  setRows: (rows: RecipeRow<TNode>[]) => void;
+  /** False once a newer search or a clear has replaced this one. */
+  isCurrent: () => boolean;
 }
 
 export const SEARCH_FETCH_SIZE = 25;
@@ -87,12 +112,12 @@ export function createSeenKeys(): SeenKeys {
 // Drops rows already shown: by Spoonacular id where a backend recipe is linked,
 // else by normalized title, where the first-rendered local row wins. Mutates
 // `seen` so the next page sees these keys.
-export function dedupePageAgainstSeen(
-  localNodes: LocalRecipeNode[],
+export function dedupePageAgainstSeen<TNode extends SearchedRecipe>(
+  localNodes: readonly TNode[],
   spoonacularResults: SpoonacularRecipe[],
   seen: SeenKeys,
-): { localNodes: LocalRecipeNode[]; spoonacular: SpoonacularRecipe[] } {
-  const dedupedLocal: LocalRecipeNode[] = [];
+): { localNodes: TNode[]; spoonacular: SpoonacularRecipe[] } {
+  const dedupedLocal: TNode[] = [];
   for (const node of localNodes) {
     const titleKey = normalizeTitle(node.name);
     const idKey =
@@ -193,8 +218,8 @@ export async function fetchSpoonacularTextPage(
 
 // One combined page of results plus the advanced cursor state — the shared
 // unit of work for both the initial search and load-more.
-export interface SearchPageResult {
-  rows: RecipeRow[];
+export interface SearchPageResult<TNode extends SearchedRecipe> {
+  rows: RecipeRow<TNode>[];
   localEndCursor: string | null;
   localHasNextPage: boolean;
   // How many rows this page actually fetched (advances the offset).
@@ -209,7 +234,8 @@ export interface SearchPageResult {
 // ONE page from both sources, deduped against `seen` (mutated), with advanced
 // cursors; initial search and load-more share it. A local failure degrades to
 // null and a Spoonacular error is captured, so either source alone still pages.
-export async function fetchRecipeSearchPage(
+export async function fetchRecipeSearchPage<TNode extends SearchedRecipe>(
+  document: RecipeSearchDocument<TNode>,
   query: string,
   filters: RecipeFilters,
   client: ApolloClient,
@@ -218,7 +244,7 @@ export async function fetchRecipeSearchPage(
   spoonacularOffset: number,
   fetchSpoonacular: boolean,
   seen: SeenKeys,
-): Promise<SearchPageResult> {
+): Promise<SearchPageResult<TNode>> {
   // `activeFilters` map back to the API's enums (unmapped values drop), so both
   // sources filter alike. Skipped once local has no more pages: a null cursor
   // re-fetches page 1 and double-appends it.
@@ -231,39 +257,49 @@ export async function fetchRecipeSearchPage(
   const localCategory = filters.mealType
     ? SPOONACULAR_TO_MEAL_TYPE_CATEGORY[filters.mealType]
     : undefined;
-  const searchLocalRecipes = async (): Promise<SearchRecipesQuery | null> => {
-    try {
-      const result = await client.query({
-        query: SearchRecipesDocument,
-        variables: {
-          query,
-          first: SEARCH_FETCH_SIZE,
-          ...(localAfter && { after: localAfter }),
-          ...(localDiets.length > 0 && { diets: localDiets }),
-          ...(localIntolerances.length > 0 && {
-            intolerances: localIntolerances,
-          }),
-          ...(filters.maxReadyTime && {
-            maxReadyTime: filters.maxReadyTime,
-          }),
-          ...(localCategory && { category: localCategory }),
-        },
-        fetchPolicy: 'network-only',
-      });
+  // Null lets the Spoonacular source still render; the page fails only when
+  // the combined list would be empty, and its caller presents that.
+  const searchLocalRecipes =
+    async (): Promise<RecipeSearchData<TNode> | null> => {
+      let result;
+      try {
+        result = await client.query({
+          query: document,
+          variables: {
+            query,
+            first: SEARCH_FETCH_SIZE,
+            ...(localAfter && { after: localAfter }),
+            ...(localDiets.length > 0 && { diets: localDiets }),
+            ...(localIntolerances.length > 0 && {
+              intolerances: localIntolerances,
+            }),
+            ...(filters.maxReadyTime && {
+              maxReadyTime: filters.maxReadyTime,
+            }),
+            ...(localCategory && { category: localCategory }),
+          },
+          fetchPolicy: 'network-only',
+        });
+      } catch (error) {
+        errorService.reportError(error, { operation: 'searchRecipesLocal' });
+        return null;
+      }
+      // `errorPolicy: 'all'` resolves a failed query with its error, unthrown.
+      if (result.error) {
+        errorService.reportError(result.error, {
+          operation: 'searchRecipesLocal',
+        });
+      }
       return result.data ?? null;
-    } catch {
-      // Null lets the Spoonacular source below still render; the alert fires
-      // only when the combined list would otherwise be empty.
-      return null;
-    }
-  };
+    };
 
-  const localPromise: Promise<SearchRecipesQuery | null> = fetchLocal
+  const localPromise: Promise<RecipeSearchData<TNode> | null> = fetchLocal
     ? searchLocalRecipes()
     : Promise.resolve(null);
 
-  // Errors are captured, not alerted, so the local source can still render;
-  // the alert fires only when the combined list would otherwise be empty.
+  // Captured, not thrown, so the local source can still render; the page
+  // fails only when the combined list would be empty, and its caller presents
+  // that.
   let spoonacularError: unknown = null;
   const spoonacularPromise = !fetchSpoonacular
     ? Promise.resolve(EMPTY_SPOONACULAR_PAGE)
@@ -295,9 +331,7 @@ export async function fetchRecipeSearchPage(
     if (!spoonacularByTitle.has(titleKey))
       spoonacularByTitle.set(titleKey, recipe);
   }
-  const enrichmentFor = (
-    node: LocalRecipeNode,
-  ): SpoonacularRecipe | undefined => {
+  const enrichmentFor = (node: TNode): SpoonacularRecipe | undefined => {
     if (node.externalSource === ExternalSource.Spoonacular && node.externalId) {
       const byId = spoonacularById.get(node.externalId);
       if (byId) return byId;
@@ -315,7 +349,7 @@ export async function fetchRecipeSearchPage(
 
   const rows = [
     ...localRows(localNodes, enrichmentFor),
-    ...spoonacularRows(dedupedSpoonacular),
+    ...spoonacularRows<TNode>(dedupedSpoonacular),
   ];
 
   return {
@@ -328,21 +362,27 @@ export async function fetchRecipeSearchPage(
   };
 }
 
-export async function executeRecipeTextSearch(
+export async function executeRecipeTextSearch<TNode extends SearchedRecipe>(
+  document: RecipeSearchDocument<TNode>,
   query: string,
   filters: RecipeFilters,
   client: ApolloClient,
-  setLoading: (v: boolean) => void,
-  setSearchPerformed: (v: boolean) => void,
-  setRows: (rows: RecipeRow[]) => void,
-  setPagination: (p: SearchPagination) => void,
-  shouldCommit: () => boolean,
-): Promise<void> {
+  {
+    setLoading,
+    setPerformed,
+    setRows,
+    setPagination,
+    isCurrent,
+  }: SearchCommits<TNode> & {
+    setPagination: (pagination: SearchPagination) => void;
+  },
+): Promise<SearchOutcome> {
   setLoading(true);
-  setSearchPerformed(true);
+  setPerformed(true);
 
   const seen = createSeenKeys();
   const page = await fetchRecipeSearchPage(
+    document,
     query,
     filters,
     client,
@@ -355,7 +395,7 @@ export async function executeRecipeTextSearch(
 
   // A newer search fired mid-flight: discard this response whole, so it cannot
   // clobber the newer results, cursors, error or loading flag.
-  if (!shouldCommit()) return;
+  if (!isCurrent()) return SUPERSEDED;
 
   setRows(page.rows);
   setPagination({
@@ -371,9 +411,10 @@ export async function executeRecipeTextSearch(
     seen,
   });
 
+  let outcome = SHOWN;
   if (page.spoonacularError) {
     if (page.rows.length === 0) {
-      handleSearchError(page.spoonacularError, 'Search error');
+      outcome = failedSearch(page.spoonacularError, 'Search error');
     } else {
       // Local results are on screen — degrade silently.
       errorService.reportError(page.spoonacularError, {
@@ -383,16 +424,18 @@ export async function executeRecipeTextSearch(
   }
 
   setLoading(false);
+  return outcome;
 }
 
 // The next page from each source with results left, deduped against
 // `pagination.seen`; the CALLER commits it, only if the search was not replaced
 // mid-flight. Failures never wipe shown results.
-export async function executeRecipeLoadMore(
+export async function executeRecipeLoadMore<TNode extends SearchedRecipe>(
+  document: RecipeSearchDocument<TNode>,
   pagination: SearchPagination,
   client: ApolloClient,
 ): Promise<{
-  rows: RecipeRow[];
+  rows: RecipeRow<TNode>[];
   nextPagination: SearchPagination;
 } | null> {
   const { query, filters, seen } = pagination;
@@ -406,6 +449,7 @@ export async function executeRecipeLoadMore(
   if (!fetchLocal && !spoonacularHasMore) return null;
 
   const page = await fetchRecipeSearchPage(
+    document,
     query,
     filters,
     client,
@@ -450,15 +494,14 @@ export async function executeRecipeLoadMore(
   };
 }
 
-export async function executeRecipeIngredientSearch(
+export async function executeRecipeIngredientSearch<
+  TNode extends SearchedRecipe,
+>(
   ingredientString: string,
-  setLoading: (v: boolean) => void,
-  setSearchPerformed: (v: boolean) => void,
-  setRows: (rows: RecipeRow[]) => void,
-  shouldCommit: () => boolean,
-): Promise<void> {
+  { setLoading, setPerformed, setRows, isCurrent }: SearchCommits<TNode>,
+): Promise<SearchOutcome> {
   setLoading(true);
-  setSearchPerformed(true);
+  setPerformed(true);
 
   // Check cache first
   const cacheKey = ingredientCacheKey(ingredientString);
@@ -469,12 +512,13 @@ export async function executeRecipeIngredientSearch(
     // A newer search (text or ingredient) was fired mid-flight — discard so this
     // stale response can't clobber the fresher results or clear the loading flag
     // the newer search now owns. Mirrors executeRecipeTextSearch's guard.
-    if (!shouldCommit()) return;
+    if (!isCurrent()) return SUPERSEDED;
     setRows(spoonacularRows(cached.results));
     setLoading(false);
-    return;
+    return SHOWN;
   }
 
+  let outcome = SHOWN;
   try {
     // Note: findByIngredients API does NOT support diet/intolerance/mealType filters
     const results = await spoonacularService.searchRecipesByIngredients({
@@ -486,12 +530,15 @@ export async function executeRecipeIngredientSearch(
     // The results are valid for this ingredient key regardless of staleness,
     // so warm the cache unconditionally; only the visible commit is guarded.
     cacheStore.setCached(cacheKey, results);
-    if (shouldCommit()) {
+    if (isCurrent()) {
       setRows(spoonacularRows(results));
+    } else {
+      outcome = SUPERSEDED;
     }
   } catch (error) {
-    handleSearchError(error, 'Ingredient search error');
+    outcome = failedSearch(error, 'Ingredient search error');
   }
 
-  if (shouldCommit()) setLoading(false);
+  if (isCurrent()) setLoading(false);
+  return outcome;
 }

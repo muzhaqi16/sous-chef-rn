@@ -1,34 +1,29 @@
 /**
  * The single source of truth for login/register/logout business logic, as a
  * non-React service. Every dependency is a singleton: the Apollo client,
- * toastService, errorService, the Zustand store via `getState()`, and keychain.
+ * toastService, errorService and the Zustand store via `getState()`. What a
+ * device adds — its registration, a stored biometric sign-in — comes from the
+ * steps its host registers (`sessionHost`).
  */
 
-import { client } from '#/apollo/client';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { errorService, isTransportFailure } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useStore } from '#store';
 import { runSessionTeardown } from '#store/sessionTeardown';
 import { whileSessionEnds } from '#store/sessionEnding';
-import { isApiUnavailable } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
-import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { incrementLoginCount } from '#/hooks/useFeatureHint';
+import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
-  ExchangeDeviceCredentialDocument,
-  IssueDeviceCredentialDocument,
   LoginDocument,
-  MyDeviceCredentialsDocument,
   RegisterDocument,
-  RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
-import { ensureDeviceId } from '#/storage/deviceId';
+import { ensureDeviceId } from '#/services/auth/deviceId';
 import {
   deviceRegionCurrency,
   isUnchosenCurrency,
@@ -41,25 +36,10 @@ import type {
   LoginInput,
   RegisterInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  hasCredentials,
-  getBiometricCapability,
-  getLastBiometricEmail,
-} from '#/storage/keychain';
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { withinMs } from '#/utils/withinMs';
-import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
-import {
-  checkStoredCredentials,
-  getBiometricInfo,
-  loadStoredCredentials,
-  markDeviceCredential,
-  readDeviceCredential,
-  removeCredentials,
-  storeCredentials,
-} from '#/services/auth/credentials';
+import { type PostSignInGate, sessionHost } from '#/services/auth/sessionHost';
 
 // --- Store bootstrap (pre-populate Zustand from auth response) ---
 
@@ -119,7 +99,7 @@ async function applyRegionCurrencyDefault(
   try {
     // Not `localFirst`: a queued write would leave the money on screen in a
     // currency the account does not hold until some later replay.
-    result = await client.mutate({
+    result = await requireApolloClient().mutate({
       mutation: UpdateUserPreferencesDocument,
       variables: { input: { regional: { preferredCurrency: inferred } } },
     });
@@ -149,10 +129,6 @@ function getUserPreferences(targetUserId: string) {
   const store = useStore.getState();
 
   return {
-    shouldShowCredentialPrompt: () => {
-      const navState = store.getUserNavigationState(targetUserId);
-      return !navState?.credentialPromptDeclined;
-    },
     trackCredentialPromptShown: () => {
       store.setUserNavigationState(targetUserId, {
         lastCredentialPromptShown: Date.now(),
@@ -183,7 +159,7 @@ function unmaskAuthPayload<
     user: { __typename: 'User'; id: string };
   },
 >(payload: T): ResolvedAuthPayload | null {
-  const user = client.cache.readFragment<LoginUserFragment>({
+  const user = requireApolloClient().cache.readFragment<LoginUserFragment>({
     fragment: LoginUserFragmentDoc,
     fragmentName: 'LoginUser',
     from: payload.user,
@@ -258,49 +234,16 @@ async function handleLogin(
   const store = useStore.getState();
   const previousUserId = queueStore.getCurrentUserId();
 
-  // The gates resolve BEFORE auth state changes: RootNavigator routes from
+  // The gate resolves BEFORE auth state changes: RootNavigator routes from
   // `user`, so setting it first flashes main_app behind the gate. Deciding
   // first commits auth and the final navigation state together.
-  let showBiometricGate = false;
+  let gate: PostSignInGate = null;
   if (loginCredentials && user.emailVerified && user.onBoarded) {
-    try {
-      const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
-      showBiometricGate = biometricResult.shouldShow;
-    } catch {
-      logger.error('Error checking biometric eligibility');
-    }
-  }
-
-  // Offered only when biometrics are unavailable. `!showBiometricGate` cannot
-  // stand in for that: one reason it is false is a user who refused biometrics,
-  // and saving credentials enrols them into the biometric-protected slot.
-  let showRememberMeGate = false;
-  if (
-    showRememberPrompt &&
-    !showBiometricGate &&
-    loginCredentials &&
-    user.emailVerified &&
-    user.onBoarded
-  ) {
-    let biometricAvailable = false;
-    try {
-      const capability = await getBiometricCapability();
-      biometricAvailable = capability.isAvailable;
-    } catch {
-      logger.error('Error checking biometric capability');
-    }
-
-    const navState = store.getUserNavigationState(user.id);
-    const declinedBiometrics = navState?.biometricDeclinedPermanently;
-
-    if (!biometricAvailable && !declinedBiometrics) {
-      const hasStoredCreds = await checkStoredCredentials(
-        loginCredentials.email,
-      );
-      const prefs = getUserPreferences(user.id);
-      showRememberMeGate =
-        !hasStoredCreds && prefs.shouldShowCredentialPrompt();
-    }
+    gate = await sessionHost().postSignInGate(
+      user,
+      loginCredentials.email,
+      showRememberPrompt,
+    );
   }
 
   // Set auth state
@@ -321,7 +264,7 @@ async function handleLogin(
   }
 
   logger.info('Auth success: Login successful');
-  requestIdleCallback(() => registerDeviceInBackground());
+  sessionHost().afterSignIn();
   incrementLoginCount(user.id);
 
   // Navigation flow control
@@ -340,7 +283,7 @@ async function handleLogin(
   // Eligible returning user → route to the dedicated biometric enrollment
   // screen (the `biometric_setup` nav state) instead of straight to main_app,
   // so it renders as its own step, not a modal over PantryMain.
-  if (showBiometricGate && loginCredentials) {
+  if (gate === 'biometricSetup' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
     store.setShowBiometricSetup(true);
     store.setNavigationState('biometric_setup');
@@ -350,7 +293,7 @@ async function handleLogin(
   // Stays on the auth screen for LoginScreen's RememberMe modal, which enters
   // main_app on an answer; RootNavigator's postLoginCredentials guard keeps
   // the user-change effect from forcing it meanwhile.
-  if (showRememberMeGate && loginCredentials) {
+  if (gate === 'rememberMe' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
     getUserPreferences(user.id).trackCredentialPromptShown();
     return true;
@@ -358,53 +301,6 @@ async function handleLogin(
 
   store.setNavigationState('main_app');
   return false;
-}
-
-// --- Biometric prompting (moved from useBiometricPrompting, only the check logic) ---
-
-async function shouldShowPostLoginBiometricPrompt(targetUser: {
-  id: string;
-  email?: string | null;
-}): Promise<{ shouldShow: boolean; reason?: string }> {
-  // Keychain entries are namespaced by email, so an account with no readable
-  // email can't be matched against stored credentials.
-  const accountEmail = targetUser.email;
-  if (!targetUser.id || !accountEmail) {
-    return { shouldShow: false, reason: 'No user found' };
-  }
-
-  const store = useStore.getState();
-  const navState = store.getUserNavigationState(targetUser.id);
-
-  if (navState?.isNewUser && !navState.hasCompletedOnboarding) {
-    return {
-      shouldShow: false,
-      reason: 'New user - biometric setup handled during onboarding',
-    };
-  }
-
-  try {
-    const biometricInfo = await getBiometricCapability();
-    if (!biometricInfo.isAvailable) {
-      return { shouldShow: false, reason: 'Biometric not available' };
-    }
-
-    const hasCreds = await hasCredentials(accountEmail);
-    if (hasCreds) {
-      return { shouldShow: false, reason: 'Already has biometric setup' };
-    }
-
-    if (navState?.biometricDeclinedPermanently) {
-      return {
-        shouldShow: false,
-        reason: 'User permanently declined biometric authentication',
-      };
-    }
-
-    return { shouldShow: true };
-  } catch {
-    return { shouldShow: false, reason: 'Error checking eligibility' };
-  }
 }
 
 // --- Public API ---
@@ -437,7 +333,7 @@ async function login(
     // `authLink` sends the id it already holds. A session minted without it is
     // bound to no device, and the server pushes only to a bound session.
     await ensureDeviceId();
-    const result = await client.mutate({
+    const result = await requireApolloClient().mutate({
       mutation: LoginDocument,
       variables: { input },
     });
@@ -524,7 +420,11 @@ async function register(
   // Bound to the device, as `login` explains.
   await ensureDeviceId();
   const settled = await settleMutation(
-    () => client.mutate({ mutation: RegisterDocument, variables: { input } }),
+    () =>
+      requireApolloClient().mutate({
+        mutation: RegisterDocument,
+        variables: { input },
+      }),
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
@@ -558,14 +458,11 @@ async function register(
   return signedIn ? 'signedIn' : 'verificationSent';
 }
 
-/** Longest a best-effort revoke may hold the sign-out. */
-const REVOKE_BUDGET_MS = 3000;
-
 interface LogoutOptions {
   /**
-   * KEEP the biometric credential across the sign-out: the slot is
-   * `BIOMETRY_CURRENT_SET` and holds a revocable device credential, not the
-   * password. FALSE drops the slot AND revokes it server-side.
+   * KEEP the sign-in the host stores across the sign-out — on mobile a
+   * biometric slot holding a revocable device credential, not the password.
+   * FALSE has the host drop it and revoke it server-side.
    */
   keepBiometricCredentials?: boolean;
 }
@@ -580,20 +477,10 @@ async function logout(options?: LogoutOptions): Promise<void> {
 
     // Done FIRST: everything below can throw into a catch that only logs, so a
     // security-relevant deletion parked at the end may silently not happen.
-    // Credentials are per-account, so this never touches another user's.
     if (!options?.keepBiometricCredentials && currentUserEmail) {
-      // Server first, while the session that authorises it is still live: the
-      // local delete below cannot be undone, so a revoke attempted after it
-      // would have nothing left to authenticate with.
-      await revokeWithinBudget();
-      // READ, not discarded: a failed delete leaves the previous user's device
-      // credential on the device — the exact state this call exists to prevent.
-      const removed = await removeCredentials(currentUserEmail);
-      if (!removed) {
-        logger.error(
-          'Logout: biometric credentials could not be removed; the previous account may still be unlockable on this device',
-        );
-      }
+      // A host step settles even when it fails (`registerSessionHost`), so it
+      // cannot fall into the catch below and skip the sign-out.
+      await sessionHost().forgetStoredSignIn(currentUserEmail);
     }
 
     // The teardown `endSession` runs too, so both exits rest the same. One scope
@@ -621,302 +508,14 @@ async function logout(options?: LogoutOptions): Promise<void> {
   }
 }
 
-/**
- * Take the biometric affordance down with the slot it offers. The login screen
- * gates its button on `hasStoredCredentials`, so a slot proven unusable stops
- * being offered without waiting for a remount.
- */
-function forgetBiometricSlot(): void {
-  useStore.getState().setHasStoredCredentials(false);
-}
-
-/**
- * The one biometric sign-in path (the login button and cold-start auto-login),
- * so the dead-versus-transient rule below is written once.
- */
-async function signInWithDeviceCredential(email: string): Promise<boolean> {
-  try {
-    // Every attempt spends the server's per-device budget, so a refused one is
-    // held off rather than re-offered. A DEADLINE, so a relaunch cannot skip it.
-    const heldUntil = useStore.getState().biometricRetryAt;
-    const waitMs = heldUntil - Date.now();
-    if (waitMs > 0) {
-      toastService.error(
-        t('auth.biometricRetryIn', { count: Math.ceil(waitMs / 1000) }),
-      );
-      return false;
-    }
-
-    const hasStoredCreds = await checkStoredCredentials(email);
-    if (!hasStoredCreds) {
-      logger.info('No stored credentials found for auto-login');
-      // The affordance outlives the slot: it is rendered from a flag the clear
-      // below does not reach, so say why and take the button away.
-      forgetBiometricSlot();
-      toastService.error(t('auth.biometricNeedsSetupAgain'));
-      return false;
-    }
-
-    const stored = await loadStoredCredentials(email);
-    if (!stored) {
-      logger.info('Failed to load stored credentials');
-      toastService.error(t('auth.biometricUnavailableOnDevice'));
-      return false;
-    }
-
-    // A slot older than device credentials holds a PASSWORD: dropped, never
-    // replayed, and the person re-enrols on their next password sign-in.
-    const credential =
-      stored.credential && readDeviceCredential(stored.credential);
-    if (!stored.email || !credential) {
-      logger.warn('Biometric slot predates the device credential; clearing it');
-      await removeCredentials(email);
-      forgetBiometricSlot();
-      toastService.error(t('auth.biometricNeedsSetupAgain'));
-      return false;
-    }
-
-    // A credential is bound to a device id, so an exchange without one cannot
-    // succeed. Deliberately not cleared: the slot is fine, the device is not.
-    const deviceId = await ensureDeviceId();
-    if (!deviceId) {
-      logger.warn('No device id available; skipping the credential exchange');
-      toastService.error(t('auth.biometricUnavailableOnDevice'));
-      return false;
-    }
-
-    logger.info('Exchanging the stored device credential');
-    const result = await client.mutate({
-      mutation: ExchangeDeviceCredentialDocument,
-      variables: { input: { credential, deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-
-    if (payload) {
-      const unmaskedLogin = unmaskAuthPayload(payload);
-      if (!unmaskedLogin) {
-        // The exchange spent one of the server's attempts and opened no
-        // session, so the backoff protecting that budget has to stay on.
-        logger.error(
-          'Auto-login succeeded but the LoginUser read was incomplete',
-        );
-        useStore.getState().registerBiometricRefusal();
-        toastService.error(t('errors.codes.genericRetry'));
-        return false;
-      }
-
-      await handleLogin(unmaskedLogin, true);
-      useStore.getState().clearBiometricBackoff();
-      logger.info('Auto-login successful');
-      return true;
-    }
-
-    const refusal = result.data?.exchangeDeviceCredential;
-    if (refusal && 'code' in refusal) {
-      // Dropped only when THESE credentials will never authenticate; a
-      // token-side refusal ends the session but leaves them good
-      // (isDeadCredentialCode).
-      if (isDeadCredentialCode(refusal.code)) {
-        logger.warn(
-          `Auto-login rejected (${refusal.code}), clearing stored credentials`,
-        );
-        await removeCredentials(email);
-        forgetBiometricSlot();
-      } else {
-        // The slot survives, so the button is offered again — hold it off, or
-        // every tap spends another of the server's attempts for nothing.
-        useStore.getState().registerBiometricRefusal();
-      }
-      handleRejectedAuthPayload(refusal, 'Auto-login');
-      return false;
-    }
-
-    if (result.error) {
-      // Same rule: a transport failure says the request did not ARRIVE, so
-      // clearing on one un-enrols the device after a single blip.
-      const parsed = errorService.parseApolloError(result.error, {
-        logError: false,
-      });
-      const code = parsed.error?.code;
-      if (code && isDeadCredentialCode(code)) {
-        logger.warn(
-          `Auto-login rejected (${code}), clearing stored credentials`,
-        );
-        await removeCredentials(email);
-        forgetBiometricSlot();
-      } else if (isTransportFailure(result.error)) {
-        // The request never arrived, so the server refused nothing. A lockout
-        // recorded here is PERSISTED and not session-scoped, so one launch
-        // without connectivity would outlast the outage that caused it.
-        logger.warn('Auto-login could not reach the server; nothing recorded');
-      } else {
-        logger.warn('Auto-login failed; stored credentials kept');
-        // A throttle carries the server's own deadline, and it knows what
-        // budget is left better than the local schedule does.
-        const rateLimit = getRateLimitDetails(result.error);
-        useStore
-          .getState()
-          .registerBiometricRefusal(
-            rateLimit?.retryAfter ? rateLimit.retryAfter * 1000 : undefined,
-          );
-      }
-      handleAuthError(result.error, 'Auto-login');
-    }
-
-    return false;
-  } catch (error) {
-    // Deliberately does NOT clear. A throw here is a transport or client fault,
-    // never the server saying these credentials are dead — and the branches
-    // above already handle the one case that is.
-    logger.error('Auto-login error:', error);
-    return false;
-  }
-}
-
-/** Cold start: no user yet, so fall back to the most-recently-enrolled account. */
-async function autoLogin(): Promise<boolean> {
-  const email = await getLastBiometricEmail();
-  if (!email) {
-    logger.info('No stored credentials found for auto-login');
-    return false;
-  }
-  return signInWithDeviceCredential(email);
-}
-
-/**
- * Paired with DROPPING the local slot, so a secret lifted off the device is
- * already dead; never on a sign-out that KEEPS it. Best effort: a failure costs
- * the server a stale row, not the person a working sign-in.
- */
-async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
-  // With the API unreachable there is nothing to revoke against, and httpLink's
-  // abort plus retryLink's attempts would otherwise hold the sign-out for ~30s
-  // on the one path where the person is trying to leave the device.
-  if (isApiUnavailable(useStore.getState())) return false;
-  try {
-    // `DeviceCredential.deviceId` is non-null, so a null here matches nothing
-    // and the revoke would resolve having done nothing at all.
-    const deviceId = await ensureDeviceId();
-    if (!deviceId) {
-      logger.warn('No device id available; cannot revoke this device');
-      return false;
-    }
-
-    // Both round trips belong to the sign-out, which sets `isLoggingOut`
-    // before they can finish on a slow link — without the opt-in `authLink`
-    // refuses the cleanup the sign-out is waiting for.
-    const listed = await client.query({
-      query: MyDeviceCredentialsDocument,
-      fetchPolicy: 'network-only',
-      context: { allowDuringLogout: true },
-    });
-    // A failed listing resolves with no data; it is not "nothing to revoke".
-    if (!listed.data) return false;
-    const mine = listed.data.deviceCredentials.find(
-      credential => credential.deviceId === deviceId,
-    );
-    if (!mine) return true;
-
-    const revoked = await client.mutate({
-      mutation: RevokeDeviceCredentialDocument,
-      variables: { input: { id: mine.id } },
-      context: { allowDuringLogout: true },
-    });
-    // A refusal is a union member resolved as data, so the absence of a throw
-    // is not a revoke: the credential stays exchangeable while the local slot
-    // is dropped.
-    return (
-      revoked.data?.revokeDeviceCredential.__typename ===
-      'RevokeDeviceCredentialPayload'
-    );
-  } catch (error) {
-    logger.warn('Could not revoke the device credential server-side', error);
-    return false;
-  }
-}
-
-/** The revoke, bounded. A slow network must not hold the local sign-out. */
-async function revokeWithinBudget(): Promise<void> {
-  const revoked = await withinMs(
-    revokeDeviceCredentialForThisDevice(),
-    REVOKE_BUDGET_MS,
-    false,
-  );
-  // The local slot goes either way, so this is a stale server row rather than a
-  // sign-in the person loses — but it is a secret still exchangeable.
-  if (!revoked) {
-    logger.warn('The device credential may still be live server-side');
-  }
-}
-
-/**
- * `refused` was already reported by the auth handlers; `unsaved` (no device id,
- * keychain failure) was not, so the caller says so in its own words.
- */
-export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
-
-/**
- * Puts a server-issued device credential behind biometry, from the live
- * session alone, so no password is retained. Issuing supersedes any credential
- * this device already held.
- */
-async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
-  try {
-    const deviceId = await ensureDeviceId();
-    if (!deviceId) {
-      logger.warn('No device id available; not issuing a device credential');
-      return 'unsaved';
-    }
-
-    const result = await client.mutate({
-      mutation: IssueDeviceCredentialDocument,
-      variables: { input: { deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-    if (!payload) {
-      const refusal = result.data?.issueDeviceCredential;
-      if (refusal && 'code' in refusal)
-        handleRejectedAuthPayload(refusal, 'Enrol device credential');
-      else if (result.error)
-        handleAuthError(result.error, 'Enrol device credential');
-      return 'refused';
-    }
-
-    const stored = await storeCredentials(
-      email,
-      markDeviceCredential(payload.credential),
-    );
-    return stored ? 'enrolled' : 'unsaved';
-  } catch (error) {
-    logger.error('Enrol device credential error:', error);
-    return 'unsaved';
-  }
-}
-
 export const authService = {
-  // Core operations
-  enrolDeviceCredential,
-  revokeDeviceCredentialForThisDevice,
-  signInWithDeviceCredential,
   login,
   register,
   logout,
-  autoLogin,
 
-  // Post-auth flow handlers
+  // Post-auth flow handlers, also run by a host's own sign-in paths
   handleLogin,
   handleAuthError,
-
-  // Credential management
-  checkStoredCredentials,
-  loadStoredCredentials,
-  storeCredentials,
-  removeCredentials,
-  getBiometricInfo,
-  getLastBiometricEmail,
-
-  // Device registration
-  registerDeviceInBackground,
+  handleRejectedAuthPayload,
+  resolveAuthPayload: unmaskAuthPayload,
 };

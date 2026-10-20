@@ -10,13 +10,13 @@ import {
 import {
   BottomSheetModal,
   type BottomSheetModalRef,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   OnPrimaryActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { hitSlop } from '#/theme/foundations/sizes';

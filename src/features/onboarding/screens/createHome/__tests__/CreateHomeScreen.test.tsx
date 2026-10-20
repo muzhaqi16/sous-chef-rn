@@ -15,13 +15,15 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   GetHomesDocument,
-  GetMyPendingInvitesDocument,
   CreateHomeDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
   type GetHomesQuery,
-  type GetMyPendingInvitesQuery,
 } from '#operations/home/home.generated';
+import {
+  GetMyPendingInvitesDocument,
+  type GetMyPendingInvitesQuery,
+} from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { InviteCard_InviteFragment } from '../CreateHomeScreen.generated';
 import type { RootState } from '#store/index';
@@ -33,7 +35,7 @@ const mockNavigateToNextStep = jest.fn();
 const mockSetUserNavigationState = jest.fn();
 const mockSkipToStep = jest.fn();
 
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     setUserNavigationState: mockSetUserNavigationState,

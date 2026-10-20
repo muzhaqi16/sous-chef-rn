@@ -18,14 +18,14 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   useSavedRecipes,
   type SavedRecipeNode,
-} from '#features/recipes/hooks/useSavedRecipes';
+} from '#features/recipes/screens/useSavedRecipes';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
-import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
+import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { SubScreen } from '#components/templates/SubScreen';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { IngredientFormState } from '#features/recipes/types';
 import { RecipeIngredientList } from '../RecipeIngredientList';
 
 const ingredient = (

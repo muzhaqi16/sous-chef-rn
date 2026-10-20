@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import { usePerformanceStore } from '#/store/performanceStore';
+import { usePerformanceStore } from '#/services/performance/performanceStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 
 /**

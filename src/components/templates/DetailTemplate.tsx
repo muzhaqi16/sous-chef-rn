@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { Icon } from '#utils/iconUtils';
+import type { Icon } from '#components/atoms/Icon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { Button } from '#components/molecules/Button';
 import { DetailSection } from '../molecules/DetailSection';

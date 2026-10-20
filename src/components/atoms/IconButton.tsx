@@ -1,8 +1,8 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import type { IconLibrary } from '#/utils/iconUtils';
-import { Icon, type IconTone } from '#/utils/iconUtils';
+import type { IconLibrary } from '#components/atoms/Icon';
+import { Icon, type IconTone } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
 import { Pressable } from '#components/atoms/themedComponents';
 import { borderlessRipple } from '#constants/ripple';

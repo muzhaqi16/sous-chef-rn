@@ -16,7 +16,7 @@ jest.mock('#/services/authService', () => ({
   },
 }));
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
   }),

@@ -8,7 +8,6 @@ import { useSubscription } from '@apollo/client/react';
 import {
   MealPlanEventsDocument,
   MealPlanForEventDocument,
-  GetMealPlanDocument,
   type MealPlanEventsSubscription,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
@@ -168,7 +167,8 @@ function refreshPlanAggregates(
       refreshPlanAggregates(client, attempt + 1);
       return;
     }
-    void client.refetchQueries({ include: [GetMealPlanDocument] });
+    // Named: the plan screen's query belongs to its UI.
+    void client.refetchQueries({ include: ['GetMealPlan'] });
   }, AGGREGATE_REFRESH_DELAY_MS);
 }
 

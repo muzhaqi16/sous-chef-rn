@@ -8,9 +8,9 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  RecipeForm_RecipeFragmentDoc,
-  type RecipeForm_RecipeFragment,
-} from '#features/recipes/screens/RecipeForm/RecipeForm.generated';
+  UseRecipeFormWrites_RecipeFragmentDoc,
+  type UseRecipeFormWrites_RecipeFragment,
+} from './useRecipeFormWrites.generated';
 import {
   revertOptimisticRecipe,
   upsertMyRecipesEdge,
@@ -42,11 +42,12 @@ export function useForkRecipe() {
 
   // Returns the forked recipe's id (for navigation) or null on failure.
   const forkRecipe = async (recipeId: string): Promise<string | null> => {
-    const source = client.cache.readFragment<RecipeForm_RecipeFragment>({
-      id: client.cache.identify({ __typename: 'Recipe', id: recipeId }),
-      fragment: RecipeForm_RecipeFragmentDoc,
-      fragmentName: 'RecipeForm_recipe',
-    });
+    const source =
+      client.cache.readFragment<UseRecipeFormWrites_RecipeFragment>({
+        id: client.cache.identify({ __typename: 'Recipe', id: recipeId }),
+        fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+        fragmentName: 'useRecipeFormWrites_recipe',
+      });
     if (!source) {
       toastService.error(t('recipes.forkSourceNotLoaded'));
       return null;

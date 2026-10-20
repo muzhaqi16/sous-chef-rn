@@ -12,7 +12,7 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { authTestIDs } from '#features/auth/testIDs';
 
 interface Props<T extends FieldValues> {

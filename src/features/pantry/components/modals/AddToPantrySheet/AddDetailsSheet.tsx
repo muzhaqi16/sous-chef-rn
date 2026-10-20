@@ -28,8 +28,8 @@ import {
   addPantryItemSchema,
   addPantryItemDefaults,
   FIELD_PAGE,
-  type AddPantryItemFormData,
 } from './addPantryItemFormConfig';
+import type { AddPantryItemFormData } from '#features/pantry/types';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;

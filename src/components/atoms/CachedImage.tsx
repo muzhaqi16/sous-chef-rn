@@ -12,7 +12,7 @@ import type {
 import type { StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { logger } from '#/utils/environment';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 

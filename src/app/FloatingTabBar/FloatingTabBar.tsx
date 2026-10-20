@@ -27,7 +27,7 @@ import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import {
   TAB_BAR_HEIGHT,
   FLOATING_BUTTON_GAP,

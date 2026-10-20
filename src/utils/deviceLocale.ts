@@ -44,9 +44,10 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
 /** The device's locale (`en-US`), or null when neither source can say. */
 export function getDeviceLocale(): string | null {
   try {
-    if (typeof navigator !== 'undefined' && navigator.language) {
-      return navigator.language;
-    }
+    // Typed as always present, but a host may have no navigator or language.
+    const host: { navigator?: { language?: string } } = globalThis;
+    const language = host.navigator?.language;
+    if (language) return language;
     return Intl.DateTimeFormat().resolvedOptions().locale || null;
   } catch {
     return null;

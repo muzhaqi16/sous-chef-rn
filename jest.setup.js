@@ -44,6 +44,12 @@ require('./__tests__/setup/mocks/react-native-vision-camera');
 require('./__tests__/setup/globals');
 
 // ---------------------------------------------------------------------------
+// Platform — the in-memory services, installed before any core module loads,
+// as `index.js` installs the native ones.
+// ---------------------------------------------------------------------------
+require('./__tests__/helpers/memoryPlatform').installMemoryPlatform();
+
+// ---------------------------------------------------------------------------
 // i18n — initialize i18next so useTranslation() returns real strings in tests
 // instead of raw keys. This mirrors index.js's boot-time init.
 // ---------------------------------------------------------------------------

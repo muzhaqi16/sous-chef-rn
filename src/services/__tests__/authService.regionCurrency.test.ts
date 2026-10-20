@@ -12,10 +12,6 @@ const mockMutate = jest.fn();
 // just wrote, so the double has to answer that read for the login to complete.
 const mockReadFragment = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: {
-    mutate: (...args: unknown[]) => mockMutate(...args),
-    cache: { readFragment: () => mockReadFragment() },
-  },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -59,8 +55,8 @@ const mockStore: MockStore = {
 };
 jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
 
-jest.mock('#/storage/deviceId');
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#/services/auth/deviceId');
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(),
   hasCredentials: jest.fn().mockResolvedValue(false),
   loadCredentials: jest.fn(),
@@ -70,8 +66,16 @@ jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(),
 }));
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+  cache: { readFragment: () => mockReadFragment() },
+} as unknown as ApolloClient);
 
 /** An account's settings row; `null` until its first settings write. */
 type Settings = { preferredCurrency: string } | null;

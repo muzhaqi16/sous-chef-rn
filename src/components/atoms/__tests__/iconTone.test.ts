@@ -1,0 +1,31 @@
+import { TONE_TO_COLOR } from '#components/atoms/Icon';
+import { lightTheme, darkTheme } from '#/theme/themes';
+
+/**
+ * `IconTone` is `keyof typeof TONE_TO_COLOR`. Annotating the map
+ * `Record<string, …>` widens that to `string`, and a tone the map does not have
+ * then type-checks and throws on the undefined resolver — nine call sites were
+ * in that state, each a crash the moment its branch rendered.
+ */
+describe('icon tones', () => {
+  it('resolves every tone against both themes', () => {
+    const tones = Object.keys(TONE_TO_COLOR);
+    expect(tones.length).toBeGreaterThan(20);
+
+    for (const resolveColor of Object.values(TONE_TO_COLOR)) {
+      for (const theme of [lightTheme, darkTheme]) {
+        const colour = resolveColor(theme);
+        expect(typeof colour).toBe('string');
+        expect(colour).not.toBe('');
+      }
+    }
+  });
+
+  it('has no tone whose colour the theme does not define', () => {
+    const undefinedTones = Object.entries(TONE_TO_COLOR)
+      .filter(([, resolveColor]) => resolveColor(lightTheme) === undefined)
+      .map(([tone]) => tone);
+
+    expect(undefinedTones).toEqual([]);
+  });
+});

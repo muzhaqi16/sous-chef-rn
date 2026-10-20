@@ -21,7 +21,7 @@ import {
 } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { colors } from '#/theme/foundations/colors';
 
 const COLORS = colors.illustration;

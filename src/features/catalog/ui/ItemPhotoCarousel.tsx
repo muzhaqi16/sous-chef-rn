@@ -14,7 +14,7 @@ import type { FragmentType } from '@apollo/client/masking';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import {

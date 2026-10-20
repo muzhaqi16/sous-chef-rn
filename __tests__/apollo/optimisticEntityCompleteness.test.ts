@@ -55,15 +55,17 @@ import {
 } from '#features/mealPlan/cache/mealTemplateItem';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { makeCache } from '#/apollo/cache';
-import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   GetMealPlansDocument,
-  GetMealPlanDocument,
   MealPlanForEventDocument,
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
-  type GetMealPlanQuery,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealPlanDocument,
+  type GetMealPlanQuery,
+} from '#features/mealPlan/screens/useMealPlan.generated';
 import {
   GetMealTemplatesDocument,
   GetMealTemplateDocument,
@@ -85,22 +87,22 @@ import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
-  GetPantryItemDocument,
   GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import {
   InviteToHomeDocument,
-  GetHomeDocument,
   GetHomesDocument,
   CreateHomeDocument,
   AcceptHomeInviteDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { writeLocalHome } from '#features/home/cache/optimisticHome';
 import {
   CreateStorageLocationDocument,
@@ -121,13 +123,17 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   AddRecipeToFavoritesDocument,
-  MyRecipesDocument,
-  MySavedRecipesDocument,
   GetRecipeDocument,
   type GetRecipeQuery,
-  type MyRecipesQuery,
-  type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/screens/useSavedRecipes.generated';
+import {
+  MyRecipesDocument,
+  type MyRecipesQuery,
+} from '#features/recipes/screens/useRecipeManagement.generated';
 import { writeLocalRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
   writeLocalPantryItem,
@@ -1461,9 +1467,9 @@ describe('optimistic entity completeness', () => {
     });
 
     it('keeps GetRecipe complete after an optimistic create', async () => {
-      // GetRecipe spreads useRecipeData_recipe AND RecipeForm_recipe; the
-      // create has to materialize both or the detail screen (and the edit form)
-      // are blank offline.
+      // GetRecipe spreads useRecipeData_recipe AND useRecipeFormWrites_recipe;
+      // the create has to materialize both or the detail screen (and the edit
+      // form) are blank offline.
       const cache = makeCache();
       writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
@@ -1652,6 +1658,8 @@ describe('optimistic entity completeness', () => {
         'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',
       'src/features/recipes/cache/favorites.ts':
         'covered: AddRecipeToFavorites is compared below against MySavedRecipes; the optimistic row spreads SavedRecipeReaders',
+      'src/features/recipes/utils/recipeCacheWriters.ts':
+        'covered: "keeps MyRecipes complete after an optimistic create"; the row spreads RecipeReaders',
     };
 
     // Every way the app links an entity into a collection a screen reads: a

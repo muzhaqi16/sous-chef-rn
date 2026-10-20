@@ -8,8 +8,8 @@ import {
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
-  GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ShoppingListItemForEditDocument } from './useShoppingListItemWrites.generated';
 import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
@@ -83,7 +83,7 @@ export function useShoppingListItemWrites(
   const { t } = useTranslation();
 
   const { data, refetch } = useQuery(
-    GetShoppingListItemDocument,
+    ShoppingListItemForEditDocument,
     itemId ? { variables: { id: itemId } } : skipToken,
   );
 

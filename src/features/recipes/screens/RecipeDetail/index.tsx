@@ -8,7 +8,7 @@ import {
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#utils/externalUrl';
+import { openWebUrl } from '#native/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -16,7 +16,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, type IconName } from '#utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
@@ -24,13 +24,13 @@ import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
-import { useAddToMealPlanSheet } from '#features/mealPlan/hooks/useAddToMealPlanSheet';
+import { useAddToMealPlanSheet } from '#features/mealPlan/ui/useAddToMealPlanSheet';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
-import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
+import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
-import { useRecipeDetail } from '../../hooks/useRecipeDetail';
+import { useRecipeDetail } from './useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';

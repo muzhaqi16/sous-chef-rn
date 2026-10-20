@@ -2,9 +2,9 @@ import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemUsageHistoryDocument } from '#features/pantry/graphql/pantry.generated';
-import type { UsageRecord } from '#features/pantry/components/UsageHistoryRow';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
+import type { UsageRecord } from '#features/pantry/types';
 
 const PAGE_SIZE = 30;
 

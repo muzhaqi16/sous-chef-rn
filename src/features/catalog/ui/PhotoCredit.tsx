@@ -4,13 +4,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
-import type { ImageCredit } from '#/graphql/generated/schemaTypes';
+import type { PhotoCreditValue } from '#/types/attribution';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-
-export type PhotoCreditValue = Pick<
-  ImageCredit,
-  'text' | 'license' | 'licenseUrl' | 'sourceUrl'
->;
 
 interface PhotoCreditProps {
   credit: PhotoCreditValue;

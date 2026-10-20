@@ -4,7 +4,7 @@ import {
   recordMock,
 } from '#/test-utils/apolloMockProvider';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 
 /**
  * `item` is an @oneOf `ItemRefInput` the server resolves as a CATALOG item, so

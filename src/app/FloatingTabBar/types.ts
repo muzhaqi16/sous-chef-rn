@@ -1,6 +1,6 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { SharedValue } from 'react-native-reanimated';
-import type { IconLibrary } from '#/utils/iconUtils';
+import type { IconLibrary } from '#components/atoms/Icon';
 import type { TabAppearance } from '#features/types';
 
 export interface FloatingTabBarProps extends BottomTabBarProps {

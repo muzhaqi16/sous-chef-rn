@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { profileTestIDs } from '#features/profile/testIDs';
 
 // --- Mocks ---
@@ -58,11 +58,11 @@ jest.mock('#hooks/settings/useUserPreferences', () => ({
   }),
 }));
 
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 
-jest.mock('#hooks/useFeatureHint', () => ({
+jest.mock('#hooks/settings/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 

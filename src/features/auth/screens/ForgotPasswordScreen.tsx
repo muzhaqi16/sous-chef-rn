@@ -9,7 +9,7 @@ import { forgotPasswordSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { useRequestPasswordReset } from '#features/auth/hooks/useRequestPasswordReset';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { toastService } from '#services/toastService';

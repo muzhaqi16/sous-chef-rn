@@ -1,5 +1,3 @@
-import { useEffect, useRef } from 'react';
-import { AppState, Platform } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
@@ -22,9 +20,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
-import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
-import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
-import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
+import { requirePlatform } from '#platform/install';
 import {
   getNotificationAction,
   getNotificationCopy,
@@ -52,10 +48,20 @@ import { isNetworkError } from '#/utils/isNetworkError';
 // notifications themselves live in the Apollo cache.
 const selectListenerUser = (state: RootState) => state.user;
 
+/** A notification the person is told about while the app is away. */
+export interface AwayNotification {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+}
+
 interface NotificationConfig {
   skip?: boolean;
   showInAppNotifications?: boolean;
   showPushNotifications?: boolean;
+  /** Draws a notification that arrives while the app is away, outside quiet hours. */
+  onArrivedWhileAway?: (notification: AwayNotification) => void;
 }
 
 /**
@@ -125,9 +131,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // before `onData`, so the "was it unread?" guard already sees the new value,
   // and the badge counts rows this device never paged in.
   const reseedUnreadCount = () => scheduleUnreadReseed(client, 'badge');
-
-  // A ref, not state: AppState changes must not re-render this listener.
-  const appStateRef = useRef(AppState.currentState);
 
   const user = useAppStore(selectListenerUser);
 
@@ -265,24 +268,19 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     );
     reseedUnreadCount();
 
-    // Show push notification if enabled, app is not active, and not quiet time.
-    // Android only: on iOS the OS already draws the APNs alert for the same
-    // event, so an in-app Notifee draw here would double the tray entry.
+    // Told about only while away and outside quiet hours; the host decides
+    // how, if at all, to draw it.
     if (
-      Platform.OS === 'android' &&
       finalConfig.showPushNotifications &&
-      appStateRef.current !== 'active' &&
+      requirePlatform('appLifecycle').current() !== 'active' &&
       !isQuietTime()
     ) {
       const copy = getNotificationCopy(processedNotification, t, todayKey());
-      void showLocalNotification({
+      config.onArrivedWhileAway?.({
         id: processedNotification.id,
+        category: processedNotification.category,
         title: copy.title,
         body: copy.message,
-        data: {
-          category: processedNotification.category,
-          notificationId: processedNotification.id,
-        },
       });
     }
   };
@@ -397,27 +395,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     notificationEvents,
     notificationEventsSkip,
   );
-
-  // PERFORMANCE: App state handling - store in ref to avoid re-renders
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      appStateRef.current = nextAppState;
-    });
-    return () => subscription.remove();
-  }, []);
-
-  // Taps on OS-displayed pushes; data-only pushes go through Notifee. Gated on
-  // a session: registering consumes the one-shot cold-start tap, which stays
-  // cached until this effect re-runs.
-  useEffect(() => {
-    if (config.skip || !user?.id) return;
-    const unsubscribeFcm = registerFcmTapHandlers();
-    const unsubscribeApns = registerIosPushTapHandlers();
-    return () => {
-      unsubscribeFcm();
-      unsubscribeApns();
-    };
-  }, [config.skip, user?.id]);
 };
 
 /**

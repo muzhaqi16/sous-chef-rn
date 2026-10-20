@@ -2,9 +2,9 @@ import React, { type ReactNode } from 'react';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { AppState, type AppStateStatus } from 'react-native';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import {
   connectResyncSources,
@@ -35,11 +35,6 @@ const USER = {
   emailVerified: true,
   onBoarded: true,
 };
-
-const emitAppState = (next: AppStateStatus) =>
-  (AppState.addEventListener as jest.Mock).mock.calls
-    .filter(([event]) => event === 'change')
-    .forEach(([, listener]) => (listener as (s: AppStateStatus) => void)(next));
 
 function setup() {
   const unread = recordMock(GetUnreadNotificationsDocument, {
@@ -112,8 +107,8 @@ describe('useNotificationsOnLaunch', () => {
     expect(requests).toEqual(['GetUnreadNotifications']);
 
     act(() => {
-      emitAppState('background');
-      emitAppState('active');
+      memoryLifecycle().moveTo('background');
+      memoryLifecycle().moveTo('active');
     });
     await pastTheResyncWindow();
 

@@ -18,6 +18,8 @@ const project = require('../../eslint/project.js') as {
 };
 const syntax = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string }>;
+  FEATURE_HOOK_SYNTAX: Array<{ id: string }>;
+  ACTION_CALLER_SYNTAX: Array<{ id: string }>;
   TEST_SYNTAX: Array<{ id: string }>;
 };
 
@@ -81,9 +83,12 @@ describe('sous-chef rule catalog', () => {
       path.join(ROOT, 'docs/rules/restricted-syntax.md'),
       'utf8',
     );
-    const ids = [...syntax.PRODUCTION_SYNTAX, ...syntax.TEST_SYNTAX].map(
-      entry => entry.id,
-    );
+    const ids = [
+      ...syntax.PRODUCTION_SYNTAX,
+      ...syntax.FEATURE_HOOK_SYNTAX,
+      ...syntax.ACTION_CALLER_SYNTAX,
+      ...syntax.TEST_SYNTAX,
+    ].map(entry => entry.id);
 
     expect(ids.length).toBeGreaterThan(10);
     expect(ids.filter(id => !page.includes(`\`${id}\``))).toEqual([]);

@@ -6,7 +6,7 @@ import { ShoppingListMain } from '../ShoppingListMain';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#features/shoppingList/hooks/useShoppingListScreen', () => ({
+jest.mock('#features/shoppingList/screens/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({
     state: {
       currentListId: 'sl1',

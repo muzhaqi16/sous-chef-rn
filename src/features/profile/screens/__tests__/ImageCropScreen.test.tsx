@@ -14,7 +14,7 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: mockGoBack }),
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -26,8 +26,6 @@ jest.mock('@react-native-community/image-editor', () => ({
   __esModule: true,
   default: { cropImage: jest.fn().mockResolvedValue({ uri: 'cropped-uri' }) },
 }));
-
-jest.mock('#/storage/mmkv');
 
 jest.mock('#/services/errorService');
 

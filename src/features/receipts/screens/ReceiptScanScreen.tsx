@@ -9,10 +9,10 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { alertService } from '#/services/alertService';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { useReceiptScan } from '../hooks/useReceiptScan';
+import { useReceiptScan } from './useReceiptScan';
 import {
   useServerReceiptParse,
   type ServerReadingStatus,

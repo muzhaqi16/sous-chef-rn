@@ -8,7 +8,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { ImageKind, ItemImageStatus } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

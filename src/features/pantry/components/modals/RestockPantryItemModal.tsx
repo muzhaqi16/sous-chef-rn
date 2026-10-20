@@ -17,14 +17,14 @@ import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedb
 import { inCountedUnit } from '#domain/stockDisplay';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import {
-  PantryActionModal,
-  type PantryActionSharedState,
-  type ShownQuantity,
-} from '#features/pantry/components/modals/PantryActionModal';
+import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { parseMoneyInput } from '#/utils/validation/common';
+import type {
+  PantryActionSharedState,
+  ShownQuantity,
+} from '#features/pantry/types';
 
 interface RestockPantryItemModalProps {
   visible: boolean;

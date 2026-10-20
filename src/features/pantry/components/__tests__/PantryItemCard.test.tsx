@@ -2,10 +2,7 @@
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
-import {
-  renderWithApollo,
-  toFragmentRef,
-} from '#/test-utils/apolloMockProvider';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryItemCard } from '../PantryItemCard';
 import {
   PantryItemCard_PantryItemFragmentDoc,
@@ -266,11 +263,7 @@ function renderCard(
   const item = buildItem(overrides);
   return renderWithApollo(
     <PantryActionsProvider actions={actions}>
-      <PantryItemCard
-        pantryItemRef={toFragmentRef<
-          typeof PantryItemCard_PantryItemFragmentDoc
-        >(item)}
-      />
+      <PantryItemCard pantryItemId={item.id} />
     </PantryActionsProvider>,
     { cache: buildCache(item) },
   );

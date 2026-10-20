@@ -35,7 +35,7 @@ Error: index out of bounds, not enough layouts
 
 Reproduced by deleting several rows in quick succession, especially near the end of the
 list. It reached `ErrorUtils.reportFatalError` with `isFatal: true`, so
-`setupGlobalErrorHandler` (`src/utils/globalErrorHandler.ts`) recorded it as
+`setupGlobalErrorHandler` (`src/app/globalErrorHandler.ts`) recorded it as
 `app_unhandled_exceptions_total{fatal="true"}` and release builds crashed. An error
 boundary could not catch it: the throw happens inside an event handler, not during
 render.
@@ -109,7 +109,7 @@ path alone.
   cover the deferred value's one-render lag) and its test are gone.
 - `src/components/organisms/ItemList.tsx` — `items` passed directly; the data-reference
   tracker label is now `ItemList.items`.
-- `src/features/shoppingList/hooks/useShoppingListScreen.ts` — the transform output is
+- `src/features/shoppingList/screens/useShoppingListScreen.ts` — the transform output is
   returned as-is. `isLoadingInitial` keeps its `hasRawData` term (its comment explains
   what it still covers); that is a separate clean-up.
 - `DRAW_DISTANCE`'s comment in `pantryDisplay/constants.ts` no longer cites the deferral

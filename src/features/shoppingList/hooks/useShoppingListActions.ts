@@ -1,5 +1,5 @@
+import { requirePlatform } from '#platform/install';
 import { toastService } from '#/services/toastService';
-import { HapticService } from '#services/haptic/HapticService';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
@@ -21,7 +21,7 @@ async function executeTogglePurchase(
   itemId: string,
 ): Promise<void> {
   try {
-    HapticService.selection();
+    requirePlatform('haptics').selection();
     await toggleItem(itemId);
     Telemetry.trackEvent('toggle_item_purchase_success');
   } catch (error) {
@@ -38,7 +38,7 @@ async function executeDeleteItem(
   itemId: string,
 ): Promise<void> {
   try {
-    HapticService.warning();
+    requirePlatform('haptics').warning();
     // A refusal is reported by `removeItem` itself; only a removal that took
     // effect counts as a success.
     if (await removeItem(itemId)) Telemetry.trackEvent('delete_item_success');
@@ -56,14 +56,18 @@ async function executeClearItems(
   purchased: boolean,
 ): Promise<void> {
   try {
-    HapticService.warning();
+    requirePlatform('haptics').warning();
     await clearItems(purchased);
   } catch {
     toastService.error(t('shoppingListScreens.failedToClear'));
   }
 }
 
-/** Sort-order updates are NOT here — `useItemReordering` is the one handler. */
+/**
+ * Sort-order updates are NOT here — `useItemReordering` is the one handler.
+ * Each action fires its own haptic, so every control that runs it gives the
+ * same feedback, and a clear with nothing to remove gives none.
+ */
 export function useShoppingListActions({
   currentListId,
   unpurchasedItems,

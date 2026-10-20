@@ -65,7 +65,7 @@ jest.mock('#features/mealPlan/hooks/useMealPlans', () => ({
   useMealPlanDisplay: jest.fn((id: string | null) => (id ? { id } : null)),
 }));
 
-jest.mock('#features/mealPlan/hooks/useMealPlan', () => ({
+jest.mock('#features/mealPlan/screens/useMealPlan', () => ({
   useMealPlan: jest.fn(() => ({
     mealPlan: null,
     items: [],
@@ -115,7 +115,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplateActions', () => ({
   })),
 }));
 
-jest.mock('#features/mealPlan/hooks/useMealPlanSelectorConfig', () => ({
+jest.mock('#features/mealPlan/screens/useMealPlanSelectorConfig', () => ({
   useMealPlanSelectorConfig: jest.fn(() => ({})),
 }));
 
@@ -577,7 +577,7 @@ describe('MealPlanMain', () => {
     );
 
     const { useMealPlan } = jest.requireMock(
-      '#features/mealPlan/hooks/useMealPlan',
+      '#features/mealPlan/screens/useMealPlan',
     );
     useMealPlan.mockReturnValue({
       mealPlan: { id: 'plan-1', name: 'My Plan' },
@@ -685,7 +685,7 @@ describe('MealPlanMain', () => {
         }),
       );
       const { useMealPlan } = jest.requireMock(
-        '#features/mealPlan/hooks/useMealPlan',
+        '#features/mealPlan/screens/useMealPlan',
       );
       useMealPlan.mockReturnValue({
         mealPlan: { id: 'plan-1', name: 'My Plan' },

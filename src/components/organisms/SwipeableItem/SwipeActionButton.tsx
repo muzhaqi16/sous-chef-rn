@@ -11,7 +11,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { withUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { styles } from '#components/organisms/SwipeableItem/styles';
 import type { ActionButtonProps } from '#components/organisms/SwipeableItem/types';
 import { Text } from '#components/atoms/Text';

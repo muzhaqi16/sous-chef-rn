@@ -9,8 +9,10 @@ import {
   type SuggestibleItemChangesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
-import type { AddItemFormData } from './createItemMapping';
-import type { AddItemFormInitialData } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type {
+  AddItemFormData,
+  AddItemFormInitialData,
+} from './createItemMapping';
 import { refByIdOrName } from '#/utils/refInput';
 
 /**

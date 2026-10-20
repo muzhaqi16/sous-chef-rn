@@ -12,18 +12,18 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
-import { useBarcodeOutput } from '../hooks/useBarcodeOutput';
+import { useBarcodeOutput } from './useBarcodeOutput';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/molecules/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
-import { useHiddenStatusBar } from '#features/barcode/hooks/useHiddenStatusBar';
+import { useHiddenStatusBar } from '#features/barcode/screens/useHiddenStatusBar';
 
 import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 const { height: screenHeight } = Dimensions.get('window');
 

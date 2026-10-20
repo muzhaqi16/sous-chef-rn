@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/atoms/Badge';

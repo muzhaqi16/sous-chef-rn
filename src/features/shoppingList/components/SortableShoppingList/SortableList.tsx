@@ -35,7 +35,7 @@ import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 
 // 2× viewport — wider than one ITEMS_PAGE_SIZE, so an append can mount a whole
 // page in one commit. Read pantryDisplay/constants.ts DRAW_DISTANCE first.
