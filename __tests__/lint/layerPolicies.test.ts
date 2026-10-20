@@ -19,6 +19,7 @@ type Case = {
 
 const VALUE_USE = 'export const y: unknown = x;\n';
 const CORE_FILE = 'src/i18n/featureLocales.ts';
+const MOBILE_FILE = 'src/app/useAppLifecycle.ts';
 
 const CASES: Case[] = [
   {
@@ -74,6 +75,18 @@ const CASES: Case[] = [
     filePath: CORE_FILE,
     code: 'export const y = requestIdleCallback(() => {});\n',
     blocked: true,
+  },
+  ...['fs', 'node:fs', 'crypto', 'node:crypto'].map(builtin => ({
+    label: `Node's ${builtin}, from core`,
+    filePath: CORE_FILE,
+    code: `import * as x from '${builtin}';\n${VALUE_USE}`,
+    blocked: true,
+  })),
+  {
+    label: "Node's node:fs, from mobile",
+    filePath: MOBILE_FILE,
+    code: `import * as x from 'node:fs';\n${VALUE_USE}`,
+    blocked: false,
   },
   {
     label: 'an allowed package, from core',
