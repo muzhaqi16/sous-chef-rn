@@ -19,7 +19,7 @@ import { logger } from '#/utils/environment';
 import { localizedErrorMessage } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
 import { resetPasswordSchema } from '#/utils/validation/auth';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

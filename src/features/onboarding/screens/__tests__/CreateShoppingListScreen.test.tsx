@@ -9,7 +9,7 @@ import { CreateShoppingListScreen } from '../CreateShoppingListScreen';
 
 const mockNavigateToNextStep = jest.fn();
 const mockSkipToStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     skipToStep: mockSkipToStep,

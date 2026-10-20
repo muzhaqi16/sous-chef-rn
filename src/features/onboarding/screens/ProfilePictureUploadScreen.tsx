@@ -15,7 +15,7 @@ import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { useImageUpload } from '#hooks/device/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import { useOnboardingNavigation } from '#features/onboarding/screens/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';

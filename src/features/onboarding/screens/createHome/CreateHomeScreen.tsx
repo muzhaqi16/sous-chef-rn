@@ -39,7 +39,7 @@ import {
 import {
   useOnboardingNavigation,
   type OnboardingStepId,
-} from '#features/onboarding/hooks/useOnboardingNavigation';
+} from '#features/onboarding/screens/useOnboardingNavigation';
 
 import { getCreateHomeSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#/utils/validation/common';

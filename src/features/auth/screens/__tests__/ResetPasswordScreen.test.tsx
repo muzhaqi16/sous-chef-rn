@@ -49,7 +49,7 @@ jest.mock('#store/useAppStore', () => ({
     }),
 }));
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
   }),

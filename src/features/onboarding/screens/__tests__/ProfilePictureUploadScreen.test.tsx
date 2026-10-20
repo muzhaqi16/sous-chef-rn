@@ -14,7 +14,7 @@ type ButtonProps = React.ComponentProps<typeof ButtonComponent>;
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
 const mockSkipToStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     navigateToPreviousStep: mockNavigateToPreviousStep,

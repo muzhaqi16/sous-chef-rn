@@ -17,7 +17,7 @@ import { loginSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { useAppStore, useHasStoredCredentials } from '#store/useAppStore';
 import { useBiometricBackoff } from '../hooks/useBiometricBackoff';
 import { authService } from '#/services/authService';

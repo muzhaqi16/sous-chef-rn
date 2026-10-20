@@ -25,7 +25,7 @@ import { SUPPORTED_LANGUAGES } from '#/i18n/config';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
-import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useAuthPreferences } from '#hooks/auth/useAuthPreferences';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 import { destructiveConfirm } from '#/services/destructiveConfirm';

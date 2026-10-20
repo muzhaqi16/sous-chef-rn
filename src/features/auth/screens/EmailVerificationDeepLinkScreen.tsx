@@ -7,7 +7,7 @@ import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { useUpdateUser, useUser } from '#store/useAppStore';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useVerifyEmail,

@@ -45,7 +45,7 @@ const mockNavigateToForgotPassword = jest.fn();
 const mockNavigateToSignUp = jest.fn();
 const mockNavigateToLogin = jest.fn();
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToForgotPassword: mockNavigateToForgotPassword,
     navigateToSignUp: mockNavigateToSignUp,

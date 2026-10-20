@@ -9,7 +9,7 @@ let mockHasUnverifiedEmail = false;
 
 const mockNavigateToNextStep = jest.fn();
 const mockSkipToStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     setUserNavigationState: jest.fn(),

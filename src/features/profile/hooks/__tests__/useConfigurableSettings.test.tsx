@@ -92,7 +92,7 @@ jest.mock('#features/profile/hooks/useCredentialStorage', () => ({
 
 const mockResetBiometricDeclination = jest.fn();
 const mockMarkBiometricEnabled = jest.fn();
-jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: jest.fn(() => ({
     resetBiometricDeclination: mockResetBiometricDeclination,
     markBiometricEnabled: mockMarkBiometricEnabled,

@@ -18,7 +18,7 @@ import { useTranslation } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnboardingInvites';
 import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import { useOnboardingNavigation } from '#features/onboarding/screens/useOnboardingNavigation';
 import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';

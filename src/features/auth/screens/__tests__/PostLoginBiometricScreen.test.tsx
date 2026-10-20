@@ -76,7 +76,7 @@ jest.mock('#features/auth/hooks/useBiometricPrompting', () => ({
 
 const mockMarkEnabled = jest.fn();
 const mockMarkDeclined = jest.fn();
-jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markBiometricEnabled: mockMarkEnabled,
     markBiometricDeclined: mockMarkDeclined,

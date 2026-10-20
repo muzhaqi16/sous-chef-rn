@@ -11,7 +11,7 @@ type OnBoardingWrapperProps = React.ComponentProps<
 >;
 
 const mockNavigateToNextStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
   }),
@@ -47,7 +47,7 @@ jest.mock('#/services/biometric/deviceCredential', () => ({
   },
 }));
 
-jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markBiometricDeclined: jest.fn(),
     markBiometricEnabled: jest.fn(),

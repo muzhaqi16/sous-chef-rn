@@ -4,7 +4,7 @@ import type { AlertButton } from '#platform/presenters';
 import { useRememberMe } from '../useRememberMe';
 
 const mockMarkCredentialPromptDeclined = jest.fn();
-jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#/hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markCredentialPromptDeclined: mockMarkCredentialPromptDeclined,
   }),

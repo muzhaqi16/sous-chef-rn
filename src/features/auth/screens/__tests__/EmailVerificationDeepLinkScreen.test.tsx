@@ -15,7 +15,7 @@ const mockUpdateUser = jest.fn();
 const mockNavigateToLogin = jest.fn();
 const mockReplaceWithLogin = jest.fn();
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
     replaceWithLogin: mockReplaceWithLogin,
