@@ -1,12 +1,16 @@
 /**
- * A host's session steps are its own additions: one that fails is logged, and
+ * A host's session steps are its own additions: one that fails is reported, and
  * the core still opens the session the server issued, and still ends one on
  * sign-out. `logout()` is the only sign-out, so nothing a host does may keep a
  * person signed in.
  */
 import { createApolloClient } from '#/apollo/client';
-import { registerSessionHost } from '#/services/auth/sessionHost';
+import {
+  registerSessionHost,
+  type SessionHost,
+} from '#/services/auth/sessionHost';
 import { authService } from '#/services/authService';
+import { errorService } from '#/services/errorService';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { useStore } from '#store';
 
@@ -31,6 +35,35 @@ const ACCESS_TOKEN = [
   'signature',
 ].join('.');
 
+const fail = (step: string): Error => new Error(`${step} failed`);
+
+const HOSTS: [string, SessionHost][] = [
+  [
+    'fail later',
+    {
+      afterSignIn: () => {
+        throw fail('afterSignIn');
+      },
+      postSignInGate: () => Promise.reject(fail('postSignInGate')),
+      forgetStoredSignIn: () => Promise.reject(fail('forgetStoredSignIn')),
+    },
+  ],
+  [
+    'throw as they are called',
+    {
+      afterSignIn: () => {
+        throw fail('afterSignIn');
+      },
+      postSignInGate: () => {
+        throw fail('postSignInGate');
+      },
+      forgetStoredSignIn: () => {
+        throw fail('forgetStoredSignIn');
+      },
+    },
+  ],
+];
+
 const realFetch = globalThis.fetch;
 
 beforeAll(() => {
@@ -38,36 +71,53 @@ beforeAll(() => {
     Promise.reject(new TypeError('Network request failed')),
   );
   createApolloClient();
-  registerSessionHost({
-    afterSignIn: () => {},
-    postSignInGate: () => Promise.reject(new Error('gate unavailable')),
-    forgetStoredSignIn: () => Promise.reject(new Error('keychain locked')),
-  });
 });
 
 afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
-it('opens the session when the post-sign-in gate fails', async () => {
-  await authService.handleLogin(
-    { user: USER, accessToken: ACCESS_TOKEN, refreshToken: 'refresh-token' },
-    undefined,
-    { email: EMAIL },
-  );
+const reportedSteps = (report: jest.SpyInstance): unknown[] =>
+  report.mock.calls.map(([, context]) => (context as { operation: string }).operation);
 
-  const state = useStore.getState();
-  expect(state.user?.id).toBe(USER.id);
-  expect(state.accessToken).toBe(ACCESS_TOKEN);
-});
+describe.each(HOSTS)('a host whose steps %s', (_, host) => {
+  let report: jest.SpyInstance;
 
-it('signs out when forgetting the stored sign-in fails', async () => {
-  useStore.getState().setAuth(USER, ACCESS_TOKEN, 'refresh-token');
+  beforeEach(() => {
+    registerSessionHost(host);
+    report = jest.spyOn(errorService, 'reportError').mockImplementation(() => {});
+  });
 
-  await authService.logout();
+  afterEach(() => {
+    report.mockRestore();
+  });
 
-  const state = useStore.getState();
-  expect(state.user).toBeNull();
-  expect(state.accessToken).toBeNull();
-  expect(state.navigationState).toBe('auth');
+  it('opens the session the server issued and routes into the app', async () => {
+    await authService.handleLogin(
+      { user: USER, accessToken: ACCESS_TOKEN, refreshToken: 'refresh-token' },
+      undefined,
+      { email: EMAIL },
+    );
+
+    const state = useStore.getState();
+    expect(state.user?.id).toBe(USER.id);
+    expect(state.accessToken).toBe(ACCESS_TOKEN);
+    expect(state.navigationState).toBe('main_app');
+    expect(reportedSteps(report)).toEqual([
+      'sessionHost.postSignInGate',
+      'sessionHost.afterSignIn',
+    ]);
+  });
+
+  it('signs out', async () => {
+    useStore.getState().setAuth(USER, ACCESS_TOKEN, 'refresh-token');
+
+    await authService.logout();
+
+    const state = useStore.getState();
+    expect(state.user).toBeNull();
+    expect(state.accessToken).toBeNull();
+    expect(state.navigationState).toBe('auth');
+    expect(reportedSteps(report)).toEqual(['sessionHost.forgetStoredSignIn']);
+  });
 });

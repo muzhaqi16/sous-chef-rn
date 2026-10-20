@@ -1,4 +1,5 @@
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
+import { errorService } from '#/services/errorService';
 
 /** What follows a password sign-in before the app opens, if anything. */
 export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
@@ -24,17 +25,60 @@ export interface SessionHost {
   forgetStoredSignIn(email: string): Promise<void>;
 }
 
+/** What each step settles to when it fails: the session goes on without it. */
 const NO_HOST_STEPS: SessionHost = {
   afterSignIn: () => {},
   postSignInGate: () => Promise.resolve(null),
   forgetStoredSignIn: () => Promise.resolve(),
 };
 
+const reportStep = (step: keyof SessionHost, error: unknown): void => {
+  errorService.reportError(error, { operation: `sessionHost.${step}` });
+};
+
+// The executor runs synchronously, so a step that throws as it is called
+// rejects here too; a bare `.catch` only sees a step that rejects later.
+const settleStep = <T>(
+  step: keyof SessionHost,
+  run: () => Promise<T>,
+  fallback: () => Promise<T>,
+): Promise<T> =>
+  new Promise<T>(resolve => resolve(run())).catch((error: unknown) => {
+    reportStep(step, error);
+    return fallback();
+  });
+
+const guarded = (steps: SessionHost): SessionHost => ({
+  afterSignIn: () => {
+    try {
+      steps.afterSignIn();
+    } catch (error) {
+      reportStep('afterSignIn', error);
+    }
+  },
+  postSignInGate: (user, email, offerRememberMe) =>
+    settleStep(
+      'postSignInGate',
+      () => steps.postSignInGate(user, email, offerRememberMe),
+      () => NO_HOST_STEPS.postSignInGate(user, email, offerRememberMe),
+    ),
+  forgetStoredSignIn: email =>
+    settleStep(
+      'forgetStoredSignIn',
+      () => steps.forgetStoredSignIn(email),
+      () => NO_HOST_STEPS.forgetStoredSignIn(email),
+    ),
+});
+
 let host: SessionHost = NO_HOST_STEPS;
 
-/** Called once by the host's composition root, before the first sign-in. */
+/**
+ * Called once by the host's composition root, before the first sign-in. A step
+ * that fails is reported and settles as a host without it would, so no host can
+ * strand a sign-in or keep a person signed in.
+ */
 export const registerSessionHost = (steps: SessionHost): void => {
-  host = steps;
+  host = guarded(steps);
 };
 
 export const sessionHost = (): SessionHost => host;
