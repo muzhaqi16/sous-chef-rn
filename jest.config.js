@@ -1,3 +1,4 @@
+const path = require('path');
 const { jestModuleNameMapper } = require('./scripts/lib/aliases');
 const { dependenciesOutsideCore } = require('./scripts/lib/layers');
 const { dependencies } = require('./package.json');
@@ -113,6 +114,18 @@ const corePortability = {
   roots: ['<rootDir>/__tests__/core-portability'],
   testMatch: ['<rootDir>/__tests__/core-portability/**/*.test.ts'],
   globals: { __DEV__: true },
+  // Its own transform, not the app's: the app's runs React Native's preset.
+  transform: {
+    '\\.[jt]sx?$': [
+      'babel-jest',
+      {
+        configFile: path.join(
+          __dirname,
+          '__tests__/core-portability/babel.config.js',
+        ),
+      },
+    ],
+  },
   setupFiles: ['<rootDir>/__tests__/core-portability/setup.js'],
   moduleNameMapper: {
     ...jestModuleNameMapper(),

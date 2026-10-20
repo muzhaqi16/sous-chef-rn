@@ -154,8 +154,11 @@ it('adds a recipe to a plan and removes it, with no React Native', async () => {
     cache,
   });
 
+  let renderer: ReturnType<typeof create> | undefined;
   await act(async () => {
-    create(createElement(Wrapper, null, createElement(PlannerProbe)));
+    renderer = create(
+      createElement(Wrapper, null, createElement(PlannerProbe)),
+    );
   });
   await until(() => current().add.hasPlan);
 
@@ -192,4 +195,9 @@ it('adds a recipe to a plan and removes it, with no React Native', async () => {
   expect(removedOk).toBe(true);
   expect(removed.fired).toEqual([{ input: { id: mealId } }]);
   expect(planMeals(cache)).toEqual([]);
+
+  // A mounted hook keeps its timers, such as the midnight rollover.
+  await act(async () => {
+    renderer?.unmount();
+  });
 });
