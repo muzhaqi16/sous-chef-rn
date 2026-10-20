@@ -99,6 +99,8 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     'react-native-unistyles/reanimated#useAnimatedTheme',
   ],
   'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
+  // The composition root installs the device's key-value store as the port.
+  'src/app/installNativePlatform.ts': ['#native/storage/keyValueStore#*'],
   // Device storage's writers.
   'src/apollo/**/*.{ts,tsx}': [
     '#store/deviceStorage#*',

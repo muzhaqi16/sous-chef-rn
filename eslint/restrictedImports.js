@@ -17,6 +17,14 @@ const RESTRICTED_IMPORT_PATHS = [
     name: '#/store/deviceStorage',
     message: MMKV_MESSAGE,
   },
+  // The raw MMKV instance and its adapter: only the composition root installs
+  // them, as the key-value store port that `#store/deviceStorage` reads.
+  ...[
+    '#native/storage/mmkv',
+    '#/native/storage/mmkv',
+    '#native/storage/keyValueStore',
+    '#/native/storage/keyValueStore',
+  ].map(name => ({ name, message: MMKV_MESSAGE })),
   // The raw scroller gives a sheet the keyboard offset but NOT the input
   // context, so its inputs resolve to React Native's `TextInput`. Only the
   // wrapper itself may import it (allowed in its own override).

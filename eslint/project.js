@@ -757,6 +757,15 @@ const overrides = [
     },
   },
   {
+    // The composition root installs the device's key-value store as the port.
+    files: ['src/app/installNativePlatform.ts'],
+    rules: {
+      'no-restricted-imports': restrictedImports({
+        allow: { '#native/storage/keyValueStore': true },
+      }),
+    },
+  },
+  {
     // The sheet machinery IS the guarded path the `present()` / `dismiss()` ban
     // points callers at. FolderPicker hands off between two STACKED sheets in
     // an order a `visible` boolean cannot express.
