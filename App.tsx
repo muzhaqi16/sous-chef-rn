@@ -8,10 +8,9 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { useIsHydrated } from '#store/useAppStore';
-import { restorePersistedCache } from '#/apollo/client';
 import { client } from '#/app/apolloClient';
-import { connectResyncSources } from '#/apollo/refetchEvents';
+import { startCore } from '#bootstrap/startCore';
+import { useCoreReady } from '#bootstrap/useCoreReady';
 import { Navigation } from '#navigation/RootNavigator';
 import { navigationRef } from '#services/NavigationService';
 import { SplashScreen } from '#screens/SplashScreen';
@@ -22,10 +21,10 @@ import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#/app/useAppLifecycle';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
-import { DataProvider } from '#/app/providers/DataProvider';
+import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
-import { SubscriptionProvider } from '#/app/providers/SubscriptionProvider';
+import { CoreSubscriptionProvider } from '#bootstrap/CoreSubscriptionProvider';
 import {
   OverlayBackdropProvider,
   GlobalBackdrop,
@@ -51,28 +50,22 @@ setPushTokenProvider(
 // device beyond the core. Before the first sign-in, which this module precedes.
 registerMobileSessionHost();
 
-// Foreground, API-reachable, socket-reconnect and language triggers for the
-// client's resync (`src/apollo/refetchEvents.ts`); navigation paces the
-// language catch-up.
-connectResyncSources(client, {
+// The core's start: its persisted stores and the client's resync triggers
+// (`src/apollo/refetchEvents.ts`); navigation paces the language catch-up.
+startCore({
+  client,
   onNavigation: listener => navigationRef.addListener('state', listener),
 });
 
 const App = () => {
-  const isHydrated = useIsHydrated();
+  // Restores the persisted cache once storage is ready, before ApolloProvider
+  // below mounts and any query runs.
+  const isReady = useCoreReady();
   useAppLifecycle();
 
-  if (!isHydrated) {
+  if (!isReady) {
     return <SplashScreen />;
   }
-
-  // Restore the persisted Apollo cache here, not in initializeClient(): that
-  // runs at module import, before the async keychain-backed storage init has
-  // resolved, so it always found storage unready and restored nothing. This is
-  // the first point where storage is guaranteed ready AND ApolloProvider has
-  // not mounted yet — `cache.restore()` replaces cache contents wholesale, so
-  // it must land before any query runs. Idempotent; safe on every render.
-  restorePersistedCache();
 
   return (
     <AppErrorBoundary>
@@ -83,8 +76,8 @@ const App = () => {
             {/* Which named form fields exist is an app decision, not the form
                 renderer's — see `#components/molecules/fieldRenderers`. */}
             <FieldRendererProvider renderers={catalogFieldRenderers}>
-              <DataProvider>
-                <SubscriptionProvider>
+              <CoreDataProvider>
+                <CoreSubscriptionProvider>
                   <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                     <OverlayBackdropProvider>
                       <BottomSheetModalProvider>
@@ -119,8 +112,8 @@ const App = () => {
                       </BottomSheetModalProvider>
                     </OverlayBackdropProvider>
                   </SafeAreaProvider>
-                </SubscriptionProvider>
-              </DataProvider>
+                </CoreSubscriptionProvider>
+              </CoreDataProvider>
             </FieldRendererProvider>
           </ApolloProvider>
         </KeyboardProvider>

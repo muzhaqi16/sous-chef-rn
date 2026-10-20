@@ -150,7 +150,7 @@ const removeCollaborator = createRemoveFromParentConnectionUpdater(
 );
 
 /**
- * Mounted once at app level, by `SubscriptionProvider`. Another device's change
+ * Mounted once at app level, by `CoreSubscriptionProvider`. Another device's change
  * is written as it arrives; this device's own writes are skipped as echoes.
  */
 export function useShoppingListSubscriptions(userId?: string) {

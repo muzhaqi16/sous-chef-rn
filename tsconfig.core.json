@@ -26,6 +26,7 @@
   "include": [
     "src/platform/**/*",
     "src/apollo/**/*",
+    "src/bootstrap/**/*",
     "src/domain/**/*",
     "src/graphql/**/*",
     "src/i18n/**/*",

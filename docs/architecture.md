@@ -61,6 +61,7 @@ Every production file in `src/` belongs to one of two layers:
 | --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | platform              | core   | `platform/**`                                                                                                                  |
 | apollo                | core   | `apollo/**`                                                                                                                    |
+| bootstrap             | core   | `bootstrap/**`                                                                                                                 |
 | domain                | core   | `domain/**`                                                                                                                    |
 | graphql               | core   | `graphql/**`                                                                                                                   |
 | i18n                  | core   | `i18n/**`                                                                                                                      |
@@ -306,14 +307,17 @@ With the flag off, the feature does what it did before the capability existed. T
 `src/native/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
 service name, so changing one on a shipped app signs every user out silently.
 
-`src/app/` is the composition root: the modules whose whole job is to know which
-features exist — the provider that mounts each feature's subscriptions, the
-offline tab preloader — and the ones that assemble the host: the platform
-install, the Apollo client built over the native socket (`apolloClient.ts`),
-the session steps this device adds (`mobileSessionHost.ts`), and the startup
-bootstrap (`useStartupInit`). They are not reusable and a
-sibling app writes its own, so they sit outside the kit rather than being
-excused from its rule.
+`src/app/` is the composition root: the modules that assemble the mobile host —
+the platform install, the Apollo client built over the native socket
+(`apolloClient.ts`), and the session and start-up steps this device adds
+(`mobileSessionHost.ts`, `mobileStartupHost.ts`). What every host runs to start
+the core is `src/bootstrap/`, a core folder: `startCore` (the persisted stores
+and the client's resync sources), `useCoreReady` (the cache restored before the
+first query), `useCoreLifecycle` (the lifecycle hooks and the start-up sequence,
+around a `StartupHost`), and the providers that warm each feature's data and
+mount its subscriptions. Both know which features exist, so they sit outside
+the kit rather than being excused from its rule; a sibling host reuses the
+bootstrap and writes its own `src/app/`.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
 app reuses wholesale. It does not import `#features/…` (a

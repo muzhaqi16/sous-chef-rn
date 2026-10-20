@@ -22,7 +22,7 @@ export function useOnlineQueueSync(): void {
   const hasAccessToken = useAppStore(state => !!state.accessToken);
   const accessToken = useAppStore(state => state.accessToken);
 
-  // The permanent-failure handler is registered by `useStartupInit`, not here —
+  // The permanent-failure handler is registered by `useCoreStartup`, not here —
   // `setFailureHandler` is last-write-wins and one owner is the whole point.
 
   useEffect(() => {

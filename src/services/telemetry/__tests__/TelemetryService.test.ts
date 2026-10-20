@@ -129,7 +129,7 @@ describe('TelemetryService', () => {
       // that read inside the very window `app_startup_duration_ms` and
       // `app_fully_drawn_ms` measure, on real devices only, biasing the
       // comparison the label exists to enable. `app_starts_total` now comes
-      // from `useStartupInit`'s idle callback instead.
+      // from `useCoreStartup`'s idle callback instead.
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,

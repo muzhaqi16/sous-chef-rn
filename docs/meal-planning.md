@@ -84,7 +84,7 @@ model in `utils/homeLinkedPermissions.ts`: the owner is `plan.user` (not
 | `useMealTemplateEditor`                                           | Builder writes: create/update template, add/update/remove template items                                               |
 | `useMealPlanPermissions`                                          | `canEdit`, `canDelete`, `canDuplicate`, `canGenerateShoppingList`, `canSaveAsTemplate`                                 |
 | `useMealPlanSelectorConfig`                                       | Config for the plan selector (rows, create / from template / new template actions)                                     |
-| `useMealPlanSubscriptions`                                        | `MealPlanEvents` for the selected home; mounted in `src/app/providers/AuthenticatedSubscriptions.tsx`                  |
+| `useMealPlanSubscriptions`                                        | `MealPlanEvents` for the selected home; mounted in `src/bootstrap/AuthenticatedSubscriptions.tsx`                  |
 
 ## GraphQL
 

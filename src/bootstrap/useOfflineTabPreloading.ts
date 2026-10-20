@@ -5,6 +5,7 @@ import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/sho
 import { SHOPPING_LISTS_PAGE_SIZE } from '#features/shoppingList/hooks/useShoppingListsQuery';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 import {
   useAppStore,
   useIsOnline,
@@ -98,12 +99,10 @@ export function useOfflineTabPreloading(): void {
     if (!isOnline || !isReady || warmedRef.current) return;
     warmedRef.current = true;
 
-    const handle = requestIdleCallback(() => {
+    return scheduleIdle(() => {
       warmTabQueries(client).catch(() => {
         warmedRef.current = false;
       });
     });
-
-    return () => cancelIdleCallback(handle);
   }, [client, isOnline, isReady]);
 }

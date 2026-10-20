@@ -62,7 +62,7 @@ export const Environment = {
   //
   // Defaulting to `false` here would invert the thing this mock stands in for.
   // `Environment` is auto-mocked globally, so any suite rendering
-  // `useStartupInit` without an explicit override would never enter
+  // the start-up without an explicit override would never enter
   // `injectDetoxLaunchArgs` at all, and a regression inside it — a renamed
   // launch arg, a parse change, a throw — would pass CI untouched. That is the
   // class of failure behind commit deaf9d4c. A suite that wants the capability
