@@ -47,7 +47,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 }));
 
 // Mirrors what the real hook emits: `key` is the config section's stable id.
-jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
+jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
   useConfigurableSettings: () => ({
     sections: [
       {

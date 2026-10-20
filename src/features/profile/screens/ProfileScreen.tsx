@@ -11,7 +11,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ProfileHero } from '#features/profile/components/ProfileHero';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
-import { useConfigurableSettings } from '#features/profile/hooks/useConfigurableSettings';
+import { useConfigurableSettings } from '#features/profile/screens/useConfigurableSettings';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';

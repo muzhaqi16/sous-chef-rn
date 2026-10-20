@@ -10,7 +10,7 @@ import {
 } from '#store/useAppStore';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
-import { useCredentialStorage } from '#features/profile/hooks/useCredentialStorage';
+import { removeCredentials } from '#/services/biometric/credentials';
 import { useMutation } from '@apollo/client/react';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import type { UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
@@ -58,8 +58,7 @@ export const useConfigurableSettings = () => {
     options: currencyOptions,
     selectCurrency,
   } = useCurrencyPreference();
-  const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
-    useCredentialStorage();
+  const { checkStoredCredentials, getBiometricInfo } = biometricService;
   const { resetBiometricDeclination, markBiometricEnabled } =
     useAuthPreferences();
   // No optimistic response — UserSettings has many required fields that are

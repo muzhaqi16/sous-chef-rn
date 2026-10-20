@@ -41,7 +41,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
   }),
 }));
 
-jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
+jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
   useConfigurableSettings: () => ({
     sections: [
       {

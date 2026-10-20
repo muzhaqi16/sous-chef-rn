@@ -38,7 +38,13 @@ jest.mock('#/services/authService', () => ({
 jest.mock('#/services/biometric/deviceCredential', () => ({
   biometricService: {
     revokeDeviceCredentialForThisDevice: () => mockRevokeDeviceCredential(),
+    checkStoredCredentials: (email?: string | null) =>
+      mockCheckStoredCredentials(email),
+    getBiometricInfo: () => mockGetBiometricInfo(),
   },
+}));
+jest.mock('#/services/biometric/credentials', () => ({
+  removeCredentials: (email?: string) => mockRemoveCredentials(email),
 }));
 
 const mockGetUserNavigationState = jest.fn(
@@ -81,14 +87,6 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
   biometryType: null,
 });
 const mockRemoveCredentials = jest.fn();
-
-jest.mock('#features/profile/hooks/useCredentialStorage', () => ({
-  useCredentialStorage: jest.fn(() => ({
-    checkStoredCredentials: mockCheckStoredCredentials,
-    getBiometricInfo: mockGetBiometricInfo,
-    removeCredentials: mockRemoveCredentials,
-  })),
-}));
 
 const mockResetBiometricDeclination = jest.fn();
 const mockMarkBiometricEnabled = jest.fn();
