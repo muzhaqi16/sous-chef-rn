@@ -24,7 +24,7 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import type { useShoppingListScreen } from '#features/shoppingList/hooks/useShoppingListScreen';
 import { useShoppingListActions } from '#features/shoppingList/hooks/useShoppingListActions';
 import { useBatchMoveToPantry } from '#features/shoppingList/hooks/useBatchMoveToPantry';
-import { useShoppingListSelectorModal } from '#features/shoppingList/hooks/useShoppingListSelectorModal';
+import { useShoppingListSelectorModal } from '#features/shoppingList/components/useShoppingListSelectorModal';
 import { useItemReordering } from '#features/shoppingList/hooks/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import {

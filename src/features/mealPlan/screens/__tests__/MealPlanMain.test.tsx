@@ -115,7 +115,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplateActions', () => ({
   })),
 }));
 
-jest.mock('#features/mealPlan/hooks/useMealPlanSelectorConfig', () => ({
+jest.mock('#features/mealPlan/screens/useMealPlanSelectorConfig', () => ({
   useMealPlanSelectorConfig: jest.fn(() => ({})),
 }));
 

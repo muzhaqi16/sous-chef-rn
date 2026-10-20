@@ -15,7 +15,7 @@ import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/S
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
-import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingListSelectorModal';
+import * as selectorModalModule from '#features/shoppingList/components/useShoppingListSelectorModal';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { BarAction } from '#components/molecules/BarActions';
 import { useStore } from '#store';
@@ -64,15 +64,18 @@ jest.mock('#features/shoppingList/hooks/useBatchMoveToPantry', () => ({
   })),
 }));
 
-jest.mock('#features/shoppingList/hooks/useShoppingListSelectorModal', () => ({
-  useShoppingListSelectorModal: jest.fn(() => ({
-    selectorRef: { current: null },
-    listConfig: {},
-    handleOpenSelector: jest.fn(),
-    handleOverlayOpen: jest.fn(),
-    handleOverlayClose: jest.fn(),
-  })),
-}));
+jest.mock(
+  '#features/shoppingList/components/useShoppingListSelectorModal',
+  () => ({
+    useShoppingListSelectorModal: jest.fn(() => ({
+      selectorRef: { current: null },
+      listConfig: {},
+      handleOpenSelector: jest.fn(),
+      handleOverlayOpen: jest.fn(),
+      handleOverlayClose: jest.fn(),
+    })),
+  }),
+);
 
 jest.mock('#features/shoppingList/hooks/useItemReordering', () => ({
   useItemReordering: jest.fn(() => ({
@@ -525,7 +528,7 @@ describe('ShoppingListMainContent', () => {
         .spyOn(selectorModalModule, 'useShoppingListSelectorModal')
         .mockImplementation(
           jest.requireActual(
-            '#features/shoppingList/hooks/useShoppingListSelectorModal',
+            '#features/shoppingList/components/useShoppingListSelectorModal',
           ).useShoppingListSelectorModal,
         );
       const user = userEvent.setup();

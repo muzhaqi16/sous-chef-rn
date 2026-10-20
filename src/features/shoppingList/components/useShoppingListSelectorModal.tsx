@@ -20,7 +20,7 @@ import type {
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
 import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
-import type { ShoppingListFromQuery } from './useShoppingListsQuery';
+import type { ShoppingListFromQuery } from '../hooks/useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 import type { BarAction } from '#components/molecules/BarActions';
 import { firstNonBlank } from '#/utils/firstNonBlank';

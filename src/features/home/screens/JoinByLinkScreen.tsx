@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { ErrorState } from '#components/molecules/ErrorState';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { useResolveShareLink } from '#features/home/hooks/useResolveShareLink';
+import { useResolveShareLink } from '#features/home/screens/useResolveShareLink';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { SubScreen } from '#components/templates/SubScreen';

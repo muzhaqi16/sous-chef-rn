@@ -29,7 +29,7 @@ import { usePantrySorting } from './hooks/usePantrySorting';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { usePantryImagePreload } from '#features/pantry/hooks/usePantryImagePreload';
+import { usePantryImagePreload } from '#features/pantry/components/usePantryImagePreload';
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';

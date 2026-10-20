@@ -38,7 +38,7 @@ jest.mock('#features/home/hooks/useHomeManagement', () => ({
   })),
 }));
 
-jest.mock('#features/home/hooks/useInviteUserModal', () => ({
+jest.mock('#features/home/screens/useInviteUserModal', () => ({
   useInviteUserModal: jest.fn(() => ({
     show: jest.fn(),
     InviteModalComponent: null,

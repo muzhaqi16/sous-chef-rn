@@ -19,7 +19,7 @@ import { Text } from '#components/atoms/Text';
 import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
 import { stockAmountOf } from '#domain/stockAmount';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
-import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
+import { useMoveToPantryItem } from '#features/shoppingList/components/moveToPantry/useMoveToPantryItem';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { PantrySelector } from './PantrySelector';
 import { StorageStateControl } from './StorageStateControl';

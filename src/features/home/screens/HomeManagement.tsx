@@ -14,7 +14,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useInviteUserModal } from '#features/home/hooks/useInviteUserModal';
+import { useInviteUserModal } from '#features/home/screens/useInviteUserModal';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { toastService } from '#/services/toastService';

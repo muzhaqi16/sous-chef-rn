@@ -21,7 +21,7 @@ import {
 } from '#/utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
-import { usePantryActionItem } from '#features/pantry/hooks/usePantryActionItem';
+import { usePantryActionItem } from '#features/pantry/components/modals/usePantryActionItem';
 import { shownStock } from '#domain/stockDisplay';
 
 /** An amount and the unit it reads in: "11 pc", "2 doz". */

@@ -24,7 +24,7 @@ import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
-import { useAddToMealPlanSheet } from '#features/mealPlan/hooks/useAddToMealPlanSheet';
+import { useAddToMealPlanSheet } from '#features/mealPlan/ui/useAddToMealPlanSheet';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';

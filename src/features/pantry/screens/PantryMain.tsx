@@ -12,7 +12,7 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { StyleSheet } from 'react-native-unistyles';
-import { usePantrySelectorConfig } from '#features/pantry/hooks/usePantrySelectorConfig';
+import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
 import { useScannerSetup } from '#features/barcode/screens/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {

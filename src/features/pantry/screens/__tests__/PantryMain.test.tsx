@@ -151,7 +151,7 @@ jest.mock('#features/pantry/context/PantryModalsContext', () => ({
 }));
 
 // --- Pantry hooks still used directly by PantryMainInner ---
-jest.mock('#features/pantry/hooks/usePantrySelectorConfig', () => ({
+jest.mock('#features/pantry/screens/usePantrySelectorConfig', () => ({
   usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
 }));
 

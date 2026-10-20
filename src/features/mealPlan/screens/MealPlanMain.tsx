@@ -36,7 +36,7 @@ import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItem
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
-import { useMealPlanSelectorConfig } from '#features/mealPlan/hooks/useMealPlanSelectorConfig';
+import { useMealPlanSelectorConfig } from '#features/mealPlan/screens/useMealPlanSelectorConfig';
 import { MealPlanFilterBar } from '#features/mealPlan/components/MealPlanFilterBar';
 import {
   EMPTY_MEAL_PLAN_FILTERS,
