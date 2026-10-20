@@ -136,8 +136,11 @@ export interface ReceiptDraft {
   /** Lines already in the pantry, so a retry sends only what failed. */
   added?: number[];
   checkIn?: ReceiptCheckIn;
-  /** Why each line the API refused failed, by line index. */
-  failed?: Partial<Record<number, ErrorCode>>;
+  /**
+   * Why each line the API refused failed, by line index: null for a code this
+   * build does not know, or none.
+   */
+  failed?: Partial<Record<number, ErrorCode | null>>;
 }
 
 interface ReceiptDraftState {
@@ -145,6 +148,8 @@ interface ReceiptDraftState {
   saveDraft: (draft: ReceiptDraft) => void;
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
+  /** Lines shown, then taken back without being sent: left to add, not failed. */
+  markUnsent: (indexes: readonly number[]) => void;
   /** Keeps every id already minted. */
   ensureCheckInIds: (indexes: readonly number[], sends: number) => void;
   setCheckInState: (state: ReceiptCheckIn['state']) => void;
@@ -228,6 +233,10 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
             added: [...new Set([...(added ?? []), ...indexes])],
             failed: withoutIndexes(failed, indexes),
           })),
+        markUnsent: indexes =>
+          patchDraft(({ added }) => ({
+            added: (added ?? []).filter(index => !indexes.includes(index)),
+          })),
         ensureCheckInIds: (indexes, sends) =>
           patchDraft(({ checkIn }) => ({
             checkIn: withCheckInIds(checkIn, indexes, sends),
@@ -253,11 +262,11 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
                   .map(result => result.index),
               ]),
             ].filter(index => !refused.has(index));
-            const failed: Partial<Record<number, ErrorCode>> = {};
+            const failed: Partial<Record<number, ErrorCode | null>> = {};
             for (const { index, success, failure } of results) {
-              if (!success && failure && isErrorCode(failure.code)) {
-                failed[index] = failure.code;
-              }
+              if (success) continue;
+              failed[index] =
+                failure && isErrorCode(failure.code) ? failure.code : null;
             }
             const stillFailed = {
               ...withoutIndexes(draft.failed, added),

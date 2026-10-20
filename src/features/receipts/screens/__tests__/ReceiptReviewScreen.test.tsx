@@ -20,6 +20,7 @@ let mockRows: ReceiptReviewRow[] = [];
 let mockStoreOffer: { id: string; name: string } | null = null;
 const mockChooseStore = jest.fn();
 const mockAddChosen = jest.fn<Promise<{ sent: number; held: number }>, []>();
+const mockFinish = jest.fn();
 jest.mock('../../hooks/useReceiptReview', () => ({
   useReceiptReview: () => ({
     rows: mockRows,
@@ -44,7 +45,8 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     listItemNameFor: () => undefined,
     pickItem: jest.fn(),
     addChosen: mockAddChosen,
-    finish: jest.fn(),
+    // A new function each render, as a hook closing over the draft returns.
+    finish: () => mockFinish(),
   }),
 }));
 
@@ -129,6 +131,22 @@ describe('ReceiptReviewScreen Add', () => {
       'Added 2 items to Kitchen Pantry',
     );
     expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the receipt once, when the review is gone, however often it changes while open', async () => {
+    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+    // The check-in settling, then queueing, re-renders the closing review.
+    screen.rerender(<ReceiptReviewScreen />);
+    screen.rerender(<ReceiptReviewScreen />);
+
+    expect(mockFinish).not.toHaveBeenCalled();
+    screen.unmount();
+    expect(mockFinish).toHaveBeenCalledTimes(1);
   });
 
   it('stays on the review while a line still lacks something', async () => {

@@ -8,9 +8,11 @@ import {
   applyMoveToPantryCacheUpdate,
   revertLocalMove,
 } from '#features/shoppingList/cache/localMove';
+import { unstampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
+import { forgetReceipt } from '../../utils/forgetReceipt';
 import {
   applyReceiptCheckIn,
   reconcileReceiptCheckInReplay,
@@ -20,19 +22,20 @@ import {
 
 jest.mock('#features/pantry/cache/items');
 jest.mock('#features/shoppingList/cache/localMove');
+jest.mock('#features/shoppingList/cache/moveToPantry');
 jest.mock('#features/shoppingList/cache/purchase');
+jest.mock('../../utils/forgetReceipt');
 
 const cache = new InMemoryCache();
 
 const INPUT = {
   id: 'checkin-1',
   pantryId: 'pantry-1',
-  shoppingListId: 'list-1',
   lines: [
-    { pantryItemId: 'pi-0' },
-    { pantryItemId: 'pi-1', shoppingListItemId: 'line-eggs' },
-    { pantryItemId: 'pi-2' },
-    {},
+    { clientId: '0', pantryItemId: 'pi-0' },
+    { clientId: '1', pantryItemId: 'pi-1', shoppingListItemId: 'line-eggs' },
+    { clientId: '2', pantryItemId: 'pi-2' },
+    { clientId: '3' },
   ],
 };
 
@@ -71,20 +74,46 @@ describe('applyReceiptCheckIn', () => {
     ]);
   });
 
-  it('settles a listed line as a move that keeps it on the list', () => {
+  it("settles a listed line's stack alone: the answer states its list line", () => {
     applyReceiptCheckIn(cache, INPUT, [
       { index: 1, success: true, pantryItem: { id: 'pi-1' } },
     ]);
 
-    expect(applyMoveToPantryCacheUpdate).toHaveBeenCalledWith(cache, {
-      pantryId: 'pantry-1',
-      shoppingListItemId: 'line-eggs',
-      removeFromList: false,
-      currentListId: 'list-1',
-      pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-      clientId: 'pi-1',
-    });
-    expect(reconcileCreatedPantryItem).not.toHaveBeenCalled();
+    expect(reconcileCreatedPantryItem).toHaveBeenCalledWith(
+      cache,
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'pi-1' },
+      'pi-1',
+    );
+    expect(applyMoveToPantryCacheUpdate).not.toHaveBeenCalled();
+  });
+
+  it('unticks the list line of a refused line kept out of the pantry, exactly', () => {
+    const stamp = {
+      listId: 'list-1',
+      itemId: 'line-towels',
+      wasPurchased: false,
+      previousMovedToPantryAt: null,
+      counterChange: undefined,
+    };
+    jest.mocked(unstampItemKeptOnListAfterMoveToPantry).mockReturnValue(true);
+
+    const { exact } = applyReceiptCheckIn(
+      cache,
+      {
+        ...INPUT,
+        lines: [{ clientId: '4', shoppingListItemId: 'line-towels' }],
+      },
+      [{ index: 0, success: false, failure: { code: 'FORBIDDEN' } }],
+      new Map([[0, { kind: 'tick' as const, written: stamp }]]),
+    );
+
+    expect(unstampItemKeptOnListAfterMoveToPantry).toHaveBeenCalledWith(
+      cache,
+      stamp,
+    );
+    expect(writePurchaseInfo).not.toHaveBeenCalled();
+    expect(exact).toBe(true);
   });
 
   it('withdraws only the refused line, exactly, from what it wrote', () => {
@@ -204,6 +233,60 @@ describe('a queued check-in', () => {
     expect(draft?.checkIn?.state).toBe('idle');
   });
 
+  it('settles the receipt lines it sent, not their places in the send', () => {
+    useReceiptDraftStore.getState().ensureCheckInIds([3, 7, 9], 1);
+    const lines = [3, 7, 9].map(index => ({
+      clientId: String(index),
+      pantryItemId: `pi-${index}`,
+    }));
+
+    reconcileReceiptCheckInReplay(
+      cache,
+      { input: { ...queuedInput(), lines } },
+      {
+        createReceiptCheckIn: {
+          __typename: 'CreateReceiptCheckInPayload',
+          results: [
+            { index: 0, success: true, pantryItem: { id: 'pi-3' } },
+            {
+              index: 1,
+              success: false,
+              failure: { code: 'VALIDATION_FAILED' },
+            },
+            { index: 2, success: true, pantryItem: { id: 'pi-9' } },
+          ],
+        },
+      },
+    );
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.added).toEqual([3, 9]);
+    expect(draft?.failed).toEqual({ 7: 'VALIDATION_FAILED' });
+  });
+
+  it('ends a receipt whose review closed, and forgets its lookups', () => {
+    useReceiptDraftStore.setState({ draft: null });
+    seedDraft({ parseId: 'parse-1' });
+    const store = useReceiptDraftStore.getState();
+    store.ensureCheckInIds([0], 1);
+    store.setCheckInState('queued');
+    store.closeReceipt();
+
+    reconcileReceiptCheckInReplay(
+      cache,
+      { input: { ...queuedInput(), lines: [INPUT.lines[0]] } },
+      {
+        createReceiptCheckIn: {
+          __typename: 'CreateReceiptCheckInPayload',
+          results: [{ index: 0, success: true, pantryItem: { id: 'pi-0' } }],
+        },
+      },
+    );
+
+    expect(useReceiptDraftStore.getState().draft).toBeNull();
+    expect(forgetReceipt).toHaveBeenCalledWith(cache, 'parse-1');
+  });
+
   it('leaves a newer receipt alone', () => {
     reconcileReceiptCheckInReplay(
       cache,
@@ -212,6 +295,34 @@ describe('a queued check-in', () => {
     );
 
     expect(useReceiptDraftStore.getState().draft?.added).toBeUndefined();
+  });
+
+  it('puts the lines of a check-in refused for good back as failed, on its own receipt', () => {
+    useReceiptDraftStore.getState().markAdded([0, 1, 2, 3]);
+    useReceiptDraftStore.getState().setCheckInState('queued');
+
+    withdrawReceiptCheckIn(cache, { input: queuedInput() }, null);
+    const once = useReceiptDraftStore.getState().draft;
+    withdrawReceiptCheckIn(cache, { input: queuedInput() }, null);
+
+    expect(once?.added).toEqual([]);
+    expect(once?.failed).toEqual({ 0: null, 1: null, 2: null, 3: null });
+    expect(once?.checkIn?.state).toBe('idle');
+    expect(useReceiptDraftStore.getState().draft).toEqual(once);
+  });
+
+  it('leaves a receipt holding another check-in alone when one is refused for good', () => {
+    useReceiptDraftStore.getState().markAdded([0]);
+    useReceiptDraftStore.getState().setCheckInState('sending');
+    const before = useReceiptDraftStore.getState().draft;
+
+    withdrawReceiptCheckIn(
+      cache,
+      { input: { ...INPUT, id: 'an-older-check-in' } },
+      null,
+    );
+
+    expect(useReceiptDraftStore.getState().draft).toEqual(before);
   });
 
   it('withdraws every stack and list stamp when refused for good', () => {

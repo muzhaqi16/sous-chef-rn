@@ -12,10 +12,13 @@ import {
   type PantryItemRef,
 } from '#features/pantry/cache/items';
 import {
-  applyMoveToPantryCacheUpdate,
   revertLocalMove,
   type LocalMove,
 } from '#features/shoppingList/cache/localMove';
+import {
+  unstampItemKeptOnListAfterMoveToPantry,
+  type KeptOnListStamp,
+} from '#features/shoppingList/cache/moveToPantry';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
@@ -24,6 +27,7 @@ import {
   useReceiptDraftStore,
   type CheckInLineOutcome,
 } from '../store/receiptDraftStore';
+import { forgetReceipt } from '../utils/forgetReceipt';
 
 /**
  * What a check-in's settle reads from what was sent: true of the input this
@@ -32,8 +36,9 @@ import {
 export interface CheckInSent {
   id: string;
   pantryId: string;
-  shoppingListId?: string | null;
   lines: readonly {
+    /** The receipt line it is, as a string. */
+    clientId?: string | null;
     pantryItemId?: string | null;
     shoppingListItemId?: string | null;
     item?: { inline?: { id?: string | null } | null } | null;
@@ -51,7 +56,9 @@ export interface CheckInLineResult extends CheckInLineOutcome {
 /** What a line wrote before the check-in fired, so a refusal undoes exactly that. */
 export type WrittenLine =
   | { kind: 'move'; written: LocalMove }
-  | { kind: 'intake' };
+  | { kind: 'intake' }
+  /** A line kept out of the pantry: its list line ticked as bought. */
+  | { kind: 'tick'; written: KeptOnListStamp };
 
 const pantryRef = (id: string): PantryItemRef => ({
   __typename: 'PantryItem',
@@ -63,7 +70,7 @@ const pantryRef = (id: string): PantryItemRef => ({
 // reread the caller runs.
 const withdrawLine = (
   cache: ApolloCache,
-  input: CheckInSent,
+  input: Omit<CheckInSent, 'id'>,
   line: CheckInSent['lines'][number],
   wrote: WrittenLine | undefined,
 ): boolean => {
@@ -75,6 +82,9 @@ const withdrawLine = (
       { pantryId, pantryItemId, shoppingListItemId, removeFromList: false },
       wrote.written,
     );
+  }
+  if (wrote?.kind === 'tick') {
+    return unstampItemKeptOnListAfterMoveToPantry(cache, wrote.written);
   }
   if (pantryItemId) revertOptimisticPantryItem(cache, pantryId, pantryItemId);
   if (!shoppingListItemId) return true;
@@ -89,7 +99,7 @@ const withdrawLine = (
  */
 export function applyReceiptCheckIn(
   cache: ApolloCache,
-  input: CheckInSent,
+  input: Omit<CheckInSent, 'id'>,
   results: readonly CheckInLineResult[],
   written?: ReadonlyMap<number, WrittenLine>,
 ): { exact: boolean; adopted: RowAdoption[] } {
@@ -99,7 +109,7 @@ export function applyReceiptCheckIn(
   for (const result of results) {
     const line = input.lines[result.index];
     if (!line) continue;
-    const { pantryItemId, shoppingListItemId } = line;
+    const { pantryItemId } = line;
     if (!result.success) {
       exact =
         withdrawLine(cache, input, line, written?.get(result.index)) && exact;
@@ -111,19 +121,10 @@ export function applyReceiptCheckIn(
       adoptServerEntityId(cache, 'Item', result.item.id, line.item?.inline?.id);
     }
     if (!pantryItemId || !result.pantryItem) continue;
+    // A ticked list line needs nothing more: the answer states it, version
+    // included.
     const pantryItem = pantryRef(result.pantryItem.id);
-    if (shoppingListItemId) {
-      applyMoveToPantryCacheUpdate(cache, {
-        pantryId,
-        shoppingListItemId,
-        removeFromList: false,
-        currentListId: input.shoppingListId ?? undefined,
-        pantryItem,
-        clientId: pantryItemId,
-      });
-    } else {
-      reconcileCreatedPantryItem(cache, pantryId, pantryItem, pantryItemId);
-    }
+    reconcileCreatedPantryItem(cache, pantryId, pantryItem, pantryItemId);
     if (pantryItem.id !== pantryItemId) {
       adopted.push({
         mintedId: pantryItemId,
@@ -133,6 +134,38 @@ export function applyReceiptCheckIn(
     }
   }
   return { exact, adopted };
+}
+
+/**
+ * Results as the receipt lines they answer: a result's `index` is its place in
+ * the send, and the line sent there names its receipt line by `clientId`.
+ */
+export function receiptLineOutcomes<Result extends CheckInLineOutcome>(
+  input: CheckInSent,
+  results: readonly Result[],
+): Result[] {
+  return results.flatMap(result => {
+    const clientId = input.lines[result.index]?.clientId;
+    const index = clientId ? Number(clientId) : Number.NaN;
+    return Number.isInteger(index) ? [{ ...result, index }] : [];
+  });
+}
+
+/**
+ * Settles the saved receipt holding `checkInId`. One this ends drops its
+ * lookups, as leaving its review does.
+ */
+export function settleReceiptCheckIn(
+  cache: ApolloCache,
+  checkInId: string,
+  outcomes: readonly CheckInLineOutcome[],
+): void {
+  const { draft, settleCheckIn } = useReceiptDraftStore.getState();
+  if (!draft?.checkIn?.ids.includes(checkInId)) return;
+  settleCheckIn(checkInId, outcomes);
+  if (!useReceiptDraftStore.getState().draft) {
+    forgetReceipt(cache, draft.parseId ?? draft.serverParse?.id);
+  }
 }
 
 const idOrNull = (value: unknown) => (typeof value === 'string' ? value : null);
@@ -157,10 +190,10 @@ const checkInSentOf = (variables: { input?: unknown }): CheckInSent | null => {
   return {
     id: input.id,
     pantryId: input.pantryId,
-    shoppingListId: idOrNull(input.shoppingListId),
     lines: input.lines.map((line: unknown) =>
       isRecord(line)
         ? {
+            clientId: idOrNull(line.clientId),
             pantryItemId: idOrNull(line.pantryItemId),
             shoppingListItemId: idOrNull(line.shoppingListItemId),
             item: inlineOf(line.item),
@@ -210,10 +243,13 @@ export const reconcileReceiptCheckInReplay: ReplayReconcilerTable[string] = (
   const results = resultsOf(data);
   const { adopted } = applyReceiptCheckIn(cache, input, results);
   for (const adoption of adopted) adopt?.(adoption);
-  useReceiptDraftStore.getState().settleCheckIn(input.id, results);
+  settleReceiptCheckIn(cache, input.id, receiptLineOutcomes(input, results));
 };
 
-/** A queued check-in refused for good: every stack it wrote goes, uncounted. */
+/**
+ * A queued check-in refused for good: every stack it wrote goes, uncounted, and
+ * its lines are back to send on the receipt that holds it.
+ */
 export const withdrawReceiptCheckIn: CountWithdrawalTable[string] = (
   cache,
   variables,
@@ -225,7 +261,11 @@ export const withdrawReceiptCheckIn: CountWithdrawalTable[string] = (
       removePantryItemLocally(cache, input.pantryId, pantryItemId);
     }
   }
-  useReceiptDraftStore.getState().setCheckInState('idle');
+  const refused = input.lines.map((_line, index) => ({
+    index,
+    success: false,
+  }));
+  settleReceiptCheckIn(cache, input.id, receiptLineOutcomes(input, refused));
 };
 
 /**

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
@@ -123,14 +123,13 @@ export const ReceiptReviewScreen: React.FC = () => {
   } = useReceiptReview();
 
   // The draft is cleared once the screen has gone: cleared first, the review
-  // shows its "no items" state while it slides away.
+  // shows its "no items" state while it slides away. Once, however often the
+  // draft changes while it is open.
   const applied = useRef(false);
-  useEffect(
-    () => () => {
-      if (applied.current) finish();
-    },
-    [finish],
-  );
+  const leave = useEffectEvent(() => {
+    if (applied.current) finish();
+  });
+  useEffect(() => () => leave(), []);
 
   // What was read shows as text that opens its field; what wasn't is a field.
   const [changingStore, setChangingStore] = useState(false);

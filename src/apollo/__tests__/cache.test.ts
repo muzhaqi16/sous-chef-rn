@@ -1683,16 +1683,59 @@ describe('cache', () => {
   });
 
   describe('by-id root fields', () => {
-    // A move answers `shoppingListItem: null` for the line it takes off the
-    // list, and an add that reuses that line writes it back under the same id.
-    it.each([
+    const BY_ID_FIELDS = [
       ['shoppingListItem', 'ShoppingListItem'],
       ['shoppingList', 'ShoppingList'],
       ['pantryItem', 'PantryItem'],
       ['pantry', 'Pantry'],
       ['recipe', 'Recipe'],
       ['home', 'Home'],
-    ])(
+    ];
+
+    it.each(BY_ID_FIELDS)(
+      'Query.%s reads null over the %s the device still holds, until another version is written',
+      (field, typename) => {
+        const cache = makeCache();
+        const query = parse(
+          `query ById($id: ID!) { ${field}(id: $id) { id } }`,
+        );
+        const variables = { id: 'gone-1' };
+        const held = parse(`fragment Held on ${typename} { id version }`);
+        const write = (version: number) =>
+          cache.writeFragment({
+            fragment: held,
+            data: { __typename: typename, id: 'gone-1', version },
+          });
+        write(2);
+
+        // Deleted elsewhere: the device missed the removal.
+        cache.writeQuery({ query, variables, data: { [field]: null } });
+        expect(cache.readQuery({ query, variables })).toEqual({
+          [field]: null,
+        });
+        // As the persisted cache restores it.
+        const restored = makeCache();
+        restored.restore(cache.extract());
+        expect(restored.readQuery({ query, variables })).toEqual({
+          [field]: null,
+        });
+
+        // A list page still carrying the stale copy brings nothing back.
+        write(2);
+        expect(cache.readQuery({ query, variables })).toEqual({
+          [field]: null,
+        });
+
+        write(3);
+        expect(cache.readQuery({ query, variables })).toMatchObject({
+          [field]: { id: 'gone-1' },
+        });
+      },
+    );
+
+    // A move answers `shoppingListItem: null` for the line it takes off the
+    // list, and an add that reuses that line writes it back under the same id.
+    it.each(BY_ID_FIELDS)(
       'Query.%s reads a %s written back after the server answered null',
       (field, typename) => {
         const cache = makeCache();

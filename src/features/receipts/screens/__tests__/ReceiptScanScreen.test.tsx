@@ -153,39 +153,45 @@ describe('ReceiptScanScreen', () => {
     expect(screen.queryByText(/names your phone finds are covered/)).toBeNull();
   });
 
-  it('names the lines the API refused, to fix in the review and add again', () => {
-    mockScan = {
-      status: 'saved',
-      draft: {
-        pages: ['MILK 3.48'],
-        scannedAt: SCANNED_AT,
-        parsed: {
-          lines: [
-            { index: 0, rawText: 'MILK 3.48', kind: 'item', product: 'MILK' },
-            {
-              index: 1,
-              rawText: 'CUBANELLE 1.20',
-              kind: 'item',
-              product: 'CUBANELLE',
-            },
-          ],
+  it.each([
+    ['a code', ErrorCode.ValidationFailed],
+    ['no code this build knows', null],
+  ])(
+    'names the lines the API refused with %s, to fix in the review and add again',
+    (_case, code) => {
+      mockScan = {
+        status: 'saved',
+        draft: {
+          pages: ['MILK 3.48'],
+          scannedAt: SCANNED_AT,
+          parsed: {
+            lines: [
+              { index: 0, rawText: 'MILK 3.48', kind: 'item', product: 'MILK' },
+              {
+                index: 1,
+                rawText: 'CUBANELLE 1.20',
+                kind: 'item',
+                product: 'CUBANELLE',
+              },
+            ],
+          },
+          choices: {
+            1: lineChoice({ itemId: null, itemName: 'Cubanelle pepper' }),
+          },
+          added: [0],
+          failed: { 1: code },
         },
-        choices: {
-          1: lineChoice({ itemId: null, itemName: 'Cubanelle pepper' }),
-        },
-        added: [0],
-        failed: { 1: ErrorCode.ValidationFailed },
-      },
-    };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
+      };
+      const screen = renderWithApollo(<ReceiptScanScreen />);
 
-    expect(screen.getByText("1 line wasn't added")).toBeTruthy();
-    expect(
-      screen.getByText(/^Cubanelle pepper\. Open the review/),
-    ).toBeTruthy();
-    expect(screen.getByTestId(receiptsTestIDs.savedReview)).toBeTruthy();
-    expect(screen.queryByTestId(receiptsTestIDs.savedQueued)).toBeNull();
-  });
+      expect(screen.getByText("1 line wasn't added")).toBeTruthy();
+      expect(
+        screen.getByText(/^Cubanelle pepper\. Open the review/),
+      ).toBeTruthy();
+      expect(screen.getByTestId(receiptsTestIDs.savedReview)).toBeTruthy();
+      expect(screen.queryByTestId(receiptsTestIDs.savedQueued)).toBeNull();
+    },
+  );
 
   it('says a check-in waiting for a connection lands once the phone is back online', () => {
     mockScan = {

@@ -28,6 +28,7 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
+import { t } from '#/i18n';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
@@ -545,6 +546,21 @@ describe('useReceiptReview', () => {
       expect(result.current.review.pendingCount).toBe(1);
     },
   );
+
+  it('says a line refused with no code this build knows was not added', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      const { draft } = useReceiptDraftStore.getState();
+      useReceiptDraftStore.setState({
+        draft: draft && { ...draft, failed: { 1: null } },
+      });
+    });
+
+    const [milk] = result.current.review.rows;
+    expect(milk?.status).toBe('failed');
+    expect(milk?.failure).toBe(t('errors.addItemFailedRetry'));
+  });
 
   it('sends the server reading it was confirmed from, and a saving off the whole order', async () => {
     const draft = useReceiptDraftStore.getState().draft!;
@@ -1416,6 +1432,78 @@ describe('useReceiptReview', () => {
         'added',
       ]);
       expect(result.current.review.pendingCount).toBe(1);
+    });
+
+    it('leaves a ticked list line at the version the API answers', async () => {
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> => ({
+          createReceiptCheckIn: {
+            __typename: 'CreateReceiptCheckInPayload',
+            results: sentLinesOf(vars).map((line, index) => ({
+              index,
+              clientId: line.clientId,
+              success: true,
+              failure: null,
+              pantryItem: { id: line.pantryItemId, item: { id: 'cat-milk' } },
+              shoppingListItem: {
+                id: line.shoppingListItemId,
+                version: 7,
+                purchaseInfo: { isPurchased: true },
+              },
+            })),
+          },
+        }),
+      });
+      const { cache, chooseOnListAndAdd } = await setup({ checkIn });
+      await chooseOnListAndAdd(1, MILK);
+
+      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+        version: 7,
+      });
+    });
+
+    it('ticks the list line of a line kept out of the pantry at once, and puts it back when refused', async () => {
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        dataFor: checkInAnswer({ refuses: () => true }),
+        held: true,
+      });
+      const { result, cache } = await setup({ checkIn });
+      await act(async () => {
+        result.current.review.chooseLine(1, { ...MILK, notStocked: true });
+      });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.onList).toBe(true),
+      );
+      const toBuy =
+        'itemsConnection:{"filters":{"isPurchased":false,"itemIds":["cat-milk"]}}';
+
+      await act(async () => {
+        await result.current.review.addChosen();
+      });
+
+      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+        expect.not.objectContaining({ pantryItemId: expect.anything() }),
+      ]);
+      // Bought, and not stamped as moved to the pantry.
+      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+        purchaseInfo: { isPurchased: true, movedToPantryAt: null },
+      });
+      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+        [toBuy]: { totalCount: 0, edges: [] },
+      });
+
+      await act(async () => checkIn.release());
+      await waitFor(() =>
+        expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+          purchaseInfo: { isPurchased: false },
+        }),
+      );
+      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+        [toBuy]: {
+          totalCount: 1,
+          edges: [{ node: { __ref: 'ShoppingListItem:sli-milk' } }],
+        },
+      });
     });
 
     it('adds a line on its own when the user keeps it off the list', async () => {

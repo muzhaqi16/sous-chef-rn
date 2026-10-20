@@ -220,21 +220,17 @@ export interface KeptOnListStamp {
 }
 
 /**
- * A move that keeps the line on the list leaves it purchased and stamped, as the
- * server does. Written before the move fires: a queued move runs no `update`.
+ * A purchase that names a list line leaves it bought, as the server does.
+ * Written before the write fires: a queued one runs no `update`.
  */
-export function stampItemKeptOnListAfterMoveToPantry(
+export function stampItemBoughtOnList(
   cache: ApolloCache,
   listId: string,
   itemId: string,
   wasPurchased: boolean,
 ): KeptOnListStamp {
   const previousMovedToPantryAt = readMovedToPantryAt(cache, itemId);
-  // Two writes: the writer clears the stamp on the flip itself.
   writePurchaseInfo(cache, itemId, { isPurchased: true });
-  writePurchaseInfo(cache, itemId, {
-    movedToPantryAt: new Date().toISOString(),
-  });
   const counterChange = wasPurchased
     ? undefined
     : recordListCounters(cache, listId, () =>
@@ -247,6 +243,24 @@ export function stampItemKeptOnListAfterMoveToPantry(
     previousMovedToPantryAt,
     counterChange,
   };
+}
+
+/**
+ * A move that keeps the line on the list leaves it bought and stamped, as the
+ * server does.
+ */
+export function stampItemKeptOnListAfterMoveToPantry(
+  cache: ApolloCache,
+  listId: string,
+  itemId: string,
+  wasPurchased: boolean,
+): KeptOnListStamp {
+  const stamp = stampItemBoughtOnList(cache, listId, itemId, wasPurchased);
+  // A second write: the writer clears the stamp on the flip itself.
+  writePurchaseInfo(cache, itemId, {
+    movedToPantryAt: new Date().toISOString(),
+  });
+  return stamp;
 }
 
 /**

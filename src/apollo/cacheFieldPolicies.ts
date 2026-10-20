@@ -13,6 +13,7 @@ import type {
 } from '@apollo/client';
 import { queueStore } from './offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
+import { isRecord } from '#/utils/isRecord';
 
 // Apollo's `readField` accessor, extracted from the field-policy options bag.
 type ReadField = FieldFunctionOptions['readField'];
@@ -165,18 +166,49 @@ function mergeAuthoritativeFirstPage(
   return preservePendingEdges(existing, merged, readField);
 }
 
+/** A by-id field the server answered `null` while the device held the record. */
+interface MissingAtVersion {
+  missingAtVersion: number | null;
+}
+
+const isMissingAtVersion = (value: unknown): value is MissingAtVersion =>
+  isRecord(value) && 'missingAtVersion' in value;
+
 /**
  * A by-id root field (`pantryItem(id)`) reads the `typename` entity the cache
  * holds, so a row created on the device reads back before the server has it.
+ * A `null` answered over a held record keeps that record's version: it reads
+ * again only once a copy of another version is written, as when an add reuses
+ * a line moved off the list under the same id.
  */
 export function readByIdFromCache(typename: string): FieldPolicy {
   return {
-    read(existing: unknown, { args, toReference, canRead }) {
-      // A stored `null` stands only while no such entity is held: an add that
-      // reuses a line moved off the list writes it back under the same id.
-      if (existing !== undefined && existing !== null) return existing;
+    // Stated: with both `read` and `merge`, Apollo defaults to `keyArgs: false`
+    // and every id would share one entry.
+    keyArgs: ['id'],
+    merge(
+      _existing,
+      incoming: unknown,
+      { args, toReference, canRead, readField },
+    ) {
+      if (incoming !== null) return incoming;
       const ref = toReference({ __typename: typename, id: args?.id as string });
-      return canRead(ref) ? ref : existing;
+      if (!canRead(ref)) return null;
+      const missing: MissingAtVersion = {
+        missingAtVersion: readField<number>('version', ref) ?? null,
+      };
+      return missing;
+    },
+    read(existing: unknown, { args, toReference, canRead, readField }) {
+      const missing = isMissingAtVersion(existing);
+      if (!missing && existing !== undefined && existing !== null) {
+        return existing;
+      }
+      const ref = toReference({ __typename: typename, id: args?.id as string });
+      if (!canRead(ref)) return missing ? null : existing;
+      if (!missing) return ref;
+      const version = readField<number>('version', ref) ?? null;
+      return version === existing.missingAtVersion ? null : ref;
     },
   };
 }

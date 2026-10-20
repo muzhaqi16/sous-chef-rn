@@ -11,4 +11,7 @@ RCT_EXTERN_METHOD(preparePhotos:(NSArray<NSString *> *)imageUris
 RCT_EXTERN_METHOD(deletePhotos:(NSArray<NSString *> *)imageUris
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(maskPhotos:(NSArray<NSDictionary *> *)photos
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 @end
