@@ -14,6 +14,8 @@ import { alertService } from '#/services/alertService';
 import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
+import { registerTelemetryStateLoader } from '#services/telemetry/telemetryState';
+import { logger } from '#/utils/environment';
 
 // `null` is untyped but real: Android reports no state until its first change.
 const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
@@ -57,3 +59,11 @@ installPlatform({
 
 // Until AlertProvider mounts and takes over, an alert is the OS's own.
 alertService.init(presentNativeAlert);
+
+// A push handled with the app closed never renders App, so nothing else loads
+// the store that tells telemetry the person's consent.
+registerTelemetryStateLoader(() => {
+  import('#store').catch((error: unknown) =>
+    logger.warn('Loading the store for telemetry failed', error),
+  );
+});

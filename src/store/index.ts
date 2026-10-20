@@ -48,7 +48,7 @@ import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
 import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
-import { setTelemetryStateSource } from '#services/telemetry/TelemetryService';
+import { setTelemetryStateSource } from '#services/telemetry/telemetryState';
 
 const secureStore = requirePlatform('secureStore');
 
@@ -504,6 +504,17 @@ export const useStore = create<RootState>()(
 );
 
 setTelemetryStateSource({
+  // `isHydrated` flips on a failed hydration too (persist's own signal does not),
+  // so consent never stays unknown.
+  consentKnown: () => useStore.getState().isHydrated,
+  onConsentKnown: listener => {
+    useStore.subscribe(
+      state => state.isHydrated,
+      isHydrated => {
+        if (isHydrated) listener();
+      },
+    );
+  },
   userConsent: () => useStore.getState().userConsent,
   isOnline: () => useStore.getState().isOnline,
 });
