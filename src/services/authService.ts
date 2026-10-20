@@ -239,11 +239,13 @@ async function handleLogin(
   // first commits auth and the final navigation state together.
   let gate: PostSignInGate = null;
   if (loginCredentials && user.emailVerified && user.onBoarded) {
-    gate = await sessionHost().postSignInGate(
-      user,
-      loginCredentials.email,
-      showRememberPrompt,
-    );
+    // The host's offer is optional; the session the server issued is not.
+    gate = await sessionHost()
+      .postSignInGate(user, loginCredentials.email, showRememberPrompt)
+      .catch((error: unknown) => {
+        logger.error('Post-sign-in gate failed; signing in without it', error);
+        return null;
+      });
   }
 
   // Set auth state
@@ -478,7 +480,12 @@ async function logout(options?: LogoutOptions): Promise<void> {
     // Done FIRST: everything below can throw into a catch that only logs, so a
     // security-relevant deletion parked at the end may silently not happen.
     if (!options?.keepBiometricCredentials && currentUserEmail) {
-      await sessionHost().forgetStoredSignIn(currentUserEmail);
+      // Caught here, not by the catch below: that one would skip the sign-out.
+      await sessionHost()
+        .forgetStoredSignIn(currentUserEmail)
+        .catch((error: unknown) => {
+          logger.error('Logout: the host kept its stored sign-in', error);
+        });
     }
 
     // The teardown `endSession` runs too, so both exits rest the same. One scope
