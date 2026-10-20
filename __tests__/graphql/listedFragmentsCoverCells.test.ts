@@ -124,22 +124,45 @@ const pathsOf = (name: string): Set<string> => {
 const missingFrom = (needed: Set<string>, held: Set<string>): string[] =>
   [...needed].filter(p => !held.has(p));
 
-/** What each query selects on each type, one entry per selection set. */
+/** The fragments a definition spreads, and the ones they spread. */
+function spreadFragments(
+  definition: OperationDefinitionNode | FragmentDefinitionNode,
+  found = new Map<string, FragmentDefinitionNode>(),
+): Map<string, FragmentDefinitionNode> {
+  visit(definition, {
+    FragmentSpread(spread) {
+      const name = spread.name.value;
+      if (found.has(name)) return;
+      const fragment = fragments.get(name);
+      if (!fragment) throw new Error(`No fragment ${name}`);
+      found.set(name, fragment);
+      spreadFragments(fragment, found);
+    },
+  });
+  return found;
+}
+
+/**
+ * What each query selects on each type, one entry per selection set. A type
+ * reached only inside a fragment the query spreads counts too.
+ */
 const querySelections = new Map<string, Set<string>[]>();
 for (const query of queries) {
-  const typeInfo = new TypeInfo(schema);
-  visit(
-    query,
-    visitWithTypeInfo(typeInfo, {
-      SelectionSet(node) {
-        const type = getNamedType(typeInfo.getParentType());
-        if (!type) return;
-        const sets = querySelections.get(type.name) ?? [];
-        sets.push(fieldPaths(node));
-        querySelections.set(type.name, sets);
-      },
-    }),
-  );
+  for (const definition of [query, ...spreadFragments(query).values()]) {
+    const typeInfo = new TypeInfo(schema);
+    visit(
+      definition,
+      visitWithTypeInfo(typeInfo, {
+        SelectionSet(node) {
+          const type = getNamedType(typeInfo.getParentType());
+          if (!type) return;
+          const sets = querySelections.get(type.name) ?? [];
+          sets.push(fieldPaths(node));
+          querySelections.set(type.name, sets);
+        },
+      }),
+    );
+  }
 }
 
 type ByIdRead = { file: string; fragment: string; typename: string };
@@ -231,9 +254,7 @@ describe('cells read by id', () => {
       .filter(read => {
         const needed = pathsOf(read.fragment);
         const selections = querySelections.get(read.typename) ?? [];
-        return !selections.some(
-          held => missingFrom(needed, held).length === 0,
-        );
+        return !selections.some(held => missingFrom(needed, held).length === 0);
       })
       .map(read => `${read.fragment} (${read.file})`);
     expect(unfetched).toEqual([]);
@@ -249,6 +270,14 @@ describe('cells read by id', () => {
     expect(
       selections.some(held => missingFrom(needed, held).length === 0),
     ).toBe(false);
+  });
+
+  it('counts a type a query reaches only inside a fragment it spreads', () => {
+    const needed = pathsOf('ItemPhotoCarousel_itemPhoto');
+    const selections = querySelections.get('ItemPhoto') ?? [];
+    expect(
+      selections.some(held => missingFrom(needed, held).length === 0),
+    ).toBe(true);
   });
 });
 
