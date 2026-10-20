@@ -15,7 +15,11 @@ import {
   textSearchCacheKey,
   ingredientCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type {
+  Diet,
+  Intolerance,
+  PageInfo,
+} from '#/graphql/generated/schemaTypes';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   type RecipeFilters,
@@ -31,11 +35,14 @@ import {
   localRows,
 } from '#features/recipes/utils/recipeRows';
 
-/** The connection search pages through, as any caller's document selects it. */
+/**
+ * The connection search pages through, as any caller's document selects it. A
+ * document without `endCursor` does not compile: load-more would refetch page 1.
+ */
 export interface RecipeSearchData<TNode extends SearchedRecipe> {
   searchRecipes: {
     edges: ReadonlyArray<{ node: TNode }>;
-    pageInfo: { endCursor?: string | null; hasNextPage: boolean };
+    pageInfo: Pick<PageInfo, 'endCursor' | 'hasNextPage'>;
   };
 }
 
@@ -250,10 +257,13 @@ export async function fetchRecipeSearchPage<TNode extends SearchedRecipe>(
   const localCategory = filters.mealType
     ? SPOONACULAR_TO_MEAL_TYPE_CATEGORY[filters.mealType]
     : undefined;
+  // Null lets the Spoonacular source still render; the page fails only when
+  // the combined list would be empty, and its caller presents that.
   const searchLocalRecipes =
     async (): Promise<RecipeSearchData<TNode> | null> => {
+      let result;
       try {
-        const result = await client.query({
+        result = await client.query({
           query: document,
           variables: {
             query,
@@ -270,20 +280,26 @@ export async function fetchRecipeSearchPage<TNode extends SearchedRecipe>(
           },
           fetchPolicy: 'network-only',
         });
-        return result.data ?? null;
-      } catch {
-        // Null lets the Spoonacular source below still render; the alert fires
-        // only when the combined list would otherwise be empty.
+      } catch (error) {
+        errorService.reportError(error, { operation: 'searchRecipesLocal' });
         return null;
       }
+      // `errorPolicy: 'all'` resolves a failed query with its error, unthrown.
+      if (result.error) {
+        errorService.reportError(result.error, {
+          operation: 'searchRecipesLocal',
+        });
+      }
+      return result.data ?? null;
     };
 
   const localPromise: Promise<RecipeSearchData<TNode> | null> = fetchLocal
     ? searchLocalRecipes()
     : Promise.resolve(null);
 
-  // Errors are captured, not alerted, so the local source can still render;
-  // the alert fires only when the combined list would otherwise be empty.
+  // Captured, not thrown, so the local source can still render; the page
+  // fails only when the combined list would be empty, and its caller presents
+  // that.
   let spoonacularError: unknown = null;
   const spoonacularPromise = !fetchSpoonacular
     ? Promise.resolve(EMPTY_SPOONACULAR_PAGE)

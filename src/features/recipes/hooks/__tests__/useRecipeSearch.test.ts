@@ -6,9 +6,14 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import { useStore } from '#store';
-import { Difficulty, type Recipe } from '#/graphql/generated/schemaTypes';
+import {
+  Difficulty,
+  type PageInfo,
+  type Recipe,
+} from '#/graphql/generated/schemaTypes';
 import type { SearchRecipesQueryVariables } from '#features/recipes/graphql/recipe.generated';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterMaps';
 import type {
@@ -144,4 +149,52 @@ describe('useRecipeSearch', () => {
     expect(result.current.loading).toBe(false);
     expect(alertService.alert).not.toHaveBeenCalled();
   });
+
+  it('reports a failed local search, which resolves rather than throws', async () => {
+    const report = jest
+      .spyOn(errorService, 'reportError')
+      .mockImplementation(() => {});
+    const search = recordMock(CardSearch, { error: new Error('network down') });
+    const { result } = renderSearch([search.mock]);
+
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+
+    expect(report).toHaveBeenCalledWith(expect.anything(), {
+      operation: 'searchRecipesLocal',
+    });
+    report.mockRestore();
+  });
+});
+
+// A caller's document must select every field search reads; the compiler
+// refuses one that does not, rather than search quietly degrading.
+type CallerSearch<TNode, TPageInfo> = TypedDocumentNode<
+  {
+    searchRecipes: {
+      edges: ReadonlyArray<{ node: TNode }>;
+      pageInfo: TPageInfo;
+    };
+  },
+  SearchRecipesQueryVariables
+>;
+type FullPageInfo = Pick<PageInfo, 'endCursor' | 'hasNextPage'>;
+
+it('refuses a document that omits a field search reads', () => {
+  type Accepted = Parameters<typeof useRecipeSearch>[0];
+  const omitsExternalId = CardSearch as unknown as CallerSearch<
+    Omit<CardNode, 'externalId'>,
+    FullPageInfo
+  >;
+  const omitsEndCursor = CardSearch as unknown as CallerSearch<
+    CardNode,
+    Pick<PageInfo, 'hasNextPage'>
+  >;
+
+  expect<Accepted>(CardSearch).toBeDefined();
+  // @ts-expect-error without `externalId`, dedupe falls back to the title alone
+  expect<Accepted>(omitsExternalId).toBeDefined();
+  // @ts-expect-error without `endCursor`, load-more refetches the first page
+  expect<Accepted>(omitsEndCursor).toBeDefined();
 });

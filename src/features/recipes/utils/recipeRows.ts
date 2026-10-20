@@ -5,18 +5,20 @@ import type {
 } from '#/services/spoonacular/types';
 import type { SearchRecipesQuery } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeSuggestionsQuery } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
-import type { ExternalSource } from '#/graphql/generated/schemaTypes';
+import type { Recipe } from '#/graphql/generated/schemaTypes';
 
 export type LocalRecipeNode =
   SearchRecipesQuery['searchRecipes']['edges'][number]['node'];
 
-/** What search reads off an API recipe to page and dedupe it, whatever else its card selects. */
-export interface SearchedRecipe {
-  id: string;
-  name: string;
-  externalSource?: ExternalSource | null;
-  externalId?: string | null;
-}
+/**
+ * What search reads off an API recipe to page and dedupe it, whatever else its
+ * card selects. Picked keys are required: a document that omits one does not
+ * compile, rather than deduping by title alone.
+ */
+export type SearchedRecipe = Pick<
+  Recipe,
+  'id' | 'name' | 'externalSource' | 'externalId'
+>;
 
 export type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
 
