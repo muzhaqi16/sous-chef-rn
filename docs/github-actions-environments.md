@@ -170,7 +170,7 @@ Use this when dev/stg/prod use the same API keys but different servers.
 
 **Setup:**
 
-- Repository secrets: `API_KEY`, `SPOONACULAR_API_KEY` (shared)
+- Repository secrets: `API_KEY` (shared)
 - Environment variables: `API_URL` (different per environment)
 
 **Result:**
