@@ -3,18 +3,10 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
-import {
-  useUser,
-  useNavigationUtils,
-  usePreferences,
-} from '#store/useAppStore';
+import { useUser, useNavigationUtils } from '#store/useAppStore';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
 import { removeCredentials } from '#/services/biometric/credentials';
-import { useMutation } from '@apollo/client/react';
-import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
-import type { UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
@@ -28,6 +20,7 @@ import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/auth/useAuthPreferences';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
+import { useLanguagePreference } from '#features/profile/hooks/useLanguagePreference';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /**
@@ -51,7 +44,7 @@ export const useConfigurableSettings = () => {
     toPerformanceDashboard,
     toChangePassword,
   } = useAppNavigation();
-  const { language, setLanguage } = usePreferences();
+  const { language, selectLanguage } = useLanguagePreference();
   const {
     preferredCurrency,
     currentLabel: currencyLabel,
@@ -61,12 +54,6 @@ export const useConfigurableSettings = () => {
   const { checkStoredCredentials, getBiometricInfo } = biometricService;
   const { resetBiometricDeclination, markBiometricEnabled } =
     useAuthPreferences();
-  // No optimistic response — UserSettings has many required fields that are
-  // hard to predict; normalization writes the response by id. Failures settle
-  // in `updateUserPreferences` below, the single alerter.
-  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument, {
-    context: { localFirst: true },
-  });
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -158,22 +145,6 @@ export const useConfigurableSettings = () => {
     }
   };
 
-  const updateUserPreferences = async (input: UpdateSettingsInput) => {
-    // No optimisticResponse (the nested input doesn't map onto the flat cached
-    // entity), so a queued write has nothing to tear down and replays
-    // idempotently; the preference setters drive the local UI.
-    await settleMutation(
-      () =>
-        updateSettingsMutation({
-          variables: { input },
-        }),
-      {
-        document: UpdateUserPreferencesDocument,
-        fallback: t('errors.codes.genericRetry'),
-      },
-    );
-  };
-
   const createSettingItem = (config: SettingItemConfig): SettingItem => {
     // Row ids are assigned by `ProfileScreen`, beside the handlers it wires.
     const baseItem: SettingItem = {
@@ -195,8 +166,7 @@ export const useConfigurableSettings = () => {
             value: language ?? 'en',
             options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
-              setLanguage(v);
-              void updateUserPreferences({ regional: { language: v } });
+              selectLanguage(v);
             },
           };
         }
