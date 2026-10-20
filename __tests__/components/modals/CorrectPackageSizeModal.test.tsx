@@ -8,9 +8,6 @@ import {
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },
@@ -48,14 +45,6 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
 jest.mock('../../../src/components/molecules/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => null,
 }));
-jest.mock(
-  '../../../src/features/pantry/hooks/usePantryItemTransformation',
-  () => ({
-    formatNetWeightDisplay: jest.fn((weight, unit) =>
-      weight != null && unit ? `${weight} ${unit.symbol}` : null,
-    ),
-  }),
-);
 
 const PANTRY_ITEM_ID = 'pi1';
 const BATCH_ID = 'b1';

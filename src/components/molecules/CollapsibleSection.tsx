@@ -2,9 +2,9 @@ import React from 'react';
 
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -32,11 +32,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           {title}
           {count != null ? ` (${count})` : ''}
         </Text>
-        <Icon
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          tone="textSecondary"
-        />
+        <ExpandChevron expanded={expanded} />
       </AppPressable>
       {!!expanded && <CurrentThemeScope>{children}</CurrentThemeScope>}
     </>

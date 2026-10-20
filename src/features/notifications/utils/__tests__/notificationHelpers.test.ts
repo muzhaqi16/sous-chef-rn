@@ -409,6 +409,33 @@ describe('notificationHelpers', () => {
       ).toBe('Your reminder for Groceries');
     });
 
+    it('names what may run out, counting what it cannot name', () => {
+      expect(
+        messageOf(NotificationType.RunningLow, {
+          date: '2026-10-14',
+          homeId: 'home-1',
+          itemCount: 2,
+          itemIds: ['item-1', 'item-2'],
+          itemNames: ['Milk', 'Eggs'],
+        }),
+      ).toBe('Milk and Eggs may run out soon');
+      expect(
+        messageOf(NotificationType.RunningLow, { itemCount: 4, itemNames: [] }),
+      ).toBe('4 items may run out soon');
+      expect(messageOf(NotificationType.RunningLow, {})).toBe(
+        'Some pantry items may run out soon',
+      );
+    });
+
+    it('counts the meals of a reminder that names none', () => {
+      expect(
+        messageOf(NotificationType.MealPlanReminder, {
+          mealCount: 2,
+          mealNames: [],
+        }),
+      ).toBe('2 meals planned for today');
+    });
+
     it("names the day's meals, counting the rest", () => {
       expect(
         messageOf(NotificationType.MealPlanReminder, {

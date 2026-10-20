@@ -1,23 +1,20 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
-import { normalizeSmartPunctuation } from '#/utils/validation/common';
+import {
+  lazyMessage,
+  normalizeSmartPunctuation,
+} from '#/utils/validation/common';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { t, type KeyUnder } from '#/i18n';
+import type { KeyUnder } from '#/i18n';
 import {
   BaseDimension,
   ItemType,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 
-/**
- * These schemas are built once at module scope, so a message resolved eagerly
- * would freeze whichever language happened to be active at import time. Yup
- * accepts a function and calls it when the rule actually fails, so the lookup
- * lands after any language change.
- */
-const msg =
-  (key: KeyUnder<'itemValidation'>, options?: Record<string, unknown>) =>
-  (): string =>
-    t(`itemValidation.${key}`, options);
+const msg = (
+  key: KeyUnder<'itemValidation'>,
+  options?: Record<string, unknown>,
+) => lazyMessage(`itemValidation.${key}`, options);
 
 /**
  * yup's own number cast rejects "0,5", which a comma keypad types. Typed text is
@@ -45,10 +42,8 @@ export const descriptionRule = string()
   .max(500, msg('descriptionMax', { count: 500 }))
   .optional();
 
-// UPC validation (replaces barcode)
-// Transform: empty string -> undefined so the optional flag actually kicks in.
-// Without this, `.min(8)` and `.matches()` run on '' and fail, which blocks
-// form submission for any flow that doesn't start with a scanned barcode.
+// '' becomes undefined so `.optional()` applies; else `.min(8)` and `.matches()`
+// refuse it and block every submit that didn't start from a scanned barcode.
 export const upcRule = string()
   .transform((value: unknown) =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
@@ -262,10 +257,9 @@ export const createItemSchema = object({
 export type CreateItemFormData = InferType<typeof createItemSchema>;
 
 /**
- * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`,
- * and the reviewing admin has nothing else to judge the diff against. The
- * direct-edit path has no reviewer and `UpdateItemInput` takes no note, so it
- * keeps `createItemSchema` and omits the field.
+ * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`
+ * and the reviewer's only context. A direct edit (the viewer's own private
+ * item) has no reviewer, so it keeps `createItemSchema`.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,

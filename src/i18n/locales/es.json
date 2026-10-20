@@ -11,7 +11,7 @@
       "emailAlreadyExists": "Ya existe una cuenta con este correo.",
       "emailAlreadyVerified": "Esta dirección de correo ya está verificada.",
       "emailNotVerified": "Verifica tu correo antes de continuar",
-      "featureDisabled": "Esta función está desactivada actualmente",
+      "featureDisabled": "Esto no está disponible en tu cuenta ahora.",
       "fieldInvalid": "Valor de campo no válido",
       "fieldRequired": "Falta un campo obligatorio",
       "forbidden": "No tienes permiso para realizar esta acción",
@@ -20,6 +20,8 @@
       "genericRetry": "Algo salió mal. Inténtalo de nuevo.",
       "homeAccessDenied": "No tienes acceso a este hogar",
       "homeInviteExpired": "La invitación al hogar ha caducado",
+      "homeMemberLimitReached": "Este hogar ha alcanzado su límite de miembros",
+      "payloadTooLarge": "Es demasiado para enviar de una vez. Prueba con un cambio más pequeño.",
       "homeInviteInvalid": "Invitación al hogar no válida",
       "homeMemberAlreadyExists": "El usuario ya es miembro de este hogar",
       "homeNotFound": "Hogar no encontrado",
@@ -53,6 +55,8 @@
       "unexpected": "Se ha producido un error inesperado",
       "uniqueConstraint": "Este valor ya existe",
       "unitInvalid": "Esa unidad no se puede usar aquí.",
+      "unstatedAmount": "La receta no indica una cantidad para este ingrediente, así que no se descontó nada.",
+      "premiumRequired": "Esto necesita un plan Premium.",
       "validationFailed": "Revisa los datos introducidos e inténtalo de nuevo",
       "versionConflict": "Esto se modificó en otro lugar después de que lo abrieras. Actualiza e inténtalo de nuevo.",
       "unitChangeNeedsResolution": "Este cambio de unidad es solo una estimación. Elige si usar la estimación o introducir la cantidad tú mismo."
@@ -124,6 +128,7 @@
       "Notification": "la notificación"
     },
     "queuedChangeRejected": "No se pudo guardar un cambio y se ha deshecho.",
+    "queuedChangeRejectedResource": "Tu cambio en {{resource}} no se pudo guardar y se ha deshecho.",
     "offlineNoMorePages": "Estás sin conexión, así que por ahora no hay nada más que cargar.",
     "offlineSearchUnavailable": "La búsqueda de recetas necesita conexión. Tus recetas guardadas siguen aquí.",
     "queuedChangeOverwrittenResource": "Tu cambio en {{resource}} se sustituyó por uno más reciente y se ha deshecho.",
@@ -132,6 +137,7 @@
     "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
     "invalidQuantity": "Introduce una cantidad válida",
+    "invalidAmountPaid": "Introduce el importe pagado, como 3,49, o déjalo vacío.",
     "itemNotFound": "Artículo no encontrado",
     "parentContextRequired": "Se requiere el contexto principal",
     "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
@@ -147,8 +153,8 @@
     "openBatchFailed": "No se pudo abrir este lote.",
     "wasteBatchFailed": "No se pudo marcar como desperdiciado.",
     "updateShoppingItemFailed": "No se pudo actualizar el artículo.",
-    "entityUpdatedTitle": "{{entity}}: actualización",
     "changedElsewhereTitle": "Modificado en otro lugar",
+    "changedElsewhereLatestShown": "Esto se modificó en otro lugar después de que lo abrieras, así que tu cambio no se guardó. Ahora se muestra la versión más reciente.",
     "entityHome": "Hogar",
     "entityMember": "Miembro",
     "entityInvite": "Invitación",
@@ -178,6 +184,7 @@
       "newPassword": "Esa contraseña no cumple las reglas: de 8 a 72 caracteres, con una mayúscula, una minúscula y un número.",
       "currentPassword": "Esa contraseña actual no es correcta. Compruébala e inténtalo de nuevo.",
       "servingsMade": "Introduce un número entero de raciones mayor que cero",
+      "servings": "Introduce un número de raciones mayor que cero",
       "key": "No se pudo confirmar esa imagen. Vuelve a elegirla e inténtalo de nuevo.",
       "imageUrl": "Introduce la URL completa de la imagen, empezando por http:// o https://",
       "videoUrl": "Introduce la URL completa del vídeo, empezando por http:// o https://",
@@ -185,7 +192,10 @@
       "packageSize": "Indica el tamaño del paquete en una unidad del mismo tipo que la de este artículo (peso con peso, volumen con volumen).",
       "resolution": "Elige si usar la estimación o introducir la cantidad tú mismo.",
       "amount": "Es más de lo que le queda a este artículo.",
-      "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista."
+      "amountMeasuredQuantity": "Indica una cantidad mayor que cero.",
+      "amountPackagesSize": "No sabemos cuánto contiene un paquete de esto. Indica el tamaño del paquete o la cantidad con su unidad (por ejemplo, 1 kg).",
+      "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista.",
+      "primaryUpc": "Ese código de barras no es válido. Comprueba los dígitos e inténtalo de nuevo."
     },
     "unitDenied": {
       "noRoute": "Esa unidad no se puede convertir a la forma en que se registra este artículo.",
@@ -243,6 +253,7 @@
     "deleteAccount": "¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
     "logout": "¿Seguro que quieres cerrar sesión?",
     "discardChanges": "¿Seguro que quieres descartar los cambios?",
+    "discardChangesTitle": "¿Descartar los cambios?",
     "logoutWithPending_one": "Tienes {{count}} cambio sin sincronizar. Al cerrar sesión se descartará.",
     "logoutWithPending_other": "Tienes {{count}} cambios sin sincronizar. Al cerrar sesión se descartarán.",
     "deleteHomeTitle": "Eliminar hogar",
@@ -262,6 +273,7 @@
     "addNamed": "Añadir {{name}}",
     "addToShoppingList": "Añadir a la lista de la compra",
     "adding": "Añadiendo...",
+    "added": "Añadido",
     "admin": "Administrador",
     "alertWhenBelow": "Avisar cuando esté por debajo de",
     "allergiesIntolerances": "Alergias e intolerancias",
@@ -293,9 +305,11 @@
     "changePassword": "Cambiar contraseña",
     "clear": "Borrar",
     "clearAll": "Borrar todo",
+    "check": "Revisar",
     "clearInput": "Borrar entrada",
     "clearRead": "Borrar leídas",
     "close": "Cerrar",
+    "open": "Abrir",
     "commaSeparated": "Separadas por comas",
     "condition": "Estado",
     "confirm": "Confirmar",
@@ -305,6 +319,8 @@
     "copied": "Copiado",
     "copy": "Copiar",
     "copyOfName": "{{name}} (Copia)",
+    "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "Licencia",
     "couldnTSendThat": "No se pudo enviar",
     "couldnTSetThatPhoto": "No se pudo establecer la foto",
     "create": "Crear",
@@ -483,7 +499,6 @@
     "thisFieldIsRequired": "Este campo es obligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
     "tips": "Consejos",
-    "totalCost": "Coste total",
     "stockValue": "Valor del stock",
     "avgCostPerUnit": "Costo prom./unidad",
     "totalPaid": "Total pagado",
@@ -508,7 +523,9 @@
     "durationDays_one": "{{count}} día",
     "durationDays_other": "{{count}} días",
     "currency": "Moneda",
-    "today": "Hoy"
+    "today": "Hoy",
+    "packageSize": "Tamaño del paquete",
+    "unit": "Unidad"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -565,7 +582,6 @@
     "features": "Funcionalidades",
     "showTutorials": "Mostrar tutoriales",
     "showTutorialsDesc": "Muestra consejos y tutoriales útiles",
-    "betaFeaturesEnabled": "Funciones beta activas",
     "experience": "Experiencia",
     "hapticFeedback": "Respuesta háptica",
     "hapticFeedbackDesc": "Vibración para interacciones y alertas",
@@ -573,6 +589,8 @@
     "navigationLabelsDesc": "Mostrar texto debajo de los iconos de navegación",
     "shoppingListImages": "Imágenes de la lista de la compra",
     "shoppingListImagesDesc": "Mostrar imágenes de productos en las listas",
+    "storeMode": "Modo tienda",
+    "storeModeDesc": "Recorre una lista pasillo a pasillo desde el icono de tienda de la lista de la compra",
     "shareUsageData": "Compartir datos de uso",
     "shareUsageDataDesc": "Ayuda a mejorar {{appName}} compartiendo estadísticas anónimas",
     "resetSection": "Restablecer",
@@ -592,8 +610,7 @@
     "placeholder": "Selecciona una opción"
   },
   "searchBar": {
-    "placeholder": "Buscar…",
-    "actionFallback": "Botón {{icon}}"
+    "placeholder": "Buscar…"
   },
   "settingRow": {
     "enabled": "activado",
@@ -609,7 +626,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Despensa",
-      "shoppingList": "Lista"
+      "shoppingList": "Lista",
+      "mealPlan": "Plan"
     }
   },
   "numberInputSheet": {
@@ -674,7 +692,8 @@
   },
   "tabBar": {
     "actionButton": "Botón de acción",
-    "actionButtonHint": "Abre la acción de la pestaña actual"
+    "actionButtonHint": "Abre la acción de la pestaña actual",
+    "addMenuHint": "Abre las formas de añadir"
   },
   "swipeActions": {
     "markUnpurchased": "Marcar como no comprado",
@@ -689,7 +708,6 @@
     "year": "Año"
   },
   "a11y": {
-    "actionButton": "Botón {{name}}",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "Valor de {{label}}",
     "quantityValue": "Valor de cantidad",

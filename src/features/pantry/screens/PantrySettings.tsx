@@ -23,6 +23,7 @@ import {
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 function syncPantryFormState(
   pantry:
@@ -164,29 +165,22 @@ export const PantrySettings: React.FC<
     alertService.alert(
       t('labels.deletePantry'),
       t('pantrySettings.deleteConfirmMessage'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            // Stops the subscription racing the delete.
-            subscriptionService.registerParentDeletion(pantryId);
+      destructiveConfirm(t('labels.delete'), () => {
+        // Stops the subscription racing the delete.
+        subscriptionService.registerParentDeletion(pantryId);
 
-            void executeAsyncWithCleanup(
-              async () => {
-                const outcome = await deletePantry(pantryId);
-                if (outcome.status === 'rejected') return;
-                setSelectedPantryId(null);
-                goBack();
-              },
-              () => {
-                subscriptionService.unregisterParentDeletion(pantryId);
-              },
-            );
+        void executeAsyncWithCleanup(
+          async () => {
+            const outcome = await deletePantry(pantryId);
+            if (outcome.status === 'rejected') return;
+            setSelectedPantryId(null);
+            goBack();
           },
-        },
-      ],
+          () => {
+            subscriptionService.unregisterParentDeletion(pantryId);
+          },
+        );
+      }),
     );
   };
 

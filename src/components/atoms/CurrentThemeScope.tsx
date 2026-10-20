@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react';
 import { ScopedTheme, useUnistyles } from 'react-native-unistyles';
+import { useThemeEpoch } from '#hooks/ui/useThemeEpoch';
 
 /**
- * For a host that mounts its children later than they were created — a sheet
- * on present, a modal on show, a section on expand. A compiled caller can hand
- * it elements cached before a theme change, and Unistyles corrects a style
- * snapshot at mount only inside a scoped theme. Keyed, so a switch between
- * themes while mounted remounts the children in the new one.
+ * For a host that mounts children late (sheet, modal, expand): Unistyles fixes
+ * a cached style snapshot at mount only in a scoped theme, whose `withUnistyles`
+ * and `useUnistyles` readers ignore theme events, so each theme commit remounts.
  */
 export const CurrentThemeScope = ({ children }: { children: ReactNode }) => {
   const { rt } = useUnistyles();
+  const epoch = useThemeEpoch();
   if (!rt.themeName) return children;
   return (
-    <ScopedTheme key={rt.themeName} name={rt.themeName}>
+    <ScopedTheme key={`${rt.themeName}:${epoch}`} name={rt.themeName}>
       {children}
     </ScopedTheme>
   );

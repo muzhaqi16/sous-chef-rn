@@ -40,7 +40,7 @@ export const NotificationActionHandler: React.FC<
   // Expiration action sheet — state-driven (no ref access during render)
   const [selectedExpirationNotification, setSelectedExpirationNotification] =
     useState<NotificationItem | null>(null);
-  const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
+  const { syncMarkAction } = useExpirationNotificationSync();
   const { syncMarkAsRead } = useNotificationSync();
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
@@ -122,10 +122,8 @@ export const NotificationActionHandler: React.FC<
         notification.expirationNotificationId,
         action,
       );
-      // Also mark the expiration notification as read on the server
-      void syncMarkRead(notification.expirationNotificationId);
-      // Neither call above moves the generic row; its own mark-read settles it
-      // and the badge.
+      // One read state: the server reads the reminders a feed notification
+      // announced with it, and this response states the badge.
       void syncMarkAsRead(notification.id);
     }
     setSelectedExpirationNotification(null);

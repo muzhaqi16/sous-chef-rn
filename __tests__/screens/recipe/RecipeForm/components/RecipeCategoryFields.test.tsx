@@ -10,9 +10,6 @@ import {
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#components/molecules/AnimatedChip', () => ({
   AnimatedChip: ({
     label,
@@ -54,7 +51,10 @@ describe('RecipeCategoryFields', () => {
     notes: '',
     tips: '',
     originalAuthor: '',
+    capturedFrom: null,
     tags: '',
+    version: null,
+    ingredientsUnread: false,
   };
 
   const updateField = jest.fn();

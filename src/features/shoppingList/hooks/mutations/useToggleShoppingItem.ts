@@ -1,13 +1,11 @@
 /**
- * Local-first: the flip, the connection move and the offline marker land in the
- * cache before firing — an `optimisticResponse` rolls back on the queue's null
- * result. `purchaseInfo` carries a write-time invariant in its merge policy, so it
- * goes through `writePurchaseInfo` (cache.writeFragment), never `cache.modify`.
+ * Local-first: the flip, connection move and offline marker land before firing,
+ * as an `optimisticResponse` rolls back on the queue's null result. `purchaseInfo`
+ * goes through `writePurchaseInfo`, never `cache.modify` (write-time invariant).
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
-  ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListItemDocument,
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
@@ -44,14 +42,8 @@ export function useToggleShoppingItem({
   const { t } = useTranslation();
 
   // An API unreachable while "online" queues for replay rather than raising a
-  // blocking error; the toggle is idempotent on a real id.
-  const [togglePurchasedMutation] = useMutation(
-    ToggleShoppingListItemPurchasedDocument,
-    { context: { localFirst: true } },
-  );
-
-  // Amounts go through updateShoppingListItem — the toggle input can't carry
-  // purchaseTracking.
+  // blocking error. The server does not hold an update carrying only
+  // `purchaseTracking` to its `version`, so a tick replays over a reorder.
   const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument, {
     context: { localFirst: true },
   });
@@ -96,10 +88,9 @@ export function useToggleShoppingItem({
       }
     });
 
-    // Survives an app restart while offline. The tracked field must be one the
-    // entity actually has (`isPurchased` lives inside `purchaseInfo`) — restoration
-    // goes through `cache.modify`, which ignores a modifier for a missing field.
-    // It shallow-merges object values, so a partial `purchaseInfo` is enough.
+    // Tracks `purchaseInfo`, not `isPurchased` inside it: restoration's
+    // `cache.modify` ignores a modifier for a missing field, and shallow-merges
+    // object values, so a partial `purchaseInfo` is enough.
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
@@ -133,9 +124,16 @@ export function useToggleShoppingItem({
     };
 
     const togglePurchasedMutationOptions: Parameters<
-      typeof togglePurchasedMutation
+      typeof updatePurchaseMutation
     >[0] = {
-      variables: { input: { id: itemId, purchased: newStatus } },
+      variables: {
+        input: {
+          id: itemId,
+          version: snapshot.version,
+          // The flag alone: the server refuses amounts beside an un-tick.
+          purchaseTracking: { isPurchased: newStatus },
+        },
+      },
       onCompleted: data => {
         // Drop the offline marker only once the server confirms — a queued
         // completion resolves with a null payload and must keep it.
@@ -167,9 +165,9 @@ export function useToggleShoppingItem({
     // A queued toggle keeps the optimistic flip; a failure reverts it and
     // refetches, since the server's state is the one to show.
     const settled = await settleMutation(
-      () => togglePurchasedMutation(togglePurchasedMutationOptions),
+      () => updatePurchaseMutation(togglePurchasedMutationOptions),
       {
-        document: ToggleShoppingListItemPurchasedDocument,
+        document: UpdateShoppingListItemDocument,
         fallback: t('errors.updateItemFailed'),
         onFailed: () => {
           revert();
@@ -187,10 +185,9 @@ export function useToggleShoppingItem({
   };
 
   /**
-   * `purchasedPrice` is PER UNIT — the server records
-   * `Purchase.totalPrice = purchasedPrice × purchasedQuantity` and move-to-pantry
-   * derives its per-unit cost from it. The Mark Purchased sheet collects the TOTAL
-   * paid, so `usePurchaseAmountModal` divides first; null omits it (server derives).
+   * `purchasedPrice` is PER UNIT: the server records it times the quantity as
+   * `Purchase.totalPrice`. The sheet collects the TOTAL paid, so
+   * `usePurchaseAmountModal` divides first; null records it unpriced.
    */
   const recordPurchase = async (
     itemId: string,

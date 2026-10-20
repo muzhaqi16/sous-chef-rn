@@ -4,8 +4,6 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeFolders } from '../useRecipeFolders';
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

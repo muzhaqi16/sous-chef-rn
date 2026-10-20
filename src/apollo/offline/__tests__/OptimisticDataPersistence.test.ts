@@ -358,6 +358,36 @@ describe('OptimisticDataPersistence', () => {
     });
   });
 
+  describe('trackFields', () => {
+    it('saves every stated field, and its clear drops only those', () => {
+      seedData([
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+      ]);
+
+      const clear = optimisticDataPersistence.trackFields(
+        'ShoppingListItem',
+        '1',
+        { quantity: 2, storeDepartmentOverride: null, notes: undefined },
+      );
+      optimisticDataPersistence.flush();
+      expect(optimisticDataPersistence.get('ShoppingListItem', '1')).toEqual({
+        sortOrder: 'a1',
+        quantity: 2,
+        storeDepartmentOverride: null,
+      });
+
+      clear();
+      expect(optimisticDataPersistence.get('ShoppingListItem', '1')).toEqual({
+        sortOrder: 'a1',
+      });
+    });
+  });
+
   describe('clearEntity', () => {
     it('removes all fields for a specific entity', () => {
       seedData([

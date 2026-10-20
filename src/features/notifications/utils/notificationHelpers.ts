@@ -14,11 +14,17 @@ import {
 import type { TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { formatMonthDay, formatTimeOfDay } from '#/utils/formatters/date';
+import { cappedNames } from '#/utils/cappedNames';
 
 type IconProps = React.ComponentProps<typeof Icon>;
 
 export const getNotificationAction = (
   type: NotificationType,
+  /**
+   * The stack the server names for the notification now. Null offers no stack
+   * action, since there is nothing for it to act on; absent predates the field.
+   */
+  pantryItemId?: string | null,
 ): { requiresAction: boolean; actionType?: string } => {
   switch (type) {
     case NotificationType.HomeInvitation:
@@ -30,7 +36,9 @@ export const getNotificationAction = (
         actionType: 'ACCEPT_SHOPPING_LIST_INVITE',
       };
     case NotificationType.ExpiryReminder:
-      return { requiresAction: true, actionType: 'VIEW_EXPIRING_ITEMS' };
+      return pantryItemId === null
+        ? { requiresAction: false }
+        : { requiresAction: true, actionType: 'VIEW_EXPIRING_ITEMS' };
     case NotificationType.CollaborationAccepted:
     case NotificationType.CollaborationDeclined:
     case NotificationType.CollaboratorPermissionsUpdated:
@@ -41,6 +49,7 @@ export const getNotificationAction = (
     case NotificationType.ItemUpdated:
     case NotificationType.ListUpdated:
     case NotificationType.LowStock:
+    case NotificationType.RunningLow:
     case NotificationType.NewItemAdded:
     case NotificationType.RecipeCooked:
     case NotificationType.RecipeSaved:
@@ -64,6 +73,8 @@ export const getNotificationIcon = (
       return 'time';
     case NotificationType.LowStock:
       return 'cube';
+    case NotificationType.RunningLow:
+      return 'trending-down';
     case NotificationType.NewItemAdded:
       return 'add-circle';
     case NotificationType.ItemUpdated:
@@ -116,10 +127,8 @@ export interface ExpiryReminderFields {
   isMultiBatch: boolean;
   batchOpenedAt: string | null;
   batchAddedAt: string | null;
-  // Always set by the server (see expirationCheckProcessor) for both the
-  // batch-level and item-level reminder paths — unlike sourceId/sourceType,
-  // which alias either PantryItem or PantryItemBatch depending on which path
-  // fired, this is unambiguously the pantry item id.
+  // The stack as it was when the reminder was written, so a later merge
+  // leaves it stale: `Notification.pantryItemId` is the one to act on.
   pantryItemId: string | null;
 }
 
@@ -151,10 +160,9 @@ export const readExpiryReminderFields = (
   };
 };
 
-// Only qualify the item name when more than one active batch exists — otherwise
-// the name alone is unambiguous. The qualifier uses the batch's opened date (or
-// added date as a fallback), parsed and formatted in the device's local time so
-// it isn't off by a day like the server's UTC-formatted plain-text message.
+// Qualified only when more than one batch is active, by the batch's opened
+// (else added) date in device-local time: the server's UTC-formatted message
+// can be off by a day.
 const buildExpiryName = (
   fields: ExpiryReminderFields,
   t: Translate,
@@ -241,8 +249,7 @@ const buildDigestMessage = (
   if (names.length === 0) {
     return t('notifications.copy.message.expiryDigestCount', { count });
   }
-  const shown = names.slice(0, DIGEST_NAME_CAP).join(', ');
-  const remainder = count - Math.min(DIGEST_NAME_CAP, names.length);
+  const { shown, remainder } = cappedNames(names, count);
   return remainder > 0
     ? t('notifications.copy.message.expiryDigestMore', {
         names: shown,
@@ -412,6 +419,8 @@ const joinNames = (
   t: Translate,
 ): string | null => {
   const shown = names.slice(0, DIGEST_NAME_CAP);
+  // No name to lead with: the caller counts instead.
+  if (shown.length === 0) return null;
   const remainder = Math.max(total, names.length) - shown.length;
   if (remainder > 0) {
     return t('notifications.copy.names.andMore', {
@@ -478,6 +487,24 @@ const buildPantryChangeMessage = (
   return itemName
     ? t(PANTRY_CHANGE_COPY[type].one, { names, count, itemName, pantryName })
     : generic;
+};
+
+const buildRunningLowMessage = (
+  payload: NotificationPayload,
+  t: Translate,
+): string => {
+  const itemNames = readNames(payload, 'itemNames');
+  const itemCount = readCount(payload, 'itemCount') ?? itemNames.length;
+  const names = joinNames(itemNames, itemCount, t);
+  if (names) {
+    return t('notifications.copy.message.runningLow', {
+      names,
+      count: Math.max(itemCount, itemNames.length),
+    });
+  }
+  return itemCount > 0
+    ? t('notifications.copy.message.runningLowCount', { count: itemCount })
+    : t('notifications.copy.message.runningLowGeneric');
 };
 
 const buildListReminderMessage = (
@@ -676,6 +703,8 @@ export const getNotificationCopy = (
       return buildListUpdatedCopy(payload, t);
     case NotificationType.LowStock:
       return { title, message: buildLowStockMessage(payload, t) };
+    case NotificationType.RunningLow:
+      return { title, message: buildRunningLowMessage(payload, t) };
     case NotificationType.ExpiryReminder: {
       const single = buildExpiryReminderMessage(payload, t, today);
       if (single) return { title, message: single };

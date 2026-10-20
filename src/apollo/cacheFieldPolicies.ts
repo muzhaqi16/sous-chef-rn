@@ -1,16 +1,19 @@
 /**
- * The field-policy primitives a feature's type policies are built from: cursor
- * connections keyed on the arguments that partition a list, and array merging
- * by entity id. Their own module so a policy needing one does not close a cycle
- * with `cache.ts`, which assembles them.
+ * Field-policy primitives the feature type policies build on, in their own
+ * module so a policy needing one closes no import cycle with `cache.ts`.
  */
 
 // **No type declares `keyFields: ['id']`** — it is Apollo's default, and
 // declaring it switches the key to `PantryItem:{"id":"abc"}`, breaking every
 // consumer that reads one back. Declare it only for a genuinely different key.
-import type { FieldFunctionOptions, Reference } from '@apollo/client';
+import type {
+  FieldFunctionOptions,
+  FieldPolicy,
+  Reference,
+} from '@apollo/client';
 import { queueStore } from './offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
+import { isRecord } from '#/utils/isRecord';
 
 // Apollo's `readField` accessor, extracted from the field-policy options bag.
 type ReadField = FieldFunctionOptions['readField'];
@@ -37,120 +40,6 @@ export interface CachedConnection {
 const MAX_WINDOW_EDGES = 100;
 
 /**
- * Version-aware merge: optimistic (`temp-`) items survive until the server
- * confirms, and conflicts resolve on `version`, falling back to `updatedAt`.
- */
-export function mergeArrayByIdIntelligent<
-  T extends { id: string; __ref?: string },
->(
-  // A cache write is not schema-validated, so either side can arrive as `null`.
-  existing: T[] | null = [],
-  incoming: T[] | null = [],
-  { readField }: Pick<FieldFunctionOptions, 'readField'>,
-): T[] {
-  // A null incoming keeps existing; an explicit [] means the list is genuinely empty.
-  if (incoming == null) {
-    return existing ?? [];
-  }
-
-  if (incoming.length === 0) {
-    return [];
-  }
-
-  // If no existing data, return incoming (first load or after cache clear)
-  if (!existing || existing.length === 0) {
-    return incoming;
-  }
-
-  // Create a map of existing items by ID with version metadata
-  const existingMap = new Map<
-    string,
-    { item: T; version: number; updatedAt: string }
-  >();
-  existing.forEach(item => {
-    const id = readField<string>('id', item);
-    if (id) {
-      existingMap.set(id, {
-        item,
-        version: readField<number>('version', item) ?? 0,
-        updatedAt: readField<string>('updatedAt', item) ?? '',
-      });
-    }
-  });
-
-  // Create a map of incoming items by ID with version metadata
-  const incomingMap = new Map<
-    string,
-    { item: T; version: number; updatedAt: string }
-  >();
-  incoming.forEach(item => {
-    const id = readField<string>('id', item);
-    if (id) {
-      incomingMap.set(id, {
-        item,
-        version: readField<number>('version', item) ?? 0,
-        updatedAt: readField<string>('updatedAt', item) ?? '',
-      });
-    }
-  });
-
-  // Merge with version-based conflict resolution
-  const merged: T[] = [];
-
-  // Process all incoming items
-  incomingMap.forEach(
-    (
-      {
-        item: incomingItem,
-        version: incomingVersion,
-        updatedAt: incomingUpdatedAt,
-      },
-      id,
-    ) => {
-      const existingData = existingMap.get(id);
-
-      if (!existingData) {
-        // New item from server, add it
-        merged.push(incomingItem);
-        return;
-      }
-
-      // Both exist - resolve conflict using version
-      if (incomingVersion > existingData.version) {
-        // Incoming has higher version, use it
-        merged.push(incomingItem);
-      } else if (incomingVersion < existingData.version) {
-        // Existing has higher version (optimistic update ahead of server), keep existing
-        merged.push(existingData.item);
-      } else {
-        // Same version - use timestamp as tiebreaker
-        if (incomingUpdatedAt >= existingData.updatedAt) {
-          merged.push(incomingItem);
-        } else {
-          merged.push(existingData.item);
-        }
-      }
-    },
-  );
-
-  // Keep existing items whose id still has a PENDING queue mutation, so an
-  // offline create survives a refetch that beats the queue drain. Once the
-  // queue empties the server page wins, and a genuinely deleted item (no
-  // pending op) is dropped. Mirrors the guard in itemsConnectionFieldPolicy.
-  const pendingIds = queueStore.getUnconfirmedCreateIds();
-  existingMap.forEach(({ item }, id) => {
-    if (incomingMap.has(id)) {
-      return; // Already processed above
-    }
-    if (pendingIds.has(id)) {
-      merged.push(item);
-    }
-  });
-
-  return merged;
-}
-
-/**
  * Reads the `node.id` from a connection edge via Apollo's `readField` helper.
  * Returns undefined when the edge or its node is missing — callers should skip
  * those edges rather than treat them as deduplication keys.
@@ -165,10 +54,8 @@ function readEdgeNodeId(
 }
 
 /**
- * Preserve un-replayed local creates when an authoritative first page replaces a
- * connection: keeps only edges whose `node.id` still has a PENDING queue
- * mutation and is absent from the incoming page. Falls straight through once
- * the queue drains. Shared so the guard is encoded in one place.
+ * Keeps un-replayed local creates through an authoritative first page: the
+ * edges whose `node.id` still has a PENDING queue mutation and the page omits.
  */
 function preservePendingEdges(
   existing: CachedConnection,
@@ -200,9 +87,8 @@ function preservePendingEdges(
 }
 
 /**
- * The cached edges an authoritative first page leaves standing: those after the
- * cached position of the page's last already-held entry, minus any it restates.
- * A page sharing no entry with the cache cannot be placed, so it keeps none and
+ * The cached edges past the page's last already-held entry, minus any it
+ * restates. A page sharing no entry cannot be placed, so it keeps none and
  * `fetchMore` reloads from the page's own cursor.
  */
 function edgesPastFirstPage(
@@ -230,10 +116,9 @@ function edgesPastFirstPage(
 }
 
 /**
- * Merge a cursorless first page as authoritative for the window it covers.
- * `hasNextPage` decides how much it restates: `false` replaces the whole
- * connection, `true` replaces the cached entries up to the page's last one and
- * keeps the rest. Only `totalCount === 0` may empty a populated list.
+ * A cursorless first page is authoritative for its window: with no next page it
+ * replaces the whole connection, else the cached entries up to its last one.
+ * Only `totalCount === 0` may empty a populated list.
  */
 function mergeAuthoritativeFirstPage(
   existing: CachedConnection,
@@ -281,13 +166,64 @@ function mergeAuthoritativeFirstPage(
   return preservePendingEdges(existing, merged, readField);
 }
 
+/** A by-id field the server answered `null` while the device held the record. */
+interface MissingAtVersion {
+  missingAtVersion: number | null;
+}
+
+const isMissingAtVersion = (value: unknown): value is MissingAtVersion =>
+  isRecord(value) && 'missingAtVersion' in value;
+
 /**
- * Connection merge where fresh server data wins on duplicate node ids
- * (last-write-wins), for connections with no paginated window. Append-only
- * paginated lists use {@link itemsConnectionFieldPolicy} instead, which keeps
- * existing edge positions and bounds the window.
+ * A by-id root field (`pantryItem(id)`) reads the `typename` entity the cache
+ * holds, so a row created on the device reads back before the server has it.
+ * A `null` answered over a held record keeps that record's version: it reads
+ * again only once a copy of another version is written, as when an add reuses
+ * a line moved off the list under the same id.
  */
-export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
+export function readByIdFromCache(typename: string): FieldPolicy {
+  return {
+    // Stated: with both `read` and `merge`, Apollo defaults to `keyArgs: false`
+    // and every id would share one entry.
+    keyArgs: ['id'],
+    merge(
+      _existing,
+      incoming: unknown,
+      { args, toReference, canRead, readField },
+    ) {
+      if (incoming !== null) return incoming;
+      const ref = toReference({ __typename: typename, id: args?.id as string });
+      if (!canRead(ref)) return null;
+      const missing: MissingAtVersion = {
+        missingAtVersion: readField<number>('version', ref) ?? null,
+      };
+      return missing;
+    },
+    read(existing: unknown, { args, toReference, canRead, readField }) {
+      const missing = isMissingAtVersion(existing);
+      if (!missing && existing !== undefined && existing !== null) {
+        return existing;
+      }
+      const ref = toReference({ __typename: typename, id: args?.id as string });
+      if (!canRead(ref)) return missing ? null : existing;
+      if (!missing) return ref;
+      const version = readField<number>('version', ref) ?? null;
+      return version === existing.missingAtVersion ? null : ref;
+    },
+  };
+}
+
+/**
+ * Connection merge where fresh data wins on duplicate node ids, for a
+ * connection with no paginated window; an append-only paginated list uses
+ * {@link itemsConnectionFieldPolicy}.
+ */
+export function mergeConnectionByNodeId(
+  // `false` is one store field whatever arguments read it. An empty array is
+  // not: Apollo keys a selection WITH arguments `field:{}` and a bare one
+  // `field`, so the two never see each other's rows.
+  keyArgs: string[] | false = ['filters'],
+) {
   return {
     keyArgs,
     // Same self-healing read as itemsConnectionFieldPolicy — drop dangling
@@ -320,10 +256,9 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after) {
-        // No cursor means a refresh, not a page: the response re-states the
-        // window it covers, so it replaces those edges rather than merging in.
-        // Gating on `!hasNextPage` would hide every removal and reorder in a
-        // list long enough to paginate.
+        // No cursor means a refresh, not a page: it replaces the window it
+        // covers. Gating on `!hasNextPage` would hide every removal and reorder
+        // in a list long enough to paginate.
         return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 
@@ -360,18 +295,15 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
 }
 
 /**
- * Paginated append-only merge with a bounded window: existing edges keep their
- * positions, only new node ids are appended, and the result is capped at
- * MAX_WINDOW_EDGES so memory stays bounded. Use
+ * Paginated append-only merge: existing edges keep their positions, only new
+ * node ids are appended, and the window is capped at MAX_WINDOW_EDGES. Use
  * {@link mergeConnectionByNodeId} where fresh data should overwrite duplicates.
  */
 export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
     keyArgs,
-    // Self-heal dangling refs: Apollo's broken-ref filter handles plain lists,
-    // never a nested `edge.node`, so an evicted entity leaves a truthy
-    // Reference that renders as a phantom row with a stale totalCount.
-    // `canRead` drops those edges and decrements the count.
+    // Apollo's broken-ref filter handles plain lists, never a nested
+    // `edge.node`: an evicted entity would render as a phantom row.
     read(
       existing: CachedConnection | undefined,
       { canRead }: FieldFunctionOptions,
@@ -404,10 +336,8 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after) {
-        // No cursor means a refresh, not a page. See
-        // `mergeAuthoritativeFirstPage` for why this must not also require
-        // `!hasNextPage`, and for the empty-response and pending-create guards
-        // it carries.
+        // No cursor means a refresh: gating on `!hasNextPage` too would hide
+        // every removal and reorder in a list long enough to paginate.
         return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 

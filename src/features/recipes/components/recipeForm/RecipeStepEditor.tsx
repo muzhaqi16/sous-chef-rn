@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { SheetHeader } from '#components/templates/SheetHeader';
@@ -66,7 +66,10 @@ export const RecipeStepEditor = forwardRef<
         confirm={{ onPress: handleSave }}
       />
 
-      <BottomSheetView style={styles.content}>
+      <BottomSheetFormScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <FormTextArea
           label={t('recipes.instruction')}
           value={instruction}
@@ -75,7 +78,7 @@ export const RecipeStepEditor = forwardRef<
           required
           useBottomSheetInput
         />
-      </BottomSheetView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 });
@@ -84,7 +87,6 @@ RecipeStepEditor.displayName = 'RecipeStepEditor';
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
   },

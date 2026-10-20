@@ -9,6 +9,7 @@ query SearchRecipes(
   $diets: [Diet!]
   $intolerances: [Intolerance!]
   $maxReadyTime: Int
+  $category: RecipeCategory
 ) {
   searchRecipes(
     query: $query
@@ -18,6 +19,7 @@ query SearchRecipes(
       diets: $diets
       intolerances: $intolerances
       maxReadyTime: $maxReadyTime
+      category: $category
     }
   ) {
     edges {
@@ -86,7 +88,10 @@ query MyRecipes($cursor: String, $first: Int = 25) {
   }
 }
 
-query GetRecipe($id: ID!) {
+# `$ingredientsFirst` is the server's largest page and the most a recipe holds,
+# so one request is the whole list. No cursor: a recipe over the limit stays
+# marked `hasNextPage`, which every derived write refuses.
+query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
   recipe(id: $id) {
     id
     ...useRecipeData_recipe
@@ -177,7 +182,10 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
 # Names a catalog recipe by provider id; the API fetches its content itself.
 # The recipe selects everything GetRecipe reads, so the detail screen answers
 # from the cache the moment this settles.
-mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
+mutation OpenCatalogRecipe(
+  $input: UpsertExternalRecipeInput!
+  $ingredientsFirst: Int!
+) {
   upsertExternalRecipe(input: $input) {
     __typename
     ... on UpsertExternalRecipePayload {
@@ -199,7 +207,7 @@ mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
   }
 }
 
-mutation UpdateRecipe($input: UpdateRecipeInput!) {
+mutation UpdateRecipe($input: UpdateRecipeInput!, $ingredientsFirst: Int!) {
   updateRecipe(input: $input) {
     __typename
     ... on UpdateRecipePayload {
@@ -208,6 +216,19 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
         ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
+        ingredientsConnection(first: $ingredientsFirst) {
+          edges {
+            node {
+              id
+              ...RecipeIngredientFragment
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
       }
     }
     ... on Error {
@@ -247,41 +268,12 @@ mutation ForkRecipe($input: ForkRecipeInput!) {
   }
 }
 
-mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
-  updateRecipeIngredients(input: $input) {
-    __typename
-    ... on UpdateRecipeIngredientsPayload {
-      recipe {
-        id
-        ...RecipeReaders
-        ingredientsConnection {
-          edges {
-            node {
-              id
-              ...RecipeIngredientFragment
-            }
-          }
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation DeleteRecipe($input: DeleteRecipeInput!) {
   deleteRecipe(input: $input) {
     __typename
     ... on DeleteRecipePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       recipe {
         id
       }
@@ -405,73 +397,12 @@ mutation UpdateFavoriteRecipe($input: UpdateFavoriteRecipeInput!) {
   }
 }
 
-mutation CreateShoppingListItemsFromRecipe(
-  $input: CreateShoppingListItemsFromRecipeInput!
-) {
-  createShoppingListItemsFromRecipe(input: $input) {
-    __typename
-    ... on CreateShoppingListItemsFromRecipePayload {
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-      results {
-        success
-        outcome
-        item {
-          id
-          ...ShoppingListItemReaders
-          ...AddedShoppingListItemFields
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation CreateShoppingListItemFromRecipeIngredient(
-  $input: CreateShoppingListItemFromRecipeIngredientInput!
-) {
-  createShoppingListItemFromRecipeIngredient(input: $input) {
-    __typename
-    ... on CreateShoppingListItemFromRecipeIngredientPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        shoppingList {
-          id
-          ...ShoppingListReaders
-        }
-      }
-      previousQuantity
-      quantityAdded
-      wasUpdated
-      unitConversionApplied
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
+# The pick and up to three `alternativeMatches` come in the order a cook draws
+# them, so an empty stack is last.
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
-  $servings: Int
+  $servings: Float
 ) {
   matchRecipeIngredientsToPantry(
     pantryId: $pantryId
@@ -483,7 +414,7 @@ query MatchRecipeIngredientsToPantry(
       ...RecipeIngredientFragment
     }
     isAvailable
-    matchConfidence
+    matchKind
     availableQuantity
     suggestedQuantity
     shortfall
@@ -508,36 +439,30 @@ query MatchRecipeIngredientsToPantry(
         }
       }
     }
-  }
-}
-
-mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {
-  confirmRecipeConsumption(input: $input) {
-    __typename
-    ... on ConfirmRecipeConsumptionPayload {
-      # Replay signal: false = a partial crash already finished the leftover
-      # items; true = idempotent replay of a completed confirmation.
-      converged
-      totalConsumed
-      totalFailed
-      cookingLog {
+    alternativeMatches {
+      id
+      itemName
+      unit {
         id
-        servingsMade
-        notes
-        cookedAt
+        name
+        symbol
+      }
+      displayAmount {
+        quantity
+        unit {
+          id
+          symbol
+        }
       }
     }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
   }
 }
 
-mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
+# `$stacksFirst` defaults, so a cook queued without it still replays.
+mutation MarkRecipeAsCooked(
+  $input: MarkRecipeAsCookedInput!
+  $stacksFirst: Int = 100
+) {
   markRecipeAsCooked(input: $input) {
     __typename
     ... on MarkRecipeAsCookedPayload {
@@ -567,6 +492,19 @@ mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
         recipe {
           id
           name
+        }
+        # The stacks the cook drew from, so the pantry shows what is left: a
+        # cook publishes no pantry event.
+        pantryItemsUsedConnection(first: $stacksFirst) {
+          edges {
+            node {
+              id
+              pantryItem {
+                id
+                ...PantryItemReaders
+              }
+            }
+          }
         }
       }
     }

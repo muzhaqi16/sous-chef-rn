@@ -1,3 +1,4 @@
+jest.unmock('../toastService');
 import { _setToastDispatch, toastService } from '../toastService';
 
 describe('toastService', () => {

@@ -12,7 +12,6 @@ import {
   removeShoppingListFromCache,
 } from '#features/shoppingList/cache/list';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
@@ -59,10 +58,9 @@ export function useDeleteShoppingList() {
         fallback: t('errors.deleteShoppingListFailed'),
         removal: true,
         onFailed: restore,
-        present: 'none',
+        present: 'toast',
       },
     );
-    if (settled.failure) toastService.error(settled.failure.body);
     return settled.status !== 'failed';
   };
 

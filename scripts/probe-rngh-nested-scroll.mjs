@@ -1,9 +1,11 @@
 /**
  * Probe: the RNGH Android behaviours behind the swipeable-row scroll rules.
  *
- * HARD CHECK — `cancelAllLegacyHandlers()` matches only the v1/v2 action types,
- * so a v3 detector pan survives a native scroll takeover. That is why every
- * FlashList whose rows carry RNGH gestures must render RNGH's ScrollView.
+ * HARD CHECK — `cancelHandlersOnNativeTouchGrab()` cancels a v3 detector
+ * handler that has not activated, so a native scroll taking the touch ends a
+ * row's pending pan or press (RNGH 3.4.0, #4582). Before that only
+ * `cancelAllLegacyHandlers()` ran, which matches v1/v2 alone: the row's pan
+ * survived the takeover and opened mid-scroll.
  *
  * REPORTED ONLY — whether `ScrollViewHook` ends the nested scroll it opens
  * (`shouldStopNestedScroll`). That is the upstream fix for the parked Android
@@ -30,39 +32,46 @@ const classBody = (source, name) => {
   return end === -1 ? rest : rest.slice(0, end);
 };
 
+/** The body of a member `fun <name>(` up to the next member at that indent. */
+const funBody = (source, name) => {
+  const start = source.indexOf(`fun ${name}(`);
+  if (start === -1) return null;
+  const rest = source.slice(start);
+  const end = rest.search(/\n {2}(?:fun |\/\*\*|private |override )/);
+  return end === -1 ? rest : rest.slice(0, end);
+};
+
 const failures = [];
 
-// Hard check: the legacy-only cancellation still skips the v3 detectors.
-const orchestrator = read('GestureHandlerOrchestrator.kt');
-const cancelStart = orchestrator.indexOf('fun cancelAllLegacyHandlers()');
-const cancelBody =
-  cancelStart === -1
-    ? null
-    : orchestrator.slice(cancelStart, cancelStart + 400);
+// Hard check: a native touch grab cancels the detectors' pending handlers.
+const grabBody = funBody(
+  read('GestureHandlerOrchestrator.kt'),
+  'cancelHandlersOnNativeTouchGrab',
+);
+const detectorTest =
+  /fun usesNativeOrVirtualDetector\([^)]*\)[^=]*=\s*(.+)/.exec(
+    read('GestureHandler.kt'),
+  )?.[1];
 
-const handler = read('GestureHandler.kt');
-const detectorConstants = [
-  'ACTION_TYPE_NATIVE_DETECTOR',
-  'ACTION_TYPE_VIRTUAL_DETECTOR',
-];
-
-if (cancelBody === null) {
-  failures.push(
-    'cancelAllLegacyHandlers not found in GestureHandlerOrchestrator.kt',
+const cancelsPendingDetectors =
+  grabBody !== null &&
+  grabBody.includes('usesNativeOrVirtualDetector(it.actionType)') &&
+  grabBody.includes('!it.isActive') &&
+  detectorTest !== undefined &&
+  ['ACTION_TYPE_NATIVE_DETECTOR', 'ACTION_TYPE_VIRTUAL_DETECTOR'].every(c =>
+    detectorTest.includes(c),
   );
-} else {
-  for (const constant of detectorConstants) {
-    if (!handler.includes(`const val ${constant}`)) {
-      failures.push(`${constant} is gone from GestureHandler.kt`);
-    }
-    if (cancelBody.includes(constant)) {
-      failures.push(
-        `cancelAllLegacyHandlers now cancels ${constant}. A native scroll ` +
-          'takeover may cancel a row pan on its own — re-measure before ' +
-          'relying on renderScrollComponent for arbitration.',
-      );
-    }
-  }
+
+if (grabBody === null) {
+  failures.push(
+    'cancelHandlersOnNativeTouchGrab not found in GestureHandlerOrchestrator.kt',
+  );
+} else if (!cancelsPendingDetectors) {
+  failures.push(
+    'cancelHandlersOnNativeTouchGrab no longer cancels pending v3 detector ' +
+      'handlers. A row pan may survive a native scroll takeover again, and ' +
+      'SwipeAwareScrollComponent becomes the only arbitration — re-measure.',
+  );
 }
 
 // Reported only: the upstream fix for the parked refresh spinner.
@@ -83,10 +92,10 @@ const version = JSON.parse(
 
 console.log(`react-native-gesture-handler@${version}`);
 console.log(
-  'cancelAllLegacyHandlers skips v3 detectors:  ',
-  cancelBody !== null && !detectorConstants.some(c => cancelBody.includes(c)),
+  'Native touch grab cancels pending detectors:',
+  cancelsPendingDetectors,
 );
-console.log('ScrollViewHook stops its nested scroll:      ', stopsNestedScroll);
+console.log('ScrollViewHook stops its nested scroll:     ', stopsNestedScroll);
 if (stopsNestedScroll) {
   console.log(
     '\n  Upstream carries the parked-spinner fix. Dropping\n' +
@@ -100,4 +109,7 @@ if (failures.length > 0) {
   console.error(`\nFAIL\n- ${failures.join('\n- ')}`);
   process.exit(1);
 }
-console.log('\nPASS — the takeover rule holds in the installed version.');
+console.log(
+  '\nPASS — a native scroll takeover cancels a pending row gesture in the ' +
+    'installed version.',
+);

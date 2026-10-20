@@ -4,11 +4,12 @@ import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
-import { withExpiresOn } from './legacyExpiry';
-import { withRefInputs } from './legacyRefs';
+import { withCurrentInput } from './legacyRefs';
 import { withoutRemovedFields } from './legacySelections';
+import { upgradeRetiredEntry } from './legacyRetired';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { isRecord } from '#/utils/isRecord';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -23,19 +24,13 @@ const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
 /** The item a queued move targets; entries are persisted JSON, read structurally. */
 const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
   const input: unknown = mutation.variables.input;
-  return typeof input === 'object' &&
-    input !== null &&
-    'itemId' in input &&
-    typeof input.itemId === 'string'
-    ? input.itemId
-    : undefined;
+  return isRecord(input) && typeof input.id === 'string' ? input.id : undefined;
 };
 
 /**
- * Terminal = the queue will not replay it as things stand. AUTH_ERROR counts
- * as terminal for bookkeeping only ({@link QueueStore.revivePendingAuthErrors}
- * returns it on sign-in), but it must stay evictable or accumulated auth
- * failures wedge the queue at capacity.
+ * Not replayed as things stand. AUTH_ERROR is terminal for bookkeeping only
+ * ({@link QueueStore.revivePendingAuthErrors} revives it on sign-in), but must
+ * stay evictable or accumulated auth failures wedge the queue at capacity.
  */
 function isTerminal(status: QueueStatus): boolean {
   return (
@@ -50,12 +45,117 @@ function isTerminal(status: QueueStatus): boolean {
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
-/**
- * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
- * except the `mutation` DocumentNode is stored as a serialized JSON string.
- */
-type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
-  mutation: string;
+type StoredEntry = Omit<QueuedMutation, 'mutation'>;
+
+/** Blob v1: every entry carries its own serialized document. */
+type QueueBlobV1 = Array<StoredEntry & { mutation: string }>;
+
+/** Blob v2: each distinct document once, named by the entries that send it. */
+interface QueueBlobV2 {
+  v: 2;
+  documents: Record<string, string>;
+  entries: Array<StoredEntry & { document: string }>;
+}
+
+interface SerializedDocument {
+  json: string;
+  hash: string;
+}
+
+// A generated mutation document is tens of KB of AST, shared by every entry
+// that sends it: each document object is serialized once per process.
+const serializedDocuments = new WeakMap<DocumentNode, SerializedDocument>();
+
+/** FNV-1a: tells one operation's documents from different builds apart. */
+function hashOf(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = Math.imul(hash ^ text.charCodeAt(index), 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function remember(document: DocumentNode, json: string): SerializedDocument {
+  const serialized = { json, hash: hashOf(json) };
+  serializedDocuments.set(document, serialized);
+  return serialized;
+}
+
+function serializedDocument(document: DocumentNode): SerializedDocument {
+  return (
+    serializedDocuments.get(document) ??
+    remember(
+      document,
+      JSON.stringify({
+        kind: document.kind,
+        definitions: document.definitions,
+        loc: document.loc,
+      }),
+    )
+  );
+}
+
+function serializeQueue(mutations: readonly QueuedMutation[]): string {
+  const documents = new Map<string, string>();
+  const keys = new Map<DocumentNode, string>();
+  const keyOf = (operationName: string, document: DocumentNode): string => {
+    const { json, hash } = serializedDocument(document);
+    let key = `${operationName}:${hash}`;
+    // A hash collision takes its own key, never another document's.
+    while (documents.has(key) && documents.get(key) !== json) key += "'";
+    documents.set(key, json);
+    keys.set(document, key);
+    return key;
+  };
+  const entries = mutations.map(({ mutation, ...entry }) => ({
+    ...entry,
+    document: keys.get(mutation) ?? keyOf(entry.operationName, mutation),
+  }));
+  const blob: QueueBlobV2 = {
+    v: 2,
+    documents: Object.fromEntries(documents),
+    entries,
+  };
+  return JSON.stringify(blob);
+}
+
+/** Entries naming one stored document share one parsed object. */
+function documentParser(): (
+  ref: string,
+  json: string | undefined,
+) => DocumentNode {
+  const parsed = new Map<string, DocumentNode>();
+  return (ref, json) => {
+    const known = parsed.get(ref);
+    if (known) return known;
+    if (json === undefined) {
+      throw new Error(`Queue blob holds no document ${ref}`);
+    }
+    const stored = JSON.parse(json) as DocumentNode;
+    const document = withoutRemovedFields(stored);
+    if (document === stored) remember(document, json);
+    parsed.set(ref, document);
+    return document;
+  };
+}
+
+// A retired operation is replaced first, so every later rewrite and every
+// registry reads the write as the operation it replays as.
+const loadedEntry = (
+  entry: StoredEntry,
+  stored: DocumentNode,
+): QueuedMutation => {
+  const { operationName, mutation, variables } = upgradeRetiredEntry({
+    operationName: entry.operationName,
+    mutation: stored,
+    variables: entry.variables,
+  });
+  return {
+    ...entry,
+    operationName,
+    mutation,
+    variables: withCurrentInput(mutation, variables),
+  };
 };
 
 /** User-scoped mutation queue persisted to MMKV. */
@@ -105,21 +205,15 @@ export class QueueStore {
         return [];
       }
 
-      const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
-
-      const queue: QueuedMutation[] = parsed.map(item => {
-        const mutation = withoutRemovedFields(
-          JSON.parse(item.mutation) as DocumentNode,
-        );
-        return {
-          ...item,
-          mutation,
-          variables: withRefInputs(
-            mutation,
-            withExpiresOn(mutation, item.variables),
-          ),
-        };
-      });
+      const blob = JSON.parse(queueJson) as QueueBlobV1 | QueueBlobV2;
+      const documentFor = documentParser();
+      const queue = Array.isArray(blob)
+        ? blob.map(({ mutation, ...entry }) =>
+            loadedEntry(entry, documentFor(mutation, mutation)),
+          )
+        : blob.entries.map(({ document, ...entry }) =>
+            loadedEntry(entry, documentFor(document, blob.documents[document])),
+          );
 
       this.cache = queue;
 
@@ -132,21 +226,11 @@ export class QueueStore {
 
   private saveQueue(mutations: QueuedMutation[]): void {
     try {
-      // The DocumentNode has to be serialized to survive MMKV.
-      const serialized = mutations.map(m => ({
-        ...m,
-        mutation: JSON.stringify({
-          kind: m.mutation.kind,
-          definitions: m.mutation.definitions,
-          loc: m.mutation.loc,
-        }),
-      }));
-
       // A queued mutation carries its full variables, so it is written only to
       // the encrypted instance. The in-memory cache below still updates, so a
       // quarantined session queues and replays normally within its lifetime.
       if (!isRecoveryStorage()) {
-        storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
+        storage.set(QUEUE_STORAGE_KEY, serializeQueue(mutations));
       }
 
       this.cache = mutations;
@@ -186,11 +270,9 @@ export class QueueStore {
   }
 
   /**
-   * Repeated MoveShoppingListItem ops for one item coalesce into the last
-   * position, so a drag only ever replays where the item finally landed. The
-   * merged move keeps the first one's age in `agedFrom` — not in `createdAt`,
-   * which orders the drain: an older stamp there would sort the surviving move
-   * ahead of a row created between the two moves, and the move names that row.
+   * Repeated MoveShoppingListItem ops for one item coalesce into the last. Its
+   * age goes in `agedFrom`, not the drain-ordering `createdAt`, so it never
+   * sorts ahead of a row created between the two moves that it names.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
@@ -232,12 +314,9 @@ export class QueueStore {
       return;
     }
 
-    // Enforce the cap without ever dropping a PENDING op: that would break a
-    // create→update chain, replaying the update against a create that never
-    // happened. Prefer an entry already reconciled (SUCCESS replayed, FAILED
-    // withdrawn); an AUTH_ERROR still has its change on screen, so it goes only
-    // when it is all that is left. Nothing terminal at all means the queue is
-    // full of un-synced work and the enqueue is refused.
+    // Never drop a PENDING op: it would break a create→update chain. Evict a
+    // reconciled entry first; an AUTH_ERROR still has its change on screen, so
+    // it goes only when nothing else can. With none terminal, enqueue refuses.
     if (queue.length >= MAX_QUEUE_SIZE) {
       const reconciled = (m: QueuedMutation): boolean =>
         m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED;
@@ -359,10 +438,9 @@ export class QueueStore {
   }
 
   /**
-   * Drains are serialized, so a PROCESSING entry seen at drain start is debris
-   * from a process killed mid-replay: left alone it is never replayed, never
-   * failed, and loses its pending-client-id merge protection. Re-replaying a
-   * possibly-committed op is safe — replays are idempotent by design.
+   * Drains are serialized, so a PROCESSING entry at drain start is debris from
+   * a process killed mid-replay. Re-replaying a possibly-committed op is safe,
+   * as replays are idempotent.
    */
   resetProcessingToPending(userId: string): number {
     const queue = this.loadQueue();
@@ -383,10 +461,9 @@ export class QueueStore {
   }
 
   /**
-   * PENDING entries past the 90-day dedup horizon become FAILED so they surface
-   * through the normal failure UX instead of double-applying. Expiry is
-   * age-based, so a FIFO queue can only expire a prefix, never punch a hole
-   * mid dependency chain. Returns the expired entries for withdrawal.
+   * PENDING entries past the dedup horizon become FAILED, surfacing through the
+   * failure UX instead of double-applying. Age-based, so a FIFO queue expires
+   * only a prefix, never a hole mid dependency chain.
    */
   expireStalePending(
     userId: string,
@@ -432,10 +509,7 @@ export class QueueStore {
   }
 
   /**
-   * Client ids with a still-PENDING mutation. The cache merge uses this so a
-   * first-page background refetch landing before replay does not drop an
-   * un-replayed optimistic item; a server-deleted item has no pending op and is
-   * correctly dropped. Empty when no user is set.
+   * Client ids with a still-PENDING mutation; empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
     if (this.pendingClientIds) return this.pendingClientIds;
@@ -452,12 +526,9 @@ export class QueueStore {
   }
 
   /**
-   * Ids the device minted for a create still PENDING or PROCESSING — rows the
-   * server has not confirmed. A replay in flight counts: a first page landing
-   * before its answer would otherwise drop the row. Narrower than
-   * {@link getPendingClientIds}: a pending usage or update names a row the
-   * server owns, and treating it as unconfirmed skips that row's detail
-   * queries and pins it into lists it has left.
+   * Ids minted for a create still PENDING or PROCESSING, which a first page
+   * would drop. Narrower than {@link getPendingClientIds}: an update names a row
+   * the server owns, and counting it pins it into lists it left.
    */
   getUnconfirmedCreateIds(): Set<string> {
     if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;

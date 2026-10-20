@@ -24,59 +24,25 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-type RecipeNode = NonNullable<
-  NonNullable<
-    NonNullable<MockDataFor<typeof MyRecipesDocument>['recipes']>['edges']
-  >[number]['node']
->;
-
-function buildRecipeNode(id: string, name: string): RecipeNode {
-  return {
-    __typename: 'Recipe',
-    id,
-    name,
-    description: null,
-    imageUrl: null,
-    servings: 4,
-    prepTimeMinutes: null,
-    cookTimeMinutes: null,
-    totalTimeMinutes: null,
-  };
-}
+const edge = (cursor: string, id: string, name: string) => ({
+  cursor,
+  node: { id, name },
+});
 
 function recipesMock() {
   return recordMock(MyRecipesDocument, {
     data: {
       recipes: {
-        __typename: 'RecipeConnection',
         edges: [
-          {
-            __typename: 'RecipeEdge',
-            cursor: 'c1',
-            node: buildRecipeNode('r1', 'Pasta'),
-          },
-          {
-            __typename: 'RecipeEdge',
-            cursor: 'c2',
-            node: buildRecipeNode('r2', 'Salad'),
-          },
-          {
-            __typename: 'RecipeEdge',
-            cursor: 'c3',
-            node: buildRecipeNode('r3', 'Soup'),
-          },
+          edge('c1', 'r1', 'Pasta'),
+          edge('c2', 'r2', 'Salad'),
+          edge('c3', 'r3', 'Soup'),
         ],
-        pageInfo: {
-          __typename: 'PageInfo',
-          hasNextPage: false,
-          endCursor: null,
-        },
+        pageInfo: { hasNextPage: false, endCursor: null },
         totalCount: 3,
       },
     },
@@ -92,18 +58,12 @@ function pagedRecipesMock() {
       const secondPage = vars.cursor === 'page-1';
       return {
         recipes: {
-          __typename: 'RecipeConnection',
           edges: [
-            {
-              __typename: 'RecipeEdge',
-              cursor: secondPage ? 'c2' : 'c1',
-              node: secondPage
-                ? buildRecipeNode('r2', 'Lasagne')
-                : buildRecipeNode('r1', 'Pasta'),
-            },
+            secondPage
+              ? edge('c2', 'r2', 'Lasagne')
+              : edge('c1', 'r1', 'Pasta'),
           ],
           pageInfo: {
-            __typename: 'PageInfo',
             hasNextPage: !secondPage,
             endCursor: secondPage ? null : 'page-1',
           },

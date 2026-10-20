@@ -11,7 +11,7 @@
       "emailAlreadyExists": "An account with this email already exists.",
       "emailAlreadyVerified": "This email address is already verified.",
       "emailNotVerified": "Please verify your email before continuing",
-      "featureDisabled": "This feature is currently disabled",
+      "featureDisabled": "This isn't available on your account right now.",
       "fieldInvalid": "Invalid field value",
       "fieldRequired": "Required field is missing",
       "forbidden": "You don't have permission to perform this action",
@@ -20,6 +20,8 @@
       "genericRetry": "Something went wrong. Please try again.",
       "homeAccessDenied": "You don't have access to this home",
       "homeInviteExpired": "Home invitation has expired",
+      "homeMemberLimitReached": "This home has reached its member limit",
+      "payloadTooLarge": "That is too much to send at once. Try a smaller change.",
       "homeInviteInvalid": "Invalid home invitation",
       "homeMemberAlreadyExists": "User is already a member of this home",
       "homeNotFound": "Home not found",
@@ -53,6 +55,8 @@
       "unexpected": "An unexpected error occurred",
       "uniqueConstraint": "This value already exists",
       "unitInvalid": "That unit cannot be used here.",
+      "unstatedAmount": "The recipe doesn't state an amount for this ingredient, so nothing was deducted.",
+      "premiumRequired": "This needs a Premium plan.",
       "validationFailed": "Please check your input and try again",
       "versionConflict": "This changed somewhere else after you opened it. Please refresh and try again.",
       "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."
@@ -124,6 +128,7 @@
       "Notification": "notification"
     },
     "queuedChangeRejected": "A change couldn't be saved and has been undone.",
+    "queuedChangeRejectedResource": "Your change to the {{resource}} couldn't be saved and has been undone.",
     "offlineNoMorePages": "You're offline, so there's nothing more to load yet.",
     "offlineSearchUnavailable": "Recipe search needs a connection. Your saved recipes are still here.",
     "queuedChangeOverwrittenResource": "Your change to the {{resource}} was overwritten by a newer one and has been undone.",
@@ -132,6 +137,7 @@
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
     "invalidQuantity": "Please enter a valid quantity",
+    "invalidAmountPaid": "Enter the amount paid, like 3.49, or leave it empty.",
     "itemNotFound": "Item not found",
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
@@ -147,8 +153,8 @@
     "openBatchFailed": "Could not open this batch.",
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
-    "entityUpdatedTitle": "{{entity}} Updated",
     "changedElsewhereTitle": "Changed Elsewhere",
+    "changedElsewhereLatestShown": "This changed somewhere else after you opened it, so your change wasn't saved. The latest version is shown now.",
     "entityHome": "Home",
     "entityMember": "Member",
     "entityInvite": "Invite",
@@ -178,6 +184,7 @@
       "newPassword": "That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.",
       "currentPassword": "That current password isn’t right. Check it and try again.",
       "servingsMade": "Enter a whole number of servings greater than zero",
+      "servings": "Enter a number of servings greater than zero",
       "key": "That image could not be confirmed. Pick it again and retry.",
       "imageUrl": "Enter the full image URL, starting with http:// or https://",
       "videoUrl": "Enter the full video URL, starting with http:// or https://",
@@ -185,7 +192,10 @@
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",
       "amount": "That's more than this item has left.",
-      "unitId": "That unit can't be used here. Pick one from the list."
+      "amountMeasuredQuantity": "Enter an amount greater than zero.",
+      "amountPackagesSize": "We don't know how much one package of this holds. Enter the package size, or the amount with its unit (like 1 kg).",
+      "unitId": "That unit can't be used here. Pick one from the list.",
+      "primaryUpc": "That barcode isn’t valid. Check its digits and try again."
     },
     "unitDenied": {
       "noRoute": "That unit can't be converted to how this item is tracked.",
@@ -243,6 +253,7 @@
     "deleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "logout": "Are you sure you want to log out?",
     "discardChanges": "Are you sure you want to discard your changes?",
+    "discardChangesTitle": "Discard changes?",
     "logoutWithPending_one": "You have {{count}} change that hasn't synced yet. Signing out will discard it.",
     "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them.",
     "deleteHomeTitle": "Delete Home",
@@ -262,6 +273,7 @@
     "addNamed": "Add {{name}}",
     "addToShoppingList": "Add to Shopping List",
     "adding": "Adding...",
+    "added": "Added",
     "admin": "Admin",
     "alertWhenBelow": "Alert When Below",
     "allergiesIntolerances": "Allergies & Intolerances",
@@ -293,9 +305,11 @@
     "changePassword": "Change Password",
     "clear": "Clear",
     "clearAll": "Clear all",
+    "check": "Check",
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",
+    "open": "Open",
     "commaSeparated": "Comma-separated",
     "condition": "Condition",
     "confirm": "Confirm",
@@ -305,6 +319,8 @@
     "copied": "Copied",
     "copy": "Copy",
     "copyOfName": "{{name}} (Copy)",
+    "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "License",
     "couldnTSendThat": "Couldn't send that",
     "couldnTSetThatPhoto": "Couldn't set that photo",
     "create": "Create",
@@ -483,7 +499,6 @@
     "thisFieldIsRequired": "This field is required",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "This item isn't in the catalog any more — it may have been removed.",
     "tips": "Tips",
-    "totalCost": "Total Cost",
     "stockValue": "Stock value",
     "avgCostPerUnit": "Avg Cost/Unit",
     "totalPaid": "Total paid",
@@ -508,7 +523,9 @@
     "durationDays_one": "{{count}} day",
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
-    "today": "Today"
+    "today": "Today",
+    "packageSize": "Package size",
+    "unit": "Unit"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -565,7 +582,6 @@
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
-    "betaFeaturesEnabled": "Beta Features Enabled",
     "experience": "Experience",
     "hapticFeedback": "Haptic Feedback",
     "hapticFeedbackDesc": "Vibration feedback for interactions and alerts",
@@ -573,6 +589,8 @@
     "navigationLabelsDesc": "Show text labels below navigation icons",
     "shoppingListImages": "Shopping List Images",
     "shoppingListImagesDesc": "Show product images in shopping lists",
+    "storeMode": "Store mode",
+    "storeModeDesc": "Shop a list aisle by aisle from the store icon on the shopping list",
     "shareUsageData": "Share Usage Data",
     "shareUsageDataDesc": "Help improve {{appName}} by sharing anonymous usage statistics",
     "resetSection": "Reset",
@@ -592,8 +610,7 @@
     "placeholder": "Select an option"
   },
   "searchBar": {
-    "placeholder": "Search…",
-    "actionFallback": "{{icon}} button"
+    "placeholder": "Search…"
   },
   "settingRow": {
     "enabled": "enabled",
@@ -609,7 +626,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Pantry",
-      "shoppingList": "List"
+      "shoppingList": "List",
+      "mealPlan": "Meal Plan"
     }
   },
   "numberInputSheet": {
@@ -674,7 +692,8 @@
   },
   "tabBar": {
     "actionButton": "Action button",
-    "actionButtonHint": "Opens the action for the current tab"
+    "actionButtonHint": "Opens the action for the current tab",
+    "addMenuHint": "Opens the ways to add"
   },
   "swipeActions": {
     "markUnpurchased": "Mark as unpurchased",
@@ -689,7 +708,6 @@
     "year": "Year"
   },
   "a11y": {
-    "actionButton": "{{name}} button",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "{{label}} value",
     "quantityValue": "Quantity value",

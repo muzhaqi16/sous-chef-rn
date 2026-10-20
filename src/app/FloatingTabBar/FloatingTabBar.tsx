@@ -6,9 +6,10 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedReaction,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import {
   useTabBarState,
   useTabBarSetters,
@@ -18,10 +19,9 @@ import {
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
+import { AddMenu } from './AddMenu';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
@@ -42,19 +42,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   navigation,
   tabs,
 }) => {
-  const { t } = useTranslation();
-  const {
-    onAddPress,
-    showAddButton,
-    addButtonConfig,
-    isAddButtonDisabled,
-    addButtonDisabledMessage,
-  } = useTabBarState();
+  const { showAddButton, addButtonConfig, addMenu, isAddMenuOpen } =
+    useTabBarState();
 
   // True for every backdrop claim, sheets and selectors alike, from the global
   // backdrop's slot count — broader than the selector-only `isOverlayOpen`.
   const overlayPresent = useOverlayBackdropPresence();
-  const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
+  const { setActiveTab, setAddButtonRect, setAddMenuOpen, scrollTabBarHidden } =
     useTabBarSetters();
 
   const { ref: addButtonRef, measure: measureAddButton } =
@@ -62,14 +56,32 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   const showNavigationLabels = useShowNavigationLabels();
 
+  // A menu of one is its action; of two or more, the `+` opens it.
+  const [onlyAction] = addMenu ?? [];
+  const hasMenu = !!addMenu && addMenu.length > 1;
+  const menuProgress = useSharedValue(0);
+  // The scrim fades on its own: the `+`'s under-damped spring would swing its
+  // opacity past open and back several times before it settles.
+  const menuFade = useSharedValue(0);
+  useEffect(() => {
+    const opening = hasMenu && isAddMenuOpen;
+    menuProgress.set(withSpring(opening ? 1 : 0, motion.spring.SNAPPY));
+    menuFade.set(
+      withTiming(opening ? 1 : 0, {
+        duration: opening ? SHEET.BACKDROP_FADE_IN : SHEET.BACKDROP_FADE_OUT,
+      }),
+    );
+  }, [hasMenu, isAddMenuOpen, menuProgress, menuFade]);
+  const closeAddMenu = () => setAddMenuOpen(false);
+
   const handleAddPress = () => {
-    if (isAddButtonDisabled) {
-      toastService.info(
-        firstNonBlank(addButtonDisabledMessage) ?? t('errors.codes.forbidden'),
-      );
-      return;
+    if (hasMenu) {
+      setAddMenuOpen(!isAddMenuOpen);
+    } else if (onlyAction?.disabledReason) {
+      toastService.info(onlyAction.disabledReason);
+    } else {
+      onlyAction?.onPress();
     }
-    onAddPress?.();
   };
   const { bottom: safeBottom } = useSafeAreaInsets();
 
@@ -79,11 +91,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     activeTabIndex.set(state.index);
   }, [state.index, activeTabIndex]);
 
-  // Visibility is the max of two 0…1 hide sources: overlay coverage (the global
-  // dim opacity, so the bar moves in lockstep with the sheet's own
-  // `animatedIndex` rather than waiting on a settled-closed callback) and the
-  // scroll-hide spring. Detail screens are siblings of the tab navigator, so they
-  // cover the bar outright and never factor in.
+  // Hidden by the max of the global dim opacity, which moves the bar in
+  // lockstep with a sheet's `animatedIndex`, and the scroll-hide spring.
+  // Detail screens cover the bar outright as the tab navigator's siblings.
   const overlayOpacity = useOverlayBackdropOpacity();
   const scrollHide = useSharedValue(0);
 
@@ -158,10 +168,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     activeTabIndex.set(targetIndex);
     HapticService.selection();
 
+    // The library tab bar's rule: a press on the focused tab is a repeat, which
+    // native-stack answers by popping that tab's stack to its first screen.
     const event = navigation.emit({
       type: 'tabPress',
       target: route.key,
       canPreventDefault: true,
+      data: { behavior: { scrollToTop: isFocused, popToTop: isFocused } },
     });
 
     if (!event.defaultPrevented) {
@@ -236,14 +249,28 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         onPress={handleAddPress}
         icon={addButtonConfig.icon}
         iconLibrary={addButtonConfig.iconLibrary}
-        disabled={isAddButtonDisabled}
+        disabled={!hasMenu && !!onlyAction?.disabledReason}
+        {...(hasMenu && { menuOpen: isAddMenuOpen, menuProgress })}
       />
     </Animated.View>
   ) : null;
 
+  // Between the bar and the `+`, so the `+` stays above its own scrim.
+  const addMenuLayer =
+    showAddButton && hasMenu ? (
+      <AddMenu
+        actions={addMenu}
+        open={isAddMenuOpen}
+        fade={menuFade}
+        buttonBottom={floatingButtonStyle.bottom}
+        onClose={closeAddMenu}
+      />
+    ) : null;
+
   return (
     <>
       {bar}
+      {addMenuLayer}
       {floatingAddButton}
     </>
   );

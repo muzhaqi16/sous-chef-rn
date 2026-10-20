@@ -3,14 +3,9 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import type { FragmentType } from '@apollo/client/masking';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
-import type { ShoppingListRowItem } from '../../../../src/features/shoppingList/components/SortableShoppingList/types';
-import type { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem.generated';
-
-jest.mock('../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../src/apollo/links/refreshToken');
+import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 
 jest.mock('../../../../src/hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
@@ -78,18 +73,7 @@ describe('SortableShoppingList', () => {
   });
 
   it('renders list when items are provided', () => {
-    const items: ShoppingListRowItem[] = [
-      {
-        id: '1',
-        isPurchased: false,
-        sortOrder: 'a0',
-        // The masked ref is structurally a normalized ref: __typename + id is
-        // enough for useFragment's cache lookup.
-        itemRef: { __typename: 'ShoppingListItem', id: '1' } as FragmentType<
-          typeof SortableItem_ItemFragmentDoc
-        >,
-      },
-    ];
+    const items = [shoppingListRowItem('1')];
     const { toJSON } = render(
       withPermissions(<SortableShoppingList {...defaultProps} items={items} />),
     );

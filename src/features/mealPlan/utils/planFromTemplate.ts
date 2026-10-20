@@ -1,5 +1,6 @@
 import { generateEntityId } from '#/utils/generateEntityId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { addDaysToKey } from '#/utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
@@ -34,6 +35,7 @@ export interface DerivedPlan {
 }
 
 interface Options {
+  /** The plan's first day, as a `LocalDate` key. */
   startDate: string;
   name?: string | null;
   servings?: number | null;
@@ -42,8 +44,6 @@ interface Options {
   planType: MealPlanType;
   mintId?: () => string;
 }
-
-const DAY_MS = 86_400_000;
 
 /**
  * Lay a template's meals onto real dates. A template's day offset plus the
@@ -54,7 +54,6 @@ export function planFromTemplate(
   options: Options,
 ): DerivedPlan {
   const mint = options.mintId ?? generateEntityId;
-  const start = new Date(options.startDate).getTime();
   const planId = mint();
   // Inclusive, so a one-day template starts and ends on the same date.
   const span = Math.max(source.durationDays ?? 1, 1) - 1;
@@ -65,8 +64,10 @@ export function planFromTemplate(
     id: planId,
     name: firstNonBlank(options.name)?.trim() ?? source.name,
     startDate: options.startDate,
-    endDate: new Date(start + span * DAY_MS).toISOString(),
+    endDate: addDaysToKey(options.startDate, span),
     planType: options.planType,
+    // The server counts the template's use with the plan it was made into.
+    templateId: source.id,
     ...(source.description != null && { description: source.description }),
     ...(options.budgetAmount != null && {
       budgetAmount: options.budgetAmount,
@@ -90,7 +91,7 @@ export function planFromTemplate(
     items.push({
       id: mint(),
       mealPlanId: planId,
-      date: new Date(start + meal.dayOffset * DAY_MS).toISOString(),
+      date: addDaysToKey(options.startDate, meal.dayOffset),
       mealType: meal.mealType,
       meal: reference,
       ...(meal.servings != null && { servings: meal.servings }),

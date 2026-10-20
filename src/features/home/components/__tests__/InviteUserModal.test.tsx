@@ -13,8 +13,6 @@ jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: jest.fn(() => false),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 describe('InviteUserModal', () => {
   const defaultProps = {
     visible: true,

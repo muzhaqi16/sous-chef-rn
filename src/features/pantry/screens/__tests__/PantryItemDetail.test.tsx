@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
+import { kitTestIDs } from '#components/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -26,6 +27,13 @@ jest.mock('#features/pantry/hooks/useRecipeSuggestionsForItem', () => ({
     loadingRecipes: false,
   }),
 }));
+
+/** A header action, in the bar or in the "more" menu it overflowed into. */
+const headerAction = (testID: string) => {
+  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
+  if (more) fireEvent.press(more);
+  return screen.queryByTestId(testID);
+};
 
 // Action handlers are covered by usePantryItemDetailActions.test. Mock to
 // expose stable refs for the screen's headerActions wiring.
@@ -346,7 +354,7 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
     await screen.findAllByText('Milk');
-    expect(screen.getByTestId('pantry-item-discard-button')).toBeTruthy();
+    expect(headerAction('pantry-item-discard-button')).toBeTruthy();
   });
 
   it('does not offer discard on the expiry date itself', async () => {
@@ -403,10 +411,11 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [itemMock(fullItem)],
     });
     await screen.findAllByText('Milk');
+    // Add to list and adjust stay in the bar; the rest open from "more".
     expect(screen.getByTestId('pantry-item-add-to-list-button')).toBeTruthy();
-    expect(screen.getByTestId('pantry-item-edit-button')).toBeTruthy();
-    expect(screen.getByTestId('pantry-item-delete-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
+    expect(headerAction('pantry-item-edit-button')).toBeTruthy();
+    expect(headerAction('pantry-item-delete-button')).toBeTruthy();
   });
 
   it('shows the offline state, not a spinner, on an offline cache miss', async () => {
@@ -427,12 +436,28 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.queryByTestId('state-loading')).toBeNull();
   });
 
+  it('says a stack the server holds nothing for is gone, not that it failed to load', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        recordMock(GetPantryItemDocument, { data: { pantryItem: null } }).mock,
+      ],
+    });
+
+    expect(await screen.findByTestId('pantry-item-removed')).toBeTruthy();
+    expect(
+      screen.getByText('This item is no longer in your pantry'),
+    ).toBeTruthy();
+    expect(screen.getByText('Go Back')).toBeTruthy();
+    expect(screen.queryByTestId('state-error')).toBeNull();
+    expect(screen.queryByTestId('state-loading')).toBeNull();
+  });
+
   it('renders loader before the query resolves', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [
         recordMock(GetPantryItemDocument, {
           data: pantryItemData(fullItem),
-          delay: 1000,
+          held: true,
         }).mock,
       ],
     });

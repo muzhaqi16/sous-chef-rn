@@ -2,161 +2,130 @@ import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
+  recordMock,
   renderHookWithApollo,
-  type MockDataFor,
-  type MockFor,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { BarcodeRestockPantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import type { ScannedItem } from '../../types';
 import { useAddScannedItem } from '../useAddScannedItem';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-/**
- * Offline no payload arrives, so the row is bumped locally; online the payload
- * carries the server's count and the version the restock bumped.
- */
-
-const QUANTITY = gql`
-  fragment _RestockProbe on PantryItem {
-    id
-    quantity
-  }
-`;
+// What a restock moves and sends is `usePantryRestock`'s suite; this one holds
+// what the scan hands it.
 
 const ROW_ID = 'pi-oats';
 
-function cacheWithRow(quantity: number) {
+const SCANNED: ScannedItem = {
+  id: 'item-oats',
+  name: 'Oats',
+  upc: '0001',
+  canEdit: false,
+  canSuggest: true,
+};
+
+const ADDED_ITEM = gql`
+  fragment _RestockAddedItemProbe on PantryItem {
+    id
+    item {
+      id
+    }
+  }
+`;
+
+/** A cache holding the duplicated row, stacked in `unitId`. */
+const heldIn = (type: UnitType, unitId: string) => {
   const cache = makeCache();
   cache.writeFragment({
     id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-    fragment: QUANTITY,
-    data: { __typename: 'PantryItem', id: ROW_ID, quantity },
+    fragment: gql`
+      fragment _RestockStackUnit on PantryItem {
+        id
+        quantity
+        unit {
+          id
+          type
+          symbol
+        }
+      }
+    `,
+    data: {
+      __typename: 'PantryItem',
+      id: ROW_ID,
+      quantity: 3,
+      unit: { __typename: 'Unit', id: unitId, type, symbol: unitId },
+    },
   });
   return cache;
-}
+};
 
-const readQuantity = (cache: ReturnType<typeof makeCache>) =>
-  cache.readFragment<{ quantity: number }>({
-    id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-    fragment: QUANTITY,
-  })?.quantity;
-
-const restockAnswer = (
-  data: MockDataFor<typeof BarcodeRestockPantryItemDocument>,
-): MockFor<typeof BarcodeRestockPantryItemDocument> => ({
-  request: {
-    query: BarcodeRestockPantryItemDocument,
-    variables: () => true,
-  },
-  result: { data },
-});
+const renderScan = (
+  cache: ReturnType<typeof makeCache>,
+  mock: ReturnType<typeof recordMock>,
+) =>
+  renderHookWithApollo(
+    () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
+    { cache, operationMocks: [mock.mock] },
+  );
 
 describe('restocking the row a scan duplicated', () => {
-  it('counts the scanned unit on the row it restocked', async () => {
-    const cache = cacheWithRow(3);
-    const { result } = renderHookWithApollo(
-      () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
-      {
-        cache,
-        operationMocks: [
-          restockAnswer({
-            restockPantryItem: {
-              __typename: 'RestockPantryItemPayload',
-              pantryItemUsage: {
-                __typename: 'PantryItemUsage',
-                pantryItem: {
-                  __typename: 'PantryItem',
-                  id: ROW_ID,
-                  quantity: 4,
-                },
-              },
-            },
-          }),
-        ],
-      },
-    );
+  it('restocks one package of the size entered', async () => {
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: { restockPantryItem: null },
+    });
+    const { result } = renderScan(heldIn(UnitType.Volume, 'unit-ml'), restock);
+    const size = { netWeight: 500, netWeightUnitId: 'unit-ml' };
 
     await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
+      await result.current.restockDuplicate(SCANNED, ROW_ID, size);
     });
 
-    expect(readQuantity(cache)).toBe(4);
+    expect(restock.fired[0]?.input).toMatchObject({
+      id: ROW_ID,
+      amount: { packages: { count: 1, size } },
+    });
   });
 
-  it('puts the count back when the restock is refused', async () => {
-    const cache = cacheWithRow(3);
-    const { result } = renderHookWithApollo(
-      () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
-      {
-        cache,
-        operationMocks: [
-          restockAnswer({
-            restockPantryItem: {
-              __typename: 'NotFoundError',
-              code: ErrorCode.NotFound,
-            },
-          }),
-        ],
-      },
-    );
+  // A forced add, since a restock refuses packages nothing sizes.
+  it.each([
+    ['a catalog item', SCANNED, { id: 'item-oats' }],
+    [
+      'a variation',
+      { ...SCANNED, variationId: 'esm-oats' },
+      { variation: 'esm-oats' },
+    ],
+  ])(
+    'adds a package nothing sizes as %s, its row showing the catalog item',
+    async (_label, scanned, sent) => {
+      const cache = heldIn(UnitType.Volume, 'unit-ml');
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const { result } = renderScan(cache, create);
+      const held = new Set(Object.keys(cache.extract()));
+      let row;
+      let restocked;
+      await act(async () => {
+        const pending = result.current.restockDuplicate(scanned, ROW_ID);
+        // Read before the answer lands: the row is written before the create fires.
+        const [minted] = Object.keys(cache.extract()).filter(
+          key => key.startsWith('PantryItem:') && !held.has(key),
+        );
+        row = minted
+          ? cache.readFragment({ id: minted, fragment: ADDED_ITEM })
+          : undefined;
+        restocked = await pending;
+      });
 
-    await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
-    });
-
-    expect(readQuantity(cache)).toBe(3);
-  });
-
-  it('takes the version the restock returns, so the next edit is not a conflict', async () => {
-    const VERSION = gql`
-      fragment _RestockVersionProbe on PantryItem {
-        id
-        version
-      }
-    `;
-    const cache = cacheWithRow(3);
-    cache.writeFragment({
-      id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-      fragment: VERSION,
-      data: { __typename: 'PantryItem', id: ROW_ID, version: 4 },
-    });
-    const { result } = renderHookWithApollo(
-      () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
-      {
-        cache,
-        operationMocks: [
-          restockAnswer({
-            restockPantryItem: {
-              __typename: 'RestockPantryItemPayload',
-              pantryItemUsage: {
-                __typename: 'PantryItemUsage',
-                pantryItem: {
-                  __typename: 'PantryItem',
-                  id: ROW_ID,
-                  quantity: 4,
-                  version: 5,
-                },
-              },
-            },
-          }),
-        ],
-      },
-    );
-
-    await act(async () => {
-      await result.current.restockDuplicate(ROW_ID);
-    });
-
-    expect(
-      cache.readFragment<{ version: number }>({
-        id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
-        fragment: VERSION,
-      })?.version,
-    ).toBe(5);
-  });
+      expect(restocked).toBe(true);
+      expect(create.fired[0]?.input).toMatchObject({
+        item: sent,
+        amount: { packages: { count: 1 } },
+        forceAdd: true,
+      });
+      expect(row).toMatchObject({ item: { id: 'item-oats' } });
+    },
+  );
 });

@@ -23,6 +23,7 @@ import { formatDateRangeWithYear } from '#/utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -133,17 +134,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: mealPlan.name,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            onDelete(mealPlan.id);
-            onClose();
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        onDelete(mealPlan.id);
+        onClose();
+      }),
     );
   };
 
@@ -156,6 +150,28 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           parseISO(mealPlan.endDate),
         )
       : null;
+
+  const generatedLists = mealPlan.generatedShoppingListsConnection.edges.map(
+    edge => edge.node,
+  );
+
+  // No recorded spend is unknown, not a spend of zero.
+  let costLine: string | null = null;
+  if (mealPlan.budgetAmount != null) {
+    costLine =
+      mealPlan.actualCost != null
+        ? t('mealPlanSettings.budgetSpent', {
+            spent: money(mealPlan.actualCost),
+            budget: money(mealPlan.budgetAmount),
+          })
+        : t('mealPlanSettings.budgetOnly', {
+            budget: money(mealPlan.budgetAmount),
+          });
+  } else if (mealPlan.actualCost != null && mealPlan.actualCost > 0) {
+    costLine = t('mealPlanSettings.spentAmount', {
+      spent: money(mealPlan.actualCost),
+    });
+  }
 
   return (
     <Sheet
@@ -199,20 +215,11 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             })}
           </Text>
         )}
-        {mealPlan.budgetAmount != null ? (
+        {costLine !== null && (
           <Text role="caption" tone="tertiary" style={styles.planDate}>
-            {t('mealPlanSettings.budgetSpent', {
-              spent: money(mealPlan.actualCost),
-              budget: money(mealPlan.budgetAmount),
-            })}
+            {costLine}
           </Text>
-        ) : mealPlan.actualCost > 0 ? (
-          <Text role="caption" tone="tertiary" style={styles.planDate}>
-            {t('mealPlanSettings.spentAmount', {
-              spent: money(mealPlan.actualCost),
-            })}
-          </Text>
-        ) : null}
+        )}
       </View>
 
       {/* Actions */}
@@ -284,13 +291,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       )}
 
       {/* Generated shopping lists */}
-      {mealPlan.generatedShoppingLists.length > 0 && (
+      {generatedLists.length > 0 && (
         <View style={styles.section}>
           <SectionHeader variant="overline">
             {t('mealPlanSettings.generatedLists')}
           </SectionHeader>
           <View style={styles.actionsCard}>
-            {mealPlan.generatedShoppingLists.map(list => (
+            {generatedLists.map(list => (
               <View key={list.id} style={styles.listRow}>
                 <Icon name="list-outline" size={18} tone="textSecondary" />
                 <Text role="caption" style={styles.listName}>

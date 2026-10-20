@@ -1,5 +1,8 @@
 import { generateEntityId } from '#/utils/generateEntityId';
-import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  type BatchAddShoppingListItemInput,
+} from '#/graphql/generated/schemaTypes';
 
 /** One planned meal, as `useGenerateShoppingList_mealPlan` caches it. */
 export interface PlannedMeal {
@@ -15,7 +18,9 @@ export interface PlannedMeal {
 export interface PlannedIngredient {
   id: string;
   name: string;
-  quantity: number;
+  /** Null when the recipe states no amount ("salt, to taste"). */
+  quantity: number | null;
+  isOptional: boolean;
   unitId?: string | null;
   itemId?: string | null;
 }
@@ -44,21 +49,23 @@ export interface DerivedShoppingList {
 
 interface DeriveOptions {
   mealPlanId: string;
-  mealPlanName: string;
   checkPantry: boolean;
   /** Null means the pantry is not in the cache, not that it is empty. */
   pantryRows: PantryStock[] | null;
   mintId?: () => string;
 }
 
-interface Aggregate {
-  itemId: string;
-  unitId: string;
+interface Source {
   name: string;
-  quantity: number;
   recipeId: string;
   mealPlanItemId: string;
   recipeIngredientId: string;
+}
+
+interface Aggregate extends Source {
+  itemId: string;
+  unitId: string;
+  quantity: number;
 }
 
 /**
@@ -69,9 +76,9 @@ interface Aggregate {
 const keyOf = (itemId: string, unitId: string) => `${itemId}:${unitId}`;
 
 /**
- * Turn a cached meal plan into the shopping-list lines it implies, so the action
- * runs with the API unreachable. Optional ingredients are INCLUDED, matching the
- * server, which never reads `isOptional` on this path.
+ * The shopping-list lines a cached meal plan implies, derived offline. Optional
+ * ingredients drop silently, as on the server; an unstated amount is one line
+ * with no quantity, only when neither the pantry nor a stated line covers it.
  */
 export function deriveShoppingListFromMealPlan(
   meals: PlannedMeal[],
@@ -80,6 +87,7 @@ export function deriveShoppingListFromMealPlan(
   const mint = options.mintId ?? generateEntityId;
   const skipped: DerivedShoppingList['skipped'] = [];
   const aggregated = new Map<string, Aggregate>();
+  const unstated = new Map<string, Source>();
 
   for (const meal of meals) {
     const recipe = meal.recipe;
@@ -98,7 +106,25 @@ export function deriveShoppingListFromMealPlan(
     const multiplier = perRecipe > 0 ? (meal.servings ?? 1) / perRecipe : 1;
 
     for (const ingredient of recipe.ingredients) {
-      const { itemId, unitId } = ingredient;
+      if (ingredient.isOptional) continue;
+      const { itemId, unitId, quantity } = ingredient;
+      // Never scaled, summed or converted, so it needs no unit.
+      if (quantity === null) {
+        if (!itemId) {
+          skipped.push({
+            sourceId: ingredient.id,
+            reason: 'ingredient-not-in-catalog',
+          });
+        } else if (!unstated.has(itemId)) {
+          unstated.set(itemId, {
+            name: ingredient.name,
+            recipeId: recipe.id,
+            mealPlanItemId: meal.id,
+            recipeIngredientId: ingredient.id,
+          });
+        }
+        continue;
+      }
       // The server drops an ingredient missing either, rather than adding it as
       // free text. Reported here so the caller can name what it left out.
       if (!itemId || !unitId) {
@@ -112,14 +138,14 @@ export function deriveShoppingListFromMealPlan(
       const key = keyOf(itemId, unitId);
       const existing = aggregated.get(key);
       if (existing) {
-        existing.quantity += ingredient.quantity * multiplier;
+        existing.quantity += quantity * multiplier;
         continue;
       }
       aggregated.set(key, {
         itemId,
         unitId,
         name: ingredient.name,
-        quantity: ingredient.quantity * multiplier,
+        quantity: quantity * multiplier,
         recipeId: recipe.id,
         mealPlanItemId: meal.id,
         recipeIngredientId: ingredient.id,
@@ -131,8 +157,17 @@ export function deriveShoppingListFromMealPlan(
   const pantryChecked = pantryRows !== null;
   const inputs: BatchAddShoppingListItemInput[] = [];
   const displayNames = new Map<string, string>();
+  const recipeContext = (entry: Source) => ({
+    mealPlanId: options.mealPlanId,
+    mealPlanItemId: entry.mealPlanItemId,
+    addedContext: AddedContext.FromMealPlan,
+    recipeId: entry.recipeId,
+    recipeIngredientId: entry.recipeIngredientId,
+  });
+  const statedItemIds = new Set<string>();
 
   for (const entry of aggregated.values()) {
+    statedItemIds.add(entry.itemId);
     const quantity = pantryRows
       ? entry.quantity - stockFor(pantryRows, entry.itemId, entry.unitId)
       : entry.quantity;
@@ -152,24 +187,41 @@ export function deriveShoppingListFromMealPlan(
       item: { itemId: entry.itemId },
       unit: { id: entry.unitId },
       quantity,
-      recipeContext: {
-        mealPlanId: options.mealPlanId,
-        mealPlanItemId: entry.mealPlanItemId,
-        mealPlanReference: options.mealPlanName,
-        recipeId: entry.recipeId,
-        recipeIngredientId: entry.recipeIngredientId,
-      },
+      recipeContext: recipeContext(entry),
+    });
+  }
+
+  for (const [itemId, entry] of unstated) {
+    // A stated line of the item already puts it on the list.
+    if (statedItemIds.has(itemId)) continue;
+    if (pantryRows && holdsAny(pantryRows, itemId)) {
+      skipped.push({
+        sourceId: entry.recipeIngredientId,
+        reason: 'covered-by-pantry',
+      });
+      continue;
+    }
+    const lineId = mint();
+    displayNames.set(lineId, entry.name);
+    inputs.push({
+      id: lineId,
+      item: { itemId },
+      recipeContext: recipeContext(entry),
     });
   }
 
   return { inputs, displayNames, skipped, pantryChecked };
 }
 
+/** Any stock of the item, in any unit: an unstated amount asks for no more. */
+function holdsAny(rows: PantryStock[], itemId: string): boolean {
+  return rows.some(row => row.itemId === itemId && row.quantity > 0);
+}
+
 /**
  * Rows of the same catalog item in the SAME unit. The server matches the unit's
- * TYPE and converts, which the client cannot do — no selectable field carries a
- * unit's type. Matching the exact unit is a subset of what the server deducts,
- * so a derived list can over-buy but never under-buy.
+ * TYPE and converts, but no selectable field carries it; an exact match deducts
+ * less, so a list may over-buy, never under-buy.
  */
 function stockFor(rows: PantryStock[], itemId: string, unitId: string): number {
   let total = 0;

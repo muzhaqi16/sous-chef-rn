@@ -11,7 +11,6 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
-  BatchAddShoppingListItemInput,
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
@@ -24,6 +23,7 @@ import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items
 import {
   createShoppingListRow,
   type ShoppingRowFields,
+  type ShoppingRowLine,
 } from '#features/shoppingList/cache/createShoppingListRow';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
@@ -31,27 +31,18 @@ import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
 
-type LocalItemField = keyof Pick<
-  ShoppingListItem,
-  | 'itemName'
-  | 'notes'
-  | 'category'
-  | 'priority'
-  | 'sortOrder'
-  | 'quantity'
-  | 'quantityInput'
+type LocalItemFields = Partial<
+  Pick<
+    ShoppingListItem,
+    | 'itemName'
+    | 'notes'
+    | 'category'
+    | 'priority'
+    | 'sortOrder'
+    | 'quantity'
+    | 'quantityInput'
+  >
 >;
-type LocalItemFields = Partial<Pick<ShoppingListItem, LocalItemField>>;
-
-const LOCAL_ITEM_FIELDS = [
-  'itemName',
-  'notes',
-  'category',
-  'priority',
-  'sortOrder',
-  'quantity',
-  'quantityInput',
-] satisfies LocalItemField[];
 
 /**
  * The edited fields a cached `ShoppingListItem` holds in the input's own shape.
@@ -80,10 +71,9 @@ function localItemFields(input: UpdateShoppingListItemInput): LocalItemFields {
 }
 
 /**
- * The item an edit form loads, and the two writes it can make. The create
- * writes the row into the cache before firing and leaves it there, so it shows
- * immediately and survives being queued offline. Each write resolves `true`
- * unless refused, and a refusal has already been alerted.
+ * The item an edit form loads, and its two writes. The create caches the row
+ * before firing and leaves it, so it shows at once and survives an offline
+ * queue. Each resolves `true` unless refused, the refusal already alerted.
  */
 export function useShoppingListItemWrites(
   listId: string,
@@ -121,10 +111,7 @@ export function useShoppingListItemWrites(
     context: { localFirst: true },
   });
 
-  const createItem = async (
-    row: ShoppingRowFields,
-    line: Omit<BatchAddShoppingListItemInput, 'id'>,
-  ) => {
+  const createItem = async (row: ShoppingRowFields, line: ShoppingRowLine) => {
     const created = await createShoppingListRow(client.cache, {
       listId,
       row,
@@ -152,27 +139,16 @@ export function useShoppingListItemWrites(
   ): Promise<boolean> => {
     // Local-first: the edit shows at once and survives a restart while queued.
     const fields = localItemFields(input);
-    const persisted = LOCAL_ITEM_FIELDS.filter(
-      field => fields[field] !== undefined,
-    );
     writeEntityFields(
       client.cache,
       { __typename: 'ShoppingListItem', id: input.id },
       fields,
     );
-    for (const field of persisted) {
-      optimisticDataPersistence.save(
-        'ShoppingListItem',
-        input.id,
-        field,
-        fields[field],
-      );
-    }
-    const clearPersisted = () => {
-      for (const field of persisted) {
-        optimisticDataPersistence.clear('ShoppingListItem', input.id, field);
-      }
-    };
+    const clearPersisted = optimisticDataPersistence.trackFields(
+      'ShoppingListItem',
+      input.id,
+      fields,
+    );
 
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.

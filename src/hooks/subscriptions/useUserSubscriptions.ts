@@ -1,11 +1,11 @@
 /**
- * ONE consolidated `userEvents(userId)` stream — account, profile and lifecycle
- * events discriminated by `subtype` — because the server caps concurrent
- * subscriptions per user cluster-wide. ACCOUNT_UPDATED / PROFILE_CHANGED
+ * ONE `userEvents(userId)` stream routed by `subtype`, because the server caps
+ * concurrent subscriptions per user. ACCOUNT_UPDATED / PROFILE_CHANGED
  * normalize by id; lifecycle subtypes carry their context on the envelope.
  */
 
 import { useApolloClient, useSubscription } from '@apollo/client/react';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import {
   UserEventsDocument,
   type UserEventsSubscription,
@@ -33,6 +33,10 @@ import { authService } from '#/services/authService';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type UserEventPayload = UserEventsSubscription['userEvents'];
+
+/** A leave arrives as a removal the user made themselves; it is not news. */
+const removedThemselves = (payload: UserEventPayload) =>
+  !!payload.actorUserId && payload.actorUserId === payload.userId;
 
 function handleRemovedFromHome(
   payload: UserEventPayload,
@@ -66,12 +70,18 @@ function handleRemovedFromHome(
     store.setSelectedMealPlanId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromHome'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromHome'));
+  }
 }
 
-function handleAddedToHome(client: SubscriptionApolloClient) {
+/** `ownAccept`: the echo of an invite this device just accepted. */
+function handleAddedToHome(
+  client: SubscriptionApolloClient,
+  ownAccept: boolean,
+) {
   void client.refetchQueries({ include: [GetHomesDocument] });
-  toastService.success(t('accountEvents.addedToHome'));
+  if (!ownAccept) toastService.success(t('accountEvents.addedToHome'));
 }
 
 function handleRemovedFromShoppingList(
@@ -88,18 +98,19 @@ function handleRemovedFromShoppingList(
     store.setSelectedShoppingListId(null);
   }
 
-  toastService.error(t('accountEvents.removedFromShoppingList'));
+  if (!removedThemselves(payload)) {
+    toastService.error(t('accountEvents.removedFromShoppingList'));
+  }
 }
 
-function handleAddedToShoppingList() {
-  toastService.success(t('accountEvents.addedToShoppingList'));
+function handleAddedToShoppingList(ownAccept: boolean) {
+  if (!ownAccept) toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
 /**
- * The event's `reason` is a moderator's own English, so no toast shows it. The
- * copy comes from `reasonCode`, which separates the two states the user needs
- * told apart: the failed-login lockout lifts by itself, a moderator's decision
- * does not.
+ * `reason` is a moderator's own English, so no toast shows it; `reasonCode`
+ * tells the failed-login lockout, which lifts by itself, from a moderator's
+ * decision, which does not.
  */
 function handleBannedOrSuspended(payload: UserEventPayload) {
   const message =
@@ -119,10 +130,8 @@ function handleBannedOrSuspended(payload: UserEventPayload) {
 }
 
 /**
- * Initialize user subscriptions for multi-device profile/settings sync
- * and lifecycle events (membership changes, moderation actions).
- *
- * @param userId - Current user ID for deduplication and subscription scoping
+ * Multi-device profile/settings sync and lifecycle events (membership changes,
+ * moderation actions).
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
@@ -149,7 +158,7 @@ export function useUserSubscriptions(userId?: string) {
           break;
 
         case UserSubtype.AddedToHome:
-          handleAddedToHome(client);
+          handleAddedToHome(client, isSelfEcho(payload, userId));
           break;
 
         case UserSubtype.RemovedFromShoppingList:
@@ -157,7 +166,7 @@ export function useUserSubscriptions(userId?: string) {
           break;
 
         case UserSubtype.AddedToShoppingList:
-          handleAddedToShoppingList();
+          handleAddedToShoppingList(isSelfEcho(payload, userId));
           break;
 
         case UserSubtype.Banned:

@@ -1,6 +1,7 @@
 import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
+import { getDeviceLocale } from './deviceLocale';
 import { getDeviceId } from '#/storage/deviceId';
 import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 
@@ -19,10 +20,9 @@ export interface DeviceInformation {
   screenResolution?: string;
   timezone: string;
   /**
-   * The device's BCP 47 locale ("en-US"), null when it cannot be read: the
-   * server takes a "Device default" user's unit system from its region, so a
-   * guess would register the device as American. Null, not absent: the server
-   * keeps a stored locale for a field left out.
+   * BCP 47 ("en-US"), null when unreadable: the server takes a "Device default"
+   * user's unit system from its region, so a guess would register an American.
+   * Null, not absent: the server keeps a stored locale for an omitted field.
    */
   language: string | null;
 
@@ -341,10 +341,8 @@ const collectAdditionalInfo = async () => {
   const additionalInfo: Partial<DeviceInformation> = {};
 
   try {
-    // Media capabilities for fingerprinting. The platform returns one entry per
-    // codec instance, so the raw list repeats each MIME type many times
-    // (video/avc, video/hevc, etc.). This field is a capability set, so collapse
-    // to unique types before reporting.
+    // The platform lists one entry per codec instance, repeating each MIME type,
+    // so the capability set collapses to unique types.
     const mediaTypes = await DeviceInfo.getSupportedMediaTypeList().catch(
       () => undefined,
     );
@@ -357,18 +355,6 @@ const collectAdditionalInfo = async () => {
 
   return additionalInfo;
 };
-
-/** The device's locale, or null when neither source can say. */
-function readDeviceLocale(): string | null {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.language) {
-      return navigator.language;
-    }
-    return Intl.DateTimeFormat().resolvedOptions().locale || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Collects display-related information
@@ -511,7 +497,7 @@ export const collectDeviceInformation =
         appVersion,
         screenResolution,
         timezone,
-        language: readDeviceLocale(),
+        language: getDeviceLocale(),
         ...browserInfo,
 
         // Enhanced security & identification
@@ -569,16 +555,15 @@ export const collectDeviceInformation =
         osVersion: Platform.Version.toString(),
         appVersion: '1.0.0',
         timezone: 'UTC',
-        language: readDeviceLocale(),
+        language: getDeviceLocale(),
       };
     }
   };
 
 /**
- * The collected facts a registration input cannot be built without. The device
- * IDENTITY is not among them: no amount of collecting produces one, so the
- * caller resolves it first. `satisfies` is what makes a renamed field a compile
- * error rather than a check that quietly refuses every device.
+ * The facts a registration input needs, minus the device IDENTITY, which the
+ * caller resolves first. `satisfies` makes a renamed field a compile error, not
+ * a check that quietly refuses every device.
  */
 export const validateDeviceInformation = (
   deviceInfo: DeviceInformation,

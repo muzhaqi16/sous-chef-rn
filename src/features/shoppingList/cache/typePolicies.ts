@@ -1,22 +1,18 @@
 import type { TypePolicies } from '@apollo/client';
-import type {
-  FieldFunctionOptions,
-  Reference,
-  StoreObject,
-} from '@apollo/client';
+import type { Reference, StoreObject } from '@apollo/client';
 import { isReference } from '@apollo/client';
 import type { FieldMergeFunctionOptions } from '@apollo/client/cache';
 import type { StoreValue } from '@apollo/client/utilities';
 import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
+  readByIdFromCache,
 } from '#/apollo/cacheFieldPolicies';
 
 /**
- * The shopping list's cache shape: an item merges field-wise, its purchase info is ONE FACT that clears on a flip, and every list read redirects to the normalized entity so a local-first row is readable with no server response.
- *
- * Merged into the cache by `makeCache()`, which throws rather than let two
- * features silently overwrite each other on the same field.
+ * The shopping list's cache shape: an item merges field-wise, its purchase info
+ * is ONE FACT that clears on a flip, and list reads redirect to the normalized
+ * entity so a local-first row reads with no server response.
  */
 export const shoppingListTypePolicies: TypePolicies = {
   ShoppingListItem: {
@@ -31,14 +27,9 @@ export const shoppingListTypePolicies: TypePolicies = {
       purchasesConnection: mergeConnectionByNodeId(['orderBy']),
     },
   },
-  // A nested object with no type policy is REPLACED wholesale on write, so
-  // a narrow `purchaseInfo { isPurchased }` write would blank an open
-  // detail screen. Plain `merge: true` is also wrong — the purchase fields
-  // are ONE FACT, so a flipped `isPurchased` must not inherit the previous
-  // purchase's amounts. So: an unchanged `isPurchased` merges field-wise, a
-  // changed one clears what it omits as `null` (removing reads INCOMPLETE).
-  // A local write (`extensions.local`, from `writePurchaseInfo`) always merges:
-  // the amounts it omits are the server's record, not a different purchase.
+  // ONE FACT: an unchanged `isPurchased` merges field-wise (replacing blanks an
+  // open detail screen), a changed one sets what it omits to `null` (a removal
+  // reads INCOMPLETE), and a local `writePurchaseInfo` write always merges.
   ShoppingListItemPurchaseInfo: {
     merge(
       existing: StoreObject | Reference | undefined,
@@ -46,10 +37,8 @@ export const shoppingListTypePolicies: TypePolicies = {
       options: FieldMergeFunctionOptions,
     ) {
       if (!existing) return incoming;
-      // A value object with no key fields is never stored as a reference,
-      // but the parameter type admits one and `Object.keys` on a Reference
-      // would build `{ __ref: null }` and write it over the object. Cheaper
-      // to refuse the shape than to rely on it not occurring.
+      // Never a reference in practice, but the type admits one, and
+      // `Object.keys` on it would write `{ __ref: null }` over the object.
       if (isReference(existing)) return incoming;
       if (options.extensions?.local === true) {
         return options.mergeObjects(existing, incoming);
@@ -92,33 +81,8 @@ export const shoppingListTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      shoppingList: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'ShoppingList',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
-      shoppingListItem: {
-        read(
-          existing: unknown,
-          { args, toReference, canRead }: FieldFunctionOptions,
-        ) {
-          if (existing !== undefined) return existing;
-          const ref = toReference({
-            __typename: 'ShoppingListItem',
-            id: args?.id as string,
-          });
-          return canRead(ref) ? ref : existing;
-        },
-      },
-      // List-level queries (return collections of lists/homes)
+      shoppingList: readByIdFromCache('ShoppingList'),
+      shoppingListItem: readByIdFromCache('ShoppingListItem'),
       // Not keyed on page size: a picker asking for fewer lists reads the
       // collection the overview holds, offline included. `cache.modify` by
       // field name still reaches every stored variant.

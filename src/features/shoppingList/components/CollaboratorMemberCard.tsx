@@ -79,7 +79,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
 
   const statusVariant = getStatusVariant(member.status);
   const statusText = formatStatus(member.status);
-  const displayName = getCollaboratorDisplayName(member, currentUserId);
+  const displayName = getCollaboratorDisplayName(member, t, currentUserId);
   const memberEmail = member.collaborator?.email ?? member.email ?? '';
   const showEmailRow = !!memberEmail && memberEmail !== displayName;
 

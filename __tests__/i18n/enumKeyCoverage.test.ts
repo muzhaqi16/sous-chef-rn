@@ -12,6 +12,7 @@ import {
   ItemType,
   RecipeStatus,
   StorageState,
+  StoreDepartment,
   UnitType,
   UsagePurpose,
 } from '#/graphql/generated/schemaTypes';
@@ -56,6 +57,13 @@ interface EnumNamespace {
 }
 
 const CASES: EnumNamespace[] = [
+  // src/features/shoppingList: the aisle headings and the aisle picker.
+  {
+    enumName: 'StoreDepartment',
+    members: StoreDepartment,
+    namespace: 'shoppingListScreens.aisles.department',
+    keyFragment: verbatim,
+  },
   // src/components/organisms/AddItemForm/fields.tsx — options come from
   // `Object.values(ItemType)` / `Object.values(StorageState)`.
   {

@@ -92,17 +92,20 @@ describe('listFromTemplate', () => {
     });
   });
 
-  it('falls back to the written name when the line has no catalog item', () => {
-    const { items, skipped } = listFromTemplate(
+  it('sends the written name under a minted item id when the line has no catalog item', () => {
+    const { items, skipped, display } = listFromTemplate(
       source({ lines: [line({ itemId: null, unitId: null })] }),
       { name: 'G', mintId },
     );
 
     expect(skipped).toEqual([]);
     expect(items[0]).toMatchObject({
-      item: { itemName: 'Tomatoes' },
+      id: 'line-2',
+      item: { inline: { id: 'line-1', name: 'Tomatoes' } },
       unit: { name: 'pc' },
     });
+    // The copied row names the item the request mints.
+    expect(display.get('line-2')?.itemId).toBe('line-1');
   });
 
   it('reports a line naming neither an item nor a name rather than sending it blank', () => {

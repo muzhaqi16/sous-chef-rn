@@ -25,6 +25,7 @@ import { AuthStack } from './stacks/AuthStack';
 import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
+import { ReceiptsStack } from './stacks/ReceiptsStack';
 import { NotificationStack } from './stacks/NotificationStack';
 import { VerificationGateScreen } from '#features/auth/screens/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#features/auth/screens/EmailVerificationDeepLinkScreen';
@@ -141,14 +142,17 @@ const RootStack = createNativeStackNavigator({
           screen: BarcodeStack,
           layout: noInsetScreenLayout,
         }),
+        Receipts: createNativeStackScreen({
+          screen: ReceiptsStack,
+          layout: noInsetScreenLayout,
+        }),
         Notifications: createNativeStackScreen({
           screen: NotificationStack,
           layout: noInsetScreenLayout,
         }),
-        // Siblings of `Home`, so a pushed detail screen covers the tab navigator
-        // and the floating tab bar is structurally absent. The object spread keeps
-        // `StaticParamList` inference, so `navigate` stays type-checked. One
-        // registration per screen, even for ones reachable from several tabs.
+        // Siblings of `Home`, so a pushed detail screen covers the floating tab
+        // bar. The object spread keeps `StaticParamList` inference, so `navigate`
+        // stays type-checked. One registration per screen, however many tabs reach it.
         ...pantryDetailScreens,
         ...shoppingListDetailScreens,
         ...recipeDetailScreens,
@@ -208,13 +212,6 @@ declare module '@react-navigation/core' {
 const StaticNavigation = createStaticNavigation(RootStack);
 
 /**
- * The navigation state implied by the current user plus their stored decision to
- * defer email verification. The post-login `biometric_setup` gate is NOT derivable
- * from either — it depends on device capability and stored credentials, so
- * `authService.handleLogin` sets it and the effect below must not clobber it.
- */
-
-/**
  * States that wait on the user, so `app_fully_drawn_ms` is suppressed for a launch
  * that hits one — the interval would otherwise include however long they took.
  */
@@ -225,6 +222,11 @@ const INTERACTIVE_GATES = new Set<NavigationState>([
   'onboarding',
 ]);
 
+/**
+ * The state the user and their stored email-verification deferral imply. The
+ * post-login `biometric_setup` gate is not derivable from them, so
+ * `authService.handleLogin` sets it and the effect below must not clobber it.
+ */
 function resolveNavTarget(
   user: ReturnType<typeof useUser>,
   verificationSkipped: boolean,
@@ -274,12 +276,9 @@ export function Navigation() {
       hasInitialized.current = true;
       const target = resolveNavTarget(user, verificationSkipped);
 
-      // Read from THIS launch's resolved target, never from `navigationState`:
-      // that is persisted and rehydrates before the launch resolves its own, so
-      // reading it sees the PREVIOUS session's screen — and `noteInteractiveGate()`
-      // is a one-way process latch, so one such read suppresses the metric for
-      // good. A gate entered later by an interactive login is not a launch gate and
-      // is deliberately not noted; the startup window's own bound covers it.
+      // THIS launch's target, never the persisted `navigationState`, which
+      // holds the PREVIOUS session's screen here; `noteInteractiveGate()` is a
+      // one-way latch, so one such read would suppress the metric for good.
       if (INTERACTIVE_GATES.has(target)) {
         NativePerformanceService.noteInteractiveGate();
       }
@@ -291,10 +290,9 @@ export function Navigation() {
   useEffect(() => {
     if (!isHydrated || !hasInitialized.current) return;
     const target = resolveNavTarget(user, verificationSkipped);
-    // A user-prop change must not yank the user out of a pending post-login gate
-    // into main_app — biometric enrollment and the RememberMe prompt each own that
-    // transition. setAuth fires before the gate commits, so without this the main
-    // app briefly mounts behind it.
+    // A user-prop change must not yank a pending post-login gate into main_app:
+    // biometric enrollment and the RememberMe prompt own that transition, and
+    // setAuth fires before the gate commits.
     if (
       target === 'main_app' &&
       (navigationState === 'biometric_setup' || postLoginCredentials != null)

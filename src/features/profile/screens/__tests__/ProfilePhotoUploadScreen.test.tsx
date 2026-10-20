@@ -5,10 +5,6 @@ import { render, userEvent } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
 import { ProfilePhotoUploadScreen } from '../ProfilePhotoUploadScreen';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGoBack = jest.fn();
 const mockDispatch = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
@@ -56,8 +52,6 @@ jest.mock('react-native-permissions', () => ({
 jest.mock('#/storage/mmkv');
 
 jest.mock('#/services/errorService');
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,

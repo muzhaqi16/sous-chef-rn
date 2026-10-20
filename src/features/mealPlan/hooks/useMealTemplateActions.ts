@@ -1,17 +1,10 @@
+import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateMealTemplateDocument,
   DeleteMealTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  UseMealTemplateActions_TemplateFragmentDoc,
-  type UseMealTemplateActions_TemplateFragment,
-} from '#features/mealPlan/hooks/useMealTemplateActions.generated';
-import {
-  UseDuplicateMealPlan_MealPlanFragmentDoc,
-  type UseDuplicateMealPlan_MealPlanFragment,
-} from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
@@ -26,10 +19,14 @@ import {
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MealPlanType,
-  type CreateMealPlanFromTemplateInput,
   type CreateMealTemplateInput,
-  type CreateTemplateFromMealPlanInput,
+  type MealTemplate,
+  type TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
+import {
+  readPlanSource,
+  readTemplateSource,
+} from '#features/mealPlan/cache/derivationSources';
 import { toastService } from '#/services/toastService';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { Telemetry } from '#/services/telemetry';
@@ -46,10 +43,45 @@ import { errorService } from '#/services/errorService';
 import { removeFromMealTemplates } from '#features/mealPlan/cache/removals';
 import { settleMealTemplateDelete } from '#features/mealPlan/offline/replayReconcilers';
 
-const addToMealTemplates = createAddToQueryConnectionUpdater(
+const addTemplateEdge = createAddToQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
 );
+
+/**
+ * First in each cached `mealTemplates` variant the template belongs to: the
+ * browser sheet caches one per category or search, and a modify fans out to all.
+ */
+const addToMealTemplates = (
+  cache: ApolloCache,
+  template: Pick<MealTemplate, 'id' | 'category'>,
+) =>
+  addTemplateEdge(cache, template, {
+    position: 'start',
+    skipStoreField: skipUnmatchedFilterVariants({
+      category: template.category,
+    }),
+  });
+
+/** What a plan made from a template states; its meals come from the cache. */
+export interface PlanFromTemplateInput {
+  templateId: string;
+  /** The plan's first day, as a `LocalDate` key. */
+  startDate: string;
+  name?: string | null;
+  servings?: number | null;
+  budgetAmount?: number | null;
+  dietaryProfileId?: string | null;
+}
+
+/** What a template cut from a plan states; its meals come from the cache. */
+export interface TemplateFromPlanInput {
+  mealPlanId: string;
+  name: string;
+  description?: string | null;
+  category?: TemplateCategory | null;
+  tags?: string[] | null;
+}
 
 export function useMealTemplateActions() {
   const client = useApolloClient();
@@ -63,17 +95,7 @@ export function useMealTemplateActions() {
       context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
-        if (payload) {
-          addToMealTemplates(cache, payload.mealTemplate, {
-            position: 'start',
-            // Scope the write to variants this template belongs to: the browser
-            // sheet caches one `mealTemplates` entry per category/search the
-            // user has visited, and cache.modify fans out across all of them.
-            skipStoreField: skipUnmatchedFilterVariants({
-              category: payload.mealTemplate.category,
-            }),
-          });
-        }
+        if (payload) addToMealTemplates(cache, payload.mealTemplate);
       },
     },
   );
@@ -97,16 +119,6 @@ export function useMealTemplateActions() {
     toastService.info(t('duplicatePlan.someSkipped', { count }));
   };
 
-  const readTemplate = (id: string) => {
-    const cacheId = client.cache.identify({ __typename: 'MealTemplate', id });
-    if (!cacheId) return null;
-    return client.cache.readFragment<UseMealTemplateActions_TemplateFragment>({
-      id: cacheId,
-      fragment: UseMealTemplateActions_TemplateFragmentDoc,
-      fragmentName: 'useMealTemplateActions_template',
-    });
-  };
-
   /** `true` once the template landed or is queued; `false` when it reverted. */
   const createTemplate = async (
     input: CreateMealTemplateInput,
@@ -122,12 +134,7 @@ export function useMealTemplateActions() {
           input,
           ownerId,
         );
-        addToMealTemplates(client.cache, template, {
-          position: 'start',
-          skipStoreField: skipUnmatchedFilterVariants({
-            category: template.category,
-          }),
-        });
+        addToMealTemplates(client.cache, template);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Create Meal Template (optimistic)',
@@ -162,10 +169,8 @@ export function useMealTemplateActions() {
     return settled.status !== 'failed';
   };
 
-  const createPlanFromTemplate = async (
-    input: CreateMealPlanFromTemplateInput,
-  ) => {
-    const template = readTemplate(input.templateId);
+  const createPlanFromTemplate = async (input: PlanFromTemplateInput) => {
+    const template = readTemplateSource(client.cache, input.templateId);
     if (!template) {
       toastService.error(t('mealPlan.needsTheTemplate'));
       return null;
@@ -217,20 +222,8 @@ export function useMealTemplateActions() {
     return { mealPlanId: derived.plan.id ?? null };
   };
 
-  const createTemplateFromPlan = async (
-    input: CreateTemplateFromMealPlanInput,
-  ) => {
-    const cacheId = client.cache.identify({
-      __typename: 'MealPlan',
-      id: input.mealPlanId,
-    });
-    const plan = cacheId
-      ? client.cache.readFragment<UseDuplicateMealPlan_MealPlanFragment>({
-          id: cacheId,
-          fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-          fragmentName: 'useDuplicateMealPlan_mealPlan',
-        })
-      : null;
+  const createTemplateFromPlan = async (input: TemplateFromPlanInput) => {
+    const plan = readPlanSource(client.cache, input.mealPlanId);
     if (!plan) {
       toastService.error(t('mealPlan.needsThePlan'));
       return null;
@@ -264,10 +257,9 @@ export function useMealTemplateActions() {
         })
       : null;
 
-    // Local-first: remove from the cache BEFORE firing, so the deletion shows
-    // immediately and survives an offline queue. Replaying the delete for an
-    // already-deleted template is idempotent on the API, and a NotFound counts
-    // as deleted too. Mirrors deleteMealPlan.
+    // Removed from the cache BEFORE firing, so the delete survives an offline
+    // queue. A replay against an already-deleted template is idempotent, and a
+    // NotFound counts as deleted.
     try {
       removeFromMealTemplates(client.cache, id, { evictItem: true });
     } catch (cacheError) {
@@ -285,12 +277,7 @@ export function useMealTemplateActions() {
           fragmentName: 'MealTemplateDisplay',
           data: snapshot,
         });
-        addToMealTemplates(client.cache, snapshot, {
-          position: 'start',
-          skipStoreField: skipUnmatchedFilterVariants({
-            category: snapshot.category,
-          }),
-        });
+        addToMealTemplates(client.cache, snapshot);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Restore refused Template delete',
@@ -318,7 +305,7 @@ export function useMealTemplateActions() {
   };
 
   const duplicateTemplate = async (id: string, newName: string) => {
-    const template = readTemplate(id);
+    const template = readTemplateSource(client.cache, id);
     if (!template) {
       toastService.error(t('mealPlan.needsTheTemplate'));
       return null;

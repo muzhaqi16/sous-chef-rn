@@ -8,9 +8,6 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ResolveShareLinkDocument } from '../JoinByLinkScreen.generated';
 import { JoinByLinkScreen } from '../JoinByLinkScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockDispatch = jest.fn();
 const mockGoBack = jest.fn();
 const mockReplace = jest.fn((name: string, params: unknown) => ({

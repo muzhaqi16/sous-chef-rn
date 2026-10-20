@@ -38,6 +38,7 @@ fragment PantryItemReaders on PantryItem {
   item {
     id
     canEdit
+    canSuggest
     categories {
       id
       category {
@@ -45,6 +46,12 @@ fragment PantryItemReaders on PantryItem {
         name
       }
       isPrimary
+    }
+    dataAttributions {
+      licenseUrl
+      notice
+      source
+      sourceUrl
     }
     images {
       id
@@ -75,6 +82,12 @@ fragment PantryItemReaders on PantryItem {
     }
     photos {
       id
+      credit {
+        license
+        licenseUrl
+        sourceUrl
+        text
+      }
       isPrimary
       perspective
       status

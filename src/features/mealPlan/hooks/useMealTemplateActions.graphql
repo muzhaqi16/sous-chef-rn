@@ -10,15 +10,24 @@ fragment useMealTemplateActions_template on MealTemplate {
   defaultServings
   tags
   homeId
-  items {
-    id
-    dayOffset
-    mealType
-    servings
-    notes
-    customMealName
-    recipe {
-      id
+  itemsConnection {
+    # A copy reads every meal: it does not run on a first page alone.
+    pageInfo {
+      hasNextPage
+    }
+    totalCount
+    edges {
+      node {
+        id
+        dayOffset
+        mealType
+        servings
+        notes
+        customMealName
+        recipe {
+          id
+        }
+      }
     }
   }
 }

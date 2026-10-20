@@ -6,7 +6,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 import type { Unmasked } from '@apollo/client/masking';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { AddedContext, DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '../cache';
 import {
   ItemDetail_ShoppingListItemFragmentDoc,
@@ -64,6 +64,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
     purchasedBy: {
       __typename: 'User',
       id: 'u1',
+      displayName: 'Sam',
       profile: {
         __typename: 'UserProfile',
         id: 'profile-1',
@@ -74,8 +75,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   },
   source: {
     __typename: 'ShoppingListItemSource',
-    isAutoAdded: false,
-    autoAddReason: null,
+    addedContext: AddedContext.Manual,
     isFromMealPlan: false,
   },
   addedBy: {

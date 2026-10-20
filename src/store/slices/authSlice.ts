@@ -1,9 +1,3 @@
-// ============================================
-// store/slices/authSlice.ts
-// Updated to work with your existing store structure
-// Implements proactive token refresh (best practice)
-// ============================================
-
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import {
@@ -13,24 +7,18 @@ import {
 } from '../tokenRefreshBridge';
 import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { retryCooldownMs } from '#/utils/backoff';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 import type { UserRole } from '#/graphql/generated/schemaTypes';
-
-// ============================================
-// AppState Token Refresh
-// Handles token refresh when app resumes from background
-// (setTimeout doesn't fire reliably when backgrounded)
-// ============================================
 
 // A resume is worth a refresh only when the token is about to stop working.
 const RESUME_REFRESH_BUFFER_MS = 60 * 1000;
 
 /**
- * Refresh the access token if it's expired or expiring. Call this on
- * background → active transitions from the single AppState listener
- * owned by useAppStateLifecycle. Module-scope so the try-catch is safe
- * — React Compiler doesn't apply outside hook bodies.
+ * Called on background → active by useAppStateLifecycle's one AppState
+ * listener, as a backgrounded setTimeout does not fire reliably. Module-scope,
+ * so the React Compiler never sees its try-catch.
  */
 export const handleTokenRefreshOnResume = async (
   getAccessToken: () => string | null,
@@ -56,9 +44,8 @@ export const handleTokenRefreshOnResume = async (
 
 /**
  * The signed-in user as persisted. `email` / `emailVerified` / `role` are
- * API-gated (null unless the caller is that user or an admin), so they stay
- * nullable — read defensively, never assert: `user?.email ?? fallback`, or
- * `firstNonBlank(user?.email) ?? fallback` where a blank string must fall through.
+ * API-gated, null unless the caller is that user or an admin: read them with a
+ * fallback, never assert (`firstNonBlank` where a blank must fall through).
  */
 export interface User {
   id: string;
@@ -95,6 +82,8 @@ export type AuthUserInput = User & {
   } | null;
   settings?: {
     showTutorials?: boolean | null;
+    /** The account's currency lives on its settings; absent until a first write. */
+    preferredCurrency?: string | null;
   } | null;
 };
 
@@ -149,16 +138,10 @@ export interface AuthState {
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
-/**
- * Seconds between device-credential exchanges after a refusal. Index 0 is the
- * never-refused state, so counting from 1 always lands on a real delay.
- */
-const BIOMETRIC_BACKOFF_SECONDS = [0, 30, 60, 180, 300];
-
-const backoffForAttempt = (attempt: number): number =>
-  (BIOMETRIC_BACKOFF_SECONDS[
-    Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
-  ] ?? 0) * 1000;
+/** A session's tokens are held: signed in, or signing back in from either one. */
+export const holdsSessionTokens = (
+  state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
+): boolean => !!state.accessToken || !!state.refreshToken;
 
 const initialAuthState = {
   user: null,
@@ -180,10 +163,9 @@ export const createAuthSlice: StateCreator<
   AuthState
 > = (set, get) => {
   /**
-   * Write-through token persistence: session tokens live in the keychain
-   * (saveSessionTokens skips identical pairs). The result drives
-   * `sessionTokensInKeychain` — while false, partialize keeps the pair in
-   * the MMKV blob as a fallback so a failed write can't lose the session.
+   * Session tokens live in the keychain; while `sessionTokensInKeychain` is
+   * false, partialize keeps the pair in the MMKV blob so a failed write can't
+   * lose the session.
    */
   const persistSessionTokens = (
     accessToken: string | null,
@@ -222,6 +204,8 @@ export const createAuthSlice: StateCreator<
         // Flatten profile fields from the login/register GraphQL response so the
         // greeting can render the user's name immediately without a separate query.
         const profile = user.profile;
+        const currency =
+          user.settings?.preferredCurrency ?? user.preferredCurrency;
 
         // Normalize email to prevent validation issues (trim whitespace, lowercase)
         state.user = {
@@ -231,19 +215,18 @@ export const createAuthSlice: StateCreator<
           lastName: profile?.lastName ?? user.lastName,
           name: profile?.displayName ?? user.name,
           profilePicture: profile?.avatar ?? user.profilePicture,
+          preferredCurrency: currency,
         };
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
         state.isAutoLoggingIn = false; // Clear auto-login state on success
         // Mirrored out of the auth payload so every money surface can read it
         // without a query of its own; the reset manager clears it on sign-out.
-        if (user.preferredCurrency) {
-          state.preferredCurrency = user.preferredCurrency;
+        if (currency) {
+          state.preferredCurrency = currency;
         }
-        // Seeded here, not from `useAppSettings` — that hook mounts only on the
-        // App Settings screen, while a session end resets this to `true`. The
-        // gap between the two showed a never-seen coach mark to someone who
-        // had turned tutorials off, and marked it seen.
+        // Seeded here, not from `useAppSettings`, which mounts only on the App
+        // Settings screen while a session end resets this to `true`.
         if (typeof user.settings?.showTutorials === 'boolean') {
           state.showTutorials = user.settings.showTutorials;
         }
@@ -340,7 +323,7 @@ export const createAuthSlice: StateCreator<
       set(state => {
         state.biometricAttempts += 1;
         // The server's own deadline wins: it knows what budget is left.
-        const wait = retryAfterMs ?? backoffForAttempt(state.biometricAttempts);
+        const wait = retryAfterMs ?? retryCooldownMs(state.biometricAttempts);
         state.biometricRetryAt = Date.now() + wait;
       });
     },

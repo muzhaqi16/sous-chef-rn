@@ -14,8 +14,6 @@ import {
 import { InviteStatus, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Text as AppText } from '#components/atoms/Text';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

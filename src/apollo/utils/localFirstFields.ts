@@ -1,14 +1,12 @@
 /**
- * Local-first field updates for settings-shaped mutations: write the cached entity
- * PERMANENTLY, fire with `context: { localFirst: true }`, treat "queued" as
- * success, revert from a snapshot only on refusal. An `optimisticResponse` cannot:
- * Apollo tears its layer down on the queue's null result, reverting while queued.
+ * Writes the cached entity PERMANENTLY and reverts from a snapshot only on
+ * refusal: an `optimisticResponse` cannot, as Apollo tears its layer down on
+ * the queue's null result, reverting while queued.
  */
 
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { settledStatus } from './settleMutation';
-import { errorService } from '#/services/errorService';
+import type { SettleStatus } from './settleMutation';
 
 /**
  * The normalized entity holding the fields; its GraphQL field names must match the
@@ -18,8 +16,6 @@ export type FieldsEntityRef = StoreObject & {
   __typename: string;
   id: string;
 };
-
-type MutationResultLike = { data?: unknown; error?: unknown };
 
 /** An object the cache should normalize rather than store inline. */
 function isEntityLike(value: unknown): value is Record<string, unknown> {
@@ -80,11 +76,9 @@ export function writeEntityFields<TFields extends object>(
     .map(([field, value]) => `${field}${selectionFor(value)}`)
     .join('\n    ');
 
-  // `writeFragment`, not `cache.modify`: modify cannot INTRODUCE a field the cached
-  // record lacks (silently dropped, no error — and which fields it carries depends
-  // on whichever query loaded it), and it stores a nested entity as a private copy
-  // rather than a reference. Verified vs `@apollo/client@4.2.12`:
-  // `docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field`.
+  // `writeFragment`, not `cache.modify`: modify silently drops a field the
+  // record lacks and stores a nested entity as a private copy. Verified vs
+  // `@apollo/client@4.2.12`: `docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field`.
   cache.writeFragment({
     id: cacheId,
     fragment: localFirstFragment(entity.__typename, selections),
@@ -99,7 +93,7 @@ export function writeEntityFields<TFields extends object>(
  */
 const localFirstFragments = new Map<string, DocumentNode>();
 
-function localFirstFragment(
+export function localFirstFragment(
   typename: string,
   selections: string,
 ): DocumentNode {
@@ -132,10 +126,9 @@ function shapeHash(input: string): string {
 }
 
 /**
- * The pre-write values for exactly the keys an update will write. A key the source
- * does not CARRY is OMITTED, not null — `writeEntityFields` skips `undefined`, so
- * the revert leaves it alone; a key carried AS null IS recorded. Absent from the
- * read is not the same fact as empty in the store, and one `??` collapses them.
+ * The pre-write values of the keys an update writes. A key the source does not
+ * CARRY is OMITTED, so the revert leaves it alone; one carried AS null is
+ * recorded. Absent from the read is not empty in the store.
  */
 export function snapshotFields<TFields extends object>(
   // `object`, not `Record<string, unknown>`: an interface without an index
@@ -159,45 +152,23 @@ export interface LocalFirstFieldsOptions<TFields extends object> {
   updates: Partial<TFields>;
   /** Current values for the same keys — restored if the server refuses. */
   previous: Partial<TFields>;
-  /** Fires the mutation, whose `useMutation` sets `context: { localFirst: true }`. */
-  mutate: () => Promise<MutationResultLike>;
-  /** Operation label for error reporting. */
-  logLabel: string;
-}
-
-export interface LocalFirstFieldsResult {
-  /** True when the change landed on the server OR was queued for replay. */
-  persisted: boolean;
-  /** Raw mutation result; `undefined` when the call threw. Callers classify/report. */
-  result: MutationResultLike | undefined;
+  /** Fires and settles the write, whose `useMutation` sets `context: { localFirst: true }`. */
+  settle: () => Promise<{ status: SettleStatus }>;
 }
 
 /**
- * Apply a local-first field update, returning the outcome rather than reporting it
- * — the call sites surface a refusal differently, and deciding here double-alerts.
+ * Applies a field update at once and puts `previous` back only when the write
+ * failed. True when it landed or was queued, which replays later.
  */
 export async function updateEntityFieldsLocalFirst<TFields extends object>({
   cache,
   entity,
   updates,
   previous,
-  mutate,
-  logLabel,
-}: LocalFirstFieldsOptions<TFields>): Promise<LocalFirstFieldsResult> {
+  settle,
+}: LocalFirstFieldsOptions<TFields>): Promise<boolean> {
   writeEntityFields(cache, entity, updates);
-
-  let result;
-  try {
-    result = await mutate();
-  } catch (error) {
-    errorService.reportError(error, { operation: logLabel });
-  }
-
-  // A queued change keeps its cache write; only a failed one reverts.
-  const persisted = settledStatus(result) !== 'failed';
-  if (!persisted) {
-    writeEntityFields(cache, entity, previous);
-  }
-
-  return { persisted, result };
+  const { status } = await settle();
+  if (status === 'failed') writeEntityFields(cache, entity, previous);
+  return status !== 'failed';
 }

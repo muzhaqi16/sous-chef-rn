@@ -1,9 +1,5 @@
 'use no memo';
 
-// Mock tokenScheduler and refreshToken (needed transitively by store)
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 // Mock keychain. `clearCredentials` is the stored-login tier (biometric /
 // remembered login) and is mocked purely so the assertion that session end
 // never touches it has something real to watch.
@@ -225,9 +221,7 @@ describe('resetManager', () => {
         useNotificationStore
           .getState()
           .linkExpirationData('n1', { pantryItemName: 'Milk' });
-        useBarcodeScannerStore
-          .getState()
-          .addToRecentlyScanned({ id: 's1', name: 'Milk', upc: '01' });
+        useBarcodeScannerStore.getState().showBottomSheet();
 
         await resetManager.resetStore({
           auth: false,
@@ -243,7 +237,9 @@ describe('resetManager', () => {
         expect(useNotificationStore.getState().pendingExpirationLinks).toEqual(
           {},
         );
-        expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
+        expect(useBarcodeScannerStore.getState().scannerSheetVisible).toBe(
+          false,
+        );
       });
 
       it('clears the persisted Apollo cache when clearApolloCache is true', async () => {

@@ -12,16 +12,15 @@ import { useScrollEdgeFades } from '#hooks/ui/useScrollEdgeFades';
 import { useCenterActiveItem } from '#hooks/ui/useCenterActiveItem';
 import Animated from 'react-native-reanimated';
 
-// Animated wrapper so Reanimated can drive the centering scroll on the UI
-// thread via the `animatedRef` from `useCenterActiveItem`. Built once at module
-// scope — `createAnimatedComponent` must never run per render. Wraps RNGH's
-// ScrollView (kept for horizontal scrolling inside a bottom sheet).
+// Reanimated drives the centering scroll through `useCenterActiveItem`'s
+// `animatedRef`. RNGH's ScrollView, for horizontal scrolling inside a sheet.
 const AnimatedChipScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export interface ChipOption<T> {
   key: T;
   label: string;
   icon?: IconName;
+  testID?: string;
 }
 
 interface ChipScrollRowProps<T> {
@@ -66,9 +65,10 @@ export function ChipScrollRow<T>({
     const isActive = selected === opt.key;
     return (
       <Pressable
-        key={opt.label}
+        key={String(opt.key)}
         onPress={() => onSelect(opt.key)}
         onLayout={e => onItemLayout(opt.key, e)}
+        testID={opt.testID}
       >
         <View style={[styles.chip, isActive && styles.chipActive, chipStyle]}>
           {opt.icon ? (
@@ -89,10 +89,9 @@ export function ChipScrollRow<T>({
     );
   });
 
-  // Centering needs the live viewport/content widths and scroll position, so
-  // all three handlers run always. `useScrollEdgeFades(!!edgeFadeColor)` keeps
-  // updating `metrics` but only flips the fade `edges` when fades are enabled,
-  // so a fade-less row tracks scroll for centering without extra re-renders.
+  // Centering reads the live widths and offset, so all three handlers always
+  // run; with fades off `useScrollEdgeFades` still updates `metrics` but never
+  // flips `edges`, so a fade-less row adds no re-renders.
   const scroller = (
     <AnimatedChipScrollView
       ref={animatedRef}

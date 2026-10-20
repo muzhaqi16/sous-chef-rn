@@ -1,8 +1,7 @@
 /**
- * Local-first: the item is written to the cache PERMANENTLY before firing — an
- * `optimisticResponse` rolls back on the offline queue's null result. `input.id`
- * is the client-minted PK, so a queued replay converges on one row. If the server
- * merges into an existing catalog row its id differs: adopt it, evict the cuid.
+ * Local-first: cached PERMANENTLY before firing, as an `optimisticResponse` rolls
+ * back on the queue's null result; the minted `input.id` makes a replay converge.
+ * A merge into an existing catalog row answers its id: adopt it, evict the cuid.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -18,7 +17,7 @@ import {
 } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { errorService } from '#/services/errorService';
-import { refByIdOrName } from '#/utils/refInput';
+import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {
@@ -72,7 +71,7 @@ export function useAddShoppingItem({
 
     // `shoppingListId` rides on the batch input, not on the line.
     const line = {
-      item: { itemName: input.itemName },
+      item: typedItemRef(input.itemName),
       quantity: apiQuantityText ?? input.quantity ?? 1,
       ...lineUnitFields(input.unitId, input.unitName),
       ...(input.notes && { notes: input.notes }),

@@ -10,13 +10,10 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
     save: jest.fn(),
@@ -24,7 +21,6 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     track: jest.fn(() => jest.fn()),
   },
 }));
-jest.mock('#/utils/finallyHelpers');
 
 const TOTAL = 3;
 
@@ -139,14 +135,14 @@ const counts = (cache: ReturnType<typeof seedCache>) =>
     fragment: COUNTS,
   });
 
-const refusal: MockFor<typeof ToggleShoppingListItemPurchasedDocument> = {
+const refusal: MockFor<typeof UpdateShoppingListItemDocument> = {
   request: {
-    query: ToggleShoppingListItemPurchasedDocument,
+    query: UpdateShoppingListItemDocument,
     variables: () => true,
   },
   result: {
     data: {
-      toggleShoppingListItemPurchased: {
+      updateShoppingListItem: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
         message: 'refused',

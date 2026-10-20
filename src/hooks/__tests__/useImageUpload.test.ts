@@ -1,7 +1,7 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
-import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
+import { act, waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -13,10 +13,9 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
-import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
-import type { UploadFormField } from '#/graphql/generated/schemaTypes';
 
 type ImageUploadApi = ReturnType<typeof useImageUpload>;
 type ProfileResult = Awaited<
@@ -26,8 +25,6 @@ type ProfileUploadResult = Awaited<
   ReturnType<ImageUploadApi['uploadProfileImage']>
 >;
 type ItemImagesResult = Awaited<ReturnType<ImageUploadApi['uploadItemImages']>>;
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
 
 // Spread the real module and stub only the two functions under control. Listing
 // exports by hand drifts: this factory predated MAX_IMAGE_SIZE and
@@ -43,12 +40,6 @@ jest.mock('#store', () => ({
   useStore: {
     getState: () => ({ isOnline: true, updateUser: jest.fn() }),
   },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 // Mock XMLHttpRequest
@@ -96,25 +87,7 @@ function buildUpdateProfileMock(
       data: {
         updateProfile: {
           __typename: 'UpdateProfilePayload',
-          userProfile: {
-            __typename: 'UserProfile',
-            id,
-            userId: 'u1',
-            firstName: null,
-            lastName: null,
-            displayName: null,
-            bio: null,
-            avatar: avatar ?? null,
-            coverImage: null,
-            phone: null,
-            website: null,
-            dateOfBirth: null,
-            gender: null,
-            profileVisibility: ProfileVisibility.Public,
-            showEmail: true,
-            showPhone: true,
-            createdAt: '2025-01-01T00:00:00.000Z',
-          },
+          userProfile: { id, avatar: avatar ?? null },
         },
       },
     },
@@ -135,49 +108,34 @@ beforeEach(() => {
 
 // The presigned POST the server hands back. `fields` is the storage policy and
 // is non-null on the payload — the upload is rejected without every entry.
-const PRESIGN_FIELDS: UploadFormField[] = [
-  { __typename: 'UploadFormField', name: 'key', value: 'items/i1/a' },
-  { __typename: 'UploadFormField', name: 'policy', value: 'eyJ0' },
-  {
-    __typename: 'UploadFormField',
-    name: 'x-amz-signature',
-    value: 'sig',
-  },
+const PRESIGN_FIELDS = [
+  { name: 'key', value: 'items/i1/a' },
+  { name: 'policy', value: 'eyJ0' },
+  { name: 'x-amz-signature', value: 'sig' },
 ];
 
-function buildPresignMock(): MockFor<typeof CreateImageUploadUrlDocument> {
-  return {
-    request: { query: CreateImageUploadUrlDocument, variables: () => true },
-    result: {
-      data: {
-        createImageUploadUrl: {
-          __typename: 'CreateImageUploadUrlPayload',
-          url: 'https://storage.test/bucket',
-          key: 'items/i1/a',
-          fields: PRESIGN_FIELDS,
-        },
+const recordPresign = ({ held = false }: { held?: boolean } = {}) =>
+  recordMock(CreateImageUploadUrlDocument, {
+    held,
+    data: {
+      createImageUploadUrl: {
+        __typename: 'CreateImageUploadUrlPayload',
+        url: 'https://storage.test/bucket',
+        key: 'receipt-photos/u1/p1.jpg',
+        fields: PRESIGN_FIELDS,
       },
     },
-    maxUsageCount: 10,
-  };
-}
+  });
 
-function buildConfirmItemMock(
-  url: string,
-): MockFor<typeof ConfirmItemImageUploadDocument> {
-  return {
-    request: { query: ConfirmItemImageUploadDocument, variables: () => true },
-    result: {
-      data: {
-        confirmItemImageUpload: {
-          __typename: 'ConfirmItemImageUploadPayload',
-          url,
-        },
+const recordConfirm = () =>
+  recordMock(ConfirmItemImageUploadDocument, {
+    data: {
+      confirmItemImageUpload: {
+        __typename: 'ConfirmItemImageUploadPayload',
+        url: 'https://cdn.test/a.jpg',
       },
     },
-    maxUsageCount: 10,
-  };
-}
+  });
 
 describe('useImageUpload', () => {
   it('initializes with uploading false', () => {
@@ -209,10 +167,7 @@ describe('useImageUpload', () => {
 
     async function runUpload(): Promise<ItemImagesResult> {
       const { result } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [
-          buildPresignMock(),
-          buildConfirmItemMock('https://cdn.test/a.jpg'),
-        ],
+        operationMocks: [recordPresign().mock, recordConfirm().mock],
       });
 
       let uploaded: ItemImagesResult = [];
@@ -249,6 +204,107 @@ describe('useImageUpload', () => {
       const names = appendSpy.mock.calls.map(([name]) => name);
 
       expect(names).toEqual(['key', 'policy', 'x-amz-signature', 'file']);
+    });
+
+    it('posts a receipt photo for its key, with no confirm step', async () => {
+      const presign = recordPresign();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [presign.mock],
+      });
+
+      let key: string | null = null;
+      await act(async () => {
+        key = await result.current.uploadUnconfirmed(
+          { ...file, type: 'image/jpeg' },
+          ImageUploadPurpose.ReceiptPhoto,
+        );
+      });
+
+      expect(key).toBe('receipt-photos/u1/p1.jpg');
+      expect(presign.fired).toEqual([
+        {
+          input: expect.objectContaining({
+            purpose: ImageUploadPurpose.ReceiptPhoto,
+          }),
+        },
+      ]);
+      expect(mockXhr.open).toHaveBeenCalledWith(
+        'POST',
+        'https://storage.test/bucket',
+      );
+    });
+
+    describe('a receipt photo the scan stops', () => {
+      const photo = { ...file, type: 'image/jpeg' };
+
+      it('is never presigned once stopped', async () => {
+        const presign = recordPresign();
+        const { result } = renderHookWithApollo(() => useImageUpload(), {
+          operationMocks: [presign.mock],
+        });
+        const stopped = new AbortController();
+        stopped.abort();
+
+        await act(async () => {
+          await expect(
+            result.current.uploadUnconfirmed(
+              photo,
+              ImageUploadPurpose.ReceiptPhoto,
+              { signal: stopped.signal },
+            ),
+          ).rejects.toThrow('Upload was cancelled');
+        });
+
+        expect(presign.fired).toEqual([]);
+        expect(mockXhr.open).not.toHaveBeenCalled();
+      });
+
+      it('aborts its transfer', async () => {
+        mockXhr.send.mockImplementation(() => {});
+        mockXhr.abort.mockImplementation(() =>
+          mockXhr.onabort?.({} as ProgressEvent),
+        );
+        const { result } = renderHookWithApollo(() => useImageUpload(), {
+          operationMocks: [recordPresign().mock],
+        });
+        const sending = new AbortController();
+
+        let uploading: Promise<string | null> = Promise.resolve(null);
+        act(() => {
+          uploading = result.current.uploadUnconfirmed(
+            photo,
+            ImageUploadPurpose.ReceiptPhoto,
+            { signal: sending.signal },
+          );
+        });
+        await waitFor(() => expect(mockXhr.send).toHaveBeenCalled());
+        sending.abort();
+
+        await expect(uploading).rejects.toThrow('Upload was cancelled');
+        expect(mockXhr.abort).toHaveBeenCalled();
+        mockXhr.abort.mockReset();
+      });
+    });
+
+    it('starts no transfer when the screen goes during the presign', async () => {
+      const presign = recordPresign({ held: true });
+      const { result, unmount } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [presign.mock],
+      });
+
+      let uploading: Promise<string | null> = Promise.resolve(null);
+      act(() => {
+        uploading = result.current.uploadUnconfirmed(
+          { ...file, type: 'image/jpeg' },
+          ImageUploadPurpose.ReceiptPhoto,
+        );
+      });
+      await waitFor(() => expect(presign.fired).toHaveLength(1));
+      unmount();
+      presign.release();
+
+      await expect(uploading).rejects.toThrow('Upload was cancelled');
+      expect(mockXhr.open).not.toHaveBeenCalled();
     });
 
     it('returns the confirmed url', async () => {
@@ -303,20 +359,10 @@ describe('useImageUpload', () => {
       // Some Android providers report the non-standard 'image/jpg'; the API
       // accepts only image/jpeg | image/png | image/webp and rejects the raw
       // value with a ValidationError.
-      const data: MockDataFor<typeof CreateImageUploadUrlDocument> = {
-        createImageUploadUrl: {
-          __typename: 'CreateImageUploadUrlPayload',
-          url: 'https://storage.test/bucket',
-          key: 'items/i1/a',
-          fields: PRESIGN_FIELDS,
-        },
-      };
-      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
-        data,
-      });
+      const { mock, fired } = recordPresign();
 
       const { result } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [mock, buildConfirmItemMock('https://cdn.test/a.jpg')],
+        operationMocks: [mock, recordConfirm().mock],
       });
 
       await act(async () => {
@@ -350,25 +396,12 @@ describe('useImageUpload', () => {
       mockXhr.send.mockReset();
     });
 
-    function recordConfirm() {
-      const data: MockDataFor<typeof ConfirmItemImageUploadDocument> = {
-        confirmItemImageUpload: {
-          __typename: 'ConfirmItemImageUploadPayload',
-          url: 'https://cdn.test/a.jpg',
-        },
-      };
-      return recordMock(ConfirmItemImageUploadDocument, {
-        data,
-        maxUsageCount: 10,
-      });
-    }
-
     // The batch carries the flag per file, so the starred photo is promoted no
     // matter where it sits in the run.
     it('promotes only the flagged file in a batch', async () => {
       const { mock, fired } = recordConfirm();
       const { result } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [buildPresignMock(), mock],
+        operationMocks: [recordPresign().mock, mock],
       });
 
       await act(async () => {

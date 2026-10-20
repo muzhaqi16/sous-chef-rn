@@ -1,10 +1,9 @@
 /**
- * Feature-owned stores a session end must still clear (`SESSION_SCOPED_STATE`
- * only reaches the ROOT store). Metro's `inlineRequires` means an unused module
- * never registers — fine for in-memory state, not for PERSISTED state, whose
- * keys are declared as DATA below and deleted without loading their module.
+ * Feature stores a session end must clear (`SESSION_SCOPED_STATE` reaches only
+ * the ROOT store). With `inlineRequires` an unused module never registers, so
+ * PERSISTED keys are declared as DATA below and deleted without their module.
  */
-import { storage } from '#/storage/mmkv';
+import { RETIRED_PERSISTED_KEYS, storage } from '#/storage/mmkv';
 import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;
@@ -16,20 +15,19 @@ const stores = new Map<string, StoreReset>();
  * missing here survives sign-out on a shared device.
  */
 export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
-  // src/features/barcode/store/barcodeScannerStore.ts — scan history carries
-  // item names, brands and UPCs.
-  'sous-chef-barcode',
-  // src/features/recipes/store/useRecipeCacheStore.ts — search terms and results.
+  // features/recipes/store/useRecipeCacheStore.ts: search terms and results.
   'recipe-search-cache',
-  // src/features/recipes/store/useRecipeSuggestionsStore.ts — personalized
-  // suggestions derived from the account's pantry.
+  // features/recipes/store/useRecipeSuggestionsStore.ts: from the pantry.
   'recipe-suggestions-cache',
+  // features/recipes/store/recipeCaptureStore.ts: captured pages and recipes.
+  'sous-chef-recipe-captures',
+  // features/receipts/store/receiptDraftStore.ts: the shop and what was bought.
+  'sous-chef-receipt-draft',
+  // features/receipts/store/receiptPhotoConsentStore.ts: this user's consent.
+  'sous-chef-receipt-photo-consent',
 ];
 
-/**
- * Register a feature store's reset. Last write wins, so a hot reload replaces
- * rather than duplicates.
- */
+/** Last write wins, so a hot reload replaces rather than duplicates. */
 export const registerSessionScopedStore = (
   name: string,
   reset: StoreReset,
@@ -38,10 +36,8 @@ export const registerSessionScopedStore = (
 };
 
 /**
- * Clear every registered feature store.
- *
- * One failure must not skip the rest — a store left populated is the previous
- * person's data on a shared device, which is the whole reason this exists.
+ * One failure must not skip the rest: a store left populated is the previous
+ * person's data on a shared device.
  */
 export const resetSessionScopedStores = (): void => {
   for (const [name, reset] of stores) {
@@ -54,7 +50,10 @@ export const resetSessionScopedStores = (): void => {
 
   // Independent of the loop above: a store whose module was never evaluated has
   // no registration, but its persisted key is still on disk.
-  for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
+  for (const key of [
+    ...SESSION_SCOPED_PERSISTED_KEYS,
+    ...RETIRED_PERSISTED_KEYS,
+  ]) {
     try {
       storage.remove(key);
     } catch (error) {
@@ -63,8 +62,5 @@ export const resetSessionScopedStores = (): void => {
   }
 };
 
-/**
- * The names currently registered, for tests that assert coverage.
- * @internal Test seam.
- */
+/** @internal Test seam: the names currently registered. */
 export const registeredSessionScopedStores = (): string[] => [...stores.keys()];

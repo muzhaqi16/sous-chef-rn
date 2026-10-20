@@ -12,6 +12,7 @@ import { isSessionEnding, resetSessionEndingGate } from '#store/sessionEnding';
 import { logger } from '#/utils/environment';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { operationNameOf } from './utils/documentOperation';
+import { forgetAnswersSinceSwitch } from './answeredSinceSwitch';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -87,6 +88,10 @@ export class LogoutCleanup {
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
       }
+
+      // 6. Forget which queries were answered since a language switch: the
+      // keys carry the account's search terms and ids.
+      forgetAnswersSinceSwitch();
 
       logger.info('✅ Apollo logout cleanup completed');
     } catch (error) {
@@ -215,11 +220,9 @@ export class LogoutCleanup {
   }
 }
 
-// A session the server ended gets the same teardown a deliberate sign-out does:
-// the difference is who decided, not how much of the session is still usable.
-//
-// The gate belongs to whoever started the session end (`whileSessionEnds`), not
-// to this step: it must stay closed for the store reset that follows.
+// A server-ended session gets the same teardown as a sign-out. The gate belongs
+// to whoever started the session end (`whileSessionEnds`), not to this step: it
+// must stay closed for the store reset that follows.
 registerSessionTeardown('apollo', async () => {
   await LogoutCleanup.performLogoutCleanup();
 });

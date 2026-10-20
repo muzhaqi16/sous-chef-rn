@@ -10,10 +10,6 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useUpdateHomeFields } from '../useUpdateHomeFields';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const FALLBACK = 'Failed to update home';
 
 /**

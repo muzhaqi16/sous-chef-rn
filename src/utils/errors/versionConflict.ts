@@ -6,7 +6,7 @@ import { t } from '#/i18n';
  * member's `code` and the thrown `extensions.code`. `CONFLICT` refuses on state
  * (already completed, already a member) and is deliberately not one of them.
  */
-export const VERSION_CONFLICT_CODES: readonly string[] = [
+const VERSION_CONFLICT_CODES: readonly string[] = [
   ErrorCode.VersionConflict,
   TopLevelErrorCode.ResourceVersionConflict,
 ];
@@ -27,7 +27,7 @@ function asConflictError(error: unknown): ConflictErrorLike | null {
   return error && typeof error === 'object' ? error : null;
 }
 
-const isVersionConflictCode = (code: unknown): boolean =>
+export const isVersionConflictCode = (code: unknown): boolean =>
   typeof code === 'string' && VERSION_CONFLICT_CODES.includes(code);
 
 export function isVersionConflictError(error: unknown): boolean {

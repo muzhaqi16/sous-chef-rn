@@ -63,9 +63,6 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 jest.mock('#/apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),
 }));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(() => Promise.resolve(null)),
-}));
 jest.mock('#/apollo/links/apiHealthProbe', () => ({
   probeApiHealth: jest.fn(() => Promise.resolve(false)),
 }));
@@ -111,8 +108,11 @@ function goOffline() {
 }
 
 describe('offline transition (real store + real breaker)', () => {
+  // No jitter, so the probe lands on its schedule's exact tick.
+  let random: jest.SpyInstance;
   beforeEach(() => {
     jest.useFakeTimers();
+    random = jest.spyOn(Math, 'random').mockReturnValue(0);
     mockIsOnline = true;
     mockStore.setState({
       isOnline: true,
@@ -128,6 +128,7 @@ describe('offline transition (real store + real breaker)', () => {
     mockStore.setState({ isOnline: true, apiReachable: true });
     apiReachabilityBreaker.reset();
     jest.useRealTimers();
+    random.mockRestore();
   });
 
   it('treats the device as offline for the whole offline window', () => {

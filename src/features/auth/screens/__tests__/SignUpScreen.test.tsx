@@ -155,13 +155,12 @@ jest.mock('#/utils/validation/auth', () => {
     // submit). The inputs are string mocks and cannot be typed into, so the
     // address is seeded through the cast — `onSubmit` reads the resolver's
     // output, and the confirmation needs a real one to resend to.
-    getSignUpValidationSchema: () =>
-      yup.object({
-        email: yup.string().transform(() => 'new@example.com'),
-      }),
+    signUpSchema: yup.object({
+      email: yup.string().transform(() => 'new@example.com'),
+    }),
     // The success branch renders CodeVerificationScreen, which builds its own
     // resolver. A partial factory here would leave that undefined.
-    getEmailVerificationValidationSchema: () => yup.object({}),
+    emailVerificationSchema: yup.object({}),
   };
 });
 

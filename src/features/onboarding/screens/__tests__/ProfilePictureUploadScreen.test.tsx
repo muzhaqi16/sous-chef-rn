@@ -11,9 +11,6 @@ type OnBoardingWrapperProps = React.ComponentProps<
 >;
 type ButtonProps = React.ComponentProps<typeof ButtonComponent>;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
 const mockSkipToStep = jest.fn();
@@ -44,7 +41,6 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/storage/mmkv');
-jest.mock('#/utils/finallyHelpers');
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),
   ImageValidationError: class extends Error {},

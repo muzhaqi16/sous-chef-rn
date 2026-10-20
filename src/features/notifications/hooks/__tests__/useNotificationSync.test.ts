@@ -28,13 +28,7 @@ import { alertService } from '#/services/alertService';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#/services/errorService');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 // Whether a notification is unread is read from the cache, which is also what
 // renders it, so the two cannot disagree. The store holds only the expiration
@@ -86,6 +80,7 @@ const seedRows = (rows: Array<{ id: string; status: NotificationStatus }>) =>
       actionUrl: null,
       sourceId: null,
       sourceType: null,
+      pantryItemId: null,
       sentAt: '2026-01-01T00:00:00.000Z',
       readAt: null,
       expiresAt: null,

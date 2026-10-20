@@ -17,6 +17,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
@@ -28,10 +29,9 @@ export const AcceptInvite: React.FC = () => {
 
   const [processing, setProcessing] = useState(false);
 
-  // This screen is the deep-link acceptance surface: the invite is resolved
-  // straight from the URL token (accept-invitation?token=…), since it may not be
-  // in the user's cached pending list on a fresh device. In-app acceptance from
-  // a notification is handled by InvitationAcceptanceModal.
+  // The deep-link surface resolves the invite from the URL token, as a fresh
+  // device's cached pending list may not hold it; in-app acceptance is
+  // InvitationAcceptanceModal's.
   const {
     invitationType,
     hasInvite,
@@ -85,18 +85,11 @@ export const AcceptInvite: React.FC = () => {
     alertService.alert(
       t('confirmations.declineInvitationTitle'),
       t('invitationAcceptance.declineConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.decline'),
-          style: 'destructive',
-          onPress: () => {
-            void executeWithLoadingState(async () => {
-              if (await decline(inviteToken)) goBack();
-            }, setProcessing);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.decline'), () => {
+        void executeWithLoadingState(async () => {
+          if (await decline(inviteToken)) goBack();
+        }, setProcessing);
+      }),
     );
   };
 

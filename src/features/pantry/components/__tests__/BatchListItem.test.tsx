@@ -30,6 +30,7 @@ const batch = (quantity: number): PantryItemBatchFragment => ({
   pantryItemId: 'pi1',
   currency: null,
   store: null,
+  purchase: null,
 });
 
 describe('BatchListItem', () => {

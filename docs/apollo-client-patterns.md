@@ -49,19 +49,20 @@ on, a cell subscribing to one entity is the documented pattern
 
 Pick by what the mutation changes; the numbered patterns below carry the code.
 
-| Pattern                                       | Use when                                                            | Example                                                                    |
-| --------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| No `update` callback (preferred default)      | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
-| `cache.modify` on parent aggregates           | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
-| `cache.modify` BEFORE firing, revert on error | Optimistic UI without a callback                                    | `useToggleShoppingItem`                                                    |
-| `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
-| `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
-| `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
+| Pattern                                      | Use when                                                            | Example                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| No `update` callback (preferred default)     | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
+| `cache.modify` on parent aggregates          | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
+| Local write BEFORE firing, revert on refusal | A field edit that shows at once and survives being queued           | `useToggleShoppingItem`, `usePublishRecipe` (Pattern 5)                    |
+| `updateEntityFieldsLocalFirst`               | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
+| `cache.modify` on connection edges + counts  | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
+| `writeFragment`                              | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
+| `refetchQueries` (last resort)               | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
 
-- Build optimistic responses from the cache (`cache.readFragment` + spread),
-  never from hand-rolled placeholder shapes. Prefer the
-  cache.modify-before-mutation + revert pattern when no callback is needed.
+- A write that shows before the server answers is written into the cache
+  before firing and reverted on a refusal (Pattern 5); no write in the app
+  passes an `optimisticResponse`. If one is ever needed, build it from the
+  cache (`cache.readFragment` + spread), never from a hand-rolled shape.
 - Avoid `refetchQueries` unless `cache.modify` would duplicate server logic
   ([refetchQueries Guidance](#refetchqueries-guidance)).
 
@@ -165,15 +166,15 @@ const [deleteItemMutation] = useDeleteItemMutation({
 **Example**:
 
 ```typescript
-const [updateItemMutation] = useUpdateItemMutation({
-  // No update function needed!
-  // Apollo automatically merges the returned entity into cache
-  optimisticResponse: variables => ({
-    __typename: 'Mutation',
-    updateItem: enhanceWithVersion(currentItem, variables.input),
-  }),
+// `useAdjustPantryItemQuantity`: no `update`. The payload spreads the item's
+// readers, and Apollo merges it into the cache by `__typename` + `id`.
+const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument, {
+  context: { localFirst: true },
 });
 ```
+
+The same hook shows the new quantity before the server answers by writing the
+row locally first (Pattern 5); the response then settles it.
 
 **Requirements**:
 
@@ -245,122 +246,113 @@ update: (cache, { data }, { variables }) => {
 
 ---
 
-### Pattern 5: cache.modify() - For Simple Field Updates ⭐ RECOMMENDED
+### Pattern 5: A local write before firing - For Simple Field Updates ⭐ RECOMMENDED
 
-**Use When**: Updating specific fields on an entity (e.g., toggling booleans, incrementing counters)
+**Use When**: Editing fields of an entity the cache already holds — a toggle, a setting, a rename — where the change shows at once and survives being queued.
 
-**Benefits**:
+**Shape**: snapshot the fields, write the new values into the cache, fire the mutation with `context: { localFirst: true }`, settle it, and put the snapshot back only when it `failed`.
 
-- Instant UI updates without optimistic response complexity
-- Eliminates "Missing field" warnings from partial fragments
-- Simpler code - no fragment reading or field extraction needed
-- Works perfectly offline (cache update is immediate)
-- Avoids cache corruption from `__ref` fields
+- **The write is permanent, not an optimistic layer.** Apollo tears an `optimisticResponse` layer down on the offline queue's null result, which reverts the change while it is still queued.
+- **It is made before firing, not in `update`.** `update` runs only with a server payload, so a queued write would show nothing.
+- **It goes through `writeEntityFields`** (`src/apollo/utils/localFirstFields.ts`), a `cache.writeFragment`: `cache.modify` cannot introduce a field the cached record lacks. A field whose rules live in a merge policy takes its own writer instead ([one writer](#a-field-with-a-write-time-invariant-has-one-writer)).
+- **`queued` is not a failure.** `settleMutation` answers `applied | queued | failed`, and only `failed` reverts.
+- **The settle shows the failure.** It alerts by default; `present: 'toast'` shows the same copy as an error toast, and `present: 'none'` hands it to the caller as `failure`, for a caller that combines several writes into one message.
+- **The snapshot omits what the cache lacks.** `snapshotFields` keeps only the keys the read carried, so a revert never blanks a field it never saw. Read it from the cache, not from a query result that may not have answered yet.
 
-**When to Use This Instead of Optimistic Response**:
-
-- Simple field updates (boolean toggles, counters, timestamps)
-- When mutation fragment has many fields but you're only updating 1-2
-- When you're getting "Missing field" warnings from partial optimistic responses
-- When automatic normalization isn't sufficient (need immediate feedback)
-
-**Example - Toggle Boolean Field**:
+**Example - a field edit that states its version** (`usePublishRecipe`):
 
 ```typescript
-const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
-  errorPolicy: 'all',
-  // Use cache.modify in update function for instant UI updates
-  // This avoids "Missing field" warnings from partial fragments
-  update(cache, { data }, { variables }) {
-    if (!data?.toggleShoppingListItemPurchased || !variables) return;
-
-    const itemId = variables.id;
-    const newStatus = variables.purchased;
-
-    // Directly modify the cached item's fields
-    cache.modify({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-      fields: {
-        isPurchased() {
-          return newStatus;
-        },
-        updatedAt() {
-          return new Date().toISOString();
-        },
-      },
-    });
-  },
+const [mutate] = useMutation(UpdateRecipeDocument, {
+  context: { localFirst: true },
 });
 
-// Usage in the action function
-const toggleItem = async (itemId: string) => {
-  const currentItem = items.find(item => item.id === itemId);
-  if (!currentItem) return false;
-
-  const newStatus = !currentItem.isPurchased;
-
-  const result = await togglePurchasedMutation({
-    variables: {
-      id: itemId,
-      purchased: newStatus,
-      version: currentItem.version,
-    },
-    // No optimisticResponse - cache.modify handles instant UI
+const setSubmitted = async (recipeId: string, submitted: boolean) => {
+  const entity = { __typename: 'Recipe', id: recipeId };
+  const held = client.cache.readFragment<RecipeReadersFragment>({
+    id: client.cache.identify(entity),
+    fragment: RecipeReadersFragmentDoc,
+    returnPartialData: true,
   });
+  const patch = {
+    status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,
+    isPublished: false,
+  };
+  const previous = snapshotFields(held, patch);
+  writeEntityFields(client.cache, entity, patch);
 
-  return result.data?.toggleShoppingListItemPurchased ?? false;
+  const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
+  const settled = await settleMutation(
+    () =>
+      // Sends once earlier writes to this row have settled, at the version the
+      // cache holds then; rejects without sending when it holds none.
+      chainVersionedWrite(client.cache, entity, version =>
+        mutate({ variables: { input: { id: recipeId, status, version } } }),
+      ),
+    {
+      document: UpdateRecipeDocument,
+      fallback: t('labels.failedToUpdateRecipe'),
+      onFailed: () => writeEntityFields(client.cache, entity, previous),
+    },
+  );
+  return settled.status !== 'failed';
 };
 ```
 
-**Example - Increment Counter**:
+**Example - a settings-shaped entity** (`useUpdateHomeFields`, `useAppSettings`, `useNotificationSettings`). `updateEntityFieldsLocalFirst` wraps the same write, fire and revert, and returns the outcome for the caller to report:
 
 ```typescript
-const [incrementViewsMutation] = useIncrementViewsMutation({
-  errorPolicy: 'all',
-  update(cache, { data }, { variables }) {
-    if (!data?.incrementViews || !variables) return;
+const { persisted } = await updateEntityFieldsLocalFirst({
+  cache: client.cache,
+  entity: { __typename: 'Home', id: homeId },
+  updates,
+  previous: snapshotFields(home, updates),
+  logLabel: 'Update Home Fields',
+  mutate: () => updateHomeMutation({ variables: { input } }),
+});
+```
 
-    cache.modify({
-      id: cache.identify({ __typename: 'Recipe', id: variables.id }),
-      fields: {
-        viewCount(existingCount = 0) {
-          return existingCount + 1;
-        },
-        lastViewedAt() {
-          return new Date().toISOString();
+**Example - a field with a merge-policy invariant** (`useToggleShoppingItem`). A tick is an `updateShoppingListItem` carrying only the flag; `purchaseInfo` is written through its one writer, and the row moves between the filtered `itemsConnection` variants in the same step:
+
+```typescript
+const [updatePurchase] = useMutation(UpdateShoppingListItemDocument, {
+  context: { localFirst: true },
+});
+
+writePurchaseInfo(
+  client.cache,
+  itemId,
+  { isPurchased: newStatus },
+  { updatedAt: new Date().toISOString() },
+);
+const counterChange = recordListCounters(client.cache, listId, () => {
+  moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+});
+
+const settled = await settleMutation(
+  () =>
+    updatePurchase({
+      variables: {
+        input: {
+          id: itemId,
+          version: snapshot.version,
+          purchaseTracking: { isPurchased: newStatus },
         },
       },
-    });
+    }),
+  {
+    document: UpdateShoppingListItemDocument,
+    fallback: t('errors.updateItemFailed'),
+    // Puts back the flag, the connection move and the counters.
+    onFailed: revert,
   },
-});
+);
 ```
-
-**Why This Pattern Works**:
-
-1. **Instant UI feedback**: cache.modify executes immediately, updating the UI before server responds
-2. **No fragment complexity**: Don't need to read full fragments or extract fields
-3. **No validation warnings**: Apollo doesn't validate field completeness in cache.modify
-4. **Offline-first**: Works seamlessly with offline queue (cache updates locally, mutation queues)
-5. **Type-safe field updates**: Modify only the fields that changed
-
-**The cache.modify form vs an optimisticResponse callback:**
-
-```typescript
-// ✅ cache.modify — simple toggle, no callback needed
-await toggleMutation({
-  variables: { id: itemId, purchased: newStatus },
-  // No optimisticResponse — cache.modify in `update` handles instant UI
-});
-```
-
-Compared to an `optimisticResponse` callback, the cache.modify form skips reading the fragment, skips constructing the response shape, and avoids "Missing field" warnings from partial responses. Reserve `optimisticResponse` for cases that genuinely need the full mutation result shape (e.g. creating an entity that doesn't exist in cache yet — see "Optimistic Responses" section below).
 
 **When NOT to Use This Pattern**:
 
-- Creating new entities (write the entity to the cache permanently before firing — `docs/local-first-architecture.md` § 2)
-- Complex updates involving multiple related entities (use optimistic response)
-- When mutation returns incomplete data and you need to preserve existing fields (use optimistic response)
-- Array operations (use cache.modify with `readField`/`toReference` pattern instead)
+- Creating a new entity: write the whole row before firing (`docs/local-first-architecture.md` § 2, and [New Entity](#pattern-new-entity-createadd) below)
+- Adding to or removing from a list: the edge writers of Pattern 1
+- A change the server must compute (a total, a merged quantity): send it and let the response normalize (Pattern 2)
 
 ---
 
@@ -405,14 +397,12 @@ const [updateMutation] = useUpdateMutation({
 
 ### When to Use
 
-**Provide optimistic responses** for mutations that:
-
-- Create or update user data
-- Are frequently used
-- Need instant UI feedback
-- Work offline
-
-**For delete operations**: Optimistic responses are optional. The `update` function with manual cache updates (cache.modify + cache.evict + cache.gc) provides sufficient instant UI feedback for both online and offline scenarios. Using optimistic responses with deletes can cause cache normalization warnings when the response doesn't include all fragment fields.
+No write in the app passes an `optimisticResponse`. A change the user should see
+before the server answers is written into the cache before the mutation fires —
+a whole row for a create (below), the edited fields for an update (Pattern 5),
+an unlinked edge for a removal (Pattern 4) — and is reverted only when the write
+settles as `failed`. That write is permanent rather than a layer, which is what
+lets it outlive the offline queue's null result and an app restart.
 
 ### Pattern: New Entity (Create/Add)
 
@@ -472,17 +462,18 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event           | Fires when                                                   |
-| --------------- | ------------------------------------------------------------ |
-| `appForeground` | AppState goes from background/inactive to `active`           |
-| `apiReachable`  | `isApiUnavailable` goes from true to false (link or breaker) |
-| `wsReconnected` | `onWebSocketReconnected`                                     |
+| Event             | Fires when                                                       |
+| ----------------- | ---------------------------------------------------------------- |
+| `appForeground`   | AppState goes from background/inactive to `active`               |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)     |
+| `wsReconnected`   | `onWebSocketReconnected`                                         |
+| `languageChanged` | The resolved language really changes; after one, each navigation |
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is
 passed to the `ApolloClient` constructor with one coalescing default handler;
-`connectResyncSources(client)` attaches the three sources at app start in
-`App.tsx`, because a source subscribes as it is set and importing the client
+`connectResyncSources(client, { onNavigation })` attaches the sources at app
+start in `App.tsx`, because a source subscribes as it is set and importing the client
 must not subscribe to the store, AppState and the socket.
 
 The handler:
@@ -499,6 +490,23 @@ The handler:
 
 `include: 'active'` already leaves out standby watchers (`skipToken` or
 `skip: !isFocused`) and `cache-only` reads.
+
+**A language switch catches up on navigation.** Catalog names come in the
+request's language, but a screen paused at the switch has no active query for
+the refetch to reach, and resumes on `cache-first`
+([probe](verified-library-behaviour.md#apollo-tears-down-a-paused-screens-query-resubscribing-reads-the-current-fetch-policy)).
+So after a real switch `languageChanged` also fires on every navigation
+(`onNavigation`, wired in `App.tsx`; payload `switched: false`), and a batch of
+only that event refetches just the active queries not answered since the
+switch. The set is per switch, not per language: names live on shared entities,
+so a screen paused through `en` → `es` → `en` reads what the `es` screens wrote.
+A query joins it only once its refetch answers, and a catch-up waits while the
+API is unavailable. A switch before any query exists (rehydration applying the
+saved language) is not one. No screen carries code for it, and none is
+remounted.
+
+Evicting the names instead would blank every screen offline, and
+`include: 'all'` does not reach a paused screen's torn-down query.
 
 **A transient query opts out** with `refetchOn: false`: searches,
 autocompletes, analytics, conversion and join-code previews, barcode lookups,
@@ -571,9 +579,9 @@ START
   ├─ Is this a DELETE operation?
   │   └─ YES → Use cache.evict() + cache.gc() + cache.modify()
   │
-  ├─ Is this a SIMPLE FIELD UPDATE (toggle, counter, timestamp)?
-  │   └─ YES → Use cache.modify() for specific fields (Pattern 5)
-  │               [Instant UI, zero warnings, no optimistic response needed]
+  ├─ Is this a SIMPLE FIELD UPDATE (toggle, setting, rename)?
+  │   └─ YES → Write the fields locally before firing, revert on refusal (Pattern 5)
+  │               [Shows at once, survives being queued]
   │
   ├─ Is this adding/removing from an ARRAY?
   │   └─ YES → Use cache.modify() with readField/toReference (Pattern 1)
@@ -589,30 +597,28 @@ START
 
 ### "Should I Add an Optimistic Response?"
 
+No. Every write that shows before the server answers is a local write made
+before firing:
+
 ```
 START
   │
-  ├─ Is this a READ-ONLY query?
-  │   └─ YES → NO (queries don't have optimistic responses)
+  ├─ Does the write CREATE an entity?
+  │   └─ Write the whole row under a client-minted id, then fire (New Entity)
   │
-  ├─ Is this a SIMPLE FIELD UPDATE (toggle, counter)?
-  │   └─ YES → NO - Use cache.modify() instead (Pattern 5)
-  │               [Simpler, zero warnings, instant UI feedback]
+  ├─ Does it EDIT fields of a row the cache holds?
+  │   └─ Write the fields, then fire; revert on refusal (Pattern 5)
   │
-  ├─ Is this a DELETE operation?
-  │   └─ YES → NO - cache.modify + evict + gc provides instant UI
+  ├─ Does it REMOVE a row?
+  │   └─ Unlink it, then fire; restore on refusal (Pattern 4)
   │
-  ├─ Is this a frequently-used mutation (create/update)?
-  │   └─ YES → ADD OPTIMISTIC RESPONSE
-  │
-  ├─ Does this need to work offline?
-  │   └─ YES → ADD OPTIMISTIC RESPONSE
-  │
-  ├─ Is instant UI feedback important?
-  │   └─ YES → ADD OPTIMISTIC RESPONSE
-  │
-  └─ DEFAULT → ADD OPTIMISTIC RESPONSE (it's almost always worth it!)
+  └─ Does the server compute the result?
+      └─ Fire and let the response normalize (Pattern 2)
 ```
+
+An `optimisticResponse` is a layer Apollo removes when the mutation settles,
+and the offline queue settles a queued write with a null result, so the change
+would vanish while it is still waiting to be sent.
 
 ### "Which Fetch Policy Should I Use?"
 
@@ -828,12 +834,12 @@ Use the hook-owned fragment form when the caller is a hook that runs outside the
 
 ### Which cache update approach
 
-| Operation         | Cache Update Needed? | Use This                                      |
-| ----------------- | -------------------- | --------------------------------------------- |
-| **Create/Add**    | YES                  | `createAddToParentConnectionUpdater()`        |
-| **Update**        | NO                   | Apollo auto-normalizes by `__typename` + `id` |
-| **Delete/Remove** | YES                  | `createRemoveFromParentConnectionUpdater()`   |
-| **Toggle field**  | Optional             | `cache.modify()` for instant UI (Pattern 5)   |
+| Operation         | Cache Update Needed? | Use This                                             |
+| ----------------- | -------------------- | ---------------------------------------------------- |
+| **Create/Add**    | YES                  | `createAddToParentConnectionUpdater()`               |
+| **Update**        | NO                   | Apollo auto-normalizes by `__typename` + `id`        |
+| **Delete/Remove** | YES                  | `createRemoveFromParentConnectionUpdater()`          |
+| **Toggle field**  | YES, before firing   | A local field write, reverted on refusal (Pattern 5) |
 
 ### When to Use optimisticDataPersistence
 
@@ -993,10 +999,8 @@ one, so an add never introduces a count a later query reads as a cache hit.
 
 **Plain array fields** (no edges wrapper):
 
-| Utility                              | Use Case                                                 |
-| ------------------------------------ | -------------------------------------------------------- |
-| `createAddToParentArrayUpdater`      | Add item to `parent.arrayField`                          |
-| `createRemoveFromParentArrayUpdater` | Remove item from `parent.arrayField` + optional eviction |
+| Utility | Use Case |
+| ------- | -------- |
 
 **Misc helpers in the same file:** `safeEvict`, `safeEvictMany` (evicts,
 releases each entity's retains, one gc), `adoptServerEntityId`,
@@ -1029,22 +1033,11 @@ update: (cache, { data }) => {
 };
 ```
 
-### Optimistic Response Helpers (`src/apollo/utils/createOptimisticResponse.ts`)
+### Local row helpers (`src/apollo/utils/createOptimisticResponse.ts`)
 
-| Utility                                    | Use Case                                  |
-| ------------------------------------------ | ----------------------------------------- |
-| `enhanceWithVersion(currentItem, updates)` | Add version/timestamp to update mutations |
-
-### Mutation failure reporting (`src/utils/errorHandlers.ts`)
-
-What `settleMutation` shares with other callers. A write's failure is settled
-through `settleMutation` (see [Error Handling](#error-handling)), never handled
-here directly.
-
-| Utility                                   | Use Case                                                                       |
-| ----------------------------------------- | ------------------------------------------------------------------------------ |
-| `reportMutationFailure(error, operation)` | Report a failed write; a network failure during a known outage is not reported |
-| `alertVersionConflict(config)`            | The "updated elsewhere" alert with a Refresh action                            |
+| Utility                                    | Use Case                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `enhanceWithVersion(currentItem, updates)` | The row a local write stores: the cached entity with the edit, `version` kept (the server moves it) and `updatedAt` stamped |
 
 ### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
 
@@ -1428,7 +1421,7 @@ See `src/features/shoppingList/cache/connections.ts` for the full implementation
 - **Cache updater utilities**: `src/apollo/utils/cacheUpdaters.ts`
 - **Subscription setup**: `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
 - **Fetch policies**: global `watchQuery` defaults in `src/apollo/defaultOptions.ts` cover the common case. Override per-query only when the policy needs to differ.
-- **Error handling**: `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, `src/utils/errors/versionConflict.ts`
+- **Error handling**: `src/apollo/utils/settleMutation.ts` (it also reports a failed write, quiet for a network failure during a known outage), `src/services/errorService.ts`, `src/utils/errors/versionConflict.ts`
 
 ---
 

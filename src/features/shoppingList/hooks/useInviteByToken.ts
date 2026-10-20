@@ -25,6 +25,8 @@ import {
   type AcceptInvite_HomeInviteFragment,
 } from '#features/shoppingList/screens/AcceptInvite.generated';
 
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
+
 export type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
 /** False when the write failed; the failure is already alerted. */
@@ -48,6 +50,7 @@ const settleInvite = async (
  */
 export function useInviteByToken(token: string | undefined) {
   const { t } = useTranslation();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
     GetHomeInviteByTokenDocument,
     token ? { variables: { token } } : skipToken,
@@ -91,6 +94,9 @@ export function useInviteByToken(token: string | undefined) {
   // An unresolved invite has nothing to send; the screen explains it first.
   const accept = async (inviteToken: string): Promise<boolean> => {
     if (invitationType === 'unknown') return false;
+    // The API refuses an accept from an unverified email; the gate says so and
+    // offers the way to verify, with the invite still pending afterwards.
+    if (!requireVerifiedEmail()) return false;
     const variables = { input: { token: inviteToken } };
     const fallback = t('invitationAcceptance.acceptFailed');
     if (invitationType === 'home') {

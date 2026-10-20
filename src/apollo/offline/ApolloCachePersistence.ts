@@ -6,12 +6,11 @@ import { logger } from '#/utils/environment';
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
- * The SHAPE of a persisted blob, not the app that wrote it. Bump by hand for a
- * `cache.ts` change that makes old data unsafe, OR a server change that
- * redefines what persisted data means — retired ids and rewritten values parse
+ * The persisted SHAPE, not the app version. Bump it for a policy change unsafe
+ * on old data, or a server change redefining persisted data: retired ids parse
  * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-5';
+const CURRENT_CACHE_VERSION = 'shape-6';
 /** Keys nothing writes; `clear()` removes them so a session end strands nothing. */
 const LEGACY_SPLIT_KEYS = [
   'apollo-cache-v1-critical',
@@ -24,10 +23,9 @@ const DEBOUNCE_MS = 3000;
 type Extractor = () => NormalizedCacheObject;
 
 /**
- * Identity per top-level key, not value: `extract()` returns the store's own
- * objects, so an untouched entity keeps its reference. Scans the WHOLE cache —
- * writers report only `ROOT_QUERY`, whose `__ref`s are unchanged when a refetch
- * updates entities in place, so a per-key check reads as "no change".
+ * Identity per top-level key, as `extract()` returns the store's own objects.
+ * Scans the WHOLE cache: writers report only `ROOT_QUERY`, whose `__ref`s
+ * survive a refetch that updates entities in place.
  */
 function hasCacheChanged(
   cache: NormalizedCacheObject,
@@ -39,10 +37,9 @@ function hasCacheChanged(
   for (const key of keys) {
     if (cache[key] !== snapshot[key]) return true;
   }
-  // `__META` is excluded above because `extract()` allocates it fresh every
-  // time, so its reference always differs. Its CONTENT still has to be compared
-  // or a pin added with no entity change never reaches disk; the id list is
-  // sorted by `extract()`, which makes length a sound cheap proxy.
+  // `extract()` allocates `__META` fresh, so it is compared by content, or a
+  // pin added with no entity change never reaches disk; `extract()` sorts the
+  // ids, so length is a sound proxy.
   return metaPinCount(cache) !== metaPinCount(snapshot);
 }
 
@@ -60,9 +57,7 @@ function metaPinCount(cache: NormalizedCacheObject): number {
 
 /**
  * `restore()` re-`retain`s every id in `__META.extraRootIds`, so a pin whose
- * entity is already gone is re-established on each launch and the list only
- * ever grows. Dropping ids absent from the extract is safe: an absent id has no
- * entity to protect.
+ * entity is gone returns each launch; an absent id has nothing to protect.
  */
 function pruneExtraRootIds(cache: NormalizedCacheObject): void {
   const meta = cache[META_KEY];

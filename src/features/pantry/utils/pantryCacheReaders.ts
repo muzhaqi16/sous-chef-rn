@@ -6,7 +6,11 @@
 import type { ApolloCache } from '@apollo/client';
 import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
-import { FindCachedPantryItemDuplicate_PantryFragmentDoc } from './pantryCacheReaders.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  FindCachedPantryItemDuplicate_PantryFragmentDoc,
+  ReadStackUnit_PantryItemFragmentDoc,
+} from './pantryCacheReaders.generated';
 
 /** The matched row, plus what an optimistic restock needs to bump it locally. */
 export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
@@ -86,10 +90,9 @@ function scanCachedPantryItems(
 }
 
 /**
- * The server's key is `(pantryId, itemId, unitId)` among active rows. `itemId`
- * reproduces the item half; `itemName` is the fallback for the details form,
- * which has no catalog id, and a name match only ever drives a prompt. Without
- * a `unitId` any unit matches, which reads "stocks this item at all".
+ * The server's key is `(pantryId, itemId, unitId)` among active rows;
+ * `itemName` stands in for the details form, which has no catalog id, and only
+ * drives a prompt. No `unitId` matches any unit.
  */
 export function findCachedPantryItemDuplicate(
   cache: ApolloCache,
@@ -100,15 +103,37 @@ export function findCachedPantryItemDuplicate(
     unitId?: string | null;
   },
 ): CachedPantryItemDuplicate | null {
-  if (!pantryId) return null;
-
   const itemId = match.itemId ?? null;
   const unitId = match.unitId ?? null;
   const itemName = normalizeName(match.itemName);
   if (!itemId && !itemName) return null;
 
+  for (const node of cachedPantryItems(cache, pantryId)) {
+    // An id match is authoritative; the name match only runs when the caller
+    // has no catalog id to offer.
+    const matched = itemId
+      ? node.item?.id === itemId
+      : normalizeName(node.itemName) === itemName;
+    if (matched && (!unitId || node.unit?.id === unitId)) {
+      return {
+        existingPantryItemId: node.id,
+        existingPantryItemIds: [node.id],
+        quantity: node.quantity,
+      };
+    }
+  }
+
+  return null;
+}
+
+/** The pantry's cached rows, from the client-mode key or any server-mode one. */
+function cachedPantryItems(
+  cache: ApolloCache,
+  pantryId: string | null | undefined,
+): CachedNode[] {
+  if (!pantryId) return [];
   const pantryCacheId = cache.identify({ __typename: 'Pantry', id: pantryId });
-  if (!pantryCacheId) return null;
+  if (!pantryCacheId) return [];
 
   // Plain statements only in the try body: a value block inside one bails the
   // React Compiler out of the whole function.
@@ -125,28 +150,42 @@ export function findCachedPantryItemDuplicate(
   }
 
   const edges = pantry?.itemsConnection.edges;
-  // A miss on the client-mode key is not "no duplicate": in server mode the
-  // field is keyed on the live filter and sort, so the rows are cached under a
-  // key this fragment cannot name. Without this the same duplicate prompts on
-  // a small pantry and not on a large one.
-  const nodes: CachedNode[] = edges
+  // A client-mode miss is not "no duplicate": in server mode the rows are
+  // cached under the live filter and sort, a key this fragment cannot name.
+  return edges
     ? edges.map(edge => edge.node)
     : scanCachedPantryItems(cache, pantryCacheId);
+}
 
-  for (const node of nodes) {
-    // An id match is authoritative; the name match only runs when the caller
-    // has no catalog id to offer.
-    const matched = itemId
-      ? node.item?.id === itemId
-      : normalizeName(node.itemName) === itemName;
-    if (matched && (!unitId || node.unit?.id === unitId)) {
-      return {
-        existingPantryItemId: node.id,
-        existingPantryItemIds: [node.id],
-        quantity: node.quantity,
-      };
-    }
-  }
+export interface StackUnit {
+  id: string;
+  type: UnitType;
+}
 
-  return null;
+/** The unit a cached stack is counted in; null when the cache holds none. */
+export function readStackUnit(
+  cache: ApolloCache,
+  pantryItemId: string,
+): StackUnit | null {
+  const stack = cache.readFragment({
+    id: cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
+    fragment: ReadStackUnit_PantryItemFragmentDoc,
+  });
+  return stack?.unit ?? null;
+}
+
+/**
+ * The unit the pantry holds `itemId` in, a counted stack first: an item can be
+ * held both by the carton and in mL. Null when the cache holds no stack of it.
+ */
+export function readHeldStackUnit(
+  cache: ApolloCache,
+  pantryId: string | null | undefined,
+  itemId: string,
+): StackUnit | null {
+  const units = cachedPantryItems(cache, pantryId)
+    .filter(node => node.item?.id === itemId)
+    .map(node => readStackUnit(cache, node.id))
+    .filter(unit => unit !== null);
+  return units.find(unit => unit.type === UnitType.Count) ?? units[0] ?? null;
 }

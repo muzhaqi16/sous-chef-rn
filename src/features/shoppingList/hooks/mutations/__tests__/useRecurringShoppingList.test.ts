@@ -16,14 +16,6 @@ import { ErrorCode, RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { useRecurringShoppingList } from '../useRecurringShoppingList';
 import { useStore } from '#store';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',
@@ -101,7 +93,6 @@ describe('useRecurringShoppingList', () => {
               cancelRecurring: {
                 __typename: 'CancelRecurringPayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   isRecurring: false,
                   recurringPattern: 'WEEKLY',
@@ -153,6 +144,11 @@ describe('useRecurringShoppingList', () => {
       homeId: 'home-1',
       unpurchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',
@@ -174,6 +170,11 @@ describe('useRecurringShoppingList', () => {
       },
       purchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',

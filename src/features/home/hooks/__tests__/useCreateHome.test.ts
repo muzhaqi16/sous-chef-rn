@@ -169,7 +169,7 @@ describe('a minted id while its create is in flight', () => {
   it('holds a home unconfirmed until the create settles', async () => {
     const home = recordMock(CreateHomeDocument, {
       data: { createHome: null },
-      delay: 20,
+      held: true,
     });
     const { result } = renderHookWithApollo(() => useCreateHome(), {
       operationMocks: [home.mock],
@@ -184,6 +184,7 @@ describe('a minted id while its create is in flight', () => {
 
     expect(unconfirmedCreates.has(id)).toBe(true);
     await act(async () => {
+      home.release();
       await settled;
     });
     expect(unconfirmedCreates.has(id)).toBe(false);
@@ -192,7 +193,7 @@ describe('a minted id while its create is in flight', () => {
   it('holds a pantry unconfirmed until the create settles', async () => {
     const pantry = recordMock(CreatePantryDocument, {
       data: { createPantry: null },
-      delay: 20,
+      held: true,
     });
     const { result } = renderHookWithApollo(() => useCreatePantry(), {
       operationMocks: [pantry.mock],
@@ -210,6 +211,7 @@ describe('a minted id while its create is in flight', () => {
 
     expect(unconfirmedCreates.has(id)).toBe(true);
     await act(async () => {
+      pantry.release();
       await settled;
     });
     expect(unconfirmedCreates.has(id)).toBe(false);

@@ -1,5 +1,9 @@
 'use no memo';
 
+import {
+  captureOnData,
+  type CapturedOnData,
+} from '#/test-utils/subscriptionCapture';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
@@ -10,13 +14,12 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
-import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  GetMealPlanDocument,
+  MealPlanEventsDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
-
-type CapturedOnData = (data: unknown, client: unknown) => void;
-
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
@@ -34,8 +37,10 @@ const mockAddToMealPlans = jest.fn();
 const mockAddToMealTemplates = jest.fn();
 const mockRemoveFromMealPlans = jest.fn();
 const mockRemoveFromMealTemplates = jest.fn();
-const mockAddToMealPlanItems = jest.fn();
-const mockRemoveFromMealPlanItems = jest.fn();
+// Called with the `Parent.field` each edge writer was built for, then its own
+// arguments: a plan's meals and a template's are edges of a connection.
+const mockAddEdge = jest.fn();
+const mockRemoveEdge = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   // The updater factories are stubbed so each call site can be asserted, but
   // the pure helpers keep their real behaviour — a fully-partial factory drops
@@ -49,28 +54,15 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
     fieldName === 'mealPlans'
       ? (...args: unknown[]) => mockRemoveFromMealPlans(...args)
       : (...args: unknown[]) => mockRemoveFromMealTemplates(...args),
-  createAddToParentArrayUpdater:
-    () =>
+  createAddToParentConnectionUpdater:
+    (parent: string, field: string) =>
     (...args: unknown[]) =>
-      mockAddToMealPlanItems(...args),
-  createRemoveFromParentArrayUpdater:
-    () =>
+      mockAddEdge(`${parent}.${field}`, ...args),
+  createRemoveFromParentConnectionUpdater:
+    (parent: string, field: string) =>
     (...args: unknown[]) =>
-      mockRemoveFromMealPlanItems(...args),
+      mockRemoveEdge(`${parent}.${field}`, ...args),
 }));
-
-/** Captures the hook's customOnData so tests can drive it with a payload. */
-function captureCustomOnData() {
-  let customOnData: CapturedOnData | undefined;
-  mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    customOnData = config.customOnData as CapturedOnData | undefined;
-    return {};
-  });
-  return (): CapturedOnData => {
-    if (!customOnData) throw new Error('customOnData was not captured');
-    return customOnData;
-  };
-}
 
 const makeClient = (
   readFragment: jest.Mock = jest.fn(),
@@ -136,7 +128,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('drops a deleted plan and clears the selection naming it', () => {
     useStore.setState({ selectedMealPlanId: 'plan-1' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -165,7 +157,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('leaves a selection that names a different plan', () => {
     useStore.setState({ selectedMealPlanId: 'plan-mine' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -183,7 +175,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('reads a plan created elsewhere back before adding it', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue({
@@ -221,7 +213,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('skips the add when the read-back leaves the list card incomplete', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue(null),
@@ -248,7 +240,7 @@ describe('useMealPlanSubscriptions', () => {
   it('skips the add when the plan cannot be read back', async () => {
     // Offline, or deleted between the event and the read. Adding an entity the
     // overview cannot render completely would blank the list.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn(),
@@ -271,7 +263,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('re-reads a plan updated elsewhere without touching the connection', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(jest.fn());
 
@@ -297,7 +289,7 @@ describe('useMealPlanSubscriptions', () => {
   it('refreshes the plan when an item is added elsewhere', () => {
     // One plan read answers both halves — array membership and the
     // server-computed totals — so an item add costs no read of its own.
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -319,7 +311,7 @@ describe('useMealPlanSubscriptions', () => {
 
   it('skips an item echo while a local delete is in flight', () => {
     mockIsPendingDelete.mockReturnValue(true);
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -333,11 +325,12 @@ describe('useMealPlanSubscriptions', () => {
       makeClient(jest.fn()),
     );
 
-    expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+    expect(mockAddEdge).not.toHaveBeenCalled();
+    expect(mockRemoveEdge).not.toHaveBeenCalled();
   });
 
   it('removes an item deleted elsewhere', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -352,17 +345,54 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
-    expect(mockRemoveFromMealPlanItems).toHaveBeenCalledWith(
+    // The edge comes off the plan's meals connection, and the entity goes.
+    expect(mockRemoveEdge).toHaveBeenCalledTimes(1);
+    expect(mockRemoveEdge).toHaveBeenCalledWith(
+      'MealPlan.mealPlanItemsConnection',
       client.cache,
       'plan-1',
       'item-1',
       { evictItem: true },
     );
+    // Its totals moved too, which only the plan read restates.
+    flushAggregateRefresh();
+    expect(client.refetchQueries).toHaveBeenCalledWith({
+      include: [GetMealPlanDocument],
+    });
+  });
+
+  it('removes a template item deleted elsewhere from its template, without a read', async () => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(
+      getOnData(),
+      {
+        subtype: MealPlanSubtype.MealTemplateItemChanged,
+        mutation: MutationType.ItemRemoved,
+        templateId: 'tpl-1',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealTemplateItem', id: 'tpl-item-1' },
+      },
+      client,
+    );
+
+    expect(mockRemoveEdge).toHaveBeenCalledTimes(1);
+    expect(mockRemoveEdge).toHaveBeenCalledWith(
+      'MealTemplate.itemsConnection',
+      client.cache,
+      'tpl-1',
+      'tpl-item-1',
+      { evictItem: true },
+    );
+    expect(client.query).not.toHaveBeenCalled();
+    expect(client.refetchQueries).not.toHaveBeenCalled();
   });
 
   it('ignores its own echo', () => {
     useStore.setState({ selectedMealPlanId: 'plan-1' });
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
 
     getOnData()(
@@ -384,7 +414,7 @@ describe('useMealPlanSubscriptions', () => {
     // The template browser is a sheet whose query mounts once with the screen,
     // so "it'll arrive on the next read" never happens while it stays mounted.
     const template = { __typename: 'MealTemplate', id: 'tpl-new' };
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
       jest.fn().mockReturnValue(template),
@@ -414,7 +444,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('skips an incomplete template rather than blanking the list', async () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const template = { __typename: 'MealTemplate', id: 'tpl-new' };
 
@@ -441,7 +471,7 @@ describe('useMealPlanSubscriptions', () => {
   it.each([MutationType.ItemAdded, MutationType.Updated])(
     'reads the template items back on %s rather than linking a bare id',
     async mutation => {
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
       const client = makeClient();
 
@@ -457,21 +487,23 @@ describe('useMealPlanSubscriptions', () => {
         client,
       );
 
+      // The first page of the template's meals, at the size its readers use.
       expect(client.query).toHaveBeenCalledWith(
         expect.objectContaining({
           query: MealTemplateItemsForEventDocument,
-          variables: { id: 'tpl-1' },
+          variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
           fetchPolicy: 'network-only',
         }),
       );
-      expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+      // No bare id is linked by hand: the read's own write lists the item.
+      expect(mockAddEdge).not.toHaveBeenCalled();
       expect(client.refetchQueries).not.toHaveBeenCalled();
     },
   );
 
   it('does not read back a template item a local delete is removing', async () => {
     mockIsPendingDelete.mockReturnValue(true);
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 
@@ -491,7 +523,7 @@ describe('useMealPlanSubscriptions', () => {
   });
 
   it('drops a template deleted elsewhere', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient();
 

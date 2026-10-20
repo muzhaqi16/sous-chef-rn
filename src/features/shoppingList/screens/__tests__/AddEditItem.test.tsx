@@ -13,7 +13,11 @@ import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { alertService, type AlertButton } from '#/services/alertService';
-import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  DisplayFormat,
+  ErrorCode,
+} from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
 import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
@@ -25,12 +29,10 @@ import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { t } from '#/i18n';
 
-jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/utils/deviceLocale', () => ({
   ...jest.requireActual('#/utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = jest
@@ -79,10 +81,6 @@ jest.mock('#features/shoppingList/cache/withdraw', () => ({
 }));
 jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 jest.mock('#components/templates/FormScreen', () => ({
   FormScreen: ({
@@ -279,13 +277,11 @@ jest.mock('#components/atoms/FieldRow', () => ({
  * states what the test asserts on rather than the whole selection.
  */
 const SHOPPING_LIST_ITEM_CORE: MockPart<AddedShoppingListItemFieldsFragment> = {
-  __typename: 'ShoppingListItem',
   itemName: 'Milk',
   quantity: 1,
   quantityInput: '1',
   displayFormat: DisplayFormat.Auto,
   purchaseInfo: {
-    __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
   },
   version: 1,
@@ -317,16 +313,13 @@ function buildDetailShoppingListItem(id: string) {
   return {
     ...SHOPPING_LIST_ITEM_CORE,
     id,
-    priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+    priceEstimate: { estimated: null },
     source: {
-      __typename: 'ShoppingListItemSource',
-      isAutoAdded: false,
-      autoAddReason: null,
+      addedContext: AddedContext.Manual,
       isFromMealPlan: false,
     },
     priority: 0,
     storeInfo: {
-      __typename: 'ShoppingListItemStoreInfo',
       preferredStore: null,
     },
     brand: null,
@@ -346,7 +339,6 @@ function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
           __typename: 'AddItemsToShoppingListPayload',
           results: [
             {
-              __typename: 'BatchAddShoppingListItemResult',
               index: 0,
               clientId: null,
               success: true,
@@ -1114,6 +1106,45 @@ describe('AddEditItem', () => {
     expect(createLocalShoppingListItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ quantity: 2.2, quantityInput: '2.2' }),
+    );
+  });
+
+  it('sends the typed name inline under a minted item id, which the row names', async () => {
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2' },
+        }),
+      );
+    const { createLocalShoppingListItem } = jest.requireMock(
+      '#features/shoppingList/cache/items',
+    );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    const [line] = (
+      added.fired[0]?.input as {
+        items: { item: { inline?: { id: string } } }[];
+      }
+    ).items;
+    expect(line?.item).toEqual({
+      inline: { id: expect.any(String), name: 'Flour' },
+    });
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ itemId: line?.item.inline?.id }),
     );
   });
 

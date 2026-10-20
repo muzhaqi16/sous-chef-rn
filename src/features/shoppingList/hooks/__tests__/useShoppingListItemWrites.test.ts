@@ -24,19 +24,6 @@ jest.mock('#/utils/deviceLocale', () => ({
 }));
 
 jest.mock('#/services/errorService');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-jest.mock('#/services/toastService', () => ({
-  toastService: { info: jest.fn() },
-}));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
 
 const ITEM = gql`
   fragment ItemWritesProbe on ShoppingListItem {
@@ -57,6 +44,11 @@ type Item = {
 
 const EDIT = { itemName: 'Oat milk', notes: 'organic' };
 
+const readPersisted = () => {
+  optimisticDataPersistence.flush();
+  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
+};
+
 function setup(outcome: 'applied' | 'refused') {
   const cache = seedCache([
     {
@@ -71,7 +63,7 @@ function setup(outcome: 'applied' | 'refused') {
   ]);
   const itemQuery = recordMock(GetShoppingListItemDocument, {
     data: {
-      shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+      shoppingListItem: { id: 'item-1' },
     },
   });
   const update = recordMock(UpdateShoppingListItemDocument, {
@@ -81,7 +73,6 @@ function setup(outcome: 'applied' | 'refused') {
           ? {
               __typename: 'UpdateShoppingListItemPayload',
               shoppingListItem: {
-                __typename: 'ShoppingListItem',
                 id: 'item-1',
               },
             }
@@ -107,6 +98,7 @@ function setup(outcome: 'applied' | 'refused') {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
   jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
@@ -117,6 +109,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     await waitFor(() => expect(result.current.itemData).not.toBeNull());
 
     let written: Item | null = null;
+    let persisted: Record<string, unknown> = {};
     await act(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1 1/2', ...EDIT },
@@ -124,6 +117,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
       );
       // Offline nothing else lands: the queue resolves the write with no payload.
       written = readItem();
+      persisted = readPersisted();
       await pending;
     });
 
@@ -132,14 +126,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
       quantity: 1.5,
       quantityInput: '1 1/2',
     });
-    for (const [field, value] of Object.entries(EDIT)) {
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        expect.anything(),
-        'item-1',
-        field,
-        value,
-      );
-    }
+    expect(persisted).toMatchObject(EDIT);
   });
 
   it('reads the API text it sends as API text on a comma device', async () => {
@@ -175,13 +162,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     });
 
     expect(updated).toBe(false);
-    for (const field of Object.keys(EDIT)) {
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        expect.anything(),
-        'item-1',
-        field,
-      );
-    }
+    expect(readPersisted()).toEqual({});
     await waitFor(
       () => expect(itemQuery.fired.length).toBeGreaterThan(readsBefore),
       { timeout: 3000 },
@@ -200,14 +181,12 @@ describe('useShoppingListItemWrites.createItem', () => {
             __typename: 'AddItemsToShoppingListPayload',
             results: [
               {
-                __typename: 'BatchAddShoppingListItemResult',
                 index: 0,
                 success: true,
                 packageSizeCleared,
                 item: {
-                  __typename: 'ShoppingListItem',
                   id: row?.id ?? '',
-                  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+                  shoppingList: { id: 'list-1' },
                 },
               },
             ],
@@ -230,7 +209,7 @@ describe('useShoppingListItemWrites.createItem', () => {
       await result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
         {
-          item: { itemName: 'Pasta sauce' },
+          item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
           quantity: '1',
           netWeight: { netWeight: 22, netWeightUnitId: 'u-oz' },
         },
@@ -248,10 +227,95 @@ describe('useShoppingListItemWrites.createItem', () => {
     await act(async () => {
       await result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
-        { item: { itemName: 'Pasta sauce' }, quantity: '1' },
+        {
+          item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
+          quantity: '1',
+        },
       );
     });
 
     expect(toastService.info).not.toHaveBeenCalled();
+  });
+});
+
+describe('useShoppingListItemWrites.createItem, for a typed name', () => {
+  const typed = { inline: { id: 'item-minted', name: 'Cubanelle pepper' } };
+
+  /** An add answered with its line naming `servedItemId`. */
+  function answeredWith(servedItemId: string) {
+    const cache = seedCache([]);
+    const add = recordMock(AddItemToShoppingListDocument, {
+      dataFor: (vars): MockDataFor<typeof AddItemToShoppingListDocument> => {
+        const [row] = (vars as AddItemToShoppingListMutationVariables).input
+          .items;
+        return {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [
+              {
+                index: 0,
+                success: true,
+                item: {
+                  id: row?.id ?? '',
+                  shoppingList: { id: 'list-1' },
+                  item: { id: servedItemId },
+                },
+              },
+            ],
+          },
+        };
+      },
+    });
+    const rendered = renderHookWithApollo(
+      () => useShoppingListItemWrites('list-1', undefined),
+      { cache, operationMocks: [add.mock] },
+    );
+    return { cache, add, ...rendered };
+  }
+
+  const lineOf = (cache: ReturnType<typeof seedCache>) => {
+    const [key] = Object.keys(cache.extract()).filter(id =>
+      id.startsWith('ShoppingListItem:'),
+    );
+    return key ? cache.extract()[key] : undefined;
+  };
+
+  it('re-points a typed item the API matched to one it holds', async () => {
+    const { cache, add, result } = answeredWith('item-held');
+
+    let namedBefore: unknown;
+    await act(async () => {
+      const adding = result.current.createItem(
+        { itemName: 'Cubanelle pepper', quantity: 1 },
+        { item: typed, quantity: '1' },
+      );
+      namedBefore = lineOf(cache)?.item;
+      await adding;
+    });
+
+    expect(add.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({
+          items: [expect.objectContaining({ item: typed })],
+        }),
+      }),
+    ]);
+    expect(namedBefore).toEqual({ __ref: 'Item:item-minted' });
+    expect(lineOf(cache)?.item).toEqual({ __ref: 'Item:item-held' });
+    expect(cache.extract()['Item:item-minted']).toBeUndefined();
+  });
+
+  it('keeps the item the API created under the minted id', async () => {
+    const { cache, result } = answeredWith('item-minted');
+
+    await act(async () => {
+      await result.current.createItem(
+        { itemName: 'Cubanelle pepper', quantity: 1 },
+        { item: typed, quantity: '1' },
+      );
+    });
+
+    expect(lineOf(cache)?.item).toEqual({ __ref: 'Item:item-minted' });
+    expect(cache.extract()['Item:item-minted']).toBeDefined();
   });
 });

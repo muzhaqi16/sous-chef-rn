@@ -136,14 +136,6 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
-  formatNetWeightDisplay: (
-    ...[weight, unit]: Parameters<
-      typeof import('#features/pantry/hooks/usePantryItemTransformation').formatNetWeightDisplay
-    >
-  ) => (weight != null ? `${weight} ${unit?.symbol || ''}` : ''),
-}));
-
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (input: string) => {
     const val = parseFloat(input);

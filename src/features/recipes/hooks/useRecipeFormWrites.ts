@@ -8,7 +8,6 @@ import {
   GetRecipeDocument,
   CreateRecipeDocument,
   UpdateRecipeDocument,
-  UpdateRecipeIngredientsDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeForm_RecipeFragmentDoc,
@@ -17,7 +16,6 @@ import {
 import type {
   CreateRecipeInput,
   UpdateRecipeInput,
-  RecipeIngredientInput,
 } from '#/graphql/generated/schemaTypes';
 import {
   upsertMyRecipesEdge,
@@ -30,9 +28,24 @@ import {
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
+
+/**
+ * An edit's fields with what the FORM read, against which it is judged, not the
+ * cache at save time. `version` is null until the recipe loads;
+ * `ingredientsUnread` means the form holds only the first page of ingredients.
+ */
+export type RecipeUpdateFields = Omit<UpdateRecipeInput, 'id' | 'version'> & {
+  version: number | null;
+  ingredientsUnread: boolean;
+};
 
 /** A refused save, as the form shows it: on its field, or as an alert. */
 export type RecipeWriteFailure = SettledFailure;
@@ -51,9 +64,16 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data: recipeData } = useQuery(
+  const { data: recipeData, refetch: refetchRecipe } = useQuery(
     GetRecipeDocument,
-    recipeId ? { variables: { id: recipeId } } : skipToken,
+    recipeId
+      ? {
+          variables: {
+            id: recipeId,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        }
+      : skipToken,
   );
   const recipeRef = recipeData?.recipe ?? null;
 
@@ -88,10 +108,6 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     UpdateRecipeDocument,
     { context: { localFirst: true } },
   );
-  const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
-    useMutation(UpdateRecipeIngredientsDocument, {
-      context: { localFirst: true },
-    });
 
   /**
    * Mint the permanent cuid (the row's real PK) and write the recipe into My
@@ -139,46 +155,59 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   };
 
   /**
-   * Both edits queue together offline and replay in FIFO order against the same
-   * recipe id (the queue serializes same-entity ops); the local display catches
-   * up when the replay syncs.
+   * The fields and the ingredient list in one write under the version: both
+   * land or neither does. The list REPLACES the recipe's, so the form of a
+   * recipe over the ingredient limit, which holds part of it, sends nothing.
    */
   const updateRecipe = async (
     id: string,
-    input: Omit<UpdateRecipeInput, 'id'>,
-    ingredients: RecipeIngredientInput[],
+    { version, ingredientsUnread, ...fields }: RecipeUpdateFields,
   ): Promise<RecipeWriteOutcome> => {
-    const fallback = t('recipes.updateRecipeFailed');
-    const [recipeLeg, ingredientsLeg] = await Promise.all([
-      settleMutation(
-        () =>
-          updateRecipeMutation({
-            variables: { input: { ...input, id } },
-          }),
-        { document: UpdateRecipeDocument, fallback, present: 'none' },
-      ),
-      settleMutation(
-        () =>
-          updateRecipeIngredientsMutation({
-            variables: { input: { recipeId: id, ingredients } },
-          }),
-        {
-          document: UpdateRecipeIngredientsDocument,
-          fallback,
-          present: 'none',
-        },
-      ),
-    ]);
+    if (ingredientsUnread) {
+      return outcomeOf({
+        code: null,
+        field: null,
+        title: t('labels.error'),
+        body: t('recipes.editIngredientsOverLimit', {
+          count: MAX_RECIPE_INGREDIENTS,
+        }),
+      });
+    }
+    const settled = await settleMutation(
+      () =>
+        version === null
+          ? Promise.reject(new UnreadVersionError('Recipe'))
+          : updateRecipeMutation({
+              variables: {
+                input: { ...fields, id, version },
+                ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+              },
+            }),
+      {
+        document: UpdateRecipeDocument,
+        fallback: t('recipes.updateRecipeFailed'),
+        present: 'none',
+      },
+    );
+    return outcomeOf(settled.failure);
+  };
 
-    // One message, from a leg that was actually refused.
-    return outcomeOf(recipeLeg.failure ?? ingredientsLeg.failure);
+  /**
+   * The recipe as the server now has it, for a form reopening after a conflict;
+   * null when it could not be re-read, since the cache still holds the copy the
+   * save was refused against.
+   */
+  const reloadRecipe = async (): Promise<RecipeForm_RecipeFragment | null> => {
+    const refreshed = await refetchRecipe().catch(() => null);
+    return refreshed && !refreshed.error ? readRecipe() : null;
   };
 
   return {
     recipeRef,
     readRecipe,
+    reloadRecipe,
     createRecipe,
     updateRecipe,
-    saving: creating || updating || updatingIngredients,
+    saving: creating || updating,
   };
 }

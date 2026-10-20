@@ -1,10 +1,6 @@
 import { InMemoryCache } from '@apollo/client';
 ('use no memo');
 
-// Break the circular dependency chain these modules sit in.
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),

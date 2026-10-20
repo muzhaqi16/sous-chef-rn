@@ -19,7 +19,7 @@ import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
-import { UpdateAccountDocument } from '#operations/auth/user.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
   ExchangeDeviceCredentialDocument,
   IssueDeviceCredentialDocument,
@@ -49,6 +49,7 @@ import {
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { withinMs } from '#/utils/withinMs';
 import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
@@ -87,10 +88,9 @@ function bootstrapUserStore(user: LoginUserFragment): void {
 }
 
 /**
- * Denominate a new account from the DEVICE REGION, once. The device already
- * answers this, and a cost keeps whatever currency it was recorded in, so the
- * answer has to land before the first one rather than being asked for.
- * Silent by design — a user who disagrees changes it in Profile.
+ * Denominates a new account from the DEVICE REGION, once and silently: a cost
+ * keeps the currency it was recorded in, so the answer must land before the
+ * first one. A user who disagrees changes it in Profile.
  */
 async function applyRegionCurrencyDefault(
   user: LoginUserFragment,
@@ -99,13 +99,13 @@ async function applyRegionCurrencyDefault(
   const navState = store.getUserNavigationState(user.id);
   if (navState?.currencyDefaultApplied) return;
 
-  // An account that HAS a currency has been denominated — by its holder or by
-  // this write on another device — so the server's own value is what stops
-  // this running twice, and the flag below only stops it running twice here.
-  if (!isUnchosenCurrency(user.preferredCurrency)) return;
+  // An account that HAS settings states a currency — its holder's, or this
+  // write's from another device — so the server's own row is what stops this
+  // running twice, and the flag below only stops it running twice here.
+  if (!isUnchosenCurrency(user.settings?.preferredCurrency)) return;
 
   const inferred = deviceRegionCurrency();
-  if (!inferred || inferred === user.preferredCurrency) return;
+  if (!inferred) return;
 
   const previous = store.preferredCurrency;
   // Ahead of the round trip so the money on screen is denominated at once;
@@ -117,9 +117,11 @@ async function applyRegionCurrencyDefault(
   // THROWS, which is the offline case this runs in most often.
   let result;
   try {
+    // Not `localFirst`: a queued write would leave the money on screen in a
+    // currency the account does not hold until some later replay.
     result = await client.mutate({
-      mutation: UpdateAccountDocument,
-      variables: { input: { preferredCurrency: inferred } },
+      mutation: UpdateUserPreferencesDocument,
+      variables: { input: { regional: { preferredCurrency: inferred } } },
     });
   } catch (error) {
     useStore.getState().setPreferredCurrency(previous);
@@ -129,13 +131,15 @@ async function applyRegionCurrencyDefault(
 
   if (appliedPayload(result.data)) {
     store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
+    // The persisted record follows, or the next launch restores the old one.
+    useStore.getState().updateUser({ preferredCurrency: inferred });
     return;
   }
 
   useStore.getState().setPreferredCurrency(previous);
   logger.warn(
     'Could not apply the region currency default:',
-    result.error ?? result.data?.updateAccount,
+    result.error ?? result.data?.updateSettings,
   );
 }
 
@@ -225,21 +229,16 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
   useStore.getState().setAuthIsLoading(false);
 }
 
-// A non-success member of LoginResult. It resolves 200 with no transport
-// error, so surface it the way handleAuthError surfaces transport failures —
-// a toast — and stay on the sign-in screen. The code is mapped through the
-// shared friendly-message table so a refusal reads the same here as it does
-// when the identical condition arrives as a top-level error; the server's own
-// message is only the fallback.
+// A refusal member of LoginResult resolves 200 with no transport error, so it
+// toasts like handleAuthError and stays on sign-in, through the shared
+// friendly-message table so it reads as the same top-level error does.
 function handleRejectedAuthPayload(
   payload: { code: string; message: string },
   operation: string,
 ): void {
   logger.warn(`${operation} rejected by the server: ${payload.code}`);
-  // The FALLBACK must be the app's own copy, not the payload's. Passing
-  // `payload.message` meant any code missing from the suffix table displayed
-  // the server's English — the table is total now, but the fallback is where
-  // the next gap would have surfaced.
+  // The FALLBACK is the app's own copy: `payload.message` is the server's
+  // English, which a code missing from the table would display.
   toastService.error(
     errorService.getUserFriendlyMessage(
       payload.code,
@@ -259,11 +258,9 @@ async function handleLogin(
   const store = useStore.getState();
   const previousUserId = queueStore.getCurrentUserId();
 
-  // Resolve the post-login gates BEFORE mutating auth state. RootNavigator
-  // derives its target route from `user`; if we set auth first and then resolve
-  // these (async) checks, the navigator briefly routes to main_app and flashes
-  // the home screen behind the gate. Deciding first lets us commit auth + the
-  // final navigation state together.
+  // The gates resolve BEFORE auth state changes: RootNavigator routes from
+  // `user`, so setting it first flashes main_app behind the gate. Deciding
+  // first commits auth and the final navigation state together.
   let showBiometricGate = false;
   if (loginCredentials && user.emailVerified && user.onBoarded) {
     try {
@@ -274,11 +271,9 @@ async function handleLogin(
     }
   }
 
-  // The no-biometrics fallback: offer to save credentials only when biometrics
-  // are unavailable, nothing is stored yet, and the user has not declined.
-  // `showBiometricGate` is false for five separate reasons and cannot stand in
-  // for "unavailable" — one of them is that the user refused biometrics, and
-  // saving credentials enrols them into the biometric-protected slot.
+  // Offered only when biometrics are unavailable. `!showBiometricGate` cannot
+  // stand in for that: one reason it is false is a user who refused biometrics,
+  // and saving credentials enrols them into the biometric-protected slot.
   let showRememberMeGate = false;
   if (
     showRememberPrompt &&
@@ -331,10 +326,8 @@ async function handleLogin(
 
   // Navigation flow control
   if (!user.emailVerified) {
-    // A previous session's "skip for now" doesn't carry into a fresh login —
-    // prompt once more, and let them skip again if the email still hasn't
-    // arrived. Clearing it here also keeps this in step with resolveNavTarget,
-    // which would otherwise immediately route past the screen we just set.
+    // A previous session's "skip for now" doesn't carry into a fresh login;
+    // clearing it also keeps resolveNavTarget from routing past this screen.
     store.setUserNavigationState(user.id, { verificationSkipped: false });
     store.setNavigationState('verification');
     return false;
@@ -354,11 +347,9 @@ async function handleLogin(
     return true;
   }
 
-  // RememberMe fallback → stash credentials and stay on the auth screen so
-  // LoginScreen surfaces the RememberMe modal. We intentionally do NOT navigate
-  // to main_app here; LoginScreen transitions there once the user responds (and
-  // RootNavigator's postLoginCredentials guard keeps the user-change effect
-  // from forcing main_app in the meantime).
+  // Stays on the auth screen for LoginScreen's RememberMe modal, which enters
+  // main_app on an answer; RootNavigator's postLoginCredentials guard keeps
+  // the user-change effect from forcing it meanwhile.
   if (showRememberMeGate && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
     getUserPreferences(user.id).trackCredentialPromptShown();
@@ -537,7 +528,7 @@ async function register(
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
-      present: 'none',
+      present: 'toast',
       on: {
         [ErrorCode.AuthTokenExpired]: clearAuth,
         [ErrorCode.AuthRefreshTokenInvalid]: clearAuth,
@@ -547,7 +538,6 @@ async function register(
 
   if (settled.failure) {
     store.setAuthIsLoading(false);
-    toastService.error(settled.failure.body);
     return 'failed';
   }
   if (settled.status !== 'applied') {
@@ -573,8 +563,7 @@ const REVOKE_BUDGET_MS = 3000;
 
 interface LogoutOptions {
   /**
-   * KEEP this account's biometric credential across the sign-out, which is the
-   * case biometric sign-in exists for. Safe because the slot is
+   * KEEP the biometric credential across the sign-out: the slot is
    * `BIOMETRY_CURRENT_SET` and holds a revocable device credential, not the
    * password. FALSE drops the slot AND revokes it server-side.
    */
@@ -607,13 +596,9 @@ async function logout(options?: LogoutOptions): Promise<void> {
       }
     }
 
-    // The same teardown `endSession` runs, and it is where the prior user's
-    // push state is torn down: two exits from a session otherwise leave two
-    // different resting states, and the deliberate one was the exit that
-    // skipped it.
-    // One scope over the whole descent, released however it exits: a throw
-    // between here and the last write would otherwise leave the gate latched,
-    // and the next sign-in's Login is refused until the app restarts.
+    // The teardown `endSession` runs too, so both exits rest the same. One scope
+    // over the whole descent, released however it exits: a latched gate refuses
+    // the next sign-in until the app restarts.
     await whileSessionEnds(async () => {
       await runSessionTeardown();
 
@@ -621,12 +606,9 @@ async function logout(options?: LogoutOptions): Promise<void> {
         queueManager.onLogout(currentUserId);
       }
 
-      // `resetStore` rather than `clearAuth`: clearAuth only nulls the user and
-      // tokens, leaving the selected home/pantry/list ids, the notification
-      // inbox, the scanner's recent list and the item-suggestion LRU persisted
-      // for whoever signs in next. The auth branch of resetStore clears all of
-      // it, plus the on-disk copy. Apollo is already cleared by the teardown's
-      // `apollo` step, so this pass skips it.
+      // `resetStore`, not `clearAuth`, which leaves the selections, inbox and
+      // LRUs persisted for whoever signs in next. Apollo is already cleared by
+      // the teardown's `apollo` step.
       await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
       store.setNavigationState('auth');
     });
@@ -649,10 +631,8 @@ function forgetBiometricSlot(): void {
 }
 
 /**
- * Sign in by exchanging the account's stored device credential. The one path
- * for biometric sign-in — the login screen's button and the cold-start
- * auto-login both come through here, so the dead-versus-transient rule below
- * is written once.
+ * The one biometric sign-in path (the login button and cold-start auto-login),
+ * so the dead-versus-transient rule below is written once.
  */
 async function signInWithDeviceCredential(email: string): Promise<boolean> {
   try {
@@ -684,10 +664,8 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
       return false;
     }
 
-    // An enrolment made before device credentials existed holds a PASSWORD.
-    // It is dropped rather than presented anywhere: replaying it is the thing
-    // this whole path exists to stop, and the person re-enrols on their next
-    // password sign-in.
+    // A slot older than device credentials holds a PASSWORD: dropped, never
+    // replayed, and the person re-enrols on their next password sign-in.
     const credential =
       stored.credential && readDeviceCredential(stored.credential);
     if (!stored.email || !credential) {
@@ -736,11 +714,9 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
 
     const refusal = result.data?.exchangeDeviceCredential;
     if (refusal && 'code' in refusal) {
-      // Drop the stored credentials only when the server says THESE
-      // credentials will never authenticate — the password changed elsewhere,
-      // or the account is gone. Token-side refusals end the session but leave
-      // the credentials good, so they are deliberately not in this set; see
-      // isDeadCredentialCode for how the two lists relate.
+      // Dropped only when THESE credentials will never authenticate; a
+      // token-side refusal ends the session but leaves them good
+      // (isDeadCredentialCode).
       if (isDeadCredentialCode(refusal.code)) {
         logger.warn(
           `Auto-login rejected (${refusal.code}), clearing stored credentials`,
@@ -757,10 +733,8 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     if (result.error) {
-      // Same rule as the payload branch above: credentials are dropped only when
-      // the failure establishes they will never authenticate. A transport failure
-      // says the request did not ARRIVE, nothing about the password — clearing on
-      // one silently un-enrols the device after a single blip.
+      // Same rule: a transport failure says the request did not ARRIVE, so
+      // clearing on one un-enrols the device after a single blip.
       const parsed = errorService.parseApolloError(result.error, {
         logError: false,
       });
@@ -811,10 +785,9 @@ async function autoLogin(): Promise<boolean> {
 }
 
 /**
- * Revoke this device's credential server-side, paired with DROPPING the local
- * slot, so a secret lifted off the device is already dead. Never on a sign-out
- * that KEEPS the slot. Best effort: the slot is gone either way, so a failure
- * costs the server a stale row, not the person a working sign-in.
+ * Paired with DROPPING the local slot, so a secret lifted off the device is
+ * already dead; never on a sign-out that KEEPS it. Best effort: a failure costs
+ * the server a stale row, not the person a working sign-in.
  */
 async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
   // With the API unreachable there is nothing to revoke against, and httpLink's
@@ -865,15 +838,11 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
 
 /** The revoke, bounded. A slow network must not hold the local sign-out. */
 async function revokeWithinBudget(): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const budget = new Promise<boolean>(resolve => {
-    timer = setTimeout(() => resolve(false), REVOKE_BUDGET_MS);
-  });
-  const revoked = await Promise.race([
+  const revoked = await withinMs(
     revokeDeviceCredentialForThisDevice(),
-    budget,
-  ]);
-  if (timer) clearTimeout(timer);
+    REVOKE_BUDGET_MS,
+    false,
+  );
   // The local slot goes either way, so this is a stale server row rather than a
   // sign-in the person loses — but it is a secret still exchangeable.
   if (!revoked) {
@@ -888,10 +857,9 @@ async function revokeWithinBudget(): Promise<void> {
 export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
 
 /**
- * Enrol biometric sign-in: ask the server for a device-bound credential and put
- * THAT behind biometry. Needs only the live session — the account password is
- * never passed in, so there is nothing to retain past the sign-in that enabled
- * this. Issuing supersedes any credential this device already held.
+ * Puts a server-issued device credential behind biometry, from the live
+ * session alone, so no password is retained. Issuing supersedes any credential
+ * this device already held.
  */
 async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
   try {

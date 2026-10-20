@@ -27,6 +27,7 @@ fragment ShoppingListCollaboratorReaders on ShoppingListCollaborator {
       displayName
     }
   }
+  inviterName
   role
   shoppingList {
     id

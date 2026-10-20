@@ -22,9 +22,19 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
       displayName
     }
   }
-  generatedShoppingLists {
-    id
-    name
+  # The server's default page: only the lists the viewer may view.
+  generatedShoppingListsConnection {
+    edges {
+      node {
+        id
+        name
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
   nutritionSummary {
     totalCalories

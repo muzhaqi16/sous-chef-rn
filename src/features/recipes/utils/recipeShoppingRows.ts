@@ -1,0 +1,83 @@
+import { generateEntityId } from '#/utils/generateEntityId';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import { itemIdOf, typedItemRef } from '#/utils/refInput';
+import { AddedContext } from '#/graphql/generated/schemaTypes';
+import type { ShoppingRowLine } from '#features/shoppingList/cache/createShoppingListRow';
+
+/** A recipe ingredient, as the recipe detail caches it. */
+export interface RecipeIngredientLine {
+  id: string;
+  name: string;
+  /** Null when the recipe states no amount ("salt, to taste"). */
+  quantity: number | null;
+  isOptional: boolean;
+  unit?: { id: string; symbol?: string | null; name?: string | null } | null;
+  item?: { id: string } | null;
+}
+
+export interface RecipeShoppingRow {
+  /** The batch entry; `input.id` is the row's client-minted id. */
+  input: ShoppingRowLine & { id: string };
+  recipeIngredientId: string;
+  /** What the list shows before the server answers. */
+  display: {
+    itemName: string;
+    quantity: number | null;
+    unitName: string | null;
+    itemId?: string;
+  };
+}
+
+interface RowOptions {
+  /** The name a line takes when the ingredient carries none. */
+  unnamed: string;
+  /** A single ingredient the user picked is added even when optional. */
+  includeOptional?: boolean;
+  mintId?: () => string;
+}
+
+/**
+ * The shopping-list lines a recipe's ingredients become, at the whole recipe's
+ * amounts. The API adds what it is sent, so dropping an optional ingredient and
+ * naming one with no catalog item are the device's call.
+ */
+export function recipeShoppingRows(
+  recipeId: string,
+  ingredients: readonly RecipeIngredientLine[],
+  { unnamed, includeOptional = false, mintId = generateEntityId }: RowOptions,
+): RecipeShoppingRow[] {
+  return ingredients
+    .filter(ingredient => includeOptional || !ingredient.isOptional)
+    .map(ingredient => {
+      const id = mintId();
+      const itemName = firstNonBlank(ingredient.name) ?? unnamed;
+      const item = ingredient.item
+        ? { itemId: ingredient.item.id }
+        : typedItemRef(itemName, mintId);
+      // An unstated amount is a line with none. A legacy zero states nothing
+      // either, and the API refuses a quantity that is not above it.
+      const stated = ingredient.quantity;
+      const quantity = stated !== null && stated > 0 ? stated : null;
+      const unit = ingredient.unit;
+      return {
+        recipeIngredientId: ingredient.id,
+        display: {
+          itemName,
+          quantity,
+          unitName: firstNonBlank(unit?.symbol, unit?.name) ?? null,
+          itemId: itemIdOf(item),
+        },
+        input: {
+          id,
+          item,
+          ...(quantity !== null && { quantity }),
+          ...(unit && { unit: { id: unit.id } }),
+          recipeContext: {
+            recipeId,
+            recipeIngredientId: ingredient.id,
+            addedContext: AddedContext.FromRecipe,
+          },
+        },
+      };
+    });
+}

@@ -27,10 +27,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
@@ -54,7 +50,7 @@ jest.mock(
     useUpdatePantryItemQuantity: jest.fn(() => ({ updateQuantity: jest.fn() })),
   }),
 );
-jest.mock('#features/pantry/hooks/mutations/useResolveUnit', () => ({
+jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
   useResolveUnit: jest.fn(() => ({ resolveUnitId: jest.fn() })),
 }));
 
@@ -65,8 +61,6 @@ jest.mock('#features/pantry/hooks/mutations/types', () => ({
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => parseFloat(input) || 0),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 // Form sub-sections — exercised via their own focused tests.
 jest.mock('#components/atoms/FormInput', () => ({
@@ -290,9 +284,6 @@ jest.mock('../StorageDetailsSection', () => ({
     );
   },
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 beforeEach(() => {
   jest.clearAllMocks();

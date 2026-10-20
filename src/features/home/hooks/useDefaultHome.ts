@@ -11,6 +11,7 @@ import {
   useAppStore,
 } from '#store/useAppStore';
 import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { pantriesOf, defaultPantryOf } from '#domain/homePantries';
 import { logger } from '#/utils/environment';
@@ -66,8 +67,7 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   } = usePantryState();
   const canAttemptQueries = useAppStore(
-    state =>
-      (!!state.accessToken || !!state.refreshToken) && !state.isLoggingOut,
+    state => holdsSessionTokens(state) && !state.isLoggingOut,
   );
 
   // Track if we've already initialized defaults to prevent cascading re-renders
@@ -107,10 +107,9 @@ export const useDefaultHome = () => {
       : skipToken,
   );
 
-  // Opens the pantry query in parallel with GetHomes when the persisted pair
-  // still checks out against the synchronously restored cache. `unknown` takes
-  // no shortcut and repairs nothing — the ready effect below re-answers it once
-  // GetHomes lands.
+  // Opens the pantry query alongside GetHomes when the persisted pair checks
+  // out against the restored cache. `unknown` takes no shortcut and repairs
+  // nothing; the ready effect below re-answers it once GetHomes lands.
   useEffect(() => {
     if (
       !canAttemptQueries ||
@@ -155,10 +154,7 @@ export const useDefaultHome = () => {
     }
   }, [canAttemptQueries]);
 
-  // Preserve homes data even when query fails - prevents cascade failures.
-  // Each node carries `id`, `isDefault`, `myMembership`, and
-  // `pantriesConnection` from the operation plus a masked `HomeCard_home`
-  // ref. Pantry lookups read the connection nodes via `extractNodes`.
+  // Preserved across a failed query so consumers keep their homes.
   const homesList = usePreservedNodes(homes?.homes, 'GetHomes');
 
   // Derive default home from isDefault field (no separate query needed)
@@ -173,11 +169,9 @@ export const useDefaultHome = () => {
     return homesList.some(h => h.id === selectedHomeId);
   })();
 
-  // The selected PANTRY must belong to the selected HOME. Both are persisted,
-  // so a cold start can restore a pantry from a home the user has left — and
-  // the ready flag opens `usePantryQuery`'s gate on a valid HOME alone, sending
-  // `GetPantry` for a pantry the account cannot read. Judged only against a
-  // connection known complete: empty means "not loaded", not "absent".
+  // The selected PANTRY must belong to the selected HOME: a cold start can
+  // restore a pantry from a home the user left, and `GetPantry` would read it.
+  // Judged only on a complete connection: empty means "not loaded", not "absent".
   const selectedHome = homesList.find(h => h.id === selectedHomeId);
   const selectedHomePantries = pantriesOf(selectedHome);
   const selectedHomeHasCompletePantries = !!(
@@ -232,12 +226,9 @@ export const useDefaultHome = () => {
     client,
   ]);
 
-  // Repointed, never evicted: a pantry outside the selected home is usually a
-  // live pantry of another home, and evicting it drops the edge from THAT
-  // home's connection too (the self-healing read in `mergeConnectionByNodeId`).
-  // Eviction stays with `needsClearing`, where the server has confirmed the
-  // home is gone. The gate is lowered rather than withheld so a mid-session
-  // removal closes an already-open gate.
+  // Repointed, never evicted: it is usually another home's live pantry, whose
+  // edge eviction would drop (`mergeConnectionByNodeId`). `needsClearing` evicts
+  // once the server confirms the home gone. Lowering also closes an open gate.
   const staleSelectedPantryId = isSelectedPantryStale ? selectedPantryId : null;
   useEffect(() => {
     if (!staleSelectedPantryId) return;
@@ -253,11 +244,9 @@ export const useDefaultHome = () => {
     setIsHomeSelectionReady,
   ]);
 
-  // The complement of `needsClearing`: a home is selected but the list came
-  // back EMPTY, so nothing can validate it — which happens when the fetch above
-  // ran before onboarding created the home, stranding every consumer on its
-  // "no home" fallback. Refetch once per selected home; a genuinely empty list
-  // stays empty without re-triggering.
+  // A home is selected but the list came back EMPTY, as when the fetch ran
+  // before onboarding created the home. Refetch once per selected home; a
+  // genuinely empty list stays empty without re-triggering.
   const hasSelectionButNoHomes = !!(
     canAttemptQueries &&
     !loading &&

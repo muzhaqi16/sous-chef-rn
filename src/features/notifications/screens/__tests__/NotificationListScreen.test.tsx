@@ -5,9 +5,6 @@ import { render } from '@testing-library/react-native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationListScreen } from '../NotificationListScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 // `useNotifications` is the write side only — the rows come from the query

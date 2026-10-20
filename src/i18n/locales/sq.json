@@ -11,7 +11,7 @@
       "emailAlreadyExists": "Ekziston tashmë një llogari me këtë email.",
       "emailAlreadyVerified": "Kjo adresë emaili është tashmë e verifikuar.",
       "emailNotVerified": "Verifikoni emailin tuaj përpara se të vazhdoni",
-      "featureDisabled": "Kjo veçori është aktualisht e çaktivizuar",
+      "featureDisabled": "Kjo nuk është e disponueshme në llogarinë tënde tani.",
       "fieldInvalid": "Vlerë e pavlefshme e fushës",
       "fieldRequired": "Mungon një fushë e detyrueshme",
       "forbidden": "Nuk keni leje për ta kryer këtë veprim",
@@ -20,6 +20,8 @@
       "genericRetry": "Diçka shkoi keq. Provoni sërish.",
       "homeAccessDenied": "Nuk keni akses në këtë shtëpi",
       "homeInviteExpired": "Ftesa për shtëpinë ka skaduar",
+      "homeMemberLimitReached": "Kjo shtëpi ka arritur kufirin e anëtarëve",
+      "payloadTooLarge": "Është shumë për t'u dërguar njëherësh. Provo një ndryshim më të vogël.",
       "homeInviteInvalid": "Ftesë e pavlefshme për shtëpinë",
       "homeMemberAlreadyExists": "Përdoruesi është tashmë anëtar i kësaj shtëpie",
       "homeNotFound": "Shtëpia nuk u gjet",
@@ -53,6 +55,8 @@
       "unexpected": "Ndodhi një gabim i papritur",
       "uniqueConstraint": "Kjo vlerë ekziston tashmë",
       "unitInvalid": "Kjo njësi nuk mund të përdoret këtu.",
+      "unstatedAmount": "Receta nuk tregon sasi për këtë përbërës, prandaj nuk u zbrit asgjë.",
+      "premiumRequired": "Kjo kërkon planin Premium.",
       "validationFailed": "Kontrolloni të dhënat e futura dhe provoni sërish",
       "versionConflict": "Kjo u ndryshua diku tjetër pasi e hapët. Rifreskoni dhe provoni sërish.",
       "unitChangeNeedsResolution": "Ky ndryshim njësie është vetëm një vlerësim. Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë."
@@ -124,6 +128,7 @@
       "Notification": "Njoftimi"
     },
     "queuedChangeRejected": "Një ndryshim nuk u ruajt dhe u zhbë.",
+    "queuedChangeRejectedResource": "{{resource}}: ndryshimi juaj nuk u ruajt dhe u zhbë.",
     "offlineNoMorePages": "Je pa lidhje, prandaj për momentin nuk ka më çfarë të ngarkohet.",
     "offlineSearchUnavailable": "Kërkimi i recetave kërkon lidhje. Recetat e tua të ruajtura janë ende këtu.",
     "queuedChangeOverwrittenResource": "{{resource}}: ndryshimi juaj u zëvendësua nga një më i ri dhe u zhbë.",
@@ -132,6 +137,7 @@
     "queuedRemovalKept": "Një heqje nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
+    "invalidAmountPaid": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
     "itemNotFound": "Artikulli nuk u gjet",
     "parentContextRequired": "Kërkohet konteksti prind",
     "createStorageLocationFailed": "Krijimi i vendndodhjes së ruajtjes dështoi",
@@ -147,8 +153,8 @@
     "openBatchFailed": "Ky grumbull nuk mund të hapej.",
     "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
-    "entityUpdatedTitle": "{{entity}} u përditësua",
     "changedElsewhereTitle": "U ndryshua diku tjetër",
+    "changedElsewhereLatestShown": "Kjo u ndryshua diku tjetër pasi e hapët, prandaj ndryshimi juaj nuk u ruajt. Tani shfaqet versioni më i fundit.",
     "entityHome": "Shtëpia",
     "entityMember": "Anëtar",
     "entityInvite": "Ftesë",
@@ -178,6 +184,7 @@
       "newPassword": "Ai fjalëkalim nuk i plotëson rregullat: 8–72 karaktere, me një shkronjë të madhe, një të vogël dhe një numër.",
       "currentPassword": "Fjalëkalimi aktual nuk është i saktë. Kontrollo dhe provo përsëri.",
       "servingsMade": "Shkruaj një numër të plotë racionesh më të madh se zero",
+      "servings": "Shkruaj një numër racionesh më të madh se zero",
       "key": "Ai imazh nuk u konfirmua dot. Zgjidhe sërish dhe provo përsëri.",
       "imageUrl": "Shkruaj URL-në e plotë të imazhit, që fillon me http:// ose https://",
       "videoUrl": "Shkruaj URL-në e plotë të videos, që fillon me http:// ose https://",
@@ -185,7 +192,10 @@
       "packageSize": "Vendosni madhësinë e paketimit në një njësi të të njëjtit lloj si ajo e artikullit (peshë me peshë, vëllim me vëllim).",
       "resolution": "Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë.",
       "amount": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
-      "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista."
+      "amountMeasuredQuantity": "Shkruaj një sasi më të madhe se zero.",
+      "amountPackagesSize": "Nuk e dimë sa përmban një paketë e kësaj. Shkruaj madhësinë e paketës ose sasinë me njësinë e saj (p.sh. 1 kg).",
+      "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista.",
+      "primaryUpc": "Ai barkod nuk është i vlefshëm. Kontrollo shifrat dhe provo përsëri."
     },
     "unitDenied": {
       "noRoute": "Kjo njësi nuk mund të konvertohet në mënyrën si regjistrohet ky artikull.",
@@ -243,6 +253,7 @@
     "deleteAccount": "Vërtet dëshiron ta fshish llogarinë? Ky veprim nuk mund të zhbëhet.",
     "logout": "Vërtet dëshiron të dalësh?",
     "discardChanges": "Vërtet dëshiron t'i shpërfillësh ndryshimet?",
+    "discardChangesTitle": "T'i shpërfillësh ndryshimet?",
     "logoutWithPending_one": "Ke {{count}} ndryshim të pasinkronizuar. Dalja do ta heqë atë.",
     "logoutWithPending_other": "Ke {{count}} ndryshime të pasinkronizuara. Dalja do t'i heqë ato.",
     "deleteHomeTitle": "Fshi shtëpinë",
@@ -262,6 +273,7 @@
     "addNamed": "Shto {{name}}",
     "addToShoppingList": "Shto në listën e blerjeve",
     "adding": "Po shtohet...",
+    "added": "U shtua",
     "admin": "Administrator",
     "alertWhenBelow": "Sinjalizo kur është nën",
     "allergiesIntolerances": "Alergjitë & Intolerancat",
@@ -293,9 +305,11 @@
     "changePassword": "Ndrysho fjalëkalimin",
     "clear": "Pastro",
     "clearAll": "Pastro të gjitha",
+    "check": "Kontrollo",
     "clearInput": "Pastro fushën",
     "clearRead": "Pastro të lexuarat",
     "close": "Mbyll",
+    "open": "Hap",
     "commaSeparated": "Të ndara me presje",
     "condition": "Gjendja",
     "confirm": "Konfirmo",
@@ -305,6 +319,8 @@
     "copied": "U kopjua",
     "copy": "Kopjo",
     "copyOfName": "{{name}} (Kopje)",
+    "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "Licenca",
     "couldnTSendThat": "Nuk u dërgua dot",
     "couldnTSetThatPhoto": "Fotoja nuk u vendos dot",
     "create": "Krijo",
@@ -483,7 +499,6 @@
     "thisFieldIsRequired": "Kjo fushë është e detyrueshme",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
     "tips": "Këshilla",
-    "totalCost": "Kostoja totale",
     "stockValue": "Vlera e stokut",
     "avgCostPerUnit": "Kosto mes./njësi",
     "totalPaid": "Totali i paguar",
@@ -508,7 +523,9 @@
     "durationDays_one": "{{count}} ditë",
     "durationDays_other": "{{count}} ditë",
     "currency": "Monedha",
-    "today": "Sot"
+    "today": "Sot",
+    "packageSize": "Madhësia e paketimit",
+    "unit": "Njësia"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -565,7 +582,6 @@
     "features": "Veçoritë",
     "showTutorials": "Shfaq udhëzuesit",
     "showTutorialsDesc": "Shfaq këshilla dhe udhëzues të dobishëm",
-    "betaFeaturesEnabled": "Veçoritë beta të aktivizuara",
     "experience": "Përvoja",
     "hapticFeedback": "Përgjigje haptike",
     "hapticFeedbackDesc": "Dridhje për ndërveprime dhe sinjalizime",
@@ -573,6 +589,8 @@
     "navigationLabelsDesc": "Shfaq etiketat nën ikonat e navigimit",
     "shoppingListImages": "Imazhet e listës së blerjeve",
     "shoppingListImagesDesc": "Shfaq imazhet e produkteve në lista",
+    "storeMode": "Mënyra e dyqanit",
+    "storeModeDesc": "Bëni pazarin e një liste korridor pas korridori nga ikona e dyqanit te lista e blerjeve",
     "shareUsageData": "Ndaj të dhënat e përdorimit",
     "shareUsageDataDesc": "Ndihmo të përmirësojmë {{appName}} duke ndarë statistika anonime",
     "resetSection": "Rivendos",
@@ -592,8 +610,7 @@
     "placeholder": "Zgjidh një opsion"
   },
   "searchBar": {
-    "placeholder": "Kërko…",
-    "actionFallback": "Butoni {{icon}}"
+    "placeholder": "Kërko…"
   },
   "settingRow": {
     "enabled": "aktivizuar",
@@ -609,7 +626,8 @@
   "navigation": {
     "tabs": {
       "pantry": "Qilari",
-      "shoppingList": "Lista"
+      "shoppingList": "Lista",
+      "mealPlan": "Vaktet"
     }
   },
   "numberInputSheet": {
@@ -674,7 +692,8 @@
   },
   "tabBar": {
     "actionButton": "Butoni i veprimit",
-    "actionButtonHint": "Hap veprimin për skedën aktuale"
+    "actionButtonHint": "Hap veprimin për skedën aktuale",
+    "addMenuHint": "Hap mënyrat për të shtuar"
   },
   "swipeActions": {
     "markUnpurchased": "Shëno si të pablerë",
@@ -689,7 +708,6 @@
     "year": "Vit"
   },
   "a11y": {
-    "actionButton": "Butoni {{name}}",
     "counterValue": "{{label}}, {{value}}",
     "valueSuffix": "Vlera e {{label}}",
     "quantityValue": "Vlera e sasisë",

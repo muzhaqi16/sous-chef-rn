@@ -46,6 +46,13 @@ optional:
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
   so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
   same distance apart in both; the same test pins all of it.
+- **Three trailing slots.** Past three actions, `Header` and
+  `CollapsingHeroDetail` keep the first two and put the rest behind "more" (an
+  `ActionTray` of `ActionMenuRow`s, `src/components/organisms/HeaderActionMenu.tsx`),
+  so the offline pill and a crowded bar never squeeze the title. A text action
+  and one a spotlight measures always stay; callers lead with the most used. A
+  menu action runs once the tray has closed, so a sheet it opens never stacks on
+  one animating out.
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset
@@ -142,17 +149,24 @@ they read it.
   package itself is an import ban.
 - **A node reanimated animates takes no themed Unistyles style**
   ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).
-  Reanimated renders its animated prop's React-side value into the host's style
-  array. Unistyles links those plain objects to the node, and after a theme
-  rebuild its non-React commits write them back over the animation. The view
-  then shows a stale value until its next React re-render. The global dim
-  (`GlobalBackdrop`) snapped off at the end of every sheet open this way
-  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
+  After a theme change, the next React commit puts the old values back at and
+  under a Reanimated view, while a `useAnimatedStyle` over `useAnimatedTheme()`
+  follows every change
+  ([A React commit reverts Unistyles' theme values at and under a Reanimated view](verified-library-behaviour.md#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view)).
+  A Reanimated container with a scroll-driven style and themed descendants
+  renders `<ThemeEpochSentinel />`, which re-keys on each theme commit so React
+  rebuilds the container from current nodes (`CollapsingHeroDetail`'s hero and
+  scroll view).
   The node's static key keeps only structure. Themed values go in a
   `useAnimatedStyle` of their own that reads only `useAnimatedTheme()`, which
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
-  `FloatingTabBar`). Or they sit on a non-animated parent or child
-  (`GlobalBackdrop`, `SkeletonBase`, the list rows' `rowWrapper`).
+  `FloatingTabBar`). Or they sit on a non-animated parent (the list rows'
+  `rowWrapper`).
+- **The animated theme is `useAnimatedTheme` from `#hooks/ui/useAnimatedTheme`**
+  (`no-restricted-imports`). Unistyles' own hook stops listening while a paused
+  screen is hidden and never reads the theme again, so the app's reads it when
+  the screen is shown
+  ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
   `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to
@@ -192,7 +206,11 @@ they read it.
   which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
   (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
   `children` on its own open state adds it. A component rendering its own JSX
-  needs nothing: the condition it mounts on is a dependency of that JSX.
+  needs nothing: the condition it mounts on is a dependency of that JSX. A
+  `withUnistyles` or `useUnistyles` reader inside a scoped theme
+  [ignores theme events](verified-library-behaviour.md#a-unistyles-reader-inside-a-scopedtheme-ignores-theme-events),
+  so the scope is keyed on the theme epoch and every theme commit remounts its
+  children.
 
 ## Typography roles
 
@@ -274,15 +292,13 @@ they read it.
 - **Pick the `ScrollView` by what is inside it.** RNGH's `ScrollView` is only for
   a container with RNGH gesture components inside it; plain forms and settings
   screens use RN's.
-- **A swipeable row needs an RNGH scrollable host.** RNGH cancels only v1/v2
-  handlers when a native scrollable grabs the touch
-  (`cancelAllLegacyHandlers`), and `ReanimatedSwipeable` runs on the v3
-  detectors. Over a plain RN `ScrollView` the row's pan survives the takeover,
-  accumulates horizontal drift for the whole drag, and opens rows mid-scroll. No
-  `dragOffset` value fixes this, because the drift is unbounded. An RNGH
-  scrollable restores arbitration through the orchestrator. The source chain,
-  the on-device A/B and the `dragOffset` sign constraint are in
-  [RNGH v3 handlers survive a native scroll takeover](verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover).
+- **A swipeable row sits in an RNGH scrollable host.** RNGH cancels a row's
+  pending v3 gesture when a native scrollable takes the touch, so a drifting
+  scroll no longer opens rows and a fling-stopping tap no longer presses one,
+  over either host. The RNGH host stays because RNGH's refresh control needs it
+  and the measurement covers one list outside a pager. The A/B against 3.3.0 and
+  the `dragOffset` sign constraint are in
+  [A native scroll takeover cancels a pending RNGH v3 gesture](verified-library-behaviour.md#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture).
 - **Every FlashList must decide its scroll host.**
   `sous-chef/flashlist-declares-scroll-component` makes every FlashList
   declare a `renderScrollComponent` — RNGH's, or gorhom's
@@ -358,10 +374,6 @@ they read it.
   resets the tab bar's scroll-hide and holds the pantry rows still behind a
   sheet. `isOverlayOpen` in `TabBarActionsContext`, set only by selectors, pauses
   the tutorials, which open sheets of their own and must not pause themselves.
-- **A flicker in the dim is a rendering bug, not a claim bug.** Traces of the
-  last one showed one claim and one release per cycle; Unistyles was writing
-  Reanimated's stale value back over the animation
-  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
   leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
   sheet, so shared inputs pick it from context —
@@ -594,3 +606,23 @@ tab's query are explained in [`architecture.md`](architecture.md) § Navigation:
 - why `Home` needs `'none'` for deep pushes;
 - the background work `'none'` keeps alive;
 - when to re-measure.
+
+### The tab bar's `+`
+
+A tab gives its `+` its add actions with `useTabBarAddMenu(actions)`. With two
+or more the `+` opens `AddMenu` (`src/app/FloatingTabBar/`): labelled entries
+above the `+`, which turns into the close control. One action runs on press;
+one that cannot run dims the `+`, and the press shows its reason.
+
+- **Per tab, not per focus.** A menu is keyed by the tab the hook finds at
+  focus: the focused route of the nearest tab navigator. It is removed on
+  unmount, and blur only closes it. The tab bar's active tab can lag a lazily
+  mounted tab's first focus, so the menu never reads it.
+- **Its own scrim.** `GlobalBackdrop` renders after the whole navigation tree,
+  so a claim would paint over the `+`. The menu draws its own scrim at the
+  bar's layer, ordered bar → scrim → entries → `+`, and handles Android back
+  itself.
+- **Disabled, never hidden.** An action that cannot run now carries a
+  `disabledReason`, shown under its label.
+- **Handlers are read at press.** A re-render with new closures registers
+  nothing; a changed label, icon or reason re-registers.

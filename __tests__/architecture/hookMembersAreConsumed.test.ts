@@ -202,7 +202,7 @@ describe('every member a hook returns is read by production code', () => {
       if (!source) return undefined;
       const find = (node: ts.Node): ts.Node | undefined =>
         position >= node.getStart(source) && position < node.getEnd()
-          ? (ts.forEachChild(node, find) ?? node)
+          ? ts.forEachChild(node, find) ?? node
           : undefined;
       return find(source);
     };

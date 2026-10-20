@@ -221,7 +221,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             testID: shoppingListTestIDs.quantityEditSaveButton,
           }}
         />
-        <View style={styles.headerSpacer} />
         {/* The header spans the full width and only the fields are inset, so
           the padding lives here rather than on the measured view. */}
         <View style={styles.sections}>
@@ -295,7 +294,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
           <View style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('storageLocationForm.unit')}
+              {t('labels.unit')}
             </SectionHeader>
 
             {itemUnits.length > 0 && (
@@ -346,9 +345,6 @@ const styles = StyleSheet.create(theme => ({
   },
   sections: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  headerSpacer: {
-    height: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.lg,

@@ -9,10 +9,6 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
   () => 'bbb',
 );
@@ -20,8 +16,6 @@ jest.mock('fractional-indexing', () => ({
   generateKeyBetween: (a: string | null, b: string | null) =>
     mockGenerateKeyBetween(a, b),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   SubscriptionService: {
@@ -47,7 +41,6 @@ function moveMock() {
       moveShoppingListItem: {
         __typename: 'MoveShoppingListItemPayload',
         shoppingListItem: {
-          __typename: 'ShoppingListItem',
           id: 'item-2',
           sortOrder: 'bbb',
           version: 2,
@@ -118,7 +111,7 @@ describe('useItemReordering', () => {
     expect(mockGenerateKeyBetween).toHaveBeenCalledWith('aaa', 'eee');
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-2',
+        id: 'item-2',
         afterItemId: 'item-1',
         beforeItemId: 'item-3',
       },
@@ -161,7 +154,7 @@ describe('useItemReordering', () => {
     expect(mockGenerateKeyBetween).toHaveBeenCalledWith(null, 'aaa');
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-2',
+        id: 'item-2',
         afterItemId: undefined,
         beforeItemId: 'item-1',
       },

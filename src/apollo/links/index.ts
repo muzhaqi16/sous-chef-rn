@@ -2,6 +2,7 @@ import { ApolloLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode } from 'graphql';
 import { authLink } from './authLink';
+import { languageLink } from './languageLink';
 import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
 import { createOfflineModeLink } from './offlineModeLink';
@@ -65,9 +66,8 @@ export function createLink() {
   const queueLink = createQueueLink();
 
   // Order matters: offlineModeLink first, so blocked queries never reach
-  // retryLink/errorLink and produce doomed requests; then retryLink (queries
-  // only), errorLink, and queueLink for mutations. Query deduplication is
-  // Apollo's own `queryDeduplication: true`.
+  // retryLink/errorLink as doomed requests. Deduplication is Apollo's own
+  // `queryDeduplication: true`.
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)
@@ -75,7 +75,8 @@ export function createLink() {
     telemetryLink, // Track operations for monitoring
     retryLink, // Retry transient network failures (queries only)
     errorLink, // Handle/log errors + return cached data on network failures
-    authLink, // Authentication headers
+    languageLink, // Accept-Language: catalog names resolve by it
+    authLink, // Authentication headers (keeps the headers set before it)
     queueLink, // Queue mutations when offline
     consoleLink, // Development logging
     transportLink, // HTTP/WebSocket transport

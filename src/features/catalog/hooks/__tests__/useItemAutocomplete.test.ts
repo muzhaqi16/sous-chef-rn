@@ -7,16 +7,18 @@ import {
 } from '#operations/item/item.generated';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import type { RootState } from '#store/index';
-import { ItemType, type ItemSuggestion } from '#/graphql/generated/schemaTypes';
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
+import {
+  ItemLevel,
+  ItemType,
+  type ItemSuggestion,
+} from '#/graphql/generated/schemaTypes';
 
 const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
   __typename: 'ItemSuggestion',
   id,
   name,
   type: ItemType.Food,
+  level: ItemLevel.Concept,
   brands: [],
   category: null,
   defaultUnit: null,
@@ -63,7 +65,6 @@ function createItemsMock(
     result: {
       data: {
         autocompleteItems: {
-          __typename: 'AutocompleteResult',
           totalCount: 0,
           suggestions: [],
         },
@@ -80,7 +81,7 @@ function createSemanticMock(): MockFor<typeof SearchItemsSemanticDocument> {
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
       data: {
-        searchItemsSemantic: { __typename: 'ItemConnection', edges: [] },
+        searchItemsSemantic: { edges: [] },
       },
     },
   };

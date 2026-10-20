@@ -1,21 +1,18 @@
 'use no memo';
 import React from 'react';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ExternalSource,
+  NetWeightKind,
+} from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { t } from '#/i18n';
+import type { PackSizeOutcome } from '../PackSizeSheet';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
@@ -40,30 +37,16 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const { buildAddItemsReconcileUpdate } = jest.requireActual(
     '#features/shoppingList/cache/items',
   );
-  const revertOptimisticShoppingListItem = jest.fn();
   return {
     buildAddItemsReconcileUpdate,
-    revertOptimisticShoppingListItem,
     addLocalShoppingListItem: jest.fn(),
     createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
       id,
     })),
-    // Mirror the real reconciler (real classify + mocked revert) so the
-    // keep/revert decision under test matches production.
-    reconcileShoppingCreate: jest.fn(
-      (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (settledStatus(result) === 'failed') {
-          revertOptimisticShoppingListItem(cache, listId, id);
-          return 'reverted';
-        }
-        return 'kept';
-      },
-    ),
   };
 });
 
@@ -100,47 +83,19 @@ jest.mock('#store/useAppStore', () => ({
   ),
 }));
 
-// Use the real wrappers so pressing the add button actually runs the async
-// handler (the auto-mock would no-op the callbacks and never fire the mutation).
-jest.mock('#/utils/finallyHelpers', () =>
-  jest.requireActual('#/utils/finallyHelpers'),
+jest.mock('../ProductResultCard', () =>
+  require('#/test-utils/searchResultsStubs'),
 );
+jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 
-jest.mock('../ProductResultCard', () => ({
-  ProductResultCard: ({ item }: { item: { name: string } }) => {
-    const { Text } = require('react-native');
-    return require('react').createElement(Text, null, item.name);
-  },
-}));
-
-type MockAction = { label: string; onPress: () => void };
-jest.mock('../ActionButtons', () => ({
-  ActionButtons: ({
-    primaryAction,
-    secondaryAction,
-  }: {
-    primaryAction?: MockAction;
-    secondaryAction: MockAction;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      null,
-      primaryAction
-        ? R.createElement(
-            RN.Pressable,
-            { onPress: primaryAction.onPress, testID: 'primary-btn' },
-            R.createElement(RN.Text, null, primaryAction.label),
-          )
-        : null,
-      R.createElement(
-        RN.Pressable,
-        { onPress: secondaryAction.onPress, testID: 'secondary-btn' },
-        R.createElement(RN.Text, null, secondaryAction.label),
-      ),
-    );
-  },
+// The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
+const mockPackSizeOutcomes: PackSizeOutcome[] = [];
+jest.mock('../PackSizeSheet', () => ({
+  PackSizeSheet:
+    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming(
+      { netWeight: 32, netWeightUnitId: 'unit-oz' },
+      (outcome: PackSizeOutcome) => mockPackSizeOutcomes.push(outcome),
+    ),
 }));
 
 describe('SearchResults', () => {
@@ -149,6 +104,8 @@ describe('SearchResults', () => {
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,
+    canEdit: false,
+    canSuggest: true,
   };
 
   const defaultProps: SearchResultsProps = {
@@ -160,6 +117,7 @@ describe('SearchResults', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPackSizeOutcomes.length = 0;
   });
 
   it('renders item name', () => {
@@ -203,7 +161,7 @@ describe('SearchResults', () => {
   // which the add names: a netWeight sent beside it would be stored as the
   // user's own edit.
   it('adds one container naming the scanned record, and no size of its own', async () => {
-    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+    const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
@@ -236,8 +194,203 @@ describe('SearchResults', () => {
     expect(firedInput).not.toHaveProperty('unit');
   });
 
+  it('sends the day of the add on the input, for its default expiry', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{ ...mockItem, variationId: 'esm-1' }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const [fired] = rec.fired;
+    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fired?.input).toMatchObject({ today: fired?.today });
+  });
+
+  describe('a product from Open Food Facts', () => {
+    const created = () =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          },
+        },
+      });
+
+    const notice = {
+      source: ExternalSource.Openfoodfacts,
+      notice: 'Product data from Open Food Facts, available under the ODbL.',
+      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      sourceUrl: 'https://world.openfoodfacts.org/product/123456',
+    };
+
+    it('shows the notice its data asks for', () => {
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            dataAttributions: [notice],
+          }}
+        />,
+      );
+      expect(screen.getByText(notice.notice)).toBeTruthy();
+    });
+
+    it('credits nobody for an item whose data asks for no notice', () => {
+      renderWithApollo(<SearchResults {...defaultProps} />);
+      expect(screen.queryByText(/Open Food Facts/)).toBeNull();
+    });
+
+    it('asks for the pack size it lacks, then stores the one entered', async () => {
+      const rec = created();
+      const onScanAnother = jest.fn();
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          onScanAnother={onScanAnother}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            netWeight: undefined,
+            variationId: 'off-1',
+          }}
+        />,
+        { operationMocks: [rec.mock] },
+      );
+
+      fireEvent.press(screen.getByTestId('primary-btn'));
+      // Nothing is added until the size is given.
+      expect(rec.fired).toHaveLength(0);
+
+      fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+        .input;
+      expect(firedInput.netWeight).toEqual({
+        netWeight: 32,
+        netWeightUnitId: 'unit-oz',
+      });
+      expect(firedInput.item).toEqual({ variation: 'off-1' });
+      // The prompt closes only once the add has landed.
+      await waitFor(() =>
+        expect(mockPackSizeOutcomes).toEqual([{ status: 'done' }]),
+      );
+      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
+      expect(onScanAnother).toHaveBeenCalledTimes(1);
+    });
+
+    describe('a refused add', () => {
+      const offItem = {
+        ...mockItem,
+        source: 'OPENFOODFACTS',
+        netWeight: undefined,
+        variationId: 'off-1',
+      };
+      const refusedOn = (field: string) =>
+        recordMock(CreatePantryItemDocument, {
+          data: {
+            createPantryItem: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'refused',
+              field,
+            },
+          },
+        });
+
+      it('keeps the prompt open with the reason on the size, and no alert', async () => {
+        const rec = refusedOn('netWeight');
+        const onScanAnother = jest.fn();
+        renderWithApollo(
+          <SearchResults
+            {...defaultProps}
+            onScanAnother={onScanAnother}
+            item={offItem}
+          />,
+          { operationMocks: [rec.mock] },
+        );
+
+        fireEvent.press(screen.getByTestId('primary-btn'));
+        fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+        await waitFor(() =>
+          expect(mockPackSizeOutcomes).toEqual([
+            { status: 'refused', sizeError: t('errors.field.netWeight') },
+          ]),
+        );
+        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        const { alertService } = jest.requireMock('#/services/alertService');
+        expect(alertService.alert).not.toHaveBeenCalled();
+        expect(onScanAnother).not.toHaveBeenCalled();
+      });
+
+      it('alerts any other refusal, with the prompt still open', async () => {
+        const rec = refusedOn('quantity');
+        renderWithApollo(<SearchResults {...defaultProps} item={offItem} />, {
+          operationMocks: [rec.mock],
+        });
+
+        fireEvent.press(screen.getByTestId('primary-btn'));
+        fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+        await waitFor(() =>
+          expect(mockPackSizeOutcomes).toEqual([{ status: 'refused' }]),
+        );
+        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        const { alertService } = jest.requireMock('#/services/alertService');
+        expect(alertService.alert).toHaveBeenCalledTimes(1);
+        expect(alertService.alert).toHaveBeenCalledWith(
+          t('labels.error'),
+          t('errors.field.quantity'),
+        );
+      });
+    });
+
+    it('adds in one tap when the record states its pack size', async () => {
+      const rec = created();
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            netWeight: 16,
+            netWeightKind: NetWeightKind.Package,
+            variationId: 'off-2',
+          }}
+        />,
+        { operationMocks: [rec.mock] },
+      );
+
+      fireEvent.press(screen.getByTestId('primary-btn'));
+
+      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
+      const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+        .input;
+      expect(firedInput).not.toHaveProperty('netWeight');
+    });
+  });
+
   it('names the item when the scan found no record for the barcode', async () => {
-    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+    const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
@@ -308,7 +461,7 @@ describe('SearchResults', () => {
       jest.requireMock('#features/pantry/cache/items');
 
     it('moves with the optimistic row, before the server answers', async () => {
-      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
@@ -332,7 +485,7 @@ describe('SearchResults', () => {
     });
 
     it('is taken back when the server refuses the create', async () => {
-      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'ValidationError',

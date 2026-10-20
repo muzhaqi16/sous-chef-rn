@@ -7,7 +7,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useTranslation } from '#/i18n';
 import { logger } from '#/utils/environment';
 import { Icon } from '#/utils/iconUtils';

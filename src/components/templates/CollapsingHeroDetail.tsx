@@ -14,17 +14,22 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { commonStyles } from '#/styles/commonStyles';
 import { sizes } from '#/theme/foundations/sizes';
 import { spacing } from '#/theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import {
   HeaderActionIcon,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
+import {
+  HeaderActionMenu,
+  useHeaderOverflow,
+} from '#components/organisms/HeaderActionMenu';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
@@ -48,10 +53,9 @@ const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
 const BAR_FADE_END = COLLAPSE_POINT;
 const BAR_FADE_START = COLLAPSE_POINT - 24;
 
-// The inline bar title must not appear until the in-content `DetailTitleRow` has
-// scrolled fully under the opaque bar, or both show at once. The clearing
-// distance is inset-independent: the title's line box plus the card/row top
-// paddings, measured from where the variant places it.
+// The bar title waits until `DetailTitleRow` has scrolled fully under the
+// opaque bar, or both show at once. The distance is inset-independent: the
+// title's line box plus the card/row top paddings.
 const TITLE_FADE_START = COLLAPSE_POINT + 12;
 const TITLE_FADE_END = COLLAPSE_POINT + 48;
 
@@ -78,6 +82,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
 
 interface CollapsingHeroDetailProps {
   onBack: () => void;
+  /** Past three, the first two show and the rest open from "more". */
   actions?: HeaderAction[];
   /** Hidden at rest; fades in as the hero collapses, or as the large title
    *  scrolls under the bar on a no-hero screen. */
@@ -96,12 +101,9 @@ interface CollapsingHeroDetailProps {
   testID?: string;
 }
 
-// Edge-to-edge hero collapsing into a pinned action bar, with the content riding
-// up over it in a rounded card. With no hero the bar is solid from the start.
-//
-// The screen must NOT apply a top safe-area inset (omit `topInsetScreenLayout` in
-// its stack registration) — this layout draws behind the status bar and insets
-// itself.
+// An edge-to-edge hero collapsing into a pinned bar. It draws behind the status
+// bar and insets itself, so its screen must NOT apply a top inset (omit
+// `topInsetScreenLayout` in its stack registration).
 export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   onBack,
   actions = [],
@@ -116,6 +118,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { barActions, menuRef, overflow } = useHeaderOverflow(actions);
   const hasHero = !!renderHero;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 
@@ -206,6 +209,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         {hasHero ? (
           <Animated.View style={parallax ? heroParallaxStyle : undefined}>
             {renderHero(heroHeight)}
+            <ThemeEpochSentinel />
           </Animated.View>
         ) : (
           <View style={{ height: insets.top + HEADER_BAND_HEIGHT }} />
@@ -220,6 +224,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         >
           {children}
         </View>
+        <ThemeEpochSentinel />
       </Animated.ScrollView>
 
       <View
@@ -263,7 +268,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
                 signal too, not just the tab headers. Renders null when online,
                 leaving the chip row untouched. */}
             <OfflineStatusPill size={22} />
-            {actions.map((action, index) => (
+            {barActions.map((action, index) => (
               <HeroChip
                 key={action.testID ?? `${action.icon}-${index}`}
                 action={action}
@@ -272,6 +277,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </View>
         </View>
       </View>
+      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
 
       {/* iOS draws a pull's own spinner at the scroll view's top edge, which an
           edge-to-edge hero puts under the status bar; this one sits centred

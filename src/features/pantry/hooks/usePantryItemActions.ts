@@ -6,45 +6,37 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   ConsumptionUnitsForPantryItemDocument,
   CreatePantryItemUsageDocument,
-  RestockPantryItemDocument,
   RestockUnitsForPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { rootFieldOf } from '#/apollo/utils/documentOperation';
-import type { WasteReason } from '#/graphql/generated/schemaTypes';
+import type {
+  CreatePantryItemUsageInput,
+  WasteReason,
+} from '#/graphql/generated/schemaTypes';
 import {
   TopLevelErrorCode,
   UsagePurpose,
 } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#services/telemetry';
 import { generateEntityId } from '#/utils/generateEntityId';
-import {
-  UsePantryItemActions_TrackingUnitFragmentDoc,
-  UsePantryItemActions_QuantityFragmentDoc,
-  UsePantryItemActions_IdFragmentDoc,
-  UsePantryItemActions_EnteredUnitFragmentDoc,
-  type UsePantryItemActions_QuantityFragment,
-  type UsePantryItemActions_EnteredUnitFragment,
-} from './usePantryItemActions.generated';
+import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.generated';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
-import { writeHeldStock } from '#features/pantry/cache/stock';
-import { countFactorOver, inCountedUnit } from '#domain/stockDisplay';
+import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
+import { stockAmountOf } from '#domain/stockAmount';
+import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 
 interface UsePantryItemActionsOptions {
+  pantryId: string | undefined;
   removeItem: (id: string) => Promise<void>;
   navigateTo: {
     pantryItem: (params: { itemId: string }) => void;
   };
 }
 
-// Discriminated union: only one modal can be open at a time.
-// Stores only the entity id — the modal materializes the entity from the
-// Apollo cache via `useFragment`, so mutations to the pantry item are
-// reflected in the open modal without a re-snapshot.
-type ActiveModal =
-  | { type: null }
-  | { type: 'consume'; itemId: string }
-  | { type: 'waste'; itemId: string }
-  | { type: 'restock'; itemId: string };
+// One modal at a time, holding only the id: the modal reads the item through
+// `useFragment`, so a write to it shows in the open modal.
+type ModalType = 'consume' | 'waste' | 'restock';
+type ActiveModal = { type: null } | { type: ModalType; itemId: string };
 
 const CLOSED_MODAL: ActiveModal = { type: null };
 
@@ -58,14 +50,14 @@ const RANKED_UNIT_FIELDS = [
   RestockUnitsForPantryItemDocument,
 ].map(rootFieldOf);
 
-type StockSnapshot = UsePantryItemActions_QuantityFragment;
-
 export function usePantryItemActions({
+  pantryId,
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const { restock } = usePantryRestock(pantryId);
   // Single state for all modals — only one can be open at a time
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
@@ -78,151 +70,30 @@ export function usePantryItemActions({
     client.cache.gc();
   };
 
-  /**
-   * Read the tracking-unit id for an item from the cache. Used by mutation
-   * handlers to decide whether an optimistic same-unit update is safe.
-   */
-  const readTrackingUnitId = (itemId: string): string | undefined => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    if (!cacheId) return undefined;
-    const data = client.cache.readFragment<{
-      unit: { id: string } | null;
-    }>({
-      id: cacheId,
-      fragment: UsePantryItemActions_TrackingUnitFragmentDoc,
-    });
-    return data?.unit?.id ?? undefined;
-  };
-
-  /**
-   * An amount entered in `unitId`, in the stack's tracking unit when no
-   * conversion is needed: the tracking unit itself, or a dozen of it. Null
-   * when only the server can convert it.
-   */
-  const inTrackingUnit = (
-    itemId: string,
-    amount: number,
-    unitId: string | undefined,
-  ): number | null => {
-    const trackingUnitId = readTrackingUnitId(itemId);
-    if (!unitId || unitId === trackingUnitId) return amount;
-    const unitCacheId = client.cache.identify({
-      __typename: 'Unit',
-      id: unitId,
-    });
-    const entered = unitCacheId
-      ? client.cache.readFragment<UsePantryItemActions_EnteredUnitFragment>({
-          id: unitCacheId,
-          fragment: UsePantryItemActions_EnteredUnitFragmentDoc,
-        })
-      : null;
-    const factor = entered ? countFactorOver(entered, trackingUnitId) : null;
-    return factor === null ? null : inCountedUnit(amount, factor);
-  };
-
-  /** The stock as cached, to restore if the write is refused. */
-  const readCurrentStock = (itemId: string): StockSnapshot | null => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    if (!cacheId) return null;
-    return client.cache.readFragment<StockSnapshot>({
-      id: cacheId,
-      fragment: UsePantryItemActions_QuantityFragmentDoc,
-    });
-  };
-
-  /**
-   * Moves the cached stock by `delta` tracking units for instant feedback.
-   * `heldQuantity` is what the screens show; `quantity` counts packages and is
-   * settled by the response.
-   */
-  const optimisticUpdateStock = (itemId: string, delta: number) => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    if (!cacheId) return;
-
-    client.cache.modify({
-      id: cacheId,
-      fields: {
-        quantity(existing: number) {
-          return Math.max(0, existing + delta);
-        },
-        updatedAt() {
-          return new Date().toISOString();
-        },
-        lastUsedAt() {
-          return new Date().toISOString();
-        },
-      },
-    });
-    writeHeldStock(client.cache, itemId, held => Math.max(0, held + delta));
-  };
-
-  /** Restores the stock snapshot taken before a refused write. */
-  const revertStock = (itemId: string, original: StockSnapshot | null) => {
-    if (!original) return;
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    if (!cacheId) return;
-
-    client.cache.modify({
-      id: cacheId,
-      fields: {
-        quantity() {
-          return original.quantity;
-        },
-      },
-    });
-    writeHeldStock(
-      client.cache,
-      itemId,
-      original.heldQuantity,
-      original.displayAmount,
-    );
-  };
-
   // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useMutation(CreatePantryItemUsageDocument, {
     // Replays as the canonical mutation, deduped by its idempotencyKey.
     context: { localFirst: true },
   });
 
-  // Restock item mutation
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
-    // Replays as the canonical mutation, deduped by its idempotencyKey.
-    context: { localFirst: true },
-  });
-
-  // Handler to confirm consumption
-  const handleConfirmConsume = async (
-    quantityUsed: number,
-    _quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-    usageUnitId?: string,
+  /** Consume and waste are one usage write; `purpose` tells them apart. */
+  const recordUsage = async (
+    modal: Exclude<ModalType, 'restock'>,
+    quantity: number,
+    usageUnitId: string | undefined,
+    usage: Pick<
+      CreatePantryItemUsageInput,
+      'purpose' | 'notes' | 'wasteReason' | 'isComposted' | 'isRecycled'
+    >,
+    fallback: string,
   ) => {
-    if (activeModal.type !== 'consume') return;
+    if (activeModal.type !== modal) return;
 
     const itemId = activeModal.itemId;
-    const original = readCurrentStock(itemId);
     // A converted unit moves the stock when the server answers.
-    const used = inTrackingUnit(itemId, quantityUsed, usageUnitId);
-    if (used !== null) {
-      optimisticUpdateStock(itemId, -used);
-    }
-
-    const consumeNotes = notes || undefined;
+    const used = inTrackingUnit(client.cache, itemId, quantity, usageUnitId);
     const revertOptimistic =
-      used !== null ? () => revertStock(itemId, original) : undefined;
+      used === null ? undefined : bumpStock(client.cache, itemId, -used);
 
     const settled = await settleMutation(
       () =>
@@ -231,10 +102,9 @@ export function usePantryItemActions({
             today: todayKey(),
             input: {
               pantryItemId: itemId,
-              amount: { quantity: quantityUsed },
-              purpose,
-              notes: consumeNotes,
+              amount: { quantity },
               usageUnitId,
+              ...usage,
               today: todayKey(),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
@@ -243,7 +113,7 @@ export function usePantryItemActions({
         }),
       {
         document: CreatePantryItemUsageDocument,
-        fallback: t('errors.recordUsageFailedRetry'),
+        fallback,
         onFailed: revertOptimistic,
         on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
       },
@@ -251,57 +121,42 @@ export function usePantryItemActions({
     if (settled.status !== 'failed') closeModal();
   };
 
-  // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
-  const handleConfirmWaste = async (
+  const handleConfirmConsume = (
+    quantityUsed: number,
+    _quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ) =>
+    recordUsage(
+      'consume',
+      quantityUsed,
+      usageUnitId,
+      { purpose, notes: notes || undefined },
+      t('errors.recordUsageFailedRetry'),
+    );
+
+  const handleConfirmWaste = (
     wasteAmount: number,
     wasteReason: WasteReason,
     isComposted: boolean,
     isRecycled: boolean,
     notes: string,
     wasteUnitId?: string,
-  ) => {
-    if (activeModal.type !== 'waste') return;
-
-    const itemId = activeModal.itemId;
-    const original = readCurrentStock(itemId);
-    const wasted = inTrackingUnit(itemId, wasteAmount, wasteUnitId);
-    if (wasted !== null) {
-      optimisticUpdateStock(itemId, -wasted);
-    }
-
-    const wasteNotes = notes || undefined;
-    const revertOptimistic =
-      wasted !== null ? () => revertStock(itemId, original) : undefined;
-
-    const settled = await settleMutation(
-      () =>
-        createPantryItemUsage({
-          variables: {
-            today: todayKey(),
-            input: {
-              pantryItemId: itemId,
-              amount: { quantity: wasteAmount },
-              purpose: UsagePurpose.Waste,
-              notes: wasteNotes,
-              usageUnitId: wasteUnitId,
-              wasteReason,
-              isComposted,
-              isRecycled,
-              today: todayKey(),
-              // idempotencyKey dedups the usage ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
+  ) =>
+    recordUsage(
+      'waste',
+      wasteAmount,
+      wasteUnitId,
       {
-        document: CreatePantryItemUsageDocument,
-        fallback: t('errors.recordWasteFailedRetry'),
-        onFailed: revertOptimistic,
-        on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+        purpose: UsagePurpose.Waste,
+        notes: notes || undefined,
+        wasteReason,
+        isComposted,
+        isRecycled,
       },
+      t('errors.recordWasteFailedRetry'),
     );
-    if (settled.status !== 'failed') closeModal();
-  };
 
   // Handler to confirm restock
   const handleConfirmRestock = async (
@@ -315,84 +170,16 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'restock') return;
 
-    const itemId = activeModal.itemId;
-    const original = readCurrentStock(itemId);
-    const added = inTrackingUnit(itemId, quantity, unitId);
-    if (added !== null) {
-      optimisticUpdateStock(itemId, added);
-    }
-
-    // Optimistically increment activeBatchCount for instant UI feedback
-    const cacheIdForBatch = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
+    const settled = await restock(activeModal.itemId, {
+      amount: stockAmountOf(quantity, { unitId }),
+      notes: notes || undefined,
+      costPerUnit,
+      totalCost,
+      expiresOn: expiresAt ? toDateKey(expiresAt) : null,
+      present: 'alert',
+      on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
     });
-    if (cacheIdForBatch) {
-      client.cache.modify({
-        id: cacheIdForBatch,
-        fields: {
-          activeBatchCount(existing: number = 0) {
-            return existing + 1;
-          },
-        },
-      });
-    }
-
-    const restockNotes = notes || undefined;
-    const expiresOn = expiresAt ? toDateKey(expiresAt) : null;
-    const revertOptimistic = () => {
-      if (added !== null) {
-        revertStock(itemId, original);
-      }
-      if (cacheIdForBatch) {
-        client.cache.modify({
-          id: cacheIdForBatch,
-          fields: {
-            activeBatchCount(existing: number = 0) {
-              return Math.max(0, existing - 1);
-            },
-          },
-        });
-      }
-    };
-
-    const settled = await settleMutation(
-      () =>
-        restockPantryItem({
-          variables: {
-            today: todayKey(),
-            input: {
-              id: itemId,
-              quantity,
-              unitId,
-              notes: restockNotes,
-              costPerUnit,
-              totalCost,
-              expiresOn,
-              // idempotencyKey dedups the restock ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
-      {
-        document: RestockPantryItemDocument,
-        fallback: t('errors.restockFailedRetry'),
-        onFailed: revertOptimistic,
-        on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
-      },
-    );
-    if (settled.status === 'failed') return;
-
-    // The new batch row is the server's to build, so drop the connection and
-    // let the screen refetch it — but only once the server answered. A queued
-    // write has no response, and nothing would refill it.
-    if (settled.status === 'applied') {
-      client.cache.evict({
-        id: 'ROOT_QUERY',
-        fieldName: 'pantryItemBatchesConnection',
-        args: { pantryItemId: itemId },
-      });
-    }
+    if (settled.status === 'rejected') return;
 
     closeModal();
   };
@@ -411,25 +198,9 @@ export function usePantryItemActions({
     return !!data?.id;
   };
 
-  // Handler to open consume modal (for swipe action)
-  const handleConsumeItem = (itemId: string) => {
-    if (hasItemInCache(itemId)) {
-      setActiveModal({ type: 'consume', itemId });
-    }
-  };
-
-  // Handler to open waste modal (for swipe action)
-  const handleWasteItem = (itemId: string) => {
-    if (hasItemInCache(itemId)) {
-      setActiveModal({ type: 'waste', itemId });
-    }
-  };
-
-  // Handler to open restock modal (for swipe action)
-  const handleRestockItem = (itemId: string) => {
-    if (hasItemInCache(itemId)) {
-      setActiveModal({ type: 'restock', itemId });
-    }
+  // Swipe actions: each opens its modal only when the cache holds the item.
+  const opensModal = (type: ModalType) => (itemId: string) => {
+    if (hasItemInCache(itemId)) setActiveModal({ type, itemId });
   };
 
   // Handler to edit item (for swipe action)
@@ -449,30 +220,17 @@ export function usePantryItemActions({
     }
   };
 
-  // Derive modal states from the single activeModal for backward compatibility
-  const consumeModal = {
-    visible: activeModal.type === 'consume',
-    itemId: activeModal.type === 'consume' ? activeModal.itemId : null,
+  const modalState = (type: ModalType) => ({
+    visible: activeModal.type === type,
+    itemId: activeModal.type === type ? activeModal.itemId : null,
     close: closeModal,
-  };
-
-  const wasteModal = {
-    visible: activeModal.type === 'waste',
-    itemId: activeModal.type === 'waste' ? activeModal.itemId : null,
-    close: closeModal,
-  };
-
-  const restockModal = {
-    visible: activeModal.type === 'restock',
-    itemId: activeModal.type === 'restock' ? activeModal.itemId : null,
-    close: closeModal,
-  };
+  });
 
   return {
     // Modal states with close handlers
-    consumeModal,
-    wasteModal,
-    restockModal,
+    consumeModal: modalState('consume'),
+    wasteModal: modalState('waste'),
+    restockModal: modalState('restock'),
 
     // Confirmation handlers (for modal submit)
     handleConfirmConsume,
@@ -480,9 +238,9 @@ export function usePantryItemActions({
     handleConfirmRestock,
 
     // Swipe action handlers
-    handleConsumeItem,
-    handleWasteItem,
-    handleRestockItem,
+    handleConsumeItem: opensModal('consume'),
+    handleWasteItem: opensModal('waste'),
+    handleRestockItem: opensModal('restock'),
     handleEditItem,
     handleDeleteItem,
   };

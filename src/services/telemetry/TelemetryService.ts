@@ -16,6 +16,7 @@ import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { backoffDelay } from '#/utils/backoff';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
@@ -27,10 +28,9 @@ import { useStore } from '#store';
 const SESSION_ID = generateId();
 
 /**
- * The app version, as a metric label — the dimension that attributes a
- * regression to a release. BOUNDED on purpose: every label combination is a new
- * Prometheus series times its buckets, so the unbounded commit SHA must never be
- * a label. It travels on LOGS instead, as a body field (see `log()`).
+ * The app version metric label. Labels stay BOUNDED: each combination is a new
+ * Prometheus series times its buckets, so the commit SHA travels on LOGS as a
+ * body field (see `log()`), never as a label.
  */
 let appVersion: string | undefined;
 function resolveAppVersion(): string {
@@ -39,10 +39,8 @@ function resolveAppVersion(): string {
 }
 
 /**
- * Emulator or real hardware — two values, deliberately not `device_model`, which
- * is the same cardinality bomb as a commit SHA. Without it both run under one
- * series while disagreeing by 1.4-2x on startup marks and 10-20x on
- * `flashlist_initial_load_ms`, poisoning any release baseline.
+ * Emulator or real hardware, never `device_model` (unbounded): the two disagree
+ * too far on startup and list marks to share one series.
  */
 let deviceType: string | undefined;
 function resolveDeviceType(): string {
@@ -54,10 +52,9 @@ function resolveDeviceType(): string {
 }
 
 /**
- * Both readers are blocking SYNCHRONOUS bridge calls — `isEmulatorSync` is a
- * binder IPC on Android hardware — so they must stay lazy and memoized rather
- * than run at module scope, inside the startup window this service measures. A
- * throw is swallowed: a missing label beats breaking every `import { Telemetry }`.
+ * Both readers are blocking SYNCHRONOUS bridge calls (a binder IPC on Android),
+ * so they stay lazy, out of the startup window this service measures. A throw
+ * is swallowed: a missing label beats breaking every `import { Telemetry }`.
  */
 function safeNativeRead<T>(read: () => T, fallback: T): T {
   let value;
@@ -81,11 +78,10 @@ const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
 const MAX_LOG_BUFFER = 1000;
 const MAX_METRIC_BUFFER = 2000;
 
-// Backoff between failed flushes; without it a dead endpoint is retried on every
-// interval tick plus every error log's immediate flush. Recovery is lazy — the
-// next allowed flush — since telemetry is fire-and-forget.
-const INITIAL_FLUSH_BACKOFF_MS = 5_000;
-const MAX_FLUSH_BACKOFF_MS = 300_000;
+// Without it a dead endpoint is retried every tick and on every error log's
+// immediate flush. Recovery is the next allowed flush; jittered, as every
+// device loses the endpoint at once.
+const FLUSH_BACKOFF = { baseMs: 5_000, maxMs: 300_000, jitter: 0.25 };
 
 interface FlushBackoff {
   consecutiveFailures: number;
@@ -150,10 +146,8 @@ export class TelemetryService {
     });
 
     // `app_starts_total` belongs in `useStartupInit`'s idle callback, NOT here:
-    // this runs synchronously from the hydration effect, so its metric would be
-    // the first labelled one of a cold start and would resolve `device_type`
-    // (a binder IPC on Android hardware) inside the window the startup metrics
-    // measure — biasing them on real devices only.
+    // as the cold start's first labelled metric it would resolve `device_type`
+    // inside the window the startup metrics measure.
   }
 
   updateConfig(newConfig: Partial<TelemetryConfig>): void {
@@ -212,11 +206,9 @@ export class TelemetryService {
         platform: Platform.OS,
         env: this.config.environment,
         ...scrubLogExtra(extra),
-        // Attribution, applied last so a caller's `extra` cannot shadow it.
-        // BODY fields, not Loki stream labels — a label per device or run would
-        // multiply the stream count, while a body field stays searchable with
-        // `| json | device_id="..."`. `device_id` is stamped at FLUSH, by which
-        // time it has resolved.
+        // Last, so a caller's `extra` cannot shadow it. BODY fields, not Loki
+        // labels, which would multiply streams; `device_id` is stamped at FLUSH,
+        // once it has resolved.
         session_id: SESSION_ID,
         // The commit the build came from; a body field, never a label. `-dirty`
         // means uncommitted changes, so the build is not reproducible.
@@ -246,10 +238,8 @@ export class TelemetryService {
     }
   }
 
-  // Defense-in-depth consent gate, evaluated live on every emit. Even if
-  // updateConfig has not yet reflected revoked consent (e.g. cold start before
-  // setup runs), nothing is emitted once the user has opted out. Mirrors the
-  // telemetryLink guard.
+  // Read live on every emit, so revoked consent holds before updateConfig
+  // reflects it (a cold start before setup). Mirrors the telemetryLink guard.
   private isConsentDenied(): boolean {
     return useStore.getState().userConsent === false;
   }
@@ -369,10 +359,8 @@ export class TelemetryService {
     eventName: string,
     properties: Record<string, unknown> = {},
   ): void {
-    // `app_events_total` is the source of truth for the analytics dashboards.
-    // The breadcrumb is logged at debug level so `minLogLevel` drops it before
-    // Loki in staging/production — no write-amplification where volume matters.
-    // Guarded so the message is not even built where the floor discards it.
+    // `app_events_total` feeds the dashboards; the breadcrumb is debug, so
+    // `minLogLevel` drops it before Loki in staging/production.
     if (this.isLevelEnabled('debug')) {
       this.log('debug', `Event: ${eventName}`, properties);
     }
@@ -458,10 +446,8 @@ export class TelemetryService {
   }
 
   /**
-   * Skip flushes while the device has no internet (NetInfo-driven store
-   * flag). Deliberately NOT gated on `apiReachable` — that flag tracks the
-   * GraphQL API host, while telemetry ships to separate hosts (Loki/Mimir)
-   * whose health is handled by the flush backoff instead.
+   * NOT gated on `apiReachable`, which tracks the GraphQL host: telemetry ships
+   * to Loki/Mimir, whose health the flush backoff handles.
    */
   private isDeviceOffline(): boolean {
     return useStore.getState().isOnline === false;
@@ -489,10 +475,7 @@ export class TelemetryService {
     detail?: string,
   ): void {
     backoff.consecutiveFailures += 1;
-    const delay = Math.min(
-      INITIAL_FLUSH_BACKOFF_MS * 2 ** (backoff.consecutiveFailures - 1),
-      MAX_FLUSH_BACKOFF_MS,
-    );
+    const delay = backoffDelay(backoff.consecutiveFailures - 1, FLUSH_BACKOFF);
     backoff.nextAttemptAt = Date.now() + delay;
     const summary = `Failed to send ${pipeline} via ${transports} (attempt ${
       backoff.consecutiveFailures
@@ -552,11 +535,9 @@ export class TelemetryService {
         return;
       }
 
-      // Re-buffer only when retrying can ever succeed. A permanent failure
-      // (non-retryable 4xx: wrong endpoint, bad auth) means the same batch
-      // fails forever — re-buffering it would pin the pipeline on a poisoned
-      // batch. Newer entries that arrived during the await stay ahead of the
-      // retried batch; the cap (oldest dropped) bounds a sustained outage.
+      // A non-retryable 4xx fails the same batch forever, so only a retryable
+      // failure re-buffers it, before entries that arrived meanwhile; the cap
+      // drops the oldest in a sustained outage.
       const retryable = failures.some(f => isRetryableReason(f.result.reason));
       if (retryable) {
         this.logBuffer = [...logs, ...this.logBuffer].slice(-MAX_LOG_BUFFER);
@@ -617,10 +598,9 @@ export class TelemetryService {
         return;
       }
 
-      // No re-buffering: HttpTransport has already folded these entries into
-      // its cumulative accumulators — pushing them back would double-count
-      // counters on the next flush. Mark a resend instead so the next allowed
-      // flush re-ships the running totals even if no new metrics arrive.
+      // No re-buffering: HttpTransport's cumulative accumulators already hold
+      // these, so pushing them back double-counts. The next allowed flush
+      // re-ships the running totals instead.
       this.metricsRetryPending = failures.some(f =>
         isRetryableReason(f.result.reason),
       );
@@ -652,10 +632,8 @@ export class TelemetryService {
         onUnhandled: (id: unknown, reason: unknown) => {
           // Track dedicated counter for dashboard compatibility
           this.incrementCounter('unhandled_promise_rejections_total');
-          // Structurally serialize the reason instead of String(reason): a
-          // rejected non-Error object stringifies to "[object Object]", losing
-          // the message/stack/GraphQL fields. serializeError narrows Errors,
-          // plain objects, and Apollo error shapes into a JSON-friendly object.
+          // Not String(reason): a rejected non-Error object stringifies to
+          // "[object Object]", losing its message, stack and GraphQL fields.
           const serialized = serializeError(reason);
           this.trackError({
             message: `Unhandled Promise Rejection: ${serialized.message}`,

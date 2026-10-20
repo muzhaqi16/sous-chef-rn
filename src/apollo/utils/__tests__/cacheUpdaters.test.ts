@@ -4,9 +4,7 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createAddToParentConnectionUpdater,
-  createAddToParentArrayUpdater,
   createRemoveFromParentConnectionUpdater,
-  createRemoveFromParentArrayUpdater,
   skipUnmatchedFilterVariants,
   skipUnmatchedArgVariants,
   safeEvict,
@@ -27,6 +25,7 @@ type MockedCache = ApolloCache & {
 interface FieldHelpers {
   toReference: jest.Mock;
   readField: jest.Mock;
+  canRead: jest.Mock;
   storeFieldName: string;
 }
 
@@ -78,6 +77,7 @@ function createFieldHelpers(
       }
       return ref[fieldName];
     }),
+    canRead: jest.fn(() => false),
     storeFieldName: overrides.storeFieldName ?? 'fieldName',
     ...overrides,
   };
@@ -424,6 +424,7 @@ describe('createAddToParentConnectionUpdater', () => {
         const after = fields.notificationsConnection(before, {
           readField: () => undefined,
           toReference: () => ({ __ref: 'Notification:n1' }),
+          canRead: () => false,
           storeFieldName,
         });
         if (after !== before) seen.push(storeFieldName);
@@ -605,104 +606,108 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// createAddToParentArrayUpdater
-// ---------------------------------------------------------------------------
+describe('adding an entity the cache already holds', () => {
+  const ROW = gql`
+    fragment _AddedRowProbe on PantryItem {
+      id
+      quantity
+      item {
+        id
+        name
+      }
+    }
+  `;
+  const LIST = gql`
+    fragment _AddedListProbe on Pantry {
+      id
+      itemsConnection {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  `;
+  interface CreatedRow {
+    __typename: 'PantryItem';
+    id: string;
+    quantity: number;
+    item: { __typename: 'Item'; id: string; name: string };
+  }
+  const addToPantryItems = createAddToParentConnectionUpdater<CreatedRow>(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
+  const created: CreatedRow = {
+    __typename: 'PantryItem',
+    id: 'pi-1',
+    quantity: 2,
+    item: { __typename: 'Item', id: 'item-milk', name: 'Milk' },
+  };
+  const cacheWithPantry = () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'Pantry:p-1',
+      fragment: LIST,
+      data: {
+        __typename: 'Pantry',
+        id: 'p-1',
+        itemsConnection: { __typename: 'PantryItemConnection', edges: [] },
+      },
+    });
+    return cache;
+  };
 
-describe('createAddToParentArrayUpdater', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('adds a new item ref at the start by default', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
-
-    addToItems(cache, 'p-1', {
-      id: 'item-new',
-      __typename: 'PantryItem',
+  // A mutation's result is normalized before its update runs; merging the raw
+  // response again stored the row's item inline, so an edit to the item no
+  // longer reached the row.
+  it('links the row it holds, leaving its nested entities as references', () => {
+    const cache = cacheWithPantry();
+    cache.writeFragment({
+      id: 'PantryItem:pi-1',
+      fragment: ROW,
+      data: created,
     });
 
-    const helpers = createFieldHelpers();
-    const existing = [{ __ref: 'PantryItem:item-old' }];
-    const result = invokeFieldModifier(cache, 'items', existing, helpers);
+    addToPantryItems(cache, 'p-1', created);
 
-    expect(result).toHaveLength(2);
-    expect(result[1]).toBe(existing[0]);
-  });
-
-  it('adds at the end when position is end', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
-
-    addToItems(
-      cache,
-      'p-1',
-      { id: 'item-new', __typename: 'PantryItem' },
-      { position: 'end' },
-    );
-
-    const helpers = createFieldHelpers();
-    const existing = [{ __ref: 'PantryItem:item-old' }];
-    const result = invokeFieldModifier(cache, 'items', existing, helpers);
-
-    expect(result).toHaveLength(2);
-    expect(result[0]).toBe(existing[0]);
-  });
-
-  it('prevents duplicates by default', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
-
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockReturnValue('item-1');
-    const existing = [{ __ref: 'PantryItem:item-1' }];
-    const result = invokeFieldModifier(cache, 'items', existing, helpers);
-
-    expect(result).toBe(existing);
-  });
-
-  it('modifies the correct parent entity', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
-
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
-
-    expect(cache.modify).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'Pantry:p-1' }),
-    );
-  });
-
-  it('warns and returns early when parent not found', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
-    cache.identify.mockReturnValue(undefined);
-
-    addToItems(cache, 'p-missing', {
-      id: 'item-1',
-      __typename: 'PantryItem',
+    const row = cache.extract()['PantryItem:pi-1'];
+    expect(row?.item).toEqual({ __ref: 'Item:item-milk' });
+    cache.writeFragment({
+      id: 'Item:item-milk',
+      fragment: gql`
+        fragment _RenamedItemProbe on Item {
+          id
+          name
+        }
+      `,
+      data: { __typename: 'Item', id: 'item-milk', name: 'Whole milk' },
     });
-
-    expect(cache.modify).not.toHaveBeenCalled();
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Parent entity not found'),
-    );
+    expect(
+      cache.readFragment<{ item: { name: string } }>({
+        id: 'PantryItem:pi-1',
+        fragment: ROW,
+      })?.item.name,
+    ).toBe('Whole milk');
   });
 
-  it('returns existing items when toReference returns undefined', () => {
-    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
-    const cache = createMockCache();
+  it('writes a row the cache lacks from the object', () => {
+    const cache = cacheWithPantry();
 
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
+    addToPantryItems(cache, 'p-1', created);
 
-    const helpers = createFieldHelpers();
-    helpers.toReference.mockReturnValue(undefined);
-    const existing = [{ __ref: 'PantryItem:old' }];
-    const result = invokeFieldModifier(cache, 'items', existing, helpers);
-
-    expect(result).toBe(existing);
+    expect(cache.extract()['PantryItem:pi-1']).toMatchObject({ quantity: 2 });
+    expect(
+      cache.readFragment<{
+        itemsConnection: { edges: { node: { id: string } }[] };
+      }>({ id: 'Pantry:p-1', fragment: LIST })?.itemsConnection.edges,
+    ).toEqual([
+      expect.objectContaining({
+        node: expect.objectContaining({ id: 'pi-1' }),
+      }),
+    ]);
   });
 });
 
@@ -853,104 +858,6 @@ describe('createRemoveFromParentConnectionUpdater', () => {
 
     expect(remove(cache, 'p-1', 'pi-1')).toBe(true);
     expect(remove(cache, 'p-1', 'pi-9')).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createRemoveFromParentArrayUpdater
-// ---------------------------------------------------------------------------
-
-describe('createRemoveFromParentArrayUpdater', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('filters out the item with the matching id', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1');
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: MockRef) => {
-      if (field === 'id') {
-        if (ref.__ref === 'PantryItem:pi-1') return 'pi-1';
-        if (ref.__ref === 'PantryItem:pi-2') return 'pi-2';
-      }
-      return undefined;
-    });
-
-    const existing = [
-      { __ref: 'PantryItem:pi-1' },
-      { __ref: 'PantryItem:pi-2' },
-    ];
-    const result = invokeFieldModifier(cache, 'items', existing, helpers);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].__ref).toBe('PantryItem:pi-2');
-  });
-
-  it('modifies the correct parent entity', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1');
-
-    expect(cache.modify).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'Pantry:p-1' }),
-    );
-  });
-
-  it('evicts the item and runs gc when evictItem is true', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { evictItem: true });
-
-    expect(cache.evict).toHaveBeenCalledWith({ id: 'PantryItem:pi-1' });
-    expect(cache.gc).toHaveBeenCalled();
-  });
-
-  it('does not evict by default', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1');
-
-    expect(cache.evict).not.toHaveBeenCalled();
-  });
-
-  it('warns and returns early when parent not found', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-    cache.identify.mockReturnValue(undefined);
-
-    remove(cache, 'p-missing', 'pi-1');
-
-    expect(cache.modify).not.toHaveBeenCalled();
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Parent entity not found'),
-    );
   });
 });
 
@@ -1231,6 +1138,15 @@ describe('direct cache helpers', () => {
       adoptServerEntityId(cache, 'StorageLocation', 'server-1', null);
 
       expect(cache.extract()).toHaveProperty('StorageLocation:server-1');
+    });
+
+    it('keeps the minted row when the answer names none', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', undefined, 'client-1');
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:client-1');
     });
   });
 });

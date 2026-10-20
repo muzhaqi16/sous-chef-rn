@@ -17,6 +17,10 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   openedAt
   pantryItemId
   portionsPerTrackingUnit
+  purchase {
+    id
+    purchaseDate
+  }
   quantity
   remainingNetWeight
   status

@@ -33,11 +33,12 @@ const LIST_SCREEN = `
   }
 `;
 
+// A tick: the line's one update door, which also moves its list's totals.
 const toggle = (selection: string) => `
-  mutation FixtureToggle($input: ToggleShoppingListItemPurchasedInput!) {
-    toggleShoppingListItemPurchased(input: $input) {
+  mutation FixtureToggle($input: UpdateShoppingListItemInput!) {
+    updateShoppingListItem(input: $input) {
       __typename
-      ... on ToggleShoppingListItemPurchasedPayload {
+      ... on UpdateShoppingListItemPayload {
         ${selection}
       }
     }

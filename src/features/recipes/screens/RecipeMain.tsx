@@ -5,8 +5,11 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
+import { RecipeCaptureHost } from '#features/recipes/components/capture/RecipeCaptureHost';
+import { useRecipeCaptureMenu } from '#features/recipes/hooks/useRecipeCaptureMenu';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
@@ -112,11 +115,9 @@ const RecipeMainInner: React.FC = () => {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // State-driven sheet presentation. Each sheet receives `visible` and
-  // auto-presents/dismisses via useStandardBottomSheet's guarded `visible`
-  // path — which also dismisses on navigation blur (releasing the global
-  // backdrop) and re-presents on refocus. No manual present/dismiss effects,
-  // and immune to gorhom 5.2.14's dismiss-before-present wedge.
+  // Each sheet takes `visible`; `useStandardBottomSheet` presents and dismisses
+  // off it, releasing the backdrop on blur. No manual present or dismiss: those
+  // hit gorhom 5.2.14's dismiss-before-present wedge.
   const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
 
@@ -144,7 +145,21 @@ const RecipeMainInner: React.FC = () => {
     }),
   });
 
-  useTabBarAddButton(() => toRecipeCreate());
+  // Capture is a seam: off, its entries, sheets and rows are not rendered and
+  // the `+` writes a recipe at once, as it always has.
+  const capture = useRecipeCaptureMenu();
+
+  // The ways to add a recipe, nearest the `+` first; one entry runs at once.
+  useTabBarAddMenu([
+    ...capture.entries,
+    {
+      key: 'manual',
+      label: t('recipes.writeItMyself'),
+      icon: 'create-outline',
+      onPress: () => toRecipeCreate(),
+      testID: recipesTestIDs.addManually,
+    },
+  ]);
 
   const openIngredientSelector = () => {
     setIngredientSheetVisible(true);
@@ -188,6 +203,7 @@ const RecipeMainInner: React.FC = () => {
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
+          accessibilityLabel: t('recipes.cookWithPantry'),
           color: hasIngredientSelection
             ? theme.colors.onPrimary
             : theme.colors.primary,
@@ -301,10 +317,9 @@ const RecipeMainInner: React.FC = () => {
 
   const recipeListHeader = (
     <>
-      {/* Filters only apply to text search (discovery + ingredient search
-          can't take them) — only surface the active-filter row when a text
-          search drives what's on screen. The header badge stays as the
-          always-on indicator. */}
+      {capture.enabled ? <CaptureRows /> : null}
+      {/* Only text search takes filters, so the active-filter row shows only
+          while one drives the screen; the header badge is always on. */}
       {screen.searchPerformed && screen.searchQuery.trim() !== '' ? (
         <ActiveFilterChipsRow
           filters={screen.activeFilters}
@@ -393,6 +408,8 @@ const RecipeMainInner: React.FC = () => {
           }
         }}
       />
+
+      {capture.enabled ? <RecipeCaptureHost {...capture.host} /> : null}
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}
       <RecipeFilterSheet

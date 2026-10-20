@@ -17,10 +17,9 @@ import {
 import { errorService } from '#/services/errorService';
 
 /**
- * Warms units, categories, brands and stores into the Zustand cache so the
- * autocomplete hooks can serve matches offline via `localFirst`. Gated on core
- * data having loaded (so it runs after first paint) and on `isOnline`; the home
- * signal, not only the pantry one, so any landing tab warms the caches.
+ * Warms reference data into Zustand so autocomplete serves offline matches.
+ * Gated on core data (after first paint) and `isOnline`, by the home signal
+ * rather than the pantry one, so any landing tab warms the caches.
  */
 const REFERENCE_DATA_TTL = 24 * 60 * 60 * 1000; // 24h
 
@@ -90,10 +89,8 @@ export function useDataPreloading() {
       });
     };
 
-    // `commitWarm` stamps the timestamp on a server answer (so it isn't
-    // re-fetched until the TTL) and skips anything else (`map` over `undefined`
-    // edges yields `undefined`), leaving the timestamp null to retry on the
-    // next online tick.
+    // `commitWarm` stamps only a server answer (`map` over `undefined` edges
+    // yields `undefined`), leaving anything else null to retry next online tick.
     warm('units', lastUnitsFetchedAt, async () => {
       const data = await fromServer(() =>
         client.query({
@@ -159,6 +156,7 @@ export function useDataPreloading() {
           id: edge.node.id,
           name: edge.node.name,
           address: edge.node.address,
+          storeNumber: edge.node.storeNumber,
         })),
         store.setCachedStores,
         store.setLastStoresFetchedAt,

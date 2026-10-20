@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -22,6 +23,7 @@ import { getNotificationCopy } from '#features/notifications/utils/notificationH
 import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -66,6 +68,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
   onReject,
 }) => {
   const { t } = useTranslation();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const today = useToday();
   const user = useUser();
   const userId = user?.id ?? null;
@@ -88,6 +91,9 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
 
   const handleAccept = () => {
     if (!token) return;
+    // The API refuses an accept from an unverified email; the gate says so and
+    // offers the way to verify, with the invite still pending afterwards.
+    if (!requireVerifiedEmail()) return;
 
     setAccepting(true);
     void executeAsyncWithCleanup(
@@ -125,43 +131,36 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
       t('confirmations.declineInvitation', {
         entityName: invitation.entityName,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.decline'),
-          style: 'destructive',
-          onPress: () => {
-            if (!token) return;
-            setRejecting(true);
-            void executeAsyncWithCleanup(
-              async () => {
-                const outcome =
-                  invitation.type === 'HOME_INVITE'
-                    ? await declineHome(token)
-                    : await declineList(token);
+      destructiveConfirm(t('labels.decline'), () => {
+        if (!token) return;
+        setRejecting(true);
+        void executeAsyncWithCleanup(
+          async () => {
+            const outcome =
+              invitation.type === 'HOME_INVITE'
+                ? await declineHome(token)
+                : await declineList(token);
 
-                if (outcome.status === 'failed') {
-                  reportFailure(outcome.failure);
-                  return;
-                }
+            if (outcome.status === 'failed') {
+              reportFailure(outcome.failure);
+              return;
+            }
 
-                toastService.success(
-                  t('success.invitationDeclinedTo', {
-                    entityName: invitation.entityName,
-                  }),
-                );
-                onReject?.(invitation);
-                onClose();
-              },
-              () => setRejecting(false),
-              () => {
-                onClose();
-                toastService.error(t('invitationAcceptance.declineFailed'));
-              },
+            toastService.success(
+              t('success.invitationDeclinedTo', {
+                entityName: invitation.entityName,
+              }),
             );
+            onReject?.(invitation);
+            onClose();
           },
-        },
-      ],
+          () => setRejecting(false),
+          () => {
+            onClose();
+            toastService.error(t('invitationAcceptance.declineFailed'));
+          },
+        );
+      }),
     );
   };
 

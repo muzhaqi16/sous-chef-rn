@@ -14,6 +14,7 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { SectionHeader } from '#components/atoms/SectionHeader';
 import { ItemCard } from './ItemCard';
 import type { BadgeContent } from '#components/atoms/Badge';
 import type { IconName } from '#/utils/iconUtils';
@@ -52,6 +53,8 @@ interface Item {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   imageUrl?: string; // Pass URL as data — renderItem creates CachedImage (avoids JSX in transforms)
+  /** A heading drawn above this row: the first row of each section carries its section's. */
+  sectionTitle?: string;
 }
 
 // Bridge component — reads actions from context, renders ItemCard
@@ -80,7 +83,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       </View>
     ) : undefined);
 
-  return (
+  const card = (
     <ItemCard
       id={item.id}
       title={item.title}
@@ -97,6 +100,15 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       }
     />
   );
+  if (!item.sectionTitle) return card;
+  return (
+    <>
+      <SectionHeader variant="overline" style={styles.sectionHeader}>
+        {item.sectionTitle}
+      </SectionHeader>
+      {card}
+    </>
+  );
 };
 
 const ItemListRenderItem = ItemListRenderItemComponent;
@@ -106,8 +118,9 @@ const renderItem = (info: ListRenderItemInfo<Item>) => (
   <ItemListRenderItem {...info} />
 );
 
-// Module-scope getItemType — all items are the same type for optimal recycler pooling
-const getItemType = () => 'item';
+// Module-scope getItemType — a row under a section heading recycles apart from the rest
+const getItemType = (item: Item) =>
+  item.sectionTitle ? 'sectionStart' : 'item';
 
 // Stable config — prevents scroll jumps during data updates (matches PantryContent & SortableList)
 const MVCP_DISABLED = { disabled: true };
@@ -175,11 +188,9 @@ export const ItemList: React.FC<ItemListProps> = ({
   const flashListRef = useRef<FlashListRef<Item>>(null);
   const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  // `items` reaches FlashList as-is — never through `useDeferredValue`. A
-  // deferred render can be interrupted after FlashList has shrunk its layout
-  // table but before cells are re-indexed, and a native `onLayout` in that gap
-  // throws "index out of bounds, not enough layouts" (fatal in release). See
-  // docs/flashlist-layout-index-race.md.
+  // `items` reaches FlashList as-is, never via `useDeferredValue`: an interrupted
+  // deferred render throws "not enough layouts", fatal in release
+  // (docs/flashlist-layout-index-race.md).
 
   // ── Performance instrumentation (matches PantryContent & SortableList) ──
   const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -244,10 +255,8 @@ export const ItemList: React.FC<ItemListProps> = ({
     onRemoveRow: reflow.removeRow,
   };
 
-  // The scrollable swaps when the list empties, so a drag in flight on the old
-  // one never delivers its end event and the caller's drag tracking stays on —
-  // a later programmatic scroll then reads as finger-driven. An empty list has
-  // come to rest by definition, so say so.
+  // The scrollable swaps when the list empties, so a drag in flight never ends
+  // and the caller's drag tracking stays on; an empty list is at rest, so say so.
   const isEmpty = items.length === 0 && !!emptyState;
   useEffect(() => {
     if (isEmpty) {
@@ -264,10 +273,8 @@ export const ItemList: React.FC<ItemListProps> = ({
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
-        // Deliver taps on header/row buttons on the first touch even while the
-        // keyboard is up (default "never" swallows the first tap to dismiss the
-        // keyboard, forcing a second tap on the search button). Taps on empty
-        // space still dismiss the keyboard.
+        // The default "never" spends a button's first tap dismissing the
+        // keyboard; a tap on empty space still dismisses it.
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
       >
@@ -300,10 +307,8 @@ export const ItemList: React.FC<ItemListProps> = ({
             onScrollEndDrag={onScrollEndDrag}
             onMomentumScrollEnd={onMomentumScrollEnd}
             scrollEventThrottle={scrollEventThrottle}
-            // Deliver taps on header/row buttons on the first touch even while the
-            // keyboard is up (default "never" swallows the first tap to dismiss the
-            // keyboard, forcing a second tap on the search button). Taps on empty
-            // space still dismiss the keyboard.
+            // The default "never" spends a button's first tap dismissing the
+            // keyboard; a tap on empty space still dismisses it.
             keyboardShouldPersistTaps="handled"
             refreshControl={refreshControl}
             renderItem={renderItem}
@@ -342,5 +347,9 @@ export const ItemList: React.FC<ItemListProps> = ({
 const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingHorizontal: theme.layout.pageGutter,
+  },
+  sectionHeader: {
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
   },
 }));

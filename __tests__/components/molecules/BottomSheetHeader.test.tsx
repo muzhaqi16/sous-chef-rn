@@ -4,9 +4,6 @@ import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { BottomSheetHeader } from '../../../src/components/molecules/BottomSheetHeader';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 describe('BottomSheetHeader', () => {
   const defaultProps = {
     title: 'New Item',

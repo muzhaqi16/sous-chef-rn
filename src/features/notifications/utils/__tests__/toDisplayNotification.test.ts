@@ -23,6 +23,7 @@ const base: UseNotificationsOnLaunch_NotificationFragment = {
   expiresAt: null,
   sourceId: 'item-9',
   sourceType: NotificationSourceType.PantryItem,
+  pantryItemId: 'item-9',
   actionUrl: null,
   readAt: null,
 };
@@ -53,6 +54,34 @@ describe('toDisplayNotification', () => {
     expect(item.title).toBe(base.title);
     expect(item.message).toBe(base.message);
   });
+
+  // The stack is the server's reading of the source as it is now, so it is
+  // carried as stated — a null included — and never rebuilt from the payload.
+  it.each([['item-9'], ['merged-into-item-12'], [null]])(
+    'carries the stack the server names (%s)',
+    pantryItemId => {
+      const item = toDisplayNotification({
+        ...base,
+        pantryItemId,
+        payload: { pantryItemId: 'item-9' },
+      });
+      expect(item.pantryItemId).toBe(pantryItemId);
+    },
+  );
+
+  // A null stack leaves an action nothing to act on: offering one would aim it
+  // at a stack the server does not name.
+  it.each([
+    ['item-9', true, 'VIEW_EXPIRING_ITEMS'],
+    [null, false, undefined],
+  ])(
+    'offers the stack action on an expiry reminder naming %s: %s',
+    (pantryItemId, requiresAction, actionType) => {
+      const item = toDisplayNotification({ ...base, pantryItemId });
+      expect(item.requiresAction).toBe(requiresAction);
+      expect(item.actionType).toBe(actionType);
+    },
+  );
 
   it('marks an authored row as authored', () => {
     const item = toDisplayNotification({ ...base, isAuthoredContent: true });

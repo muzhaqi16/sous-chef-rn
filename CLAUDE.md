@@ -79,6 +79,10 @@ Map and reasoning: `docs/architecture.md`.
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
 - `src/domain/` is logic 2+ features share; `src/app/` is the composition root.
+- **A capability a fork or build may switch off is a `FeatureFlag`**
+  (`src/config/featureFlags.ts`), read only through `useFeatureFlag`; with it off
+  its feature works as before, so it plugs in through an optional prop or a
+  selector hook, never a branch inside existing code — `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
   folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
   `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.
@@ -279,10 +283,12 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a
   function-style `style`. Verified: `#unistyles-withunistyles-drops-function-styles`.
 - **A node reanimated animates takes no themed Unistyles style**
-  (`sous-chef/animated-node-takes-no-themed-style`): Unistyles writes
-  reanimated's stale React-side value back over the animation. Themed values go
-  in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or on a
-  non-animated parent or child. Verified: `#unistyles-re-applies-reanimateds-react-side-value-over-an-animation`.
+  (`sous-chef/animated-node-takes-no-themed-style`): the React commit after a
+  theme change puts the old values back at and under a Reanimated view. Themed
+  values go in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or on
+  a non-animated parent. A Reanimated container with a scroll-driven style and
+  themed descendants renders `<ThemeEpochSentinel />` (`CollapsingHeroDetail`).
+  Verified: `#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view`.
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.
@@ -303,9 +309,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   `Swipeable`, a `GestureDetector` chain or `RectButton`-style coordination, use
   RNGH's. Use RNGH's `ScrollView` only when RNGH gestures sit inside it.
 - **A FlashList whose rows carry RNGH gestures renders
-  `renderScrollComponent={SwipeAwareScrollComponent}`**: RNGH v3 handlers survive a
-  plain RN scroll takeover. A list with no RNGH rows may be exempted in
-  `eslint/project.js` (`sous-chef/flashlist-declares-scroll-component`). Verified: `#rngh-v3-handlers-survive-a-native-scroll-takeover`.
+  `renderScrollComponent={SwipeAwareScrollComponent}`**: RNGH's refresh control needs
+  it, and RNGH's own takeover cancellation is measured on one list only. A list with
+  no RNGH rows may be exempted in `eslint/project.js`
+  (`sous-chef/flashlist-declares-scroll-component`). Verified: `#a-native-scroll-takeover-cancels-a-pending-rngh-v3-gesture`.
 - **Pull-to-refresh matches its host** (`sous-chef/rngh-refresh-control-matches-host`):
   an RNGH host takes an explicit `refreshControl={<ThemedRefreshControl … />}`
   (a bare `onRefresh` builds RN's control, which drops RNGH's gesture); a plain

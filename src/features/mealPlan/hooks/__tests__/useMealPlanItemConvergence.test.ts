@@ -9,27 +9,30 @@ import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
 const PLAN_ID = 'plan-1';
 const HELD_ID = 'held-meal-1';
 
+// Selected with its paging arguments, as every reader of a loaded plan does.
 const PLAN_MEALS = gql`
   fragment TestConvergedPlanMeals on MealPlan {
     id
-    mealPlanItems {
-      id
+    mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+      edges {
+        node {
+          id
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 `;
+
+type PlanMeals = {
+  mealPlanItemsConnection: { edges: Array<{ node: { id: string } }> };
+};
 
 /**
  * A recipe meal is unique on (plan, date, meal type, recipe): adding one the
@@ -45,7 +48,20 @@ describe('adding a recipe meal the plan already holds', () => {
       data: {
         __typename: 'MealPlan',
         id: PLAN_ID,
-        mealPlanItems: [{ __typename: 'MealPlanItem', id: HELD_ID }],
+        mealPlanItemsConnection: {
+          __typename: 'MealPlanItemConnection',
+          edges: [
+            {
+              __typename: 'MealPlanItemEdge',
+              node: { __typename: 'MealPlanItem', id: HELD_ID },
+            },
+          ],
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
       },
     });
     const create = recordMock(CreateMealPlanItemDocument, {
@@ -74,11 +90,14 @@ describe('adding a recipe meal the plan already holds', () => {
     const mintedId = (sent?.input as { id: string } | undefined)?.id;
     expect(mintedId).toBeDefined();
     expect(mintedId).not.toBe(HELD_ID);
-    const plan = cache.readFragment<{ mealPlanItems: Array<{ id: string }> }>({
+    const plan = cache.readFragment<PlanMeals>({
       id: planCacheId,
       fragment: PLAN_MEALS,
     });
-    expect(plan?.mealPlanItems.map(({ id }) => id)).toEqual([HELD_ID]);
+    // One edge for the held meal: not a second one, and none for the minted.
+    expect(
+      plan?.mealPlanItemsConnection.edges.map(({ node }) => node.id),
+    ).toEqual([HELD_ID]);
     expect(cache.extract()[`MealPlanItem:${mintedId}`]).toBeUndefined();
   });
 });

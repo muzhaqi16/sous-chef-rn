@@ -6,9 +6,6 @@ import {
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useLazyHomeData } from '../useLazyHomeData';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const homesMock = () =>
   recordMock(GetHomesDocument, {
     data: {

@@ -30,9 +30,6 @@ import {
   readNotificationStatus,
 } from '../notificationCacheWrites';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const USER = 'me';
 
 const node = (
@@ -52,6 +49,7 @@ const node = (
   expiresAt: null,
   sourceId: null,
   sourceType: null,
+  pantryItemId: null,
   actionUrl: null,
   readAt: null,
   status,

@@ -148,9 +148,12 @@ describe('mutation result invariants', () => {
         return { name, payloads };
       })
       .filter(u => u.payloads.length !== 1)
-      .map(u => `${u.name} → ${u.payloads.length} non-Error members: ${
-        u.payloads.join(', ') || '(none)'
-      }`);
+      .map(
+        u =>
+          `${u.name} → ${u.payloads.length} non-Error members: ${
+            u.payloads.join(', ') || '(none)'
+          }`,
+      );
 
     if (violations.length > 0) {
       throw new Error(
@@ -170,7 +173,9 @@ describe('mutation result invariants', () => {
       .filter(op => op.rootFields.length !== 1)
       .map(
         op =>
-          `${op.name} (${op.file}) → ${op.rootFields.length} top-level fields: ${
+          `${op.name} (${op.file}) → ${
+            op.rootFields.length
+          } top-level fields: ${
             op.rootFields.map(f => f.name).join(', ') || '(none)'
           }`,
       );
@@ -180,7 +185,8 @@ describe('mutation result invariants', () => {
         `${violations.length} mutation operation(s) select more than one top-level field.\n` +
           `appliedPayload locates the payload as the single non-__typename entry in ` +
           `\`data\`; with two, it can't tell which one carries the outcome and reports 'queued'. ` +
-          `Split these into separate operations:\n` + fmt(violations),
+          `Split these into separate operations:\n` +
+          fmt(violations),
       );
     }
     expect(violations).toEqual([]);
@@ -199,7 +205,9 @@ describe('mutation result invariants', () => {
         if (arms.length === 0) continue;
         if (!arms.some(isErrorTypename)) {
           violations.push(
-            `${op.name} (${op.file}) → ${field.name}: ${returns} arms [${arms.join(', ')}]`,
+            `${op.name} (${op.file}) → ${
+              field.name
+            }: ${returns} arms [${arms.join(', ')}]`,
           );
         }
       }
@@ -210,7 +218,8 @@ describe('mutation result invariants', () => {
         `${violations.length} mutation selection(s) omit an error arm.\n` +
           `A server refusal is a union member: with no \`... on Error\` (or a specific ` +
           `\`*Error\`) arm it matches nothing, arrives as an all-but-empty payload, and the ` +
-          `client reads the refusal as success. Add an error arm to each:\n` + fmt(violations),
+          `client reads the refusal as success. Add an error arm to each:\n` +
+          fmt(violations),
       );
     }
     expect(violations).toEqual([]);

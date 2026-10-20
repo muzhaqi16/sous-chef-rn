@@ -89,9 +89,8 @@ describe('useShoppingListsLite', () => {
       'sl-2',
     ]);
 
-    const pending = recordMock(GetShoppingListsLiteDocument, {
-      delay: 60_000,
-    });
+    // The network never answers: what shows is the cache's.
+    const pending = recordMock(GetShoppingListsLiteDocument, { held: true });
     const picker = renderHookWithApollo(() => useShoppingListsLite(), {
       cache,
       operationMocks: [pending.mock],
@@ -160,9 +159,8 @@ describe('useShoppingListsLite', () => {
     await waitFor(() => expect(picker.result.current.loading).toBe(false));
     picker.unmount();
 
-    const offline = recordMock(GetShoppingListsLiteDocument, {
-      delay: 60_000,
-    });
+    // The network never answers: what shows is the cache's.
+    const offline = recordMock(GetShoppingListsLiteDocument, { held: true });
     const overview = renderHookWithApollo(() => useShoppingListsQuery(), {
       cache,
       operationMocks: [offline.mock],

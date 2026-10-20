@@ -24,6 +24,14 @@ const SKIP_FILES = new Set([
     'hooks',
     'useCreateStorageLocationNeutral.generated.ts',
   ),
+  // Same generator, derived from `useCreateStore.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'catalog',
+    'hooks',
+    'useCreateStoreNeutral.generated.ts',
+  ),
   // Same generator, derived from `items.graphql`.
   fromRoot(
     'src',

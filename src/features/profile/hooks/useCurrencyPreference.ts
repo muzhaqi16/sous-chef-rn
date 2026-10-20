@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@apollo/client/react';
-import { UpdateAccountDocument } from '#operations/auth/user.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useUpdateUser } from '#store/useAppStore';
 import { usePreferredCurrency } from '#/domain/money';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { alertService } from '#/services/alertService';
@@ -13,17 +13,17 @@ export interface CurrencyOption {
 }
 
 /**
- * The account's currency: the option list, the current code, and the write.
- * `updateAccount`, NOT `updateSettings` — the server denominates an unnamed
- * cost from `User.preferredCurrency`, so writing the `UserSettings` column of
- * the same name moves a value nothing reads.
+ * The settings' own currency (`updateSettings { regional }`), which the server
+ * denominates an unnamed cost from. The write is NOT `localFirst`: queued, the
+ * money on screen would read in a currency the account does not hold.
  */
 export function useCurrencyPreference() {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
   const setPreferredCurrency = useAppStore(state => state.setPreferredCurrency);
   const { data } = useQuery(GetCurrenciesDocument);
-  const [updateAccount] = useMutation(UpdateAccountDocument);
+  const updateUser = useUpdateUser();
+  const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
   const options: CurrencyOption[] = (data?.currencies ?? []).map(currency => ({
     value: currency.code,
@@ -47,21 +47,25 @@ export function useCurrencyPreference() {
 
     const settled = await settleMutation(
       () =>
-        updateAccount({ variables: { input: { preferredCurrency: code } } }),
+        updateSettings({
+          variables: { input: { regional: { preferredCurrency: code } } },
+        }),
       {
-        document: UpdateAccountDocument,
+        document: UpdateUserPreferencesDocument,
         fallback: t('settings.updateFailed'),
         onFailed: () => setPreferredCurrency(previous),
       },
     );
-    return settled.status !== 'failed';
+    if (settled.status === 'failed') return false;
+    // The persisted record follows: at the next launch it wins over the mirror.
+    updateUser({ preferredCurrency: code });
+    return true;
   };
 
   /**
-   * Confirmed, because the change is not retroactive: costs already recorded
-   * keep their own currency, so a pantry can end up spanning two and the API
-   * withholds its value rather than summing across them. Said here, where the
-   * decision is made, rather than discovered later on a blank total.
+   * Confirmed, because the change is not retroactive: recorded costs keep their
+   * currency, so a pantry can span two and the API withholds its value rather
+   * than summing across them.
    */
   const selectCurrency = (code: string): void => {
     if (code === preferredCurrency) return;

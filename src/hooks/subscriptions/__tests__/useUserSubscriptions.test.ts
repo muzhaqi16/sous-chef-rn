@@ -1,5 +1,7 @@
 'use no memo';
 
+import { captureOnData } from '#/test-utils/subscriptionCapture';
+import { toastService } from '#/services/toastService';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import {
@@ -7,12 +9,8 @@ import {
   UserSubtype,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
+import { getDeviceId } from '#/storage/deviceId';
 import { useUserSubscriptions } from '../useUserSubscriptions';
-
-type CapturedOnData = (data: unknown) => void;
-
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
@@ -21,30 +19,14 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    error: (...args: unknown[]) => mockToastError(...args),
-    success: jest.fn(),
-  },
-}));
+const mockToastError = jest.mocked(toastService.error);
+const mockToastSuccess = jest.mocked(toastService.success);
+
+jest.mock('#/storage/deviceId');
 
 jest.mock('#/services/authService', () => ({
   authService: { logout: jest.fn(() => Promise.resolve()) },
 }));
-
-/** Captures the hook's customOnData so tests can drive it with a payload. */
-function captureCustomOnData() {
-  let customOnData: CapturedOnData | undefined;
-  mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    customOnData = config.customOnData as CapturedOnData | undefined;
-    return {};
-  });
-  return (): CapturedOnData => {
-    if (!customOnData) throw new Error('customOnData was not captured');
-    return customOnData;
-  };
-}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -59,7 +41,7 @@ beforeEach(() => {
 
 describe('useUserSubscriptions', () => {
   it('clears every entity selection when removed from the selected home', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useUserSubscriptions('user-1'));
 
     getOnData()({
@@ -79,7 +61,7 @@ describe('useUserSubscriptions', () => {
 
   describe('a moderation action', () => {
     const drive = (payload: Record<string, unknown>) => {
-      const getOnData = captureCustomOnData();
+      const getOnData = captureOnData(mockRegister);
       renderHookWithApollo(() => useUserSubscriptions('user-1'));
       getOnData()({ __typename: 'UserEvent', ...payload });
     };
@@ -145,8 +127,97 @@ describe('useUserSubscriptions', () => {
     });
   });
 
+  describe('an accepted invite announced back', () => {
+    const THIS_DEVICE = 'device_this';
+    const ADDED = [
+      [UserSubtype.AddedToHome, 'You were added to a new home'],
+      [UserSubtype.AddedToShoppingList, 'You were added to a shopping list'],
+    ];
+
+    const drive = (subtype: string, originatorClientId: string) => {
+      jest.mocked(getDeviceId).mockReturnValue(THIS_DEVICE);
+      const getOnData = captureOnData(mockRegister);
+      renderHookWithApollo(() => useUserSubscriptions('user-1'));
+      // The same account either way: only the device tells the two apart.
+      getOnData()({
+        __typename: 'UserEvent',
+        subtype,
+        actorUserId: 'user-1',
+        originatorClientId,
+      });
+    };
+
+    it.each(ADDED)(
+      'says nothing for %s when this device accepted it',
+      subtype => {
+        drive(subtype, THIS_DEVICE);
+
+        expect(mockToastSuccess).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(ADDED)(
+      'announces %s when another device accepted it',
+      (subtype, message) => {
+        drive(subtype, 'device_other');
+
+        expect(mockToastSuccess).toHaveBeenCalledWith(message);
+      },
+    );
+  });
+
+  describe('a removal', () => {
+    const REMOVED: [UserSubtype, Record<string, string>, string][] = [
+      [
+        UserSubtype.RemovedFromHome,
+        { homeId: 'home-1' },
+        'You were removed from a home',
+      ],
+      [
+        UserSubtype.RemovedFromShoppingList,
+        { shoppingListId: 'list-1' },
+        'You were removed from a shopping list',
+      ],
+    ];
+
+    const drive = (
+      subtype: UserSubtype,
+      parents: Record<string, string>,
+      actorUserId: string,
+    ) => {
+      const getOnData = captureOnData(mockRegister);
+      renderHookWithApollo(() => useUserSubscriptions('user-1'));
+      getOnData()({
+        __typename: 'UserEvent',
+        subtype,
+        userId: 'user-1',
+        actorUserId,
+        parents,
+      });
+    };
+
+    it.each(REMOVED)(
+      'announces %s when someone else made it',
+      (subtype, parents, message) => {
+        drive(subtype, parents, 'user-owner');
+
+        expect(mockToastError).toHaveBeenCalledWith(message);
+      },
+    );
+
+    it.each(REMOVED)(
+      'says nothing for %s the user made by leaving, and still drops it',
+      (subtype, parents) => {
+        drive(subtype, parents, 'user-1');
+
+        expect(mockToastError).not.toHaveBeenCalled();
+        expect(useStore.getState().selectedShoppingListId).toBeNull();
+      },
+    );
+  });
+
   it('leaves selections alone when removed from a home that is not selected', () => {
-    const getOnData = captureCustomOnData();
+    const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useUserSubscriptions('user-1'));
 
     getOnData()({

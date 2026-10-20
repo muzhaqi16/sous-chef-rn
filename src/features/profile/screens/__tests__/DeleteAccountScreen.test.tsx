@@ -18,7 +18,7 @@ const mockNav = jest
   .useAppNavigation();
 
 jest.mock('#/services/errorService');
-const { localizedErrorMessage } = jest.requireMock('#/services/errorService');
+const { errorCopy } = jest.requireMock('#/services/errorService');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -185,7 +185,6 @@ describe('DeleteAccountScreen - loading state', () => {
   });
 
   it('shows loading state when checking eligibility', () => {
-    // delay so initial render shows loading
     const m = recordMock(CanDeleteAccountDocument, {
       data: {
         canDeleteAccount: {
@@ -194,7 +193,7 @@ describe('DeleteAccountScreen - loading state', () => {
           blockers: [],
         },
       },
-      delay: 1000,
+      held: true,
     }).mock;
     renderWithApollo(<DeleteAccountScreen />, { operationMocks: [m] });
     expect(screen.getByText('Checking account status...')).toBeTruthy();
@@ -212,8 +211,9 @@ describe('DeleteAccountScreen - error state', () => {
     });
     await screen.findByText('Unable to check account status');
     expect(screen.queryByText('Network error')).toBeNull();
-    expect(localizedErrorMessage).toHaveBeenCalledWith(
+    expect(errorCopy).toHaveBeenCalledWith(
       expect.anything(),
+      expect.any(Function),
       'An error occurred. Please try again.',
     );
     expect(screen.getByText('Something went wrong.')).toBeTruthy();

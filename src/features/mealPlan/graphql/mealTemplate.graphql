@@ -29,24 +29,38 @@ query GetMealTemplates(
   }
 }
 
-query GetMealTemplate($id: ID!) {
+query GetMealTemplate($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
   mealTemplate(id: $id) {
     id
     ...MealTemplateDisplay
-    items {
-      id
-      ...MealTemplateItemFragment
+    itemsConnection(first: $itemsFirst, after: $itemsAfter) {
+      edges {
+        node {
+          id
+          ...MealTemplateItemFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
 
 # All-inline detail for the template builder/editor form (no masked fragments,
 # so every field is read directly). Item mutations write these same
-# MealTemplate.items / MealTemplateItem fields, so the form stays in sync.
+# MealTemplateItem fields and the template's `itemsConnection` edges, so the
+# form stays in sync.
 # updatedAt is selected because useMealTemplateEditor's snapshot fragment
 # includes it — without it cached here, readFragment returns null and the
 # editor's optimistic update/revert silently skips.
-query GetMealTemplateForEdit($id: ID!) {
+query GetMealTemplateForEdit(
+  $id: ID!
+  $itemsFirst: Int!
+  $itemsAfter: String
+) {
   mealTemplate(id: $id) {
     id
     name
@@ -55,24 +69,34 @@ query GetMealTemplateForEdit($id: ID!) {
     defaultServings
     tags
     updatedAt
-    items {
-      id
-      dayOffset
-      mealType
-      customMealName
-      servings
-      notes
-      # The editor WRITES this field (picking a recipe, or replacing one with a
-      # custom name), so it has to READ it too. Without it the revert snapshot
-      # could not tell "this row has no recipe" from "this query never asked",
-      # and a refused edit wrote null over a link it had never seen.
-      recipe {
-        id
-        name
-        imageUrl
-        servings
-        totalTimeMinutes
+    itemsConnection(first: $itemsFirst, after: $itemsAfter) {
+      edges {
+        node {
+          id
+          dayOffset
+          mealType
+          customMealName
+          servings
+          notes
+          # The editor WRITES this field (picking a recipe, or replacing one
+          # with a custom name), so it has to READ it too. Without it the
+          # revert snapshot could not tell "this row has no recipe" from "this
+          # query never asked", and a refused edit wrote null over a link it
+          # had never seen.
+          recipe {
+            id
+            name
+            imageUrl
+            servings
+            totalTimeMinutes
+          }
+        }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
@@ -85,6 +109,8 @@ mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
   deleteMealTemplate(input: $input) {
     __typename
     ... on DeleteMealTemplatePayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       mealTemplate {
         id
       }

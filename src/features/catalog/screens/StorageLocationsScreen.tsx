@@ -21,6 +21,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
 
@@ -33,10 +34,9 @@ type FlatStorageLocationNode =
   GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
 
 /**
- * Superset node the render/edit/delete handlers accept — flat rows and the
- * client-derived tree share one `GetStorageLocations` node, so `childLocations`
- * is optional. Field types are inherited, which keeps the StorageType/
- * StorageState enums intact when spread into `StorageLocationInitialData`.
+ * What the render/edit/delete handlers take: flat rows and the derived tree
+ * share one `GetStorageLocations` node, so `childLocations` is optional, and
+ * inherited field types keep enums intact into `StorageLocationInitialData`.
  */
 type StorageNode = Partial<FlatStorageLocationNode> &
   Pick<FlatStorageLocationNode, 'id' | 'name' | 'type'> & {
@@ -179,16 +179,9 @@ export const StorageLocationsScreen: React.FC<
       t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: location.name,
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteLocation(location.id);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteLocation(location.id);
+      }),
     );
   };
 

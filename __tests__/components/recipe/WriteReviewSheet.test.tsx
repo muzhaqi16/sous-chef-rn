@@ -2,14 +2,8 @@
 
 import React from 'react';
 import { WriteReviewSheet } from '../../../src/features/recipes/components/WriteReviewSheet';
-import {
-  renderWithApollo,
-  seedCache,
-} from '../../helpers/apolloMockProvider';
+import { renderWithApollo, seedCache } from '../../helpers/apolloMockProvider';
 import { WriteReviewSheet_ReviewFragmentDoc } from '#features/recipes/components/WriteReviewSheet.generated';
-
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
@@ -47,7 +41,7 @@ function makeCache() {
         id: REVIEW_ID,
         rating: 4,
         comment: 'Nice',
-          },
+      },
     },
   ]);
 }
@@ -62,9 +56,7 @@ describe('WriteReviewSheet', () => {
   };
 
   it('renders without crashing', () => {
-    const { toJSON } = renderWithApollo(
-      <WriteReviewSheet {...defaultProps} />,
-    );
+    const { toJSON } = renderWithApollo(<WriteReviewSheet {...defaultProps} />);
     expect(toJSON()).toBeTruthy();
   });
 

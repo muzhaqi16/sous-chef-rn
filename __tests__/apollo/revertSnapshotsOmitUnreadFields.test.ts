@@ -39,7 +39,10 @@ const collect = (dir: string, found: string[] = []): string[] => {
 
 /** Files that perform a local-first field update, other than the helper itself. */
 const callSites = collect(SRC)
-  .map(file => ({ path: relative(process.cwd(), file), code: readFileSync(file, 'utf8') }))
+  .map(file => ({
+    path: relative(process.cwd(), file),
+    code: readFileSync(file, 'utf8'),
+  }))
   .filter(
     ({ path, code }) =>
       // Matches an explicit type argument too — `updateEntityFieldsLocalFirst<

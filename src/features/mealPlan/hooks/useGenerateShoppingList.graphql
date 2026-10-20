@@ -1,40 +1,56 @@
 # The ingredient lines a shopping list is derived from, read out of the cache
 # after `GetMealPlan` has run so the derive works with the API unreachable.
 #
-# Spread by GetMealPlan ONLY, deliberately NOT by `MealPlanMain_mealPlan`. That
-# fragment is also spread by `CreateMealPlanFromTemplate`, which starts two
-# levels deeper inside a mutation payload — carrying the ingredients there takes
-# it to depth 14 against the server's HTTP limit of 12, and armor refuses the
-# whole mutation. Here GetMealPlan sits at depth 10, cost 303, against limits of
-# 12 and 3000; `documentLimits.test.ts` pins both.
+# Spread by GetMealPlan ONLY. `item { id }` under an ingredient is the deepest
+# path in the app: it puts GetMealPlan AT the server's HTTP depth limit, so one
+# more level here is refused. `documentLimits.test.ts` pins depth and cost.
 fragment useGenerateShoppingList_mealPlan on MealPlan {
   id
   # The derived list takes its default name from the plan and inherits its home,
   # which is what the server's fan-out does.
   name
   homeId
-  mealPlanItems {
-    id
-    servings
-    recipe {
-      id
-      servings
-      ingredientsConnection {
-        edges {
-          node {
-            id
-            name
-            quantity
-            isOptional
-            # The id alone: the derive keys its aggregate on it and sends it
-            # back as `unit.unitId`. A name or symbol here would be a fourth
-            # copy of a shape nothing on this path renders.
-            unit {
-              id
+  mealPlanItemsConnection(first: $mealsFirst, after: $mealsAfter) {
+    # A derived write reads every meal: it does not run on a first page alone.
+    pageInfo {
+      hasNextPage
+    }
+    totalCount
+    edges {
+      node {
+        id
+        servings
+        recipe {
+          id
+          # Names the recipe that is over the ingredient limit.
+          name
+          servings
+          # One page is the whole list: a recipe holds no more than it, and one
+          # that does is marked `hasNextPage` and refused.
+          ingredientsConnection(first: $ingredientsFirst) {
+            # The same count and cursor every reader of the recipe selects.
+            pageInfo {
+              hasNextPage
+              endCursor
             }
-            item {
-              id
-              name
+            totalCount
+            edges {
+              node {
+                id
+                name
+                quantity
+                isOptional
+                # The id alone: the derive keys its aggregate on it and sends it
+                # back as `unit.unitId`. A name or symbol here would be a fourth
+                # copy of a shape nothing on this path renders.
+                unit {
+                  id
+                }
+                item {
+                  id
+                  name
+                }
+              }
             }
           }
         }

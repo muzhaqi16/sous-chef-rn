@@ -206,10 +206,8 @@ export const HomeManagement: React.FC = () => {
     );
   };
 
-  // Sort the account's default home first. Keyed off the server-owned
-  // `Home.isDefault` (via `remoteDefaultHomeId`), not the local selection —
-  // the two are allowed to differ, and only one of them is what this screen's
-  // "Default" chip claims.
+  // The default home sorts first, keyed off the server's `Home.isDefault`, not
+  // the local selection: the two may differ, and the "Default" chip claims it.
   const sortedHomes = [...homes].sort((a, b) => {
     if (a.id === remoteDefaultHomeId) return -1;
     if (b.id === remoteDefaultHomeId) return 1;
@@ -376,10 +374,9 @@ export const HomeManagement: React.FC = () => {
                   home.myMembership.canInviteOthers,
                 )
               : false;
-            // deleteHome is @requireAccess(Home, OWNER) server-side — the
-            // OWNER role, not the canManageHome flag (which ADMINs hold by
-            // default). Gating on the flag showed ADMINs a Delete that could
-            // only ever return FORBIDDEN.
+            // The server lets only the OWNER delete a home — the role, not the
+            // canManageHome flag (which ADMINs hold by default). Gating on the
+            // flag shows ADMINs a Delete that can only ever be refused.
             const userCanDelete =
               home.myMembership?.role === MembershipRole.Owner;
 

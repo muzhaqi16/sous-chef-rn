@@ -10,9 +10,6 @@ type OnBoardingWrapperProps = React.ComponentProps<
   typeof OnBoardingWrapperComponent
 >;
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
@@ -65,8 +62,6 @@ jest.mock('#/storage/keychain', () => ({
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({

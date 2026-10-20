@@ -1,6 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { queuedSubject } from '../queuedSubject';
+import { queuedSubject, subjectTypeOf } from '../queuedSubject';
+import type {
+  PantryItem,
+  ShoppingListItem,
+} from '#/graphql/generated/schemaTypes';
 import {
   AddRecipeToFavoritesDocument,
   ForkRecipeDocument,
@@ -9,15 +13,40 @@ import {
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
+  UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import {
   CreatePantryItemDocument,
   DeletePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 
 describe('queuedSubject', () => {
+  it('reads a receipt check-in as minting the stacks its stocked lines add', () => {
+    expect(
+      queuedSubject({
+        mutation: CreateReceiptCheckInDocument,
+        variables: {
+          input: {
+            id: 'checkin-1',
+            pantryId: 'pantry-1',
+            lines: [
+              { clientId: '0', purchaseId: 'pur-0', pantryItemId: 'pi-0' },
+              { clientId: '1', purchaseId: 'pur-1', stock: false },
+              { clientId: '2', purchaseId: 'pur-2', pantryItemId: 'pi-2' },
+            ],
+          },
+        },
+      }),
+    ).toEqual({
+      subjectIds: ['pi-0', 'pi-2'],
+      sourceIds: ['checkin-1'],
+      mintedIds: ['pi-0', 'pi-2'],
+    });
+  });
+
   it('reads a fork as creating the new recipe and deriving from the source', () => {
     expect(
       queuedSubject({
@@ -35,7 +64,14 @@ describe('queuedSubject', () => {
     [
       'a move names the row it moves',
       MoveShoppingListItemDocument,
-      { itemId: 'row-1', afterItemId: 'row-0' },
+      { id: 'row-1', afterItemId: 'row-0' },
+      ['row-1'],
+      [],
+    ],
+    [
+      'a shopping line edit or tick names the line',
+      UpdateShoppingListItemDocument,
+      { id: 'row-1', version: 2, purchaseTracking: { isPurchased: true } },
       ['row-1'],
       [],
     ],
@@ -149,5 +185,26 @@ describe('which subjects the server has never seen', () => {
       variables: { input: { id: 'pi-owned' } },
     });
     expect(subject.mintedIds).toEqual([]);
+  });
+});
+
+describe('subjectTypeOf', () => {
+  const PANTRY_ITEM: NonNullable<PantryItem['__typename']> = 'PantryItem';
+  const LINE: NonNullable<ShoppingListItem['__typename']> = 'ShoppingListItem';
+
+  it.each([
+    ['a create', CreatePantryItemDocument, PANTRY_ITEM],
+    ['a removal', DeletePantryItemDocument, PANTRY_ITEM],
+    ['an update', UpdateShoppingListItemDocument, LINE],
+  ])('reads the type %s writes off its input', (_label, mutation, expected) => {
+    expect(subjectTypeOf({ mutation })).toBe(expected);
+  });
+
+  it.each([
+    ['a subject another field names', UpdatePantryItemQuantityDocument],
+    ['a batch of rows', AddItemToShoppingListDocument],
+    ['an input named by no entity verb', MoveShoppingListItemDocument],
+  ])('names no type for %s', (_label, mutation) => {
+    expect(subjectTypeOf({ mutation })).toBeNull();
   });
 });

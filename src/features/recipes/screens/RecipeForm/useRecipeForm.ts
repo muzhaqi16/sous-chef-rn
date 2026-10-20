@@ -2,13 +2,15 @@ import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type {
   CreateRecipeInput,
-  UpdateRecipeInput,
+  RecipeAttributionInput,
   RecipeIngredientInput,
   Diet,
   HealthGoal,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeCaptureQuery } from '#features/recipes/hooks/useRecipeCapture.generated';
+import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
 import type {
   IngredientFormState,
   StepFormState,
@@ -20,6 +22,7 @@ import {
   parseCommaTags,
 } from './recipeFormConfig';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
+import { toPastedIngredient } from '#features/recipes/utils/pastedIngredients';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
@@ -46,6 +49,31 @@ function stepInstruction(step: unknown): string {
     ? String(text)
     : '';
 }
+
+/** The unit as a row shows it. Module scope: an optional chain inside `??`
+ * stops the compiler lowering the hook. */
+const unitLabelOf = (
+  unit: { symbol: string; name: string } | null | undefined,
+): string => firstNonBlank(unit?.symbol, unit?.name) ?? '';
+
+/** Who wrote the recipe and where a capture read it; undefined when neither is known. */
+function attributionOf(
+  state: RecipeFormState,
+): RecipeAttributionInput | undefined {
+  const originalAuthor = state.originalAuthor.trim() || undefined;
+  const source = state.capturedFrom?.source ?? undefined;
+  const sourceUrl = state.capturedFrom?.sourceUrl ?? undefined;
+  return originalAuthor || source || sourceUrl
+    ? { originalAuthor, source, sourceUrl }
+    : undefined;
+}
+
+type CaptureDraft = NonNullable<
+  NonNullable<RecipeCaptureQuery['recipeCapture']>['draft']
+>;
+
+const minutesText = (minutes: number | null) =>
+  minutes ? String(minutes) : '';
 
 export function useRecipeForm() {
   const form = useForm<RecipeFormState>({
@@ -98,6 +126,21 @@ export function useRecipeForm() {
         sortOrder: current.length,
         ...ingredient,
       },
+    ]);
+  };
+
+  /** Rows read from pasted lines, after the ones the form holds. */
+  const appendIngredients = (
+    rows: readonly Omit<IngredientFormState, 'id' | 'sortOrder'>[],
+  ) => {
+    const current = getValues('ingredients');
+    setIngredients([
+      ...current,
+      ...rows.map((row, index) => ({
+        ...row,
+        id: generateTempId(),
+        sortOrder: current.length + index,
+      })),
     ]);
   };
 
@@ -162,14 +205,13 @@ export function useRecipeForm() {
     setValue('intolerances', intolerances, { shouldDirty: true });
   };
 
-  // Build ingredient input array (shared by create and update-ingredients).
-  // Names are sanitized at the API boundary: a backend ingredient name loaded
-  // into the form may carry a legacy " $X.XX" token, and the API stores names
-  // verbatim — strip it so we never re-persist a price baked into the name.
+  // A loaded ingredient name may carry a legacy " $X.XX" token, and the API
+  // stores names verbatim, so it is stripped here rather than re-persisted.
   const buildIngredientsInput = (): RecipeIngredientInput[] => {
     return state.ingredients.map((ing, index) => ({
       name: stripPriceFromName(ing.name),
       quantity: ing.quantity,
+      ...(ing.originalText && { originalText: ing.originalText }),
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,
       preparation: firstNonBlank(ing.preparation)?.trim(),
@@ -196,9 +238,7 @@ export function useRecipeForm() {
       notes: state.notes.trim() || undefined,
       tips: state.tips.trim() || undefined,
       tags: parseCommaTags(state.tags),
-      attribution: state.originalAuthor.trim()
-        ? { originalAuthor: state.originalAuthor.trim() }
-        : undefined,
+      attribution: attributionOf(state),
       ingredients,
       instructions,
       media: {
@@ -232,8 +272,11 @@ export function useRecipeForm() {
   // Without `id`, which the caller adds. An omitted field is left unchanged, so
   // an emptied one is sent as null or []; the API refuses null for `name` and
   // `servings` (NOT NULL), so those stay omitted when blank.
-  const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
+  const buildUpdateInput = (): RecipeUpdateFields => {
     return {
+      version: state.version,
+      ingredientsUnread: state.ingredientsUnread,
+      ingredients: buildIngredientsInput(),
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
       status: state.status,
@@ -270,33 +313,43 @@ export function useRecipeForm() {
     };
   };
 
-  // Populate from existing recipe (edit mode)
+  // Populate from existing recipe (edit mode). A pending edit reopens from
+  // what it proposes: a save sends the whole form, so live values would set
+  // every pending change back.
   const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
+    const proposed = recipe.pendingRevision?.proposed;
+    const content = proposed ?? recipe;
+    const ingredients = proposed
+      ? proposed.ingredients
+      : extractNodes(recipe.ingredientsConnection);
     const formState: RecipeFormState = {
-      name: recipe.name,
-      description: recipe.description ?? '',
-      imageUrl: recipe.imageUrl ?? '',
-      videoUrl: recipe.videoUrl ?? '',
-      servings: String(recipe.servings),
-      prepTimeMinutes: recipe.prepTimeMinutes
-        ? String(recipe.prepTimeMinutes)
+      name: content.name,
+      description: content.description ?? '',
+      imageUrl: content.imageUrl ?? '',
+      videoUrl: content.videoUrl ?? '',
+      servings: String(content.servings),
+      prepTimeMinutes: content.prepTimeMinutes
+        ? String(content.prepTimeMinutes)
         : '',
-      cookTimeMinutes: recipe.cookTimeMinutes
-        ? String(recipe.cookTimeMinutes)
+      cookTimeMinutes: content.cookTimeMinutes
+        ? String(content.cookTimeMinutes)
         : '',
-      caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
-      difficulty: recipe.difficulty,
-      category: recipe.category,
-      cuisines: [...recipe.cuisines],
+      caloriesPerServing: formatNumberForInput(content.caloriesPerServing),
+      difficulty: content.difficulty,
+      category: content.category,
+      cuisines: [...content.cuisines],
       status: recipe.status,
-      diets: recipe.diets,
-      healthGoals: recipe.healthGoals,
-      intolerances: recipe.intolerances,
-      ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
+      diets: content.diets,
+      healthGoals: content.healthGoals,
+      intolerances: content.intolerances,
+      ingredients: ingredients.map(ing => ({
         id: generateTempId(),
         name: ing.name,
         quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
+        unitLabel: unitLabelOf(ing.unit),
+        // A proposed revision's lines carry no line as written.
+        originalText: 'originalText' in ing ? ing.originalText : null,
         itemId: ing.item?.id ?? null,
         preparation: ing.preparation ?? '',
         section: ing.section ?? '',
@@ -304,30 +357,79 @@ export function useRecipeForm() {
         isOptional: ing.isOptional,
         sortOrder: ing.sortOrder,
       })),
-      steps: Array.isArray(recipe.instructions)
-        ? recipe.instructions.map((step: unknown, i: number) => ({
+      steps: Array.isArray(content.instructions)
+        ? content.instructions.map((step: unknown, i: number) => ({
             id: generateTempId(),
             instruction: stepInstruction(step),
             sortOrder: i,
           }))
         : [],
-      notes: recipe.notes ?? '',
-      tips: recipe.tips ?? '',
-      originalAuthor: recipe.originalAuthor ?? '',
-      tags: recipe.tags.join(', '),
+      notes: content.notes ?? '',
+      tips: content.tips ?? '',
+      originalAuthor: content.originalAuthor ?? '',
+      capturedFrom: null,
+      tags: content.tags.join(', '),
+      version: recipe.version,
+      // A proposed edit carries its whole list; the live one is one page, and
+      // `hasNextPage` marks a recipe over the ingredient limit.
+      ingredientsUnread:
+        !proposed && recipe.ingredientsConnection.pageInfo.hasNextPage,
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.
     reset(formState);
   };
 
+  /**
+   * A new recipe filled with what a capture read, and the link this device sent
+   * it. Nothing is saved until the user saves; a section the capture found
+   * nothing for is marked as needed.
+   */
+  const populateFromCapture = (
+    draft: CaptureDraft,
+    sourceUrl: string | null,
+  ) => {
+    const defaults = recipeFormDefaults();
+    reset({
+      ...defaults,
+      name: draft.name ?? '',
+      description: draft.description ?? '',
+      imageUrl: draft.imageUrl ?? '',
+      servings: draft.servings ? String(draft.servings) : defaults.servings,
+      prepTimeMinutes: minutesText(draft.prepTimeMinutes),
+      cookTimeMinutes: minutesText(draft.cookTimeMinutes),
+      originalAuthor: draft.author ?? '',
+      capturedFrom: { source: draft.sourceName, sourceUrl },
+      // A line is linked only where the server was confident; the rest keep
+      // their line as written for the user to match.
+      ingredients: draft.lines.map((line, index) => ({
+        ...toPastedIngredient(line),
+        id: generateTempId(),
+        sortOrder: index,
+      })),
+      steps: draft.steps.map((step, index) => ({
+        id: generateTempId(),
+        instruction: step.text,
+        sortOrder: index,
+      })),
+    });
+    if (draft.lines.length === 0) {
+      void form.trigger('ingredients');
+    }
+    if (draft.steps.length === 0) {
+      void form.trigger('steps');
+    }
+  };
+
   return {
     state,
     errors: form.formState.errors,
+    isDirty: form.formState.isDirty,
     handleSubmit: form.handleSubmit,
     setError: form.setError,
     updateField,
     addIngredient,
+    appendIngredients,
     updateIngredient,
     removeIngredient,
     addStep,
@@ -339,7 +441,7 @@ export function useRecipeForm() {
     setIntolerances,
     buildCreateInput,
     buildUpdateInput,
-    buildIngredientsInput,
     populateFromRecipe,
+    populateFromCapture,
   };
 }

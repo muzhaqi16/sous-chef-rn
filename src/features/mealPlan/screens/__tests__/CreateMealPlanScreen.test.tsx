@@ -2,14 +2,8 @@
 
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { addDays } from 'date-fns';
-import { toMealDateTime } from '#/utils/dateUtils';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
-
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -121,10 +115,6 @@ jest.mock('#features/mealPlan/components/TemplatePreviewSheet', () => ({
   TemplatePreviewSheet: () => null,
 }));
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 describe('CreateMealPlanScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -172,20 +162,20 @@ describe('CreateMealPlanScreen', () => {
     const { getByText } = render(<CreateMealPlanScreen />);
     expect(getByText('Track nutrition goals')).toBeTruthy();
   });
-  // The API compares a meal to its plan by UTC day, so the boundaries are sent
-  // as local noon of the picked days; local midnight lands on the previous UTC
-  // day east of UTC.
-  it('sends the plan boundaries as local noon of the picked days', async () => {
+  // The API holds a plan's first and last day as `LocalDate`s: the picked
+  // local day is sent as itself, whatever UTC day its midnight falls on.
+  it('sends the plan first and last day as the picked local days', async () => {
     const { getByTestId } = render(<CreateMealPlanScreen />);
     fireEvent.changeText(getByTestId('meal-plan-name-input'), 'Week one');
     fireEvent.press(getByTestId('start-date-pick'));
     fireEvent.press(getByTestId('form-save'));
 
     await waitFor(() => expect(mockCreateMealPlan).toHaveBeenCalled());
+    // A weekly plan: the picked Monday through the Sunday, both days of it.
     expect(mockCreateMealPlan).toHaveBeenCalledWith(
       expect.objectContaining({
-        startDate: toMealDateTime(mockPickedDay),
-        endDate: toMealDateTime(addDays(mockPickedDay, 6)),
+        startDate: '2026-10-05',
+        endDate: '2026-10-11',
       }),
       expect.anything(),
     );

@@ -4,9 +4,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { EditableField } from '#features/home/components/EditableField';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: {
     value?: string;

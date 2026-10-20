@@ -1,8 +1,6 @@
 /**
- * Every feature that has something to withdraw when a queued write is
- * permanently rejected, keyed by the operation its document declares. Its own
- * list rather than a manifest field, for the same reason as
- * {@link REPLAY_PREPARATIONS}.
+ * What each feature withdraws when a queued write is permanently rejected; its
+ * own list, not a manifest field, as {@link REPLAY_PREPARATIONS} explains.
  */
 import { byOperation } from '#/apollo/utils/documentOperation';
 import {
@@ -14,18 +12,23 @@ import {
   withdrawAddedShoppingListItems,
 } from '#features/shoppingList/offline/queueWithdrawals';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  restoreReceiptCheckInListLines,
+  withdrawReceiptCheckIn,
+} from '#features/receipts/offline/receiptCheckIn';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { forEachBatchAdd } from './replayRegistry';
 import type { CountWithdrawalTable, UnlinkWithdrawalTable } from './types';
 
 export const COUNT_WITHDRAWALS: CountWithdrawalTable = byOperation([
   [CreatePantryItemDocument, withdrawCreatedPantryItem],
-  [BarcodeCreatePantryItemDocument, withdrawCreatedPantryItem],
   [MoveShoppingItemToPantryDocument, withdrawMovedPantryItem],
+  [CreateReceiptCheckInDocument, withdrawReceiptCheckIn],
   ...forEachBatchAdd(withdrawAddedShoppingListItems),
 ]);
 
 export const UNLINK_WITHDRAWALS: UnlinkWithdrawalTable = byOperation([
   [MoveShoppingItemToPantryDocument, restoreMovedShoppingListItem],
+  [CreateReceiptCheckInDocument, restoreReceiptCheckInListLines],
 ]);

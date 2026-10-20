@@ -24,6 +24,7 @@ jest.mock('#store/useAppStore', () => ({
     selectedShoppingListId: mockSelectedShoppingListId,
     setSelectedShoppingListId: mockSetSelectedShoppingListId,
   })),
+  useSelectedShoppingListId: () => mockSelectedShoppingListId,
 }));
 
 function createList(

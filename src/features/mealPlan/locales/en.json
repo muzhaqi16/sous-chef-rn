@@ -66,6 +66,7 @@
     "hideNutrition": "Hide Nutrition",
     "viewNutritionDesc": "Calories, macros, and goal progress",
     "budgetSpent": "Spent {{spent}} of {{budget}}",
+    "budgetOnly": "Budget {{budget}}",
     "spentAmount": "Spent {{spent}}",
     "nutritionTrackingOn": "Nutrition tracking on",
     "trackNutritionDesc": "Compare this plan against your dietary profile",
@@ -111,6 +112,7 @@
     "sharedSuffix": " (shared with {{homeName}})",
     "generateFailed": "Failed to generate shopping list",
     "planNotLoaded": "Open the meal plan first so its recipes are available.",
+    "recipeOverLimit": "\"{{name}}\" has more than {{count}} ingredients, so it can't be added to a shopping list in full.",
     "nothingToAdd": "Nothing to add — this plan has no recipe ingredients yet.",
     "defaultName": "Shopping list for {{name}}",
     "someSkipped_one": "{{count}} entry was left out because its recipe is not downloaded.",
@@ -160,7 +162,9 @@
     "saveAsTemplateLabel": "Save as template",
     "planSettingsLabel": "Plan settings",
     "deleteMealPlanFailed": "Failed to delete meal plan",
-    "mealPlanDeleted": "Meal plan deleted"
+    "mealPlanDeleted": "Meal plan deleted",
+    "mealsIncompleteTitle": "Some meals couldn't be loaded",
+    "mealsIncompleteBody": "This plan is showing only part of its meals. Tap to try again."
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "e.g. Weeknight Dinners",

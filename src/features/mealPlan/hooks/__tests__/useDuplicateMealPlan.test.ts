@@ -1,77 +1,37 @@
 'use no memo';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
+import type { InMemoryCache } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
-  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
+import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
+import { ErrorCode, MealPlanType } from '#/graphql/generated/schemaTypes';
 import {
-  ErrorCode,
-  MealPlanType,
-  MealType,
-} from '#/graphql/generated/schemaTypes';
+  planSource,
+  seedPlanSource,
+} from '#/test-utils/fixtures/mealPlanFixtures';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { useDuplicateMealPlan } from '../useDuplicateMealPlan';
 
 /**
  * A duplicate is a create plus one create per meal, so these assert on the
- * CACHE and on what is sent — the source plan never leaves the device.
+ * CACHE and on what is sent — the source plan never leaves the device. Every
+ * day is a `LocalDate` key.
  */
 
 const SOURCE_ID = 'plan-1';
 
-const sourcePlan = {
-  __typename: 'MealPlan',
-  id: SOURCE_ID,
-  description: 'A week of food',
-  planType: MealPlanType.Weekly,
-  servings: 4,
-  budgetAmount: 90,
-  homeId: 'home-1',
-  startDate: '2026-01-05T00:00:00.000Z',
-  endDate: '2026-01-11T00:00:00.000Z',
-  mealPlanItems: [
-    {
-      __typename: 'MealPlanItem',
-      id: 'mpi-1',
-      date: '2026-01-05T00:00:00.000Z',
-      mealType: MealType.Dinner,
-      servings: 2,
-      notes: null,
-      customMealName: null,
-      recipe: { __typename: 'Recipe', id: 'recipe-1' },
-    },
-    {
-      __typename: 'MealPlanItem',
-      id: 'mpi-2',
-      date: '2026-01-07T00:00:00.000Z',
-      mealType: MealType.Lunch,
-      servings: null,
-      notes: null,
-      customMealName: 'Leftovers',
-      recipe: null,
-    },
-  ],
-};
-
 const nextWeek = {
   mealPlanId: SOURCE_ID,
   newName: 'Week Two',
-  newStartDate: '2026-01-12T00:00:00.000Z',
-  newEndDate: '2026-01-18T00:00:00.000Z',
+  newStartDate: '2026-01-12',
+  newEndDate: '2026-01-18',
 };
 
 const createPlanMock = () =>
@@ -96,14 +56,15 @@ const createItemMock = () =>
     partial: true,
   });
 
-const seeded = () =>
-  seedCache([
-    {
-      data: sourcePlan,
-      fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
-      fragmentName: 'useDuplicateMealPlan_mealPlan',
-    },
-  ]);
+/** The ids of a plan's meals as the detail screen reads them, or null. */
+const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
+  cache
+    .readFragment({
+      id: cache.identify({ __typename: 'MealPlan', id: planId ?? '' }),
+      fragment: MealPlanMain_MealPlanFragmentDoc,
+      fragmentName: 'MealPlanMain_mealPlan',
+    })
+    ?.mealPlanItemsConnection.edges.map(edge => edge.node.id) ?? null;
 
 describe('duplicating a meal plan', () => {
   beforeEach(() => {
@@ -139,23 +100,39 @@ describe('duplicating a meal plan', () => {
     const plan = createPlanMock();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock],
-      cache: seeded(),
+      cache: seedPlanSource(),
     });
 
     const response = await result.current.duplicatePlan({
       ...nextWeek,
-      newEndDate: '2026-01-19T00:00:00.000Z',
+      newEndDate: '2026-01-19',
     });
 
     expect(response).toBeNull();
     expect(plan.fired).toHaveLength(0);
   });
 
+  // A copy made from a first page alone would silently drop the other meals.
+  it('refuses a plan whose later pages of meals are unread, without firing anything', async () => {
+    const plan = createPlanMock();
+    const item = createItemMock();
+    const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
+      operationMocks: [plan.mock, item.mock],
+      cache: seedPlanSource(planSource(), { hasNextPage: true }),
+    });
+
+    expect(await result.current.duplicatePlan(nextWeek)).toBeNull();
+    expect(plan.fired).toHaveLength(0);
+    expect(item.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    expect(toastService.success).not.toHaveBeenCalled();
+  });
+
   it('writes the copied plan to the cache offline and creates every meal', async () => {
     useStore.setState({ apiReachable: false });
     const plan = createPlanMock();
     const item = createItemMock();
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, item.mock],
       cache,
@@ -170,8 +147,24 @@ describe('duplicating a meal plan', () => {
     // The copy is in the cache under its minted id before any server round trip.
     expect(cache.extract()[`MealPlan:${copyId}`]).toMatchObject({
       name: 'Week Two',
-      startDate: '2026-01-12T00:00:00.000Z',
+      startDate: '2026-01-12',
+      endDate: '2026-01-18',
     });
+    expect(plan.fired).toEqual([
+      {
+        input: {
+          id: copyId,
+          name: 'Week Two',
+          startDate: '2026-01-12',
+          endDate: '2026-01-18',
+          planType: MealPlanType.Weekly,
+          description: 'A week of food',
+          servings: 4,
+          budgetAmount: 90,
+          homeId: 'home-1',
+        },
+      },
+    ]);
 
     // One create per meal, each parented to the copy and shifted by a week.
     expect(item.fired).toHaveLength(2);
@@ -179,10 +172,7 @@ describe('duplicating a meal plan', () => {
       input: { mealPlanId: string; date: string };
     }>;
     expect(sent.map(f => f.input.mealPlanId)).toEqual([copyId, copyId]);
-    expect(sent.map(f => f.input.date)).toEqual([
-      '2026-01-12T00:00:00.000Z',
-      '2026-01-14T00:00:00.000Z',
-    ]);
+    expect(sent.map(f => f.input.date)).toEqual(['2026-01-12', '2026-01-14']);
   });
 
   it('puts every copied meal on the new plan in the cache while queued', async () => {
@@ -190,7 +180,7 @@ describe('duplicating a meal plan', () => {
     const queuedItem = recordMock(CreateMealPlanItemDocument, {
       data: { createMealPlanItem: null },
     });
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [createPlanMock().mock, queuedItem.mock],
       cache,
@@ -201,17 +191,19 @@ describe('duplicating a meal plan', () => {
     const sentIds = (queuedItem.fired as Array<{ input: { id: string } }>).map(
       fired => fired.input.id,
     );
-    const copy = cache.extract()[`MealPlan:${response?.mealPlanId}`] as {
-      mealPlanItems?: Array<{ __ref: string }>;
-    };
-    expect(copy.mealPlanItems?.map(ref => ref.__ref)).toEqual(
-      sentIds.map(id => `MealPlanItem:${id}`),
-    );
+    expect(sentIds).toHaveLength(2);
+    // Offline the new plan shows its meals only from these writes: the detail
+    // screen reads the copy complete, with an edge per copied meal.
+    expect(mealsOnScreen(cache, response?.mealPlanId ?? null)).toEqual(sentIds);
     for (const id of sentIds) {
       expect(cache.extract()[`MealPlanItem:${id}`]).toMatchObject({
         mealType: expect.any(String),
+        version: 1,
       });
     }
+    expect(
+      sentIds.map(id => cache.extract()[`MealPlanItem:${id}`]?.date),
+    ).toEqual(['2026-01-12', '2026-01-14']);
   });
 
   it('takes a refused meal back off the new plan', async () => {
@@ -225,7 +217,7 @@ describe('duplicating a meal plan', () => {
         },
       },
     });
-    const cache = seeded();
+    const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [createPlanMock().mock, refusedItem.mock],
       cache,
@@ -240,6 +232,10 @@ describe('duplicating a meal plan', () => {
     for (const id of refused) {
       expect(cache.extract()[`MealPlanItem:${id}`]).toBeUndefined();
     }
+    // Neither is left as an edge of any plan.
+    expect(JSON.stringify(cache.extract())).not.toMatch(
+      new RegExp(refused.map(id => `MealPlanItem:${id}`).join('|')),
+    );
   });
 
   it('does not report success when a copied meal fails to save', async () => {
@@ -249,7 +245,7 @@ describe('duplicating a meal plan', () => {
     });
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, failedItem.mock],
-      cache: seeded(),
+      cache: seedPlanSource(),
     });
 
     await result.current.duplicatePlan(nextWeek);

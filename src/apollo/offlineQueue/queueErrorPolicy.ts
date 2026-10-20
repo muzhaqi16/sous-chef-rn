@@ -7,20 +7,21 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import { refusalEnvelopeOf } from '#/utils/errors/graphqlErrors';
 import {
   isErrorTypename,
   type MutationErrorTypename,
 } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import { backoffDelay } from '#/utils/backoff';
 import type { QueueError } from './types';
 
 /**
- * A replayed mutation resolved with an error union member — a refusal. Carries
- * the payload's `__typename` and `code` so {@link classifyError} decides from
- * those, never from the free-text server message: "subscription expired" run
- * through the string heuristics below becomes an auth error retried forever.
+ * A replay refused with an error union member. Carries its `__typename` and
+ * `code` so {@link classifyError} never reads the message: "subscription
+ * expired" through the string heuristics below is an auth error retried forever.
  */
 export class ReplayRejectedError extends Error {
   readonly payloadTypename: MutationErrorTypename;
@@ -106,10 +107,9 @@ export function transientBatchRowCode(payload: unknown): string | null {
 }
 
 /**
- * Outcome of a replay that RESOLVED with data: under `errorPolicy: 'all'` a
- * refusal resolves instead of throwing. `'converged'` is a `ConflictError`
- * coded `IDEMPOTENT_REPLAY` — already committed, so dequeue as success. Match
- * on the CODE: a generic `ConflictError` is a real conflict, so `'rejected'`.
+ * A replay that RESOLVED, as a refusal does under `errorPolicy: 'all'`.
+ * `'converged'` is a `ConflictError` coded `IDEMPOTENT_REPLAY`, already
+ * committed; any other `ConflictError` is a real conflict, `'rejected'`.
  */
 export type ReplayOutcome =
   | { status: 'applied' | 'converged' }
@@ -131,10 +131,9 @@ export function classifyReplayResult(payload: unknown): ReplayOutcome {
 }
 
 /**
- * The API sets codes per-error inside `errors[i]`, while
- * `CombinedGraphQLErrors.extensions` is the RESPONSE-level bag — a flat
- * `extensions.code` read sees `undefined` for every real refusal. A flat `code`
- * comes from the session path's own errors (`SessionError`, refresh refusals).
+ * The API codes each `errors[i]`; `CombinedGraphQLErrors.extensions` is the
+ * RESPONSE-level bag, `undefined` for every real refusal. A flat `code` comes
+ * from the session path's own errors (`SessionError`, refresh refusals).
  */
 function readErrorCode(error: unknown): string | undefined {
   if (CombinedGraphQLErrors.is(error) || CombinedProtocolErrors.is(error)) {
@@ -146,6 +145,10 @@ function readErrorCode(error: unknown): string | undefined {
     }
     return undefined;
   }
+
+  // A refusal before execution: the code is in the body of a non-2xx response.
+  const envelope = refusalEnvelopeOf(error);
+  if (envelope) return envelope.code;
 
   const flat = error as
     | { code?: string; extensions?: { code?: string } }
@@ -181,7 +184,7 @@ const RATE_LIMIT_CODES: readonly string[] = [
   TopLevelErrorCode.OperationRateLimited,
 ];
 
-/** The per-operation window. RATE_LIMIT_EXCEEDED names `resetAt`, not `retryAfter`. */
+/** The wait when a rate-limit refusal states none. */
 const RATE_LIMIT_FALLBACK_SECONDS = 60;
 
 /**
@@ -196,10 +199,9 @@ function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
 }
 
 /**
- * Pure classification of a replay error: `auth` retries after a token refresh,
- * `stale-reference` after a vocabulary refresh, `network`/`server` defer to the
- * next drain, `unknown` fails permanently. Separate from {@link QueueManager}'s
- * stateful retry orchestration so the heuristics are testable in isolation.
+ * `auth` retries after a token refresh, `stale-reference` after a vocabulary
+ * refresh, `network`/`server` defer to the next drain, `unknown` fails
+ * permanently.
  */
 export function classifyError(error: unknown): QueueError {
   // `retryable: false` skips the in-run loop (every attempt reads the same
@@ -241,7 +243,7 @@ export function classifyError(error: unknown): QueueError {
     // QueueManager withdraws and reports it rather than re-sending.
     if (
       error.payloadCode !== null &&
-      VERSION_CONFLICT_CODES.includes(error.payloadCode)
+      isVersionConflictCode(error.payloadCode)
     ) {
       return {
         type: 'conflict',
@@ -284,7 +286,7 @@ export function classifyError(error: unknown): QueueError {
   const code = readErrorCode(error);
 
   // The thrown spelling of the same condition as the union member above.
-  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+  if (isVersionConflictCode(code)) {
     return {
       type: 'conflict',
       message,
@@ -319,10 +321,9 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Build below the server's minimum: deferred, not failed, so the change
-  // survives on disk and syncs once the user updates. `retryable: false` skips
-  // the in-run loop (every attempt sends the same version) while QueueManager
-  // defers `server` regardless of that flag — the combination wanted here.
+  // Deferred, not failed, so the change survives on disk and syncs once the
+  // user updates; `retryable: false` skips the in-run loop, as every attempt
+  // sends the same version.
   if (code === TopLevelErrorCode.ClientUpgradeRequired) {
     return {
       type: 'server',
@@ -333,10 +334,9 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Neither code is fixable by a token refresh, so both fail permanently, as in
-  // errorLink. AUTH_ACCOUNT_SUSPENDED must return HERE rather than fall to the
-  // auth branch: server wording containing "unauthorized" would otherwise mark
-  // a permanently dead account retryable and spin the queue against it.
+  // No refresh fixes either, so both fail permanently, as in errorLink.
+  // AUTH_ACCOUNT_SUSPENDED returns HERE: wording containing "unauthorized"
+  // would otherwise spin the queue retrying a dead account.
   if (code === ErrorCode.Forbidden || code === ErrorCode.AuthAccountSuspended) {
     return {
       type: 'unknown',
@@ -347,11 +347,9 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // The whole auth family, by CODE only: AUTH_TOKEN_MISSING is exactly what a
-  // refresh fixes, and message matching on 'expired'/'unauthorized' pulls in
-  // refusals that have nothing to do with the token. The codes a refresh cannot
-  // fix are self-limiting — QueueManager runs one proactiveTokenRefresh() per
-  // `auth` classification and fails the entry when it comes back empty.
+  // The auth family by CODE only: message matching on 'expired'/'unauthorized'
+  // pulls in refusals unrelated to the token. A code no refresh fixes is
+  // self-limiting: an empty proactiveTokenRefresh() fails the entry.
   if (isAuthRefusalCode(code ?? '')) {
     return {
       type: 'auth',
@@ -395,14 +393,16 @@ export function classifyError(error: unknown): QueueError {
 }
 
 /**
- * Exponential backoff with jitter, capped at 30s. `baseDelayMs` is the queue's
- * configured retry delay; delay = min(baseDelayMs * 2^retryCount + jitter, 30s).
+ * `baseDelayMs` (the queue's configured retry delay) doubling per retry, capped
+ * at 30s, then up to half again at random so devices don't retry in step.
  */
 export function calculateRetryDelay(
   retryCount: number,
   baseDelayMs: number,
 ): number {
-  const exponentialDelay = baseDelayMs * Math.pow(2, retryCount);
-  const jitter = Math.random() * 500; // Prevents a thundering herd.
-  return Math.min(exponentialDelay + jitter, 30000);
+  return backoffDelay(retryCount, {
+    baseMs: baseDelayMs,
+    maxMs: 30_000,
+    jitter: 0.5,
+  });
 }

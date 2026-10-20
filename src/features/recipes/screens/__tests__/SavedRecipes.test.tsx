@@ -11,8 +11,6 @@ import { kitTestIDs } from '#components/testIDs';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { SavedRecipes } from '../SavedRecipes';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -48,13 +46,8 @@ function savedPage(
           cursor: edge.id,
           node: {
             id: edge.id,
-            folder: null,
             tags: edge.tags,
-            recipe: {
-              id: `recipe-${edge.id}`,
-              name: edge.id,
-              description: null,
-            },
+            recipe: { id: `recipe-${edge.id}`, name: edge.id },
           },
         })),
         pageInfo: { hasNextPage: endCursor !== null, endCursor },

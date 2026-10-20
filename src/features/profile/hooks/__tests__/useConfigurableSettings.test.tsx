@@ -22,10 +22,6 @@ interface ConfigSection {
   items: SettingItem[];
 }
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 // The sign-out button goes through authService, not the store's own `logout`
 // action — the store action never deregisters the device for push, hands the
 // offline queue its owner change, or removes the persisted queue/navigation
@@ -63,6 +59,8 @@ jest.mock('#store/useAppStore', () => ({
       : state;
   }),
   useUser: jest.fn(() => ({ id: 'user-1', email: 'test@example.com' })),
+  // `useCurrencyPreference` writes a saved pick onto the persisted record.
+  useUpdateUser: jest.fn(() => jest.fn()),
   useNavigationUtils: jest.fn(() => ({
     getUserNavigationState: mockGetUserNavigationState,
   })),
@@ -103,12 +101,16 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 // production cannot reach — and would keep unreachable branches in the hook
 // alive.
 const mockToAppearance = jest.fn();
+const mockToDataSources = jest.fn();
+const mockToMyReports = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     toPersonalInformation: jest.fn(),
     toNotificationSettings: jest.fn(),
     toDietaryProfile: jest.fn(),
     toAppSettings: jest.fn(),
+    toDataSources: mockToDataSources,
+    toMyReports: mockToMyReports,
     toAppearance: mockToAppearance,
     toDebugInfo: jest.fn(),
     toPerformanceDashboard: jest.fn(),
@@ -128,6 +130,16 @@ jest.mock('#/config/settingsConfig', () => ({
           type: 'navigation',
         },
         { key: 'language', labelKey: 'labels.language', type: 'modal' },
+        {
+          key: 'dataSources',
+          labelKey: 'profile.dataSources.title',
+          type: 'navigation',
+        },
+        {
+          key: 'myReports',
+          labelKey: 'reports.myReportsTitle',
+          type: 'navigation',
+        },
       ],
     },
     {
@@ -152,15 +164,9 @@ jest.mock('#features/profile/components/BiometricSetupModal', () => ({
   BiometricSetupModal: 'BiometricSetupModal',
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
 const mockPendingCount = jest.fn(() => 0);
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
   queueStore: { getPendingCount: () => mockPendingCount() },
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 /**
@@ -190,8 +196,6 @@ function buildMocks() {
           language: 'en',
           timezone: 'UTC',
           preferredCurrency: 'USD',
-          enabledFeatures: [],
-          betaFeatures: [],
           createdAt: '2025-01-01T00:00:00.000Z',
           user: {
             __typename: 'User',
@@ -242,6 +246,37 @@ describe('useConfigurableSettings', () => {
     appearance?.onPress?.();
 
     expect(mockToAppearance).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the data sources screen from its row', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const dataSources = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
+    ).items.find(item => item.key === 'dataSources');
+
+    dataSources?.onPress?.();
+
+    expect(mockToDataSources).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens My reports from its row', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const myReports = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
+    ).items.find(item => item.key === 'myReports');
+
+    expect(myReports?.label).toBe('My reports');
+    myReports?.onPress?.();
+
+    expect(mockToMyReports).toHaveBeenCalledTimes(1);
   });
 
   it('returns sections from config', () => {

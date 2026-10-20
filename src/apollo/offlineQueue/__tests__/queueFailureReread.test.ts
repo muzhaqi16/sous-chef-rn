@@ -29,9 +29,6 @@ jest.mock('#/apollo/client', () => ({
     return mockClientHolder.client;
   },
 }));
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 
 const variables = { id: 'list-1', first: 25, isPurchased: false };
 
@@ -93,6 +90,7 @@ describe('withdrawing a refused queued update', () => {
       operationName: operationNameOf(UpdateShoppingListItemDocument),
       entityType: 'ShoppingListItem',
       entityId: 'sli-1',
+      subjectType: 'ShoppingListItem',
       variables: { input: { id: 'sli-1', itemName: 'Oat milk' } },
       error: {
         type: 'server',
@@ -117,6 +115,7 @@ describe('withdrawing a refused queued update', () => {
         operationName: operationNameOf(UpdateShoppingListItemDocument),
         entityType: 'ShoppingListItem',
         entityId: 'sli-1',
+        subjectType: 'ShoppingListItem',
         variables: { input: { id: 'sli-1', itemName: 'Oat milk' } },
         error: {
           type: 'server',

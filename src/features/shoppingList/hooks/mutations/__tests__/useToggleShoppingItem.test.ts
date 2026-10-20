@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
@@ -6,10 +7,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import {
-  ToggleShoppingListItemPurchasedDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
@@ -41,12 +39,7 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
+const mockAlert = jest.mocked(alertService.alert);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -55,10 +48,10 @@ beforeEach(() => {
 function createToggleMock(
   recorded: Array<Record<string, unknown>>,
   responseItem: Record<string, unknown>,
-): MockFor<typeof ToggleShoppingListItemPurchasedDocument> {
+): MockFor<typeof UpdateShoppingListItemDocument> {
   return {
     request: {
-      query: ToggleShoppingListItemPurchasedDocument,
+      query: UpdateShoppingListItemDocument,
       variables: vars => {
         recorded.push(vars);
         return true;
@@ -67,8 +60,8 @@ function createToggleMock(
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
       data: {
-        toggleShoppingListItemPurchased: {
-          __typename: 'ToggleShoppingListItemPurchasedPayload',
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
           shoppingListItem: responseItem,
         },
       },
@@ -157,7 +150,7 @@ const PURCHASE_INFO_FRAGMENT = gql`
 `;
 
 // Full useToggleShoppingItem_item shape so cache.readFragment is `complete`.
-function seedShoppingItem() {
+function seedShoppingItem(purchaseInfo: Record<string, unknown> = {}) {
   return seedCache([
     {
       __typename: 'ShoppingListItem',
@@ -179,6 +172,7 @@ function seedShoppingItem() {
         purchasedPrice: null,
         purchasedQuantity: null,
         purchasedBy: null,
+        ...purchaseInfo,
       },
       version: 3,
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -207,29 +201,6 @@ const NAMELESS_ROW_MESSAGE =
 // What the user actually sees: the app's own copy for `field: 'itemName'`.
 const ITEM_NAME_COPY = 'Enter a name for this item.';
 
-// Toggle twin of updatePurchaseMock's 'fieldRefusal' outcome.
-function toggleFieldRefusalMock(): MockFor<
-  typeof ToggleShoppingListItemPurchasedDocument
-> {
-  return {
-    request: {
-      query: ToggleShoppingListItemPurchasedDocument,
-      variables: () => true,
-    },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-    result: {
-      data: {
-        toggleShoppingListItemPurchased: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          message: NAMELESS_ROW_MESSAGE,
-          field: 'itemName',
-        },
-      },
-    },
-  };
-}
-
 function updatePurchaseMock(
   recorded: Array<Record<string, unknown>>,
   outcome: 'success' | 'reject' | 'fieldRefusal',
@@ -250,29 +221,24 @@ function updatePurchaseMock(
             ? {
                 __typename: 'UpdateShoppingListItemPayload',
                 shoppingListItem: {
-                  __typename: 'ShoppingListItem',
                   id: 'item-1',
                   // Recording a purchase through `purchaseTracking` writes a
                   // purchase row server-side, so the summary and the amounts
                   // move with the response — the mutation selects both so the
                   // detail screen doesn't need its own refetch to catch up.
                   purchaseHistory: {
-                    __typename: 'PurchaseHistorySummary',
                     previouslyPurchased: true,
                     purchaseCount: 2,
                     lastPurchaseDate: '2026-08-19T00:00:00.000Z',
                   },
                   purchaseInfo: {
-                    __typename: 'ShoppingListItemPurchaseInfo',
                     isPurchased: true,
                     purchasedQuantity: 2,
                     purchasedPrice: 4.5,
                     purchaseDate: '2026-08-19T00:00:00.000Z',
                     purchasedBy: {
-                      __typename: 'User',
                       id: 'user-1',
                       profile: {
-                        __typename: 'UserProfile',
                         id: 'profile-1',
                         displayName: 'Sam',
                         avatar: null,
@@ -297,6 +263,94 @@ function updatePurchaseMock(
     },
   };
 }
+
+describe('useToggleShoppingItem — toggleItem', () => {
+  const mockRefetch = jest.fn().mockResolvedValue(undefined);
+
+  const responseRow = (isPurchased: boolean) => ({
+    __typename: 'ShoppingListItem',
+    id: 'item-1',
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased,
+    },
+  });
+
+  it('ticks through the update door with the cached version and the flag alone', async () => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const cache = seedShoppingItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      {
+        cache,
+        operationMocks: [createToggleMock(recorded, responseRow(true))],
+      },
+    );
+
+    let toggled!: Awaited<ReturnType<typeof result.current.toggleItem>>;
+    await act(async () => {
+      toggled = await result.current.toggleItem('item-1');
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: { isPurchased: true },
+        },
+      },
+    ]);
+    expect(toggled).toMatchObject({ id: 'item-1' });
+    expect(readPurchased(cache)).toBe(true);
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
+      expect.anything(),
+      'list-1',
+      { id: 'item-1' },
+    );
+    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('un-ticks with no amounts beside the flag', async () => {
+    const recorded: Array<Record<string, unknown>> = [];
+    // The cached purchase carries amounts; the server refuses any beside an
+    // un-tick, so none of them may ride along.
+    const cache = seedShoppingItem({
+      isPurchased: true,
+      purchasedQuantity: 3,
+      purchasedPrice: 4.5,
+    });
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      {
+        cache,
+        operationMocks: [createToggleMock(recorded, responseRow(false))],
+      },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: { isPurchased: false },
+        },
+      },
+    ]);
+    expect(readPurchased(cache)).toBe(false);
+    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledWith(
+      expect.anything(),
+      'list-1',
+      { id: 'item-1' },
+    );
+    expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
+  });
+});
 
 describe('useToggleShoppingItem — recordPurchase', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
@@ -435,10 +489,11 @@ describe('useToggleShoppingItem — recordPurchase', () => {
   });
 
   it('shows it on the plain toggle too', async () => {
+    const recorded: Array<Record<string, unknown>> = [];
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [toggleFieldRefusalMock()] },
+      { cache, operationMocks: [updatePurchaseMock(recorded, 'fieldRefusal')] },
     );
 
     let toggled!: Awaited<ReturnType<typeof result.current.toggleItem>>;
@@ -467,10 +522,10 @@ describe('the stocked stamp follows the purchased flag', () => {
   /**
    * The mutation resolves as QUEUED — a null payload, no error.
    *
-   * Without a mock the operation resolves as an unmatched-operation ERROR, so
-   * the hook's revert races the next toggle and the assertion sees whichever
-   * won. These tests are about what the local write leaves behind, and queued
-   * is the case where that is all there is.
+   * Without a mock the operation is unmatched, resolves as an error, and the
+   * hook REVERTS — so every assertion below would describe the post-revert
+   * state while claiming to describe the flip, and pass only if the revert
+   * clears the stamp too, which is the defect they were written to catch.
    */
   const queued: MockFor<typeof UpdateShoppingListItemDocument> = {
     request: {
@@ -480,24 +535,6 @@ describe('the stocked stamp follows the purchased flag', () => {
     result: { data: { updateShoppingListItem: null } },
     maxUsageCount: Number.POSITIVE_INFINITY,
   };
-
-  /**
-   * The same for the TOGGLE mutation, which `toggleItem` actually fires.
-   *
-   * Without it the operation is unmatched, resolves as an error, and the hook
-   * REVERTS — so every assertion below describes the post-revert state while
-   * claiming to describe the flip, and passes only if the revert clears the
-   * stamp too, which is the defect they were written to catch.
-   */
-  const toggleQueued: MockFor<typeof ToggleShoppingListItemPurchasedDocument> =
-    {
-      request: {
-        query: ToggleShoppingListItemPurchasedDocument,
-        variables: () => true,
-      },
-      result: { data: { toggleShoppingListItemPurchased: null } },
-      maxUsageCount: Number.POSITIVE_INFINITY,
-    };
 
   /** A line that was purchased AND already moved into the pantry. */
   function seedStockedItem() {
@@ -532,7 +569,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued, toggleQueued] },
+      { cache, operationMocks: [queued] },
     );
 
     await act(async () => {
@@ -550,7 +587,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued, toggleQueued] },
+      { cache, operationMocks: [queued] },
     );
 
     await act(async () => {
@@ -568,7 +605,7 @@ describe('the stocked stamp follows the purchased flag', () => {
     const cache = seedStockedItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued, toggleQueued] },
+      { cache, operationMocks: [queued] },
     );
 
     await act(async () => {

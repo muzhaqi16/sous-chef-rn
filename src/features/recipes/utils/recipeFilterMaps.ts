@@ -1,4 +1,8 @@
-import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  Intolerance,
+  RecipeCategory,
+} from '#/graphql/generated/schemaTypes';
 
 // ── Filter types ──
 
@@ -16,11 +20,9 @@ export const DEFAULT_FILTERS: RecipeFilters = {
   maxReadyTime: null,
 };
 
-// Single source of truth for BOTH directions: `activeFilters` holds
-// Spoonacular strings (which complexSearch takes directly) while the local
-// `searchRecipes` API takes Diet/Intolerance enums, so the reverse lookups are
-// derived from these maps and cannot drift. The forward maps are exhaustive
-// over the enums, so a new schema member fails to compile until mapped.
+// BOTH directions: `activeFilters` holds the Spoonacular strings complexSearch
+// takes, `searchRecipes` takes the enums, and the reverse lookups below derive
+// from these. Exhaustive, so a new enum member fails to compile until mapped.
 export const DIET_ENUM_TO_SPOONACULAR: Record<Diet, string> = {
   [Diet.Vegetarian]: 'vegetarian',
   [Diet.Vegan]: 'vegan',
@@ -51,10 +53,24 @@ export const INTOLERANCE_ENUM_TO_SPOONACULAR: Record<Intolerance, string> = {
   [Intolerance.Fish]: 'fish',
 };
 
-// Reverse lookups (Spoonacular string → enum), derived from the forward maps so
-// the two directions stay in sync. `Object.keys` widens to `string[]`; narrowing
-// each key back to its enum member is sound because the source map is keyed
-// exactly by that enum.
+type MealTypeCategory =
+  | RecipeCategory.Breakfast
+  | RecipeCategory.Lunch
+  | RecipeCategory.Dinner
+  | RecipeCategory.Snack
+  | RecipeCategory.Dessert;
+
+/** The categories the meal-type filter offers (`MEAL_TYPES`). */
+const MEAL_TYPE_CATEGORY_TO_SPOONACULAR: Record<MealTypeCategory, string> = {
+  [RecipeCategory.Breakfast]: 'breakfast',
+  [RecipeCategory.Lunch]: 'lunch',
+  [RecipeCategory.Dinner]: 'dinner',
+  [RecipeCategory.Snack]: 'snack',
+  [RecipeCategory.Dessert]: 'dessert',
+};
+
+// Spoonacular string → enum. Narrowing `Object.keys`' `string[]` back to the
+// enum is sound: the source map is keyed by exactly that enum.
 function invertEnumMap<E extends string>(
   map: Record<E, string>,
 ): Record<string, E> {
@@ -69,4 +85,7 @@ function invertEnumMap<E extends string>(
 export const SPOONACULAR_TO_DIET_ENUM = invertEnumMap(DIET_ENUM_TO_SPOONACULAR);
 export const SPOONACULAR_TO_INTOLERANCE_ENUM = invertEnumMap(
   INTOLERANCE_ENUM_TO_SPOONACULAR,
+);
+export const SPOONACULAR_TO_MEAL_TYPE_CATEGORY = invertEnumMap(
+  MEAL_TYPE_CATEGORY_TO_SPOONACULAR,
 );

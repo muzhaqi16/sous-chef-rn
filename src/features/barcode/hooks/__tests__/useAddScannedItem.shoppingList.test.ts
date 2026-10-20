@@ -8,14 +8,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 const LIST_ID = 'list-1';
 
@@ -36,7 +30,13 @@ const STATED = {
   completionRate: 0.4,
 };
 
-const SCANNED: ScannedItem = { id: 'item-oats', name: 'Oats', upc: '0001' };
+const SCANNED: ScannedItem = {
+  id: 'item-oats',
+  name: 'Oats',
+  upc: '0001',
+  canEdit: false,
+  canSuggest: true,
+};
 
 function cacheWithList() {
   const cache = makeCache();

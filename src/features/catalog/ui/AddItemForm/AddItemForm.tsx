@@ -54,8 +54,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
  * writes them straight through (updateItem). They render identically — the
- * caller picks by the item's viewer-scoped `canEdit`, and only the wording
- * differs.
+ * caller picks with `writesItemDirectly`, and only the wording differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 
@@ -90,11 +89,16 @@ export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
 
+/** A server refusal the user can fix, shown on the form field it names. */
+export interface AddItemFieldRefusal {
+  field: 'upc';
+  message: string;
+}
+
 /**
- * Editor rows → the shape `createItemSchema` validates. An entirely empty row
- * is the one "Add" just created and is dropped; a half-filled one is KEPT so
- * the schema can refuse it rather than the submit path discarding what the user
- * typed. A blank weight becomes `NaN`, which the number rule reports.
+ * Editor rows → the shape `createItemSchema` validates. An empty row (the one
+ * "Add" just made) is dropped; a half-filled one is KEPT for the schema to
+ * refuse, and a blank weight becomes `NaN`, which the number rule reports.
  */
 const toNetWeightInputs = (
   entries: NetWeightEntry[],
@@ -107,10 +111,9 @@ const toNetWeightInputs = (
       ...(entry.unitId ? { unitId: entry.unitId } : {}),
     }));
 
-/** The rows an edit opens with. Seeds the editor AND the form field: a value
- *  only the editor holds is dropped from the payload by an untouched save.
- *  Seeded in the DEVICE separator — `parseDecimalInput` reads it back with
- *  that separator, and on a comma device a "." is a thousands group. */
+/** An edit's opening rows, seeding the editor AND the form field: an untouched
+ *  save drops a value only the editor holds. In the DEVICE separator, which
+ *  `parseDecimalInput` reads back; on a comma device a "." groups thousands. */
 const seedNetWeightRows = (
   initialData: AddItemFormInitialData | undefined,
 ): NetWeightEntry[] =>
@@ -159,16 +162,18 @@ interface AddItemFormProps {
   barcode?: string;
   format?: string;
   scannedValue?: string; // The actual scanned value (could be barcode or SKU)
-  onSubmit: (formData: AddItemSubmitPayload) => void;
+  /** Resolves with a refusal to show on its field, or with nothing. */
+  onSubmit: (
+    formData: AddItemSubmitPayload,
+  ) => Promise<AddItemFieldRefusal | void>;
   onClose: () => void;
   loading?: boolean;
   enableAutocomplete?: boolean;
   mode?: AddItemFormMode;
   initialData?: AddItemFormInitialData;
-  /** Optional: when provided, UPC field renders a barcode icon that invokes this.
-   *  The caller is responsible for navigating to a scanner and pushing the result
-   *  back via `initialData.upc` — this component will `setValue('upc', ...)` in
-   *  response to changes on that prop. */
+  /** Shows a barcode icon on the UPC field that calls this. The caller opens a
+   *  scanner and hands the code back through `initialData.upc`, which the form
+   *  sets on change. */
   onScanUpc?: () => void;
 }
 
@@ -272,10 +277,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  // Seed the brand exactly once per incoming brandId. Re-seeding on every
-  // render would undo the null that BrandAutocompleteField sets when the user
-  // starts typing a different brand, silently pinning the original brand id to
-  // the new name.
+  // Once per incoming brandId: re-seeding would undo the null
+  // BrandAutocompleteField sets when the user types a different brand, pinning
+  // the original brand id to the new name.
   if (initialData?.brandId && seededBrandId !== initialData.brandId) {
     setSeededBrandId(initialData.brandId);
     setSelectedBrandId(initialData.brandId);
@@ -288,11 +292,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     mode,
     onScanUpc,
   );
+  const fieldsOn = (page: PageName) => {
+    const { primary, advanced } = TAB_FIELDS[page];
+    return [...primary, ...advanced];
+  };
 
   const {
     control,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
     // Only the review path mandates a note — see `requiresEditNote`.
@@ -327,7 +336,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const netWeightsError = firstMessage(errors.netWeights);
   const unitsError = firstMessage(errors.units);
 
-  const handleFormSubmit = (data: CreateItemFormData) => {
+  const handleFormSubmit = async (data: CreateItemFormData) => {
     let tags: string[] = [];
     if (data.tags) {
       if (Array.isArray(data.tags)) {
@@ -393,7 +402,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       selectedImages,
     };
 
-    onSubmit(processedData);
+    const refusal = await onSubmit(processedData);
+    if (!refusal) return;
+    setCurrentPage(
+      PAGES.findIndex(page =>
+        fieldsOn(page).some(f => f.name === refusal.field),
+      ),
+    );
+    setError(refusal.field, { type: 'server', message: refusal.message });
   };
 
   const activePage = PAGES[currentPage] ?? PAGES[0];
@@ -405,10 +421,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // auto-expansion of "More options" when an errored field lives inside it.
   // react-hook-form deletes a field's key when its error clears.
   const fieldHasError = (name: string) => name in errors;
-  const tabHasError = (page: PageName) => {
-    const { primary, advanced } = TAB_FIELDS[page];
-    return [...primary, ...advanced].some(f => fieldHasError(String(f.name)));
-  };
+  const tabHasError = (page: PageName) =>
+    fieldsOn(page).some(f => fieldHasError(String(f.name)));
   const advancedHasError = activeTab.advanced.some(f =>
     fieldHasError(String(f.name)),
   );
@@ -465,11 +479,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 errorService.reportError(error, { operation: 'selectImage' });
               }}
               disabled={loading}
-              /* Every mode but `edit` writes through as the item's owner, so
-                 the photos land APPROVED and `makePrimary` is honoured. On the
-                 suggestion path they land PENDING and the server ignores it —
-                 offering the star there would promise a hero that review may
-                 never grant. */
+              /* Every mode but `edit` writes as the owner: photos land APPROVED
+                 and `makePrimary` holds. On a suggestion they land PENDING and
+                 the server ignores it; a star would promise an ungranted hero. */
               allowPrimarySelection={!requiresEditNote(mode)}
             />
             {!!editing && (

@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { useToday } from '#hooks/useToday';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -71,10 +72,11 @@ export function useMealPlanSelectorConfig(
 
   // A filter runs on the server so it reaches every plan, not the loaded pages.
   const debouncedSearch = useDebouncedValue(filters.search, SEARCH_DEBOUNCE_MS);
-  const serverFilters = toMealPlanServerFilters({
-    ...filters,
-    search: debouncedSearch,
-  });
+  const today = useToday();
+  const serverFilters = toMealPlanServerFilters(
+    { ...filters, search: debouncedSearch },
+    today,
+  );
   const filtered = useMealPlanList(serverFilters, { skip: !serverFilters });
   const isFiltering = hasMealPlanFilter(filters);
 
@@ -86,7 +88,7 @@ export function useMealPlanSelectorConfig(
       ? filtered
       : plans;
   const mealPlans = isFiltering
-    ? filterMealPlans(source.mealPlans, filters, new Date())
+    ? filterMealPlans(source.mealPlans, filters, today)
     : plans.mealPlans;
 
   const renderMealPlanItem = (

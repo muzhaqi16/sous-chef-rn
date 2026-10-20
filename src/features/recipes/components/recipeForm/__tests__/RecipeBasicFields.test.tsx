@@ -99,7 +99,10 @@ const defaultState = {
   notes: '',
   tips: '',
   originalAuthor: '',
+  capturedFrom: null,
   tags: '',
+  version: null,
+  ingredientsUnread: false,
 };
 
 beforeEach(() => {

@@ -3,7 +3,7 @@ import type {
   MembershipRole,
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
@@ -37,10 +37,11 @@ export type Member = {
 /** Resolves to "You" for `currentUserId`, else the first non-empty name source. */
 export function getMemberDisplayName(
   member: Member,
+  translate: Translate,
   currentUserId?: string,
 ): string {
   if (currentUserId && member.user?.id === currentUserId) {
-    return t('homeDetail.youLabel');
+    return translate('homeDetail.youLabel');
   }
 
   return (
@@ -50,7 +51,7 @@ export function getMemberDisplayName(
       member.user?.profile?.displayName,
       member.user?.email?.split('@')[0],
       member.user?.email,
-    ) ?? t('labels.unknown')
+    ) ?? translate('labels.unknown')
   );
 }
 
@@ -61,17 +62,17 @@ export type CollaboratorDisplayShape = Pick<
 >;
 
 /**
- * `User.displayName` first: it follows the SHARING relationship, so a
- * collaborator on this list resolves a name even when their profile is private
- * and `profile` comes back null. The profile read stays as the path for a
- * viewer who can see it; the email's local part is the last resort.
+ * `User.displayName` first: it follows the SHARING relationship, so it resolves
+ * even when a private `profile` comes back null. Then the profile; the email's
+ * local part is the last resort.
  */
 export function getCollaboratorDisplayName(
   collaborator: CollaboratorDisplayShape,
+  translate: Translate,
   currentUserId?: string,
 ): string {
   if (currentUserId && collaborator.collaboratorId === currentUserId) {
-    return t('homeDetail.youLabel');
+    return translate('homeDetail.youLabel');
   }
 
   const email = collaborator.collaborator?.email ?? collaborator.email ?? null;
@@ -82,6 +83,6 @@ export function getCollaboratorDisplayName(
       collaborator.collaborator?.profile?.displayName,
       email?.split('@')[0],
       email,
-    ) ?? t('labels.unknown')
+    ) ?? translate('labels.unknown')
   );
 }

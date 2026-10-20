@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { Text } from '#components/atoms/Text';
-import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
+import { forgotPasswordSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { useRequestPasswordReset } from '#features/auth/hooks/useRequestPasswordReset';
@@ -35,7 +35,7 @@ export function ForgotPasswordScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<ForgotPasswordValues>({
-    resolver: yupResolver(getForgotPasswordValidationSchema()),
+    resolver: yupResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
   });
 

@@ -4,9 +4,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { AnalyticsSummaryCard } from '#features/pantry/components/analytics/AnalyticsSummaryCard';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 describe('AnalyticsSummaryCard', () => {
   it('renders title and value', () => {
     const { getByText } = render(

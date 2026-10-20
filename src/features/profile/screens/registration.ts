@@ -18,15 +18,16 @@ const PersonalInformationScreen = React.lazy(
 );
 const ChangePasswordScreen = React.lazy(() => import('./ChangePasswordScreen'));
 const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
+const DataSourcesScreen = React.lazy(() => import('./DataSourcesScreen'));
+const MyReportsScreen = React.lazy(() => import('./MyReportsScreen'));
 // Owned by the notifications feature but only ever reached from Profile's
 // settings rows, so it is registered alongside them.
 const NotificationSettingsScreen = React.lazy(
   () => import('#features/notifications/screens/NotificationSettingsScreen'),
 );
-// An auth screen, but reached from inside the app (Profile's verify-email
-// banner, the collaborate gate's alert). Registered as a sibling of `Home` so
-// it PUSHES over the app; the root navigator's `verification` group is a gate
-// with no app behind it, and swapping to it strands the user after verifying.
+// Reached from inside the app, so a sibling of `Home` that PUSHES over it: the
+// root's `verification` group is a gate with no app behind it, and swapping to
+// it strands the user after verifying.
 const VerifyEmailScreen = React.lazy(() =>
   import('#features/auth/screens/CodeVerificationScreen').then(m => ({
     default: m.VerifyEmailScreen,
@@ -34,11 +35,9 @@ const VerifyEmailScreen = React.lazy(() =>
 );
 
 /**
- * Profile and its settings screens, siblings of `Home` (see RootNavigator).
- * `Profile` and `ChangePassword` are email link targets (the security alert
- * opens Change Password); a new path also needs claiming in the API's
- * `apple-app-site-association` and `assetlinks.json`. Onboarding registers its
- * own `ImageCrop` so cropping there stays inside the onboarding flow.
+ * `Profile` and `ChangePassword` are email link targets; a new path also needs
+ * claiming in the API's `apple-app-site-association` and `assetlinks.json`.
+ * Onboarding registers its own `ImageCrop` so cropping stays in its flow.
  */
 export const profileScreens = {
   Profile: createNativeStackScreen({
@@ -85,6 +84,16 @@ export const profileScreens = {
   }),
   AppSettings: createNativeStackScreen({
     screen: AppSettingsScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  DataSources: createNativeStackScreen({
+    screen: DataSourcesScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  MyReports: createNativeStackScreen({
+    screen: MyReportsScreen,
     options: settingsScreenOptions,
     linking: null,
   }),

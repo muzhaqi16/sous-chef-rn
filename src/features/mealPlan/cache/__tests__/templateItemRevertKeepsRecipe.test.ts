@@ -14,13 +14,14 @@
 import { makeCache } from '#/apollo/cache';
 import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { readTemplateItem } from '../mealTemplateItem';
 
 function seedTemplateWithRecipeBackedRow() {
   const cache = makeCache();
   cache.writeQuery({
     query: GetMealTemplateForEditDocument,
-    variables: { id: 'tpl-1' },
+    variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
     data: {
       __typename: 'Query',
       mealTemplate: {
@@ -32,25 +33,37 @@ function seedTemplateWithRecipeBackedRow() {
         defaultServings: 2,
         tags: [],
         updatedAt: '2026-08-01T00:00:00.000Z',
-        items: [
-          {
-            __typename: 'MealTemplateItem',
-            id: 'item-1',
-            dayOffset: 0,
-            mealType: MealType.Dinner,
-            customMealName: null,
-            servings: 2,
-            notes: null,
-            recipe: {
-              __typename: 'Recipe',
-              id: 'rec-9',
-              name: 'Ragu',
-              imageUrl: null,
-              servings: 4,
-              totalTimeMinutes: 90,
+        itemsConnection: {
+          __typename: 'MealTemplateItemConnection',
+          totalCount: 1,
+          edges: [
+            {
+              __typename: 'MealTemplateItemEdge',
+              node: {
+                __typename: 'MealTemplateItem',
+                id: 'item-1',
+                dayOffset: 0,
+                mealType: MealType.Dinner,
+                customMealName: null,
+                servings: 2,
+                notes: null,
+                recipe: {
+                  __typename: 'Recipe',
+                  id: 'rec-9',
+                  name: 'Ragu',
+                  imageUrl: null,
+                  servings: 4,
+                  totalTimeMinutes: 90,
+                },
+              },
             },
+          ],
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
           },
-        ],
+        },
       },
     },
   });
@@ -74,7 +87,7 @@ describe('the template editor snapshots the recipe it can overwrite', () => {
     const cache = makeCache();
     cache.writeQuery({
       query: GetMealTemplateForEditDocument,
-      variables: { id: 'tpl-2' },
+      variables: { id: 'tpl-2', itemsFirst: MEALS_PAGE_SIZE },
       data: {
         __typename: 'Query',
         mealTemplate: {
@@ -86,18 +99,30 @@ describe('the template editor snapshots the recipe it can overwrite', () => {
           defaultServings: 2,
           tags: [],
           updatedAt: '2026-08-01T00:00:00.000Z',
-          items: [
-            {
-              __typename: 'MealTemplateItem',
-              id: 'item-2',
-              dayOffset: 1,
-              mealType: MealType.Lunch,
-              customMealName: 'Leftovers',
-              servings: 1,
-              notes: null,
-              recipe: null,
+          itemsConnection: {
+            __typename: 'MealTemplateItemConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'MealTemplateItemEdge',
+                node: {
+                  __typename: 'MealTemplateItem',
+                  id: 'item-2',
+                  dayOffset: 1,
+                  mealType: MealType.Lunch,
+                  customMealName: 'Leftovers',
+                  servings: 1,
+                  notes: null,
+                  recipe: null,
+                },
+              },
+            ],
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
             },
-          ],
+          },
         },
       },
     });

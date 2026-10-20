@@ -1,8 +1,7 @@
 /**
- * Local-first: the id is minted here and sent as `newRecipeId`, which the server
- * passes into its own create, so a queued replay converges on one row. The
- * SERVER still forks — only it can set `forkedFromId` and carry an ingredient's
- * external sources — so the device shows a copy until the real row lands.
+ * The id is minted here as `newRecipeId`, so a queued replay converges on one
+ * row. Only the SERVER forks (it alone sets `forkedFromId` and carries external
+ * sources), so the device shows a copy until then.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -25,6 +24,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 export function useForkRecipe() {
   const { t } = useTranslation();
@@ -49,6 +49,15 @@ export function useForkRecipe() {
     });
     if (!source) {
       toastService.error(t('recipes.forkSourceNotLoaded'));
+      return null;
+    }
+    // The device's copy is written as a whole recipe. `hasNextPage` marks a
+    // source over the ingredient limit: its copy would show, and later save, a
+    // short list.
+    if (source.ingredientsConnection.pageInfo.hasNextPage) {
+      toastService.error(
+        t('recipes.ingredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
+      );
       return null;
     }
 

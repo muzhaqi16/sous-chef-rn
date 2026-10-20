@@ -62,12 +62,26 @@ import {
   MealPlanForEventDocument,
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,
+  type GetMealPlanQuery,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   GetMealTemplatesDocument,
+  GetMealTemplateDocument,
+  GetMealTemplateForEditDocument,
   MealTemplateForEventDocument,
   CreateMealTemplateDocument,
+  UpdateTemplateItemDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
+import {
+  readPlanSource,
+  readTemplateSource,
+} from '#features/mealPlan/cache/derivationSources';
+import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
+import { MealPlanSettingsSheet_MealPlanFragmentDoc } from '#features/mealPlan/components/MealPlanSettingsSheet.generated';
+import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
@@ -77,6 +91,7 @@ import {
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import {
   InviteToHomeDocument,
@@ -109,6 +124,7 @@ import {
   MyRecipesDocument,
   MySavedRecipesDocument,
   GetRecipeDocument,
+  type GetRecipeQuery,
   type MyRecipesQuery,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
@@ -162,6 +178,9 @@ const mockedSchema = addMocksToSchema({
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
     MoveShoppingItemToPantryResult: () => ({
       __typename: 'MoveShoppingItemToPantryPayload',
+    }),
+    CreateReceiptCheckInResult: () => ({
+      __typename: 'CreateReceiptCheckInPayload',
     }),
   },
 });
@@ -417,33 +436,6 @@ function expectWriterCoversReader(
 }
 
 /**
- * The array-field analogue of {@link expectWriterCoversReader}: a plain list
- * field has no `edges { node }` to descend, so the reader side is the named
- * field's own selection.
- */
-function expectWriterCoversReaderField(
-  writerDocument: DocumentNode,
-  writerField: string,
-  readerDocument: DocumentNode,
-  readerField: string,
-  label: string,
-): void {
-  const required = flattenSelection(
-    findFieldSelection(readerDocument, readerField),
-    fragmentsOf(readerDocument),
-  );
-  const written = flattenSelection(
-    findFieldSelection(writerDocument, writerField),
-    fragmentsOf(writerDocument),
-  );
-  expectSelected(required.size, label);
-  expect({
-    label,
-    missing: [...required].filter(field => !written.has(field)).sort(),
-  }).toEqual({ label, missing: [] });
-}
-
-/**
  * Asserts two writers of the same entity select the identical field set. A
  * reader comparison catches both drifting below what a screen reads; it does
  * not catch one being edited and its twin forgotten, which is the shape a
@@ -611,12 +603,40 @@ describe('optimistic entity completeness', () => {
         input: {
           shoppingListItemId: 'list-item-1',
           pantryId: 'pantry-1',
-          actualQuantity: 1,
+          amount: { measured: { quantity: 1 } },
         },
         today: '2026-09-22',
       });
       const pantryItem = moved.moveShoppingItemToPantry.pantryItem;
       pantryItem.id = 'server-item-restocked';
+      pantryItem.pantryId = 'pantry-1';
+
+      addToPantryItemsCache(cache, 'pantry-1', pantryItem);
+
+      expectCompletePantry(readPantry(cache));
+    });
+
+    it('keeps GetPantry complete after a CreateReceiptCheckIn response lands', async () => {
+      // A checked-in line answers with the stack it recorded, the held one on a
+      // restock: the only field source for the row the reconcile links.
+      const cache = await seedPantryCache();
+      const checkedIn = await runAgainstSchema<{
+        createReceiptCheckIn: {
+          results: { pantryItem: PantryItemRef & { pantryId: string } }[];
+        };
+      }>(CreateReceiptCheckInDocument, {
+        input: {
+          id: 'checkin-1',
+          pantryId: 'pantry-1',
+          purchasedOn: '2026-10-15',
+          lines: [],
+        },
+        today: '2026-10-15',
+      });
+      const [first] = checkedIn.createReceiptCheckIn.results;
+      expect(first).toBeDefined();
+      const pantryItem = first!.pantryItem;
+      pantryItem.id = 'server-item-checked-in';
       pantryItem.pantryId = 'pantry-1';
 
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
@@ -776,6 +796,7 @@ describe('optimistic entity completeness', () => {
               perspective: 'FRONT',
               isPrimary: true,
               status: 'READY',
+              credit: null,
               variants: [],
             },
           ],
@@ -834,6 +855,12 @@ describe('optimistic entity completeness', () => {
                 perspective
                 isPrimary
                 status
+                credit {
+                  license
+                  licenseUrl
+                  sourceUrl
+                  text
+                }
                 variants {
                   id
                   url
@@ -944,9 +971,9 @@ describe('optimistic entity completeness', () => {
     it('keeps GetShoppingListItemsFiltered complete after a recipe-created add', async () => {
       const cache = await seedListCache();
 
-      // Written through the fragment `createShoppingListItemsFromRecipe` now
-      // spreads, so this test tracks that selection: narrow it again and the
-      // list read goes incomplete here.
+      // Written through the fragment `AddItemsToShoppingListFromRecipe` spreads
+      // on each added line, so this test tracks that selection: narrow it and
+      // the list read goes incomplete here.
       const created = await runAgainstSchema<
         Unmasked<GetShoppingListItemsFilteredQuery>
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
@@ -1105,10 +1132,26 @@ describe('optimistic entity completeness', () => {
     const PLAN = {
       name: 'Offline week',
       planType: MealPlanType.Weekly,
-      startDate: '2026-10-05T00:00:00.000Z',
-      endDate: '2026-10-11T00:00:00.000Z',
+      startDate: '2026-10-05',
+      endDate: '2026-10-11',
       homeId: 'home-uncached',
     };
+    const PLAN_VARS = {
+      id: 'plan-1',
+      mealsFirst: MEALS_PAGE_SIZE,
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    };
+    const TEMPLATE_VARS = { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE };
+
+    /** The ids of a plan's meals as the detail screen reads them, or null. */
+    const mealsOnScreen = (cache: ApolloCache, planId: string) =>
+      cache
+        .readFragment({
+          id: cache.identify({ __typename: 'MealPlan', id: planId }),
+          fragment: MealPlanMain_MealPlanFragmentDoc,
+          fragmentName: 'MealPlanMain_mealPlan',
+        })
+        ?.mealPlanItemsConnection.edges.map(edge => edge.node.id) ?? null;
 
     it('a local plan reads complete for every query', () => {
       const cache = makeCache();
@@ -1122,13 +1165,50 @@ describe('optimistic entity completeness', () => {
       ).toBe(true);
     });
 
+    // Readers leave a plan's two lists to their edge writers, so a new plan
+    // states both empty: its detail query is skipped until the create is
+    // acknowledged, and the screen reads the plan by entity meanwhile.
+    it('a local plan reads complete for the detail screen, holding no meals and no generated lists', () => {
+      const cache = makeCache();
+      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1');
+      const plan = { __typename: 'MealPlan', id: 'plan-1' };
+      const id = cache.identify(plan);
+
+      // Every fragment `GetMealPlan` spreads on the plan.
+      const incomplete = Object.entries({
+        MealPlanMain_mealPlan: MealPlanMain_MealPlanFragmentDoc,
+        MealPlanSettingsSheet_mealPlan:
+          MealPlanSettingsSheet_MealPlanFragmentDoc,
+        useGenerateShoppingList_mealPlan:
+          UseGenerateShoppingList_MealPlanFragmentDoc,
+        useDuplicateMealPlan_mealPlan: UseDuplicateMealPlan_MealPlanFragmentDoc,
+      })
+        .filter(
+          ([fragmentName, fragment]) =>
+            cache.readFragment({ id, fragment, fragmentName }) === null,
+        )
+        .map(([fragmentName]) => fragmentName);
+      expect(incomplete).toEqual([]);
+
+      expect(mealsOnScreen(cache, 'plan-1')).toEqual([]);
+      // Whole, with no page left to read: it can be copied straight away.
+      expect(readPlanSource(cache, 'plan-1')?.mealPlanItems).toEqual([]);
+      expect(
+        cache.readFragment({
+          id,
+          fragment: MealPlanSettingsSheet_MealPlanFragmentDoc,
+          fragmentName: 'MealPlanSettingsSheet_mealPlan',
+        })?.generatedShoppingListsConnection.edges,
+      ).toEqual([]);
+    });
+
     it('a local meal reads complete, and so does the plan listing it', () => {
       const cache = makeCache();
       writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1');
       writeLocalMealPlanItem(cache, {
         id: 'meal-1',
         mealPlanId: 'plan-2',
-        date: '2026-10-06T00:00:00.000Z',
+        date: '2026-10-06',
         mealType: MealType.Dinner,
         meal: { customMealName: 'Soup' },
       });
@@ -1145,6 +1225,55 @@ describe('optimistic entity completeness', () => {
           id: 'plan-2',
         }),
       ).toBe(true);
+      // Listed as an edge of the plan's meals, where the screen and a copy
+      // of the plan both read it.
+      expect(mealsOnScreen(cache, 'plan-2')).toEqual(['meal-1']);
+      expect(
+        readPlanSource(cache, 'plan-2')?.mealPlanItems.map(meal => [
+          meal.id,
+          meal.date,
+        ]),
+      ).toEqual([['meal-1', '2026-10-06']]);
+    });
+
+    it('keeps GetMealPlan complete after a local meal is added to a loaded plan', async () => {
+      const cache = makeCache();
+      const data = await runAgainstSchema<Unmasked<GetMealPlanQuery>>(
+        GetMealPlanDocument,
+        PLAN_VARS,
+      );
+      data.mealPlan!.id = 'plan-1';
+      cache.writeQuery({
+        query: GetMealPlanDocument,
+        variables: PLAN_VARS,
+        data,
+      });
+      const loaded = data.mealPlan!.mealPlanItemsConnection.edges.map(
+        edge => edge.node.id,
+      );
+
+      writeLocalMealPlanItem(cache, {
+        id: 'meal-local',
+        mealPlanId: 'plan-1',
+        date: '2026-10-06',
+        mealType: MealType.Dinner,
+        meal: { customMealName: 'Soup' },
+      });
+
+      const diff = cache.diff<Unmasked<GetMealPlanQuery>>({
+        query: GetMealPlanDocument,
+        variables: PLAN_VARS,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+      // Appended as an edge: the meals the server sent stay where they were.
+      expect(
+        diff.result?.mealPlan?.mealPlanItemsConnection?.edges?.map(
+          edge => edge?.node?.id,
+        ),
+      ).toEqual([...loaded, 'meal-local']);
     });
 
     it('a local template reads complete with the items it was created with', () => {
@@ -1166,12 +1295,84 @@ describe('optimistic entity completeness', () => {
         'user-1',
       );
 
-      const template = cache.readFragment<{ items: { id: string }[] }>({
-        id: cache.identify({ __typename: 'MealTemplate', id: 'tpl-1' }),
-        fragment: MealTemplateReadersFragmentDoc,
-      });
-      expect(template?.items.map(item => item.id)).toEqual(['tpl-item-1']);
+      expect(
+        readsComplete(cache, MealTemplateReadersFragmentDoc, {
+          __typename: 'MealTemplate',
+          id: 'tpl-1',
+        }),
+      ).toBe(true);
+      expect(
+        readsComplete(cache, MealTemplateItemReadersFragmentDoc, {
+          __typename: 'MealTemplateItem',
+          id: 'tpl-item-1',
+        }),
+      ).toBe(true);
+      // Its meals are edges of the template, with no page left to read: a
+      // template cut from a plan can be copied or laid onto dates at once.
+      expect(
+        readTemplateSource(cache, 'tpl-1')?.items.map(item => [
+          item.id,
+          item.dayOffset,
+          item.customMealName,
+        ]),
+      ).toEqual([['tpl-item-1', 0, 'Oats']]);
     });
+
+    it('a local template with no items holds an empty list, not a missing one', () => {
+      const cache = makeCache();
+      writeLocalMealTemplate(cache, 'tpl-0', { name: 'Blank' }, 'user-1');
+
+      expect(readTemplateSource(cache, 'tpl-0')?.items).toEqual([]);
+    });
+
+    // The preview's query and the editor's, each a reader of the same list.
+    const TEMPLATE_READERS: Array<[string, DocumentNode]> = [
+      ['GetMealTemplate', GetMealTemplateDocument],
+      ['GetMealTemplateForEdit', GetMealTemplateForEditDocument],
+    ];
+    type TemplateRead = {
+      mealTemplate: {
+        id: string;
+        itemsConnection: { edges: Array<{ node: { id: string } }> };
+      } | null;
+    };
+
+    it.each(TEMPLATE_READERS)(
+      'keeps %s complete after a local item is added to a loaded template',
+      async (_name, query) => {
+        const cache = makeCache();
+        const data = await runAgainstSchema<TemplateRead>(query, TEMPLATE_VARS);
+        data.mealTemplate!.id = 'tpl-1';
+        cache.writeQuery({ query, variables: TEMPLATE_VARS, data });
+        const loaded = data.mealTemplate!.itemsConnection.edges.map(
+          edge => edge.node.id,
+        );
+
+        addTemplateItemToCache(
+          cache,
+          'tpl-1',
+          localTemplateItem(cache, 'tpl-item-local', {
+            dayOffset: 1,
+            mealType: MealType.Lunch,
+            meal: { customMealName: 'Salad' },
+          }),
+        );
+
+        const diff = cache.diff<TemplateRead>({
+          query,
+          variables: TEMPLATE_VARS,
+          optimistic: true,
+          returnPartialData: true,
+        });
+        expect(describeMissing(diff.missing)).toBe('none');
+        expect(diff.complete).toBe(true);
+        expect(
+          diff.result?.mealTemplate?.itemsConnection?.edges?.map(
+            edge => edge?.node?.id,
+          ),
+        ).toEqual([...loaded, 'tpl-item-local']);
+      },
+    );
 
     it('an added item and a restored one read complete', () => {
       const cache = makeCache();
@@ -1266,14 +1467,23 @@ describe('optimistic entity completeness', () => {
       const cache = makeCache();
       writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
-      const diff = cache.diff({
+      const diff = cache.diff<Unmasked<GetRecipeQuery>>({
         query: GetRecipeDocument,
-        variables: { id: 'client-recipe-1' },
+        variables: {
+          id: 'client-recipe-1',
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
         optimistic: true,
         returnPartialData: true,
       });
       expect(describeMissing(diff.missing)).toBe('none');
       expect(diff.complete).toBe(true);
+      // A create states every ingredient, so the list is counted and whole:
+      // adding all, copying and editing refuse one with pages left to read.
+      expect(diff.result?.recipe?.ingredientsConnection).toMatchObject({
+        totalCount: 1,
+        pageInfo: { hasNextPage: false, endCursor: null },
+      });
     });
   });
 
@@ -1409,15 +1619,11 @@ describe('optimistic entity completeness', () => {
   describe('every connection-linking writer is accounted for', () => {
     const LINKING_MODULES: Record<string, string> = {
       'src/features/pantry/cache/items.ts':
-        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
+        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, CreateReceiptCheckIn, PantryItemForEvent)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
-      'src/features/shoppingList/hooks/useMoveToPantry.ts':
-        'covered: the MoveShoppingItemToPantry case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification feed fragment comparison above',
-      'src/features/barcode/hooks/useAddScannedItem.ts':
-        'covered indirectly: the row is written in full by writeLocalPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
       'src/features/catalog/hooks/useCreateStorageLocation.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/catalog/hooks/useStorageLocationManagement.ts':
@@ -1439,7 +1645,9 @@ describe('optimistic entity completeness', () => {
       'src/features/mealPlan/hooks/useMealTemplateEditor.ts':
         'covered: writes the same CreateMealTemplate document compared below',
       'src/features/mealPlan/cache/mealPlanItem.ts':
-        'covered: CreateMealPlanItem is compared below against the mealPlanItems array GetMealPlan reads',
+        'covered: the local meal cases above (the plan listing it, GetMealPlan after an add), and CreateMealPlanItem is compared below against the meals GetMealPlan reads',
+      'src/features/mealPlan/cache/mealTemplateItem.ts':
+        'covered: the local item cases above (GetMealTemplate and GetMealTemplateForEdit after an add), and UpdateTemplateItem is compared below against both',
       'src/features/mealPlan/hooks/useMealPlanSubscriptions.ts':
         'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',
       'src/features/recipes/cache/favorites.ts':
@@ -1447,13 +1655,12 @@ describe('optimistic entity completeness', () => {
     };
 
     // Every way the app links an entity into a collection a screen reads: a
-    // connection on a parent entity, a connection at the query root, or a
-    // plain list field. `Query` is the root one — a regex naming a `Root`
-    // factory that does not exist matched nothing and passed vacuously.
+    // connection on a parent entity, or a connection at the query root.
+    // `Query` is the root one — a regex naming a `Root` factory that does not
+    // exist matched nothing and passed vacuously.
     const LINKING_FACTORIES = [
       'createAddToQueryConnectionUpdater',
       'createAddToParentConnectionUpdater',
-      'createAddToParentArrayUpdater',
     ];
 
     const CACHE_UPDATERS_MODULE = 'src/apollo/utils/cacheUpdaters.ts';
@@ -1637,12 +1844,35 @@ describe('optimistic entity completeness', () => {
         'MealTemplate (event read-back)',
         'mealTemplates',
       );
-      expectWriterCoversReaderField(
+      // A meal is an edge of its plan's one list: what the screen reads off
+      // a node, and what a copy of the plan reads off it.
+      expectWriterCoversReader(
         CreateMealPlanItemDocument,
         'mealPlanItem',
         GetMealPlanDocument,
-        'mealPlanItems',
         'MealPlanItem (createMealPlanItem)',
+        'mealPlanItemsConnection',
+      );
+      expectWriterCoversReader(
+        CreateMealPlanItemDocument,
+        'mealPlanItem',
+        UseDuplicateMealPlan_MealPlanFragmentDoc,
+        'MealPlanItem (createMealPlanItem, read by a plan copy)',
+        'mealPlanItemsConnection',
+      );
+      expectWriterCoversReader(
+        UpdateTemplateItemDocument,
+        'mealTemplateItem',
+        GetMealTemplateDocument,
+        'MealTemplateItem (updateTemplateItem)',
+        'itemsConnection',
+      );
+      expectWriterCoversReader(
+        UpdateTemplateItemDocument,
+        'mealTemplateItem',
+        GetMealTemplateForEditDocument,
+        'MealTemplateItem (updateTemplateItem, read by the editor)',
+        'itemsConnection',
       );
     });
 

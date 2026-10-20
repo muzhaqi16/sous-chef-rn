@@ -15,7 +15,7 @@ Workflows declare which environment they use:
 ```yaml
 jobs:
   build:
-    environment: stg  # Uses the 'stg' environment
+    environment: stg # Uses the 'stg' environment
 ```
 
 When a workflow runs, GitHub loads variables and secrets from that environment.
@@ -28,10 +28,12 @@ GitHub resolves secrets in this priority:
 2. **Repository-level secret** (fallback if environment secret doesn't exist)
 
 This allows you to:
+
 - Share common secrets across all environments (repository-level)
 - Override specific secrets per environment (environment-level)
 
 **Example:**
+
 ```
 Repository secrets: BUILD_CERTIFICATE_BASE64 (dev keystore)
 dev environment: (no override, uses repository-level)
@@ -42,11 +44,13 @@ prod environment: PROD_KEYSTORE_BASE64 (overrides for production)
 ### Variables vs Secrets
 
 **Variables** (plain text, visible):
+
 - API URLs, endpoint URLs
 - Non-sensitive configuration
 - Located: Settings → Environments → `<env-name>` → Environment variables
 
 **Secrets** (encrypted, hidden):
+
 - API keys, passwords, keystores
 - Authentication credentials
 - Located: Settings → Environments → `<env-name>` → Environment secrets
@@ -55,24 +59,27 @@ prod environment: PROD_KEYSTORE_BASE64 (overrides for production)
 
 ## Our Environment Structure
 
-| Environment | Workflow File | Triggered By | Purpose |
-|-------------|---------------|--------------|---------|
-| `dev` | build-android.yml | `dev-v*` tags | Development testing |
-| `stg` | build-android.yml | `stg-v*` tags | Pre-production QA |
-| `prod` | build-android.yml | `prod-v*`, `playstore-v*` tags | Production releases (Android) |
-| `prod` | build-ios.yml | `v*`, `ios-v*` tags | Production releases (iOS, App Store) |
+| Environment | Workflow File     | Triggered By                   | Purpose                              |
+| ----------- | ----------------- | ------------------------------ | ------------------------------------ |
+| `dev`       | build-android.yml | `dev-v*` tags                  | Development testing                  |
+| `stg`       | build-android.yml | `stg-v*` tags                  | Pre-production QA                    |
+| `prod`      | build-android.yml | `prod-v*`, `playstore-v*` tags | Production releases (Android)        |
+| `prod`      | build-ios.yml     | `v*`, `ios-v*` tags            | Production releases (iOS, App Store) |
 
 ### What Each Environment Contains
 
 **dev environment:**
+
 - Variables: Dev API URLs, dev endpoints
 - Secrets: Inherits from repository (dev keystore, API keys)
 
 **stg environment:**
+
 - Variables: Staging API URLs (e.g., `https://stg-api.souschef.dev/graphql`)
 - Secrets: Inherits from repository (same dev keystore, API keys)
 
 **prod environment:**
+
 - Variables: Production API URLs
 - Secrets: Inherits most from repository, overrides keystore with `PROD_KEYSTORE_BASE64`
 
@@ -89,6 +96,7 @@ npm run tag:stg
 ```
 
 **What happens:**
+
 1. Tag `stg-v1.7.1` matches pattern `stg-v*`
 2. Triggers `build-android.yml` workflow
 3. Workflow declares `environment: stg`
@@ -110,6 +118,7 @@ npm run tag:prod
 ```
 
 **What happens:**
+
 1. Tag `prod-v1.7.1` matches pattern `prod-v*`
 2. Triggers `build-android.yml` workflow
 3. Workflow declares `environment: prod`
@@ -160,10 +169,12 @@ Secrets are **encrypted** and hidden after creation.
 Use this when dev/stg/prod use the same API keys but different servers.
 
 **Setup:**
+
 - Repository secrets: `API_KEY`, `SPOONACULAR_API_KEY` (shared)
 - Environment variables: `API_URL` (different per environment)
 
 **Result:**
+
 - All environments use same API key
 - Each environment connects to different server
 
@@ -172,6 +183,7 @@ Use this when dev/stg/prod use the same API keys but different servers.
 Use this when environments need different credentials.
 
 **Setup:**
+
 - Repository secrets: Common secrets
 - Environment secrets: Override specific ones
   - `dev` → no overrides
@@ -179,6 +191,7 @@ Use this when environments need different credentials.
   - `prod` → override `PROD_KEYSTORE_BASE64`
 
 **Result:**
+
 - Dev/staging share dev keystore
 - Production uses separate keystore
 
@@ -189,6 +202,7 @@ Use this when environments need different credentials.
 ### Check What Environment Was Used
 
 In GitHub Actions run:
+
 1. Open workflow run
 2. Look for "Building for environment: stg" in logs
 3. Verify it matches expected environment
@@ -209,14 +223,17 @@ Add debug step to workflow:
 ### Common Issues
 
 **"Variable is empty"**
+
 - Environment doesn't exist → Create it
 - Variable not set in environment → Add it under "Environment variables"
 
 **"Wrong API URL used"**
+
 - Workflow uses wrong environment name → Check `environment:` declaration
 - Environment name mismatch → Ensure exact match (case-sensitive)
 
 **"Build uses dev secrets in production"**
+
 - Missing environment-specific secret → Add to environment
 - Workflow not declaring environment → Add `environment: prod`
 
@@ -227,16 +244,18 @@ Add debug step to workflow:
 ### Never Store in Code
 
 ❌ Don't:
+
 ```yaml
 env:
-  API_URL: "https://api.souschef.dev/graphql"  # Hardcoded
+  API_URL: 'https://api.souschef.dev/graphql' # Hardcoded
 ```
 
 ✅ Do:
+
 ```yaml
-environment: prod  # Loads from GitHub Environment
+environment: prod # Loads from GitHub Environment
 env:
-  API_URL: ${{ vars.API_URL }}  # References environment variable
+  API_URL: ${{ vars.API_URL }} # References environment variable
 ```
 
 ### Separate Production Credentials
@@ -247,6 +266,7 @@ env:
 ### Use Environment Protection Rules
 
 **Optional:** Add protection rules to environments:
+
 1. Settings → Environments → `prod` → Configure environment
 2. Enable "Required reviewers" for production deployments
 3. Only specific users can approve production releases

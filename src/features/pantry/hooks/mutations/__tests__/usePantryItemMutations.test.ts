@@ -11,9 +11,6 @@ import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#/services/errorService');
 
 jest.mock('#/utils/generateId', () => ({
@@ -25,12 +22,6 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     registerPendingDelete: jest.fn(),
     unregisterPendingDelete: jest.fn(),
   },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 const defaultOptions = {

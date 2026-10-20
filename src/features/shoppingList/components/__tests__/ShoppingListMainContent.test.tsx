@@ -1,5 +1,6 @@
 'use no memo';
 
+import { t } from '#/i18n';
 import React from 'react';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -11,30 +12,32 @@ import {
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingListSelectorModal';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { BarAction } from '#components/molecules/BarActions';
 import { useStore } from '#store';
-import { userEvent } from '@testing-library/react-native';
+import { fireEvent, userEvent } from '@testing-library/react-native';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
+
+jest.mock('#features/shoppingList/hooks/useStoreModeEnabled', () => ({
+  useStoreModeEnabled: jest.fn(() => false),
+}));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
 
-jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
-  useTabBarAddButton: jest.fn(),
+jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
+  useTabBarAddMenu: jest.fn(),
 }));
 
 jest.mock('#hooks/useFeatureHint', () => ({
@@ -114,6 +117,7 @@ jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
     openQuantityEdit: jest.fn(),
     openPurchaseAmount: jest.fn(),
     openMoveToPantry: jest.fn(),
+    openMoveToAisle: jest.fn(),
   })),
   useAnyShoppingListSheetVisible: jest.fn(() => false),
 }));
@@ -140,8 +144,6 @@ jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
     canMarkPurchased: true,
   })),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 // Opens through its imperative handle, as the real tray does, and then lists
 // the config's rows so a test can pick one.
@@ -349,6 +351,31 @@ describe('ShoppingListMainContent', () => {
       />,
     );
     expect(getByTestId('shopping-list-screen')).toBeTruthy();
+  });
+
+  describe('store mode', () => {
+    it('offers no way in until it is turned on in Settings', () => {
+      const { queryByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+
+      expect(queryByTestId(shoppingListTestIDs.storeModeButton)).toBeNull();
+    });
+
+    it('opens store mode on the list on screen', () => {
+      jest.mocked(useStoreModeEnabled).mockReturnValue(true);
+      const screenData = makeScreenData();
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={screenData} />,
+      );
+
+      fireEvent.press(getByTestId(shoppingListTestIDs.storeModeButton));
+
+      expect(jest.mocked(useAppNavigation)().toStoreMode).toHaveBeenCalledWith({
+        listId: screenData.state.currentListId,
+      });
+      jest.mocked(useStoreModeEnabled).mockReturnValue(false);
+    });
   });
 
   it('renders with current list name', () => {
@@ -566,9 +593,10 @@ describe('ShoppingListMainContent', () => {
     it('does not tell the person they lack permission', () => {
       render(<ShoppingListMainContent screenData={withoutDetails()} />);
 
-      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
-        .calls[0];
-      expect(disabledCopy).toBeUndefined();
+      const [[entry]] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entry?.disabledReason).not.toBe(
+        t('shoppingListScreen.noAddPermission'),
+      );
     });
 
     it('waits rather than offering a retry while the answer is still coming', () => {
@@ -595,9 +623,10 @@ describe('ShoppingListMainContent', () => {
 
       render(<ShoppingListMainContent screenData={makeScreenData()} />);
 
-      const [, , disabledCopy] = (useTabBarAddButton as jest.Mock).mock
-        .calls[0];
-      expect(disabledCopy).toBeTruthy();
+      const [[entry]] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entry?.disabledReason).toBe(
+        t('shoppingListScreen.noAddPermission'),
+      );
     });
   });
 });

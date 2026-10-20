@@ -1,14 +1,19 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  RecipeIngredientMatchKind,
+} from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
+  MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
-  ConfirmRecipeConsumptionDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { logger } from '#/utils/environment';
 import type { RootState } from '#store';
@@ -59,80 +64,118 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
+const mockToastInfo = jest.mocked(toastService.info);
 
-jest.mock('#/utils/finallyHelpers');
-
-// Deterministic client-minted cooking-log id so we can assert the consumption
-// mutation sends it.
+// Deterministic client-minted cooking-log id so we can assert the cook sends it.
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function matchesMock(
-  matches: Record<string, unknown>[],
-  options: { partial?: boolean } = {},
-) {
-  const data: MockDataFor<typeof MatchRecipeIngredientsToPantryDocument> = {
-    matchRecipeIngredientsToPantry: matches.map(m => ({
-      __typename: 'RecipeIngredientMatch',
-      ...m,
-    })),
-  };
-  return recordMock(MatchRecipeIngredientsToPantryDocument, {
-    data,
-    partial: options.partial,
+type Match = NonNullable<
+  MockDataFor<
+    typeof MatchRecipeIngredientsToPantryDocument
+  >['matchRecipeIngredientsToPantry']
+>[number];
+
+const matchesMock = (matches: Match[]) =>
+  recordMock(MatchRecipeIngredientsToPantryDocument, {
+    data: { matchRecipeIngredientsToPantry: matches },
   });
-}
+
+/**
+ * The server's match for a required ingredient: an available stack, two of
+ * the ingredient's cups suggested. `isOptional` is stated because the SDL
+ * would fill it `true`.
+ */
+const match = (ingredientId: string, overrides: Match = {}): Match => ({
+  ingredient: {
+    id: ingredientId,
+    isOptional: false,
+    unit: { id: `u-${ingredientId}` },
+  },
+  isAvailable: true,
+  matchKind: RecipeIngredientMatchKind.Item,
+  matchedPantryItem: { id: 'pi-1' },
+  availableQuantity: 5,
+  suggestedQuantity: 2,
+  suggestedUnit: { id: 'su-1' },
+  ...overrides,
+});
 
 describe('getAvailabilityStatus', () => {
-  it('returns "available" when isAvailable and confidence >= 0.8', () => {
-    expect(
-      getAvailabilityStatus({
+  it.each([
+    {
+      name: 'returns "available" for an available stack of a catalog match',
+      read: {
         isAvailable: true,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 2,
-      } as IngredientMatch),
-    ).toBe('available');
-  });
-
-  it('returns "partial" when pantry item exists, not available, but quantity > 0', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'available',
+    },
+    {
+      name: 'returns "partial" when the stack holds some, but not enough',
+      read: {
         isAvailable: false,
-        matchConfidence: 0.5,
-        matchedPantryItem: { id: 'pi-1' },
+        matchKind: RecipeIngredientMatchKind.Concept,
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: 1,
-      } as IngredientMatch),
-    ).toBe('partial');
-  });
-
-  it('returns "missing" when no pantry item matched', () => {
-    expect(
-      getAvailabilityStatus({
+      },
+      status: 'partial',
+    },
+    {
+      // The server reports null available when the recipe's unit cannot
+      // express the stack (a loaf against a pound): unknown, and it holds some.
+      name: 'returns "partial" for a stocked stack the recipe unit cannot express',
+      read: {
         isAvailable: false,
-        matchConfidence: 0,
+        matchKind: RecipeIngredientMatchKind.Item,
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
+        availableQuantity: null,
+      },
+      status: 'partial',
+    },
+    {
+      name: 'returns "missing" for a matched stack that holds nothing',
+      read: {
+        isAvailable: false,
+        matchKind: RecipeIngredientMatchKind.Item,
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 0 } },
+        availableQuantity: 0,
+      },
+      status: 'missing',
+    },
+    {
+      // The server's 0.7 is a name match only ("olives" finding "Kalamata
+      // Olives"), whatever the stack holds.
+      name: 'returns "unsure" for a stack matched by name only',
+      read: {
+        isAvailable: true,
+        matchKind: RecipeIngredientMatchKind.Name,
+        matchedPantryItem: { id: 'pi-1' },
+        availableQuantity: 5,
+      },
+      status: 'unsure',
+    },
+    {
+      name: 'returns "missing" when no pantry item matched',
+      read: {
+        isAvailable: false,
+        matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
-      } as IngredientMatch),
-    ).toBe('missing');
+      },
+      status: 'missing',
+    },
+  ])('$name', ({ read, status }) => {
+    expect(getAvailabilityStatus(read as IngredientMatch)).toBe(status);
   });
 });
 
@@ -150,6 +193,7 @@ describe('useRecipeIngredientMatching', () => {
       available: 0,
       partial: 0,
       missing: 0,
+      unsure: 0,
       included: 0,
     });
   });
@@ -171,28 +215,7 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('loadMatches populates editableMatches on success', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchConfidence: 0.95,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([match('ing-1')]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -210,37 +233,95 @@ describe('useRecipeIngredientMatching', () => {
     expect(result.current.isSheetVisible).toBe(true);
   });
 
+  it('says a recipe has nothing to match only when the server answers so', async () => {
+    const m = matchesMock([]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
+  });
+
+  // Offline the read fails; the cook goes ahead without the review.
+  it('reports nothing of its own when the match read fails', async () => {
+    const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.loadMatches(4);
+    });
+
+    expect(success).toBe(false);
+    expect(mockToastInfo).not.toHaveBeenCalled();
+    expect(result.current.isSheetVisible).toBe(false);
+  });
+
+  // `$servings` is a Float: two and a half servings is asked for as it is.
+  it('asks for the matches of a fractional number of servings, unrounded', async () => {
+    const m = matchesMock([]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    await act(async () => {
+      await result.current.loadMatches(2.5);
+    });
+
+    expect(m.fired).toEqual([
+      { recipeId: 'recipe-1', pantryId: 'pantry-1', servings: 2.5 },
+    ]);
+  });
+
   it('logs and drops a match whose cached ingredient fragment is incomplete', async () => {
     // No seedIngredientCache: the only RecipeIngredient write is the match
     // mock's partial `ingredient` (missing most fragment fields), so
     // cache.readFragment returns null. The ingredient must be dropped WITH a
     // diagnostic, not silently vanish.
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchConfidence: 0.95,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
     // The partial `ingredient` IS the subject: completing it from the SDL
     // would make `cache.readFragment` succeed and nothing would be dropped.
     // The opt-out rides on THIS mock, so it excuses only the fields this
-    // payload omits.
-    const m = matchesMock(matches, { partial: true });
+    // payload omits, and the payload states every `__typename`.
+    const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            __typename: 'RecipeIngredientMatch',
+            ingredient: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              isOptional: false,
+              unit: {
+                __typename: 'Unit',
+                id: 'u-ing-1',
+                name: 'cup',
+                symbol: 'cup',
+              },
+            },
+            isAvailable: true,
+            matchKind: RecipeIngredientMatchKind.Item,
+            matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            availableQuantity: 5,
+            suggestedQuantity: 2,
+            suggestedUnit: { __typename: 'Unit', id: 'su-1' },
+          },
+        ],
+      },
+      partial: true,
+    });
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -259,28 +340,9 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('updateMatch updates a specific match entry', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+    ]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -300,28 +362,9 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('closeSheet hides the sheet', async () => {
-    const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-    ];
-    const m = matchesMock(matches);
+    const m = matchesMock([
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+    ]);
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
@@ -343,63 +386,24 @@ describe('useRecipeIngredientMatching', () => {
 
   it('matchSummary computes counts correctly', async () => {
     const matches = [
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-1',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
-        isAvailable: true,
-        matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-        availableQuantity: 5,
-        suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-      },
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-2',
-          isOptional: false,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-2',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
+      match('ing-1', { matchKind: RecipeIngredientMatchKind.Concept }),
+      match('ing-2', {
         isAvailable: false,
-        matchConfidence: 0.3,
-        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-2' },
+        matchKind: RecipeIngredientMatchKind.Name,
+        matchedPantryItem: { id: 'pi-2' },
         availableQuantity: 1,
         suggestedQuantity: 3,
         suggestedUnit: null,
-      },
-      {
-        ingredient: {
-          __typename: 'RecipeIngredient',
-          id: 'ing-3',
-          isOptional: true,
-          unit: {
-            __typename: 'Unit',
-            id: 'u-ing-3',
-            name: 'cup',
-            symbol: 'cup',
-          },
-        },
+      }),
+      match('ing-3', {
+        ingredient: { id: 'ing-3', isOptional: true, unit: { id: 'u-ing-3' } },
         isAvailable: false,
-        matchConfidence: 0,
+        matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
         suggestedQuantity: 1,
         suggestedUnit: null,
-      },
+      }),
     ];
     const m = matchesMock(matches);
 
@@ -419,76 +423,85 @@ describe('useRecipeIngredientMatching', () => {
       expect(result.current.matchSummary).toEqual({
         total: 3,
         available: 1,
-        partial: 1,
+        partial: 0,
         missing: 1,
-        included: 2,
+        unsure: 1,
+        included: 1,
       }),
     );
   });
 });
 
 // A single included match (available, with a matched pantry item) so
-// confirmConsumption builds a non-empty consumptions array and fires.
-const includedMatch = {
-  ingredient: {
-    __typename: 'RecipeIngredient',
-    id: 'ing-1',
-    isOptional: false,
-    unit: {
-      __typename: 'Unit',
-      id: 'u-ing-1',
-      name: 'cup',
-      symbol: 'cup',
-    },
-  },
-  isAvailable: true,
-  matchConfidence: 0.95,
-  matchedPantryItem: {
-    __typename: 'PantryItem',
-    id: 'pi-1',
-    unit: { __typename: 'Unit', id: 'u-ing-1' },
-  },
-  availableQuantity: 5,
-  suggestedQuantity: 2,
-  suggestedUnit: { __typename: 'Unit', id: 'su-1' },
-};
+// confirmConsumption builds a non-empty `ingredientsUsed` and fires.
+const includedMatch = match('ing-1', {
+  matchedPantryItem: { id: 'pi-1', unit: { id: 'u-ing-1' } },
+});
 
-function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
-  return recordMock(ConfirmRecipeConsumptionDocument, {
-    data:
-      outcome.kind === 'success'
-        ? {
-            confirmRecipeConsumption: {
-              __typename: 'ConfirmRecipeConsumptionPayload',
-              totalConsumed: 1,
-              totalFailed: 0,
-              cookingLog: {
-                __typename: 'CookingLog',
-                id: 'client-cooklog-1',
-                servingsMade: 4,
-                notes: null,
-                cookedAt: '2026-01-01T00:00:00.000Z',
-              },
-            },
-          }
-        : {
-            confirmRecipeConsumption: {
-              __typename: 'ValidationError',
-              code: ErrorCode.ValidationFailed,
-              message: 'bad',
-            },
-          },
+/** A second included match, for a cook that states more than one stack. */
+const secondMatch = match('ing-2', {
+  matchedPantryItem: { id: 'pi-2', unit: { id: 'u-ing-2' } },
+  suggestedQuantity: 3,
+  // No suggestion: the entry falls back to the ingredient's own unit.
+  suggestedUnit: null,
+});
+
+type CookOutcome =
+  | { kind: 'success'; skipped?: string[]; converged?: boolean }
+  | { kind: 'queued' }
+  | { kind: 'rejected' }
+  | { kind: 'transport' };
+
+function cookMock(outcome: CookOutcome) {
+  if (outcome.kind === 'transport') {
+    return recordMock(MarkRecipeAsCookedDocument, {
+      error: new Error('network down'),
+    });
+  }
+  if (outcome.kind === 'queued') {
+    // No payload and no error: the offline queue took the write.
+    return recordMock(MarkRecipeAsCookedDocument, {
+      data: { markRecipeAsCooked: null },
+    });
+  }
+  if (outcome.kind === 'rejected') {
+    return recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: null,
+        },
+      },
+    });
+  }
+  return recordMock(MarkRecipeAsCookedDocument, {
+    data: {
+      markRecipeAsCooked: {
+        __typename: 'MarkRecipeAsCookedPayload',
+        converged: outcome.converged ?? false,
+        // Stated even when empty: left out, the SDL fills in entries. Each
+        // is an entry no conversion could take to its stack's unit.
+        skippedIngredients: (outcome.skipped ?? []).map(itemName => ({
+          itemName,
+          code: ErrorCode.UnitInvalid,
+        })),
+      },
+    },
   });
 }
 
 describe('useRecipeIngredientMatching — confirmConsumption', () => {
-  async function loadOneMatch(confirm: ReturnType<typeof confirmMock>) {
-    const matchesM = matchesMock([includedMatch]);
+  async function loadMatchesFor(
+    matches: Match[],
+    cook: ReturnType<typeof cookMock>,
+  ) {
+    const matchesM = matchesMock(matches);
     const rendered = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       {
-        operationMocks: [matchesM.mock, confirm.mock],
-        cache: seedIngredientCache(['ing-1']),
+        operationMocks: [matchesM.mock, cook.mock],
+        cache: seedIngredientCache(['ing-1', 'ing-2']),
       },
     );
 
@@ -496,34 +509,123 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await rendered.result.current.loadMatches(4);
     });
     await waitFor(() =>
-      expect(rendered.result.current.editableMatches).toHaveLength(1),
+      expect(rendered.result.current.editableMatches).toHaveLength(
+        matches.length,
+      ),
     );
     return rendered;
   }
 
-  it('sends a client-minted cooking-log id with context.localFirst on success', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const { result } = await loadOneMatch(confirm);
+  const loadOneMatch = (cook: ReturnType<typeof cookMock>) =>
+    loadMatchesFor([includedMatch], cook);
+
+  it('sends the reviewed cook as one write that deducts exactly the stacks stated', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
 
     await act(async () => {
       await result.current.confirmConsumption();
     });
 
-    // The consumption mutation carried the client-minted cooking-log id.
-    expect(confirm.fired).toContainEqual(
-      expect.objectContaining({
-        input: expect.objectContaining({ id: 'client-cooklog-1' }),
-      }),
-    );
+    // The cooking-log id is minted here, so a replayed cook converges on it.
+    expect(cook.fired).toEqual([
+      {
+        input: {
+          id: 'client-cooklog-1',
+          recipeId: 'recipe-1',
+          pantryId: 'pantry-1',
+          deductFromPantry: true,
+          exactStacks: true,
+          ingredientsUsed: [
+            {
+              recipeIngredientId: 'ing-1',
+              pantryItemId: 'pi-1',
+              actualQuantity: 2,
+              actualUnitId: 'su-1',
+            },
+          ],
+        },
+        stacksFirst: 100,
+      },
+    ]);
     // Success path: toast + sheet closed + matches cleared.
-    expect(mockToastSuccess).toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry',
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
     await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
     expect(result.current.editableMatches).toEqual([]);
   });
 
+  // The log records what the cook entered before the review, not the
+  // recipe's own servings and a placeholder note.
+  it('records the servings and note the cook entered', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption({
+        servings: 2.5,
+        notes: 'Halved it',
+      });
+    });
+
+    expect(cook.fired).toEqual([
+      {
+        input: expect.objectContaining({ servings: 2.5, notes: 'Halved it' }),
+        stacksFirst: 100,
+      },
+    ]);
+  });
+
+  it('states one entry for each included stack and none for the rest', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [
+        includedMatch,
+        secondMatch,
+        // Offered, never deducted until the user turns it on.
+        match('ing-3', {
+          matchKind: RecipeIngredientMatchKind.Name,
+          matchedPantryItem: { id: 'pi-3', unit: { id: 'u-ing-1' } },
+        }),
+        // No stack to draw on at all.
+        match('ing-4', {
+          isAvailable: false,
+          matchKind: RecipeIngredientMatchKind.None,
+          matchedPantryItem: null,
+          availableQuantity: 0,
+        }),
+      ],
+      cook,
+    );
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-1',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'pi-2',
+        actualQuantity: 3,
+        actualUnitId: 'u-ing-2',
+      },
+    ]);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 2 ingredients from pantry',
+    );
+  });
+
   it('does not deduct a row whose quantity was cleared', async () => {
-    const confirm = confirmMock({ kind: 'success' });
-    const { result } = await loadOneMatch(confirm);
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadOneMatch(cook);
 
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 0 });
@@ -532,25 +634,203 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       await result.current.confirmConsumption();
     });
 
-    expect(confirm.fired).toEqual([]);
+    expect(cook.fired).toEqual([]);
     expect(mockToastInfo).toHaveBeenCalledWith(
       'No ingredients selected for deduction',
     );
   });
 
-  it('toasts an error and keeps the sheet open when the server rejects', async () => {
-    const confirm = confirmMock({ kind: 'rejected' });
-    const { result } = await loadOneMatch(confirm);
+  it('leaves a cleared row out of a cook that still deducts another', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
+
+    act(() => {
+      result.current.updateMatch(0, { adjustedQuantity: 0 });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ recipeIngredientId: 'ing-2' }),
+    ]);
+  });
+
+  // A name-only match is offered but not deducted until the user turns it on.
+  it('holds back a stack matched by name only until the user includes it', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, matchKind: RecipeIngredientMatchKind.Name }],
+      cook,
+    );
+
+    expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
+    expect(result.current.editableMatches[0]!.selectedStack?.id).toBe('pi-1');
+
+    act(() => {
+      result.current.updateMatch(0, { isIncluded: true });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ pantryItemId: 'pi-1' }),
+    ]);
+  });
+
+  // "Salt, to taste": held, but the recipe states no amount to deduct.
+  it('holds back a line stating no amount until the cook states one', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, suggestedQuantity: null }, secondMatch],
+      cook,
+    );
+
+    expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
+
+    act(() => {
+      result.current.updateMatch(0, { isIncluded: true });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      expect.objectContaining({ recipeIngredientId: 'ing-2' }),
+    ]);
+  });
+
+  // The server can pick a stack that holds nothing (an emptied "milk");
+  // deducting from it could only fail.
+  it('leaves out a line whose matched stack is empty', async () => {
+    const matchesM = matchesMock([
+      {
+        ...includedMatch,
+        isAvailable: false,
+        availableQuantity: 0,
+        matchedPantryItem: {
+          ...includedMatch.matchedPantryItem,
+          displayAmount: { quantity: 0 },
+        },
+      },
+    ]);
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      {
+        operationMocks: [matchesM.mock],
+        cache: seedIngredientCache(['ing-1']),
+      },
+    );
+    await act(async () => {
+      await result.current.loadMatches(4);
+    });
+    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
+
+    expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
+  });
+
+  // "Olive oil" is served by the plain bottle and by the extra virgin stack
+  // under its concept; the one the user picks is the one deducted.
+  it('deducts from the stack the user picked instead of the server pick', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const evoo = { id: 'pi-evoo', unit: { id: 'u-ml' } };
+    const { result } = await loadMatchesFor(
+      [{ ...includedMatch, alternativeMatches: [evoo] }],
+      cook,
+    );
+
+    const [first] = result.current.editableMatches;
+    if (!first) throw new Error('no match loaded');
+    expect(first.stackOptions.map(stack => stack.id)).toEqual([
+      'pi-1',
+      'pi-evoo',
+    ]);
+    const picked = first.stackOptions[1];
+    act(() => {
+      result.current.updateMatch(0, { selectedStack: picked });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-evoo',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+    ]);
+  });
+
+  // The cook commits whole; what it reports apart are the entries no
+  // conversion could take to their stack's unit.
+  it('counts the entries the server skipped apart from the ones it deducted', async () => {
+    const cook = cookMock({ kind: 'success', skipped: ['Ingredient ing-2'] });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
 
     await act(async () => {
       await result.current.confirmConsumption();
     });
 
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry (1 not deducted)',
+    );
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+  });
+
+  it('counts every entry sent when the cook is queued offline', async () => {
+    const cook = cookMock({ kind: 'queued' });
+    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(cook.fired).toHaveLength(1);
+    // No response to count: every entry replays on reconnect.
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 2 ingredients from pantry',
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    expect(result.current.editableMatches).toEqual([]);
+  });
+
+  it('toasts an error and keeps the sheet open when the server rejects', async () => {
+    const cook = cookMock({ kind: 'rejected' });
+    const { result } = await loadOneMatch(cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    // The app's copy for the code the refusal carries, never its `message`.
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Please check your input and try again',
+    );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    // Sheet stays open so the user can retry.
+    expect(result.current.isSheetVisible).toBe(true);
+    expect(result.current.editableMatches).toHaveLength(1);
+  });
+
+  it('toasts once and keeps the sheet open when the request fails', async () => {
+    const cook = cookMock({ kind: 'transport' });
+    const { result } = await loadOneMatch(cook);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
       'Failed to mark recipe as cooked',
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
-    // Sheet stays open so the user can retry.
     expect(result.current.isSheetVisible).toBe(true);
     expect(result.current.editableMatches).toHaveLength(1);
   });

@@ -62,10 +62,6 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#/services/errorService');
-jest.mock('#/utils/finallyHelpers');
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 beforeEach(() => {
   jest.clearAllMocks();

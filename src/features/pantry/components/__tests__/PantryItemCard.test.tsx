@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { screen } from '@testing-library/react-native';
+import { act, screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
   toFragmentRef,
@@ -14,6 +14,7 @@ import {
 import { PantryActionsProvider } from '../PantryActionsContext';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
+import { changeLanguage } from '#/i18n';
 
 jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
@@ -358,6 +359,21 @@ describe('PantryItemCard', () => {
     // getExpirationStatus may emit "Expires in 3 days" or similar — assert on
     // a stable substring so the test isn't tied to copy.
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
+  });
+
+  // A compiled row re-runs a label helper only when one of its arguments
+  // changes, so the helper takes the row's own `t`.
+  it('re-reads its expiry text when the language changes', async () => {
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 3);
+    renderCard({ expiresOn: toDateKey(expires) });
+    expect(screen.getByText('Expires in 3 days')).toBeTruthy();
+
+    await act(() => changeLanguage('es'));
+    const inSpanish = screen.queryByText('Caduca en 3 días');
+    await act(() => changeLanguage('en'));
+
+    expect(inSpanish).toBeTruthy();
   });
 
   it('hides expiration text for items expiring far in the future', () => {

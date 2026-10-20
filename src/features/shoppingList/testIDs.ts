@@ -5,15 +5,37 @@
 export const shoppingListTestIDs = {
   screen: 'shopping-list-screen',
   listSelectorButton: 'shopping-list-selector',
+  /** The selector's pending invitations; one invite and its answers, by its id. */
+  pendingInvites: 'shopping-list-pending-invites',
+  pendingInvite: (id: string) => `shopping-list-pending-invite-${id}`,
+  pendingInviteAccept: (id: string) =>
+    `shopping-list-pending-invite-${id}-accept`,
+  pendingInviteDecline: (id: string) =>
+    `shopping-list-pending-invite-${id}-decline`,
   searchInput: 'shopping-list-search-input',
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
   moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',
   clearAllButton: 'shopping-list-clear-all',
+  /** List settings: the store the list is shopped at. */
+  listSettingsStore: 'list-settings-store',
+  /** List settings: where the list is cheapest, and one candidate by its id. */
+  storeComparison: 'list-store-comparison',
+  storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',
   /** An action button that brings no testID of its own, by position. */
   tabBarAction: (index: number) => `filter-tab-action-${index}`,
+  /** The header icon that opens store mode, and store mode's own parts. */
+  storeModeButton: 'shopping-list-store-mode',
+  storeModeScreen: 'store-mode-screen',
+  storeModeDone: 'store-mode-done',
+  storeModeChooseStore: 'store-mode-choose-store',
+  /** One aisle's heading, by its department. */
+  aisleHeader: (department: string) => `shopping-list-aisle-${department}`,
+  aisleRouteNote: 'shopping-list-aisle-route-note',
+  /** Store mode's aisle row: tabs go through `kitTestIDs.filterTab` under this prefix. */
+  aisleTabPrefix: 'store-mode-aisle-tab',
 
   /** The add-item sheet's host prefix, for the `catalogTestIDs` sheet builders. */
   addSheetPrefix: 'add-shopping-item',
@@ -54,6 +76,7 @@ export const shoppingListTestIDs = {
   purchaseQuantityInput: 'purchase-quantity-input',
   purchaseQuantityError: 'purchase-quantity-error',
   purchasePriceInput: 'purchase-price-input',
+  purchasePriceError: 'purchase-price-error',
 
   itemDetail: 'shopping-item-detail',
   itemDetailEditButton: 'shopping-item-edit-button',

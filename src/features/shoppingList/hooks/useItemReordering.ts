@@ -30,10 +30,6 @@ interface UseItemReorderingOptions<T extends ShoppingListItem> {
   refetch?: () => void;
 }
 
-/**
- * Optimistic reordering by fractional index: the new sortOrder is written to the
- * cache before the mutation fires, and reverted from persistence on failure.
- */
 // Code-point order, as the server's COLLATE "C" ranks the keys; a locale
 // comparison puts "aZ" after "az".
 function bySortOrderCodePoint(
@@ -46,6 +42,10 @@ function bySortOrderCodePoint(
   return left > right ? 1 : 0;
 }
 
+/**
+ * Optimistic reordering by fractional index: the new sortOrder is written to the
+ * cache before the mutation fires, and reverted from persistence on failure.
+ */
 export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,
 ) {
@@ -207,7 +207,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         moveItem({
           variables: {
             input: {
-              itemId,
+              id: itemId,
               afterItemId: moveAfterItemId,
               beforeItemId: moveBeforeItemId,
             },

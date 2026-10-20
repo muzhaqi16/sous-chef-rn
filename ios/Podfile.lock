@@ -2,6 +2,28 @@ PODS:
   - APNGKit (2.4.0):
     - Delegate (~> 1.3)
   - Delegate (1.3.0)
+  - DocumentScanner (2.0.4):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - FBLazyVector (0.86.3)
   - Gifu (3.5.1)
   - hermes-engine (250829098.0.17):
@@ -1592,6 +1614,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-keep-awake (2.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-keyboard-controller (1.22.5):
     - hermes-engine
     - RCTRequired
@@ -2220,7 +2264,7 @@ PODS:
     - React-utils (= 0.86.3)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.86.3)
-  - ReactNavigation (8.0.0-alpha.44):
+  - ReactNavigation (8.0.0-alpha.50):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2266,31 +2310,9 @@ PODS:
     - Yoga
   - RNCPushNotificationIOS (1.12.0):
     - React-Core
-  - RNDateTimePicker (8.6.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - RNDeviceInfo (15.0.2):
     - React-Core
-  - RNGestureHandler (3.3.0):
+  - RNGestureHandler (3.4.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2340,7 +2362,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.6.2):
+  - RNPermissions (5.6.3):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2646,7 +2668,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - Unistyles (3.4.0):
+  - Unistyles (3.5.3):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -2697,6 +2719,7 @@ PODS:
   - Yoga (0.0.0)
 
 DEPENDENCIES:
+  - DocumentScanner (from `../node_modules/react-native-document-scanner-plugin`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - "LiquidGlass (from `../node_modules/@callstack/liquid-glass`)"
@@ -2744,6 +2767,7 @@ DEPENDENCIES:
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - "react-native-image-editor (from `../node_modules/@react-native-community/image-editor`)"
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - "react-native-keep-awake (from `../node_modules/@sayem314/react-native-keep-awake`)"
   - react-native-keyboard-controller (from `../node_modules/react-native-keyboard-controller`)
   - react-native-launch-arguments (from `../node_modules/react-native-launch-arguments`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
@@ -2791,7 +2815,6 @@ DEPENDENCIES:
   - "ReactNavigation (from `../node_modules/@react-navigation/native`)"
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCPushNotificationIOS (from `../node_modules/@react-native-community/push-notification-ios`)"
-  - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNDeviceInfo (from `../node_modules/react-native-device-info`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
@@ -2814,6 +2837,8 @@ SPEC REPOS:
     - MMKVCore
 
 EXTERNAL SOURCES:
+  DocumentScanner:
+    :path: "../node_modules/react-native-document-scanner-plugin"
   FBLazyVector:
     :path: "../node_modules/react-native/Libraries/FBLazyVector"
   hermes-engine:
@@ -2907,6 +2932,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/image-editor"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-keep-awake:
+    :path: "../node_modules/@sayem314/react-native-keep-awake"
   react-native-keyboard-controller:
     :path: "../node_modules/react-native-keyboard-controller"
   react-native-launch-arguments:
@@ -3001,8 +3028,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-clipboard/clipboard"
   RNCPushNotificationIOS:
     :path: "../node_modules/@react-native-community/push-notification-ios"
-  RNDateTimePicker:
-    :path: "../node_modules/@react-native-community/datetimepicker"
   RNDeviceInfo:
     :path: "../node_modules/react-native-device-info"
   RNGestureHandler:
@@ -3033,6 +3058,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   APNGKit: dd0334806d724c889d0aa06cfbccee1f2d32e89c
   Delegate: 0ff4467868095239ff578ab531efd8af46e62881
+  DocumentScanner: d8de98e6f00b97b94af05c0f9dcbfe036b1945b0
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
   Gifu: 9f7e52357d41c0739709019eb80a71ad9aab1b6d
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
@@ -3081,6 +3107,7 @@ SPEC CHECKSUMS:
   react-native-get-random-values: 68792987aef40e8aa72dc448d97e009d1f440c88
   react-native-image-editor: 33cf9b239e7deecb3e378529f245ff49fe10ffd7
   react-native-image-picker: 23540feacc79c63c60857f318fdfa8477c26e70a
+  react-native-keep-awake: 33963ef637f3e90a56974379fba6c4a1e0519129
   react-native-keyboard-controller: ce68b0d160ca7a2314ce238bb1becb935b8de773
   react-native-launch-arguments: eab68037b01ea7c78a0b3b55da3a5e967e9aaf92
   react-native-netinfo: 4319d381f35bc11b53dafebd5cd99c04c66a9fb4
@@ -3125,24 +3152,23 @@ SPEC CHECKSUMS:
   ReactCodegen: 828f54f35f2bc4ee3f39345144ff0ec22c9535c2
   ReactCommon: 02f6a489d5eb4ab79d7deba5cd4434e0ba351a07
   ReactNativeDependencies: 6738e602b46fd24aa453cd58267ec3bb8bf29d27
-  ReactNavigation: d81e8a2238ba4fd42ed32b2f41031a64cb07dc37
+  ReactNavigation: 30494f2c734d41d090802ef0701a6139f04889d8
   RNCClipboard: 715fa7c6c8366f17d00f05a439ee7488f390fa5f
   RNCPushNotificationIOS: 85957a0534fd1309b4c028ccbe5b1baf9ab5cf57
-  RNDateTimePicker: b9e20c2a3af26f4ab10646359777205bbad1fdac
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
-  RNGestureHandler: fb2375bebca8d187e54a854cd4da9f5e0b9d5f81
+  RNGestureHandler: 0099c580b39852fedd18458e7af4d0e3e038d683
   RNKeychain: 6778b35b5bd067c322f8479526ac09b1d61f31d0
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: 60004134d572e7002ec21cc11c939e82e8b525dd
+  RNPermissions: 8aae1f041c4770e24329aae4f1a60e0d2fb1e93b
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
   RNReanimated: 51c9f6dcd9787f260c9bb9ac28b097270f15c5fc
   RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
   RNSVG: 6cae8d4082913be2eb43eaec2a456222c42195ed
   RNWorklets: 3da8f468c848547646f4e6b12fb46ad93a2cdee2
-  Unistyles: 24b931ea2f1b89b08e0bfff48e602bdd68dba4ee
+  Unistyles: 79d4e6e98a3915d5f4f08e3b7fce5d63d019e122
   VisionCamera: f84550cffbbf23f3cac7a3d1d2e66e5098a4e8eb
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 
-PODFILE CHECKSUM: aa546ebf918ad139db824c3729568c3e85cbea8f
+PODFILE CHECKSUM: 6e0f95bd9f15ca8643b6232daf8edbfada7ff1f8
 
 COCOAPODS: 1.16.2

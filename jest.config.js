@@ -18,6 +18,11 @@ module.exports = {
   // past the limit, which turns the unbounded drift into a hard ceiling.
   // CI (`ubuntu-latest`, 4 vCPU) already ran at 3 workers and passed, which is
   // why this never showed up there — keep its count rather than halving it.
+  //
+  // The `test` script caps each worker's heap at 3072MB, well under V8's
+  // default, and sized by the heaviest file: `hookMembersAreConsumed` type-checks
+  // the whole app in one worker (~1.45GB of heap), and at 1536MB it ran out on
+  // CI, where a worker carries what earlier files left under the idle limit.
   maxWorkers: process.env.CI ? '75%' : 4,
   workerIdleMemoryLimit: '512MB',
   setupFilesAfterEnv: ['./jest.setup.js'],
@@ -28,9 +33,6 @@ module.exports = {
     // Native module that needs to be mocked before anything imports unistyles
     'react-native-nitro-modules':
       '<rootDir>/__tests__/__mocks__/react-native-nitro-modules.js',
-    // MLKit text recognition — stubbed in tests to avoid loading native bindings
-    '^@react-native-ml-kit/text-recognition$':
-      '<rootDir>/__tests__/__mocks__/react-native-ml-kit-text-recognition.js',
     // Path aliases, derived from tsconfig.json — see scripts/lib/aliases.js.
     // Spread last so the explicit mocks above still win where they overlap.
     ...jestModuleNameMapper(),
@@ -97,12 +99,18 @@ module.exports = {
       'react-native-mmkv|' +
       'react-native-device-info|' +
       'react-native-config|' +
+      // Ships TypeScript source as its entry (`main: src/index.ts`), and pulls
+      // in an ESM-only swipe dependency.
+      'react-native-calendars|' +
+      'react-native-swipe-gestures|' +
       '@react-native-clipboard/clipboard|' +
       '@react-native-community|' +
       '@react-navigation|' +
       // react-navigation 8 @next pulls these in as ESM-only ("type":"module")
       // deps — Jest must transform them or they throw "Unexpected token 'export'".
       'nanoid|' +
+      // The receipt rules the API shares, published as ESM only.
+      '@muzhaqi16/receipt-rules|' +
       'escape-string-regexp|' +
       'query-string|' +
       'decode-uri-component|' +

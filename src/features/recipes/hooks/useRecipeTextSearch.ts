@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
-import {
-  transformRecipeForDisplay,
-  type TransformedRecipeItem,
-} from '#domain/recipeTransform';
+import { transformRecipeForDisplay } from '#domain/recipeTransform';
+import { useTranslation } from '#/i18n';
 import { fetchSpoonacularTextPage } from '#features/recipes/utils/recipeSearchPaging';
+import type { SpoonacularRecipe } from '#features/recipes/utils/recipeDisplayTransforms';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterMaps';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 
@@ -11,7 +10,7 @@ const MIN_QUERY_LENGTH = 3;
 
 function runSearch(
   query: string,
-  onResults: (results: TransformedRecipeItem[]) => void,
+  onResults: (results: SpoonacularRecipe[]) => void,
   setSearching: (searching: boolean) => void,
   signal: AbortSignal,
 ) {
@@ -24,8 +23,7 @@ function runSearch(
         0,
         signal,
       );
-      if (!signal.aborted)
-        onResults(page.results.map(transformRecipeForDisplay));
+      if (!signal.aborted) onResults(page.results);
     },
     () => {
       if (!signal.aborted) setSearching(false);
@@ -42,14 +40,17 @@ function runSearch(
  * aborts the one in flight.
  */
 export const useRecipeTextSearch = () => {
-  const [results, setResults] = useState<TransformedRecipeItem[]>([]);
+  const { t } = useTranslation();
+  // Kept as Spoonacular returned them: the copy is written below, while
+  // rendering, so the rows follow a language change.
+  const [found, setFound] = useState<SpoonacularRecipe[]>([]);
   const [searching, setSearching] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
 
   const clear = () => {
     controllerRef.current?.abort();
     controllerRef.current = null;
-    setResults([]);
+    setFound([]);
     setSearching(false);
   };
 
@@ -62,8 +63,10 @@ export const useRecipeTextSearch = () => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    runSearch(trimmed, setResults, setSearching, controller.signal);
+    runSearch(trimmed, setFound, setSearching, controller.signal);
   };
+
+  const results = found.map(recipe => transformRecipeForDisplay(recipe, t));
 
   return { results, searching, search, clear };
 };

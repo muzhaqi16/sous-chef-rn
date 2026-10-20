@@ -96,14 +96,11 @@ export function useRecipeFavoriteState({
         fallback: t('recipes.saveRecipeFailed'),
         onFailed: revert,
         // Saving a recipe reports its outcome as a toast.
-        present: 'none',
+        present: 'toast',
       },
     );
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return;
-    }
+    if (settled.failure) return;
     toastService.success(t('recipes.recipeSavedToCollection'));
     onSaved();
   };

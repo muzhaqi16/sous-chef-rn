@@ -1,9 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import { initialTelemetryState } from '../telemetrySlice';
 
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 describe('telemetrySlice', () => {
   it('has initial state', () => {
     const store = createTestStore();

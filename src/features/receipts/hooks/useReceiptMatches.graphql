@@ -1,0 +1,75 @@
+# Catalog candidates for a receipt's item lines: by printed code, the store's
+# item number, a remembered correction, else search. A read only; the lines
+# reach the pantry through the intake mutations.
+query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
+  resolveReceiptLines(input: $input) {
+    store {
+      id
+      name
+    }
+    # No store is placed: the one to add, on confirm, for this receipt.
+    proposedStore {
+      name
+      address
+      storeNumber
+      chain {
+        id
+        name
+      }
+    }
+    # No store is placed: the household's unlocated store of the proposed
+    # name, which a check-in with this receipt's parse locates. Offered only.
+    completableStore {
+      id
+      name
+    }
+    lines {
+      clientId
+      confidence
+      best {
+        method
+        item {
+          id
+          name
+          brands {
+            id
+            brand {
+              id
+              name
+            }
+          }
+          netWeight
+          netWeightKind
+          displayUnit {
+            id
+            symbol
+            name
+          }
+        }
+      }
+      candidates {
+        method
+        item {
+          id
+          name
+          # What tells two candidates of one name apart: a single brand, else
+          # the pack size (useReceiptMatches' candidateDetail).
+          brands {
+            id
+            brand {
+              id
+              name
+            }
+          }
+          netWeight
+          netWeightKind
+          displayUnit {
+            id
+            symbol
+            name
+          }
+        }
+      }
+    }
+  }
+}

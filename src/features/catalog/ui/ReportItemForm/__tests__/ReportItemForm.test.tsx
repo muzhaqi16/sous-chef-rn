@@ -9,10 +9,6 @@ import {
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { ReportItemForm } from '../ReportItemForm';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const REASON = 'The photo shows a completely different product.';
 
 const CANDIDATES = [
@@ -64,7 +60,7 @@ describe('ReportItemForm', () => {
       data: {
         markItemForReview: {
           __typename: 'MarkItemForReviewPayload',
-          item: { __typename: 'Item', id: 'item-1' },
+          item: { id: 'item-1' },
         },
       },
     });

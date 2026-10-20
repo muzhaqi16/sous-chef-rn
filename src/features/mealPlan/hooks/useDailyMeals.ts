@@ -1,4 +1,3 @@
-import { isSameDay } from 'date-fns';
 import type { FragmentType } from '@apollo/client/masking';
 import { useTranslation } from '#/i18n';
 import {
@@ -18,10 +17,8 @@ export type DailyMealsItem = FragmentType<typeof DailyMeals_ItemFragmentDoc> & {
   id: string;
 };
 
-// Core daily slots always shown (even empty) once a day has any meal planned,
-// so the day reads as a structured plan with per-slot "add" affordances instead
-// of collapsing to a single section above a large dead space. Brunch/Dessert
-// stay hidden unless they actually hold a meal, to avoid clutter.
+// Shown, even empty, once a day has any meal, so each slot offers its own add;
+// Brunch and Dessert appear only when they hold a meal.
 const CORE_MEAL_TYPES: MealType[] = [
   MealType.Breakfast,
   MealType.Lunch,
@@ -60,9 +57,10 @@ export function useDailyMeals<TItem extends DailyMealsItem>(
   });
 
   const dailyMeals = (() => {
-    const dayMeals = meals.filter(meal =>
-      isSameDay(new Date(meal.fields.date), selectedDate),
-    );
+    // A meal's day is a `LocalDate` key: compared as one, never through an
+    // instant, which reads the key as UTC midnight.
+    const selectedDay = toDateKey(selectedDate);
+    const dayMeals = meals.filter(meal => meal.fields.date === selectedDay);
     // Core slots are only surfaced once the day has at least one meal; a fully
     // empty day returns no groups so the dedicated EmptyDayState shows instead.
     const hasAnyMeal = dayMeals.length > 0;
@@ -89,8 +87,6 @@ export function useDailyMeals<TItem extends DailyMealsItem>(
     // A day with no meal yields no groups, core slots included.
     isEmpty: dailyMeals.length === 0,
     /** Date keys of every day holding a meal, for the calendar's markers. */
-    daysWithMeals: new Set(
-      meals.map(meal => toDateKey(new Date(meal.fields.date))),
-    ),
+    daysWithMeals: new Set(meals.map(meal => meal.fields.date)),
   };
 }

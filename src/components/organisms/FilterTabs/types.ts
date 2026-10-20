@@ -15,15 +15,16 @@ export interface FilterTabConfig<T extends string = string> {
   activeColor?: string;
 }
 
-export interface FilterTabActionButton {
-  icon?: string;
-  /** Either `icon` or `label` is enough. */
-  label?: string;
+/** A labelled button, or an icon-only one, which only its `accessibilityLabel` names. */
+export type FilterTabActionButton = {
   iconLibrary?: string;
   onPress: () => void;
   testID?: string;
   disabled?: boolean;
-}
+} & (
+  | { label: string; icon?: string; accessibilityLabel?: string }
+  | { label?: undefined; icon: string; accessibilityLabel: string }
+);
 
 export interface FilterTabsProps<T extends string = string> {
   tabs: FilterTabConfig<T>[];

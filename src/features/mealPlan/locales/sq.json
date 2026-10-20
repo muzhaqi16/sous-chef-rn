@@ -66,6 +66,7 @@
     "hideNutrition": "Fshih ushqyerjen",
     "viewNutritionDesc": "Kalori, makro dhe përparimi i objektivave",
     "budgetSpent": "Shpenzuar {{spent}} nga {{budget}}",
+    "budgetOnly": "Buxheti {{budget}}",
     "spentAmount": "Shpenzuar {{spent}}",
     "nutritionTrackingOn": "Ndjekja ushqimore aktive",
     "trackNutritionDesc": "Krahaso këtë plan me profilin tënd dietik",
@@ -111,6 +112,7 @@
     "sharedSuffix": " (e ndarë me {{homeName}})",
     "generateFailed": "Krijimi i listës së blerjeve dështoi",
     "planNotLoaded": "Hap fillimisht planin e vakteve, që recetat e tij të jenë të disponueshme.",
+    "recipeOverLimit": "\"{{name}}\" ka më shumë se {{count}} përbërës, ndaj nuk mund të shtohet plotësisht në një listë blerjesh.",
     "nothingToAdd": "Asgjë për të shtuar — ky plan ende nuk ka përbërës recetash.",
     "defaultName": "Listë blerjesh për {{name}}",
     "someSkipped_one": "{{count}} zë u la jashtë sepse receta e tij nuk është shkarkuar.",
@@ -160,7 +162,9 @@
     "saveAsTemplateLabel": "Ruaj si model",
     "planSettingsLabel": "Cilësimet e planit",
     "deleteMealPlanFailed": "Fshirja e planit të vakteve dështoi",
-    "mealPlanDeleted": "Plani i vakteve u fshi"
+    "mealPlanDeleted": "Plani i vakteve u fshi",
+    "mealsIncompleteTitle": "Disa vakte nuk u ngarkuan",
+    "mealsIncompleteBody": "Ky plan po shfaq vetëm një pjesë të vakteve. Prek për të provuar sërish."
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "p.sh. Darka të javës",

@@ -15,9 +15,6 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 interface TestItem {
   id: string;
   name: string;

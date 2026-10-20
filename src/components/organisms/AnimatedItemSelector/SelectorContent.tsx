@@ -76,6 +76,7 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     listHeader,
+    listHeaderLeads = false,
     pagination,
   } = config;
   const { t } = useTranslation();
@@ -95,19 +96,34 @@ export const SelectorContent = <T extends SelectableItem>({
     height: number;
   } | null>(null);
   const didCenterRef = useRef(false);
+  const [leadingHeaderShown, setLeadingHeaderShown] = useState(false);
+  const didRevealHeaderRef = useRef(false);
 
   const handleSelectedLayout = (event: LayoutChangeEvent) => {
     const { y, height } = event.nativeEvent.layout;
     setSelectedLayout({ y, height });
   };
 
+  const handleHeaderLayout = (event: LayoutChangeEvent) => {
+    setLeadingHeaderShown(event.nativeEvent.layout.height > 0);
+  };
+
   useEffect(() => {
-    if (didCenterRef.current || selectedLayout == null || !scroll) return;
+    if (!scroll) return;
     const { viewportHeight, scrollToContentOffset, isReady } = scroll;
     // Wait until the viewport is measured AND the sheet has settled open —
     // gorhom keeps the scrollable locked during the open animation, so an
     // earlier scroll would be dropped.
     if (!isReady || viewportHeight <= 0) return;
+    if (leadingHeaderShown) {
+      // Once: a later scroll is the reader's.
+      didCenterRef.current = true;
+      if (didRevealHeaderRef.current) return;
+      didRevealHeaderRef.current = true;
+      scrollToContentOffset(0, true);
+      return;
+    }
+    if (didCenterRef.current || selectedLayout == null) return;
     didCenterRef.current = true;
     // Center the selected row's midpoint in the viewport. Using the row's
     // measured height keeps this correct if the row size changes — no magic
@@ -118,7 +134,7 @@ export const SelectorContent = <T extends SelectableItem>({
     const { y, height } = selectedLayout;
     const target = Math.max(0, y + height / 2 - viewportHeight / 2);
     scrollToContentOffset(target, true);
-  }, [selectedLayout, scroll]);
+  }, [selectedLayout, scroll, leadingHeaderShown]);
 
   const renderItem = (item: T) => {
     const isSelected = item.id === selectedId;
@@ -178,7 +194,11 @@ export const SelectorContent = <T extends SelectableItem>({
       layout={LinearTransition}
       style={styles.container}
     >
-      {listHeader}
+      {listHeaderLeads ? (
+        <View onLayout={handleHeaderLayout}>{listHeader}</View>
+      ) : (
+        listHeader
+      )}
       {data.map(item => (
         <View
           key={keyExtractor ? keyExtractor(item) : item.id}

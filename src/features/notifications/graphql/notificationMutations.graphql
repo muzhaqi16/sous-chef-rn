@@ -38,6 +38,8 @@ mutation DeleteNotification($input: DeleteNotificationInput!) {
   deleteNotification(input: $input) {
     __typename
     ... on DeleteNotificationPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       notificationSummary {
         id
         ...NotificationSummaryReaders

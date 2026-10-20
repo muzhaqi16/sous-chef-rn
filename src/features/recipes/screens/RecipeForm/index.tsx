@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import {
   useRecipeFormWrites,
   type RecipeWriteFailure,
@@ -13,6 +14,12 @@ import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from '#features/recipes/components/recipeForm/RecipeBasicFields';
 import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
 import { RecipeIngredientList } from '#features/recipes/components/recipeForm/RecipeIngredientList';
+import { useCaptureDraft } from '#features/recipes/hooks/useCaptureDraft';
+import { useCaptureReview } from '#features/recipes/hooks/useCaptureReview';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
+import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
+import { PasteIngredientsSheet } from '#features/recipes/components/recipeForm/PasteIngredientsSheet';
+import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeIngredientEditor,
   type RecipeIngredientEditorRef,
@@ -33,6 +40,7 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { logValidationErrors } from '#/utils/validation/common';
+import { presentFailure } from '#/utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
@@ -44,10 +52,11 @@ const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
 ];
 
 export const RecipeFormScreen: React.FC<
-  StaticScreenProps<{ recipeId?: string } | undefined>
+  StaticScreenProps<{ recipeId?: string; captureId?: string } | undefined>
 > = ({ route }) => {
   useScreenTransition('RecipeForm');
   const recipeId = route.params?.recipeId;
+  const captureId = route.params?.captureId;
   const isEditMode = !!recipeId;
 
   const { t } = useTranslation();
@@ -58,8 +67,14 @@ export const RecipeFormScreen: React.FC<
   const form = useRecipeForm();
 
   const user = useUser();
-  const { recipeRef, readRecipe, createRecipe, updateRecipe, saving } =
-    useRecipeFormWrites(recipeId);
+  const {
+    recipeRef,
+    readRecipe,
+    reloadRecipe,
+    createRecipe,
+    updateRecipe,
+    saving,
+  } = useRecipeFormWrites(recipeId);
 
   // Populate the form once the recipe arrives.
   const { populateFromRecipe } = form;
@@ -71,30 +86,60 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
-  // A refusal naming a field the form renders a message for lands on it.
+  // An incomplete capture fills a new recipe once, when its draft is read.
+  const { draft: captureDraft, link: captureLink } = useCaptureDraft(captureId);
+  const { populateFromCapture } = form;
+  const filledFrom = useRef<string | null>(null);
+  useEffect(() => {
+    if (!captureId || !captureDraft || filledFrom.current === captureId) return;
+    filledFrom.current = captureId;
+    populateFromCapture(captureDraft, captureLink);
+  }, [captureId, captureDraft, captureLink, populateFromCapture]);
+  const { settle: settleCapture } = useRecipeCaptureActions();
+
+  // A landed save leaves from an effect: by then the render has turned the
+  // discard guard off, which a `goBack` in the save handler would still meet.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (saved) goBack();
+  }, [saved, goBack]);
+  const unsavedChanges = form.isDirty && !saved;
+
+  // A refusal naming a field the form renders a message for lands on it. An
+  // edit made elsewhere since the form loaded offers to reload the form from it.
   const reportFailure = (failure: RecipeWriteFailure) => {
     const field = FIELDS_WITH_MESSAGES.find(name => name === failure.field);
     if (field) {
       form.setError(field, { type: 'server', message: failure.body });
       return;
     }
-    alertService.alert(failure.title, failure.body);
+    presentFailure(failure, {
+      onConflictRefresh: () => {
+        void reloadRecipe().then(recipe => {
+          if (recipe) {
+            populateFromRecipe(recipe);
+            return;
+          }
+          // The form keeps what was typed: resetting it to the copy the save
+          // was refused against would lose the edit and conflict again.
+          alertService.alert(
+            t('recipes.loadFailed'),
+            t('errors.codes.genericRetry'),
+          );
+        });
+      },
+    });
   };
 
   const onValid = async () => {
-    // The save body is held in a local runner so the try below contains a
-    // single plain call: the React Compiler bails out of this component when a
-    // `?.`/`??`/ternary appears inside a try body, and this flow is full of
-    // them. The catch still covers the whole body.
+    // The save body is a local runner so the try holds one plain call: a
+    // `?.`/`??`/ternary inside a try body bails the component out of the React
+    // Compiler.
     const runSave = async () => {
       if (isEditMode && recipeId) {
-        const outcome = await updateRecipe(
-          recipeId,
-          form.buildUpdateInput(),
-          form.buildIngredientsInput(),
-        );
+        const outcome = await updateRecipe(recipeId, form.buildUpdateInput());
         if (outcome.status === 'ok') {
-          goBack();
+          setSaved(true);
           return;
         }
         reportFailure(outcome.failure);
@@ -111,7 +156,9 @@ export const RecipeFormScreen: React.FC<
         : null;
       const outcome = await createRecipe(form.buildCreateInput(), createdBy);
       if (outcome.status === 'ok') {
-        goBack();
+        // The capture it finished leaves the Recipes tab.
+        if (captureId) settleCapture(captureId);
+        setSaved(true);
         return;
       }
       reportFailure(outcome.failure);
@@ -139,6 +186,14 @@ export const RecipeFormScreen: React.FC<
   const handleAddIngredient = () => {
     ingredientEditorRef.current?.open();
   };
+
+  const [pasteVisible, setPasteVisible] = useState(false);
+  const pasteEnabled = useFeatureFlag('ingredientPaste');
+  // A captured recipe's unlinked lines offer the items its capture proposed.
+  const captureSources = useCaptureSources();
+  const { review: captureReview } = useCaptureReview(
+    captureSources.any ? recipeId : undefined,
+  );
 
   const handleSaveIngredient = (ingredient: IngredientFormState) => {
     // Check if this is an existing ingredient being edited
@@ -175,6 +230,7 @@ export const RecipeFormScreen: React.FC<
         onClose={goBack}
         onSave={handleSave}
         loading={saving}
+        unsavedChanges={unsavedChanges}
         testID={recipesTestIDs.recipeFormScreen}
       >
         {/* Basic fields */}
@@ -197,6 +253,9 @@ export const RecipeFormScreen: React.FC<
           onEditIngredient={handleEditIngredient}
           onRemoveIngredient={form.removeIngredient}
           onAddIngredient={handleAddIngredient}
+          onPasteIngredients={
+            pasteEnabled ? () => setPasteVisible(true) : undefined
+          }
         />
 
         {/* Steps */}
@@ -223,8 +282,20 @@ export const RecipeFormScreen: React.FC<
       <RecipeIngredientEditor
         ref={ingredientEditorRef}
         onSave={handleSaveIngredient}
+        candidatesFor={captureReview?.candidatesFor}
       />
       <RecipeStepEditor ref={stepEditorRef} onSave={handleSaveStep} />
+      {pasteEnabled ? (
+        <PasteIngredientsSheet
+          visible={pasteVisible}
+          onDismiss={() => setPasteVisible(false)}
+          room={Math.max(
+            0,
+            MAX_RECIPE_INGREDIENTS - form.state.ingredients.length,
+          )}
+          onPasted={form.appendIngredients}
+        />
+      ) : null}
     </>
   );
 };

@@ -73,6 +73,11 @@ const ENUM_DEFAULTS = {
   'StorageLocation.type': 'CUSTOM',
   'StorageLocationCount.type': 'CUSTOM',
   'ShoppingListItem.displayFormat': 'AUTO',
+  // The API's own answer for a line or item no category places.
+  'ShoppingListItem.storeDepartment': 'OTHER',
+  'Item.storeDepartment': 'OTHER',
+  // "MANUAL unless a flow that adds lines set it"; such a flow states its own.
+  'ShoppingListItemSource.addedContext': 'MANUAL',
   // "USER_CREATED when it came from no external source" — every local create.
   'Recipe.primarySource': 'USER_CREATED',
   'Recipe.status': 'DRAFT',
@@ -132,6 +137,27 @@ const TARGETS = [
         'NEUTRAL_LOCAL_STORAGE_LOCATION',
         'UseCreateStorageLocation_RowFragment',
       ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'hooks',
+      'useCreateStore.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'hooks',
+      'useCreateStoreNeutral.generated.ts',
+    ),
+    typesFrom: './useCreateStore.generated',
+    unmasked: true,
+    fragments: {
+      useCreateStore_row: ['NEUTRAL_LOCAL_STORE', 'UseCreateStore_RowFragment'],
     },
   },
   {

@@ -21,7 +21,11 @@ import {
   INTOLERANCE_ENUM_TO_SPOONACULAR,
 } from '#features/recipes/utils/recipeFilterMaps';
 import { isLifestyleDiet } from '#domain/dietary';
-import type { DisplayItem } from '#features/recipes/utils/recipeDisplayTransforms';
+import {
+  toDisplayItems,
+  type DisplayItem,
+  type RecipeRow,
+} from '#features/recipes/utils/recipeDisplayTransforms';
 import {
   EMPTY_PAGINATION,
   executeRecipeIngredientSearch,
@@ -62,10 +66,9 @@ export function useRecipeScreen() {
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
-  // Reconcile the profile's diet restrictions into the single-lifestyle +
-  // stackable-constraints model: keep at most one lifestyle diet (the first,
-  // deterministic) plus every constraint diet, as Spoonacular-format strings.
-  // Shared by discovery tags and the search filter seeding so the two agree.
+  // The profile's diets as Spoonacular strings: at most one lifestyle diet (the
+  // first) plus every constraint diet. Discovery tags and the search filters'
+  // seed share it, so the two agree.
   const profileDietRestrictions = (dietaryProfile?.restrictions ?? []).filter(
     (r): r is typeof r & { diet: Diet } => Boolean(r.diet),
   );
@@ -90,15 +93,15 @@ export function useRecipeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  // Rows and cursors live in ONE atom because they advance together, so a
-  // resolved load-more commits both atomically — and pagination identity is
-  // what tells it a new search replaced the state mid-flight, so the stale page
-  // is dropped instead of corrupting the new list.
+  // Rows and cursors are ONE atom so a load-more commits both together; a
+  // changed pagination identity tells it a new search replaced the state
+  // mid-flight, and the stale page is dropped.
   const [searchData, setSearchData] = useState<{
-    items: DisplayItem[];
+    rows: RecipeRow[];
     pagination: SearchPagination;
-  }>({ items: [], pagination: EMPTY_PAGINATION });
-  const searchResults = searchData.items;
+  }>({ rows: [], pagination: EMPTY_PAGINATION });
+  // Written here, not when a page arrives, so the list follows a language change.
+  const searchResults = toDisplayItems(searchData.rows, t);
   const searchPagination = searchData.pagination;
   // Guards against overlapping load-more calls (onEndReached can fire several
   // times before the next page resolves) and re-appending the same page.
@@ -120,11 +123,10 @@ export function useRecipeScreen() {
     setIngredientSearchQuery('');
   };
 
-  // Results arrive pre-transformed into DisplayItems (see the recipeDisplay
-  // transforms). A fresh search replaces the list and resets pagination (the
-  // cursors come from executeRecipeTextSearch via setSearchPagination).
-  const setDisplayResults = (displayItems: DisplayItem[]) => {
-    setSearchData(prev => ({ ...prev, items: displayItems }));
+  // A fresh search replaces the list and resets pagination (the cursors come
+  // from executeRecipeTextSearch via setSearchPagination).
+  const setSearchRows = (rows: RecipeRow[]) => {
+    setSearchData(prev => ({ ...prev, rows }));
   };
 
   const setSearchPagination = (pagination: SearchPagination) => {
@@ -142,17 +144,15 @@ export function useRecipeScreen() {
       client,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       setSearchPagination,
       () => generation === searchGenerationRef.current,
     );
   };
 
-  // ── Filters ──
-  // Normalize the dietary profile's Diet/Intolerance enums into the
-  // Spoonacular-format strings RecipeFilters stores, via the shared forward
-  // maps (single source of truth). useRecipeFilters owns the state + mutators
-  // and seeds itself from this the first time it arrives carrying data.
+  // The profile's Diet/Intolerance enums as the Spoonacular strings
+  // RecipeFilters stores. `useRecipeFilters` seeds itself from this the first
+  // time it carries data.
   const profileFilters: RecipeFilters | null = dietaryProfile
     ? {
         diet: reconciledDietValues,
@@ -186,8 +186,7 @@ export function useRecipeScreen() {
   const showSearchResults = searchPerformed && searchResults.length > 0;
   const showDiscovery = !searchPerformed && discovery.items.length > 0;
 
-  // Results are pre-transformed at data arrival (see setDisplayResults) — the
-  // whole list is shown; pagination is real, not a client-side slice.
+  // The whole list is shown; pagination is real, not a client-side slice.
   const searchItems = showSearchResults ? searchResults : [];
 
   // More remains while EITHER source still has a page to fetch.
@@ -214,7 +213,7 @@ export function useRecipeScreen() {
       setSearchData(prev =>
         prev.pagination === captured
           ? {
-              items: [...prev.items, ...outcome.items],
+              rows: [...prev.rows, ...outcome.rows],
               pagination: outcome.nextPagination,
             }
           : prev,
@@ -222,7 +221,6 @@ export function useRecipeScreen() {
     }, setSearchLoadingMore);
   };
 
-  // DiscoveryItem already satisfies DisplayItem — no mapping needed
   const items: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery
@@ -259,7 +257,7 @@ export function useRecipeScreen() {
       client,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       setSearchPagination,
       () => generation === searchGenerationRef.current,
     );
@@ -293,7 +291,7 @@ export function useRecipeScreen() {
       ingredientString,
       setSearchLoading,
       setSearchPerformed,
-      setDisplayResults,
+      setSearchRows,
       () => generation === searchGenerationRef.current,
     );
   };
@@ -308,7 +306,7 @@ export function useRecipeScreen() {
           client,
           setSearchLoading,
           setSearchPerformed,
-          setDisplayResults,
+          setSearchRows,
           setSearchPagination,
           () => generation === searchGenerationRef.current,
         );
@@ -324,7 +322,7 @@ export function useRecipeScreen() {
     searchGenerationRef.current += 1;
     setSearchQuery('');
     setSearchPerformed(false);
-    setSearchData({ items: [], pagination: EMPTY_PAGINATION });
+    setSearchData({ rows: [], pagination: EMPTY_PAGINATION });
     // Clear the loading flag too — a search cleared mid-flight would otherwise
     // leave the empty state stuck on the "searching…" spinner.
     setSearchLoading(false);
@@ -352,10 +350,9 @@ export function useRecipeScreen() {
       }
     : searchPerformed && activeFilterCount > 0 && searchQuery.trim() !== ''
     ? {
-        // Zero TEXT-search results with dietary filters narrowing the search —
-        // tell the user why and offer a one-tap recovery instead of a dead
-        // end. Ingredient search never applies filters (searchQuery stays
-        // empty), so it falls through to the plain empty state.
+        // No TEXT-search results under dietary filters: say why and offer a
+        // one-tap recovery. Ingredient search takes no filters, so it falls to
+        // the plain empty state.
         icon: 'search-outline',
         title: t('recipes.noRecipesFoundTitle'),
         description: t('recipes.noResultsFiltered', {

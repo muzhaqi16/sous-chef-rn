@@ -36,16 +36,18 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import type { ReactNode } from 'react';
 import React from 'react';
+import { isDeepStrictEqual } from 'node:util';
 import { ApolloClient, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { ApolloProvider } from '@apollo/client/react';
 import {
   completeMockedResponse,
+  holdMock,
+  testMockLink,
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { MockLink } from '@apollo/client/testing';
-import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemDisplayFragmentDoc,
@@ -67,6 +69,8 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 
 const LIST_ID = 'list-1';
 const ITEM_ID = 'item-1';
+// The version the cached row holds, which the tick states.
+const ITEM_VERSION = 1;
 
 function seedItem(cache: InMemoryCache, isPurchased: boolean) {
   const data: ShoppingListItemDisplayFragment = {
@@ -85,7 +89,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
       movedToPantryAt: null,
       isPurchased,
     },
-    version: 1,
+    version: ITEM_VERSION,
     updatedAt: '2025-01-01T00:00:00.000Z',
     category: 'Dairy',
     notes: null,
@@ -113,10 +117,10 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
 
 function buildSettledServerResponse(
   newPurchased: boolean,
-): MockDataFor<typeof ToggleShoppingListItemPurchasedDocument> {
+): MockDataFor<typeof UpdateShoppingListItemDocument> {
   return {
-    toggleShoppingListItemPurchased: {
-      __typename: 'ToggleShoppingListItemPurchasedPayload',
+    updateShoppingListItem: {
+      __typename: 'UpdateShoppingListItemPayload',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,
@@ -131,40 +135,48 @@ function buildSettledServerResponse(
 
 function buildClient(opts: {
   initialPurchased: boolean;
-  serverResponse: MockDataFor<typeof ToggleShoppingListItemPurchasedDocument>;
-  serverDelayMs?: number;
+  serverResponse: MockDataFor<typeof UpdateShoppingListItemDocument>;
+  /** The server's answer waits for `release()`. */
+  held?: boolean;
 }) {
   const cache = makeCache();
   seedItem(cache, opts.initialPurchased);
 
   const newPurchased = !opts.initialPurchased;
-  const responses: MockedResponse[] = [
-    completeMockedResponse({
-      request: {
-        query: ToggleShoppingListItemPurchasedDocument,
-        variables: { input: { id: ITEM_ID, purchased: newPurchased } },
-      },
-      result: { data: opts.serverResponse },
-      // `delay` makes the network response asynchronous so we can observe
-      // the cache between "optimistic write" and "server settle".
-      delay: opts.serverDelayMs ?? 0,
-    }),
-  ];
+  const tick = completeMockedResponse({
+    request: {
+      query: UpdateShoppingListItemDocument,
+      // Matched exactly: the tick carries the flag alone, no amounts.
+      variables: vars =>
+        isDeepStrictEqual(vars, {
+          input: {
+            id: ITEM_ID,
+            version: ITEM_VERSION,
+            purchaseTracking: { isPurchased: newPurchased },
+          },
+        }),
+    },
+    result: { data: opts.serverResponse },
+  });
+  const { mock, release } = opts.held
+    ? holdMock(tick)
+    : { mock: tick, release: () => {} };
+  const responses: MockedResponse[] = [mock];
 
   const client = new ApolloClient({
     cache,
-    link: new MockLink(responses),
+    link: testMockLink(responses),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
-  return { client, cache };
+  return { client, cache, release };
 }
 
 function wrap(client: ApolloClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return React.createElement(
-      ApolloProvider,
-      { client, children: children as React.ReactElement },
-    );
+    return React.createElement(ApolloProvider, {
+      client,
+      children: children as React.ReactElement,
+    });
   };
 }
 
@@ -174,10 +186,10 @@ beforeEach(() => {
 
 describe('integration: optimistic toggle + cache update', () => {
   it('writes the optimistic purchase status to the cache before the network resolves', async () => {
-    const { client, cache } = buildClient({
+    const { client, cache, release } = buildClient({
       initialPurchased: false,
       serverResponse: buildSettledServerResponse(true),
-      serverDelayMs: 50, // network is async — observe optimistic-only state first
+      held: true,
     });
 
     expect(readPurchaseStatus(cache)).toBe(false);
@@ -193,10 +205,9 @@ describe('integration: optimistic toggle + cache update', () => {
       togglePromise = result.current.toggleItem(ITEM_ID);
     });
 
-    // Optimistic phase: the cache flips before the 50ms network delay
-    // elapses. Apollo applies optimistic responses synchronously during
-    // the mutate() call, so the cache value should be visible on the next
-    // microtask.
+    // Optimistic phase: the cache flips while the server's answer is held.
+    // Apollo applies optimistic responses synchronously during the mutate()
+    // call, so the cache value is visible on the next microtask.
     await waitFor(() => {
       expect(readPurchaseStatus(cache)).toBe(true);
     });
@@ -204,6 +215,7 @@ describe('integration: optimistic toggle + cache update', () => {
     // Settle phase: let the network response arrive and the mutation
     // promise resolve. The cache stays at the (confirmed) value.
     await act(async () => {
+      release();
       await togglePromise;
     });
 

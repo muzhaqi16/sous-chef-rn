@@ -42,10 +42,9 @@ interface ShoppingListDetailsStepProps {
 }
 
 /**
- * The "details" step, rendered as content INSIDE the shared AddItemSheet rather
- * than as its own modal, so search → form is one morphing sheet. The item name
- * is a plain field, not a catalog picker: this form never links a catalog item
- * (`useAddShoppingItem` posts `item: { itemName }`).
+ * The "details" step, rendered INSIDE the shared AddItemSheet so search → form is
+ * one morphing sheet. The name is a plain field, not a catalog picker:
+ * `useAddShoppingItem` sends it `inline`, under a minted item id.
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
@@ -227,7 +226,7 @@ export const ShoppingListDetailsStep: React.FC<
           />
           <UnitAutocompleteField
             variant="modal"
-            label={t('storageLocationForm.unit')}
+            label={t('labels.unit')}
             value={unit}
             onChangeText={text => setFieldValue('unit', text)}
             onUnitSelected={handleUnitSelect}

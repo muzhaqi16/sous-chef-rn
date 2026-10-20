@@ -1,0 +1,15 @@
+# `first` is a variable: a literal page size multiplies the server's cost limit.
+query MyUserReports($first: Int!, $after: String) {
+  myUserReports(first: $first, after: $after) {
+    edges {
+      node {
+        id
+        ...MyReportRow_report
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

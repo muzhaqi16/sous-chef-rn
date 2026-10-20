@@ -5,10 +5,9 @@ import { logger } from '#/utils/environment';
 const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];
 
 /**
- * Two-level identity cache. FlashList re-renders a cell only when its `item`
- * prop changes identity (`ViewHolder`'s memo compares with `===`), so reusing
- * the row object for an unchanged node makes an append cost only its own cells;
- * Apollo mints a new node on any field change, so an edit still yields a row.
+ * FlashList re-renders a cell only when its `item` changes identity (`ViewHolder`
+ * memo, `===`), so reusing an unchanged node's row makes an append cost only its
+ * own cells; Apollo mints a new node on any field change, so an edit still shows.
  */
 const wrapItemsCache = new WeakMap<
   readonly ShoppingListItemNode[],
@@ -49,6 +48,7 @@ function wrapItems(
         id: node.id,
         isPurchased: forcePurchasedState,
         sortOrder: node.sortOrder,
+        storeDepartment: node.storeDepartment,
         itemRef: node,
       };
       rowCache.set(node, row);

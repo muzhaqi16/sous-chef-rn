@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
   useSharedValue,
   useDerivedValue,
@@ -103,10 +103,9 @@ export const SegmentedControl = <T extends string>({
   const tabWidth = contentWidth > 0 ? contentWidth / options.length : 0;
   const selectedIndex = Math.max(0, options.indexOf(value));
 
-  // The resting position is DERIVED from the selection and measured width, so it
-  // is right on the first measured frame and re-derives after a relayout — nothing
-  // stored can go stale while Reanimated warms up. `offset` is only a transient
-  // slide delta, seeded with the distance back to the old segment and sprung to 0.
+  // The resting position derives from selection and measured width, so it is
+  // right on the first measured frame and after a relayout. `offset` is only a
+  // slide delta, seeded with the distance back to the old segment, sprung to 0.
   const offset = useSharedValue(0);
   const indicatorX = useDerivedValue(
     () => selectedIndex * tabWidth + offset.get(),

@@ -13,7 +13,7 @@ import { usePanGesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';
@@ -110,11 +110,9 @@ const supersedes = (older: ToastOptions, newer: ToastOptions) =>
 const replaces = (older: ToastOptions, newer: ToastOptions) =>
   sameType(older, newer) || supersedes(older, newer);
 
-// Split out of `ToastProvider` so the `styles.useVariants({ type })` read can
-// never destabilise `showToast`, the identity `toastService` dispatches through.
-// It forwards its ref and spreads unconsumed props because `GestureDetector`
-// clones its child with `{ collapsable: false, ref }` — a plain function
-// component drops both.
+// Apart from `ToastProvider` so its `useVariants` read never destabilises
+// `showToast`, which `toastService` dispatches through. Forwards ref and rest
+// props: `GestureDetector` clones its child with `{ collapsable: false, ref }`.
 const ToastCard = forwardRef<
   React.ComponentRef<typeof Animated.View>,
   {
@@ -220,10 +218,9 @@ const ToastCard = forwardRef<
 });
 
 /**
- * Holds the toast queue and registers the imperative dispatch. No context, so
- * `children` is optional: mounted as a LEAF last at the app root, the card
- * lands last in the native order. Wrapping the navigator put it under every
- * header — and under the iOS 26 glass, which composites above RN siblings.
+ * Mounted as a LEAF last at the app root, so the card lands last in native
+ * order: wrapping the navigator puts it under every header and under the
+ * iOS 26 glass, which composites above RN siblings.
  */
 export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   children,
@@ -238,10 +235,9 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
     generation: 0,
   });
 
-  // The container never unmounts, so it has to keep rendering the outgoing
-  // toast's message and colors while it animates away. Rendering it with a
-  // null toast drops the type variant and falls back to the base background,
-  // which is near-white in the dark theme.
+  // The container never unmounts, so it keeps the outgoing toast while it
+  // animates away: a null toast drops the type variant to the base background,
+  // near-white in the dark theme.
   const [displayed, setDisplayed] = useState<ToastOptions | null>(null);
   if (current && current !== displayed) setDisplayed(current);
 
@@ -282,12 +278,9 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
     _setToastDispatch(showToast);
   });
 
-  // Animates in and arms auto-dismiss when a toast becomes current; re-running on
-  // an in-place replace resets the timer, which is the spam-coalescing behavior.
-  // The resting position (`insets.top` + `marginTop`) is LAYOUT and translateY
-  // rests at 0 relative to it, so the safe-area offset stays out of the spring
-  // target: it can change after the frame the toast appears, and the long sweep
-  // from OFFSCREEN_Y put the first frames under the status bar / Dynamic Island.
+  // Re-running on an in-place replace resets the auto-dismiss timer, which
+  // coalesces spam. translateY rests at 0 under a layout offset (`insets.top`),
+  // which can change after the first frame, so it stays out of the spring target.
   useEffect(() => {
     if (!current) return;
     // `accessibilityLiveRegion` is Android-only; VoiceOver needs to be told.

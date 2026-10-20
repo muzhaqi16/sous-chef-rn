@@ -14,14 +14,6 @@ import { UseShoppingListTemplate_ListFragmentDoc } from '../useShoppingListTempl
 import { useShoppingListTemplate } from '../useShoppingListTemplate';
 import { useStore } from '#store';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',
@@ -113,6 +105,11 @@ describe('useShoppingListTemplate', () => {
       homeId: 'home-1',
       unpurchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',
@@ -134,6 +131,11 @@ describe('useShoppingListTemplate', () => {
       },
       purchasedLines: {
         __typename: 'ShoppingListItemConnection',
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
         edges: [
           {
             __typename: 'ShoppingListItemEdge',

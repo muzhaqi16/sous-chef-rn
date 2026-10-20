@@ -49,11 +49,10 @@ const REVIEWED_SLOTS: Record<string, string> = {
   // es puts the label after the non-contracting `en`; it/sq lead with it and a
   // colon, so their participles agree with `modifica` / nothing.
   'errors.queuedChangeOverwrittenResource': 'colon frame or `en`; no agreement',
+  // The same frames: es `cambio`, it `modifica`, sq `ndryshimi` take the verbs.
+  'errors.queuedChangeRejectedResource': 'colon frame or `en`; no agreement',
   // Same frames; es/it/sq participles agree with `eliminación` / `voce` / `hyrja`.
   'errors.queuedRemovalKeptResource': 'colon frame or `en`; no agreement',
-  // Fed bare capitalised nouns, not the resourceNames map. es/it use a colon
-  // and a fixed noun rather than a participle.
-  'errors.entityUpdatedTitle': 'bare-noun slot; no participle in es/it',
 };
 
 /**
@@ -82,7 +81,9 @@ const flatten = (node: unknown, prefix = ''): [string, string][] => {
 
 const entries: Entry[] = LOCALES.flatMap(locale =>
   flatten(
-    JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8')),
+    JSON.parse(
+      fs.readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'),
+    ),
   )
     .filter(([, value]) => SLOT.test(value))
     .map(([key, value]) => ({ locale, key, value })),
@@ -107,9 +108,7 @@ describe('an interpolated entity noun has nothing agreeing with it', () => {
 
   it('interpolates an entity noun only where someone reviewed it', () => {
     const unreviewed = [
-      ...new Set(
-        entries.filter(e => !REVIEWED_SLOTS[e.key]).map(e => e.key),
-      ),
+      ...new Set(entries.filter(e => !REVIEWED_SLOTS[e.key]).map(e => e.key)),
     ];
 
     expect(unreviewed).toEqual([]);

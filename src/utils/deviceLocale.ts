@@ -1,28 +1,22 @@
 /**
- * The DEVICE's locale conventions, routinely different from the interface
- * language. Separators follow the device — `keyboardType` renders the DEVICE
- * locale's keypad — while words follow i18n (`getDateFnsLocale`). Derived from
- * `Intl`, treated as possibly-absent: a build without it must degrade.
+ * The DEVICE's locale conventions, routinely not the interface language's:
+ * separators follow the device keypad, words follow i18n (`getDateFnsLocale`).
+ * `Intl` may be absent, and a build without it must degrade.
  */
 
 /** The two decimal separators any locale the app can plausibly run under uses. */
 export type DecimalSeparator = '.' | ',';
 
-/**
- * `.` matches the JS number grammar, so a fallback round-trips through
- * `parseFloat` unchanged, and it is what `en` (the `fallbackLng`) uses anyway.
- */
+/** `.` round-trips through `parseFloat`; `en`, the `fallbackLng`, uses it. */
 const FALLBACK_SEPARATOR: DecimalSeparator = '.';
 
-// Resolving a locale walks the platform's locale database and cannot change
-// without an app restart, so compute once.
+// Fixed until an app restart, so computed once.
 let cachedSeparator: DecimalSeparator | undefined;
 
 /**
- * The separator the device's keypad offers, and so the only one some people can
- * type. Read back from `format` with the digits stripped rather than via
- * `formatToParts`: `format` is the part of `Intl.NumberFormat` Hermes implements
- * most consistently. Falls back to `.`.
+ * The device keypad's separator, the only one some people can type. Read back
+ * from `format`, not `formatToParts`: Hermes implements `format` most
+ * consistently.
  */
 export function getDeviceDecimalSeparator(): DecimalSeparator {
   if (cachedSeparator !== undefined) return cachedSeparator;
@@ -47,9 +41,20 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
   return resolved;
 }
 
+/** The device's locale (`en-US`), or null when neither source can say. */
+export function getDeviceLocale(): string | null {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+    return Intl.DateTimeFormat().resolvedOptions().locale || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Test-only: the underlying values cannot change while the app runs, so nothing
- * in the app should call this.
+ * Test-only: the values cannot change while the app runs.
  * @internal Test seam.
  */
 export function resetDeviceLocaleCache(): void {

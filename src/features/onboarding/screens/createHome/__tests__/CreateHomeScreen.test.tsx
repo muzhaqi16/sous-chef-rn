@@ -9,6 +9,7 @@ import type {
   MockPart,
 } from '#/test-utils/apolloMockProvider';
 import {
+  holdMock,
   renderWithApollo,
   statesFutureSchemaValues,
 } from '#/test-utils/apolloMockProvider';
@@ -27,9 +28,6 @@ import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
 let mockHasUnverifiedEmail = false;
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 const mockNavigateToNextStep = jest.fn();
 const mockSetUserNavigationState = jest.fn();
@@ -263,10 +261,6 @@ jest.mock('@hookform/resolvers/yup', () => ({
   yupResolver: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 // --- Mock state used by tests to control query responses ---
 /** The invite node the pending-invites query itself selects. */
 type PendingInviteShape = MockPart<
@@ -277,7 +271,6 @@ type PendingInviteShape = MockPart<
 >;
 
 let mockHomesData: MockPart<GetHomesQuery['homes']> = { edges: [] };
-let mockHomesLoading = false;
 let mockPendingInvites: PendingInviteShape[] = [];
 
 // Records of mutation calls keyed by mutation name. Tests assert on these.
@@ -319,19 +312,15 @@ let mockDeclineHomeInviteResponse: Record<string, unknown> = {
   },
 };
 
-function buildGetHomesMock(): MockFor<typeof GetHomesDocument> {
+/** The staged homes; `onAnswer` runs as each answer is made. */
+function buildGetHomesMock(
+  onAnswer?: () => void,
+): MockFor<typeof GetHomesDocument> {
   return {
     request: { query: GetHomesDocument, variables: () => true },
     maxUsageCount: 100,
     result: () => {
-      if (mockHomesLoading) {
-        // Simulate a never-resolving promise via delay won't work cleanly;
-        // tests that need loading state set mockHomesLoading and assert on it
-        // separately (they use `loading: true` semantics from useQuery, which
-        // means the mock should not have responded yet). We achieve this by
-        // resolving with empty data when not in loading state, and tests that
-        // need `loading: true` use a special render path.
-      }
+      onAnswer?.();
       return {
         data: {
           __typename: 'Query',
@@ -502,7 +491,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   // Reset query state defaults
   mockHomesData = { edges: [] };
-  mockHomesLoading = false;
   mockPendingInvites = [];
   recordedMutations = [];
   mockHasUnverifiedEmail = false;
@@ -561,14 +549,8 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows loading view when checking existing resources', () => {
-    // Give the GetHomes mock infinite delay so the screen stays in loading
     const loadingMocks: MockedResponse[] = [
-      {
-        request: { query: GetHomesDocument, variables: () => true },
-        maxUsageCount: 100,
-        delay: Number.POSITIVE_INFINITY,
-        result: { data: undefined },
-      },
+      holdMock(buildGetHomesMock()).mock,
       buildGetMyPendingInvitesMock(),
     ];
     const { getByTestId } = renderWithApollo(<CreateHomeScreen />, {
@@ -652,20 +634,17 @@ describe('CreateHomeScreen', () => {
     expect(await findByText('Johns Home')).toBeTruthy();
   });
 
-  it('shows loading view when invites are loading', () => {
-    // Same approach as the homes loading test
+  it('shows loading view when invites are loading', async () => {
+    const answeredHomes = jest.fn();
     const loadingMocks: MockedResponse[] = [
-      {
-        request: { query: GetHomesDocument, variables: () => true },
-        maxUsageCount: 100,
-        delay: Number.POSITIVE_INFINITY,
-        result: { data: undefined },
-      },
-      buildGetMyPendingInvitesMock(),
+      buildGetHomesMock(answeredHomes),
+      holdMock(buildGetMyPendingInvitesMock()).mock,
     ];
     const { getByTestId } = renderWithApollo(<CreateHomeScreen />, {
       operationMocks: loadingMocks,
     });
+    // The homes have answered; the invites, held, keep it loading.
+    await waitFor(() => expect(answeredHomes).toHaveBeenCalled());
     expect(getByTestId('loading-view')).toBeTruthy();
   });
 
@@ -1239,12 +1218,7 @@ describe('CreateHomeScreen', () => {
   it('skips to CreateShoppingList when loading view skip is pressed', async () => {
     const user = userEvent.setup();
     const loadingMocks: MockedResponse[] = [
-      {
-        request: { query: GetHomesDocument, variables: () => true },
-        maxUsageCount: 100,
-        delay: Number.POSITIVE_INFINITY,
-        result: { data: undefined },
-      },
+      holdMock(buildGetHomesMock()).mock,
       buildGetMyPendingInvitesMock(),
     ];
     const { getByText } = renderWithApollo(<CreateHomeScreen />, {

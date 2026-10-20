@@ -33,6 +33,7 @@ const mockStore = {
   setIsHomeSelectionReady: jest.fn(),
   setSelectedShoppingListId: jest.fn(),
   setPreferredCurrency: jest.fn(),
+  updateUser: jest.fn(),
   clearBiometricBackoff: jest.fn(),
   registerBiometricRefusal: jest.fn(),
   setHasStoredCredentials: jest.fn(),
@@ -41,10 +42,7 @@ const mockStore = {
 };
 jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
 
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: (...args: unknown[]) => mockToastError(...args) },
-}));
+const mockToastError = jest.mocked(toastService.error);
 
 const mockGetBiometricCapability = jest.fn();
 const mockHasCredentials = jest.fn();
@@ -88,6 +86,7 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 }));
 jest.mock('#/storage/deviceId');
 
+import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };

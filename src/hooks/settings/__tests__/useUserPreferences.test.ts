@@ -9,10 +9,6 @@ import {
 } from '#/store/slices/preferencesSlice';
 import type { RootState } from '#store/index';
 
-// Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 const mockSetUserPreference = jest.fn();
 const mockResetUserPreferences = jest.fn();
 

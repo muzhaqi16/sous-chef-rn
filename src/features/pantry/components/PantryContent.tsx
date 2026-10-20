@@ -153,11 +153,9 @@ export const PantryContent = React.forwardRef<
     // so the connection's own count can't be the wait signal.
     const expectedCount = locationCounts[locationFilter] ?? totalCount ?? 0;
 
-    // "Expected here but not arrived yet". Gating on `loading` is what stops
-    // this sticking: once the query settles the list is authoritative, so an
-    // emptied tab whose stale stats still report a count reaches the real empty
-    // state. Search and the no-home/no-pantry states are excluded — their own
-    // empty states must win.
+    // Expected but not arrived. Only while `loading`: a settled list is
+    // authoritative, so stale stats cannot hold an emptied tab off its empty
+    // state. Search and no-home/no-pantry show their own.
     const awaitingItems =
       loading &&
       items.length === 0 &&
@@ -194,12 +192,9 @@ export const PantryContent = React.forwardRef<
       onItemRestock,
     };
 
-    // Goes to FlashList whole, and never through `useDeferredValue`: FlashList
-    // truncates its layout table during render and re-indexes cells only at
-    // commit, so an interruptible render lets a native `onLayout` land between
-    // the two and throw "index out of bounds, not enough layouts" — fatal in
-    // release (docs/flashlist-layout-index-race.md). There is deliberately no
-    // local render window either; DRAW_DISTANCE alone bounds the mounted set.
+    // Whole to FlashList, never via `useDeferredValue`: an interruptible render
+    // throws "not enough layouts" (docs/flashlist-layout-index-race.md).
+    // DRAW_DISTANCE bounds the mounted set.
     const sortedItems = useServerSort ? items : sortItems(items);
 
     // A tab switch whose new page is still fetching (server mode only). Cleared
@@ -252,12 +247,9 @@ export const PantryContent = React.forwardRef<
     const nextListData = bodyItems;
     const isEmpty = bodyItems.length === 0;
 
-    // Hold the ROWS still while a sheet covers them: every pantry write flips
-    // this array's identity and FlashList re-renders every mounted cell for it,
-    // invisibly behind the sheet. Only the rows freeze — the header reads
-    // `bodyItems`/`stats` directly, so counts still tick up live. Ordinary
-    // state, deliberately NOT `useDeferredValue`/`startTransition` (see the
-    // layout-index race above): this changes WHEN the prop updates, not how.
+    // The ROWS hold still under a sheet, where each write would re-render every
+    // mounted cell unseen; the header reads `bodyItems`/`stats`, so counts stay
+    // live. Plain state, not a deferred value (the race above).
     const overlayCoversRows = useOverlayBackdropPresence();
     const [heldListData, setHeldListData] = useState(nextListData);
     if (!overlayCoversRows && heldListData !== nextListData) {
@@ -265,12 +257,9 @@ export const PantryContent = React.forwardRef<
     }
     const listData = overlayCoversRows ? heldListData : nextListData;
 
-    // `hasRealContent` latches `app_fully_drawn_ms`, so it reads the UN-SMOOTHED
-    // `initialSkeletons`, never a presentation flag: a presentation flag would
-    // put smoothing under the metric as a floor, and would deadlock the overlay
-    // (its release needs `hasContentLayout`, which only arms while this is
-    // true). A settled empty tab counts as content — `initialSkeletons` is
-    // false by then.
+    // `hasRealContent` latches `app_fully_drawn_ms` and reads raw
+    // `initialSkeletons`: a presentation flag would floor the metric and
+    // deadlock the overlay, released by the `hasContentLayout` this arms.
     const perfCallbacks = useFlashListPerformance(flashListRef, {
       componentName: 'PantryContent',
       reportInterval: 10000,
@@ -294,11 +283,9 @@ export const PantryContent = React.forwardRef<
       perfCallbacks.onDataReferenceChange,
     );
 
-    // The blank-window cover: FlashList holds every cell invisible until its
-    // first layout commits while the chrome paints immediately, so the cover
-    // renders beside the list from its FIRST commit and releases on
-    // `hasContentLayout`, which `rowCount` resolves for an empty tab. No
-    // `useMinimumVisible` — the exit fade is the anti-flash smoothing.
+    // FlashList hides every cell until its first layout, so this cover renders
+    // from the list's FIRST commit and releases on `hasContentLayout`
+    // (`rowCount` when empty). The exit fade is the anti-flash smoothing.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
 
     // The footer renders NOTHING while the overlay is up: it would paint over
@@ -321,7 +308,7 @@ export const PantryContent = React.forwardRef<
       onLocationFilterChange(id);
     };
 
-    const resolvedTabs = tabs ?? getDefaultPantryTabs();
+    const resolvedTabs = tabs ?? getDefaultPantryTabs(t);
 
     const tabsWithAddButton = (() => {
       if (!onAddLocation) return resolvedTabs;

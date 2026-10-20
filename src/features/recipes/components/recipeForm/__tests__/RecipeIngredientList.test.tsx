@@ -34,4 +34,16 @@ describe('RecipeIngredientList', () => {
     renderList([ingredient({ quantity: 177.4412 })]);
     expect(screen.getByText('177.441')).toBeTruthy();
   });
+
+  it('shows the unit after the amount', () => {
+    renderList([ingredient({ quantity: 2, unitLabel: 'cups' })]);
+    expect(screen.getByText('2 cups')).toBeTruthy();
+  });
+
+  it('shows only the handling of an ingredient stating no amount', () => {
+    renderList([
+      ingredient({ quantity: null, unitLabel: 'g', preparation: 'to taste' }),
+    ]);
+    expect(screen.getByText('to taste')).toBeTruthy();
+  });
 });

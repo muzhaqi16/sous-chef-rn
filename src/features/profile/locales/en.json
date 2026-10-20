@@ -197,7 +197,26 @@
     "loadingImage": "Loading image...",
     "cropInstructions": "Pinch to zoom, drag to move. The circular view area will be your profile photo.",
     "imageNotLoaded": "Image not loaded properly",
-    "cropImageFailed": "Failed to crop image. Please try again."
+    "cropImageFailed": "Failed to crop image. Please try again.",
+    "dataSources": {
+      "title": "Data sources",
+      "intro": "{{appName}} builds its food catalog on these open datasets.",
+      "visit": "Open website",
+      "publicDomain": "Public domain (a U.S. government work).",
+      "openFoodFacts": {
+        "name": "Open Food Facts",
+        "provides": "Product names, brands, package sizes and photos for scanned barcodes.",
+        "licence": "Database: Open Database License (ODbL). Photos: Creative Commons Attribution-ShareAlike (CC BY-SA)."
+      },
+      "usdaFoodDataCentral": {
+        "name": "USDA FoodData Central",
+        "provides": "Nutrition facts and product records."
+      },
+      "usdaFoodKeeper": {
+        "name": "USDA FoodKeeper",
+        "provides": "How long foods keep in the pantry, fridge and freezer."
+      }
+    }
   },
   "personalInformation": {
     "sectionPrivacySettings": "Privacy Settings",
@@ -282,5 +301,46 @@
   },
   "restrictionSection": {
     "empty": "None added yet"
+  },
+  "reports": {
+    "reportReview": "Report this review",
+    "reportRecipe": "Report this recipe",
+    "sheetTitle": "Report to moderators",
+    "reason": {
+      "spam": "Spam",
+      "inappropriateContent": "Inappropriate content",
+      "harassment": "Harassment or bullying",
+      "hateSpeech": "Hate speech",
+      "fakeInformation": "False or misleading information",
+      "scamFraud": "Scam or fraud",
+      "impersonation": "Impersonation",
+      "privacyViolation": "Privacy violation",
+      "copyright": "Copyright infringement"
+    },
+    "reasonRequired": "Choose a reason",
+    "descriptionLabel": "What happened?",
+    "descriptionPlaceholder": "Add anything that helps the moderators review this",
+    "descriptionRequired": "Describe what happened so the moderators can review it",
+    "send": "Send report",
+    "sent": "Report sent. The moderators will review it.",
+    "alreadyOpen": "You already reported this. It's still under review.",
+    "needsConnection": "Sending a report needs a connection. Try again when you're back online.",
+    "failed": "The report couldn't be sent. Please try again.",
+    "myReportsTitle": "My reports",
+    "about": {
+      "recipe": "Recipe report",
+      "recipeReview": "Review report",
+      "profile": "Profile report",
+      "user": "User report"
+    },
+    "reportedOn": "Reported {{date}}",
+    "status": {
+      "pending": "Waiting for review",
+      "investigating": "Under review",
+      "resolved": "Upheld",
+      "dismissed": "Closed"
+    },
+    "emptyTitle": "No reports yet",
+    "emptyDescription": "Reports you send to the moderators appear here, with where each one stands."
   }
 }

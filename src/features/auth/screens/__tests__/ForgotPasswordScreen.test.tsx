@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import React from 'react';
 import {
   ErrorCode,
@@ -21,18 +22,7 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
   }),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-const mockToastWarning = jest.fn();
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: (...args: unknown[]) => mockToastWarning(...args),
-  },
-}));
+const mockToastError = jest.mocked(toastService.error);
 jest.mock('#/services/errorService');
 
 // A real (permissive) schema, not `{}` — yupResolver has to be able to run it,
@@ -42,10 +32,9 @@ jest.mock('#/services/errorService');
 jest.mock('#utils/validation/auth', () => {
   const yup = require('yup');
   return {
-    getForgotPasswordValidationSchema: () =>
-      yup.object({
-        email: yup.string().transform((value: string) => value || TEST_EMAIL),
-      }),
+    forgotPasswordSchema: yup.object({
+      email: yup.string().transform((value: string) => value || TEST_EMAIL),
+    }),
   };
 });
 

@@ -1,0 +1,23 @@
+# Writes nothing and is read once per paste, so it never enters the cache.
+query ParseIngredientLines($input: ParseIngredientLinesInput!) {
+  parseIngredientLines(input: $input) {
+    lines {
+      originalText
+      name
+      quantity
+      unit {
+        id
+        name
+        symbol
+      }
+      preparation
+      note
+      isOptional
+      section
+      # Set only when the line names it confidently.
+      item {
+        id
+      }
+    }
+  }
+}

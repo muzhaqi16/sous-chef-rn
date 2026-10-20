@@ -23,10 +23,7 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
@@ -38,9 +35,6 @@ jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');
   return { client: { cache: makeCache() } };
 });
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
-}));
 jest.mock('../queueStore', () => ({
   queueStore: { removeMutation: jest.fn() },
 }));
@@ -121,6 +115,7 @@ const failure = (
   operationName: operationNameOf(CreatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'pi-local',
+  subjectType: 'PantryItem',
   variables: { input: { id: 'pi-local', pantryId: 'p-1' } },
   error: {
     type: 'server',
@@ -141,16 +136,6 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
 
   it('uncounts a create the server permanently refused', () => {
     handleQueueFailure(failure());
-
-    expect(totalItems()).toBe(1);
-  });
-
-  it('uncounts a scanned create the server permanently refused', () => {
-    handleQueueFailure(
-      failure({
-        operationName: operationNameOf(BarcodeCreatePantryItemDocument),
-      }),
-    );
 
     expect(totalItems()).toBe(1);
   });

@@ -12,8 +12,6 @@ import {
 } from '#features/mealPlan/utils/mealPlanFilters';
 import { useMealPlanSelectorConfig } from '../useMealPlanSelectorConfig';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
@@ -21,17 +19,24 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
+// The device's calendar day, pinned.
+const TODAY = '2026-03-10';
+jest.mock('#hooks/useToday', () => ({ useToday: () => '2026-03-10' }));
+
 const displayPlan = (
   id: string,
   planType: MealPlanType,
+  days: { startDate: string; endDate: string } = {
+    startDate: '2025-01-01',
+    endDate: '2025-01-07',
+  },
 ): MealPlanDisplayFragment => ({
   __typename: 'MealPlan',
   id,
   name: `Plan ${id}`,
   description: null,
   planType,
-  startDate: '2025-01-01T00:00:00Z',
-  endDate: '2025-01-07T00:00:00Z',
+  ...days,
   servings: 2,
   totalCalories: null,
   totalProtein: null,
@@ -55,12 +60,13 @@ function renderSelector(
   filters: MealPlanFilterState,
   server: ReturnType<typeof recordMock>,
   loadMore = jest.fn(() => Promise.resolve()),
+  loaded: MealPlanDisplayFragment[] = [loadedWeekly, loadedMonthly],
 ) {
   return renderHookWithApollo(
     () =>
       useMealPlanSelectorConfig({
         plans: {
-          mealPlans: [loadedWeekly, loadedMonthly],
+          mealPlans: loaded,
           hasMore: true,
           loadingMore: false,
           loadMore,
@@ -167,5 +173,60 @@ describe('useMealPlanSelectorConfig', () => {
     expect(ids(result.current.data)).toEqual(['loaded-weekly']);
     result.current.pagination?.onLoadMore();
     expect(loadMore).toHaveBeenCalled();
+  });
+
+  // `isActive` is judged on the day the device states: the server has no
+  // other way to know which day it is where the phone is.
+  it('asks the server for the plans active on the device day', async () => {
+    const server = recordMock(GetMealPlansDocument, {});
+    renderSelector({ ...EMPTY_MEAL_PLAN_FILTERS, activeOnly: true }, server);
+
+    await waitFor(() =>
+      expect(server.fired).toContainEqual(
+        expect.objectContaining({ filters: { isActive: true, today: TODAY } }),
+      ),
+    );
+  });
+
+  it('states no day on a filter that does not ask for active plans', async () => {
+    const server = recordMock(GetMealPlansDocument, {});
+    renderSelector(
+      { ...EMPTY_MEAL_PLAN_FILTERS, planType: MealPlanType.Weekly },
+      server,
+    );
+
+    await waitFor(() => expect(server.fired.length).toBeGreaterThan(0));
+    expect(server.fired).toEqual([
+      expect.objectContaining({ filters: { planType: MealPlanType.Weekly } }),
+    ]);
+  });
+
+  // The loaded pages stand in until the server answers, and re-check its page.
+  it('counts a plan active through its last day, and not the day after', async () => {
+    const week = (id: string, startDate: string, endDate: string) =>
+      displayPlan(id, MealPlanType.Weekly, { startDate, endDate });
+    const server = recordMock(GetMealPlansDocument, {
+      error: new Error('Network request failed'),
+    });
+
+    const { result } = renderSelector(
+      { ...EMPTY_MEAL_PLAN_FILTERS, activeOnly: true },
+      server,
+      undefined,
+      [
+        week('ended-yesterday', '2026-03-03', '2026-03-09'),
+        week('ends-today', '2026-03-04', TODAY),
+        week('starts-today', TODAY, '2026-03-16'),
+        week('only-today', TODAY, TODAY),
+        week('starts-tomorrow', '2026-03-11', '2026-03-17'),
+      ],
+    );
+
+    await waitFor(() => expect(server.fired.length).toBeGreaterThan(0));
+    expect(ids(result.current.data)).toEqual([
+      'ends-today',
+      'starts-today',
+      'only-today',
+    ]);
   });
 });

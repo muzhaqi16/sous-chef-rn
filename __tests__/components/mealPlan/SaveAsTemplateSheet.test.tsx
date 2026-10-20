@@ -4,9 +4,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SaveAsTemplateSheet } from '../../../src/features/mealPlan/components/SaveAsTemplateSheet';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },

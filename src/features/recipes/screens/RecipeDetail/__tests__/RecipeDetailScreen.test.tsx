@@ -1,15 +1,39 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { ModerationContentType } from '#/graphql/generated/schemaTypes';
+import { useStore } from '#store';
 import { RecipeDetail } from '../index';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { kitTestIDs } from '#components/testIDs';
+import type { ReportContentSheet } from '#features/profile/ui/ReportContentSheet';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
+/** A header action, in the bar or in the "more" menu it overflowed into. */
+const headerAction = (testID: string) => {
+  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
+  if (more) fireEvent.press(more);
+  return screen.queryByTestId(testID);
+};
+
+/** Presses an overflowed action: its row runs once the menu has closed. */
+const pressMenuAction = (testID: string) => {
+  fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
+  fireEvent.press(screen.getByTestId(testID));
+  const { onDismiss } = screen.UNSAFE_getByProps({ detached: true }).props as {
+    onDismiss: () => void;
+  };
+  act(() => onDismiss());
+};
+
+// Capture's review banner has its own suite; this one renders without Apollo.
+jest.mock('#hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => false,
+}));
 
 jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual<object>('@react-navigation/native'),
   useNavigation: jest.fn(() => ({
     navigate: jest.fn(),
     goBack: jest.fn(),
@@ -24,57 +48,8 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-// Mock the hook fully
-jest.mock('../../../hooks/useRecipeDetail', () => ({
-  useRecipeDetail: jest.fn(() => ({
-    goBack: jest.fn(),
-    recipeId: null,
-    catalogExternalId: undefined,
-    loading: false,
-    error: 'Recipe not found',
-    displayData: null,
-    backendRecipe: null,
-    saving: false,
-    isSaved: false,
-    handleSaveRecipe: jest.fn(),
-    shoppingLists: [],
-    addingToList: false,
-    addedIngredients: new Set(),
-    handleAddSingleIngredient: jest.fn(),
-    handleAddAllIngredientsToList: jest.fn(),
-    handleAddAllIngredients: jest.fn(),
-    handleListSelected: jest.fn(),
-    listPickerVisible: false,
-    handleSheetDismiss: jest.fn(),
-    cookedModalVisible: false,
-    setCookedModalVisible: jest.fn(),
-    markingAsCooked: false,
-    handleMarkAsCooked: jest.fn(),
-    handleSkipReview: jest.fn(),
-    ingredientMatching: {
-      isSheetVisible: false,
-      editableMatches: [],
-      matchSummary: null,
-      updateMatch: jest.fn(),
-      confirmConsumption: jest.fn(),
-      confirmLoading: false,
-      hasPantry: false,
-      closeSheet: jest.fn(),
-    },
-    showFolderPicker: false,
-    setShowFolderPicker: jest.fn(),
-    updatingFolderTags: false,
-    handleUpdateFolder: jest.fn(),
-    handleUpdateTags: jest.fn(),
-    handleUpdateNotes: jest.fn(),
-    handleUpdateRating: jest.fn(),
-    savedFolder: null,
-    savedTags: [],
-    savedNotes: null,
-    savedRating: null,
-    cookedCount: 0,
-    handleUnfavoriteRecipe: jest.fn(),
-  })),
+jest.mock('#features/recipes/hooks/useRecipeDetail', () => ({
+  useRecipeDetail: jest.fn(),
 }));
 
 jest.mock('#features/recipes/hooks/useRecipeFolders', () => ({
@@ -86,10 +61,7 @@ jest.mock('#features/recipes/hooks/useRecipeTags', () => ({
 }));
 
 jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
-  useRecipeReviews: jest.fn(() => ({
-    reviews: [],
-    loading: false,
-  })),
+  useRecipeReviews: () => ({ state: {}, actions: {} }),
 }));
 
 jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
@@ -158,102 +130,132 @@ jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,
 }));
 
+// Stands in for the sheet, showing what the screen opened it with.
+jest.mock('#features/profile/ui/ReportContentSheet', () => {
+  const { Text } = require('#components/atoms/Text');
+  const Probe: typeof ReportContentSheet = ({ visible, target }) =>
+    visible ? (
+      <Text testID="report-sheet">{JSON.stringify(target)}</Text>
+    ) : null;
+  return { ReportContentSheet: Probe };
+});
+
 jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
   IngredientCard: () => null,
 }));
 
 jest.mock('react-native-turbo-image', () => 'TurboImage');
 
-jest.mock('@gorhom/bottom-sheet', () => ({
-  BottomSheetFlatList: () => null,
-  BottomSheetTextInput: () => null,
-  BottomSheetModal: 'BottomSheetModal',
-  useBottomSheetScrollableCreator: jest.fn(() => () => null),
-}));
-
 // The screen reads its params through `useRecipeDetail`, which is mocked here.
 const route = { params: {} };
 
-describe('RecipeDetail', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+// The offline predicate `useOfflineAwareError` consults.
+const mockApiUnavailable = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockApiUnavailable(),
+}));
 
+/** Renders the screen over a `useRecipeDetail` holding no recipe and no error, but for `overrides`. */
+function renderDetail(overrides: Record<string, unknown> = {}) {
+  const { useRecipeDetail } = jest.requireMock<{ useRecipeDetail: jest.Mock }>(
+    '#features/recipes/hooks/useRecipeDetail',
+  );
+  useRecipeDetail.mockReturnValue({
+    goBack: jest.fn(),
+    recipeId: null,
+    catalogExternalId: undefined,
+    loading: false,
+    error: null,
+    displayData: null,
+    backendRecipe: null,
+    saving: false,
+    isSaved: false,
+    handleSaveRecipe: jest.fn(),
+    shoppingLists: [],
+    addingToList: false,
+    addedIngredients: new Set(),
+    handleAddSingleIngredient: jest.fn(),
+    handleAddAllIngredientsToList: jest.fn(),
+    handleAddAllIngredients: jest.fn(),
+    handleListSelected: jest.fn(),
+    listPickerVisible: false,
+    handleSheetDismiss: jest.fn(),
+    cookedModalVisible: false,
+    setCookedModalVisible: jest.fn(),
+    markingAsCooked: false,
+    handleMarkAsCooked: jest.fn(),
+    handleSkipReview: jest.fn(),
+    ingredientMatching: {
+      isSheetVisible: false,
+      editableMatches: [],
+      matchSummary: null,
+      updateMatch: jest.fn(),
+      confirmConsumption: jest.fn(),
+      confirmLoading: false,
+      hasPantry: false,
+      closeSheet: jest.fn(),
+    },
+    showFolderPicker: false,
+    setShowFolderPicker: jest.fn(),
+    updatingFolderTags: false,
+    handleUpdateFolder: jest.fn(),
+    handleUpdateTags: jest.fn(),
+    handleUpdateNotes: jest.fn(),
+    handleUpdateRating: jest.fn(),
+    savedFolder: null,
+    savedTags: [],
+    savedNotes: null,
+    savedRating: null,
+    cookedCount: 0,
+    handleUnfavoriteRecipe: jest.fn(),
+    ...overrides,
+  });
+  return render(<RecipeDetail route={route} />);
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockApiUnavailable.mockReturnValue(false);
+});
+
+describe('RecipeDetail', () => {
   it('renders error state when error exists', () => {
-    const tree = render(<RecipeDetail route={route} />);
+    const tree = renderDetail({ error: 'Recipe not found' });
     expect(tree.getByText('Recipe not found')).toBeTruthy();
   });
 
-  it('renders loading state when loading', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: true,
-      error: null,
-      displayData: null,
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
+  // A recipe never opened before has nothing cached to show offline; that is
+  // not a failure, and the screen says so rather than "Couldn't load".
+  it('shows the offline state for a recipe it has not downloaded', () => {
+    mockApiUnavailable.mockReturnValue(true);
+    const tree = renderDetail({
+      recipeId: 'r-1',
+      error: "Couldn't load this recipe",
     });
 
-    const tree = render(<RecipeDetail route={route} />);
+    expect(tree.getByTestId('state-offline')).toBeTruthy();
+    expect(tree.queryByText("Couldn't load this recipe")).toBeNull();
+  });
+
+  it('renders loading state when loading', () => {
+    const tree = renderDetail({
+      loading: true,
+    });
     // SousChefLoader is rendered during loading
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('renders recipe content when displayData exists', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+  it("renders recipe content, with its provider's notice", () => {
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [
+          {
+            source: 'SPOONACULAR',
+            notice: 'Recipe data from Spoonacular.',
+            licenseUrl: null,
+            sourceUrl: 'https://spoonacular.com/recipes/carbonara-1',
+          },
+        ],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -269,67 +271,19 @@ describe('RecipeDetail', () => {
         glutenFree: false,
         dairyFree: false,
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
+    expect(tree.getByText('Recipe data from Spoonacular.')).toBeTruthy();
   });
 
   it('keeps a cached recipe on screen when the refresh fails', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
+    const tree = renderDetail({
       // Offline, a cached recipe's refresh fails. Checking `error` before
       // `displayData` blanked the screen and called it "recipe not found".
       error: 'Network request failed',
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -345,70 +299,20 @@ describe('RecipeDetail', () => {
         glutenFree: false,
         dairyFree: false,
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
   });
 
   it('renders wrapped in error boundary', () => {
-    const tree = render(<RecipeDetail route={route} />);
+    const tree = renderDetail();
     expect(tree.toJSON()).toBeTruthy();
   });
 
   it('shows servings and time metadata', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Quick Soup',
         servings: 6,
@@ -416,50 +320,7 @@ describe('RecipeDetail', () => {
         ingredients: [],
         instructions: [],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText(/6 servings/)).toBeTruthy();
     expect(tree.getByText(/15 min/)).toBeTruthy();
   });
@@ -467,132 +328,24 @@ describe('RecipeDetail', () => {
   // --- Branch coverage tests ---
 
   it('renders the hook error as the title', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
       error: "Couldn't load this recipe",
-      displayData: null,
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText("Couldn't load this recipe")).toBeTruthy();
   });
 
   it('renders "Recipe not found in database" when recipeId but no backendRecipe and no error', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
-      displayData: null,
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe not found in database')).toBeTruthy();
   });
 
   it("renders the provider's dietary tags", () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Vegan Bowl',
         image: null,
@@ -607,50 +360,7 @@ describe('RecipeDetail', () => {
         glutenFree: true,
         dairyFree: true,
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Vegetarian')).toBeTruthy();
     expect(tree.getByText('Vegan')).toBeTruthy();
     expect(tree.getByText('Gluten Free')).toBeTruthy();
@@ -659,16 +369,10 @@ describe('RecipeDetail', () => {
   });
 
   it('renders saved recipe folder, tags, and notes for backend recipes', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saved Recipe',
         image: 'https://example.com/img.jpg',
@@ -678,49 +382,13 @@ describe('RecipeDetail', () => {
         instructions: [],
       },
       backendRecipe: { createdBy: { id: 'user-1' } },
-      saving: false,
       isSaved: true,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
       savedFolder: 'Dinner',
       savedTags: ['quick', 'easy'],
       savedNotes: 'My notes here',
       savedRating: 3,
       cookedCount: 5,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Dinner')).toBeTruthy();
     expect(tree.getByText('quick')).toBeTruthy();
     expect(tree.getByText('easy')).toBeTruthy();
@@ -733,16 +401,10 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "Mark cooked" text when cookedCount is 0', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'A Recipe',
         image: null,
@@ -751,63 +413,15 @@ describe('RecipeDetail', () => {
         instructions: [],
       },
       backendRecipe: { createdBy: { id: 'other' } },
-      saving: false,
       isSaved: true,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Mark cooked')).toBeTruthy();
   });
 
   it('renders source attribution with sourceName', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Test',
         image: null,
@@ -819,123 +433,20 @@ describe('RecipeDetail', () => {
         sourceName: 'AllRecipes',
         sourceUrl: 'https://allrecipes.com/r/1',
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe from AllRecipes')).toBeTruthy();
     expect(tree.getByText('View Original Recipe')).toBeTruthy();
   });
 
   it('renders "Recipe not found" when no recipeId and no error', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
-      displayData: null,
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
-    });
-
-    const tree = render(<RecipeDetail route={route} />);
+    const tree = renderDetail();
     expect(tree.getByText('Recipe not found')).toBeTruthy();
   });
 
   it('does not render image section when no image', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -943,65 +454,15 @@ describe('RecipeDetail', () => {
         ingredients: [],
         instructions: [],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     // Title is rendered but there's no BackButton in image container
     expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
   });
 
   it('renders "Adding..." when addingToList is true', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1009,64 +470,16 @@ describe('RecipeDetail', () => {
         ingredients: [{ id: 'i1', name: 'Salt' }],
         instructions: [],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
       addingToList: true,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Adding...')).toBeTruthy();
   });
 
   it('renders "None" for folder when savedFolder is null', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe',
         image: null,
@@ -1075,63 +488,15 @@ describe('RecipeDetail', () => {
         instructions: [],
       },
       backendRecipe: { createdBy: { id: 'other' } },
-      saving: false,
       isSaved: true,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('None')).toBeTruthy();
   });
 
   it('renders with saving state', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      externalId: '456',
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Saving Recipe',
         image: 'https://example.com/img.jpg',
@@ -1140,64 +505,16 @@ describe('RecipeDetail', () => {
         ingredients: [{ id: 'i1', name: 'Salt' }],
         instructions: [{ number: 1, step: 'Add salt' }],
       },
-      backendRecipe: null,
       saving: true,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
       shoppingLists: [{ id: 'sl-1', name: 'My List' }],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Saving Recipe')[0]).toBeTruthy();
   });
 
   it('renders with instructions present', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'With Instructions',
         image: null,
@@ -1209,65 +526,15 @@ describe('RecipeDetail', () => {
           { number: 2, step: 'Second step' },
         ],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('With Instructions')[0]).toBeTruthy();
     expect(tree.toJSON()).toBeTruthy();
   });
 
   it('renders with added ingredients highlighted', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Recipe With Ingredients',
         image: null,
@@ -1278,64 +545,17 @@ describe('RecipeDetail', () => {
         ],
         instructions: [],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
       shoppingLists: [{ id: 'sl-1', name: 'Weekly' }],
-      addingToList: false,
       addedIngredients: new Set(['i1']),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Recipe With Ingredients')[0]).toBeTruthy();
   });
 
   it('renders marking as cooked state', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Cooking Recipe',
         image: null,
@@ -1344,63 +564,19 @@ describe('RecipeDetail', () => {
         instructions: [],
       },
       backendRecipe: { createdBy: { id: 'user-1' } },
-      saving: false,
       isSaved: true,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
       cookedModalVisible: true,
-      setCookedModalVisible: jest.fn(),
       markingAsCooked: true,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
       cookedCount: 2,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Cooking Recipe')[0]).toBeTruthy();
   });
 
   it('renders backend instructions with step/text format correctly', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'My Pasta Recipe',
         image: null,
@@ -1413,64 +589,16 @@ describe('RecipeDetail', () => {
         ],
       },
       backendRecipe: { createdBy: { id: 'user-1' } },
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Boil the water')).toBeTruthy();
     expect(tree.getByText('Cook the pasta')).toBeTruthy();
   });
 
   it('renders no-image header with back button when image is missing', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
+    const tree = renderDetail({
       recipeId: 'r1',
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'No Image Recipe',
         image: null,
@@ -1479,65 +607,16 @@ describe('RecipeDetail', () => {
         instructions: [],
       },
       backendRecipe: { createdBy: { id: 'user-1' } },
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
     // No-image header renders with accessible meal plan button
     expect(tree.getByLabelText('Add to meal plan')).toBeTruthy();
   });
 
   it('does not show "0 min" when readyInMinutes is 0', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      catalogExternalId: undefined,
-      loading: false,
-      error: null,
+    const tree = renderDetail({
       displayData: {
+        dataAttributions: [],
         details: 'complete',
         title: 'Zero Time Recipe',
         image: null,
@@ -1546,66 +625,18 @@ describe('RecipeDetail', () => {
         ingredients: [],
         instructions: [],
       },
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
     });
-
-    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Zero Time Recipe')[0]).toBeTruthy();
     expect(tree.queryByText(/0 min/)).toBeNull();
   });
 
   describe('a catalog recipe the API has not fully fetched', () => {
-    const renderWithDetails = (details: string, { isSaved = false } = {}) => {
-      const { useRecipeDetail } = jest.requireMock<{
-        useRecipeDetail: jest.Mock;
-      }>('../../../hooks/useRecipeDetail');
-      const base = useRecipeDetail.getMockImplementation()?.();
-      useRecipeDetail.mockReturnValue({
-        ...base,
+    const renderWithDetails = (details: string, { isSaved = false } = {}) =>
+      renderDetail({
         recipeId: details === 'opening' ? null : 'catalog-1',
-        error: null,
         isSaved,
         displayData: {
+          dataAttributions: [],
           details,
           title: 'Spinach Strata',
           image: null,
@@ -1615,8 +646,6 @@ describe('RecipeDetail', () => {
         backendRecipe:
           details === 'opening' ? null : { id: 'catalog-1', createdBy: null },
       });
-      return render(<RecipeDetail route={route} />);
-    };
 
     it("shows the row's title while the API opens it", () => {
       const tree = renderWithDetails('opening');
@@ -1650,17 +679,12 @@ describe('RecipeDetail', () => {
     });
 
     it('offers no fork until its content is fetched', () => {
-      expect(
-        renderWithDetails('pending').queryByTestId(recipesTestIDs.forkButton),
-      ).toBeNull();
-      expect(
-        renderWithDetails('unavailable').queryByTestId(
-          recipesTestIDs.forkButton,
-        ),
-      ).toBeNull();
-      expect(
-        renderWithDetails('complete').getByTestId(recipesTestIDs.forkButton),
-      ).toBeTruthy();
+      renderWithDetails('pending');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
+      renderWithDetails('unavailable');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
+      renderWithDetails('complete');
+      expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
     });
 
     it('shows no notice once it is complete', () => {
@@ -1668,5 +692,111 @@ describe('RecipeDetail', () => {
       expect(tree.queryByText("Details aren't here yet")).toBeNull();
       expect(tree.queryByText('Not available right now')).toBeNull();
     });
+  });
+
+  describe('when a saved recipe was last cooked', () => {
+    const LAST_COOKED_AT = '2026-10-11T12:00:00.000Z';
+
+    const renderSaved = (cooked: {
+      cookedCount: number;
+      lastCookedAt: string | null;
+    }) =>
+      renderDetail({
+        recipeId: 'r1',
+        isSaved: true,
+        displayData: {
+          dataAttributions: [],
+          details: 'complete',
+          title: 'Shakshuka',
+          image: null,
+          servings: 2,
+          ingredients: [],
+          instructions: [],
+        },
+        backendRecipe: { id: 'r1', createdBy: { id: 'other' } },
+        ...cooked,
+      });
+
+    it('shows the date beside the cooked count', () => {
+      const tree = renderSaved({
+        cookedCount: 3,
+        lastCookedAt: LAST_COOKED_AT,
+      });
+
+      expect(tree.getByText('Cooked 3x')).toBeTruthy();
+      expect(
+        tree.getByText(
+          `Last cooked ${formatMonthDayYear(new Date(LAST_COOKED_AT))}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no date for a recipe never cooked', () => {
+      const tree = renderSaved({ cookedCount: 0, lastCookedAt: null });
+
+      expect(tree.getByText('Mark cooked')).toBeTruthy();
+      expect(tree.queryByText(/Last cooked/)).toBeNull();
+    });
+  });
+});
+
+describe('reporting a recipe from its detail screen', () => {
+  const VIEWER = {
+    id: 'viewer',
+    email: 'viewer@example.com',
+    emailVerified: true,
+    onBoarded: true,
+    preferredCurrency: 'USD',
+  };
+
+  const renderRecipe = (createdBy: { id: string } | null) =>
+    renderDetail({
+      recipeId: 'recipe-1',
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Spinach Strata',
+        image: null,
+        ingredients: [],
+        instructions: [],
+      },
+      backendRecipe: { id: 'recipe-1', createdBy },
+    });
+
+  beforeEach(() => {
+    useStore.setState({ user: VIEWER });
+  });
+
+  afterEach(() => {
+    useStore.setState({ user: null });
+  });
+
+  it("opens the report for another user's recipe, naming it and its owner", () => {
+    renderRecipe({ id: 'owner' });
+
+    expect(screen.queryByTestId('report-sheet')).toBeNull();
+    pressMenuAction(recipesTestIDs.reportButton);
+
+    expect(screen.getByTestId('report-sheet')).toHaveTextContent(
+      JSON.stringify({
+        reportedUserId: 'owner',
+        contentType: ModerationContentType.Recipe,
+        contentId: 'recipe-1',
+      }),
+    );
+  });
+
+  it("offers no report on the viewer's own recipe", () => {
+    renderRecipe({ id: VIEWER.id });
+
+    expect(headerAction(recipesTestIDs.editButton)).toBeTruthy();
+    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
+  });
+
+  it('offers no report on a catalog recipe, which nobody owns', () => {
+    renderRecipe(null);
+
+    expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
+    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
   });
 });

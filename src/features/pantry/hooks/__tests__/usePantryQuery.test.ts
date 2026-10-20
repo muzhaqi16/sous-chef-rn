@@ -20,9 +20,6 @@ type MockConnection = {
   totalCount?: number | null;
 };
 
-jest.mock('../../../../apollo/links/tokenScheduler');
-jest.mock('../../../../apollo/links/refreshToken');
-
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));

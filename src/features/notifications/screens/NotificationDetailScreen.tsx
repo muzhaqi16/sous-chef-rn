@@ -8,6 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
+import { useNotificationDetail } from '#features/notifications/hooks/useNotificationDetail';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -23,7 +24,10 @@ export const NotificationDetailScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const today = useToday();
-  const notification = route.params.notification;
+  const notification = useNotificationDetail(
+    route.params.id,
+    route.params.notification,
+  );
 
   if (!notification) {
     return (

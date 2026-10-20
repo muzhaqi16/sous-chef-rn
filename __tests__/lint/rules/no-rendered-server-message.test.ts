@@ -1,10 +1,10 @@
 import { testTypedRule } from '#/test-utils/eslintRuleTester';
 
 const PRELUDE = `import type {
+  BatchElementFailure,
   DeletionBlocker,
   LedgerPeriodData,
   ShoppingList,
-  ShoppingListItemSource,
   UserEvent,
 } from '#/graphql/generated/schemaTypes';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
@@ -26,8 +26,8 @@ declare const fieldError: FieldError | undefined;
 declare const local: Error;
 declare const notification: UseNotificationsOnLaunch_NotificationFragment;
 declare const userEvent: UserEvent;
+declare const failure: BatchElementFailure;
 declare const blockers: DeletionBlocker[];
-declare const source: ShoppingListItemSource;
 declare const period: LedgerPeriodData;
 declare const list: ShoppingList;
 declare const draft: { __typename: 'Notification'; title: string };
@@ -197,8 +197,13 @@ testTypedRule(
       },
       {
         code: code(
-          'const { autoAddReason } = source;\nexport const a = <Text>{autoAddReason}</Text>;',
+          'const { reason } = userEvent;\nexport const a = <Text>{reason}</Text>;',
         ),
+        errors: ['renderedServerCopy'],
+      },
+      // A refused batch element: `code` is the contract, `reason` is English.
+      {
+        code: code('toastService.error(failure.reason);'),
         errors: ['renderedServerCopy'],
       },
       {

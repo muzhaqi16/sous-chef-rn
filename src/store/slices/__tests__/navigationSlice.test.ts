@@ -1,10 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import { OnBoardingSteps, type DeepLinkAction } from '../navigationSlice';
 
-// Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
-
 describe('navigationSlice', () => {
   describe('initial state', () => {
     it('starts with null values', () => {

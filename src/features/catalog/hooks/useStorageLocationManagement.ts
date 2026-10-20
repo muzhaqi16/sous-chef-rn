@@ -30,7 +30,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
 import { useTranslation } from '#/i18n';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { errorCopy, errorService } from '#/services/errorService';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -83,9 +83,8 @@ function restoreLocationToCaches(
   homeId: string | undefined,
 ): void {
   // `cache.modify` runs for EVERY cached `storageLocations(homeId:…)` variant,
-  // so without this scope a refused delete in home A also appended the row into
-  // home B's list. The field is keyed on a plain argument rather than a
-  // `filters` object, which is why this uses the arg matcher.
+  // so this keeps a refused delete's row in its own home's list. The field is
+  // keyed on a plain argument, not a `filters` object, hence the arg matcher.
   addToStorageLocationsQuery(cache, location, {
     position: 'end',
     skipStoreField: homeId ? skipUnmatchedArgVariants({ homeId }) : undefined,
@@ -172,10 +171,9 @@ export function useStorageLocationManagement(
   // previous home is dropped.
   const data = variables.homeId === homeId ? result : undefined;
 
-  // Offline, "we never tried and have nothing" is read from the absence of
-  // data, and offlineModeLink's synthetic cache-miss error is not an error to
-  // show. Without it an offline user sees the ordinary empty state, which
-  // invites them to create a location that may already exist on the server.
+  // Offline, no data means "never tried", and offlineModeLink's synthetic
+  // cache-miss error is not one to show; else the ordinary empty state invites
+  // creating a location that may already exist on the server.
   const networkBlocked = useBlocksCacheMissQueries();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
@@ -187,11 +185,9 @@ export function useStorageLocationManagement(
 
   const client = useApolloClient();
 
-  // Every write here is offline-capable. Update and set-default write absolute
-  // fields on a row keyed by its existing `id`, so a replay lands the same state
-  // twice; delete converges server-side (`converged: true` when the row is
-  // already gone, `NotFoundError` only for a target that never existed), so a
-  // replayed delete is a success rather than a permanent failure.
+  // Every write here replays safely: update and set-default write absolute
+  // fields on an existing `id`, and a delete converges server-side (`converged:
+  // true` once gone, `NotFoundError` only for a row that never existed).
 
   // Each write below settles its own failure and toasts it — no `onError`.
   const [updateMutation, { loading: updating }] = useMutation(
@@ -218,10 +214,9 @@ export function useStorageLocationManagement(
   ) => {
     const current = locations.find(location => location.id === id);
 
-    // Input field names ARE the StorageLocation field names except
-    // `parentLocationId`: the sheet is seeded with the flat id, but the query
-    // selects only the nested `parentLocation`, which is what the tree builder
-    // and the delete guard read. Writing the flat field alone moves nothing.
+    // Input names ARE the StorageLocation field names except `parentLocationId`:
+    // the tree builder and delete guard read the nested `parentLocation`, so
+    // writing the flat field alone moves nothing.
     const { parentLocationId, ...directFields } = input;
     const nextParent =
       parentLocationId === undefined
@@ -229,9 +224,8 @@ export function useStorageLocationManagement(
         : locations.find(location => location.id === parentLocationId) ?? null;
 
     // Identity only: `writeEntityFields` normalizes `__typename`+`id` into a
-    // reference, so the child points AT the parent instead of copying its
-    // fields (a later rename would strand every child's sub-label) and the
-    // write cannot clobber the parent's own record.
+    // reference, so the child points AT the parent (a copy would strand its
+    // sub-label on a rename) and cannot clobber the parent's record.
     const locationRef = (locationId: string) => ({
       __typename: 'StorageLocation',
       id: locationId,
@@ -244,10 +238,8 @@ export function useStorageLocationManagement(
         : { parentLocation: nextParent ? locationRef(nextParent.id) : null }),
     };
 
-    // Snapshot the fields being changed. A key the read did not CARRY is
-    // omitted, so a refusal leaves that field alone rather than blanking a
-    // value the snapshot never saw; a key carried as null is recorded, so an
-    // empty field is restored as empty. An undefined `current` is harmless —
+    // A key the read did not CARRY is left out, so a refusal leaves it alone;
+    // one carried as null is restored as empty. An undefined `current` is fine:
     // `writeEntityFields` is a no-op without an entity, on write and revert.
     const previous = {
       ...snapshotFields(current, updates),
@@ -287,7 +279,7 @@ export function useStorageLocationManagement(
       {
         document: UpdateStorageLocationDocument,
         fallback: t('errors.codes.genericRetry'),
-        present: 'none',
+        present: 'toast',
         onFailed: () => {
           writeEntityFields(client.cache, entity, previous);
           if (displacedDefault) {
@@ -298,10 +290,7 @@ export function useStorageLocationManagement(
         },
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
     // queue took it. The only consumer reads truthiness.
@@ -342,14 +331,11 @@ export function useStorageLocationManagement(
         document: DeleteStorageLocationDocument,
         fallback: t('errors.codes.genericRetry'),
         removal: true,
-        present: 'none',
+        present: 'toast',
         onFailed: restore,
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
     toastService.success(t('success.storageLocationDeleted'));
     return true;
@@ -380,7 +366,7 @@ export function useStorageLocationManagement(
       {
         document: MarkStorageLocationAsDefaultDocument,
         fallback: t('errors.codes.genericRetry'),
-        present: 'none',
+        present: 'toast',
         onFailed: () => {
           writeEntityFields(client.cache, entity, { isDefault: false });
           if (previousDefault) {
@@ -393,22 +379,16 @@ export function useStorageLocationManagement(
         },
       },
     );
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
     return true;
   };
 
   // Preserve data even when query fails to prevent cascade failures
   const locations = usePreservedNodes(data?.storageLocations, homeId ?? '');
 
-  // Always derive the tree from the flat list. The flat `GetStorageLocations`
-  // query is kept fresh by the create/update/delete cache updaters; the separate
-  // `storageLocationTree` query was NOT (mutations don't touch it), so after
-  // creating a nested location the tree view went stale — missing the new child
-  // and collapsing same-name siblings. buildTreeFromFlatList keys on ids, so two
-  // locations with the same name under different parents stay distinct.
+  // The tree derives from the flat list, which the create/update/delete cache
+  // updaters keep fresh; no mutation touches `storageLocationTree`. Keyed on
+  // ids, so same-name locations under different parents stay distinct.
   const tree = buildTreeFromFlatList(locations);
 
   return {
@@ -421,7 +401,7 @@ export function useStorageLocationManagement(
     updating,
     errorMessage:
       error && !networkBlocked
-        ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
+        ? errorCopy(error, t, t('errors.codes.genericRetry'))
         : null,
 
     // Actions

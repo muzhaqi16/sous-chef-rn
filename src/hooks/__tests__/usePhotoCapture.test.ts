@@ -6,17 +6,11 @@ import { PermissionService } from '#services/permissions/PermissionService';
 import { MAX_IMAGE_SIZE, MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { usePhotoCapture } from '../usePhotoCapture';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/services/errorService');
 
 jest.mock('react-native-image-picker', () => ({
   launchCamera: jest.fn(),
   launchImageLibrary: jest.fn(),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 jest.mock('#services/permissions/PermissionService', () => ({

@@ -1,6 +1,10 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="AppTheme" parent="Theme.EdgeToEdge">
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
         <item name="enforceNavigationBarContrast">false</item>
+        <!-- React Native measures text by glyph advances. Targeting API 35+ makes
+             every TextView break lines by glyph bounds instead, so a line that
+             fits when measured can wrap when drawn and its last word is clipped. -->
+        <item name="android:useBoundsForWidth" tools:targetApi="35">false</item>
     </style>
 </resources>

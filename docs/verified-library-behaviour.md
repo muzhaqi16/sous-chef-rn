@@ -2,10 +2,12 @@
 
 The probe record behind CLAUDE.md's one-line verification stamps. Each entry
 pins a rule to what the INSTALLED package actually does: the claim, the
-version it was verified against, the mechanism in the library's own source,
-and a command that re-derives it. **If a rule changes, re-run its probe and
-update the entry — a rule without a live check is a hypothesis.** Entries are
-last verified 2026-08-23 unless the entry names a later date.
+version it was verified against, what in the repo depends on it, and a command
+that re-derives it. **If a rule changes, re-run its probe and update the entry
+— a rule without a live check is a hypothesis.** Entries are last verified
+2026-08-23 unless the entry names a later date. An entry stays only while a
+rule, a doc or code in the repo points at it; the investigation behind it is
+in git history.
 
 ### gorhom BottomSheetView cannot bound a scrollable
 
@@ -13,21 +15,16 @@ last verified 2026-08-23 unless the entry names a later date.
 `BottomSheetScrollView`, `BottomSheetFlatList`) inside `BottomSheetView` is
 never height-bounded — it grows to every row and cannot scroll.
 
-**Verified against `@gorhom/bottom-sheet@5.2.14`.** The component's container
-style is `position: 'absolute', left: 0, top: 0, right: 0` with no `bottom`
-or height, so `flex: 1` on it does nothing; the sheet's content region gets an
-explicit animated height from `BottomSheetContent.tsx`, which is what bounds a
-plain flex child. `BottomSheetView` also re-registers the sheet's scrollable
-as a plain view after a child list registers itself (parent effects run last).
+**Verified against `@gorhom/bottom-sheet@5.2.14`.** The container style is
+`position: 'absolute', left: 0, top: 0, right: 0` with no `bottom` or height,
+so `flex: 1` on it does nothing. Guarded by
+`src/features/catalog/components/__tests__/BottomSheetAutocompleteInput.test.tsx`.
 
 Re-check:
 
 ```
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
-
-Guarded by `src/features/catalog/components/__tests__/BottomSheetAutocompleteInput.test.tsx`
-("keeps the list out of gorhom BottomSheetView").
 
 ### gorhom keyboard handling requires BottomSheetTextInput
 
@@ -37,12 +34,10 @@ keyboard covers the field.
 
 **Verified against `@gorhom/bottom-sheet@5.2.14`.**
 `BottomSheetTextInput.handleOnFocus` sets `animatedKeyboardState.target`, and
-`useAnimatedKeyboard.ts` caches a keyboard-shown event while that target is
-unset — replaying it only once a `BottomSheetTextInput` focus sets the target.
-The library's own
-[keyboard-handling docs](https://gorhom.dev/react-native-bottom-sheet/keyboard-handling)
-say the input is "pre-integrated" and the only sanctioned alternative is to
-"copy the `handleOnFocus` and `handleOnBlur`" logic into your own component.
+`useAnimatedKeyboard.ts` caches a keyboard-shown event until a
+`BottomSheetTextInput` focus sets that target. The input reads the sheet's
+internal context and **throws outside a sheet**, which is why shared inputs
+pick their implementation from `useIsBottomSheetInput()`.
 
 Re-check:
 
@@ -51,26 +46,19 @@ grep -n "target" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetTex
 grep -n -A3 "temporaryCachedState" node_modules/@gorhom/bottom-sheet/src/hooks/useAnimatedKeyboard.ts
 ```
 
-`BottomSheetTextInput` reads the sheet's internal context and **throws outside
-a sheet** (`useBottomSheetInternal`), which is why shared inputs pick their
-implementation from `useIsBottomSheetInput()` context rather than hardcoding.
-
 ### keyboard-controller bottomOffset measures input bottom
 
 **Claim:** `KeyboardAwareScrollView`'s `bottomOffset` is measured from the
 focused input's **bottom edge**, not the caret its docstring mentions; the
 library default is `0`.
 
-**Verified 2026-09-29 against `react-native-keyboard-controller@1.22.5`.**
-`KeyboardAwareScrollView/index.tsx` computes
-`point = absoluteY + inputHeight` and scrolls when
-`visibleRect - point <= bottomOffset`; the prop defaults to `0` in the same
-file. The app-level default is the density-scaled `theme.spacing.md`, applied
-as a `withUnistyles` mapping in
+**Verified 2026-09-29 against `react-native-keyboard-controller@1.22.5`.** It
+computes `point = absoluteY + inputHeight` and scrolls when
+`visibleRect - point <= bottomOffset`. The app default is the density-scaled
+`theme.spacing.md`, applied in
 `src/components/atoms/BottomSheetKeyboardAwareScrollView.tsx` (sheets) and by
-`ThemedKeyboardAwareScrollView` in
-`src/components/atoms/themedComponents.tsx` (full-screen forms) — not in the
-library, and never hardcoded at call sites.
+`ThemedKeyboardAwareScrollView` in `src/components/atoms/themedComponents.tsx`
+(full-screen forms), never at call sites.
 
 Re-check:
 
@@ -85,13 +73,12 @@ the sheet by the keyboard's height. Focusing a field then opens a band of blank
 sheet and scrolls the header off the top.
 
 **Verified 2026-09-29 against `react-native-keyboard-controller@1.22.5` +
-`@gorhom/bottom-sheet@5.2.14`.** The scrollable pads its own content to lift the
-focused input clear of the keyboard — `ScrollViewWithBottomPadding` in `insets`
-mode (the default), a spacer view in `layout` mode. Gorhom's dynamic sizing takes
-the sheet's height from the scrollable's reported CONTENT size, so that padding
-is measured as content, and the sheet grows by exactly the padding meant to
-scroll under the keyboard. Gorhom's own `keyboardBehavior: 'interactive'` has
-already lifted the sheet, so the room is being made twice.
+`@gorhom/bottom-sheet@5.2.14`.** The scrollable pads its own content to clear
+the keyboard, gorhom's dynamic sizing measures that padding as content, and
+gorhom's `keyboardBehavior: 'interactive'` has already lifted the sheet. A
+content-sized sheet uses `BottomSheetView` (or gorhom's `BottomSheetScrollView`);
+`BottomSheetFormScrollView` belongs in a sheet with FIXED snap points.
+`PurchaseAmountSheet` and `QuantityEditSheet` are the worked pair.
 
 Re-check:
 
@@ -100,179 +87,68 @@ grep -n "bottomPadding\|paddingBottom" node_modules/react-native-keyboard-contro
 grep -n "mode = \"insets\"" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
-A sheet sized to its own content uses `BottomSheetView` (or gorhom's
-`BottomSheetScrollView`) and lets gorhom do the lifting;
-`BottomSheetFormScrollView` belongs in a sheet with FIXED snap points, where the
-height it reports changes nothing. `PurchaseAmountSheet` and `QuantityEditSheet`
-are the worked pair.
+### A native scroll takeover cancels a pending RNGH v3 gesture
 
-### RNGH v3 handlers survive a native scroll takeover
+**Claim:** when a native scrollable takes the touch stream on Android, RNGH
+cancels every v3 detector gesture that has not activated. A
+`ReanimatedSwipeable` row stays shut through a drifting scroll, and a tap that
+only stops a fling presses nothing — over React Native's `ScrollView` as well
+as RNGH's.
 
-**Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while
-the user is only scrolling, and no activation distance prevents it. RNGH does not
-cancel v3 gesture handlers when a native scrollable takes the touch stream, so the
-row's pan keeps accumulating horizontal travel for the whole drag and crosses any
-threshold eventually.
+**Verified against `react-native-gesture-handler@3.4.0`** (2026-10-16), in
+source and by an on-device A/B on the pantry list (emulator, synthetic input)
+with 3.3.0 as the control:
 
-**Verified against `react-native-gesture-handler@3.3.0`.** The chain:
+| Pantry list                        | 3.3.0                    | 3.4.0              |
+| ---------------------------------- | ------------------------ | ------------------ |
+| Drifting scroll, RN `ScrollView`   | the row opens mid-scroll | stays shut (2 / 2) |
+| Drifting scroll, RNGH `ScrollView` | stays shut               | stays shut         |
+| Tap to stop a fling, RNGH host     | presses the row (3 / 3)  | no press (0 / 3)   |
+| Tap to stop a fling, RN host       | not run                  | no press (0 / 2)   |
 
-1. `ReanimatedSwipeable.tsx:28` imports `GestureDetector` from `'../../v3/detectors'`,
-   so its pan registers as `ACTION_TYPE_NATIVE_DETECTOR` / `ACTION_TYPE_VIRTUAL_DETECTOR`
-   (5 / 6 in `GestureHandler.kt:1034-1035`, assigned in
-   `RNGestureHandlerDetectorView.kt:104,187,222`).
-2. A native view grabbing the touch calls
-   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:119`), which
-   cancels through `orchestrator.cancelAllLegacyHandlers()` and, for a view that opts
-   in, `cancelHandlersOnNativeTouchGrab()` deferred to `onNativeDispatchEnd`.
-3. `GestureHandlerOrchestrator.kt:385` — `cancelAllLegacyHandlers` matches only action
-   types 1–4. **Types 5 and 6 are not in the list**, so the swipe pan is never
-   cancelled. `cancelHandlersOnNativeTouchGrab` (`:395`) is gated on
-   `it is NativeViewGestureHandler`, and the sole override of
-   `shouldCancelOnNativeTouchGrab` is `RNGestureHandlerButtonViewManager.kt:835` — so
-   it covers buttons, not a detector pan.
+`cancelHandlersOnNativeTouchGrab` in `GestureHandlerOrchestrator.kt` cancels a
+non-active handler whose action type is a native or virtual detector, and
+`cancelHandlersOnNativeTouchCancel` catches a takeover the root never hears
+about by the `ACTION_CANCEL` it sends down. `cancelAllLegacyHandlers` still
+matches v1/v2 alone, so before 3.4.0 an RNGH host was the only arbitration —
+and even that pressed a row on a fling-stopping tap.
 
-Distance cannot compensate: `activeOffsetX` is measured from touch-down with no time
-limit and no cancellation, so a long scroll crosses 10, 16, 24 — and the 40 that
-failed for the reporter of upstream
-[#2380](https://github.com/software-mansion/react-native-gesture-handler/issues/2380).
-`ReanimatedSwipeable` also exposes no `failOffsetY` anywhere in 2.30.0 through 3.3.0,
-and the legacy non-Reanimated `Swipeable` is gone in 3.x.
+**Every swipeable list still takes `SwipeAwareScrollComponent`:** RNGH's
+refresh control needs an RNGH host (next entry), and the A/B covers one list —
+the shopping list's sits inside a pager. Dropping the host is a separate,
+measured change.
 
-**The fix is to make the scrollable an RNGH handler.**
-`GestureHandlerOrchestrator.makeActive()` (`:234-247`) cancels every handler for which
-`shouldHandlerBeCancelledBy` holds, so once the scroll is a real
-`NativeViewGestureHandler` its activation cancels the row's pan through the
-orchestrator — the arbitration `cancelAllLegacyHandlers` fails to provide. FlashList
-takes it via `renderScrollComponent` (`FlashListProps.d.ts:101`); RNGH's root
-`ScrollView` is the v3 wrapper (`src/index.ts:153` re-exports `./v3`), built with
-`createNativeWrapper(..., { disallowInterruption: true }, GestureDetectorType.Intercepting)`.
-It forwards `ref={props.ref}` and re-clones `refreshControl` with `block: scrollGesture`
-(`GestureComponents.tsx:56-115`), so FlashList's scroll ref and pull-to-refresh
-survive the swap. `src/components/atoms/SwipeAwareScrollComponent.tsx` is the single
-place this is wired; `sous-chef/rngh-refresh-control-matches-host` guards it.
-
-**Confirmed on device by controlled A/B (2026-08-24), not just by reading source.**
-With the fix in place the bug was gone; removing `renderScrollComponent` from
-`PantryContent` alone — same freshly-restarted process, same bundle, same
-`dragOffset`, every other list left on RNGH's ScrollView as a control — brought it
-straight back. Restoring the prop cleared it again. That rules out the alternative
-explanation (that a long-lived dev process accumulating stale native registrations
-was the real cause, and the process restart was doing the work), because the failure
-reproduced minutes into a clean process.
-
-Note the direction of the `dragOffset` change in the fixing commit: **24 → 16**, i.e.
-easier to trigger. If activation distance were the lever, lowering it would have made
-misfires worse.
-
-**When it started:** RNGH 2.30.0 → 3.0.2 (2026-07-13, `4a280dae`) moved Swipeable onto
-the v3 detectors. The component's gesture config is identical across 2.30.0 and 3.2.1
-— diffing the component alone clears it wrongly; the engine underneath is what changed.
-Corroboration: `DayMealList.tsx` already used RNGH's `ScrollView` and was the one
-swipeable surface never reported as broken.
-
-**Upstream:** [#4432](https://github.com/software-mansion/react-native-gesture-handler/issues/4432)
-("a regression introduced with the v3 `Pressable`") and open PR
-[#4441](https://github.com/software-mansion/react-native-gesture-handler/pull/4441)
-("when a native `ScrollView` takes the gesture over, nothing stops the handler") are
-the same gap for buttons. That PR's new `cancelHandlersOnNativeTouchGrab` is gated on
-`it is NativeViewGestureHandler`, so it would not cover a detector pan.
-
-**Two near-misses that do NOT close the gap** (checked so nobody re-litigates them):
-
-- `RNGestureHandlerDetectorView.kt:49-63` overrides
-  `requestDisallowInterceptTouchEvent` and cancels its attached handlers — but
-  `requestDisallowInterceptTouchEvent` propagates **upward** from the view that
-  grabs the touch, and a swipeable row's detector sits **below** the ScrollView,
-  so the call never reaches it. It only protects the inverse topology (a native
-  scrollable inside a detector).
-- `ReanimatedSwipeable` renders its detectors with `touchAction="pan-y"`
-  (`ReanimatedSwipeable.tsx:583,590`), which reads as exactly this fix — but
-  `touchAction` is implemented only in `HostGestureDetector.web.tsx`; the
-  Android sources never consume it. Web-only.
-
-**No `minDist` interference.** Android's `PanGestureHandler` inits
-`minDist = defaultMinDist = vc.scaledTouchSlop`, which alone would activate the pan at
-8dp in _any_ direction. Setting any custom criterion (`activeOffsetX` here) makes
-`updateConfig` set `minDist = Float.MAX_VALUE` unless `minDistance` was passed
-explicitly, so the radial fallback is off. On iOS every criterion defaults to `NAN`.
-Never pass `minDistance` alongside these — `validatePanConfig` throws.
-
-`SwipeableItem`'s `dragOffset` (default 16dp, Android's `PAGING_TOUCH_SLOP`) remains as
-defence in depth only. Note `dragOffsetFromRight` **throws** in `__DEV__` unless
-non-positive, which is why the component takes one positive number and applies the sign.
+Never pass `minDistance` beside `activeOffsetX` (`validatePanConfig` throws),
+and `dragOffsetFromRight` throws in `__DEV__` unless non-positive.
 
 Re-check:
 
 ```
 node scripts/probe-rngh-nested-scroll.mjs
-grep -n "cancelAllLegacyHandlers" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
-grep -rn "renderScrollComponent" src --include=*.tsx
-grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
-grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
+grep -n "fun cancelHandlersOnNativeTouchGrab" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 ```
 
 ### RNGH's scroll gesture reaches only RNGH's RefreshControl
 
 **Claim:** a list that renders RNGH's `ScrollView` but supplies React Native's
-`RefreshControl` gets no scroll↔refresh arbitration. The prop RNGH uses to wire
-them together is accepted and discarded, silently.
+`RefreshControl` gets no scroll↔refresh arbitration. RNGH hands the control a
+`block` prop that only its own `RefreshControl` consumes; RN's control receives
+it as an unknown prop. Nothing throws, warns, or type-errors.
 
-**Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.3.0`** (re-run 2026-10-02 against Unistyles 3.4.0 and
-`@shopify/flash-list@2.3.3`: the probe passes and the FlashList excerpt is
-unchanged). The chain:
+**Verified against `react-native-gesture-handler@3.4.0` +
+`react-native-unistyles@3.5.3` + `@shopify/flash-list@2.3.3`** (2026-10-16).
 
-1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
-   `refreshControl` as
-   `React.cloneElement(refreshControl, scrollGesture ? { block: scrollGesture } : {})`,
-   with the comment _"block exists (on our RefreshControl)"_.
-2. `block` is a member of `ExternalRelationsConfig`
-   (`v3/hooks/utils/propsWhiteList.ts:30-34`), which is folded into
-   `NativeWrapperProps` (`:116-124`).
-3. `v3/createNativeWrapper.tsx:26-46` splits incoming props on that Set:
-   anything in it goes to `useNativeGesture(gestureHandlerProps)`, everything
-   else to the wrapped child. Only a control built by `createNativeWrapper` —
-   i.e. RNGH's own `RefreshControl`, exported from `v3/components/index.ts` —
-   has that split. RN's control receives `block` as an ordinary unknown prop.
+- **RN's control arrives unnamed.** A list that passes only
+  `onRefresh`/`refreshing` gets the control FlashList builds, which is React
+  Native's (`useSecondaryProps.tsx`).
+- **The opposite pairing crashes.** RNGH's control in a plain RN `ScrollView`
+  throws (its `VirtualDetector` requires an intercepting detector above it);
+  those hosts take `PlainScrollRefreshControl`.
+- An RNGH host is a FlashList rendering RNGH's scroll component OR RNGH's
+  `ScrollView` used directly.
+- `withUnistyles` passes `block` through by reference.
 
-Nothing throws, warns, or type-errors: the failure is entirely absent
-behaviour, which is why it is guarded by a test rather than left to review.
-
-**The mis-pairing is a CRASH in the other direction.** RNGH's control renders a
-`VirtualDetector`, whose first statement is
-`useRequiredInterceptingDetectorContext()` — it throws
-`"VirtualGestureDetector must be a descendant of an InterceptingGestureDetector"`
-when nothing above it supplies that context
-(`src/v3/detectors/VirtualDetector/VirtualDetector.tsx:17-27,38`). So RNGH's
-control in a plain RN `ScrollView` takes the screen down rather than merely
-losing arbitration; `PlainScrollRefreshControl` is what those hosts take. An
-RNGH host is either a FlashList rendering RNGH's scroll component OR RNGH's
-`ScrollView` used directly — a check written only against
-`renderScrollComponent` reports the second as a false positive.
-
-**The trap is that RN's control arrives unnamed.** A list that passes only
-`onRefresh`/`refreshing` and no `refreshControl` never mentions a control at
-all — but FlashList builds one, and the one it builds is React Native's:
-
-```
-node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx:53-66
-  const refreshControl = useMemo(() => {
-    if (customRefreshControl) { return customRefreshControl }
-    else if (onRefresh) { return <RefreshControl … /> }   // RN's
-  }, …)
-```
-
-Observed on device 2026-08-24: the shopping list (the only RNGH-hosted list on
-the bare-prop path) showed a refresh indicator hanging in the MIDDLE of the list
-that would not retract until pushed back up by hand. Every list passing an
-explicit `refreshControl` was unaffected — which is what localises the cause to
-the control's type rather than to the RNGH scrollable itself.
-
-The `withUnistyles` wrapper between them is transparent. It builds
-`deepMergeObjects(mappingsProps, unistyleProps, props)` and spreads the result
-onto the wrapped component; `deepMergeObjects` (`src/utils.ts:3-24`) recurses
-only when BOTH sides of a key are objects, and no mapping declares `block`, so
-the `NativeGesture` is assigned by reference and arrives intact.
+Guarded by `sous-chef/rngh-refresh-control-matches-host`.
 
 Re-check:
 
@@ -280,8 +156,6 @@ Re-check:
 node scripts/probe-withunistyles-prop-passthrough.mjs
 grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
 grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
-grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
-npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 ```
 
 ### RNGH ends the nested scroll its ScrollView opens
@@ -291,47 +165,20 @@ retraction path androidx's `SwipeRefreshLayout` needs. This is the upstream fix
 for the parked Android refresh spinner — but the app still forces
 `nestedScrollEnabled={false}`, because nothing here has measured the removal.
 
-**Verified against `react-native-gesture-handler@3.3.0` +
-`react-native@0.86.3`.** The chain:
+**Verified against `react-native-gesture-handler@3.4.0` +
+`react-native@0.86.3`** (2026-10-16). Under a `refreshControl` on Android, RN
+defaults `nestedScrollEnabled` to `true`, and an explicit `false` survives.
+`NativeViewGestureHandler.kt`'s `ScrollViewHook` overrides
+`shouldStopNestedScroll() = true`, so the handler calls
+`view.stopNestedScroll()` when the gesture ends and the indicator retracts; the
+orchestrator does the same for a view it cancels when the root starts
+intercepting.
 
-1. `ScrollView.js:1861` — under a `refreshControl` on Android, RN renders
-   `nestedScrollEnabled={props.nestedScrollEnabled ?? true}`, with the comment
-   _"Nested scroll should always be enabled to allow the child scroll view to
-   handle events before passing them to the refresh control parent"_. It is a
-   default, not a force: an explicit `false` survives
-   (facebook/react-native#55189).
-2. The ScrollView opens a nested scroll on DOWN. Once RNGH's
-   `NativeViewGestureHandler` is `STATE_ACTIVE` it feeds touches straight to
-   `onTouchEvent`, bypassing `View.dispatchTouchEvent` — which is what would
-   normally close that nested scroll.
-3. `NativeViewGestureHandler.kt:543-549` — `ScrollViewHook` overrides
-   `shouldStopNestedScroll() = true`, so the handler calls
-   `view.stopNestedScroll()` when the active gesture ends (`:164`, `:212`).
-   androidx's `SwipeRefreshLayout` gets `onStopNestedScroll` → `finishSpinner()`
-   and the indicator retracts.
-
-Without step 3 the spinner has no retraction path: the hook's own mid-pull
-`fail()` dispatches ACTION_CANCEL, and androidx ignores it outright — no
-`finishSpinner()`, `mIsBeingDragged` left true. `SwipeRefreshLayoutHook` does
-not opt into `shouldStopNestedScroll`, so the retraction comes from the child
-ScrollView's handler, over the nested-scroll protocol rather than the touch
-protocol.
-
-**Why the override stays anyway.** `nestedScrollEnabled={false}` in
-`SwipeAwareScrollComponent` keeps the nested-scroll protocol out of the picture
-entirely, which also avoids the park. It costs the nesting step 1 exists to
-provide, so removing it is a real candidate — but a candidate is not a
-measurement, and **a mechanism is not a cause**. A controlled A/B on the meal
-plan (the surface the park shipped on), 3.2.1 vs 3.3.0, both with the override
-removed, could not reproduce the park on EITHER build: five synthetic pull
-profiles, plus `gesture-custom` pulls with a genuine stationary hold mid-gesture
-and a drift-back-before-release, all showed the spinner appear and retract
-cleanly. The spinner is demonstrably reached — it is visible in the frames — so
-the gesture engages the control; what synthetic input does not reproduce is the
-park. That matches the repo's standing finding that this class of gesture bug
-needs a real finger. Until a real-finger A/B says otherwise, the override stays.
-
-`SwipeAwareScrollComponent` is where a change here would land.
+**Why the override stays.** A controlled A/B on the meal plan, 3.2.1 vs 3.3.0,
+both with the override removed, could not reproduce the park on EITHER build
+with synthetic input. This class of gesture bug needs a real finger; until a
+real-finger A/B says otherwise, the override in `SwipeAwareScrollComponent`
+stays.
 
 Re-check:
 
@@ -339,7 +186,6 @@ Re-check:
 node scripts/probe-rngh-nested-scroll.mjs
 grep -n -A 4 "private class ScrollViewHook" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/NativeViewGestureHandler.kt
 grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/ScrollView/ScrollView.js
-npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 ```
 
 ### unistyles withUnistyles drops function styles
@@ -348,12 +194,12 @@ npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.4.0` (2026-10-02).**
-`node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
-by reducing its style entries with `Object.assign(acc, secret.uni__getStyles())`
-from `{}`. For a function-valued `style` prop, `uni__getStyles()` returns the
-function itself, and `Object.assign` copies a function's own enumerable
-properties. An arrow function has none.
+**Verified against `react-native-unistyles@3.5.3` (2026-10-13).**
+`withUnistyles.native.tsx` builds the forwarded style with
+`Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
+that is the function itself, and an arrow function has no own enumerable
+properties. RN's `Pressable` needs no wrapper: the Unistyles babel plugin
+auto-binds it.
 
 Re-check:
 
@@ -361,77 +207,104 @@ Re-check:
 node -e "console.log(Object.assign({}, ({pressed}) => [{padding:12}]))"   # -> {}
 ```
 
-RN's `Pressable` needs no wrapper: the Unistyles babel plugin auto-binds it to
-the C++ ShadowTree, so function-style callbacks with `StyleSheet.create`
-proxies work natively.
+### A React commit reverts Unistyles' theme values at and under a Reanimated view
 
-### Unistyles re-applies reanimated's React-side value over an animation
+**Claim:** after a theme change, Unistyles commits the new values outside
+React, and the next React commit can put the old values back on a view that a
+Reanimated animated style has registered, and on everything under it.
+Reanimated re-applies only the props it owns.
 
-**Claim:** an element reanimated animates must not also carry a theme-reading
-Unistyles style. Unistyles captures reanimated's React-side value of the
-animated prop and writes it back over the animation, so the element shows a
-stale value until its next React re-render. It is invisible when the animation
-comes to rest at the value React already holds, and visible when it does not:
-the global dim rests at 0.5 while React holds 0.
+**Verified against `react-native-unistyles@3.5.3` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
+emulator; first measured on 3.5.0 on an iOS simulator),** by running
+`UnistylesShadowRegistry.verify()` after every commit. Right after the
+Unistyles theme commit there were 0 mismatches; the next React commit put
+`CollapsingHeroDetail`'s hero back on the old theme. With a
+`ThemeEpochSentinel` in both of the template's Reanimated containers: 0 (on
+Android 0 of 564 views, against 1 of 563 without the hero's sentinel).
 
-**Verified against `react-native-unistyles@3.3.0` +
-`react-native-reanimated@4.6.0` (default static flags) + `react-native@0.86.3`,
-2026-09-23.** The source chain was re-checked on 2026-10-02 against Unistyles
-3.4.0 and Reanimated 4.7.1. Step 4 changed: the update map is now drained. The
-`nativeProps_DEPRECATED` leg is unchanged, so the rule stays. The symptom was
-not re-observed on device. The chain:
+The mechanism: `ReanimatedCommitHook` clones each registered view and its
+ancestors without a runtime shadow node reference, so React's own instance of
+those views is never mounted. Unistyles' `refreshReactNodes` skips any node
+never mounted, and React re-attaches the pre-theme subtree on its next commit.
 
-1. Reanimated's `AnimatedComponent` renders the host with
-   `style: [...yourStyles, <animated style's initial value>, state.settledStyle]`:
-   plain objects that hold the animated prop's React-side value.
-2. The Unistyles babel plugin binds that host. Its ref callback calls
-   `UnistylesShadowRegistry.add(ref, props.style)` on every commit
-   (`src/core/createUnistylesElement.native.tsx`).
-3. `HybridShadowRegistry::link` → `unistyleFromValue` wraps every plain object
-   in the array as a static "exotic" unistyle and links it to the node beside
-   the real one (`cxx/core/UnistyleWrapper.h`). A node with no themed style has
-   nothing that ever triggers an update.
-4. A theme rebuild of the node (`useAppearance` calls `updateTheme` on every
-   cold start) parses each exotic entry from its raw value
-   (`cxx/parser/Parser.cpp`, "compute styles only once"). The node's props,
-   the captured opacity included, go into the update map. On 3.3.0
-   `ShadowTrafficController` never drained it. On 3.4.0
-   `ShadowTreeManager::updateShadowTree` takes the map and commits it once.
-   Each commit also merges the props into `family->nativeProps_DEPRECATED`,
-   which `ShadowNode::clone` re-applies to any props-less clone.
-5. These are non-React commits. With `USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
-   on, reanimated's commit hook skips them. A settled animation has no next
-   frame to correct the value, so the stale value holds until a React
-   re-render. Reanimated's settled-props sync is usually that re-render, 0.5 s
-   to 1.5 s later.
+The fixes: themed values on the animated view itself go in a theme-only
+`useAnimatedStyle` over `useAnimatedTheme()` (enforced by
+`sous-chef/animated-node-takes-no-themed-style`). A Reanimated container whose
+descendants carry themed styles renders a `ThemeEpochSentinel`, a child
+re-keyed on each theme commit. Upstream:
+[reanimated#7728](https://github.com/software-mansion/react-native-reanimated/issues/7728),
+[unistyles#1170](https://github.com/jpudysz/react-native-unistyles/issues/1170),
+[unistyles#1007](https://github.com/jpudysz/react-native-unistyles/issues/1007).
 
-Observed 2026-09-23 on the iOS simulator by measuring the dimmed header's
-luminance per recorded frame (Meal Plan → Add a meal, open/close ×4). With
-`[styles.backdrop, animatedStyle]`, every open dimmed in, then snapped to
-undimmed as the sheet settled, and closes sometimes flashed the dim back on.
-The SharedValue was correct throughout. With the settled-props sync stubbed
-out, the view stayed wrong. With `[StyleSheet.absoluteFill, animatedStyle]`
-and the colour on a child, 16 of 16 transitions were clean. Removing the
-sheets' `CurrentThemeScope` did not help. Every animated node in `src` was
-then converted, and `sous-chef/animated-node-takes-no-themed-style` holds it. Upstream: reanimated
-[#10444](https://github.com/software-mansion/react-native-reanimated/issues/10444)
-has the same symptom and is open. Reanimated
-[#8513](https://github.com/software-mansion/react-native-reanimated/issues/8513)
-says mixing the two libraries on one node is unsupported. Unistyles
-[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
-is open and covers the per-node commits on unfreeze. Unistyles 3.4.0 drains the
-update map but still writes the captured props into `nativeProps_DEPRECATED`.
-Neither package fixes the symptom as of Unistyles 3.4.0 and Reanimated 4.7.1.
+Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
+fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
+`UnistylesShadowRegistry.verify()` (module
+`react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
+then reports `dot` / `heroInner` mismatches.
+
+### A Unistyles reader inside a ScopedTheme ignores theme events
+
+**Claim:** a `withUnistyles` or `useUnistyles` reader mounted inside a
+`ScopedTheme` never follows a theme event: not a switch to another theme, and
+not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
+A view styled by `StyleSheet.create` is updated natively and does follow.
+
+**Verified against `react-native-unistyles@3.5.3` (2026-10-13, in source; on
+an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
+with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
+`scopedTheme` is the scope's name.
+
+The fix: `CurrentThemeScope` keys its `ScopedTheme` on the theme name and the
+theme epoch, so every theme commit remounts the children. Guarded by
+`src/components/atoms/__tests__/CurrentThemeScope.test.tsx`.
 
 Re-check:
 
 ```
-grep -n "unistylesFromNonExistentNativeState" -A 6 node_modules/react-native-unistyles/cxx/core/UnistyleWrapper.h
-grep -n "compute styles only once" -A 5 node_modules/react-native-unistyles/cxx/parser/Parser.cpp
-grep -n "takeUpdates\|mergeNativeProps" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTreeManager.cpp
-grep -n "propsOverride.emplace" -B 4 node_modules/react-native/ReactCommon/react/renderer/core/ShadowNode.cpp
-grep -n "USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS" -A 6 node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp
+grep -n -A 6 "updateTheme: () =>" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
 ```
+
+### Unistyles' useAnimatedTheme misses a theme change made while its screen is paused
+
+**Claim:** `useAnimatedTheme` drops its listener while a screen paused by
+`inactiveBehavior: 'pause'` is hidden, and re-subscribes on reveal without
+reading the theme again. A `useAnimatedStyle` over it keeps the old theme's
+values. `useUnistyles` and `withUnistyles` catch up on their own.
+
+**Verified against `react-native-unistyles@3.5.3` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
+emulator).** With Profile two levels down the stack, the theme went from dark to
+light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
+avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
+the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
+no mismatch there, because the value is Reanimated's. With
+`#hooks/ui/useAnimatedTheme` the same run gave the light surface
+`rgb(255, 255, 255)`, and a paused `CollapsingHeroDetail` came back with its
+pinned bar in the new theme.
+
+The mechanism: the hook subscribes through `StyleSheet.addChangeListener` in a
+`useEffect`. A hidden `Activity` runs the cleanup and the reveal runs the effect
+again, and nothing reads `UnistylesRuntime.getTheme()` in between.
+`useProxifiedUnistyles` does that read after a cleanup
+([unistyles#1300](https://github.com/jpudysz/react-native-unistyles/pull/1300));
+`useAnimatedTheme` does not.
+
+The fix: `#hooks/ui/useAnimatedTheme` wraps the library hook. When its effect
+runs again after a cleanup, it sets the shared value if the theme object changed
+in between. `no-restricted-imports` bans the library hook everywhere else.
+Guarded by `src/hooks/ui/__tests__/useAnimatedTheme.test.tsx`. Only a screen two
+or more levels below the top is paused, so a repro needs a three-deep stack.
+
+Re-check:
+
+```
+sed -n '/useEffect(() => {/,/}, \[scopedTheme\])/p' node_modules/react-native-unistyles/src/reanimated/useAnimatedTheme.native.ts
+```
+
+The effect reads `getTheme()` only inside the listener. On a device: point
+`ProfileHero` at the library hook, open Profile, push two more screens,
+`setTheme` to the other theme, and go back twice.
 
 ### react-compiler try shapes
 
@@ -455,25 +328,16 @@ const data = result?.data ?? null;
 For a `finally`, use the helpers in `src/utils/finallyHelpers.ts`.
 
 **Verified against `babel-plugin-react-compiler@1.0.0`** (re-run 2026-09-14,
-all eleven fixtures as claimed). The compiler's own
-diagnostics: `Handle TryStatement with a finalizer ('finally') clause`,
-`Support value blocks (conditional, logical, optional chaining, etc) within a
-try/catch statement`, `Unexpected terminal in optional`.
+all eleven fixtures as claimed). Lint sees only half of this: `react-hooks/todo`
+(`eslint-plugin-react-hooks@7.1.1`) reports the finalizer shapes and NOTHING for
+a value block inside a `try/catch`, so `node scripts/check-compiler-bailouts.mjs`
+is the only detector of that shape.
 
 Re-check (compiles one fixture per shape and prints the diagnostic):
 
 ```
 node scripts/probe-compiler-try-forms.mjs
 ```
-
-Lint sees only half of this. `eslint-plugin-react-compiler` is not installed;
-`react-hooks/todo` (`eslint-plugin-react-hooks@7.1.1`) reports the finalizer
-shapes (`Handle TryStatement without a catch clause`) but reports NOTHING for a
-value block inside a `try/catch` — probed 2026-09-14 with one fixture of each.
-`node scripts/check-compiler-bailouts.mjs` compiles every file and is the only
-detector of the value-block shape. The standalone `react-compiler/react-compiler`
-rule has a [known bug](https://github.com/facebook/react/issues/35644) that
-silences every diagnostic on unsupported syntax, which is why it is not the gate.
 
 ### i18next plural category fallback
 
@@ -482,300 +346,58 @@ locale's `_other` — it falls through to `fallbackLng`. An Italian user at a
 count of 1,000,000 (Italian needs `many`) would read `1000000 items` in
 English if `_many` keys were missing.
 
-**Verified 2026-09-29 against `i18next@26.4.2`.** `Translator.resolve()` builds, per
-language, `[key, key + pluralSuffix]` and tries them in reverse — the plural
-key, then the bare key — and never tries `key_other` intra-locale; only after
-both miss does it advance to the next language in the fallback hierarchy.
-`completePluralCategories` in `src/i18n/config.ts` closes the gap by filling
-every CLDR category a locale needs from `_other` before `init`.
+**Verified 2026-09-29 against `i18next@26.4.2`.** `Translator.resolve()` tries
+the plural key, then the bare key, and never `key_other` within the locale
+before advancing to the next language. `completePluralCategories` in
+`src/i18n/config.ts` closes the gap by filling every CLDR category a locale
+needs from `_other` before `init`.
 
-Re-check: `npx jest __tests__/i18n/pluralCategories.test.ts`. Its "i18next
-itself falls through to fallbackLng" case drives a bare i18next instance with no
-`_many` and expects the English form; the rest ask `Intl.PluralRules` which
-categories each locale needs and assert every one resolves in that locale.
+Re-check: `npx jest __tests__/i18n/pluralCategories.test.ts`.
 
 ### InteractionManager is a no-op stub
 
 **Claim:** `InteractionManager` must never be used — in the installed RN it is
-not merely deprecated, it is a no-op stub. `runAfterInteractions` is just
-`setImmediate`; `createInteractionHandle()` returns `-1`;
-`clearInteractionHandle`/`addListener`/`setDeadline` do nothing.
+a no-op stub. `runAfterInteractions` is just `setImmediate`;
+`createInteractionHandle()` returns `-1`; the other methods do nothing. Use
+`requestIdleCallback` for deferring non-urgent work.
 
-**Verified against `react-native@0.86.3`.**
-`node_modules/react-native/Libraries/Interaction/InteractionManager.js`
-exports `InteractionManagerStub` with `@deprecated` tags on the module doc and
-every method. Use `requestIdleCallback` for deferring non-urgent work.
-
-Re-check:
+**Verified against `react-native@0.86.3`.** Re-check:
 
 ```
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
 ```
 
-### A refused WebSocket upgrade emits closed without opened
-
-**Claim:** when the HTTP upgrade is refused, graphql-ws emits `closed` and never
-`opened`, and `connectionParams` is never called — so the API key never leaves
-the device, and the server records a plain unauthenticated `GET /graphql`. An
-accepted upgrade does emit `opened`, so the absence of it identifies a refusal
-and nothing else.
-
-A dial that never opens carries no graphql-ws close code — those travel over an
-open socket — so `wsCloseCodes.ts` cannot classify it, and `connectionParams`
-is built inside `socket.onopen` (`graphql-ws/dist/client.js:165-176`), which
-such a dial never reaches. That is why `wsLink` puts the API key on the upgrade
-REQUEST as a header and reports from the dial stage — see
-`reportDialFailedBeforeOpen`.
-
-**The absence of `opened` does not by itself mean the upgrade was refused.**
-React Native turns every `websocketFailed` — DNS failure, connection refused,
-TLS error, dead radio — into `CloseEvent{code: 1006}` with no preceding
-`opened` (`react-native/Libraries/WebSocket/WebSocket.js`), so an unreachable
-host is indistinguishable from a refusal by code alone. The probe's third leg
-demonstrates this. The close REASON carries the native error text and is the
-field that separates them.
-
-**Verified 2026-09-01 vs `graphql-ws@6.2.1` on Node's WebSocket** — re-check:
-`node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
-
-| upgrade  | events                                       | `connectionParams` called |
-| -------- | -------------------------------------------- | ------------------------- |
-| refused  | `connecting → error → closed(1006)`          | no                        |
-| accepted | `connecting → opened → error → closed(1006)` | yes                       |
-
-Both legs close 1006; only the presence of `opened` separates them. The probe's
-accepting server completes the upgrade and then drops the socket, so the close
-code says nothing about which case it was — which is the point.
-
-### graphql-ws fatal close codes
-
-**Claim:** graphql-ws rethrows close codes 4400, 4401, 4406, 4409, 4429, 4500
-and its own 4004/4005 before consulting `shouldRetry`, erroring every active
-subscription's sink; `dispose()` latches a `disposed` flag with no reset, and
-`terminate()` is a no-op once a socket has closed.
-
-**Verified 2026-09-29 against `graphql-ws@6.2.1`** — mechanism and verdicts in
-[session-and-transport.md](session-and-transport.md); the canonical record is
-`src/apollo/links/wsCloseCodes.ts`, pinned by
-`src/apollo/links/__tests__/wsCloseCodes.library.test.ts`, which drives the
-real installed library against a fake socket. Re-check: run that suite.
-
-### Hermes' sampling profiler is reachable on iOS with no new dependency
-
-**Claim:** the Hermes startup CPU profiler that
-`android/.../StartupMarkModule.kt` drives through the static
-`com.facebook.hermes.instrumentation.HermesSamplingProfiler` has a direct iOS
-counterpart in the installed pod — a process-global root API — so
-`react-native-release-profiler` is not needed on either platform.
-
-**Verified 2026-08-25 against `hermes-engine` as vendored by
-`react-native@0.86.3`.** `facebook::hermes::makeHermesRootAPI()` returns a
-`jsi::ICast*` with static lifetime that casts to `IHermesRootAPI`, and
-`enableSamplingProfiler(double)`, `disableSamplingProfiler()` and
-`dumpSampledTraceToFile(const std::string&)` are declared on that interface.
-They are `virtual`, so they dispatch through the returned object's vtable and
-need no exported symbols of their own — `makeHermesRootAPI()` being exported is
-the entire linkage requirement.
-
-Three things were checked rather than assumed, because each is a way the route
-could exist in headers and still not work in a shipped build:
-
-- The entry symbol is exported in the prebuilt xcframework, not just declared.
-- The profiler is genuinely compiled in rather than stubbed out by
-  `HERMESVM_SAMPLING_PROFILER_AVAILABLE` — `SamplingProfiler.cpp.o`,
-  `SamplingProfilerPosix.cpp.o` and `SamplingProfilerSampler.cpp.o` are all
-  linked into the binary, on the device slice as well as the simulator one.
-- The app target can already see the headers and the framework, so no Podfile
-  change and no `pod install` is involved.
-
-Re-check:
-
-```
-SLICE=ios/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermesvm.xcframework/ios-arm64_x86_64-simulator
-nm -gU "$SLICE/hermesvm.framework/hermesvm" | c++filt | grep makeHermesRootAPI
-nm -a  "$SLICE/hermesvm.framework/hermesvm" | grep -c SamplingProfiler   # expect ~106, not 0
-grep -n "makeHermesRootAPI\|SamplingProfiler" ios/Pods/hermes-engine/destroot/include/hermes/hermes.h
-grep -o 'HEADER_SEARCH_PATHS = .*' "ios/Pods/Target Support Files/Pods-SousChef/Pods-SousChef.release.xcconfig" | tr ' ' '\n' | grep hermes-engine
-```
-
-Used by `ios/SousChef/StartupMarkModule.mm`. **Dump before disable** —
-disabling first discards the samples and leaves a valid-looking empty trace.
-
-### Metro hoists every require above all top-level statements
-
-**Claim:** with `experimentalImportSupport: true`, Metro rewrites ES imports to
-`require` calls and hoists ALL of them above every top-level statement in the
-file. Relative order among the requires is preserved; order between a require
-and a statement is not. A timing origin written as a statement in `index.js`
-therefore runs after every module that file imports, however near the top it
-appears.
-
-**Verified 2026-09-29 against `metro@0.84.5`** (the version resolved by
-`react-native@0.86.3`), by running `metro-transform-plugins`'
-`import-export-plugin` — the plugin `experimentalImportSupport` enables — over
-`index.js`'s shape:
-
-```
-import 'a';
-global.T = Date.now();
-import 'b';
-import { X } from './x';
-```
-
-emits
-
-```
-require('a');
-require('b');
-var X = require('./x').X;
-global.T = Date.now();
-```
-
-This is why `app_startup_duration_ms` and `app_fully_drawn_ms` silently
-excluded `./src/i18n/config`, `./src/apollo/config` and `./src/theme/unistyles`
-while being documented as measuring from JS-bundle entry: all five of
-`index.js`'s bare side-effect imports evaluated before the timestamp statement.
-`inlineRequires` does not change it for those — a side-effect import has no
-binding to inline, so it stays a hoisted require.
-
-The fix is structural rather than positional: the origin lives in a module with
-NO imports of its own, imported first. Both halves matter — a module's own
-imports evaluate before its body, so an import added there moves the origin
-later again.
-
-Re-check:
-
-```
-node scripts/check-startup-origin.mjs
-```
-
-Guarded by that script, which transforms `index.js` with the real plugin and
-asserts the clock module is the first emitted `require` AND that it is
-dependency-free. Wired into `pre-commit` and `npm run check:startup-origin`.
-Pinned to a Metro internal path on purpose: if an upgrade moves the plugin the
-check fails loudly, because the guarantee is a property of that transform.
-
 ### simctl screenshot sampling resolves ~176 ms, no finer
 
 **Claim:** the `xcrun simctl io <device> screenshot` loop in
 `scripts/ios-frame-sample.mjs` samples at roughly 176 ms, so it can resolve the
-~2 s scale of a cold start and cannot resolve anything under ~200 ms.
+~2 s scale of a cold start and cannot resolve anything under ~200 ms. iOS has
+no OS-side fully-drawn marker, so this loop is the only second method for
+cross-checking `app_fully_drawn_ms` on the platform.
 
 **Verified 2026-08-25 on Xcode 26.6 / iOS 26.5, iPhone 17 simulator**, n=20 over
-a static screen: median 176 ms per screenshot, min 159, max 351. For scale, the
-Android equivalents were 130-160 ms on the emulator and ~450 ms on the phone.
-`simctl` writes full-resolution PNGs with no downscale option (~2.9 MB each),
-which is most of the cost and why a run's output directory is wiped first.
-
-This matters because iOS has **no OS-side fully-drawn marker** — there is no API
-that accepts an app-declared "fully drawn" signal — so this loop is the only
-second method available for cross-checking `app_fully_drawn_ms` on the platform,
-and the Android two-method agreement result does not carry over.
+a static screen: median 176 ms per screenshot, min 159, max 351.
 
 Re-check: run `node scripts/ios-frame-sample.mjs`; it reports the achieved
 median/min/max interval for that run rather than trusting this number.
 
-Two classification traps this instrument has, both found by running it and both
-now handled in the script: the pre-launch frame is often the LARGEST of the run
-(3.21 MB against a 776 KB settled frame), so min/max-derived bands put real
-content in a middle band and call the pre-launch frame "settled"; and relative
-bands cannot mark the END of a load at all, because the tallest frame is always
-the top band. Anchor to the blankest frame and detect the plateau — a settled
-screen holds its byte size flat, here 776,027 bytes for seven seconds.
-
-### jest.isolateModules cannot hold a Platform.OS override past its callback
-
-**Claim:** a test that sets `Platform.OS` inside `jest.isolateModules(...)` and
-then calls the code under test _outside_ the callback silently gets the real
-`Platform.OS` back.
-
-**Verified 2026-08-25 against `react-native@0.86.3`.** RN's index exports
-`Platform` through a lazy getter that `require`s the module on every access, and
-Babel's ESM interop compiles `import { Platform } from 'react-native'` into that
-same live read. So a `Platform.OS` check runs its `require` when the method is
-CALLED, not when the module is imported — and once the `isolateModules` callback
-returns, that require resolves against the restored OUTER registry and hands
-back the untouched `Platform`.
-
-The failure is silent and one-sided, which is what makes it worth writing down:
-anything destructured out of `NativeModules` at import time keeps pointing at
-the stub, so those assertions still pass and only the `Platform`-gated ones
-fail. Use `jest.resetModules()` and keep the mutated registry live instead.
-
-Re-check: `src/native/__tests__/StartupMark.test.ts`, whose `load()` helper
-carries the same explanation at its call site.
-
-### RN$LegacyInterop_UIManager_getConstantsForViewManager does not exist on iOS
-
-**Claim:** `src/services/performance/viewManagerProbe.ts` records nothing on
-iOS, and structurally cannot — so `viewmanagers.json` is written but always
-holds `{"totalMs":0,"count":0,"rows":[]}` there.
-
-**Verified 2026-08-25 against `react-native@0.86.3`**, by running a profiled
-release build on an iPhone 17 simulator and reading the file back out of the app
-container. The probe wraps
-`global.RN$LegacyInterop_UIManager_getConstantsForViewManager`, which on iOS is
-installed only when `ReactNativeFeatureFlags::useNativeViewConfigsInBridgelessMode()`
-is true (`RCTInstance.mm:457-459`), and that flag defaults to **false**
-(`ReactNativeFeatureFlagsDefaults.h:354-356`). The binding is therefore never
-installed and the probe's `typeof original !== 'function'` guard returns
-immediately. Android installs its equivalent through
-`ReactAndroid/.../UIConstantsProviderBinding.cpp` regardless.
-
-This is a platform difference, not a tooling gap, and it matters for how the
-Android result is read: the standout finding there was UIManager view-manager
-constants running at 3.29x the hardware gap, queried synchronously at
-module-import time through exactly this global. **iOS does not take that code
-path at all** — view configs come from the static native component registry —
-so the cost has no iOS counterpart. Its absence is a different mechanism, not a
-faster one.
-
-Re-check:
-
-```
-grep -rn "useNativeViewConfigsInBridgelessMode" node_modules/react-native/ReactCommon/react/runtime/platform/ios/ReactCommon/RCTInstance.mm
-grep -n -A3 "useNativeViewConfigsInBridgelessMode" node_modules/react-native/ReactCommon/react/featureflags/ReactNativeFeatureFlagsDefaults.h
-```
-
-### A profiled run's app_fully_drawn_ms suppression needs timestamp(), not query_range
-
-**Claim:** checking that a `HERMES_PROFILE_STARTUP` run emitted no
-`app_fully_drawn_ms` sample with a Prometheus range query gives the wrong
-answer — the series looks freshly written when it was not.
-
-**Verified 2026-08-25 against Mimir.** Prometheus carries a series' last value
-forward for five minutes, so a `query_range` over a window that includes the
-PREVIOUS unprofiled session shows samples at every step right through the
-profiled run. `timestamp(app_fully_drawn_ms_count{platform="ios"})` returns the
-sample's own write time instead, which is what distinguishes them: 15:33:55 (the
-terminated session) against 15:35:42 for `app_content_appeared_ms_count`,
-`app_native_launch_ms_count` and `app_starts_total` from the live profiled run.
-
-Same reason the audit says to read these per session and never aggregate: each
-cold start is a new process, so the transport's cumulative accumulator restarts
-and `_count` is 1 per launch.
-
 ### FlashList v2 first-layout opacity gate
 
-**Claim:** FlashList v2 renders its initial cells progressively across
-multiple commits (~`initialDrawBatchSize` = 2 cells per
-commit→measure→setState pass) and holds the ENTIRE cell container —
-sticky-header sentinel rows included — at `opacity: 0` until the loop finishes
-and `commitLayout()` runs, while `ListHeaderComponent` renders outside the
-gated container and paints on the first commit. `onLoad` and
+**Claim:** FlashList v2 renders its initial cells progressively across several
+commits and holds the ENTIRE cell container — sticky-header sentinel rows
+included — at `opacity: 0` until `commitLayout()` runs, while
+`ListHeaderComponent` paints on the first commit. `onLoad` and
 `isFirstLayoutComplete` latch ONCE per mount, so a sentinel-only skeleton
-layout consumes them before real data arrives; the public
-`onCommitLayoutEffect` prop is the signal that re-fires — it is driven by a
-layout effect on the container's `renderId`, which `commitLayout()` increments
-at the end of EVERY settled layout pass, including the first one after a data
-change.
+layout consumes them before real data arrives. The public
+`onCommitLayoutEffect` prop is the signal that re-fires: at the end of EVERY
+settled layout pass, including the first one after a data change.
 
 **Verified against `@shopify/flash-list@2.3.2`** (re-checks re-run 2026-10-02
-against 2.3.3, whose only source change is `EngagedIndicesTracker.ts`), and on-device
-(SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
-blank frame between skeleton dismissal and rows, eliminated by releasing
-skeletons on the first `onCommitLayoutEffect` that lands with real content.
-Consumed by `useFlashListPerformance`'s `hasContentLayout` latch.
+against 2.3.3), and on-device (SM-S908U1, `localRelease`, 67 items): the gate
+is a 300–342 ms header-only blank frame between skeleton dismissal and rows,
+eliminated by releasing skeletons on the first `onCommitLayoutEffect` that
+lands with real content. Consumed by `useFlashListPerformance`'s
+`hasContentLayout` latch.
 
 Re-check:
 
@@ -785,72 +407,24 @@ grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopi
 grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
 ```
 
-### FlashList v2 re-renders every mounted cell on a list-prop identity change
-
-**Claim:** `ViewHolder`'s memo (`prevProps.item === nextProps.item`) governs
-only whether an INDIVIDUAL cell re-renders. FlashList itself re-renders the
-whole mounted set when its own `data`, `ListFooterComponent` or `onEndReached`
-prop changes identity — and it names them verbatim in its re-render reason.
-Separately, **`drawDistance` is what bounds how many cells are mounted**; a
-short `data` array only caps it incidentally (25 entries cannot mount more than
-24 cells no matter how large `drawDistance` is), which makes a manual render
-window look like it is saving mount work when it is really just hiding
-`drawDistance`.
-
-**Verified against `@shopify/flash-list@2.3.2`** (re-checks re-run 2026-10-02
-against 2.3.3), on-device (SM-S908U1,
-`localRelease`, 92 items). The pantry kept a local render window
-(`slice(0, clientWindow)`) whose growth changed both the data array and
-`handleEndReached`'s identity: one growth cost **597 ms / 2203 fibers**,
-re-rendering all 24 mounted cells, and fired at 24/48/72 items. Removing the
-window and making `onEndReached` ref-stable took the worst scroll commit to
-**29 ms**. Removing it also doubled the mounted set (24 → 54 cells) until
-`DRAW_DISTANCE` was lowered, confirming the two were doing the same job.
-
-Note the mounted-cell count is a RE-RENDER multiplier, not a frame-time driver:
-UI-thread work is ~1.5 ms of a 17 ms frame on this screen
-(`docs/flashlist-performance-analysis.md` § Two different symptoms).
-
-Since 2.3.3, a fling can mount cells beyond `drawDistance`
-([#2510](https://github.com/Shopify/flash-list/pull/2510)). The window is computed from
-the projected scroll offset. When the trailing buffer is smaller than the projection
-delta, FlashList now clamps the window to also cover the real viewport. At rest the
-window matches 2.3.2. Our small values are the ones this applies to: pantry's
-`DRAW_DISTANCE` (half a screen) and the `bottomSheet` preset (250).
-
-Re-check:
-
-```
-grep -rn "prevProps.item === nextProps.item\|areEqual" node_modules/@shopify/flash-list/src/recyclerview/ViewHolder.tsx
-grep -rn "drawDistance" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
-grep -n "offset + viewportSize" node_modules/@shopify/flash-list/src/recyclerview/helpers/EngagedIndicesTracker.ts
-```
-
 ### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
 
 **Claim:** `react-native-unistyles`' Babel plugin rewrites a component that
-calls `styles.useVariants(...)` by assigning `path.node.body` directly —
-inserting `const _styles = styles;`, wrapping the remaining statements in a new
-`BlockStatement`, and declaring a shadowing `const styles =
-_styles.useVariants(args)` inside it — and never calls `path.scope.crawl()`.
-Babel's scope table therefore holds no binding for that declaration, and
+calls `styles.useVariants(...)` without calling `path.scope.crawl()`, so
+Babel's scope table holds no binding for the shadowing `styles` it declares and
 `babel-plugin-react-compiler` cannot lower the function.
+`scripts/babel/unistyles-scope-crawl.js` crawls between the two plugins, at
+`Program.enter` (at `Program.exit` it is a silent no-op).
 
-This is an upstream defect, not an incompatibility. A `scope.crawl()` between
-the two plugins fixes it, which is what `scripts/babel/unistyles-scope-crawl.js`
-does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
-has already analysed the file and the crawl is a silent no-op.
+**Verified against `react-native-unistyles@3.5.3` +
+`babel-plugin-react-compiler@1.0.0`** (2026-10-13). Three orders, three
+outcomes:
 
-**Verified against `react-native-unistyles@3.3.0` +
-`babel-plugin-react-compiler@1.0.0`** (probe re-run 2026-10-02 against Unistyles
-3.4.0, whose Babel plugin is unchanged: all three legs hold). Three orders,
-three outcomes:
-
-| plugin order                             | compiler                                                                                                                                             | variant read                                                |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `[unistyles, compiler]` (their docs)     | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized                                         |
-| `[compiler, unistyles]`                  | compiles                                                                                                                                             | STALE — `if ($[2] !== style)`, the read is not a dependency |
-| `[unistyles, crawl, compiler]` (shipped) | compiles                                                                                                                                             | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
+| plugin order                             | compiler                  | variant read        |
+| ---------------------------------------- | ------------------------- | ------------------- |
+| `[unistyles, compiler]` (their docs)     | function silently SKIPPED | correct, unmemoized |
+| `[compiler, unistyles]`                  | compiles                  | STALE               |
+| `[unistyles, crawl, compiler]` (shipped) | compiles                  | fresh               |
 
 The middle row is the trap: zero bailouts and full memoization, while every
 variant style freezes at its first-render value.
@@ -871,29 +445,13 @@ Ongoing regression cover is
 **Verified 2026-08-29 vs `@apollo/client@4.2.12`.** Re-check:
 `node scripts/probe-cache-modify-field-addition.mjs`.
 
-`cache.modify` runs a modifier only for a field the store object ALREADY holds.
-Name a field the cached entity has never carried and the modifier is never
-called, nothing is written, and there is no error or warning:
-
-```
-modifier ran for the PRESENT field: true
-modifier ran for the ABSENT field:  false
-absent field in the store after:    false
-```
-
+**Claim:** `cache.modify` runs a modifier only for a field the store object
+ALREADY holds. Name a field the cached entity has never carried and the
+modifier is never called, nothing is written, and there is no error or warning.
 Which fields an entity carries is decided by whichever query loaded it, not by
-the schema — so this bites per-screen, not per-type. `GetMealTemplateForEdit`
-selects `items { id dayOffset mealType customMealName servings notes }` and no
-`recipe`, so for every row the builder loaded, `recipe` is absent. Picking a
-recipe for such a row wrote `customMealName: null` (a field it does carry) and
-dropped the `recipe` (a field it does not), leaving the row with neither a name
-nor a recipe — and offline no response arrives to reconcile it.
-
-The second reason to avoid it for this job: **`cache.modify` stores exactly what
-it is handed.** A nested `{ __typename, id, name }` is written inline as a
-private copy, so renaming that entity later moves the original and leaves every
-copy stale — how a re-parented storage location kept showing its old parent's
-name.
+the schema. `cache.modify` also stores exactly what it is handed: a nested
+`{ __typename, id, name }` is written inline as a private copy, which goes
+stale when that entity changes.
 
 `writeEntityFields` (`src/apollo/utils/localFirstFields.ts`) therefore builds a
 fragment from the update keys and goes through `cache.writeFragment`, which adds
@@ -901,18 +459,10 @@ absent fields and normalizes a nested `__typename` + `id` into a reference.
 Guarded by `src/apollo/utils/__tests__/localFirstFields.test.ts`.
 
 `cache.modify` remains the right tool where the field is known to exist and the
-write must NOT normalize — connection edges and counts.
-
-It is NOT the right tool for the `purchaseInfo` record. Two rules are documented
-on `writePurchaseInfo` and neither can run through `cache.modify`: the type
-policy's clear-on-flip never fires (no merge runs), and a field the cached record
-does not already carry cannot be introduced. The writer goes through
-`cache.writeFragment` with `extensions: { local: true }`, which the policy reads
-to merge a local flip field-wise instead of clearing it (see
-[Apollo `writeFragment` forwards `extensions` to merge functions](#apollo-writefragment-forwards-extensions-to-merge-functions))
-— which is what the SDL describes, since it documents a clearing contract
-for `movedToPantryAt` alone and says nothing about the amounts. The policy still
-governs the narrow SERVER responses it was written for.
+write must NOT normalize — connection edges and counts. It is not the tool for
+`purchaseInfo`: `writePurchaseInfo` goes through `cache.writeFragment` with
+`extensions: { local: true }`, which the type policy reads to merge a local flip
+field-wise instead of clearing it.
 
 ### Apollo storeFieldName has two serialized forms
 
@@ -927,26 +477,16 @@ storageLocations:{"homeId":"A"}        keyArgs: ['homeId']   COLON form
 things({"filters":{"category":"x"}})   no keyArgs            PAREN form
 ```
 
-A guard that locates the arguments by searching for `(` therefore sees nothing
-at all on an array-`keyArgs` field. `skipUnmatchedArgVariants` was written that
-way, so it returned "do not skip" for every variant and the cross-home leak it
-exists to prevent — a storage location restored after a refused delete in home A
-appearing in home B's list — was still live under a passing suite.
-`skipUnmatchedFilterVariants` is the same guard for the nested `filters`
-argument, and its consumers (`mealTemplates`, `User.notificationsConnection`)
-are array-`keyArgs` fields, so it has to read the colon form too: both helpers
-share `parseStoreFieldArgs`, and `cacheUpdaters.test.ts` captures the real store
-key off `makeCache()` so a fixture cannot drift from Apollo's form.
+A guard that locates the arguments by searching for `(` sees nothing on an
+array-`keyArgs` field. `skipUnmatchedArgVariants` and
+`skipUnmatchedFilterVariants` share `parseStoreFieldArgs`, which reads both
+forms, and `cacheUpdaters.test.ts` captures the real store key off
+`makeCache()` so a fixture cannot drift from Apollo's form.
 
 Parse by whichever delimiter comes FIRST: the paren form also contains a `:`
-inside its JSON (at index 17 in the sample above), so testing for `:` alone
-mis-parses it.
-
-The probe also checks whether Apollo exports a parser that would remove the
-need to do this by hand. On 4.2.12 it does **not**:
-`@apollo/client/utilities` exports no `fieldNameFromStoreName`,
-`argumentsObjectFromField` or `storeKeyNameFromField`. If a later version does,
-prefer it over the hand-rolled split.
+inside its JSON. Apollo 4.2.12 exports no parser for this
+(`fieldNameFromStoreName`, `argumentsObjectFromField`, `storeKeyNameFromField`);
+if a later version does, prefer it over the hand-rolled split.
 
 ### Apollo reports `loading: true` on every mount, warm cache or not
 
@@ -959,78 +499,21 @@ even when the cache answers the query completely, and it is `true` again on
 every remount. A screen gating its whole render on `loading` therefore blanks
 itself for the length of the network leg on EVERY visit.
 
-```
-1. cache-and-network over a COMPLETE cache, first mount
-   started at       -> cache-and-network
-   loading          -> true
-   data present     -> true
-   settled to       -> cache-first
-2. the SAME query watched again (a remount)
-   started at       -> cache-and-network
-   loading          -> true
-3. the same query over a cache missing ONE field
-   loading          -> true
-   data             -> undefined
-```
+Two mechanisms:
 
-Two mechanisms, and the second is the one that surprises:
+- `ObservableQuery.getInitialResult` hard-codes `loading: true` for
+  `cache-and-network`, so the cache never enters into it.
+- `nextFetchPolicy` rewrites `options.fetchPolicy` on the ObservableQuery
+  instance that settled, and `useQuery` calls `client.watchQuery` per mount, so
+  a remount starts at `cache-and-network` again.
 
-`ObservableQuery.getInitialResult` **hard-codes** the flag for this policy
-(`core/ObservableQuery.js`), so the cache never enters into it:
-
-```js
-case "cache-and-network":
-    return { ...cacheResult(), loading: true, networkStatus: NetworkStatus.loading };
-```
-
-And `nextFetchPolicy` rewrites `options.fetchPolicy` on the **ObservableQuery
-instance** that settled. `useQuery` calls `client.watchQuery` per mount
-(`react/hooks/useQuery.js`), so a remount gets a fresh instance that starts at
-`cache-and-network` again — the switch never survives a navigation. Line 2 of
-the probe is that: the first instance sitting on `cache-first` buys the second
-nothing. `notifyOnNetworkStatusChange: false` does not help either; it only
-filters emissions AFTER the initial result.
-
-The third line is the other half. With `returnPartialData: false` an incomplete
-cache read yields `data === undefined` rather than a partial object, so
-`loading && !data` is precisely _"the read was incomplete"_ — and one missing
-field of the selection is enough to trigger it. That is why every writer of an
-entity must write the full shape the reading query selects; see
+With `returnPartialData: false` an incomplete cache read yields
+`data === undefined` rather than a partial object, so `loading && !data` is
+precisely _"the read was incomplete"_, and one missing field of the selection
+is enough to trigger it. That is why every writer of an entity must write the
+full shape the reading query selects; see
 [cache.modify cannot add a field](#cachemodify-cannot-add-a-field) and
 `__tests__/apollo/userProfileCompleteness.test.ts`.
-
-Both halves shipped together in the profile area: `AppSettingsScreen`,
-`NotificationSettingsScreen` and `DietaryProfileScreen` gated on bare `loading`,
-and `GetUserProfile` selected 17 profile fields while `LoginUser` wrote 3. A
-stalled request then held the screen blank for httpLink's 10s abort deadline
-(`Environment.getApiConfig().timeout`), up to ~30s across `retryLink`'s three
-attempts — with no header and no back button, because the loading branch
-rendered outside the screen scaffold (now `SubScreen`).
-
-### Apollo partial reads omit missing keys rather than undefining them
-
-Verified 2026-08-29 vs `@apollo/client@4.2.12` — re-check:
-`node scripts/probe-apollo-cache-shapes.mjs`.
-
-`readFragment` with `returnPartialData: true` leaves the key **out** of the
-result where the cache cannot satisfy it. It does not set it to `undefined`:
-
-```
-strict readFragment           -> null (incomplete)
-partial read keys on the link -> ["__typename","category"]
-'isPrimary' in link           -> false
-link.isPrimary === undefined  -> true
-```
-
-Both of the last two lines are true, which is what makes the mistake easy: a
-completeness test written as `value !== undefined` reads the same as one written
-as `'key' in value` on a whole object, and diverges only on the partial one it
-exists to catch: a writer testing for `undefined` judges every partially-cached
-nested object whole, writes it straight back, and leaves the read incomplete.
-
-Ask the cache instead of walking the value: a strict `readFragment` of the
-selection returns `null` when the cache cannot satisfy it, which is Apollo's own
-notion of completeness and therefore the one the later read will use.
 
 ### Reanimated applies reduce motion itself
 
@@ -1040,26 +523,18 @@ call-site branch. A branch is needed only for motion a zero duration cannot
 stop — a loop's resting state, an ambient illustration, a shimmer.
 
 **Verified 2026-09-03 against `react-native-reanimated@4.6.0`; probe re-run
-2026-10-02 against 4.7.1.**
-`getReduceMotionFromConfig` in `animation/utilCommon.js` reads
-`!config || config === ReduceMotion.System ? isReduceMotionOnUI.value : …`, so
-an animation that passes no `reduceMotion` resolves to the device setting;
-`timing.js`, `spring/spring.js` and `repeat.js` each pass their config through
-`getReduceMotionForAnimation`, and `BaseAnimationBuilder` initialises
-`reduceMotionV = ReduceMotion.System`.
-
+2026-10-02 against 4.7.1.** An animation that passes no `reduceMotion` resolves
+to the device setting (`getReduceMotionFromConfig` in `animation/utilCommon.js`).
 This is why `src/theme/foundations/motion.ts` holds one set of tokens rather
-than a reduced twin of each: reducing them in the app would duplicate what the
-library does a layer below, and the duplicate is what goes stale.
+than a reduced twin of each, and `src/hooks/animations/useMotionEnabled.ts` is
+the single `useReducedMotion` read, for the loop cases and CSS transitions
+(below).
 
 Re-check:
 
 ```
 node scripts/probe-reanimated-reduce-motion.mjs
 ```
-
-`src/hooks/animations/useMotionEnabled.ts` is the single `useReducedMotion`
-read, for the loop cases and CSS transitions (below).
 
 ### Reanimated CSS transitions need a baseline commit
 
@@ -1074,19 +549,10 @@ commit only.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0` and
 `@shopify/flash-list@2.3.2`; source re-checks re-run 2026-10-02 against 4.7.1 and
-2.3.3.** `CSSManager.update` builds a normalized style
-only while a transition is attached (`hasTransition`), so with none it passes
-`undefined` and `CSSTransitionsManager.update` stores `prevProps = null`; the
-attaching commit then reads no previous props and triggers nothing. On the
-iOS simulator (pantry, dev build, recorded at 30 fps): attaching in the
-delete's own commit left the rows jumping in one frame; attaching one commit
-earlier spread the move over 8 frames (250 ms); with a transition held on
-for 3 s, a flick sent recycled rows sliding across the viewport, and
-detaching on `onScrollBeginDrag` removed them. On an SM-S908U1 (`localRelease`,
-120 Hz) the reflow ran with no cell lost on detach (the Android regression class
-of reanimated#9218), and against a control build of the direct delete, 3 deletes
-each, frame times were unchanged (p90 16–17 ms both); the reflow added ~29
-rendered frames per delete, 2 of them janky. Consumed by `useRowReflow`.
+2.3.3.** On the iOS simulator, attaching one commit earlier spread a delete's
+reflow over 8 frames (250 ms); with a transition held on, a flick sent recycled
+rows sliding across the viewport, and detaching on `onScrollBeginDrag` removed
+them. Consumed by `useRowReflow`.
 
 Re-check:
 
@@ -1094,7 +560,6 @@ Re-check:
 grep -n "hasTransition ||\|this.propsBuilder.build" node_modules/react-native-reanimated/src/css/native/managers/CSSManager.ts
 grep -n "this.prevProps = nextStyle\|if (!prevProps || !transitionConfig)" node_modules/react-native-reanimated/src/css/native/managers/CSSTransitionsManager.ts
 grep -n -A6 "prepareForLayoutAnimationRender: () =>" node_modules/@shopify/flash-list/src/recyclerview/hooks/useRecyclerViewController.tsx
-grep -n "animationOptimizationsEnabled = false" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
 ```
 
 ### Reanimated CSS transitions ignore reduce motion
@@ -1105,10 +570,7 @@ transition runs at its full duration under the OS setting. Motion driven by one
 reads `useMotionEnabled()` and skips attaching it.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0`, re-checked
-2026-10-02 against 4.7.1,** by source
-only: neither the JS side (`src/css`) nor the native engine
-(`Common/cpp/reanimated/CSS`) reads a reduced-motion setting. Not probed on a
-device.
+2026-10-02 against 4.7.1,** by source only. Not probed on a device.
 
 Re-check (expect no output):
 
@@ -1120,271 +582,37 @@ grep -rli "reducedmotion\|reduce_motion\|reducemotion" node_modules/react-native
 
 **Claim:** reading an image's leading bytes with `fetch(uri)` → `blob.slice(0, n)`
 → `FileReader.readAsDataURL` works for every URI this app's picker produces, and
-`content://` never arises. The upload confirm step verifies the object's magic
-bytes against the extension its key was minted for, so the presign must ask for
-the type the BYTES are, not the type the picker or the file name reports.
+`content://` never arises: the library copies the selection into the app's own
+cache. The upload confirm step verifies the object's magic bytes, so the presign
+must ask for the type the BYTES are, not the type the picker reports.
 
 **Verified on device 2026-09-04, SM-S908U1 (Android 16, API 36), against
-`react-native-image-picker@8.2.1` + RN 0.86.3 (Hermes).** Picking a photo
-through the Android Photo Picker returned
-
-```
-file:///data/user/0/dev.souschef.app/cache/rn_image_picker_lib_temp_<uuid>.png
-```
-
-— the library COPIES the selection into the app's own cache, so the app always
-reads a path it owns and no media permission is involved (the app declares
-neither `READ_MEDIA_IMAGES` nor `READ_EXTERNAL_STORAGE`). Against that URI:
-`blob.size` 99, `head.size` 12 — the slice really is bounded, not a whole-file
-read — and the decoded bytes were `89 50 4E 47 0D 0A 1A 0A 00 00 00 0D`, the PNG
-signature plus the IHDR length.
-
-Three things that do NOT work, each of which reads as the same
-`Network request failed` and so cannot be told apart by its message:
-
-- `fetch` on a `data:` URI.
-- `fetch` on a `file://` outside the app's sandbox (`/sdcard/Download/...`).
-- `fetch` on a MediaStore `content://` **for an app holding no media
-  permission** — which is why the sniffer must degrade to the reported type
-  rather than refuse, even though this app never sees one.
-
-**`global` is not bound in every Hermes scope.** `global.atob` threw
+`react-native-image-picker@8.2.1` + RN 0.86.3 (Hermes).** `fetch` fails with
+the same `Network request failed` on a `data:` URI, on a `file://` outside the
+app's sandbox, and on a MediaStore `content://` without media permission, so the
+sniffer degrades to the reported type rather than refusing. `global.atob` threw
 `Property 'global' doesn't exist` on this device while bare `atob` resolved, so
-`bytesFromDataUrl` uses the bare form. The failure would have been silent: the
-sniffer reads a throw as "unreadable" and falls back to the picker's type.
-
-Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
-
-```js
-(async () => {
-  const res = await fetch(PICKED_URI); // from the picker's response
-  const head = (await res.blob()).slice(0, 12);
-  const url = await new Promise(r => {
-    const fr = new FileReader();
-    fr.onloadend = () => r(String(fr.result));
-    fr.readAsDataURL(head);
-  });
-  const bin = atob(url.slice(url.indexOf(',') + 1));
-  return Array.from({ length: 12 }, (_, i) => bin.charCodeAt(i));
-})();
-```
+`bytesFromDataUrl` uses the bare form.
 
 Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).
 
 ### fraction.js's float constructor costs a quarter-second on device
 
 **Claim:** `new Fraction(<float>)` runs a continued-fraction search whose cost
-depends on how near the value is to a rational it cannot represent exactly. A
-value that is a float32 echo of a repeating fraction drives it to its
-denominator bound. Seeding from an integer numerator/denominator pair is exact
-rational arithmetic instead, and produces identical output.
+depends on how near the value is to a rational it cannot represent exactly.
+Seeding from an integer numerator/denominator pair
+(`new Fraction(Math.round(v * 1e6), 1e6)`) is exact rational arithmetic instead,
+and produces identical output.
 
 **Verified 2026-09-07 against `fraction.js@5.3.4`, in the app's own Hermes
-runtime on an SM-S908U1** (Android 16, 96 Hz panel → 10.4 ms frame budget),
-debug bundle with the CDP debugger attached. Microseconds per call:
+runtime on an SM-S908U1**, debug bundle. Microseconds per
+`.simplify(0.02)` call, float against integer pair: `0.33333334` 273,534 vs 36;
+`4.6` 17,843 vs 53; `1.1` 9,051 vs 17. `0.33333334` is the float32 echo of `1/3`
+the API returns, and the path is per-row (`QuantityBadge`, `QuantityDisplay`,
+`PantryItemCard`). `src/utils/__tests__/formatQuantity.test.ts` pins the output.
 
-| value                      | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
-| -------------------------- | -------------------------------- | ----------------------------------------------------- |
-| `0.33333334`               | **273,534**                      | 36                                                    |
-| `0.66666667`               | **290,297**                      | 70                                                    |
-| `4.6`                      | **17,843**                       | 53                                                    |
-| `1.1`                      | **9,051**                        | 17                                                    |
-| `0.93`                     | 263                              | 99                                                    |
-| `2.7`                      | 73                               | 62                                                    |
-| `1/3` exact, `0.5`, `1.25` | 15–19                            | 15–35                                                 |
-
-The control rules out a debugger tax: 5,000,000 iterations of `s += i % 7` on
-the same runtime took 351 ms — 70 ns per iteration, ordinary Hermes-on-device
-speed. Both columns come from the same build, so the ratio holds; the absolute
-figures are an upper bound for a release bundle.
-
-`0.33333334` is not a contrived value: `src/utils/formatQuantity.ts` names it,
-because the API stores `1/3` and echoes back the float32. `4.6` and `1.1` are
-ordinary typed quantities, and each exceeds a whole frame in one call. The path
-is per-row — `QuantityBadge`, `QuantityDisplay`, `PantryItemCard` — and FlashList
-rebinds cells continuously while scrolling.
-
-Output is unchanged across the verified set, the fraction-vs-decimal choice
-included; `src/utils/__tests__/formatQuantity.test.ts` pins every value.
-
-Re-check: connect the debugger (`argent-metro-debugger`), serve
-`node_modules/fraction.js/dist/fraction.js` over a reverse-forwarded port, then
-evaluate
-
-```js
-fetch('http://localhost:8099/fraction.js')
-  .then(r => r.text())
-  .then(src => {
-    const mod = { exports: {} };
-    new Function('module', 'exports', src)(mod, mod.exports);
-    globalThis.__Frac = mod.exports;
-  });
-// then, in a second evaluate:
-(() => {
-  const F = globalThis.__Frac,
-    now = () => performance.now();
-  const t0 = now();
-  for (let i = 0; i < 2; i++) new F(0.33333334).simplify(0.02);
-  return Math.round(((now() - t0) * 1000) / 2); // microseconds per call
-})();
-```
-
-### Android does not invalidate a `BIOMETRY_CURRENT_SET` entry on a new enrolment
-
-**Claim:** on Android, a react-native-keychain entry saved with
-`BIOMETRY_CURRENT_SET` survives a new fingerprint enrolment, and the new finger
-unlocks it — it behaves as `BIOMETRY_ANY`. Only iOS invalidates it.
-
-**Verified 2026-09-21 against `react-native-keychain@10.0.0`, on an Android 16
-(API 36) emulator** running the `stg-v4.6.1` build. Enabled biometric sign-in
-with finger 1, enrolled finger 2, then signed in with finger 1 and again with
-finger 2: both succeeded. keystore2 logged `KEY_USER_NOT_AUTHENTICATED` (auth
-token expired, `timeout=5s`) before each prompt, never an invalidation.
-
-`CipherStorageKeystoreAesGcm.getKeyGenSpecBuilder` sets
-`setUserAuthenticationParameters(5, AUTH_BIOMETRIC_STRONG or AUTH_DEVICE_CREDENTIAL)`
-and never calls `setInvalidatedByBiometricEnrollment`, which Android applies
-only to a key with no validity window. A per-use key is not an option without
-changing the library: its prompt passes no `CryptoObject`
-(`prompt.authenticate(this.promptInfo)`), so such a key could never be unlocked.
-Accepted as a risk — it needs the device PIN and a sign-out that kept
-biometrics (`openspec/changes/fix-pr232-review-findings/design.md` D11).
-
-Re-check: pinned by `src/storage/__tests__/keychainAndroidErrors.library.test.ts`.
-On device: enable biometric sign-in, enrol a second finger, sign out, and sign
-in with the new finger.
-
-### An Android screen-lock reset surfaces as a failed tag check, not an invalidated key
-
-**Claim:** once the screen lock is removed and set again, loading a biometric
-entry rejects on every attempt with `code: "E_CRYPTO_FAILED"` and
-`message: "Decryption failed: Authentication tag verification failed. …"` —
-never with a `KeyPermanentlyInvalidated` message.
-
-**Verified 2026-09-21 against `react-native-keychain@10.0.0`, on an Android 16
-emulator.** Removing the lock deletes the auth-bound key.
-`CipherStorageBase.extractGeneratedKey` then finds the alias missing and
-generates a new key under it, the prompt succeeds, and `decryptBytes` fails with
-`AEADBadTagException`, which it rethrows as that `CryptoFailedException`.
-`reThrowOnError` passes a `CryptoFailedException` through unwrapped, so there is
-no `Wrapped error:` prefix. The entry can never be read again, so
-`isKeychainKeyInvalidated` treats the message as an unusable key.
-
-Re-check: the rethrow, the pass-through and the regeneration are pinned by
-`src/storage/__tests__/keychainAndroidErrors.library.test.ts`. On device: remove
-and re-add the screen lock and a fingerprint, then tap _Use Biometric Login_.
-
-### An Android biometric cancel is indistinguishable from an invalidated key by code
-
-**Claim:** react-native-keychain rejects a user CANCEL and a permanently
-invalidated key with the same `code`. Only the message tells them apart, and
-treating the code as proof of invalidation deletes a user's stored credentials
-when they tap the prompt's negative button.
-
-**Verified 2026-09-07 against `react-native-keychain@10.0.0`, on an SM-S908U1**
-with three fingerprints enrolled. Enrolled biometric sign-in, then called
-`loadCredentials()` and tapped the prompt's "Use manual login". The rejection:
-
-```json
-{
-  "code": "E_CRYPTO_FAILED",
-  "name": "com.oblador.keychain.exceptions.CryptoFailedException",
-  "message": "code: 13, msg: Use manual login"
-}
-```
-
-`13` is androidx `BiometricPrompt.ERROR_NEGATIVE_BUTTON`.
-`ResultHandlerInteractiveBiometric.onAuthenticationError` formats EVERY androidx
-outcome as `CryptoFailedException("code: $errorCode, msg: $errString")`, and
-`KeychainModule` rejects all of them as `E_CRYPTO_FAILED` — so cancel, lockout,
-timeout and a genuinely unusable key are one code. A key invalidated by an
-enrolment change is thrown from the cipher path instead and reaches JS through
-`CryptoFailedException.reThrowOnError`'s `"Wrapped error: …"`, with no `code: <n>`.
-
-`src/storage/keychain.ts` therefore treats the `code: <n>` marker as proof the
-failure came from the prompt, and keeps the credentials. After the cancel above,
-`hasCredentials()` returned `true` and `getLastBiometricEmail()` still returned
-the account — the slot, its indicator and the remembered address all survived.
-
-Re-check: the format string is pinned by
-`src/storage/__tests__/keychainAndroidErrors.library.test.ts` against the
-installed Kotlin. On device, connect the debugger and call
-`getGenericPassword({ service, authenticationPrompt })`, tap the negative
-button, and read the rejection's `code`/`name`/`message`.
-
-### Apollo `client.stop()` cancels queries, not mutations
-
-**Claim:** `client.stop()` aborts in-flight `client.query` calls but leaves
-in-flight `client.mutate` calls running to completion. A teardown step that
-stops the client therefore cannot cancel a mutation issued before it — but it
-does cancel any query in front of that mutation.
-
-**Verified 2026-09-20 against `@apollo/client@4.2.12`** with a hanging link, by
-opening one query and one mutation, then calling `stop()` and `clearStore()`
-while both were open:
-
-```
-operations that reached the link: [ 'UpdateDevice', 'DeviceByDeviceId' ]
-AFTER client.stop()  mutation: PENDING
-AFTER client.stop()  query   : REJECTED  "message":90
-AFTER clearStore()   mutation: PENDING
-AFTER answering the mutation: RESOLVED
-```
-
-Invariant 90 is "QueryManager stopped while query was in flight"; `clearStore`
-cancels with 92. The mechanism: `QueryManager.stop()` iterates `obsQueries` and
-`fetchCancelFns`, and `fetchCancelFns` is written in exactly one place —
-`fetchObservableWithInfo`, the query path. `QueryManager.mutate()` registers
-nothing in either, so a mutation is invisible to both halves.
-
-**What depends on it:** the sign-out teardown stops the client, but a token
-refresh mutation already in flight still completes. `setTokens` therefore
-refuses a pair inside the session-end scope, and `refreshToken.ts` discards a
-rotation that outlived its session; the server's family revoke retires that
-successor — see `docs/session-and-transport.md` § A session end mints nothing.
-
-### Apollo masks a mutation's returned data, not what `update` receives
-
-**Claim:** with `dataMasking: true`, `client.mutate` resolves with data whose
-fragment spreads are masked (a spread object reads as `{ __typename, id }`),
-while the `update` callback of the same call receives the full, unmasked
-payload. Code that reads fields inside a fragment spread after a mutation must
-take them from `update`.
-
-**Verified 2026-09-21 against `@apollo/client@4.2.12`** by
-`src/apollo/offlineQueue/__tests__/replayReadsUnmaskedData.test.ts`: a real
-`ApolloClient` with `dataMasking: true` replays a queued shopping add whose
-item carries `shoppingList { totalItems }` inside `AddedShoppingListItemFields`.
-Read from the returned value, the total is absent and the list count drifts
-(3); read from `update`, it is the server's (4).
-
-**What depends on it:** `queueManager.executeMutation` hands the `update`
-payload to `reconcileReplaySuccess`; every replay reconciler that reads list
-totals or a merged row's id relies on it.
-
-### An iOS 27 SDK build launches only with the UIScene lifecycle
-
-**Claim:** an app linked against the iOS 27 SDK that declares no
-`UIApplicationSceneManifest` traps at launch on iOS 27, before any JS runs. The
-same binary built with an older SDK still launches. React Native has no scene
-support of its own, so the host app's `SceneDelegate` owns the window, and it
-must copy a cold-start link into the launch options: `Linking.getInitialURL()`
-reads only `launchOptions[UIApplicationLaunchOptionsURLKey]` and the
-user-activity dictionary, while under scenes UIKit delivers both in the scene's
-connection options.
-
-**Verified 2026-09-21 on Xcode 27.0 (27A266a), iPhone 17 simulator, iOS 27.0,
-`react-native@0.86.3`.** The pre-scene build crashed at launch with
-`EXC_BREAKPOINT` in `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`
-(`UIApplication workspace:didCreateScene:…`). After the migration, a cold
-`souschef://home-management` opened HomeManagement and a warm one reached React
-Navigation. `RCTReactNativeFactory.h` and `RCTLinkingManager.mm:151-164` in
-0.86.3, and the 0.87.1 community template, contain no scene code.
-
-**What depends on it:** `ios/SousChef/AppDelegate.swift` — `SceneDelegate`
-starts React Native once (a reconnected scene re-parents the existing window),
-keeps `AppDelegate.window` pointing at it (LogBox re-keys that window on
-dismiss), and merges the connection options into the launch options.
+Re-check: time both forms in the app's Hermes runtime through
+`debugger-evaluate` (`argent-metro-debugger`).
 
 ### Apollo gc needs no result-cache reset to drop evicted entities
 
@@ -1392,36 +620,11 @@ Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
 `node scripts/probe-apollo-gc-result-cache.mjs`.
 
 **Claim:** after `cache.evict` + `cache.gc()`, a watched query and a fresh
-read see exactly the same result with or without `resetResultCache: true`.
-Evicted list entries are filtered out; a singular field left pointing at an
-evicted entity makes the read incomplete (`dataState: 'empty'`, `readQuery`
-returns `null`) in both modes. The reset only discards memoized results, so
-the next broadcast re-reads every watcher cold:
-
-```
-default gc   -> list i0,i2 | by id null | singular ref: watcher empty, fresh null
-forced reset -> list i0,i2 | by id null | singular ref: watcher empty, fresh null
-cost of gc + re-read (node, median of 20):
-  500 entities, 50 watchers   -> default ~0.7 ms, forced reset ~3.7–8 ms
-  2000 entities, 200 watchers -> default ~2–8 ms, forced reset ~19–23 ms
-```
-
-The mechanism is Apollo's own dependency tracking: a read depends on each
-entity's `__exists`, which `evict` dirties, so no stale memoized result can
-survive it.
-
-In the app (2026-09-30, iPhone 18 Pro simulator, debug build, the signed-in
-cache: 519 entities, 23 cache watches, 9 active queries), `cache.gc()` followed
-by `cache.broadcastWatches()`, 15 runs each, bracketed by a control run:
-
-```
-default gc   -> median 0.50 ms, p90 0.88 ms (control after: 0.50 / 1.09)
-forced reset -> median 33.83 ms, p90 35.86 ms
-```
-
-A debug build on a simulator overstates absolute times, but the ratio is the
-point: the reset re-reads every watcher cold, about two frames of JS at 60 fps
-per eviction, for no difference in what any read returns.
+read see exactly the same result with or without `resetResultCache: true`: a
+read depends on each entity's `__exists`, which `evict` dirties, so no stale
+memoized result survives. The reset only discards memoized results, so the next
+broadcast re-reads every watcher cold. In the app (2026-09-30, simulator, 519
+entities, 23 cache watches) that was a median 33.83 ms against 0.50 ms.
 
 **What depends on it:** the `cache.gc` wrapper in `src/apollo/client.ts` no
 longer forces the reset, and `safeEvict` / `safeEvictMany` in
@@ -1440,33 +643,14 @@ same object identity. A value derived from that `data` by a render-time
 `cache.readFragment` is recomputed only when its inputs change — the React
 Compiler memoizes it on them — so it stays stale until something else changes
 the query's result. `useFragment` (`watchFragment`), with a single or an ARRAY
-`from`, sees the edit:
+`from`, sees the edit.
 
-```
-1. row field behind the spread only
-  query emitted on the edit     -> false
-  data kept its identity        -> true
-  memoized render-time read     -> old b
-  watchFragment, array from     -> ["old a","new b"]
-2. the same field also selected inline (a "signal")
-  query emitted on the edit     -> true
-  data kept its identity        -> false
-  memoized render-time read     -> new b
-```
-
-Two mechanisms in `core/ObservableQuery.js`: the emit filter compares with
-`equalByQuery` against `documentInfo.nonReactiveQuery` (named spreads marked
-`@nonreactive`) when `dataMasking` is on, so a change inside a spread counts
-as equal; and a masked result deeply equal to the previous one is swapped for
-the previous object (`result.data = previous.result.data`). The fragment watch
-(`cache/core/cache.js`, `watchSingleFragment`) compares against the fragment's
-own selection instead, so it emits. The array form (4.1+) returns one entry per
-`from`, deduplicates the per-entity watches, and reports a partial read as one
-`complete: false` with a missing tree keyed by entry index.
-
-Selecting the field inline as well (case 2) makes the query re-emit, which is
-why the "reactivity signal" selections worked — and why removing one as a
-cleanup froze the value it fed.
+The mechanism is in `core/ObservableQuery.js`: with `dataMasking` on, the emit
+filter compares against the query with named spreads marked `@nonreactive`, and
+a masked result deeply equal to the previous one is swapped for the previous
+object. Selecting the field inline as well makes the query re-emit, which is
+why "reactivity signal" selections worked, and why removing one as a cleanup
+froze the value it fed.
 
 **What depends on it:** every render-time read of cached data in a feature hook
 goes through `useFragment`, or `useFragmentList` (`src/hooks/apollo/`) for a
@@ -1480,35 +664,16 @@ Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
 
 **Claim:** a `useLazyQuery` executed a second time with the same variables is
 answered from the cache, even when the hook asked for `network-only`. `execute`
-calls `observable.reobserve` with the observable's CURRENT `fetchPolicy`
-(`react/hooks/useLazyQuery.js`), and the client-wide
-`nextFetchPolicy: 'cache-first'` (`src/apollo/defaultOptions.ts`) rewrote it
-after the first result (`core/ObservableQuery.js`, `applyNextFetchPolicy`).
-`execute` accepts only `variables` and `context` in 4.2, so the policy cannot
-be overridden per call.
+calls `observable.reobserve` with the observable's CURRENT `fetchPolicy`, and
+the client-wide `nextFetchPolicy: 'cache-first'` (`src/apollo/defaultOptions.ts`)
+rewrote it after the first result. `execute` accepts only `variables` and
+`context` in 4.2, so the policy cannot be overridden per call.
 
 **What depends on it:** a lazy query that re-issues to refresh sets
 `nextFetchPolicy: 'network-only'` on the hook (`useRecipeIngredientMatching`,
 `useHomeInvitations`, `useConvertAvailableQuantity`); a warmer or time-to-live
 refresh uses `client.query({ fetchPolicy: 'network-only' })` through
 `fromServer`. See `apollo-client-patterns.md` § Resync.
-
-### Apollo `writeFragment` forwards `extensions` to merge functions
-
-Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
-`npx jest src/features/shoppingList/cache/__tests__/writePurchaseInfo.test.ts`.
-
-**Claim:** `cache.writeFragment({ …, extensions })` reaches a field policy's
-`merge` as `options.extensions`, although `Cache.WriteFragmentOptions` does not
-declare the key. `writeFragment` spreads its remaining options into `write`
-(`cache/core/cache.js`), `write` passes `extensions` to `writeToStore`
-(`cache/inmemory/writeToStore.js`), and the policies hand it to `merge` (4.1+).
-
-**What depends on it:** `writePurchaseInfo` writes with
-`extensions: { local: true }`, and the `ShoppingListItem.purchaseInfo` merge
-(`src/features/shoppingList/cache/typePolicies.ts`) merges a local write
-field-wise instead of clearing on a flip. The call site widens the options
-type with `Pick<Cache.WriteOptions, 'extensions'>`.
 
 ### Apollo `skipToken` keeps serving the last run's data
 
@@ -1532,12 +697,145 @@ const data = result.variables?.id === listId ? result.data : undefined;
 ```
 
 A query skipped from mount has no variables, so `refetch()` on it sends none;
-a hook that exposes `refetch` guards it. Resync is unaffected: a never-run
-`skipToken` query is not `'active'`.
+a hook that exposes `refetch` guards it. `useSubscription` has no `skipToken`
+overload in 4.2.12, so the subscription hooks stay on `skip`.
 
-**What depends on it:** `usePantryQuery`, `usePaginatedShoppingItems`,
-`useShoppingListDetails`, `useShoppingListItemsQuery`,
-`useStorageLocationManagement` and `useMealPlanList` (which checks whether it
-is skipped). `useSubscription` has no `skipToken` overload in 4.2.12, so the
-subscription hooks stay on `skip`, which also gates
-`useSubscriptionTransportRecovery`.
+### Apollo tears down a paused screen's query; resubscribing reads the current fetch policy
+
+Verified 2026-10-02 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/apollo/__tests__/refetchEvents.test.ts -t "paused at the switch"`.
+
+**Claim:** native-stack's `inactiveBehavior: 'pause'` hides a screen in a React
+`Activity`, whose effects are cleaned up, so the screen's `useQuery` loses its
+last observer. An `ObservableQuery` with no observer is torn down and removed
+from the client's set. Neither `refetchQueries({ include: 'active' })` nor
+`include: 'all'` reaches it. On resume the first subscriber calls `reobserve()`
+with no options, which runs the current `fetchPolicy`: `cache-first` once the
+global `nextFetchPolicy` has applied, so the screen serves what the cache holds
+and sends nothing.
+
+**What depends on it:** the language catch-up in `src/apollo/refetchEvents.ts`.
+After a switch, every navigation refetches only the active queries not answered
+since it, because a refetch at the switch cannot reach a paused screen.
+
+### Google ML Kit's iOS pods have no arm64-simulator slice
+
+Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
+`GoogleMLKit/TextRecognition` 8.0.0).
+
+**Claim:** ML Kit's iOS frameworks ship an arm64 slice built for devices and an
+x86_64 slice built for the simulator, and nothing else. On Apple silicon with
+an arm64-only iOS 26+ simulator runtime, any ML Kit pod fails to link. That's
+why `react-native.config.js` keeps the barcode scanner's pod off iOS, and why
+receipt text recognition uses Apple Vision on iOS (`TextRecognitionModule.swift`).
+
+Re-check (the pod's source URL is in its podspec on the CocoaPods CDN):
+
+```
+curl -sL -o t.tgz https://dl.google.com/dl/cpdc/d19e9c059f422b0c/MLKitTextRecognition-7.0.0.tar.gz
+tar xzf t.tgz && F=Frameworks/MLKitTextRecognition.framework/MLKitTextRecognition
+lipo -info $F                               # x86_64 arm64
+for a in arm64 x86_64; do lipo -thin $a $F -output /tmp/s && otool -l /tmp/s | grep -m1 ' platform '; done
+# arm64 → platform 2 (iOS device); x86_64 → platform 7 (iOS simulator)
+```
+
+### Apple Vision reads a two-column receipt as separate columns
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator (iOS 27, arm64) through
+`TextRecognitionModule.recognizeAndDelete` (`VNRecognizeTextRequest`,
+`.accurate`, language correction off).
+
+**Claim:** Vision returns a receipt's left column top to bottom, and then its
+price column as separate observations. A row's name and price are never one
+observation, so `receipts/utils/assembleReceiptRows.ts` rebuilds rows by
+vertical overlap before redaction and parsing. On a rendered 18-row receipt:
+the 16 left-column rows first, then 8 prices, each price's `y` within 0.005 of
+its row's. The same call deletes the pages it read, plus any
+`DOCUMENT_SCAN_*.jpg` that `react-native-document-scanner-plugin` 2.0.4 left in
+Documents, which iCloud backs up.
+
+The document scanner itself needs a device: on the simulator, `scanDocument`
+rejects with `Document scanning is not supported on this device`.
+
+Re-check: put a JPEG in the app's Documents directory, connect the debugger
+(`argent-metro-debugger`), then evaluate:
+
+```js
+globalThis.nativeModuleProxy.TextRecognitionModule.recognizeAndDelete([
+  'file://<Documents>/probe.jpg',
+]).then(pages => (globalThis.__probe = pages));
+```
+
+### Apple Foundation Models labels receipt lines, but can't be trusted with their figures
+
+Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 Pro simulator (iOS 27), through `ReceiptStructuringModule`.
+
+**Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt: it invented purchase dates, negated item prices and shifted line indices. On a longer, skewed receipt it numbers lines itself, skipping lines with no words.
+
+So `receipts/utils/structureReceipt.ts` reads every figure from the printed text, places each label by the words it copied, and lets the printed words overrule a label. A model reading is kept only when the receipt rules' check accepts it (`checkOnPhone`). Labelling took a median 0.55 s per labelled line on the simulator (2026-10-02, 32-receipt corpus), and 5 receipts of 48–79 lines ran past the 20 s timeout.
+
+Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
+`globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
+The deployment target is iOS 15.1, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
+
+### Apple Foundation Models can refuse a whole receipt over its footer
+
+Verified 2026-09-30 on macOS 27.0.1 (26A434), with `scripts/receipt-corpus/label.swift`, which uses `ReceiptStructuringModule`'s schema, prompt and greedy sampling.
+
+**Claim:** the model's guardrail can refuse a whole labelling request because of a receipt's promotional footer. It throws `GenerationError.guardrailViolation` ("May contain unsafe content"), and which text trips it can't be predicted. An ALDI US receipt whose footer has a sweepstakes line and an age line ("Must be 18 years old to enter.") was refused; removing either one let it through.
+
+So `parseReceiptOnDevice` sends only `linesThroughTotal`: no item follows the printed total, so the footer is never needed. A refusal still resolves to no parse, and the draft's text stands.
+
+Re-check, with `entry.json` holding `{ "id": "…", "pages": ["<a made-up receipt with that footer>"] }`:
+
+```
+swiftc -O -parse-as-library scripts/receipt-corpus/label.swift -o /tmp/label
+/tmp/label /tmp entry.json   # prints FAILED May contain unsafe content
+```
+
+### ML Kit GenAI Prompt API needs Kotlin 2.2 and a minSdk override
+
+Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `genai-common` beta4), Gemini Nano's on-device Prompt API. The dependency fails twice without help:
+
+1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it.
+2. `compileDebugKotlin`: the library's Kotlin metadata is 2.3.0, which Kotlin 2.1.20 cannot read. The failure hits `MainApplication.kt`, so the whole app stops compiling.
+
+Resolved with `kotlinVersion = "2.2.0"` AND the Kotlin Gradle plugin's classpath entry versioned by it: unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. Gemini Nano runs only on AICore devices; the emulator has none, so its labelling is still unverified on a device.
+
+Re-check: `genai-prompt` is already a dependency in `android/app/build.gradle`; to see the failure again, set `kotlinVersion` back to `"2.1.20"` in `android/build.gradle` and run `./gradlew :app:compileDebugKotlin`.
+
+### ML Kit text recognition kills the app on the arm64 Android emulator
+
+Verified 2026-09-30 on `Medium_Phone_API_36.1` (Android 16, arm64, Apple-silicon host) with `play-services-mlkit-text-recognition` 19.0.1.
+
+**Claim:** the first `TextRecognizer.process` loads Play services' TensorFlow Lite module into the app process, which dies there with `signal 4 (SIGILL)`. It is a native crash, so neither Kotlin nor JS can catch it. `TextRecognitionModule` therefore rejects with `text_recognition_unsupported` when `Build.HARDWARE == "ranchu"` on arm64, and the screen shows its failure state instead of the app vanishing. The document scanner works on the same emulator; it writes pages to `cache/mlkit_docscan_ui_client/<id>.jpg`, which recognition empties on every call.
+
+Re-check: `adb logcat | grep -E "SIGILL|TfliteDynamite"` while scanning on the emulator with the guard removed.
+
+### Android breaks a TextView's lines by glyph bounds, and React Native measures by advances
+
+**Claim:** on Android 15+ an app that targets API 35 or later gets bounds-based
+line breaking in every `TextView` (`TextView#USE_BOUNDS_FOR_WIDTH`). React
+Native measures `<Text>` with a `StaticLayout` that breaks on glyph advances.
+A line that fits when measured can wrap when the view lays its text out again,
+and the extra line falls outside the measured height.
+
+**Verified against `react-native@0.86.3` (2026-10-12, API 36 emulator at
+420 dpi, `targetSdkVersion` 36).** Profile's email, a shrink-wrapped `<Text>`
+with 0.03 px to spare, drew as `test@souschef` after any theme change.
+`TextLayoutManager.kt` declares a `setUseBoundsForWidth` handle and never calls
+it, and `ReactTextView.java` does not mention it.
+
+The fix: `AppTheme` sets `android:useBoundsForWidth` to `false`, which every
+`TextView` takes from its theme in place of the platform default.
+[react-native#58280](https://github.com/react/react-native/pull/58280) makes
+the same choice inside `ReactTextView`; it is on `main` and in no release
+through 0.87.1.
+
+Re-check (a hit means React Native opts out itself and the theme item can go):
+
+```
+grep -c "UseBoundsForWidth" node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/ReactTextView.java   # 0
+```
+
+Guarded by `__tests__/androidTextLineBreaking.test.ts`.

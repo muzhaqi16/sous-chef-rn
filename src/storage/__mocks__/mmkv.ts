@@ -41,6 +41,7 @@ export const __mockStore = store;
 
 export const STORAGE_KEY = 'sous-chef-storage';
 export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
+export const RETIRED_PERSISTED_KEYS: readonly string[] = ['sous-chef-barcode'];
 
 export const storage = {
   set: jest.fn((key: string, value: MockStoreValue) => {

@@ -6,10 +6,9 @@ import { serializeError } from '#/utils/errorSerialization';
 import { logger } from '#/utils/environment';
 
 /**
- * Drop the retain `writeFragment`/`writeQuery` adds for every id it writes
- * explicitly. Without it the entity stays a retained root: `gc()` skips it,
- * `extract()` pins it under `__META.extraRootIds`, and `restore()` re-retains it
- * on the next launch. `release` is `InMemoryCache`-only, hence the narrowing.
+ * Drops the retain `writeFragment`/`writeQuery` adds per explicitly written id;
+ * kept, the entity is a root `gc()` skips and `extract()` pins under
+ * `__META.extraRootIds` for `restore()` to re-retain on the next launch.
  */
 export function releaseEntity(cache: ApolloCache, cacheId: string): void {
   if (!(cache instanceof InMemoryCache)) return;
@@ -74,7 +73,6 @@ export type ConnectionData = {
 
 /** What a modifier receives: a field the server returned as `null` is stored as `null`. */
 type StoredConnection = ConnectionData | null | undefined;
-type StoredRefs = readonly Reference[] | null | undefined;
 
 type InsertPosition = 'start' | 'end';
 
@@ -95,9 +93,8 @@ interface RemoveOptions {
 }
 
 /**
- * The serialized args inside a `storeFieldName`, or null. Apollo writes them two
- * ways — `storageLocations:{"homeId":"A"}` (array `keyArgs`) vs
- * `things({"filters":…})` (none) — so the FIRST delimiter decides the form.
+ * Apollo serializes a `storeFieldName`'s args two ways, `storageLocations:{…}`
+ * (array `keyArgs`) or `things({…})` (none), so the FIRST delimiter decides.
  * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`
  */
 function storeFieldArgs(storeFieldName: string): string | null {
@@ -133,10 +130,9 @@ function parseStoreFieldArgs(storeFieldName: string): ParsedStoreFieldArgs {
 }
 
 /**
- * Skip cached variants whose TOP-LEVEL arguments do not match — for a field keyed
- * on a plain argument (`storageLocations(homeId:)`), where the nested-`filters`
- * sibling finds nothing to compare and lets every variant through. A variant
- * carrying NONE of the named args is left alone; unparseable args are skipped.
+ * Skips cached variants whose TOP-LEVEL arguments do not match, for a field
+ * keyed on a plain argument (`storageLocations(homeId:)`). A variant carrying
+ * NONE of the named args is left alone; unparseable args are skipped.
  */
 export function skipUnmatchedArgVariants(
   equals: Record<string, unknown>,
@@ -179,10 +175,9 @@ function isActiveFilter(value: unknown): boolean {
 }
 
 /**
- * Skip cached variants whose nested `filters` argument does not match. The
- * unfiltered variant always takes the write; a filtered one only when every active
- * filter is a key in `equals` and matches. Anything else — search text, a tag set,
- * a range — skips: a briefly-missing row heals on the next read, a misplaced one does not.
+ * The unfiltered variant always takes the write; a filtered one only when
+ * `equals` matches its every active filter. Anything else skips: a missing row
+ * heals on the next read, a misplaced one does not.
  */
 export function skipUnmatchedFilterVariants(
   equals: Record<string, unknown>,
@@ -201,6 +196,19 @@ export function skipUnmatchedFilterVariants(
 }
 
 /**
+ * The entity as the cache holds it: merging a response object over it stores
+ * nested entities inline, cut off from their records. Only an entity the cache
+ * lacks is written from the object.
+ */
+function entityRef(
+  newItem: { id: string },
+  { toReference, canRead }: ModifierDetails,
+) {
+  const ref = toReference(newItem);
+  return ref && canRead(ref) ? ref : toReference(newItem, true);
+}
+
+/**
  * Edge typename assumes Relay (`Foo` → `FooEdge`); anything else is wrong
  * silently. `totalCount` moves only where the record already holds one, so an
  * add never introduces a count a query then reads as a cache hit.
@@ -210,14 +218,12 @@ function addEdgeModifier<T extends { id: string }>(
   itemTypename: string,
   { position = 'start', skipStoreField }: AddToConnectionOptions,
 ) {
-  return (
-    existing: StoredConnection,
-    { toReference, readField, storeFieldName }: ModifierDetails,
-  ) => {
+  return (existing: StoredConnection, details: ModifierDetails) => {
+    const { readField, storeFieldName } = details;
     // Every "leave alone" path returns `existing` as is: Apollo reads an
     // `undefined` over a stored `null` as a delete.
     if (skipStoreField?.(storeFieldName)) return existing;
-    const newItemRef = toReference(newItem, true);
+    const newItemRef = entityRef(newItem, details);
     if (!newItemRef) return existing;
 
     const edges = existing?.edges ?? [];
@@ -256,32 +262,6 @@ function removeEdgeModifier(itemId: string, onRemoved: () => void) {
   };
 }
 
-function addRefModifier<T extends { id: string }>(
-  newItem: T,
-  position: InsertPosition,
-) {
-  return (
-    existing: StoredRefs,
-    { toReference, readField }: ModifierDetails,
-  ) => {
-    const newItemRef = toReference(newItem, true);
-    if (!newItemRef) return existing;
-    const refs = existing ?? [];
-    if (refs.some(ref => readField('id', ref) === newItem.id)) return existing;
-    return position === 'start' ? [newItemRef, ...refs] : [...refs, newItemRef];
-  };
-}
-
-function removeRefModifier(itemId: string, onRemoved: () => void) {
-  return (existing: StoredRefs, { readField }: ModifierDetails) => {
-    const refs = existing ?? [];
-    const kept = refs.filter(ref => readField('id', ref) !== itemId);
-    if (kept.length === refs.length) return existing;
-    onRemoved();
-    return kept;
-  };
-}
-
 /**
  * Add an item to a Query root Connection field. `cache.modify` fires for EVERY
  * cached `keyArgs` variant, so an item whose membership depends on filters or
@@ -302,11 +282,9 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
 }
 
 /**
- * Remove an item from a Query root Connection field. The edge is filtered here;
- * `evictItem: true` also evicts the entity and gcs. The edge goes either way: a
- * delete response's `{ id }` stub re-creates the entity, and an edge left to
- * dangle then resolves to a row missing every field. Reports whether anything
- * was removed.
+ * `evictItem: true` also evicts the entity and gcs; the edge goes either way,
+ * as a delete response's `{ id }` stub re-creates the entity and a dangling
+ * edge then resolves to a row missing every field.
  */
 export function createRemoveFromQueryConnectionUpdater(
   fieldName: string,
@@ -339,10 +317,9 @@ export function createRemoveFromQueryConnectionUpdater(
 }
 
 /**
- * Add an item to a Connection field nested in a parent entity. With `keyArgs`
- * (e.g. `Pantry.itemsConnection` on `['filters','orderBy']`) `cache.modify` runs
- * for EVERY cached variant and `position` ignores each variant's `orderBy` — scope
- * it with `skipStoreField`.
+ * With `keyArgs` (`Pantry.itemsConnection` on `['filters','orderBy']`),
+ * `cache.modify` runs for EVERY cached variant and `position` ignores each
+ * one's `orderBy`: scope it with `skipStoreField`.
  */
 export function createAddToParentConnectionUpdater<T extends { id: string }>(
   parentTypename: string,
@@ -367,10 +344,9 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
 }
 
 /**
- * Remove an item from a parent entity's Connection field; the same two modes as
- * {@link createRemoveFromQueryConnectionUpdater}. Reports whether an edge was
- * removed, so a caller pairing this with a counter adjusts only on a real change;
- * with `evictItem`, also whether the entity was.
+ * The two modes of {@link createRemoveFromQueryConnectionUpdater}. Reports
+ * whether an edge was removed, so a paired counter moves only on a real
+ * change; with `evictItem`, also whether the entity was.
  */
 export function createRemoveFromParentConnectionUpdater(
   parentTypename: string,
@@ -408,70 +384,6 @@ export function createRemoveFromParentConnectionUpdater(
   };
 }
 
-/**
- * Add an item to a non-Connection array field nested in an entity. With `keyArgs`
- * the ref is inserted into every cached variant regardless of its filter/sort —
- * the same caveat as {@link createAddToParentConnectionUpdater}.
- */
-export function createAddToParentArrayUpdater<T extends { id: string }>(
-  parentTypename: string,
-  arrayField: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    newItem: T,
-    { position = 'start' }: { position?: InsertPosition } = {},
-  ): boolean => {
-    const id = identifyParent(cache, parentTypename, parentId);
-    if (!id) return false;
-    return tryModify(cache, `adding to ${parentTypename}.${arrayField}`, {
-      id,
-      fields: { [arrayField]: addRefModifier(newItem, position) },
-    });
-  };
-}
-
-/**
- * Remove an item from a parent entity's flat array field. A flat array has no
- * `read` policy to drop a dangling ref, so the ref is filtered out even when the
- * entity is evicted.
- */
-export function createRemoveFromParentArrayUpdater(
-  parentTypename: string,
-  arrayField: string,
-  itemTypename: string,
-) {
-  return (
-    cache: ApolloCache,
-    parentId: string,
-    itemId: string,
-    { evictItem = false }: RemoveOptions = {},
-  ): boolean => {
-    try {
-      const id = identifyParent(cache, parentTypename, parentId);
-      if (!id) return false;
-      let removed = false;
-      cache.modify({
-        id,
-        fields: {
-          [arrayField]: removeRefModifier(itemId, () => {
-            removed = true;
-          }),
-        },
-      });
-      if (evictItem) evictEntity(cache, itemTypename, itemId);
-      return removed;
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
-        serializeError(error),
-      );
-      return false;
-    }
-  };
-}
-
 /** Evict one entity, release its retains and gc; use instead of evict + gc. */
 export function safeEvict(
   cache: ApolloCache,
@@ -489,18 +401,17 @@ export function safeEvict(
 }
 
 /**
- * Reconcile a client-minted id with the server's after a create: when the server
- * resolves to an EXISTING row, evict the stale client-id entity so its dangling
- * edge is dropped and one row stands. `clientId` MUST come off the mutation's own
- * `variables` at the call site, never a shared ref, so overlapping creates hold.
+ * When a create resolves to an EXISTING row, evicts the client-id entity so its
+ * dangling edge drops. `clientId` MUST come off the mutation's own `variables`,
+ * never a shared ref, so overlapping creates hold.
  */
 export function adoptServerEntityId(
   cache: ApolloCache,
   typename: string,
-  serverId: string,
+  serverId: string | null | undefined,
   clientId: string | null | undefined,
 ): void {
-  if (clientId && serverId !== clientId) {
+  if (serverId && clientId && serverId !== clientId) {
     safeEvict(cache, typename, clientId);
   }
 }

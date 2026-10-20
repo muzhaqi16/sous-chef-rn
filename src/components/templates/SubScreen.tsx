@@ -1,14 +1,14 @@
 import React from 'react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { BarAction } from '#components/molecules/BarActions';
-import { Screen, type ScreenProps } from './Screen';
+import { Screen, type ScreenHeaderConfig, type ScreenProps } from './Screen';
 
 type WithoutHeader<T> = T extends unknown ? Omit<T, 'header'> : never;
 
 export type SubScreenProps = WithoutHeader<ScreenProps> & {
   title?: string;
   actions?: BarAction[];
-};
+} & Pick<ScreenHeaderConfig, 'onTitlePress' | 'titleAccessory'>;
 
 /**
  * A pushed screen: the standard header with a back control that returns to the
@@ -18,6 +18,8 @@ export type SubScreenProps = WithoutHeader<ScreenProps> & {
 export const SubScreen: React.FC<SubScreenProps> = ({
   title,
   actions,
+  onTitlePress,
+  titleAccessory,
   ...screenProps
 }) => {
   const { goBack } = useAppNavigation();
@@ -25,7 +27,13 @@ export const SubScreen: React.FC<SubScreenProps> = ({
   return (
     <Screen
       {...screenProps}
-      header={{ title: title ?? '', back: goBack, actions }}
+      header={{
+        title: title ?? '',
+        back: goBack,
+        actions,
+        onTitlePress,
+        titleAccessory,
+      }}
     />
   );
 };

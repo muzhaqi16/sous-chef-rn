@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
-import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import {
+  useRecipeIngredientMatching,
+  type CookEntry,
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -10,6 +13,8 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { useSelectedPantryId } from '#store/useAppStore';
+import { cappedNames } from '#/utils/cappedNames';
 
 interface UseRecipeCookingActionsOptions {
   recipeId: string | undefined;
@@ -29,8 +34,11 @@ interface FireMarkCookedVars {
   notes?: string;
 }
 
-/** Names shown before the rest become a count, as the expiry digest does. */
-const SKIPPED_NAME_CAP = 3;
+/** The pantry a deducting cook draws on; omitted, the server picks a default. */
+const deductingFrom = (
+  deductFromPantry: boolean,
+  pantryId: string | null | undefined,
+) => (deductFromPantry && pantryId ? { pantryId } : {});
 
 /** What the cook left undeducted, and whether one cause covers all of it. */
 interface SkippedDeductions {
@@ -45,31 +53,38 @@ export function useRecipeCookingActions({
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
+  // A confirm or a skip of the review records it.
+  const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
+  const pantryId = useSelectedPantryId();
 
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
     context: { localFirst: true },
   });
 
   /**
-   * Fires the cook-log mutation with a client-minted id, so a queued replay
-   * converges on the same log instead of re-deducting the pantry. `failure` is
-   * the message a refused or failed write shows; `skipped` describes the
-   * ingredients NOT deducted, which a bare success toast would hide.
+   * Logs the cook under a minted id, so a replay cannot re-deduct the pantry.
+   * `failure` is shown for a refused or failed write; `skipped` names
+   * ingredients NOT deducted, which a bare success toast hides.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
     const settled = await settleMutation(
       () =>
         markRecipeAsCookedMutation({
-          variables: { input: { ...vars, id } },
+          variables: {
+            input: {
+              ...vars,
+              ...deductingFrom(vars.deductFromPantry, pantryId),
+              id,
+            },
+          },
         }),
       {
         document: MarkRecipeAsCookedDocument,
         fallback: t('recipes.markCookedFailed'),
-        // Every caller reports the cook as a toast.
-        present: 'none',
+        present: 'toast',
       },
     );
 
@@ -83,7 +98,11 @@ export function useRecipeCookingActions({
       });
     }
 
-    const skippedIngredients = payload?.skippedIngredients ?? [];
+    // A line stating no amount ("salt, to taste") has nothing to deduct, so
+    // its skip is the recipe as written, not something for the user to fix.
+    const skippedIngredients = (payload?.skippedIngredients ?? []).filter(
+      item => item.code !== ErrorCode.UnstatedAmount,
+    );
     const skipped = {
       count: skippedIngredients.length,
       // Which lines, so the user knows what to fix. A blank name would read as
@@ -119,8 +138,7 @@ export function useRecipeCookingActions({
         { count },
       );
     }
-    const shown = names.slice(0, SKIPPED_NAME_CAP).join(', ');
-    const remainder = count - Math.min(SKIPPED_NAME_CAP, names.length);
+    const { shown, remainder } = cappedNames(names, count);
     if (remainder > 0) {
       return t(
         allUnitConversion
@@ -154,6 +172,7 @@ export function useRecipeCookingActions({
 
     // Granular deduction: load ingredient matches and open review sheet
     if (input.useGranularDeduction) {
+      setReviewedCook({ servings: input.servings, notes: input.notes });
       void executeWithLoadingState(async () => {
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
@@ -164,10 +183,7 @@ export function useRecipeCookingActions({
             deductFromPantry: input.deductFromPantry,
             notes: input.notes,
           });
-          if (failure) {
-            toastService.error(failure.body);
-            return;
-          }
+          if (failure) return;
           deductionToast(skipped);
         }
       }, setMarkingAsCooked);
@@ -182,10 +198,7 @@ export function useRecipeCookingActions({
         deductFromPantry: input.deductFromPantry,
         notes: input.notes,
       });
-      if (failure) {
-        toastService.error(failure.body);
-        return;
-      }
+      if (failure) return;
 
       if (input.deductFromPantry) {
         deductionToast(skipped);
@@ -195,23 +208,24 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
-  // Skip review handler — falls back to simple markRecipeAsCooked with deductFromPantry: true
+  // Skipping the review lets the server pick the stacks (markRecipeAsCooked).
   const handleSkipReview = () => {
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
       const { failure, skipped } = await fireMarkCooked({
         recipeId,
-        servings: undefined,
+        servings: reviewedCook?.servings,
         deductFromPantry: true,
+        notes: reviewedCook?.notes,
       });
-      if (failure) {
-        toastService.error(failure.body);
-        return;
-      }
+      if (failure) return;
       deductionToast(skipped);
     }, setMarkingAsCooked);
   };
+
+  const handleConfirmReview = () =>
+    ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
 
   return {
     cookedModalVisible,
@@ -219,6 +233,7 @@ export function useRecipeCookingActions({
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
   };
 }

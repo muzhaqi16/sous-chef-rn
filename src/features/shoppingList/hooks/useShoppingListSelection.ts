@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
+import { useActiveShoppingListId } from './useActiveShoppingListId';
 
 const EMPTY_DENIED: ReadonlySet<string> = new Set();
 
 /**
- * Selection over ALL the user's lists; grouping by home is the selector modal's
- * job. Auto-select fills a null selection (so a delete just sets the id to
- * null); a PENDING id — created but not yet in query results — suppresses it,
- * and a DENIED id (FORBIDDEN read, or null data) is excluded for good.
+ * Selection over ALL the user's lists. Auto-select fills a null selection (a
+ * delete just nulls the id); a PENDING id, created but not yet queried,
+ * suppresses it, and a DENIED id (FORBIDDEN or null read) is excluded for good.
  */
 export function useShoppingListSelection(
   allLists: ShoppingListFromQuery[],
@@ -23,11 +23,9 @@ export function useShoppingListSelection(
     ? allLists.filter(l => !deniedListIds.has(l.id))
     : allLists;
 
-  const defaultList = lists.find(list => list.isDefault) ?? lists[0];
-
-  const isInLists =
-    !!selectedShoppingListId &&
-    lists.some(l => l.id === selectedShoppingListId);
+  const currentListId = useActiveShoppingListId(lists);
+  const currentList = lists.find(list => list.id === currentListId);
+  const isInLists = currentListId === selectedShoppingListId;
 
   // An explicit switch (creating a list, say) can target a list the query results
   // do not hold yet; tracking it as pending stops auto-select overriding it.
@@ -56,28 +54,12 @@ export function useShoppingListSelection(
     setPendingId(null);
   }
 
-  const currentListId = isInLists ? selectedShoppingListId : defaultList?.id;
-
-  const currentList =
-    lists.find(list => list.id === currentListId) ?? defaultList;
-
-  // Auto-select when lists load and current selection is invalid
+  // Auto-select when lists load and current selection is invalid. Never over
+  // a pending user selection: the cache hasn't caught up yet.
   useEffect(() => {
-    if (lists.length === 0) return;
-
-    // Don't override a pending user selection — the cache hasn't caught up yet
-    if (pendingId) return;
-
-    const hasValidSelection =
-      selectedShoppingListId &&
-      lists.some(l => l.id === selectedShoppingListId);
-    if (hasValidSelection) return;
-
-    const listToSelect = lists.find(l => l.isDefault) ?? lists[0];
-    if (listToSelect?.id) {
-      setSelectedShoppingListId(listToSelect.id);
-    }
-  }, [lists, selectedShoppingListId, pendingId, setSelectedShoppingListId]);
+    if (!currentListId || isInLists || pendingId) return;
+    setSelectedShoppingListId(currentListId);
+  }, [currentListId, isInLists, pendingId, setSelectedShoppingListId]);
 
   // The persisted id is trusted before the lists load, so the detail/items
   // queries need not wait on GetShoppingListsLite. A stale id reads as null data

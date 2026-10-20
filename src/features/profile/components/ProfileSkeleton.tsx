@@ -15,7 +15,7 @@ const SECTION_ROWS: readonly number[] = [
   3, // Appearance & Language
   1, // Notifications
   1, // Dietary Profile
-  1, // App Settings
+  3, // App Settings
   2, // Security
 ];
 

@@ -1,8 +1,7 @@
 /**
- * Authors and edits meal templates, local-first throughout: create and every
- * item mutation mint a client-side CUID2 the server accepts, so a queued replay
- * converges on the same row rather than duplicating it. Metadata updates
- * snapshot first and revert on a refusal.
+ * Authors and edits meal templates, local-first: create and every item mutation
+ * mint an id the server accepts, so a queued replay converges on the same row.
+ * Metadata updates snapshot first and revert on a refusal.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -63,10 +62,9 @@ const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
 );
 
 /**
- * Materialize a complete `MealTemplateDisplay` entity for a local-first create,
- * mirroring useMealPlanActions' optimistic plan builder. Fallbacks match the
- * server's defaults; `home` degrades to null when only a homeId is known — the
- * post-replay response heals the gap.
+ * A complete `MealTemplateDisplay` for a local-first create. Fallbacks match
+ * the server's defaults; `home` is null when only a homeId is known, until the
+ * replay's response fills it.
  */
 function buildOptimisticMealTemplate(
   id: string,
@@ -132,11 +130,9 @@ export function useMealTemplateEditor() {
     context: { localFirst: true },
   });
 
-  // `AddTemplateItemInput.id` accepts a client-minted CUID2, so a replayed add
-  // resolves to the same row (`IDEMPOTENT_REPLAY`), update writes absolute
-  // fields, and a replayed remove converges rather than 404ing. Each writes the
-  // cache before firing: these mutations return the whole
-  // `mealTemplate { items }` and nothing moves on screen without it.
+  // `AddTemplateItemInput.id` takes a minted id, so a replayed add resolves to
+  // the same row (`IDEMPOTENT_REPLAY`) and a replayed remove converges. Each
+  // writes the cache before firing: offline, no response moves the screen.
 
   // Returns the created template's id (for navigation) or null on failure.
   const createTemplate = async (
@@ -144,10 +140,8 @@ export function useMealTemplateEditor() {
   ): Promise<string | null> => {
     const id = generateEntityId();
 
-    // Local-first: write the template into the cache before firing so an
-    // offline/queued create is visible in the overview immediately (the queued
-    // replay converges on the same client-minted id). Without this, "queued"
-    // reports success while the list shows nothing until a later refetch.
+    // Written before firing so a queued create shows in the overview at once;
+    // without it "queued" reports success over an empty list.
     const optimisticTemplate = user
       ? buildOptimisticMealTemplate(id, input, user.id)
       : null;
@@ -313,10 +307,9 @@ export function useMealTemplateEditor() {
   ): Promise<boolean> => {
     const { id, meal, ...flatFields } = input;
     const previousItem = readTemplateItem(client.cache, id);
-    // `meal` is an @oneOf ref, so it maps to `customMealName` / `recipe`, and
-    // BOTH must move together: the input names one, the entity carries both, so
-    // writing only the named one leaves the row holding the value it was meant
-    // to replace — and offline no response arrives to reconcile it.
+    // `meal` is an @oneOf ref naming one of `customMealName` / `recipe`, but
+    // the entity carries both, so BOTH are written: the other would keep the
+    // value it replaces, and offline no response reconciles it.
     const updates = {
       ...flatFields,
       ...(meal
@@ -327,37 +320,20 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const { persisted } = await updateEntityFieldsLocalFirst({
+    return updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
-      // A key the read did not CARRY is omitted, not recorded as null — the
-      // revert then leaves that field alone instead of blanking a value the
-      // snapshot never saw. `GetMealTemplateForEdit` now selects every field
-      // these updates write, so in practice nothing is omitted here; the
-      // helper is what keeps that true if a field is ever added to the write
-      // and not to the query.
+      // A key the read did not carry is omitted, not recorded as null, so the
+      // revert leaves that field alone rather than blanking a value the
+      // snapshot never saw.
       previous: snapshotFields(previousItem, updates),
-      logLabel: 'Update Template Item',
-      mutate: async () => {
-        const settled = await settleMutation(
-          () =>
-            updateItemMutation({
-              variables: { input },
-            }),
-          {
-            document: UpdateTemplateItemDocument,
-            fallback: t('mealTemplateBuilder.failedToSaveItem'),
-          },
-        );
-        // A failure travels as `error`, which is what makes the helper revert.
-        return settled.failure
-          ? { error: settled.failure }
-          : { data: settled.data };
-      },
+      settle: () =>
+        settleMutation(() => updateItemMutation({ variables: { input } }), {
+          document: UpdateTemplateItemDocument,
+          fallback: t('mealTemplateBuilder.failedToSaveItem'),
+        }),
     });
-
-    return persisted;
   };
 
   /**

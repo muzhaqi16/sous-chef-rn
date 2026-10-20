@@ -31,6 +31,8 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
     id
     name
     symbol
+    # A counted line takes a move's package count as its own (useMoveToPantry).
+    type
   }
   sortOrder
   item {
@@ -98,9 +100,8 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 }
 
 # The whole purchase record on a shopping-list item.
-# Spread by: shoppingList.graphql (UpdateShoppingListItem,
-#   ToggleShoppingListItemPurchased), useShoppingListSubscriptions.graphql
-#   (useShoppingListSubscriptions_item)
+# Spread by: shoppingList.graphql (UpdateShoppingListItem),
+#   useShoppingListSubscriptions.graphql (useShoppingListSubscriptions_item)
 # Read via the cache by: ItemDetail.tsx (which selects these fields inline
 #   rather than spreading this, because a named spread would mask them from
 #   its direct field reads under `dataMasking`)
@@ -124,6 +125,7 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
   purchaseDate
   purchasedBy {
     id
+    displayName
     profile {
       id
       displayName
@@ -175,8 +177,26 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     id
     name
     symbol
+    type
   }
   sortOrder
+  # The row reads it; a write that leaves it out blanks the row.
+  suggestedPrice {
+    amount
+    substitute
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
+  # Store mode totals it before suggestedPrice.
+  priceEstimate {
+    estimated
+  }
+  # Store mode groups by it; a write that leaves it out blanks the row.
+  storeDepartment
+  storeDepartmentOverride
   item {
     id
     imageUrl
@@ -185,6 +205,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
       url
       kind
     }
+    storeDepartment
   }
   shoppingList {
     id
@@ -244,6 +265,10 @@ fragment CopyableShoppingListFragment on ShoppingList {
         }
       }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
   purchasedLines: itemsConnection(
     filters: { isPurchased: true }
@@ -266,6 +291,10 @@ fragment CopyableShoppingListFragment on ShoppingList {
           id
         }
       }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
   }
 }

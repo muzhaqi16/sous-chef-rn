@@ -1,8 +1,7 @@
 import React, { useLayoutEffect } from 'react';
-import { useTranslation } from '#/i18n';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -19,7 +18,8 @@ type ActionButtonProps = {
   style?: StyleProp<ViewStyle>;
   color?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  accessibilityLabel?: string;
+  /** What the button does; its icon's name is no label. */
+  accessibilityLabel: string;
   /** Fill behind the glyph. Animated, so a caller can flip it on a state. */
   backgroundColor?: string;
   /** Pulses and quarter-turns the glyph once, to draw the eye to a change. */
@@ -42,7 +42,6 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   isHighlighted = false,
   testID,
 }) => {
-  const { t } = useTranslation();
   const animatedTheme = useAnimatedTheme();
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -63,31 +62,39 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     );
   }, [isHighlighted, scale, rotation]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(rotation.get(), [0, 1], [0, 90]);
+  // The border and the fill are one view's: drawn on two, Android anti-aliases
+  // each edge apart and the sheet behind shows through the seam as a dark ring.
+  const fillStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
     return {
-      backgroundColor: withTiming(
-        backgroundColor ?? animatedTheme.get().colors.surface,
-        { duration: motion.timing.FAST, easing: motion.easing.standard },
-      ),
-      transform: [{ scale: scale.get() }, { rotate: `${rotate}deg` }],
+      backgroundColor: withTiming(backgroundColor ?? theme.colors.surface, {
+        duration: motion.timing.FAST,
+        easing: motion.easing.standard,
+      }),
+      borderColor: theme.colors.primary,
+      borderWidth: theme.borderWidth.medium,
+      borderRadius: theme.radii.xl,
     };
+  });
+  const glyphStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(rotation.get(), [0, 1], [0, 90]);
+    return { transform: [{ scale: scale.get() }, { rotate: `${rotate}deg` }] };
   });
 
   return (
     <View style={[styles.button, style]}>
-      <Animated.View style={[styles.animatedInner, animatedStyle]}>
-        <IconButton
-          name={name}
-          size={size}
-          tone="primary"
-          color={color}
-          onPress={onPress}
-          testID={testID}
-          accessibilityLabel={
-            accessibilityLabel ?? t('a11y.actionButton', { name })
-          }
-        />
+      <Animated.View style={[styles.fill, fillStyle]}>
+        <Animated.View style={glyphStyle}>
+          <IconButton
+            name={name}
+            size={size}
+            tone="primary"
+            color={color}
+            onPress={onPress}
+            testID={testID}
+            accessibilityLabel={accessibilityLabel}
+          />
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -103,13 +110,11 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     width: theme.sizes.button.md,
     height: theme.sizes.button.md,
-    borderColor: theme.colors.primary,
-    borderWidth: theme.borderWidth.medium,
-    // Clips the animated fill to the radius.
-    overflow: 'hidden',
   },
-  animatedInner: {
+  fill: {
+    alignSelf: 'stretch',
     flex: 1,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },

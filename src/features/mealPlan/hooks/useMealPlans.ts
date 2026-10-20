@@ -1,6 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useToday } from '#hooks/useToday';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { startOfDay } from 'date-fns';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   SortOrder,
@@ -14,7 +14,7 @@ import {
   type MealPlanDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
-  isPlanActiveAt,
+  isPlanActiveOn,
   resolveCurrentMealPlan,
 } from '#features/mealPlan/utils/mealPlanFilters';
 
@@ -109,16 +109,13 @@ export function useMealPlanDisplay(
 export function useMealPlans() {
   const list = useMealPlanList(undefined);
 
-  // `filters.startDate` keeps plans ending today or later; ascending, started
-  // plans lead and the nearest upcoming follows, so the current plan is on page
-  // one unless a full page of plans overlaps today.
-  // Skipped only when the list's page holds a plan ACTIVE today: that beats any
-  // upcoming one. A merely upcoming plan on page one may not be the nearest.
-  const now = new Date();
-  const listActive = list.mealPlans.some(plan => isPlanActiveAt(plan, now));
-  const todayStart = startOfDay(now).toISOString();
+  // `filters.startDate` keeps plans ending today or later, ascending, so the
+  // current plan is on page one unless a full page overlaps today. Skipped once
+  // the list holds a plan ACTIVE today, which beats any upcoming one.
+  const today = useToday();
+  const listActive = list.mealPlans.some(plan => isPlanActiveOn(plan, today));
   const current = useMealPlanList(
-    { startDate: todayStart },
+    { startDate: today },
     {
       orderBy: SortOrder.Asc,
       first: CURRENT_PLAN_PAGE_SIZE,
@@ -128,7 +125,7 @@ export function useMealPlans() {
 
   // The list takes part too: offline, a new day's variant has no cached page.
   const currentPlan =
-    resolveCurrentMealPlan([...current.mealPlans, ...list.mealPlans], now) ??
+    resolveCurrentMealPlan([...current.mealPlans, ...list.mealPlans], today) ??
     list.mealPlans[0] ??
     null;
 

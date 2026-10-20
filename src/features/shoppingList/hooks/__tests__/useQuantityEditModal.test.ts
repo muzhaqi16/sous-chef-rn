@@ -1,3 +1,4 @@
+import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -7,36 +8,27 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  DisplayFormat,
+  ErrorCode,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 function updateMock() {
-  return recordMock(UpdateShoppingListItemQuantityDocument, {
+  return recordMock(UpdateShoppingListItemDocument, {
     data: {
-      updateShoppingListItemQuantity: {
-        __typename: 'UpdateShoppingListItemQuantityPayload',
-        shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+      updateShoppingListItem: {
+        __typename: 'UpdateShoppingListItemPayload',
+        shoppingListItem: { id: 'item-1' },
       },
     },
   });
 }
 
-const mockAlert = jest.fn();
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
+const mockAlert = jest.mocked(alertService.alert);
 
 const QUANTITY = gql`
   fragment QuantityEditProbe on ShoppingListItem {
@@ -52,7 +44,13 @@ jest.mock('#utils/imageUtils', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
 });
+
+const readPersisted = () => {
+  optimisticDataPersistence.flush();
+  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
+};
 
 function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
@@ -76,7 +74,13 @@ function createItem(
       movedToPantryAt: null,
       isPurchased: false,
     },
-    unit: { __typename: 'Unit', id: 'unit-1', name: 'gallon', symbol: 'gal' },
+    unit: {
+      __typename: 'Unit',
+      id: 'unit-1',
+      name: 'gallon',
+      symbol: 'gal',
+      type: UnitType.Volume,
+    },
     item: null,
     ...overrides,
   };
@@ -228,20 +232,43 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired).toContainEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '5',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
+  // An omitted unit is left as it is; a null one would clear it.
+  it('leaves the unit out of the update when none is chosen', async () => {
+    const m = updateMock();
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('5', null, null);
+    });
+
+    expect(m.fired).toEqual([
+      { input: { id: 'item-1', quantity: '5', version: 3 } },
+    ]);
+  });
+
   it('sends a comma decimal to the API with the separator normalized', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -262,9 +289,9 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '1.5',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
@@ -277,11 +304,11 @@ describe('useQuantityEditModal', () => {
   it('stores the quantity the person typed, not a thousand-fold of it', async () => {
     (getDeviceDecimalSeparator as jest.Mock).mockReturnValue(',');
 
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -296,30 +323,30 @@ describe('useQuantityEditModal', () => {
       result.current.openForItem('item-1');
     });
 
+    let persisted: Record<string, unknown> = {};
     await act(async () => {
-      await result.current.save('1,125', 'gal', 'unit-1');
+      const pending = result.current.save('1,125', 'gal', 'unit-1');
+      persisted = readPersisted();
+      await pending;
     });
 
-    const saved = (optimisticDataPersistence.save as jest.Mock).mock.calls.find(
-      call => call[2] === 'quantity',
-    );
-    expect(saved?.[3]).toBeCloseTo(1.125, 3);
+    expect(persisted.quantity).toBeCloseTo(1.125, 3);
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '1.125',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
   it('passes a mixed number through untouched', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
-          __typename: 'UpdateShoppingListItemQuantityPayload',
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          shoppingListItem: { id: 'item-1' },
         },
       },
     });
@@ -340,18 +367,18 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
-        itemId: 'item-1',
+        id: 'item-1',
         quantity: '2 1/3',
-        unitId: 'unit-1',
+        unit: { id: 'unit-1' },
         version: 3,
       },
     });
   });
 
   it('keeps the sheet open and alerts when the server refuses the quantity', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       data: {
-        updateShoppingListItemQuantity: {
+        updateShoppingListItem: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
           message: 'Invalid fraction format',
@@ -390,7 +417,7 @@ describe('useQuantityEditModal', () => {
   // A failure the server gave no verdict on still gets exactly ONE message: the
   // caller's copy, since there is no code to say anything more specific.
   it('alerts a transport failure once and keeps the sheet open', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+    const m = recordMock(UpdateShoppingListItemDocument, {
       error: new Error('network down'),
     });
     const items = [createItem()];
@@ -421,8 +448,8 @@ describe('useQuantityEditModal', () => {
   // "queued for replay". That is an acceptance, not a failure: the queue
   // replays it later, so the sheet must close silently rather than alert.
   it('closes without alerting when the write is queued offline', async () => {
-    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
-      data: { updateShoppingListItemQuantity: null },
+    const m = recordMock(UpdateShoppingListItemDocument, {
+      data: { updateShoppingListItem: null },
     });
     const items = [createItem()];
 
@@ -455,8 +482,8 @@ describe('useQuantityEditModal', () => {
           version: 3,
         },
       ]);
-      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
-        data: { updateShoppingListItemQuantity: member },
+      const m = recordMock(UpdateShoppingListItemDocument, {
+        data: { updateShoppingListItem: member },
       });
       const rendered = renderHookWithApollo(
         () => useQuantityEditModal({ items: [createItem()] }),
@@ -486,18 +513,10 @@ describe('useQuantityEditModal', () => {
         quantity: 1.5,
         quantityInput: '1 1/2',
       });
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-        1.5,
-      );
-      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantityInput',
-        '1 1/2',
-      );
+      expect(readPersisted()).toEqual({
+        quantity: 1.5,
+        quantityInput: '1 1/2',
+      });
     });
 
     it('puts the previous quantity back and drops the record when the server refuses', async () => {
@@ -516,11 +535,7 @@ describe('useQuantityEditModal', () => {
       });
 
       expect(readQuantity()).toMatchObject({ quantity: 2, quantityInput: '2' });
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-      );
+      expect(readPersisted()).toEqual({});
     });
   });
 

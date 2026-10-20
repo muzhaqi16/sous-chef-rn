@@ -108,6 +108,12 @@ const RESTRICTED_IMPORT_PATHS = [
       "Don't branch an animation on reduce motion — `withTiming`, `withSpring`, `withRepeat` and the entering/exiting builders already collapse under the OS setting with no config, so a component that checks it is a second mechanism for a concern the library owns. `useMotionEnabled` from '#hooks/animations/useMotionEnabled' is the ONE read, and only for what a zero duration cannot stop: a loop's resting state, an ambient illustration.",
   },
   {
+    name: 'react-native-unistyles/reanimated',
+    importNames: ['useAnimatedTheme'],
+    message:
+      "Use `useAnimatedTheme` from '#hooks/ui/useAnimatedTheme'. Unistyles' own drops its listener while a paused screen is hidden and re-subscribes without re-reading the theme, so a screen revealed after a theme change keeps animating in the old one. See docs/verified-library-behaviour.md § Unistyles' useAnimatedTheme misses a theme change made while its screen is paused.",
+  },
+  {
     name: '#/i18n/config',
     importNames: ['getI18n'],
     message:

@@ -22,7 +22,10 @@ import { errorService } from '#/services/errorService';
  */
 
 const SCHEMA_CODES = [
-  ...new Set([...Object.values(ErrorCode), ...Object.values(TopLevelErrorCode)]),
+  ...new Set([
+    ...Object.values(ErrorCode),
+    ...Object.values(TopLevelErrorCode),
+  ]),
 ].sort();
 
 describe('every schema error code has localized copy', () => {

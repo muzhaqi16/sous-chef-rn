@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { useTranslation } from '#/i18n';
 import { Header } from '#components/organisms/Header';
@@ -37,7 +38,12 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <View style={commonStyles.sheetHeaderBleed(contentPadding)}>
+    <View
+      style={[
+        commonStyles.sheetHeaderBleed(contentPadding),
+        !borderless && styles.belowDivider,
+      ]}
+    >
       <Header
         title={title}
         centerTitle
@@ -63,3 +69,10 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  // The body starts clear of the divider in every sheet, as BottomSheetHeader's does.
+  belowDivider: {
+    marginBottom: theme.spacing.md,
+  },
+}));

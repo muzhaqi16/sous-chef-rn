@@ -6,19 +6,30 @@ import type { InMemoryCache } from '@apollo/client';
 import { gql, ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { seedCache } from '#/test-utils/apolloMockProvider';
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import type {
+  MockDataFor,
+  MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  recordMock,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
+import {
+  ConvertExpiredToWasteDocument,
+  GetPantryItemBatchesDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { ItemCondition, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { todayKey } from '#/utils/dateUtils';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  optimisticDataPersistence.clearAll();
+});
 
 const READ_STATE = gql`
   fragment _readConvertState on PantryItem {
@@ -29,41 +40,69 @@ const READ_STATE = gql`
   }
 `;
 
+const SEEDED_STATE = {
+  quantity: 4,
+  heldQuantity: 4,
+  condition: ItemCondition.Good,
+};
+
 const seedItem = () =>
-  seedCache([
-    {
-      __typename: 'PantryItem',
-      id: 'item-1',
-      quantity: 4,
-      heldQuantity: 4,
-      condition: ItemCondition.Good,
-    },
-  ]);
+  seedCache([{ __typename: 'PantryItem', id: 'item-1', ...SEEDED_STATE }]);
 
 const readState = (cache: InMemoryCache) =>
-  cache.readFragment<{ quantity: number; condition: ItemCondition }>({
+  cache.readFragment<{
+    quantity: number;
+    heldQuantity: number;
+    condition: ItemCondition;
+  }>({
     id: 'PantryItem:item-1',
     fragment: READ_STATE,
   });
 
+/** What survives a cold start for the item — the queued convert's own values. */
+const persistedState = () => {
+  optimisticDataPersistence.flush();
+  return optimisticDataPersistence.get('PantryItem', 'item-1');
+};
+
+type ConvertData = MockDataFor<typeof ConvertExpiredToWasteDocument>;
+
+const convertMock = (data: ConvertData) =>
+  recordMock(ConvertExpiredToWasteDocument, { data }).mock;
+
+// Offline-queued signature: top-level field null, no error.
+const QUEUED: ConvertData = { convertExpiredToWaste: null };
+
+const NOT_FOUND: ConvertData = {
+  convertExpiredToWaste: {
+    __typename: 'NotFoundError',
+    code: ErrorCode.NotFound,
+    message: 'Pantry item not found',
+    resource: 'PantryItem',
+    resourceId: 'item-1',
+  },
+};
+
+interface CapturedOperation {
+  context: Record<string, unknown>;
+  variables: Record<string, unknown>;
+}
+
 /**
  * Render the hook against a real link chain so the mutation `context` and
- * `variables` can be captured off the operation. A leading tap link records
- * `getContext()` (plus the operation `variables`, where the idempotencyKey now
- * lives) for the convert op, then forwards to a `MockLink` serving the supplied
+ * `variables` can be captured off the operation: a leading tap link records
+ * both for the convert op, then forwards to a `MockLink` serving the supplied
  * responses.
  */
-function renderConvert(
-  cache: InMemoryCache,
-  mocks: MockedResponse[],
-  capturedContexts: Array<Record<string, unknown>>,
-) {
+function renderConvert(cache: InMemoryCache, mocks: MockedResponse[]) {
+  const fired: CapturedOperation[] = [];
+  const onSuccess = jest.fn();
   const tapLink = new ApolloLink((operation, forward) => {
     if (
       operation.operationName === operationNameOf(ConvertExpiredToWasteDocument)
     ) {
-      capturedContexts.push({
-        ...operation.getContext(),
+      fired.push({
+        context: operation.getContext(),
         variables: operation.variables,
       });
     }
@@ -71,36 +110,53 @@ function renderConvert(
   });
   const client = new ApolloClient({
     cache,
-    link: ApolloLink.from([tapLink, new MockLink(mocks)]),
+    link: ApolloLink.from([
+      tapLink,
+      new MockLink(mocks.map(completeMockedResponse)),
+    ]),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
   const wrapper = ({ children }: { children: ReactNode }) =>
     React.createElement(ApolloProvider, { client, children });
-  return renderHook(() => useConvertExpiredToWaste(), { wrapper });
+  const rendered = renderHook(() => useConvertExpiredToWaste({ onSuccess }), {
+    wrapper,
+  });
+  return { ...rendered, fired, onSuccess };
 }
 
-describe('useConvertExpiredToWaste (local-first)', () => {
-  it('optimistically sets quantity 0 + SPOILED before settle, fires with localFirst + input.idempotencyKey, and a queued (null) result keeps it', async () => {
+/** The one request the convert sent: local-first, keyed, dated at the tap. */
+function expectConvertSent(fired: CapturedOperation[]) {
+  expect(fired).toHaveLength(1);
+  const [sent] = fired;
+  // The server dedups a replay on `input.idempotencyKey`; `operationId` is unused.
+  expect(sent?.context.localFirst).toBe(true);
+  expect(sent?.context.operationId).toBeUndefined();
+  expect(sent?.variables).toEqual({
+    today: todayKey(),
+    input: {
+      pantryItemId: 'item-1',
+      idempotencyKey: expect.any(String),
+      today: todayKey(),
+    },
+  });
+  const { idempotencyKey } = sent?.variables.input as {
+    idempotencyKey: string;
+  };
+  expect(idempotencyKey.length).toBeGreaterThan(0);
+}
+
+describe('useConvertExpiredToWaste — a stack with no batches', () => {
+  it('writes quantity 0 + SPOILED before settle, sends the dated keyed input, and a queued (null) result keeps it', async () => {
     const cache = seedItem();
-    const contexts: Array<Record<string, unknown>> = [];
-    const { result } = renderConvert(
-      cache,
-      [
-        {
-          request: {
-            query: ConvertExpiredToWasteDocument,
-            variables: () => true,
-          },
-          // Offline-queued signature: top-level field null, no error.
-          result: { data: { convertExpiredToWaste: null } },
-        },
-      ],
-      contexts,
-    );
+    const { result, fired, onSuccess } = renderConvert(cache, [
+      convertMock(QUEUED),
+    ]);
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      const promise = result.current.convertExpiredToWaste('item-1');
+      const promise = result.current.convertExpiredToWaste('item-1', {
+        hasBatches: false,
+      });
       // Synchronous permanent write — visible before the mutation settles.
       expect(readState(cache)).toMatchObject({
         quantity: 0,
@@ -111,65 +167,138 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     });
 
     expect(resolved).toBe(true);
-    // Queued result keeps the optimistic state for replay.
+    // Queued result keeps the optimistic state for replay, in the cache and
+    // across a cold start.
     expect(readState(cache)).toMatchObject({
       quantity: 0,
       heldQuantity: 0,
       condition: ItemCondition.Spoiled,
     });
-
-    // Fired with localFirst + a non-empty input.idempotencyKey (the server
-    // dedups the replay on it; operationId is unused).
-    expect(contexts).toHaveLength(1);
-    expect(contexts[0]?.localFirst).toBe(true);
-    expect(contexts[0]?.operationId).toBeUndefined();
-    const vars = contexts[0]?.variables as {
-      input?: { idempotencyKey?: string };
-    };
-    expect(typeof vars.input?.idempotencyKey).toBe('string');
-    expect((vars.input?.idempotencyKey as string).length).toBeGreaterThan(0);
+    expect(persistedState()).toEqual({
+      quantity: 0,
+      heldQuantity: 0,
+      condition: ItemCondition.Spoiled,
+    });
+    expectConvertSent(fired);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith({ hasBatches: false });
   });
 
   it('reverts quantity + condition on a rejection (error-union result)', async () => {
     const cache = seedItem();
-    const contexts: Array<Record<string, unknown>> = [];
-    const { result } = renderConvert(
-      cache,
-      [
-        {
-          request: {
-            query: ConvertExpiredToWasteDocument,
-            variables: () => true,
-          },
-          result: {
-            data: {
-              convertExpiredToWaste: {
-                __typename: 'NotFoundError',
-                code: ErrorCode.NotFound,
-                message: 'Pantry item not found',
-                resource: 'PantryItem',
-                resourceId: 'item-1',
-              },
-            },
-          },
-        },
-      ],
-      contexts,
-    );
+    const { result, onSuccess } = renderConvert(cache, [
+      convertMock(NOT_FOUND),
+    ]);
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      resolved = await result.current.convertExpiredToWaste('item-1');
+      resolved = await result.current.convertExpiredToWaste('item-1', {
+        hasBatches: false,
+      });
     });
 
     expect(resolved).toBe(false);
-    expect(readState(cache)).toMatchObject({
-      quantity: 4,
-      heldQuantity: 4,
-      condition: ItemCondition.Good,
-    });
+    expect(readState(cache)).toMatchObject(SEEDED_STATE);
+    expect(persistedState()).toEqual({});
+    expect(onSuccess).not.toHaveBeenCalled();
     // A refusal resolves as data; the hook still tells the user, in the copy
     // for a missing record rather than the server's text.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('errors.notFoundTitle'),
+      expect.stringContaining('could not be found'),
+    );
+  });
+});
+
+describe('useConvertExpiredToWaste — a stack held in batches', () => {
+  it('writes nothing ahead of the answer, sends the dated keyed input, and a queued (null) result leaves the stack as it was', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+    const cache = seedItem();
+    const { result, fired, onSuccess } = renderConvert(cache, [
+      convertMock(QUEUED),
+    ]);
+
+    let resolved: unknown = 'unset';
+    await act(async () => {
+      const promise = result.current.convertExpiredToWaste('item-1', {
+        hasBatches: true,
+      });
+      // Which batches expired is the server's to say: no optimistic write.
+      expect(readState(cache)).toMatchObject(SEEDED_STATE);
+      resolved = await promise;
+    });
+
+    expect(resolved).toBe(true);
+    expect(readState(cache)).toMatchObject(SEEDED_STATE);
+    expect(persistedState()).toEqual({});
+    expectConvertSent(fired);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
+    // Nothing to read yet: the resync after the queue drains re-reads them.
+    expect(refetchQueries).not.toHaveBeenCalled();
+    refetchQueries.mockRestore();
+  });
+
+  it('takes the stack the server recomputed when the convert applies', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+    const cache = seedItem();
+    const { result, onSuccess } = renderConvert(cache, [
+      convertMock({
+        convertExpiredToWaste: {
+          __typename: 'ConvertExpiredToWastePayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'item-1',
+            quantity: 1,
+            heldQuantity: 1,
+            condition: ItemCondition.Good,
+            activeBatchCount: 1,
+          },
+        },
+      }),
+    ]);
+
+    let resolved: unknown = 'unset';
+    await act(async () => {
+      resolved = await result.current.convertExpiredToWaste('item-1', {
+        hasBatches: true,
+      });
+    });
+
+    expect(resolved).toBe(true);
+    // Only the expired batches left: the stack is not zeroed or spoiled.
+    expect(readState(cache)).toMatchObject({
+      quantity: 1,
+      heldQuantity: 1,
+      condition: ItemCondition.Good,
+    });
+    expect(persistedState()).toEqual({});
+    expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
+    // The answer restates the stack, not its batches: they are read again, or
+    // the wasted batch would stay listed with its discard still on offer.
+    expect(refetchQueries).toHaveBeenCalledTimes(1);
+    expect(refetchQueries).toHaveBeenCalledWith({
+      include: [GetPantryItemBatchesDocument],
+    });
+    refetchQueries.mockRestore();
+  });
+
+  it('alerts, reports no success and leaves the stack alone on a rejection (error-union result)', async () => {
+    const cache = seedItem();
+    const { result, onSuccess } = renderConvert(cache, [
+      convertMock(NOT_FOUND),
+    ]);
+
+    let resolved: unknown = 'unset';
+    await act(async () => {
+      resolved = await result.current.convertExpiredToWaste('item-1', {
+        hasBatches: true,
+      });
+    });
+
+    expect(resolved).toBe(false);
+    expect(readState(cache)).toMatchObject(SEEDED_STATE);
+    expect(onSuccess).not.toHaveBeenCalled();
     expect(alertService.alert).toHaveBeenCalledWith(
       t('errors.notFoundTitle'),
       expect.stringContaining('could not be found'),

@@ -8,8 +8,6 @@ import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shopping
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnboardingInvites';
 
-jest.mock('#/utils/finallyHelpers');
-
 const renderHook = (operationMocks: MockedResponse[]) =>
   renderHookWithApollo(() => useSendOnboardingInvites(), {
     operationMocks,

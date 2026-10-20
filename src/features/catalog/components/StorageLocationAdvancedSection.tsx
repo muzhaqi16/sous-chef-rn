@@ -1,21 +1,15 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';
-import { Icon } from '#utils/iconUtils';
 
 import { Text } from '#components/atoms/Text';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { buildCapacityUnitOptions } from '#features/catalog/components/storageLocationFormConfig';
 import { motion } from '#/theme/foundations/motion';
 
@@ -24,6 +18,8 @@ interface StorageLocationAdvancedSectionProps {
   capacity: string;
   capacityUnit: string;
   isDefault: boolean;
+  /** False for the current default, which only another location can take. */
+  canChangeDefault: boolean;
   onToggleClimateControlled: () => void;
   onCapacityChange: (capacity: string) => void;
   onCapacityUnitChange: (capacityUnit: string) => void;
@@ -42,6 +38,7 @@ export const StorageLocationAdvancedSection: React.FC<
   capacity,
   capacityUnit,
   isDefault,
+  canChangeDefault,
   onToggleClimateControlled,
   onCapacityChange,
   onCapacityUnitChange,
@@ -49,17 +46,6 @@ export const StorageLocationAdvancedSection: React.FC<
 }) => {
   const { t } = useTranslation();
   const [advancedExpanded, setAdvancedExpanded] = useState(false);
-  const chevronRotation = useSharedValue(0);
-
-  useLayoutEffect(() => {
-    chevronRotation.set(
-      withSpring(advancedExpanded ? 180 : 0, motion.spring.EXPAND),
-    );
-  }, [advancedExpanded, chevronRotation]);
-
-  const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.get()}deg` }],
-  }));
 
   return (
     <>
@@ -70,9 +56,7 @@ export const StorageLocationAdvancedSection: React.FC<
         <Text role="label" tone="secondary">
           {t('storageLocationForm.advancedSettings')}
         </Text>
-        <Animated.View style={animatedChevronStyle}>
-          <Icon name="chevron-down" size={20} tone="textSecondary" />
-        </Animated.View>
+        <ExpandChevron expanded={advancedExpanded} />
       </AppPressable>
       {advancedExpanded ? (
         <Animated.View
@@ -95,7 +79,7 @@ export const StorageLocationAdvancedSection: React.FC<
               containerStyle={styles.capacityInput}
             />
             <FormSelect
-              label={t('storageLocationForm.unit')}
+              label={t('labels.unit')}
               value={capacityUnit}
               onValueChange={onCapacityUnitChange}
               options={buildCapacityUnitOptions(t)}
@@ -104,11 +88,13 @@ export const StorageLocationAdvancedSection: React.FC<
             />
           </View>
 
-          <FormCheckbox
-            label={t('storageLocationForm.setAsDefault')}
-            checked={isDefault}
-            onPress={onToggleDefault}
-          />
+          {canChangeDefault ? (
+            <FormCheckbox
+              label={t('storageLocationForm.setAsDefault')}
+              checked={isDefault}
+              onPress={onToggleDefault}
+            />
+          ) : null}
         </Animated.View>
       ) : null}
     </>

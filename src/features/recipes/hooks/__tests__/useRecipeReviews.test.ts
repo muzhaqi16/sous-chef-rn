@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
@@ -16,69 +17,24 @@ import {
 import { useRecipeReviews } from '../useRecipeReviews';
 import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
-import type { toastService } from '#/services/toastService';
-import type { GetRecipeReviewsQuery } from '#features/recipes/graphql/recipe.generated';
-import type { Unmasked } from '@apollo/client/masking';
 
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (...args: Parameters<typeof toastService.success>) =>
-      mockToastSuccess(...args),
-    error: (...args: Parameters<typeof toastService.error>) =>
-      mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
-// Break circular dependency
-jest.mock('#/apollo/links/tokenScheduler');
-
-type ReviewNode = NonNullable<
-  Unmasked<GetRecipeReviewsQuery>['recipe']
->['reviewsConnection']['edges'][number]['node'];
-
-function buildReviewNode(
+/** A review as the list reads it: its order, its author and the viewer's vote. */
+const buildReviewNode = (
   id: string,
-  rating: number,
   helpful: number,
-  createdAt: string,
-  user: { id: string },
+  userId: string,
   // Server-computed for the requesting user, so it's a flag rather than a
   // voter list — the API windows `helpfulVotes` and so cannot answer
   // "did I vote".
   viewerHasVotedHelpful: boolean = false,
-): ReviewNode {
-  return {
-    __typename: 'RecipeReview',
-    id,
-    rating,
-    comment: id === 'rev-1' ? 'Great!' : 'Good',
-    helpful,
-    verified: false,
-    createdAt,
-    updatedAt: createdAt,
-    user: {
-      __typename: 'User',
-      id: user.id,
-      email: `${user.id}@test.com`,
-      displayName: null,
-      profile: {
-        __typename: 'UserProfile',
-        id: `${user.id}-profile`,
-        displayName: user.id,
-        avatar: null,
-      },
-    },
-    viewerHasVotedHelpful,
-  };
-}
+) => ({ id, helpful, user: { id: userId }, viewerHasVotedHelpful });
 
 function buildGetRecipeReviewsMock(
   recipeId: string = 'recipe-1',
@@ -87,15 +43,8 @@ function buildGetRecipeReviewsMock(
   const nodes = reviewNodes ?? [
     // rev-1 is someone else's review that the viewer has marked helpful;
     // rev-2 is the viewer's own, unvoted.
-    buildReviewNode(
-      'rev-1',
-      5,
-      3,
-      '2025-01-01T00:00:00Z',
-      { id: 'user-2' },
-      true,
-    ),
-    buildReviewNode('rev-2', 4, 1, '2025-01-02T00:00:00Z', { id: 'user-1' }),
+    buildReviewNode('rev-1', 3, 'user-2', true),
+    buildReviewNode('rev-2', 1, 'user-1'),
   ];
 
   return {
@@ -106,15 +55,10 @@ function buildGetRecipeReviewsMock(
     result: {
       data: {
         recipe: {
-          __typename: 'Recipe',
           id: recipeId,
           reviewsConnection: {
-            __typename: 'RecipeReviewConnection',
             totalCount: nodes.length,
-            edges: nodes.map(node => ({
-              __typename: 'RecipeReviewEdge',
-              node,
-            })),
+            edges: nodes.map(node => ({ node })),
           },
         },
       },
@@ -151,13 +95,7 @@ function buildCreateReviewMock(): MockFor<typeof CreateRecipeReviewDocument> {
           // `recipeReview`. `code`/`message` are selected on the ERROR members
           // of the union, and `success` is on none of them.
           __typename: 'CreateRecipeReviewPayload',
-          recipeReview: buildReviewNode(
-            'rev-new',
-            5,
-            0,
-            '2025-01-03T00:00:00Z',
-            { id: 'user-1' },
-          ),
+          recipeReview: buildReviewNode('rev-new', 0, 'user-1'),
         },
       },
     },
@@ -174,10 +112,7 @@ function buildDeleteReviewMock(): MockFor<typeof DeleteRecipeReviewDocument> {
       data: {
         deleteRecipeReview: {
           __typename: 'DeleteRecipeReviewPayload',
-          recipeReview: {
-            __typename: 'RecipeReview',
-            id: 'rev-2',
-          },
+          recipeReview: { id: 'rev-2' },
         },
       },
     },
@@ -200,6 +135,8 @@ const makeBackendRecipe = (
   isPublished: false,
   publishedAt: null,
   reviewNote: null,
+  pendingRevision: null,
+  latestRevision: null,
   forkedFromId: null,
   forkedFrom: null,
   originalAuthor: null,
@@ -208,6 +145,7 @@ const makeBackendRecipe = (
   tags: [],
   source: null,
   sourceUrl: null,
+  dataAttributions: [],
   instructions: null,
   isExternal: false,
   sourceMapping: null,
@@ -216,6 +154,8 @@ const makeBackendRecipe = (
   ingredientsConnection: {
     __typename: 'RecipeIngredientConnection',
     edges: [],
+    pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
+    totalCount: 0,
   },
   totalReviews: 3,
   averageRating: 4.2,
@@ -401,11 +341,6 @@ describe('useRecipeReviews', () => {
               data: {
                 toggleReviewHelpful: {
                   __typename: 'ToggleReviewHelpfulPayload',
-                  reviewHelpful: {
-                    __typename: 'ReviewHelpful',
-                    id: 'vote-1',
-                    user: { __typename: 'User', id: 'user-1' },
-                  },
                 },
               },
             },
@@ -492,9 +427,7 @@ describe('useRecipeReviews', () => {
     const data: MockDataFor<typeof CreateRecipeReviewDocument> = {
       createRecipeReview: {
         __typename: 'CreateRecipeReviewPayload',
-        recipeReview: buildReviewNode('rev-new', 5, 0, '2025-01-03T00:00:00Z', {
-          id: 'user-1',
-        }),
+        recipeReview: buildReviewNode('rev-new', 0, 'user-1'),
       },
     };
     const { mock, fired } = recordMock(CreateRecipeReviewDocument, {
@@ -563,18 +496,8 @@ describe('useRecipeReviews', () => {
       const data: MockDataFor<typeof CreateRecipeReviewDocument> = {
         createRecipeReview: {
           __typename: 'CreateRecipeReviewPayload',
-          recipeReview: {
-            __typename: 'RecipeReview',
-            id: 'rev-new',
-            rating: 5,
-          },
-          recipe: {
-            __typename: 'Recipe',
-            id: 'recipe-1',
-            totalReviews: 4,
-            rating4Count: 1,
-            rating5Count: 2,
-          },
+          recipeReview: { id: 'rev-new' },
+          recipe: { id: 'recipe-1', totalReviews: 4, rating5Count: 2 },
         },
       };
       const cache = seededCache();
@@ -608,14 +531,8 @@ describe('useRecipeReviews', () => {
       const data: MockDataFor<typeof UpdateRecipeReviewDocument> = {
         updateRecipeReview: {
           __typename: 'UpdateRecipeReviewPayload',
-          recipeReview: { __typename: 'RecipeReview', id: 'rev-2', rating: 5 },
-          recipe: {
-            __typename: 'Recipe',
-            id: 'recipe-1',
-            totalReviews: 3,
-            rating4Count: 0,
-            rating5Count: 2,
-          },
+          recipeReview: { id: 'rev-2' },
+          recipe: { id: 'recipe-1', rating4Count: 0, rating5Count: 2 },
         },
       };
       const cache = seededCache();

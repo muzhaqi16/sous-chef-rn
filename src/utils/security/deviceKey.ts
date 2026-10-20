@@ -8,6 +8,7 @@ import {
   resetGenericPassword,
 } from 'react-native-keychain';
 import { logger } from '#/utils/environment';
+import { backoffDelay, sleep } from '#/utils/backoff';
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_USERNAME = 'device_key';
 
@@ -66,8 +67,6 @@ function generateKeyMaterial(): string {
 const KEY_FETCH_ATTEMPTS = 3;
 const RETRY_DELAY_BASE_MS = 200;
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 interface DeviceKeyOptions {
   forceRegenerate?: boolean;
 }
@@ -118,7 +117,9 @@ export class DeviceKeyManager {
           error,
         );
         if (attempt < KEY_FETCH_ATTEMPTS) {
-          await delay(RETRY_DELAY_BASE_MS * attempt);
+          await sleep(
+            backoffDelay(attempt - 1, { baseMs: RETRY_DELAY_BASE_MS }),
+          );
         }
       }
     }
@@ -194,10 +195,9 @@ async function readKeyFromKeychain(): Promise<string | null> {
 }
 
 /**
- * Write the device key to the keychain with hardware-backed storage.
- * No access control is set — the key must be readable on every cold start
- * without prompting the user. WHEN_UNLOCKED_THIS_DEVICE_ONLY already ensures
- * the key is only accessible while the device is unlocked.
+ * Hardware-backed, with no access control: the key is read on every cold start
+ * without a prompt, and WHEN_UNLOCKED_THIS_DEVICE_ONLY already limits it to an
+ * unlocked device.
  */
 async function writeKeyToKeychain(key: string): Promise<boolean> {
   const hardwareOptions = {

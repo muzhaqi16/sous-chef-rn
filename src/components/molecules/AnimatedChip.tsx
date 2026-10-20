@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
   FadeIn,
@@ -137,7 +137,6 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     };
   });
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer Animated.View
   // Layout animation on outer container so Pressable doesn't conflict with it
   return (
     <Animated.View style={styles.container} layout={CHIP_LAYOUT_TRANSITION}>

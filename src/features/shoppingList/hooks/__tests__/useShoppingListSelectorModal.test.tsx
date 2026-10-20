@@ -1,12 +1,13 @@
 'use no memo';
 
-import type { ReactElement } from 'react';
+import { isValidElement, type ReactElement } from 'react';
 import { act, render, screen } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   useShoppingListSelectorModal,
   type ShoppingListSelectorItem,
 } from '../useShoppingListSelectorModal';
+import { PendingListInvites } from '#features/shoppingList/components/PendingListInvites';
 
 // Section headers injected into the grouped data by the hook.
 interface SectionHeader {
@@ -85,16 +86,19 @@ const mount = (element: ReactElement) => render(element);
 const iconCount = (name: string) =>
   screen.UNSAFE_queryAllByProps({ name }).length;
 
-// Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNav = {
   toListSettings: jest.fn(),
   toShareList: jest.fn(),
 };
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => mockNav),
+}));
+
+jest.mock('#hooks/auth/useEmailVerification', () => ({
+  useVerifiedEmailGate: jest.fn(() => ({
+    requireVerifiedEmail: jest.fn(() => true),
+    hasUnverifiedEmail: false,
+  })),
 }));
 
 const mockSetOverlayOpen = jest.fn();
@@ -133,25 +137,11 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
     unregisterParentDeletion: jest.fn(),
   },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
 }));
 
 jest.mock('#store', () => ({
@@ -874,6 +864,25 @@ describe('useShoppingListSelectorModal', () => {
   });
 
   describe('listConfig properties', () => {
+    it('heads the lists with the pending invitations, selecting what an accept joins', () => {
+      const setSelectedShoppingListId = jest.fn();
+      const { result } = renderHook(() =>
+        useShoppingListSelectorModal({
+          listDataWithOwnership: makeLists(),
+          currentListId: 'list-1',
+          setSelectedShoppingListId,
+        }),
+      );
+
+      const { listHeader } = result.current.listConfig;
+      if (!isValidElement(listHeader)) throw new Error('no list header');
+      expect(listHeader.type).toBe(PendingListInvites);
+      expect(listHeader.props).toEqual({
+        onAccepted: setSelectedShoppingListId,
+        requireVerifiedEmail: expect.any(Function),
+      });
+    });
+
     it('loading is always false', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({

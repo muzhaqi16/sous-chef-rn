@@ -29,14 +29,14 @@ interface AddArgs {
 }
 
 interface MoveArgs {
-  input: { itemId: string; afterItemId?: string | null };
+  input: { id: string; afterItemId?: string | null };
 }
 
 /** The server: rows it holds, and each write in the order it arrived. */
 function serverResolvers(existingIds: string[]) {
   const rows = new Set(existingIds);
   const arrivals: string[] = [];
-  const line = (id: string) => ({ __typename: 'ShoppingListItem', id });
+  const line = (id: string) => ({ id });
   const resolvers = () => ({
     Mutation: {
       addItemsToShoppingList: (_: unknown, { input }: AddArgs) => {
@@ -46,7 +46,6 @@ function serverResolvers(existingIds: string[]) {
         return {
           __typename: 'AddItemsToShoppingListPayload',
           results: ids.map((id, index) => ({
-            __typename: 'BatchAddShoppingListItemResult',
             index,
             success: true,
             failure: null,
@@ -55,7 +54,7 @@ function serverResolvers(existingIds: string[]) {
         };
       },
       moveShoppingListItem: (_: unknown, { input }: MoveArgs) => {
-        arrivals.push(`move ${input.itemId} after ${input.afterItemId}`);
+        arrivals.push(`move ${input.id} after ${input.afterItemId}`);
         if (input.afterItemId && !rows.has(input.afterItemId)) {
           return {
             __typename: 'NotFoundError',
@@ -67,7 +66,7 @@ function serverResolvers(existingIds: string[]) {
         }
         return {
           __typename: 'MoveShoppingListItemPayload',
-          shoppingListItem: line(input.itemId),
+          shoppingListItem: line(input.id),
         };
       },
     },
@@ -93,7 +92,7 @@ const entry = (
 const moveAfter = (id: string, afterItemId: string) =>
   entry(id, {
     ...queuedMutationFor(MoveShoppingListItemDocument),
-    variables: { input: { itemId: 'item-A', afterItemId } },
+    variables: { input: { id: 'item-A', afterItemId } },
   });
 
 describe('a coalesced move drained against the schema', () => {
@@ -129,7 +128,9 @@ describe('a coalesced move drained against the schema', () => {
         variables: {
           input: {
             shoppingListId: 'list-1',
-            items: [{ id: 'item-X', item: { itemName: 'Eggs' } }],
+            items: [
+              { id: 'item-X', item: { inline: { id: 'cat-x', name: 'Eggs' } } },
+            ],
           },
         },
       }),

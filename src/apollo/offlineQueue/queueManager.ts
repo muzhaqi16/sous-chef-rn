@@ -22,7 +22,11 @@ import {
   reconcileReplaySuccess,
   settleGoneReplay,
 } from './queueReplayReconcilers';
-import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import {
+  deletesItsSubject,
+  queuedSubject,
+  subjectTypeOf,
+} from './queuedSubject';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -45,6 +49,8 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { TimeoutError } from '#/utils/errors/timeoutError';
+import { withinMs } from '#/utils/withinMs';
+import { sleep } from '#/utils/backoff';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -67,6 +73,8 @@ const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
 };
+
+const TIMED_OUT = Symbol('timedOut');
 
 /** Deferrals that belong to one row, so the rest of the pass still runs. */
 const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
@@ -98,6 +106,10 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'targetBatchId',
   'purchaseId',
   'recipeId',
+  // A store a queued createStore may have minted.
+  'storeId',
+  'targetStoreId',
+  'preferredStoreId',
 ];
 
 /** `value` with every occurrence of the id `from` replaced by `to`. */
@@ -205,10 +217,9 @@ export class QueueManager {
   }
 
   async processQueue(): Promise<void> {
-    // Telemetry level is the contract: `queueLink` drains after every successful
-    // response, so production's `warn` floor carries only branches that MEAN
-    // something and silence reads as a healthy idle queue. Volume rides the
-    // counters instead, which no log floor can filter.
+    // `queueLink` drains after every successful response, so only branches
+    // that MEAN something log at `warn` or above, and silence reads as a
+    // healthy idle queue; volume rides the counters.
     Telemetry.debug('Queue drain invoked');
 
     if (this.isProcessing) {
@@ -283,9 +294,8 @@ export class QueueManager {
   }
 
   /**
-   * Replay pending mutations in insertion order, holding back only what
-   * depends on an undelivered entry: a write waits behind the write that
-   * minted its subject OR its parent. A transport-class deferral pauses the
+   * Replays in insertion order, holding back only a write whose subject OR
+   * parent an undelivered entry minted. A transport-class deferral pauses the
    * pass; a row-scoped one (DEADLOCK) holds that entry and its dependents.
    */
   private async _processQueueInternal(userId: string): Promise<void> {
@@ -340,11 +350,9 @@ export class QueueManager {
 
     let succeeded = 0;
     let failed = 0;
-    // Client ids belonging to an entry that did not deliver this drain. Only
-    // entries touching one of them wait; the rest of the queue drains, so a
-    // create→update chain keeps its order without blocking unrelated entities.
-    // A write parked for re-auth has not landed either, so what it minted or
-    // changes holds its dependents like a pending one does.
+    // Ids of entries undelivered this drain: only entries touching one wait, so
+    // a create→update chain keeps its order without blocking unrelated
+    // entities. A write parked for re-auth holds its dependents too.
     const blockedIds = new Set<string>(
       queueStore
         .getMutationsForUser(userId, QueueStatus.AUTH_ERROR)
@@ -570,9 +578,8 @@ export class QueueManager {
       );
     }
 
-    // The replay ran with no `update` callback, so it got normalization and
-    // nothing else. An operation whose server answer may name a DIFFERENT row
-    // than the one written locally is settled here: the foreground path's own
+    // A replay runs with no `update` callback, so a server answer naming a
+    // DIFFERENT row than the local write is settled here; the foreground path's
     // reconciliation returned when the call classified as `'queued'`.
     reconcileReplaySuccess(mutation.operationName, variables, data, adoption =>
       this.adoptSurvivingRow(mutation, adoption),
@@ -619,11 +626,9 @@ export class QueueManager {
       logger.info(`🔐 Queue: Token refreshed for ${mutation.id}, retrying`);
     }
 
-    // A unit the write names was merged away by the API's vocabulary repair.
-    // Refresh the vocabulary and re-send ONCE — on the retry `prepareReplay`
-    // restates the write's units by symbol, so the re-sent write resolves
-    // against current rows. A second refusal is a real one: drop `retryable`
-    // so it falls through to revert-and-inform below.
+    // A unit the write names was merged away: refresh the vocabulary and
+    // re-send ONCE, as `prepareReplay` restates units by symbol. A second
+    // refusal is real, so it falls through to revert-and-inform below.
     if (queueError.type === 'stale-reference') {
       if (this.staleReferenceRetried.has(mutation.id)) {
         logger.warn(
@@ -669,7 +674,7 @@ export class QueueManager {
         mutation.retryCount,
         this.config.retryDelayMs,
       );
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
 
       // Gate on `isApiUnavailable`, not bare `isOnline`: an open reachability
       // breaker (device online, API down) must defer rather than re-trip it.
@@ -682,10 +687,9 @@ export class QueueManager {
       }
     }
 
-    // Transient errors that exhausted the in-run retries stay PENDING so the
-    // change survives to the next drain rather than being dropped; retryCount
-    // resets so that drain gets a fresh attempt. The only lifetime bound is
-    // `queueStore.expireStalePending`'s age horizon.
+    // A transient error past the in-run retries stays PENDING, retryCount
+    // reset, for the next drain; only `queueStore.expireStalePending`'s age
+    // horizon bounds it.
     if (queueError.type === 'network' || queueError.type === 'server') {
       // DEADLOCK and an unbuildable replay are scoped to the row; every other
       // network/server verdict is the API's own state, which pauses the drain.
@@ -739,10 +743,9 @@ export class QueueManager {
   }
 
   /**
-   * Moves the writes still queued against `entityId` at the version this replay
-   * was built on onto the one the server returned: made in the same offline
-   * stretch, they build on this one. Written to the queue, so a restart
-   * mid-drain keeps it.
+   * Moves writes still queued against `entityId` at this replay's base version
+   * onto the version the server returned, as they build on this one. Written
+   * to the queue, so a restart mid-drain keeps it.
    */
   private rebasePending(
     replayed: QueuedMutation,
@@ -767,12 +770,9 @@ export class QueueManager {
   }
 
   /**
-   * A create the server merged into a row it already held, which may be
-   * another member's; the server refuses the minted id from now on. A removal
-   * of the minted row is dropped — it would delete a row the person never saw.
-   * An overwrite of the quantity the merge combined is withdrawn as a conflict.
-   * Every other write naming the minted id moves to the surviving row, sent at
-   * its version.
+   * A create the server merged into a row it held, maybe another member's, and
+   * whose minted id it now refuses. A removal of the minted row is dropped: it
+   * would delete a row the person never saw.
    */
   private adoptSurvivingRow(
     replayed: QueuedMutation,
@@ -913,10 +913,9 @@ export class QueueManager {
   }
 
   /**
-   * The entity a failed mutation targets, for the failure handler's cache
-   * evict. Typename comes off the normalized cache rather than a per-operation
-   * map: the hook wrote the entity under `TypeName:<clientId>` before firing
-   * and client ids are globally-unique cuids, so the key identifies the type.
+   * The entity a failed mutation targets, for the failure handler's evict. The
+   * hook wrote it as `TypeName:<clientId>` before firing, and client ids are
+   * unique cuids, so the cache key yields the typename.
    */
   private extractEntityInfo(mutation: QueuedMutation): {
     entityType: string | null;
@@ -936,34 +935,32 @@ export class QueueManager {
   }
 
   /**
-   * What a write waits on: the parents it attaches to, top-level and one level
-   * down (a batch row, `meal.recipeId`), and the entity it is derived from (a
-   * fork's source recipe).
+   * What a write waits on: the parents it attaches to at any depth (a batch
+   * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
+   * derived from (a fork's source recipe).
    */
   private getDependencyIds(mutation: QueuedMutation): string[] {
     const ids = new Set<string>(queuedSubject(mutation).sourceIds);
-    const collect = (record: unknown) => {
-      if (!isRecord(record)) return;
-      for (const key of PARENT_REFERENCE_KEYS) {
-        const value = record[key];
-        if (typeof value === 'string' && value) ids.add(value);
+    const collect = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(collect);
+        return;
       }
+      if (!isRecord(value)) return;
+      for (const key of PARENT_REFERENCE_KEYS) {
+        const id = value[key];
+        if (typeof id === 'string' && id) ids.add(id);
+      }
+      Object.values(value).forEach(collect);
     };
-    const input: unknown = mutation.variables.input;
-    if (!isRecord(input)) return [...ids];
-    collect(input);
-    for (const nested of Object.values(input)) {
-      if (Array.isArray(nested)) nested.forEach(collect);
-      else collect(nested);
-    }
+    collect(mutation.variables.input);
     return [...ids];
   }
 
   /**
-   * Drop the persisted optimistic fields a landed mutation owns on each entity
-   * it touched: those saved after the latest earlier write still queued for
-   * that entity, up to this one's enqueue. An uncached entity has nothing to
-   * restore, so skipping it is right.
+   * Drops the persisted optimistic fields a landed mutation owns on each
+   * entity: those saved after the latest earlier write still queued for it, up
+   * to this one's enqueue.
    */
   private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
     const entityIds = this.getAllEntityIds(mutation);
@@ -1022,10 +1019,9 @@ export class QueueManager {
   }
 
   /**
-   * Ages out terminal entries, withdrawing the local change of any never sent.
-   * Must run BEFORE the empty-queue early return, or a queue holding only
-   * terminal entries is never cleaned. Only AUTH_ERROR needs withdrawing:
-   * SUCCESS replayed, FAILED was refused and withdrawn at the time.
+   * Ages out terminal entries. Runs BEFORE the empty-queue early return, or a
+   * queue of only terminal ones is never cleaned. Only AUTH_ERROR needs
+   * withdrawing: SUCCESS replayed, and FAILED was withdrawn when refused.
    */
   private reconcileDiscardedEntries(): void {
     for (const discarded of queueStore.cleanupTerminal()) {
@@ -1043,10 +1039,9 @@ export class QueueManager {
   }
 
   /**
-   * Withdraws a local-first write that could not be queued at all. The house
-   * pattern writes the cache permanently and THEN fires, so a rejected enqueue
-   * would otherwise leave the change on screen and in the persisted cache with
-   * no entry and no drain to carry it — a silent, permanent divergence.
+   * Withdraws a local-first write that could not be queued: the cache is
+   * written permanently BEFORE the enqueue, so the change would otherwise stay
+   * with no entry to carry it.
    */
   withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
     this.invokeFailureHandler(mutation, error);
@@ -1074,6 +1069,7 @@ export class QueueManager {
       operationName: mutation.operationName,
       entityType,
       entityId,
+      subjectType: subjectTypeOf(mutation),
       variables: mutation.variables,
       error,
     };
@@ -1085,38 +1081,23 @@ export class QueueManager {
     }
   }
 
-  /**
-   * Races the replay against the processing timeout. The timer must be cleared
-   * once either settles, or every replay keeps the JS engine busy for 30s.
-   */
   private async executeWithTimeout(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
-            new TimeoutError(
-              'Operation timed out',
-              this.config.processingTimeoutMs,
-            ),
-          ),
-        this.config.processingTimeoutMs,
-      );
-    });
-    try {
-      return await Promise.race([this.executeMutation(mutation), timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
+    const ms = this.config.processingTimeoutMs;
+    const result = await withinMs(
+      this.executeMutation(mutation),
+      ms,
+      TIMED_OUT,
+    );
+    if (result === TIMED_OUT) throw new TimeoutError('Operation timed out', ms);
+    return result;
   }
 
   /**
-   * Resolves once nothing is in flight and nothing is scheduled. It DRAINS
-   * rather than observes: a scheduled drain has no `processingPromise`, so a
-   * caller would read "idle" during `requestDrain`'s debounce and refetch a
-   * server the queued writes have not reached, overwriting their rows.
+   * Resolves once nothing is in flight or scheduled. It DRAINS rather than
+   * observes: a scheduled drain has no `processingPromise`, so an observer
+   * reads "idle" in `requestDrain`'s debounce and refetches over unsent writes.
    */
   async whenIdle(): Promise<void> {
     const cancelledDrain = this.drainTimer !== null;

@@ -13,6 +13,7 @@ import {
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { t } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
 import {
@@ -20,11 +21,9 @@ import {
   isKeychainKeyInvalidated,
 } from '#/utils/errors/libraryErrorMessages';
 
-// Derived from `appConfig.identity.keychainNamespace` so a fork sets it once,
-// in one file. The values must stay byte-identical for THIS app: the OS keychain
-// is keyed by service name, so a changed string makes every stored credential
-// unreachable and signs everyone out. `__tests__/keychainServiceNames.test.ts`
-// pins them.
+// From `appConfig.identity.keychainNamespace`, but byte-identical for THIS app:
+// the OS keychain is keyed by service name, so a changed string signs everyone
+// out. `__tests__/keychainServiceNames.test.ts` pins them.
 const NAMESPACE = appConfig.identity.keychainNamespace;
 export const DEFAULT_SERVICE = `${NAMESPACE}.credentials`;
 export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator`;
@@ -129,10 +128,8 @@ async function setGenericPasswordWithSecurityFallback(
 }
 
 /**
- * Store an account's email & password in the native keystore/keychain under a
- * per-account policy that requires biometry to retrieve. Each account gets its
- * own slot, so enabling biometrics for one user never overwrites or exposes
- * another user's credentials.
+ * Stores an account's credentials behind biometry, in a slot of its own so
+ * enabling biometrics for one user never overwrites or exposes another's.
  */
 export async function saveCredentials(
   email: string,
@@ -268,7 +265,7 @@ export async function hasCredentials(email: string): Promise<boolean> {
       // Handle Android DataStore concurrency issue
       if (isDataStoreContention(err)) {
         // Wait a bit and retry once
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await sleep(100);
         try {
           const indicator = await getGenericPassword({
             service: indicatorService,
@@ -299,10 +296,9 @@ export async function clearCredentials(email: string): Promise<void> {
     await resetGenericPassword({ service: credentialsServiceFor(email) });
     await resetGenericPassword({ service: indicatorServiceFor(email) });
 
-    // The identity hint the login screen reads; it must be cleared alongside
-    // the per-account services or a deleted account's address stays on the
-    // device. Cleared ONLY when it names this account — another may have
-    // enrolled since, and taking its hint would disable a working login.
+    // The login screen's identity hint, or a deleted account's address stays
+    // on the device; cleared ONLY when it names this account, as another may
+    // have enrolled since.
     await clearLastBiometricEmailFor(email);
 
     // PERFORMANCE: Invalidate cache after clearing credentials
@@ -376,10 +372,8 @@ export async function getLastBiometricEmail(): Promise<string | null> {
 }
 
 /**
- * Purge the plaintext registration password an earlier build stored here while
- * onboarding ran. Nothing writes this entry any more — enrolment authorises off
- * the live session — but a keychain item survives app deletion, so the purge
- * runs at startup and at session end until it can be assumed gone.
+ * Purges the plaintext registration password an earlier build stored here.
+ * Nothing writes it now, but a keychain item survives app deletion.
  */
 export async function clearTempRegistrationPassword(): Promise<void> {
   try {
@@ -389,10 +383,9 @@ export async function clearTempRegistrationPassword(): Promise<void> {
   }
 }
 
-// Session tokens live here, NOT in MMKV, so persisted Zustand state holds
-// nothing sensitive. No biometric gate — they must be readable on every cold
-// start without a prompt — and AFTER_FIRST_UNLOCK (not WHEN_UNLOCKED) lets
-// background work read them while the device is locked.
+// Session tokens live here, NOT in MMKV. No biometric gate, as every cold
+// start reads them unprompted; AFTER_FIRST_UNLOCK lets background work read
+// them while the device is locked.
 
 export interface SessionTokens {
   accessToken: string;
@@ -475,9 +468,7 @@ type RetryableRead<T> = T | { status: 'retry'; error: unknown };
 
 /** Sleep BETWEEN attempts, never inside one: the queue's lock is not held here. */
 const backoff = (attempt: number): Promise<void> =>
-  new Promise(resolve =>
-    setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
-  );
+  sleep(backoffDelay(attempt - 1, { baseMs: SESSION_LOAD_RETRY_BASE_MS }));
 
 async function readSessionTokensOnce(): Promise<
   RetryableRead<SessionTokenLoadResult>
@@ -552,10 +543,9 @@ export async function clearSessionTokens(): Promise<boolean> {
 }
 
 /**
- * This install's device identifier, kept beside the credentials it binds. On
- * iOS a keychain entry outlives an app deletion while MMKV does not, so an
- * identifier held only in MMKV lets a surviving credential name a device the
- * server has never seen.
+ * Kept beside the credentials it binds: on iOS a keychain entry outlives an
+ * app deletion while MMKV does not, so an MMKV-only id lets a surviving
+ * credential name a device the server has never seen.
  */
 export async function saveDeviceId(deviceId: string): Promise<boolean> {
   return queueOperation(async () => {

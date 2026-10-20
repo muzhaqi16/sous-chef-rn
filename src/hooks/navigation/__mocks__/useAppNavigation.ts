@@ -16,7 +16,9 @@ const mockNavigation = {
   goBack: jest.fn(),
   toVerifyEmail: jest.fn(),
   toShareList: jest.fn(),
+  toStoreMode: jest.fn(),
   toHomeDetail: jest.fn(),
+  toReceiptScan: jest.fn(),
   navigation: {
     dispatch: jest.fn(),
     canGoBack: jest.fn(() => true),

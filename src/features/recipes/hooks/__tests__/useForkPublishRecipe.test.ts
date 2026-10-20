@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  type SeedWithFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   ForkRecipeDocument,
@@ -13,77 +14,32 @@ import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#/services/toastService';
+import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
+import { t } from '#/i18n';
+import {
+  recipeFormFragment,
+  recipeFormIngredient,
+} from '#/test-utils/fixtures/recipeFixtures';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
+/** The recipe forked and published: one ingredient, all of it on the device. */
+const sourceRecipe = (fixture: Parameters<typeof recipeFormFragment>[0] = {}) =>
+  recipeFormFragment({
+    status: RecipeStatus.Published,
+    ingredients: [recipeFormIngredient({ id: 'ri-1', name: 'Tomatoes' })],
+    ...fixture,
+  });
 
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
+const SOURCE = sourceRecipe();
 
-const SOURCE = {
-  __typename: 'Recipe',
-  id: 'recipe-1',
-  name: 'Lasagna',
-  description: 'Layered',
-  imageUrl: null,
-  videoUrl: null,
-  servings: 6,
-  prepTimeMinutes: 20,
-  cookTimeMinutes: 45,
-  caloriesPerServing: null,
-  difficulty: 'MEDIUM',
-  category: 'DINNER',
-  cuisines: ['ITALIAN'],
-  status: 'PUBLISHED',
-  diets: [],
-  healthGoals: [],
-  intolerances: [],
-  notes: null,
-  tips: null,
-  originalAuthor: 'Nonna',
-  tags: [],
-  instructions: [{ step: 1, text: 'Layer' }],
-  ingredientsConnection: {
-    __typename: 'RecipeIngredientConnection',
-    edges: [
-      {
-        __typename: 'RecipeIngredientEdge',
-        node: {
-          __typename: 'RecipeIngredient',
-          id: 'ri-1',
-          name: 'Tomatoes',
-          quantity: 800,
-          item: {
-            __typename: 'Item',
-            id: 'item-1',
-            name: 'Tomatoes',
-            imageUrl: null,
-          },
-          unit: {
-            __typename: 'Unit',
-            id: 'unit-1',
-            name: 'gram',
-            symbol: 'g',
-          },
-          image: null,
-          isOptional: false,
-          notes: null,
-          preparation: null,
-          sortOrder: 0,
-          section: null,
-        },
-      },
-    ],
-  },
-};
-
-const seedSource = () =>
+const seedSource = (source: SeedWithFragment['data'] = SOURCE) =>
   seedCache([
     {
-      data: SOURCE,
+      data: source,
       fragment: RecipeForm_RecipeFragmentDoc,
       fragmentName: 'RecipeForm_recipe',
     },
@@ -146,6 +102,44 @@ describe('useForkRecipe', () => {
     expect(fork.fired).toHaveLength(0);
   });
 
+  // The device writes the copy as a whole recipe, and holds only the first
+  // page of one over the limit: its copy would show, and later save, a short
+  // ingredient list.
+  it('refuses a source over the ingredient limit, without firing', async () => {
+    const fork = recordMock(ForkRecipeDocument, { data: { forkRecipe: null } });
+    const cache = seedSource(
+      sourceRecipe({
+        ingredientsPage: {
+          totalCount: 150,
+          hasNextPage: true,
+          endCursor: 'cursor-100',
+        },
+      }),
+    );
+    const { result } = renderHookWithApollo(() => useForkRecipe(), {
+      cache,
+      operationMocks: [fork.mock],
+    });
+
+    let id: string | null = 'unset';
+    await act(async () => {
+      id = await result.current.forkRecipe('recipe-1');
+    });
+
+    expect(id).toBeNull();
+    expect(fork.fired).toHaveLength(0);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('recipes.ingredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
+    );
+    // No copy was written either.
+    expect(
+      Object.keys(cache.extract()).filter(
+        key => key.startsWith('Recipe:') && key !== 'Recipe:recipe-1',
+      ),
+    ).toEqual([]);
+  });
+
   it('returns null and drops the copy when the fork is rejected', async () => {
     const cache = seedSource();
     const { result } = renderHookWithApollo(() => useForkRecipe(), {
@@ -206,12 +200,16 @@ describe('useForkRecipe', () => {
 });
 
 describe('usePublishRecipe', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   // A submission lands in PENDING_REVIEW until a moderator approves, so the
   // cache must not claim the recipe is published while it waits.
   it('shows a submitted draft in review before the server answers', async () => {
     const cache = seedCache([
       {
-        data: { ...SOURCE, status: 'DRAFT' },
+        data: sourceRecipe({ status: RecipeStatus.Draft }),
         fragment: RecipeForm_RecipeFragmentDoc,
         fragmentName: 'RecipeForm_recipe',
       },
@@ -238,46 +236,82 @@ describe('usePublishRecipe', () => {
     expect(recipe?.status).toBe('PENDING_REVIEW');
   });
 
-  it('returns true when the submission is queued offline', async () => {
+  it('states the cached version, and returns true when the submission is queued offline', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: { updateRecipe: null }, // queued signature
+    });
     const { result } = renderHookWithApollo(() => usePublishRecipe(), {
-      operationMocks: [
-        {
-          request: { query: UpdateRecipeDocument, variables: () => true },
-          result: { data: { updateRecipe: null } }, // queued signature
-        },
-      ],
+      cache: seedSource(),
+      operationMocks: [update.mock],
     });
 
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setSubmitted('recipe-1', true);
     });
+
     expect(ok).toBe(true);
+    // The API refuses an edit that states no version.
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: 'recipe-1',
+          status: RecipeStatus.Published,
+          version: SOURCE.version,
+        },
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      },
+    ]);
   });
 
-  it('returns false when the update is rejected', async () => {
-    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
-      operationMocks: [
-        {
-          request: { query: UpdateRecipeDocument, variables: () => true },
-          result: {
-            data: {
-              updateRecipe: {
-                __typename: 'ValidationError',
-                code: ErrorCode.ValidationFailed,
-                message: 'bad',
-                field: 'status',
-              },
-            },
-          },
+  it('returns false and puts the status back when the update is rejected', async () => {
+    const cache = seedSource();
+    const update = recordMock(UpdateRecipeDocument, {
+      data: {
+        updateRecipe: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'status',
         },
-      ],
+      },
+    });
+    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
+      cache,
+      operationMocks: [update.mock],
     });
 
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.setSubmitted('recipe-1', false);
     });
+
     expect(ok).toBe(false);
+    // The refusal, not an unsent write, is what failed it.
+    expect(update.fired).toHaveLength(1);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    const recipe = cache.readFragment<{ status: string }>({
+      id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
+      fragment: RecipeForm_RecipeFragmentDoc,
+      fragmentName: 'RecipeForm_recipe',
+    });
+    expect(recipe?.status).toBe(SOURCE.status);
+  });
+
+  it('does not send a status change for a recipe whose version it never read', async () => {
+    const update = recordMock(UpdateRecipeDocument, {
+      data: { updateRecipe: null },
+    });
+    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
+      operationMocks: [update.mock],
+    });
+
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.setSubmitted('recipe-1', true);
+    });
+
+    expect(ok).toBe(false);
+    expect(update.fired).toEqual([]);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 });

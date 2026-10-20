@@ -1,8 +1,6 @@
 /**
- * Declarative structure of the profile screens. Every user-facing string is an
- * i18n KEY, resolved by the screen that renders it — keys and not resolved
- * strings because this module is evaluated at import, before the stored
- * language is applied. There is deliberately no subtitle field.
+ * The profile screens' structure. Every user-facing string is an i18n KEY, as
+ * this module is evaluated at import, before the stored language is applied.
  */
 
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
@@ -30,12 +28,7 @@ export interface SettingItemConfig {
 export const DEVELOPER_SECTION_ID = 'developer';
 
 export interface SettingSectionConfig {
-  /**
-   * Stable identity, independent of what the section is called on screen.
-   *
-   * Screens branch on this (`section.id === DEVELOPER_SECTION_ID`). They used
-   * to branch on the English title, which tied control flow to display copy.
-   */
+  /** Stable identity screens branch on, independent of the section's title. */
   id: string;
   /** Absent for an unlabelled trailing group (the log-out row). */
   titleKey?: TranslationKey;
@@ -113,10 +106,8 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
         key: 'profileVisibility',
         labelKey: 'personalInformation.profileVisibility',
         type: 'modal',
-        // Values come from the generated enum, never typed by hand: the
-        // "friends" option read FRIENDS_ONLY, which the schema has no member
-        // for, so the server refused every selection and the optimistic write
-        // was reverted with nothing shown.
+        // Values come from the generated enum, never typed by hand: the server
+        // refuses a value the schema has no member for.
         options: [
           {
             labelKey: 'personalInformation.visibilityPublic',
@@ -211,6 +202,16 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
       {
         key: 'appSettings',
         labelKey: 'labels.appSettings',
+        type: 'navigation',
+      },
+      {
+        key: 'dataSources',
+        labelKey: 'profile.dataSources.title',
+        type: 'navigation',
+      },
+      {
+        key: 'myReports',
+        labelKey: 'reports.myReportsTitle',
         type: 'navigation',
       },
     ],

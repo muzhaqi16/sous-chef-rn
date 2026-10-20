@@ -7,6 +7,7 @@ import {
   getCollaboratorDisplayName,
   getMemberDisplayName,
 } from '../memberFormatters';
+import { t } from '#/i18n';
 
 function makeMember(overrides: Partial<Member> = {}): Member {
   return {
@@ -22,7 +23,7 @@ describe('getMemberDisplayName', () => {
     const member = makeMember({
       user: { id: 'u1', email: 'test@example.com' },
     });
-    expect(getMemberDisplayName(member, 'u1')).toBe('You');
+    expect(getMemberDisplayName(member, t, 'u1')).toBe('You');
   });
 
   it('prefers member.displayName', () => {
@@ -34,7 +35,9 @@ describe('getMemberDisplayName', () => {
         profile: { displayName: 'Profile Name' },
       },
     });
-    expect(getMemberDisplayName(member, 'different-user')).toBe('Custom Name');
+    expect(getMemberDisplayName(member, t, 'different-user')).toBe(
+      'Custom Name',
+    );
   });
 
   // `User.displayName` follows the SHARING relationship, so it survives a
@@ -52,7 +55,7 @@ describe('getMemberDisplayName', () => {
       },
     });
 
-    expect(getMemberDisplayName(member)).toBe('Tani');
+    expect(getMemberDisplayName(member, t)).toBe('Tani');
   });
 
   // The server accepts a blank display name, so `''` must not win over a real one.
@@ -62,7 +65,7 @@ describe('getMemberDisplayName', () => {
       user: { id: 'u1', email: 'test@example.com', displayName: '  ' },
     });
 
-    expect(getMemberDisplayName(member)).toBe('test');
+    expect(getMemberDisplayName(member, t)).toBe('test');
   });
 
   it('falls back to profile displayName', () => {
@@ -73,7 +76,7 @@ describe('getMemberDisplayName', () => {
         profile: { displayName: 'Profile Name' },
       },
     });
-    expect(getMemberDisplayName(member)).toBe('Profile Name');
+    expect(getMemberDisplayName(member, t)).toBe('Profile Name');
   });
 
   it('falls back to email username part', () => {
@@ -84,7 +87,7 @@ describe('getMemberDisplayName', () => {
         profile: null,
       },
     });
-    expect(getMemberDisplayName(member)).toBe('john.doe');
+    expect(getMemberDisplayName(member, t)).toBe('john.doe');
   });
 
   it('falls back to full email when no @ present', () => {
@@ -96,21 +99,21 @@ describe('getMemberDisplayName', () => {
       },
     });
     // 'noemail'.split('@')[0] = 'noemail' which is truthy, so it returns that
-    expect(getMemberDisplayName(member)).toBe('noemail');
+    expect(getMemberDisplayName(member, t)).toBe('noemail');
   });
 
   it('falls back to the shared unknown label when no info available', () => {
     const member = makeMember({
       user: null,
     });
-    expect(getMemberDisplayName(member)).toBe('Unknown');
+    expect(getMemberDisplayName(member, t)).toBe('Unknown');
   });
 
   it('does not return "You" when no currentUserId provided', () => {
     const member = makeMember({
       user: { id: 'u1', email: 'test@example.com' },
     });
-    const result = getMemberDisplayName(member);
+    const result = getMemberDisplayName(member, t);
     expect(result).not.toBe('You');
   });
 
@@ -118,7 +121,7 @@ describe('getMemberDisplayName', () => {
     const member = makeMember({
       user: { id: 'u1', email: 'test@example.com' },
     });
-    expect(getMemberDisplayName(member, 'different-id')).not.toBe('You');
+    expect(getMemberDisplayName(member, t, 'different-id')).not.toBe('You');
   });
 });
 
@@ -168,7 +171,7 @@ describe('getCollaboratorDisplayName', () => {
         profile: makeProfile({ displayName: 'Me' }),
       }),
     });
-    expect(getCollaboratorDisplayName(collab, 'u1')).toBe('You');
+    expect(getCollaboratorDisplayName(collab, t, 'u1')).toBe('You');
   });
 
   // The reported defect: the API withholds `profile` for a private user, so the
@@ -181,7 +184,7 @@ describe('getCollaboratorDisplayName', () => {
       collaborator: makeUser({ email: null, displayName: 'Tani' }),
     });
 
-    expect(getCollaboratorDisplayName(collaborator)).toBe('Tani');
+    expect(getCollaboratorDisplayName(collaborator, t)).toBe('Tani');
   });
 
   it('skips a blank collaborator displayName', () => {
@@ -193,7 +196,7 @@ describe('getCollaboratorDisplayName', () => {
         profile: makeProfile({ displayName: 'Artan M' }),
       }),
     });
-    expect(getCollaboratorDisplayName(collab)).toBe('Artan M');
+    expect(getCollaboratorDisplayName(collab, t)).toBe('Artan M');
   });
 
   it('prefers collaborator.profile.displayName', () => {
@@ -206,7 +209,7 @@ describe('getCollaboratorDisplayName', () => {
         profile: makeProfile({ displayName: 'Artan M' }),
       }),
     });
-    expect(getCollaboratorDisplayName(collab)).toBe('Artan M');
+    expect(getCollaboratorDisplayName(collab, t)).toBe('Artan M');
   });
 
   it('falls back to email username when collaborator user has no displayName', () => {
@@ -219,7 +222,7 @@ describe('getCollaboratorDisplayName', () => {
         profile: makeProfile({ displayName: null }),
       }),
     });
-    expect(getCollaboratorDisplayName(collab)).toBe('john.doe');
+    expect(getCollaboratorDisplayName(collab, t)).toBe('john.doe');
   });
 
   it('uses top-level email username for pending invites (no linked user)', () => {
@@ -228,12 +231,12 @@ describe('getCollaboratorDisplayName', () => {
       collaboratorId: null,
       collaborator: null,
     });
-    expect(getCollaboratorDisplayName(collab)).toBe('artan');
+    expect(getCollaboratorDisplayName(collab, t)).toBe('artan');
   });
 
   it('returns "Unknown" when no email or collaborator info exists', () => {
     const collab = makeCollaborator();
-    expect(getCollaboratorDisplayName(collab)).toBe('Unknown');
+    expect(getCollaboratorDisplayName(collab, t)).toBe('Unknown');
   });
 
   it('does not return "You" when no currentUserId provided', () => {
@@ -241,7 +244,7 @@ describe('getCollaboratorDisplayName', () => {
       collaboratorId: 'u1',
       collaborator: makeUser({ email: 'test@example.com' }),
     });
-    expect(getCollaboratorDisplayName(collab)).not.toBe('You');
+    expect(getCollaboratorDisplayName(collab, t)).not.toBe('You');
   });
 
   it('does not return "You" when collaboratorId does not match current user', () => {
@@ -249,6 +252,8 @@ describe('getCollaboratorDisplayName', () => {
       collaboratorId: 'u1',
       collaborator: makeUser({ email: 'test@example.com' }),
     });
-    expect(getCollaboratorDisplayName(collab, 'different-id')).not.toBe('You');
+    expect(getCollaboratorDisplayName(collab, t, 'different-id')).not.toBe(
+      'You',
+    );
   });
 });

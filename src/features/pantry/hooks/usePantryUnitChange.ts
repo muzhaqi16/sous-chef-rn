@@ -7,7 +7,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { PantryUnitChangeResolution } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
@@ -89,7 +89,7 @@ export function usePantryUnitChange() {
       return { status: 'changed' };
     }
     const failure = settled.failure;
-    if (failure?.code && VERSION_CONFLICT_CODES.includes(failure.code)) {
+    if (isVersionConflictCode(failure?.code)) {
       return { status: 'conflict' };
     }
     return {

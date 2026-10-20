@@ -15,7 +15,12 @@
  */
 import { gql, type NormalizedCacheObject } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { findCachedPantryItemDuplicate } from '../pantryCacheReaders';
+import { UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  findCachedPantryItemDuplicate,
+  readHeldStackUnit,
+  readStackUnit,
+} from '../pantryCacheReaders';
 
 const PANTRY = gql`
   query SeedPantry(
@@ -406,5 +411,68 @@ describe('server mode, where the field is keyed on the live filter and sort', ()
     expect(
       findCachedPantryItemDuplicate(seedServerMode(), 'p-1', match),
     ).toEqual(findCachedPantryItemDuplicate(seed(), 'p-1', match));
+  });
+});
+
+describe('the unit a stack is held in', () => {
+  const typed = (
+    cache: ReturnType<typeof makeCache>,
+    units: Record<string, UnitType>,
+  ) => {
+    for (const [id, type] of Object.entries(units)) {
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Unit', id }),
+        fragment: gql`
+          fragment SeedUnitType on Unit {
+            id
+            type
+          }
+        `,
+        data: { __typename: 'Unit', id, type },
+      });
+    }
+    return cache;
+  };
+
+  const oatMilk = () =>
+    typed(
+      seedWith([
+        edge('pi-ml', 'Oat Milk', 'item-oat', 500, 'unit-ml'),
+        edge('pi-carton', 'Oat Milk', 'item-oat', 2, 'unit-carton'),
+        edge('pi-rice', 'Rice', 'item-rice', 900, 'unit-g'),
+      ]),
+      {
+        'unit-ml': UnitType.Volume,
+        'unit-carton': UnitType.Count,
+        'unit-g': UnitType.Weight,
+      },
+    );
+
+  it('reads a cached stack its unit and kind', () => {
+    expect(readStackUnit(oatMilk(), 'pi-rice')).toEqual({
+      __typename: 'Unit',
+      id: 'unit-g',
+      type: UnitType.Weight,
+    });
+    expect(readStackUnit(oatMilk(), 'pi-missing')).toBeNull();
+  });
+
+  it('prefers a counted stack when the item is held in several units', () => {
+    expect(readHeldStackUnit(oatMilk(), 'p-1', 'item-oat')).toMatchObject({
+      id: 'unit-carton',
+      type: UnitType.Count,
+    });
+  });
+
+  it('falls back to the one stack held, whatever its kind', () => {
+    expect(readHeldStackUnit(oatMilk(), 'p-1', 'item-rice')).toMatchObject({
+      id: 'unit-g',
+      type: UnitType.Weight,
+    });
+  });
+
+  it('is null for an item the pantry does not hold, or no pantry', () => {
+    expect(readHeldStackUnit(oatMilk(), 'p-1', 'item-eggs')).toBeNull();
+    expect(readHeldStackUnit(oatMilk(), undefined, 'item-oat')).toBeNull();
   });
 });

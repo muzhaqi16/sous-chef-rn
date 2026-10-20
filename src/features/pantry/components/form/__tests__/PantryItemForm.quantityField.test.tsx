@@ -35,10 +35,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
@@ -54,11 +50,9 @@ jest.mock(
     })),
   }),
 );
-jest.mock('#features/pantry/hooks/mutations/useResolveUnit', () => ({
+jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
   useResolveUnit: jest.fn(() => ({ resolveUnitId: jest.fn() })),
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   UnitAutocompleteField: () => null,
@@ -113,9 +107,6 @@ jest.mock('#components/molecules/CollapsibleSection', () => ({
 jest.mock('../ItemInformationSection', () => ({
   ItemInformationSection: () => null,
 }));
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 beforeEach(() => {
   jest.clearAllMocks();

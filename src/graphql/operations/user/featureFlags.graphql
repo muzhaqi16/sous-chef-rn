@@ -1,0 +1,8 @@
+# The server-owned flags, resolved for the caller. Kept in the cache, so the
+# last answer holds offline; resync asks again.
+query MyFeatureFlags {
+  myFeatureFlags {
+    flag
+    enabled
+  }
+}

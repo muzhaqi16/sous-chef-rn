@@ -2,10 +2,6 @@ import { renderHook } from '@testing-library/react-native';
 import { alertService, type AlertButton } from '#/services/alertService';
 import { useRememberMe } from '../useRememberMe';
 
-// Break circular dependency chain
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockMarkCredentialPromptDeclined = jest.fn();
 jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
   useAuthPreferences: () => ({

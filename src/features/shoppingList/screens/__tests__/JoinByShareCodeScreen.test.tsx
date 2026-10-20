@@ -6,13 +6,6 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { JoinByShareCodeScreen } from '../JoinByShareCodeScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/toastService', () => ({
-  toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
-}));
-
 jest.mock('#components/organisms/Header', () => ({ Header: () => null }));
 
 jest.mock('#hooks/deepLink/useJoinLinkAuthGate', () => ({
@@ -110,7 +103,6 @@ describe('JoinByShareCodeScreen', () => {
         joinShoppingListByShareCode: {
           __typename: 'JoinShoppingListByShareCodePayload',
           shoppingList: {
-            __typename: 'ShoppingList',
             id: 'list-9',
             name: 'Party',
           },

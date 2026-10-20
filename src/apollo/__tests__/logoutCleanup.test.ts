@@ -16,10 +16,6 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 
-jest.mock('../links/tokenScheduler', () => ({
-  cancelTokenRefresh: jest.fn(),
-}));
-
 jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     clear: jest.fn(),
@@ -55,10 +51,6 @@ jest.mock('../links/wsLink', () => ({
 // forget its throttle clock. What clearing actually does — zeroing
 // `lastRefreshTime` so the next account is not throttled by the previous one's
 // — is asserted against the real module in refreshToken.test.ts.
-jest.mock('../links/refreshToken', () => ({
-  clearRefreshState: jest.fn(),
-}));
-
 // ---------------------------------------------------------------------------
 // Imports – after all mocks are declared
 // ---------------------------------------------------------------------------
@@ -74,6 +66,11 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { UpdateDeviceDocument } from '#operations/auth/device.generated';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  noteAnsweredInLanguage,
+  startAnswersForSwitch,
+  wasAnsweredSinceSwitch,
+} from '../answeredSinceSwitch';
 
 describe('LogoutCleanup', () => {
   beforeEach(() => {
@@ -134,6 +131,16 @@ describe('LogoutCleanup', () => {
       });
       expect(apolloCachePersistence.clear).toHaveBeenCalled();
       expect(optimisticDataPersistence.clearAll).toHaveBeenCalled();
+    });
+
+    it('forgets which queries were answered since a language switch', async () => {
+      const asked = operationNameOf(GetShoppingListsLiteDocument);
+      startAnswersForSwitch();
+      noteAnsweredInLanguage(asked, { first: 20 });
+
+      await LogoutCleanup.performLogoutCleanup();
+
+      expect(wasAnsweredSinceSwitch(asked, { first: 20 })).toBe(false);
     });
 
     it('clears legacy storage keys', async () => {

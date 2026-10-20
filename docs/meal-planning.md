@@ -117,6 +117,26 @@ rest are colocated with their consumer: `MealPlanMain_mealPlan` / `MealPlanMain_
 generate and duplicate fragments; meal-item mutations return the four item fragments so
 the cached row stays complete.
 
+A plan's meals (`mealPlanItemsConnection`), its generated lists
+(`generatedShoppingListsConnection`) and a template's meals (`itemsConnection`) are
+connections, each cached as ONE list per parent (`cache/typePolicies.ts`, `keyArgs: false` —
+an empty `keyArgs` array would key a selection with arguments apart from a bare one). Every
+selection of them carries `pageInfo` and `totalCount`: a refresh answering `totalCount: 0` is
+what empties a plan whose meals were removed elsewhere. They are read at
+the server's largest page (`MEALS_PAGE_SIZE`, sent as a variable — a literal `first`
+multiplies the server's cost limit) and `useMealPlan` / `useMealTemplate` follow the
+cursor to the last page. Generated readers leave connections out, so a mutation's
+`mealPlan { ...MealPlanReaders }` never rewrites the list: the edge writers in
+`cache/mealPlanItem.ts` and `cache/mealTemplateItem.ts` do. A copy, a template cut from a
+plan and a plan laid from a template read a WHOLE source (`cache/derivationSources.ts`)
+and refuse one whose later pages are unread.
+
+A plan's `startDate` / `endDate` and a meal's `date` are calendar days (`LocalDate`,
+`YYYY-MM-DD`): sent with `toDateKey`, compared as keys, and turned into a `Date` only
+with `fromDateKey` — `new Date('2026-09-21')` is UTC midnight, the previous day west of
+UTC. Both ends of a plan are days of the plan. `updateMealPlan` and `updateMealPlanItem`
+state the `version` the cache holds (`chainVersionedWrite`).
+
 **Subscription.** `MealPlanEvents(homeId)` is one stream for plan, plan-item, template
 and template-item changes, discriminated by `subtype`. The payload is an envelope plus
 `node { id }`, run with `fetchPolicy: 'no-cache'`. Self-echoes are dropped by
@@ -207,9 +227,10 @@ updated" badge.
 
 ### Deleting a meal
 
-Swipe-to-delete on `MealPlanItemCard`. The row is removed from `mealPlanItems` and
-evicted before the mutation, registered as a pending delete so a subscription echo
-cannot re-add it, and restored if the server refuses.
+Swipe-to-delete on `MealPlanItemCard`. The row's edge is removed from the plan's
+`mealPlanItemsConnection` and the row evicted before the mutation, registered as a
+pending delete so a subscription echo cannot re-add it, and restored if the server
+refuses. A replayed delete answers `converged`, which settles as applied.
 
 ### Generating a shopping list
 
@@ -225,6 +246,18 @@ The cart icon (or the settings sheet) opens `GenerateShoppingListSheet`: check p
   unit are skipped and reported;
 - pantry coverage uses the cache-only pantry read; with no cached pantry it is not
   checked and a toast says so.
+
+The derive runs on a WHOLE source only. A plan with unread pages of meals is refused with
+a toast and nothing is sent, and so is a plan holding a recipe over the ingredient limit.
+A recipe has at most 100 ingredients (`MAX_RECIPE_INGREDIENTS`,
+`domain/recipeIngredientsPaging.ts`), which is also the server's largest page, so
+`GetMealPlan` reads each recipe's list whole in one page (`$ingredientsFirst`) and nothing
+pages inside a recipe. The recipe form refuses a 101st ingredient on the field. A recipe
+that is over the limit all the same (an imported one, or one saved by another client)
+answers `pageInfo.hasNextPage: true`; the generator, "Add all", a copy and the edit form's
+save each refuse it and say so, the generator naming the recipe.
+`Recipe.ingredientsConnection` is one cached list per recipe
+(`features/recipes/cache/typePolicies.ts`), whichever selection filled it.
 
 It then creates the list, writes optimistic rows, sends `AddDerivedItemsToShoppingList`,
 and for a new list `LinkDerivedListToMealPlan` — all local-first.

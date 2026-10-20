@@ -1,15 +1,11 @@
 import { object, string, number } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage } from '#/utils/validation/common';
 
 /**
  * Shape, defaults and validation for the shopping-list item form. Shared by the
  * `AddEditItem` screen and the `AddToShoppingListSheet` details step, so the two
  * cannot drift on what is required or on what the message says.
  */
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly-resolved message would freeze the import-time language.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 // yup types a test's sibling values as `any`; these are the ones the rules read.
 interface NetWeightSiblings {
@@ -65,10 +61,10 @@ export const DIRTY_TRACKED_FIELDS: readonly string[] = Object.keys(
 ).filter(field => field !== 'storeName');
 
 export const shoppingItemSchema = object({
-  itemName: string().trim().required(msg('errors.itemNameRequired')),
+  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
   quantityInput: string()
     .trim()
-    .required(msg('shoppingListScreens.pleaseEnterQuantity')),
+    .required(lazyMessage('shoppingListScreens.pleaseEnterQuantity')),
   unit: string(),
   selectedUnitId: string().nullable(),
   notes: string(),
@@ -84,7 +80,7 @@ export const shoppingItemSchema = object({
   // dropped by both submit paths. Each direction reports on the field to fill.
   netWeight: string().test(
     'net-weight-needs-value',
-    msg('errors.field.netWeight'),
+    lazyMessage('errors.field.netWeight'),
     (value, context: { parent: NetWeightSiblings }) => {
       if ((value ?? '').trim()) return true;
       return !context.parent.netWeightUnitId;
@@ -94,7 +90,7 @@ export const shoppingItemSchema = object({
   // so a unit typed but never resolved to an id is structurally unsendable.
   netWeightUnit: string().test(
     'net-weight-needs-unit',
-    msg('labels.pleaseSelectAUnitForTheNetWeight'),
+    lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
     (_value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;

@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 interface CalendarToggleBarProps {
   isExpanded: boolean;
@@ -29,11 +29,7 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
       accessibilityRole="button"
     >
       <View style={styles.line} />
-      <Icon
-        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-        size={16}
-        tone="textTertiary"
-      />
+      <ExpandChevron expanded={isExpanded} size={16} tone="textTertiary" />
       <View style={styles.line} />
     </Pressable>
   );

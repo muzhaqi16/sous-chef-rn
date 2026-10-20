@@ -21,6 +21,13 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   item {
     id
     canEdit
+    canSuggest
+    dataAttributions {
+      licenseUrl
+      notice
+      source
+      sourceUrl
+    }
     displayUnit {
       id
       name
@@ -54,6 +61,12 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     }
     photos {
       id
+      credit {
+        license
+        licenseUrl
+        sourceUrl
+        text
+      }
       isPrimary
       perspective
       status
@@ -64,6 +77,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
         url
       }
     }
+    storeDepartment
   }
   itemName
   lastEditedBy {
@@ -96,6 +110,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     purchaseDate
     purchasedBy {
       id
+      displayName
       profile {
         id
         avatar
@@ -112,20 +127,31 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   }
   sortOrder
   source {
-    autoAddReason
-    isAutoAdded
+    addedContext
     isFromMealPlan
   }
+  storeDepartment
+  storeDepartmentOverride
   storeInfo {
     preferredStore {
       id
       name
     }
   }
+  suggestedPrice {
+    amount
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    substitute
+  }
   unit {
     id
     name
     symbol
+    type
   }
   unitName
   updatedAt

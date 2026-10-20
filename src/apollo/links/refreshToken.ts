@@ -3,6 +3,7 @@ import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import {
   isSessionEndingAuthCode,
   isSupersededRefreshCode,
@@ -22,10 +23,9 @@ import {
 } from './wsLink';
 import { getApolloClient } from '#/apollo/clientRegistry';
 
-// `refresh` returns a RefreshResult union, so a server refusal resolves 200
-// with an error member as DATA — no GraphQL error, nothing for errorPolicy to
-// reject. This carries that member's code out of the success path so the
-// catch below can classify it like any other rejection.
+// `refresh` returns a RefreshResult union, so a refusal resolves 200 with an
+// error member as DATA; this carries its code out of the success path so the
+// catch below classifies it like any other rejection.
 class RefreshRejectedError extends Error {
   readonly code: string;
 
@@ -36,11 +36,9 @@ class RefreshRejectedError extends Error {
   }
 }
 
-// One refusal reaches this module through two carriers, so both run through
-// this one predicate rather than keeping separate code lists that drift.
-// `UNAUTHENTICATED` is tested separately: it arrives only on the top-level
-// channel, so it lives in `TopLevelErrorCode`. Classified by CODE only — never
-// by message prose, which would read an expired invite as a dead session.
+// Both carriers of a refusal run through this one predicate. `UNAUTHENTICATED`
+// arrives only on the top-level channel, so it is `TopLevelErrorCode`. By CODE
+// only: message prose would read an expired invite as a dead session.
 const UNAUTHENTICATED: string = TopLevelErrorCode.Unauthenticated;
 
 const isSessionEndingGraphQLError = (e: {
@@ -111,9 +109,10 @@ type RefreshReason = 'scheduled' | 'recovery';
 
 const REFRESH_CONFIG = {
   MAX_RETRIES: 3,
-  RETRY_DELAY_BASE: 1000, // Base delay in ms
+  // Jittered: an outage fails every device's refresh at once, against an
+  // endpoint with its own rate limit.
+  RETRY_BACKOFF: { baseMs: 1000, jitter: 0.25 },
   MIN_REFRESH_INTERVAL: 5000, // Minimum time between refresh attempts
-  BACKOFF_MULTIPLIER: 2,
   // How long to give the winner of a rotation race to store its successor
   // before concluding there isn't one. Short, because the server's reuse grace
   // window is 10s and the successor is written the moment the winner resolves.
@@ -174,18 +173,10 @@ const deferredRefreshError = () =>
     'Token refresh deferred',
   );
 
-const calculateRetryDelay = (retryCount: number): number => {
-  return (
-    REFRESH_CONFIG.RETRY_DELAY_BASE *
-    Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount)
-  );
-};
-
 /**
- * Recover from a rotation we lost. The session is intact so the exchange is
- * retryable, but ONLY once a DIFFERENT token is stored: re-sending the spent one
- * is read as compromise past the reuse grace window and revokes the whole
- * lineage. Hence the one delayed re-check, then defer rather than spend it.
+ * Recovers from a lost rotation, retrying ONLY once a DIFFERENT token is
+ * stored: re-sending the spent one past the reuse grace window reads as
+ * compromise and revokes the whole lineage. One delayed re-check, then defer.
  */
 const retryWithSuccessorToken = async (
   presentedToken: string,
@@ -197,9 +188,7 @@ const retryWithSuccessorToken = async (
   };
 
   if (!hasSuccessor()) {
-    await new Promise(resolve =>
-      setTimeout(resolve, REFRESH_CONFIG.SUPERSEDED_SETTLE_MS),
-    );
+    await sleep(REFRESH_CONFIG.SUPERSEDED_SETTLE_MS);
   }
 
   if (!hasSuccessor()) {
@@ -266,11 +255,9 @@ const performTokenRefresh = async (): Promise<string | null> => {
       {
         mutation: RefreshTokenDocument,
         variables: { input: { token: refreshToken } },
-        // 'none' (not the global 'all') so the mutation REJECTS on error and the
-        // catch below can classify it. Under 'all', errors resolve into
-        // response.error and the generic "Missing tokens" throw loses the real
-        // error, collapsing every failure (including genuine 401s) into 'unknown'
-        // and never logging the user out on a real rejection.
+        // 'none', not the global 'all', so the mutation REJECTS and the catch
+        // below classifies the real error; under 'all' every failure, genuine
+        // 401s included, collapses into 'unknown' and never signs out.
         errorPolicy: 'none',
         context: { skipErrorLink: true },
       },
@@ -278,10 +265,9 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     const payload = response.data?.refresh;
     if (payload && 'code' in payload) {
-      // An error member of RefreshResult. Rethrow with its code so the catch
-      // below can tell a dead session (log out) from a transient refusal
-      // (defer) — a bare "Missing tokens" throw would collapse both into the
-      // unknown-error path and strand the user on an unusable access token.
+      // Rethrown with its code so the catch tells a dead session (sign out)
+      // from a transient refusal (defer); a bare throw would strand the user on
+      // an unusable access token.
       throw new RefreshRejectedError(payload.code, payload.message);
     }
     if (!payload?.accessToken || !payload.refreshToken) {
@@ -340,10 +326,9 @@ const performTokenRefresh = async (): Promise<string | null> => {
           `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
         );
         void state.tokenRefreshFailed('auth_rejected');
-        // OUR message, the server's CODE. Flattening this to a bare `Error`
-        // loses the code, and the offline queue then classifies a rejected
-        // refresh as an unknown permanent failure and WITHDRAWS the queued
-        // write instead of parking it for the next sign-in.
+        // OUR message, the server's CODE: without the code the offline queue
+        // reads a rejected refresh as a permanent failure and WITHDRAWS the
+        // queued write instead of parking it for the next sign-in.
         throw new RefreshRejectedError(error.code, 'Refresh token expired');
       }
 
@@ -366,10 +351,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
       // For network errors, we retry but DON'T trigger logout after max retries
       if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
-        const delay = calculateRetryDelay(refreshState.retryCount - 1);
+        const delay = backoffDelay(
+          refreshState.retryCount - 1,
+          REFRESH_CONFIG.RETRY_BACKOFF,
+        );
         logger.info(`Will retry token refresh in ${delay}ms`);
 
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await sleep(delay);
         return performTokenRefresh(); // Recursive retry
       }
 
@@ -429,10 +417,9 @@ export const attemptTokenRefresh = (
       return;
     }
 
-    // Within MIN_REFRESH_INTERVAL (or retry budget exhausted): give the
-    // operation one more pass with skipErrorLink instead of starting another
-    // refresh. authLink attaches the current token on the way down; a repeat
-    // 401 then surfaces normally rather than looping back into this link.
+    // Within MIN_REFRESH_INTERVAL or out of budget: one more pass with
+    // skipErrorLink instead of another refresh, so a repeat 401 surfaces
+    // rather than looping back into this link.
     if (!canAttemptRefresh()) {
       operation.setContext({ skipErrorLink: true });
       forward(operation).subscribe(observer);
@@ -443,10 +430,9 @@ export const attemptTokenRefresh = (
     refreshState.isRefreshing = true;
     refreshState.refreshPromise = performTokenRefresh();
 
-    // Reset state and drain the queue in one synchronous settle handler so a
-    // concurrent 401 can't land on an already-drained queue and hang: a late
-    // joiner either makes the queue before this runs, or sees isRefreshing
-    // cleared and starts its own refresh.
+    // Reset and drain in one synchronous settle handler, so a concurrent 401
+    // either joins the queue before this runs or sees isRefreshing cleared and
+    // starts its own refresh, never hanging on a drained queue.
     refreshState.refreshPromise.then(
       newToken => {
         resetRefreshState();
@@ -540,12 +526,9 @@ export const proactiveTokenRefresh = async (
   }
 };
 
-// Hand the socket its one use of the refresh: the 4403 close handler's fast
-// path, which gets a fresh access token into the store before the socket's
-// backoff elapses. It is not the recovery — the re-dial re-runs
-// `connectionParams` and the server can rotate there — so a failure here is
-// survivable. Registered rather than imported because wsLink cannot import this
-// module back without a cycle.
+// The 4403 close handler's fast path to a fresh access token before the
+// socket's backoff elapses; the re-dial's `connectionParams` is the recovery,
+// so a failure here is survivable. Registered, as wsLink importing this cycles.
 registerTokenRefresh(() => proactiveTokenRefresh({ reason: 'recovery' }));
 
 // Rotation is single-use, so only one transport may present the refresh token

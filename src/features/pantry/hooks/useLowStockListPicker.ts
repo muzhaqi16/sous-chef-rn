@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import type { AddToListOutcome } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 
 /** One low-stock row, in the shape `addToList` needs. */
@@ -27,14 +27,13 @@ interface Options {
 }
 
 /**
- * Adds low-stock rows to a shopping list the person picks, one queued create
- * per row, so the whole thing works offline — `addToList` is already
- * local-first. Replaces `addLowStockItemsToShoppingList`, which asked the
- * server to choose both the rows and the list.
+ * Adds low-stock rows to a shopping list the person picks, one local-first
+ * `addToList` per row, so it works offline.
  */
 export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
   // One state, not a visible flag beside a pending row: the two were only ever
   // set together, and `null` says "closed" without a second way to disagree.
+  const { t } = useTranslation();
   const [target, setTarget] = useState<PickerTarget | null>(null);
   const [busy, setBusy] = useState(false);
 

@@ -7,7 +7,9 @@ import { logger } from '#/utils/environment';
 import {
   DeviceByDeviceIdDocument,
   RegisterDeviceDocument,
+  DeleteDeviceDocument,
   UpdateDeviceDocument,
+  type DeleteDeviceMutation,
   type UpdateDeviceMutation,
 } from '#operations/auth/device.generated';
 import { PermissionService } from '#/services/permissions/PermissionService';
@@ -30,12 +32,14 @@ import {
 } from '#/storage/deviceId';
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
+import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
-// Registering THIS device with the server. Fire-and-forget: a failure here must
-// never block a sign-in. A session end leaves the push token in place: the
-// server pushes only to a live session bound to the device, so revoking the
-// refresh token (`refreshTokenRevocation.ts`) is what stops delivery.
+// Fire-and-forget: a failure never blocks a sign-in. A session end leaves the
+// push token: the server pushes only to a live session bound to the device, so
+// revoking the refresh token (`refreshTokenRevocation.ts`) stops delivery.
 
 /**
  * `undefined` leaves the server's stored push token alone; `null` clears it.
@@ -161,12 +165,15 @@ export type DeviceUpdateOutcome =
 // block, and one inside a `try` body bails the React Compiler out of the whole
 // function.
 function readDeviceUpdate(result: {
-  data?: UpdateDeviceMutation | null;
+  data?: UpdateDeviceMutation | DeleteDeviceMutation | null;
   error?: unknown;
 }): DeviceUpdateOutcome {
   if (appliedPayload(result.data)) return { status: 'ok' };
   // Any other member is a refusal the server resolved, not a success.
-  const refusal = result.data?.updateDevice;
+  const refusal =
+    result.data && 'updateDevice' in result.data
+      ? result.data.updateDevice
+      : result.data?.deleteDevice;
   if (!refusal || !('code' in refusal)) {
     return { status: 'failed', error: result.error ?? null };
   }
@@ -189,6 +196,20 @@ async function updateDevice(
   }
 }
 
+/** Removes a device row; a row already gone answers as done (`converged`). */
+async function deleteDevice(id: string): Promise<DeviceUpdateOutcome> {
+  try {
+    const result = await client.mutate({
+      mutation: DeleteDeviceDocument,
+      variables: { input: { id } },
+      fetchPolicy: 'no-cache',
+    });
+    return readDeviceUpdate(result);
+  } catch (error) {
+    return { status: 'failed', error };
+  }
+}
+
 /** Push a rotated push token to the server for the registered device. */
 export async function pushRotatedTokenToServer(
   deviceId: string,
@@ -202,9 +223,17 @@ export async function pushRotatedTokenToServer(
   logger.error('Failed to update rotated push token:', outcome);
 }
 
+/**
+ * Bumped by every session end, so a registration started in a session stops
+ * when it ends instead of retrying with no credentials, each retry also trying
+ * a refresh that has no token to present.
+ */
+let sessionGeneration = 0;
+
 // A rotation after the session ended has no credential to send it with; the
 // next sign-in registers the current token.
 registerSessionTeardown('devicePushToken', () => {
+  sessionGeneration += 1;
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
   clearRetiredDeviceRow();
@@ -212,10 +241,9 @@ registerSessionTeardown('devicePushToken', () => {
 });
 
 /**
- * Retire the row a superseded identifier registered: its push token is live and
- * no other client path reaches it. Runs after a confirmed registration, so the
- * account is never left with no row at all, and leaves the key in place on a
- * failure so the next launch retries.
+ * Retires a superseded identifier's row, whose push token is live and reachable
+ * by no other path. After a confirmed registration, so a row always remains;
+ * a failure keeps the key so the next launch retries.
  */
 async function retireLegacyDeviceRow(): Promise<void> {
   const legacy = readLegacyDeviceFingerprint();
@@ -246,7 +274,7 @@ async function retireLegacyDeviceRow(): Promise<void> {
     return;
   }
 
-  const outcome = await updateDevice({ id: row.id, delete: true });
+  const outcome = await deleteDevice(row.id);
   if (outcome.status !== 'ok') {
     logger.warn('Could not retire the superseded device row:', outcome);
     return;
@@ -279,10 +307,8 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
       return 'retry';
     }
 
-    // Acquire the push token only when OS notification permission is already
-    // granted, so login never triggers the permission prompt. The prompt happens
-    // in-context when the user enables push in settings, which then re-runs
-    // registration to deliver the token.
+    // Only with permission already granted, so login never prompts; enabling
+    // push in settings prompts and re-runs registration.
     const notificationStatus = await PermissionService.check('notifications');
     const permissionGranted = notificationStatus === 'granted';
     const acquiredToken = permissionGranted ? await acquirePushToken() : null;
@@ -309,7 +335,7 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     // Keep the server token current: the OS rotates push tokens periodically, so
     // subscribe once and updateDevice on each rotation. This is the server's
     // row id, not the identity the device presents.
-    const serverDeviceId = registerPayload.device?.id;
+    const serverDeviceId = registerPayload.device.id;
     if (serverDeviceId) {
       pushTokenRefreshUnsubscribe?.();
       pushTokenRefreshUnsubscribe = onPushTokenRefresh(token => {
@@ -317,11 +343,9 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
         if (token) void pushRotatedTokenToServer(serverDeviceId, token);
       });
 
-      // Close the getToken-timeout dead window: the OS can deliver a token after
-      // acquirePushToken's timeout resolved null but before the refresh listener
-      // subscribed just above — that token is cached yet was pushed to nobody.
-      // Re-check now (after subscribing, so any later arrival still hits the
-      // listener) and update the device if a token has since materialized.
+      // A token can land after acquirePushToken timed out but before the refresh
+      // listener subscribed, reaching nobody; re-checked after subscribing, so a
+      // later one still hits the listener.
       if (permissionGranted) {
         const laterToken = await getPushTokenProvider().getToken();
         if (laterToken && laterToken !== acquiredToken) {
@@ -344,27 +368,35 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
   }
 }
 
-async function registerDeviceWithRetry(maxRetries = 3): Promise<boolean> {
+async function registerDeviceWithRetry(
+  maxRetries = 3,
+): Promise<'ok' | 'failed' | 'sessionEnded'> {
+  const generation = sessionGeneration;
+  // Scheduled on idle, so a session can end before the first attempt runs too.
+  const sessionEnded = () =>
+    generation !== sessionGeneration ||
+    !holdsSessionTokens(useStore.getState());
   let attempts = 0;
   while (attempts < maxRetries) {
+    if (sessionEnded()) return 'sessionEnded';
     attempts++;
     const outcome = await registerDeviceOnce();
-    if (outcome === 'ok') return true;
-    if (outcome === 'unretryable') return false;
+    if (outcome === 'ok') return 'ok';
+    if (outcome === 'unretryable') return 'failed';
     if (attempts < maxRetries) {
-      const delay = Math.pow(2, attempts) * 1000;
+      const delay = backoffDelay(attempts, { baseMs: 1000 });
       logger.info(`Device registration retry in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
     }
   }
   logger.warn(`Device registration failed after ${maxRetries} attempts`);
-  return false;
+  return 'failed';
 }
 
 export function registerDeviceInBackground(): void {
   registerDeviceWithRetry(3)
-    .then(success => {
-      if (!success) {
+    .then(outcome => {
+      if (outcome === 'failed') {
         logger.warn('Background device registration failed');
       }
     })

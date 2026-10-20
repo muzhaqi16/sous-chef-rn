@@ -17,6 +17,7 @@ import {
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { isRecord } from '#/utils/isRecord';
+import { itemIdOf, type SentItemRef } from '#/utils/refInput';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import {
@@ -26,17 +27,28 @@ import {
 } from './items';
 import { withdrawShoppingListItems } from './withdraw';
 
-/** What a new row shows until the server answers; its list is the create's. */
+/**
+ * What a new row shows until the server answers; its list is the create's, and
+ * its item the one the line names unless the row states its own (a line naming
+ * a product record still names the item that record is of).
+ */
 export type ShoppingRowFields = Omit<
   OptimisticShoppingListItemFields,
   'shoppingListId'
 >;
 
+/** The line as sent, less the id the create mints. */
+export type ShoppingRowLine = Omit<
+  BatchAddShoppingListItemInput,
+  'id' | 'item'
+> & {
+  item: SentItemRef;
+};
+
 interface ShoppingRowCreate<TData> {
   listId: string;
   row: ShoppingRowFields;
-  /** The line as sent, less the id this mints. */
-  line: Omit<BatchAddShoppingListItemInput, 'id'>;
+  line: ShoppingRowLine;
   /** Fires the surface's own copy of the batch add. */
   send: (options: {
     variables: { input: AddItemsToShoppingListInput };
@@ -79,6 +91,7 @@ export async function createShoppingListRow<TData>(
   };
   const local = createLocalShoppingListItem(id, {
     ...row,
+    itemId: row.itemId ?? itemIdOf(line.item),
     shoppingListId: listId,
   });
   try {

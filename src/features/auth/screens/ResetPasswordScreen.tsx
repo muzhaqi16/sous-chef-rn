@@ -18,7 +18,7 @@ import {
 import { logger } from '#/utils/environment';
 import { localizedErrorMessage } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
-import { getResetPasswordValidationSchema } from '#/utils/validation/auth';
+import { resetPasswordSchema } from '#/utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
@@ -100,7 +100,7 @@ export const ResetPasswordScreen: React.FC = () => {
   );
 
   const form = useForm<ResetPasswordForm>({
-    resolver: yupResolver(getResetPasswordValidationSchema()),
+    resolver: yupResolver(resetPasswordSchema),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',
@@ -110,10 +110,9 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const watchedValues = useWatch({ control: form.control });
 
-  // `shouldValidate` re-runs the rule on THIS field only, and the match rule
-  // reports on `confirmPassword` while reading `newPassword`. It re-runs only
-  // once the confirmation has been reached — a mismatch under an empty field
-  // is feedback on nothing the user did. Submit still waits on `isValid`.
+  // `shouldValidate` re-runs only THIS field's rule, and the match rule reports
+  // on `confirmPassword`, so it is triggered once the confirmation has text: a
+  // mismatch under an empty field is feedback on nothing the user did.
   const setField = (field: keyof ResetPasswordForm, value: string) => {
     form.setValue(field, value, { shouldValidate: true });
     if (field === 'newPassword' && form.getValues('confirmPassword') !== '') {
@@ -121,11 +120,9 @@ export const ResetPasswordScreen: React.FC = () => {
     }
   };
 
-  // Opening a link must not, by itself, end a session — any web page can
-  // present one. So the token is checked against the server FIRST, and only a
-  // token the server accepts clears the current session (which the reset then
-  // requires). A missing, malformed, expired or unverifiable token leaves the
-  // session untouched and shows the invalid-link view.
+  // Any web page can present a link, so opening one must not end a session:
+  // only a token the server accepts FIRST clears it (the reset needs that). Any
+  // other token leaves the session and shows the invalid-link view.
   useEffect(() => {
     // A missing or too-short token needs no server round trip — the render
     // below already shows the invalid-link view for it, so this effect simply

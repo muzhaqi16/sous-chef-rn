@@ -5,7 +5,7 @@ import { useShoppingListDetails } from '#features/shoppingList/hooks/useShopping
 import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
-import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
+import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useCompleteShoppingList } from '#features/shoppingList/hooks/mutations/useCompleteShoppingList';
 import { useSetDefaultShoppingList } from '#features/shoppingList/hooks/mutations/useSetDefaultShoppingList';
@@ -33,28 +33,46 @@ import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { dayAsInstant } from '#/utils/dateUtils';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 /** Whose list this is, with "not yet known" kept distinct from "not yours". */
 export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
 
+interface StoreChoice {
+  id: string;
+  name: string;
+}
+
 function syncListFormState(
   shoppingList:
-    | { name: string; isDefault: boolean; budgetAmount?: number | null }
+    | {
+        name: string;
+        isDefault: boolean;
+        budgetAmount?: number | null;
+        targetStore: StoreChoice | null;
+      }
     | null
     | undefined,
   listId: string | undefined,
   setName: (v: string) => void,
   setIsDefault: (v: boolean) => void,
   setBudgetInput: (v: string) => void,
+  setStoreInput: (v: string) => void,
+  setPickedStore: (store: StoreChoice | null) => void,
 ) {
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
     setBudgetInput(formatNumberForInput(shoppingList.budgetAmount));
+    setStoreInput(shoppingList.targetStore?.name ?? '');
+    setPickedStore(shoppingList.targetStore);
   } else if (listId) {
     setName('');
     setIsDefault(false);
     setBudgetInput('');
+    setStoreInput('');
+    setPickedStore(null);
   }
 }
 
@@ -72,6 +90,10 @@ export const useListSettings = (listId: string | undefined) => {
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
+  // What the store field shows, and the store picked from its suggestions: a
+  // typed name that is not picked names no store.
+  const [storeInput, setStoreInput] = useState('');
+  const [pickedStore, setPickedStore] = useState<StoreChoice | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
@@ -110,11 +132,9 @@ export const useListSettings = (listId: string | undefined) => {
       }
     : null;
 
-  // Three answers, not two. Creating a list: nobody else's ownership to
-  // respect, so the owner-only controls are the author's. For an EXISTING one,
-  // `unknown` is neither — defaulting it to owner offers Save, budget,
-  // recurring, template, archive and delete to a non-owner, and defaulting it
-  // to `other` hides them from the owner with no way to tell why.
+  // A new list is the author's. For an existing one `unknown` is neither: owner
+  // would offer the owner-only controls to a non-owner, and `other` would hide
+  // them from the owner with no way to tell why.
   const ownership: OwnershipAnswer = !listId
     ? 'owner'
     : !ownershipSnapshot
@@ -130,7 +150,7 @@ export const useListSettings = (listId: string | undefined) => {
         shoppingList?.home?.myMembership,
       )
     : null;
-  const roleDisplay = formatRoleDisplay(role);
+  const roleDisplay = formatRoleDisplay(role, t);
   const ownerInfo = ownershipSnapshot
     ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;
@@ -148,7 +168,7 @@ export const useListSettings = (listId: string | undefined) => {
   const isHomeMember = !!shoppingList?.home?.myMembership;
   const linkedHomeId = shoppingList?.homeId ?? null;
 
-  const { leaveList, leaving } = useLeaveShoppingList(listId ?? '');
+  const { leaveList, leaving } = useRemoveCollaborator(listId ?? '');
   const { updateShoppingList } = useUpdateShoppingList(
     t('errors.saveSettingsFailed'),
   );
@@ -192,8 +212,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   const currency = shoppingList?.currency ?? null;
-  const totalCost = shoppingList?.totalCost ?? 0;
-  const estimatedTotal = shoppingList?.estimatedTotal ?? 0;
+  // Null is an amount nobody recorded, which is not an amount of zero.
+  const totalCost = shoppingList?.totalCost ?? null;
+  const estimatedTotal = shoppingList?.estimatedTotal ?? null;
+  const unpricedItems = shoppingList?.unpricedItems ?? 0;
   const priceTracking = shoppingList?.priceTracking ?? false;
 
   const reminderEnabled = shoppingList?.reminderEnabled ?? false;
@@ -231,13 +253,14 @@ export const useListSettings = (listId: string | undefined) => {
       setName,
       setIsDefault,
       setBudgetInput,
+      setStoreInput,
+      setPickedStore,
     );
   }, [shoppingList, listId]);
 
-  // A non-owner reaches a home-linked list through their home membership, and
-  // leaving the home evicts only the Home from cache — the ShoppingList entity
-  // stays. So on focus with every access path gone, pop back and clear the
-  // selection, or the user lands on a list they cannot open.
+  // Leaving a home evicts only the Home, not a home-linked ShoppingList a
+  // non-owner reached through it, so with every access path gone this pops back
+  // and clears the selection rather than land on a list they cannot open.
   const hasLostListAccess =
     !!listId &&
     !!shoppingList &&
@@ -251,6 +274,9 @@ export const useListSettings = (listId: string | undefined) => {
       goBack();
     }
   });
+
+  const handleStoreSelected = (id: string | null, storeName: string | null) =>
+    setPickedStore(id && storeName ? { id, name: storeName } : null);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -271,6 +297,7 @@ export const useListSettings = (listId: string | undefined) => {
       budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
         ? typedBudget
         : undefined;
+    const storeChanged = pickedStore?.id !== shoppingList?.targetStore?.id;
 
     void executeWithLoadingState(
       async () => {
@@ -315,6 +342,7 @@ export const useListSettings = (listId: string | undefined) => {
           await updateShoppingList(listId, {
             name: name.trim(),
             ...(defaultTurnedOff && { isDefault: false }),
+            ...(storeChanged && { targetStore: pickedStore }),
             ...(changedBudget !== undefined && {
               planning: {
                 budgetAmount: changedBudget,
@@ -359,16 +387,9 @@ export const useListSettings = (listId: string | undefined) => {
     alertService.alert(
       t('labels.deleteList'),
       t('shoppingListScreens.deleteListConfirmMessage'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteList(listId);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteList(listId);
+      }),
     );
   };
 
@@ -427,9 +448,10 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   // Reminder — a picked date sets/updates it; the clear action removes it.
+  // The API reads the reminder's day in the owner's recorded time zone.
   const handleSetReminderDate = (date: Date | null) => {
     if (listId && date) {
-      void setReminder(listId, date.toISOString(), true);
+      void setReminder(listId, dayAsInstant(date), true);
     }
   };
 
@@ -522,30 +544,23 @@ export const useListSettings = (listId: string | undefined) => {
       t('shoppingListScreens.leaveListMessage', {
         name: name || t('shoppingListScreens.thisList'),
       }),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.leaveList'),
-          style: 'destructive',
-          onPress: () => {
-            if (!currentUserCollaborator?.id) {
-              toastService.error(
-                t('shoppingListScreens.couldNotDetermineMembership'),
-              );
-              return;
-            }
+      destructiveConfirm(t('labels.leaveList'), () => {
+        if (!currentUserCollaborator?.id) {
+          toastService.error(
+            t('shoppingListScreens.couldNotDetermineMembership'),
+          );
+          return;
+        }
 
-            void leaveList(currentUserCollaborator.id, {
-              onSuccess: () => {
-                setSelectedShoppingListId(null);
-                goBack();
-              },
-              onError: () =>
-                toastService.error(t('shoppingListScreens.failedToLeave')),
-            });
+        void leaveList(currentUserCollaborator.id, {
+          onSuccess: () => {
+            setSelectedShoppingListId(null);
+            goBack();
           },
-        },
-      ],
+          onError: () =>
+            toastService.error(t('shoppingListScreens.failedToLeave')),
+        });
+      }),
     );
   };
 
@@ -573,6 +588,7 @@ export const useListSettings = (listId: string | undefined) => {
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
+    handleStoreSelected,
     handleToggleComplete,
     handleTogglePriceTracking,
     homes,
@@ -613,13 +629,16 @@ export const useListSettings = (listId: string | undefined) => {
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
+    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
+    storeInput,
     templateName,
     templates,
     totalCost,
+    unpricedItems,
   };
 };

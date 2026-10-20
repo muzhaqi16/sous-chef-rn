@@ -6,6 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Icon } from '#/utils/iconUtils';
 import { formatQuantityForDisplay } from '#utils/formatQuantity';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { purchaseDay } from '#utils/dateUtils';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import {
@@ -87,8 +89,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // still honest about the part it knows.
   const costPerUnit = pricing?.isRateDiluted ? null : item.costPerUnit;
   // `item.purchase` is the FIRST acquisition; a restock's is on its own batch.
-  // Label by SOURCE: a batch has no join to its Purchase, so only `createdAt`
-  // is reachable and "Purchased" would claim an intake time is a purchase date.
   const fromBatch = pricing?.lastPurchase ?? null;
   const purchaseDate = fromBatch?.date ?? item.purchase?.purchaseDate;
   const purchaseTotal = fromBatch
@@ -353,7 +353,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
               : 'pantryItemDetail.fields.purchased',
           )}
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
-          value={`${formatDate(purchaseDate)}${
+          value={`${formatMonthDayYear(purchaseDay(purchaseDate))}${
             purchaseTotal != null &&
             purchaseTotal > 0 &&
             purchaseTotalIsDenominated

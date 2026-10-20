@@ -10,20 +10,17 @@ import {
 import { isOwnKey } from '#/utils/isOwnKey';
 
 /**
- * Fields the API removed with the mutation-payload cutover that a write queued
- * by an earlier build still selects, by the type that dropped them: another
- * type may still offer the name. One unknown field fails the whole document,
- * and the write with it, so the queue drops them when it loads.
+ * Removed fields an earlier build's queued write still selects, by the type
+ * that dropped them (another type may still offer the name). One unknown field
+ * fails the whole document, so the queue drops them on load.
  */
 const REMOVED_FIELDS = {
-  CreateShoppingListItemsFromRecipePayload: new Set([
-    'addedItems',
-    'updatedItems',
-    'skippedItems',
-    'totalAdded',
-    'totalUpdated',
-    'totalSkipped',
-  ]),
+  // The previous build's readers fragments selected these on every write that
+  // returned the entity; a connection or the settings row holds each now.
+  ShoppingListItemSource: new Set(['isAutoAdded', 'autoAddReason']),
+  MealPlan: new Set(['mealPlanItems', 'generatedShoppingLists']),
+  MealTemplate: new Set(['items']),
+  User: new Set(['timezone', 'preferredCurrency']),
   MovePurchasedItemsToPantryPayload: new Set(['movedItems', 'failedItems']),
   BatchAddShoppingListItemResult: new Set([
     'quantityIncremented',
@@ -40,12 +37,24 @@ const RESULTS_LINE = {
   BulkUpsertItemsByExternalSourcePayload: 'BatchUpsertItemResult',
 };
 
+/**
+ * The type a FIELD reads as, where a type above is reached by field, not type
+ * condition (`source { isAutoAdded }` under a shopping line). Keyed by field
+ * alone: no queued selection uses these names for another type.
+ */
+const FIELD_TYPE = {
+  source: 'ShoppingListItemSource',
+  mealPlan: 'MealPlan',
+  mealTemplate: 'MealTemplate',
+  user: 'User',
+};
+
 type Ancestors = readonly (ASTNode | readonly ASTNode[])[];
 
 /**
  * The type a selection is read on, where the document names it: the nearest
- * type condition, or a batch payload's `results` line. Undefined under any
- * other field, whose type only the schema knows.
+ * type condition, a {@link FIELD_TYPE} field, or a batch payload's `results`
+ * line. Undefined under any other field, whose type only the schema knows.
  */
 function enclosingType(ancestors: Ancestors): string | undefined {
   for (let index = ancestors.length - 1; index >= 0; index -= 1) {
@@ -58,7 +67,9 @@ function enclosingType(ancestors: Ancestors): string | undefined {
       return node.typeCondition.name.value;
     }
     if (node.kind === Kind.FIELD) {
-      if (node.name.value !== 'results') return undefined;
+      const field = node.name.value;
+      if (isOwnKey(FIELD_TYPE, field)) return FIELD_TYPE[field];
+      if (field !== 'results') return undefined;
       const payload = enclosingType(ancestors.slice(0, index));
       return payload !== undefined && isOwnKey(RESULTS_LINE, payload)
         ? RESULTS_LINE[payload]

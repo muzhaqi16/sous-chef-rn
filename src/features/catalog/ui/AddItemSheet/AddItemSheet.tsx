@@ -50,6 +50,7 @@ export function AddItemSheet<
   isMutating,
   onAddManually,
   onScanPress,
+  receiptAction,
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
@@ -68,11 +69,9 @@ export function AddItemSheet<
     keyboardBehavior: 'extend',
   });
 
-  // Morphing step: ONE sheet shows search, an in-place details form, or the
-  // report form. Stacking a second BottomSheetModal instead races the global
-  // backdrop, and gorhom's default `stackBehavior: 'switch'` minimizes this
-  // sheet rather than stacking on it. The height is never force-expanded across
-  // a morph — the user drags from the search snap point to the 95% max.
+  // ONE sheet morphs between search, details and report: a second
+  // BottomSheetModal races the global backdrop, and gorhom's default
+  // `stackBehavior: 'switch'` minimizes this sheet rather than stacking on it.
   const [step, setStep] = useState<'search' | 'details' | 'report'>('search');
   const goBackToSearch = () => {
     setStep('search');
@@ -154,10 +153,8 @@ export function AddItemSheet<
     }
   }, [isOpen, resetAutocomplete]);
 
-  // Wrap onAddManually to provide search value. When the consumer renders an
-  // in-place details step, morph this same sheet to it instead of opening a
-  // second modal. The sheet keeps its current height (the search snap point) —
-  // the user can still drag it up to the 95% max.
+  // With `renderDetails` this same sheet morphs to the details step, keeping
+  // its search snap height; the user can drag it up to the 95% max.
   const handleAddManually = () => {
     const searchValue = searchBarRef.current?.getValue() ?? '';
     onAddManually(searchValue);
@@ -312,7 +309,19 @@ export function AddItemSheet<
                 {
                   icon: 'barcode-outline',
                   onPress: onScanPress,
+                  accessibilityLabel: t('labels.scanBarcode'),
                 },
+                ...(receiptAction
+                  ? [
+                      {
+                        icon: 'receipt-outline',
+                        ...receiptAction,
+                        testID: catalogTestIDs.addItemSheetReceiptAction(
+                          config.testIDPrefix,
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
             />
 

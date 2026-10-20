@@ -1,5 +1,6 @@
 import type { FormattedExecutionResult } from 'graphql';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   GraphQLNetworkError,
   getTopLevelGraphQLError,
@@ -32,6 +33,7 @@ describe('getTopLevelGraphQLError', () => {
       code: 'UNAUTHENTICATED',
       message: 'Token expired',
       field: null,
+      category: null,
     });
   });
 
@@ -48,6 +50,22 @@ describe('getTopLevelGraphQLError', () => {
     expect(getTopLevelGraphQLError(error)?.field).toBe('input.email');
   });
 
+  it("reads the API's fault category", () => {
+    const error = new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: 'Database unreachable',
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            category: 'infrastructure',
+          },
+        },
+      ],
+    } satisfies FormattedExecutionResult);
+
+    expect(getTopLevelGraphQLError(error)?.category).toBe('infrastructure');
+  });
+
   it('defaults code/message to empty strings when missing', () => {
     const error = new CombinedGraphQLErrors({
       errors: [{ message: '' }],
@@ -56,6 +74,7 @@ describe('getTopLevelGraphQLError', () => {
       code: '',
       message: '',
       field: null,
+      category: null,
     });
   });
 
@@ -74,6 +93,16 @@ describe('isResourceAccessLostError', () => {
 
   it('is true for FORBIDDEN', () => {
     expect(isResourceAccessLostError(errorWithCode('FORBIDDEN'))).toBe(true);
+  });
+
+  // A read inside a home the caller has left is refused by the home's own
+  // rule, which answers with this code rather than FORBIDDEN.
+  it('is true for HOME_NOT_A_MEMBER', () => {
+    expect(
+      isResourceAccessLostError(
+        errorWithCode(TopLevelErrorCode.HomeNotAMember),
+      ),
+    ).toBe(true);
   });
 
   // Retired server-side and emitted by nothing — matching it would keep a dead

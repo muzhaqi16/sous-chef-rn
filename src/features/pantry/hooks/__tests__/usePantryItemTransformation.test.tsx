@@ -5,7 +5,6 @@ import {
   getExpirationStatus,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
-  formatNetWeightDisplay,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
@@ -40,34 +39,34 @@ describe('formatStorageState', () => {
 
 describe('getExpirationStatus', () => {
   it('returns normal for null expiresIn', () => {
-    expect(getExpirationStatus(null)).toEqual({
+    expect(getExpirationStatus(null, t)).toEqual({
       text: 'No expiry date',
       type: 'normal',
     });
   });
   it('returns expired for negative days', () => {
-    expect(getExpirationStatus(-3)).toEqual({
+    expect(getExpirationStatus(-3, t)).toEqual({
       text: 'Expired 3 days ago',
       type: 'expired',
     });
   });
   it('returns critical for today', () => {
-    expect(getExpirationStatus(0)).toEqual({
+    expect(getExpirationStatus(0, t)).toEqual({
       text: 'Expires today',
       type: 'critical',
     });
   });
   it('returns warning for tomorrow', () => {
-    expect(getExpirationStatus(1)).toEqual({
+    expect(getExpirationStatus(1, t)).toEqual({
       text: 'Expires tomorrow',
       type: 'warning',
     });
   });
   it('returns warning for 2-3 days', () => {
-    expect(getExpirationStatus(2).type).toBe('warning');
+    expect(getExpirationStatus(2, t).type).toBe('warning');
   });
   it('returns normal for > 3 days', () => {
-    expect(getExpirationStatus(10)).toEqual({
+    expect(getExpirationStatus(10, t)).toEqual({
       text: 'Expires in 10 days',
       type: 'normal',
     });
@@ -76,76 +75,76 @@ describe('getExpirationStatus', () => {
 
 describe('formatPackageBreakdown', () => {
   it('returns null for null breakdown', () => {
-    expect(formatPackageBreakdown(null)).toBeNull();
+    expect(formatPackageBreakdown(null, t)).toBeNull();
   });
   it('formats breakdown with per-unit weight', () => {
-    const result = formatPackageBreakdown({
-      count: 12,
-      contentUnit: { name: 'cans' },
-      perUnitNetWeight: 12,
-      perUnitNetWeightUnit: { symbol: 'oz' },
-    });
+    const result = formatPackageBreakdown(
+      {
+        count: 12,
+        contentUnit: { name: 'cans' },
+        perUnitNetWeight: 12,
+        perUnitNetWeightUnit: { symbol: 'oz' },
+      },
+      t,
+    );
     expect(result).toBe('12 x 12 oz cans');
   });
   it('writes a fractional per-unit weight as a decimal', () => {
-    const result = formatPackageBreakdown({
-      count: 4,
-      contentUnit: { name: 'cans' },
-      perUnitNetWeight: 14.5,
-      perUnitNetWeightUnit: { symbol: 'oz' },
-    });
+    const result = formatPackageBreakdown(
+      {
+        count: 4,
+        contentUnit: { name: 'cans' },
+        perUnitNetWeight: 14.5,
+        perUnitNetWeightUnit: { symbol: 'oz' },
+      },
+      t,
+    );
     expect(result).toBe('4 x 14.5 oz cans');
   });
   it('formats breakdown without per-unit weight', () => {
-    const result = formatPackageBreakdown({
-      count: 6,
-      contentUnit: { name: 'bottles', symbol: 'btl' },
-    });
+    const result = formatPackageBreakdown(
+      {
+        count: 6,
+        contentUnit: { name: 'bottles', symbol: 'btl' },
+      },
+      t,
+    );
     expect(result).toBe('6 btl');
   });
 });
 
 describe('formatPackageBreakdownFull', () => {
   it('returns null for null breakdown', () => {
-    expect(formatPackageBreakdownFull(null)).toBeNull();
+    expect(formatPackageBreakdownFull(null, t)).toBeNull();
   });
   it('appends total when available', () => {
-    const result = formatPackageBreakdownFull({
-      count: 12,
-      contentUnit: { name: 'cans' },
-      perUnitNetWeight: 12,
-      perUnitNetWeightUnit: { symbol: 'oz' },
-      totalNetWeight: 144,
-    });
+    const result = formatPackageBreakdownFull(
+      {
+        count: 12,
+        contentUnit: { name: 'cans' },
+        perUnitNetWeight: 12,
+        perUnitNetWeightUnit: { symbol: 'oz' },
+        totalNetWeight: 144,
+      },
+      t,
+    );
     expect(result).toBe('12 x 12 oz cans (144 oz total)');
-  });
-});
-
-describe('formatNetWeightDisplay', () => {
-  it('returns null for no weight', () => {
-    expect(formatNetWeightDisplay(null)).toBeNull();
-  });
-  it('upscales g to kg when >= 1000', () => {
-    expect(formatNetWeightDisplay(1500, { symbol: 'g' })).toBe('1.5 kg');
-  });
-  it('upscales ml to L when >= 1000', () => {
-    expect(formatNetWeightDisplay(2000, { symbol: 'ml' })).toBe('2.0 L');
-  });
-  it('formats integer values', () => {
-    expect(formatNetWeightDisplay(500, { symbol: 'g' })).toBe('500 g');
   });
 });
 
 describe('formatQuantityBreakdown', () => {
   it('returns null for null breakdown', () => {
-    expect(formatQuantityBreakdown(null)).toBeNull();
+    expect(formatQuantityBreakdown(null, t)).toBeNull();
   });
   it('returns null when total is 0', () => {
-    const result = formatQuantityBreakdown({
-      fullPackages: 0,
-      looseContentUnits: 0,
-      totalContentUnits: 0,
-    });
+    const result = formatQuantityBreakdown(
+      {
+        fullPackages: 0,
+        looseContentUnits: 0,
+        totalContentUnits: 0,
+      },
+      t,
+    );
     expect(result).toBeNull();
   });
   it('renders the unit label the server gave, without pluralising it', () => {
@@ -158,21 +157,27 @@ describe('formatQuantityBreakdown', () => {
     // ("15 kg"). Pluralising the `name` fallback correctly would need a plural
     // form per unit per language, which the API does not expose — see the note
     // in `formatQuantityBreakdown`.
-    const result = formatQuantityBreakdown({
-      fullPackages: 1,
-      looseContentUnits: 3,
-      contentUnit: { name: 'can', symbol: 'can' },
-      totalContentUnits: 15,
-    });
+    const result = formatQuantityBreakdown(
+      {
+        fullPackages: 1,
+        looseContentUnits: 3,
+        contentUnit: { name: 'can', symbol: 'can' },
+        totalContentUnits: 15,
+      },
+      t,
+    );
     expect(result).toBe('15 can');
   });
   it('handles singular unit', () => {
-    const result = formatQuantityBreakdown({
-      fullPackages: 0,
-      looseContentUnits: 1,
-      contentUnit: { name: 'bottle' },
-      totalContentUnits: 1,
-    });
+    const result = formatQuantityBreakdown(
+      {
+        fullPackages: 0,
+        looseContentUnits: 1,
+        contentUnit: { name: 'bottle' },
+        totalContentUnits: 1,
+      },
+      t,
+    );
     expect(result).toBe('1 bottle');
   });
 });

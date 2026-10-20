@@ -31,13 +31,17 @@ jest.mock('react-hook-form', () => {
   };
 });
 
+// The hook hands the template's own fields and, apart from them, every one
+// of its meals as a flat list — however many pages they were read in.
 let mockLoadedTemplate: Record<string, unknown> | null = null;
+let mockLoadedItems: Record<string, unknown>[] = [];
 jest.mock('#features/mealPlan/hooks/useMealTemplateForEdit', () => ({
-  useMealTemplateForEdit: () => ({ template: mockLoadedTemplate }),
+  useMealTemplateForEdit: () => ({
+    template: mockLoadedTemplate,
+    items: mockLoadedItems,
+  }),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockAddItem = jest.fn(async () => true);
@@ -136,9 +140,9 @@ describe('MealTemplateBuilderScreen', () => {
       description: '',
       defaultServings: 4,
       tags: [],
-      items: [],
     };
     mockLoadedTemplate = template;
+    mockLoadedItems = [];
     templateResets.length = 0;
 
     const { rerender } = renderWithApollo(
@@ -188,24 +192,24 @@ describe('MealTemplateBuilderScreen', () => {
       description: '',
       defaultServings: 2,
       tags: [],
-      items: [
-        {
-          id: 'item-1',
-          dayOffset: 0,
-          mealType: MealType.Dinner,
-          customMealName: null,
-          servings: 2,
-          notes: null,
-          recipe: {
-            id: 'recipe-1',
-            name: 'Carbonara',
-            imageUrl: null,
-            servings: 4,
-            totalTimeMinutes: 25,
-          },
-        },
-      ],
     };
+    const RECIPE_ITEMS = [
+      {
+        id: 'item-1',
+        dayOffset: 0,
+        mealType: MealType.Dinner,
+        customMealName: null,
+        servings: 2,
+        notes: null,
+        recipe: {
+          id: 'recipe-1',
+          name: 'Carbonara',
+          imageUrl: null,
+          servings: 4,
+          totalTimeMinutes: 25,
+        },
+      },
+    ];
 
     beforeEach(() => {
       mockAddItem.mockClear();
@@ -215,6 +219,38 @@ describe('MealTemplateBuilderScreen', () => {
 
     afterEach(() => {
       mockLoadedTemplate = null;
+      mockLoadedItems = [];
+    });
+
+    it('lists every meal the template holds, whichever page it was read in', () => {
+      mockLoadedTemplate = RECIPE_TEMPLATE;
+      mockLoadedItems = [
+        ...RECIPE_ITEMS,
+        {
+          id: 'item-101',
+          dayOffset: 6,
+          mealType: MealType.Lunch,
+          customMealName: 'Leftovers',
+          servings: 1,
+          notes: null,
+          recipe: null,
+        },
+      ];
+      renderWithApollo(
+        <MealTemplateBuilderScreen
+          route={{ params: { templateId: 'tmpl-r' } }}
+        />,
+      );
+
+      expect(
+        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-1')),
+      ).toBeTruthy();
+      expect(
+        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-101')),
+      ).toBeTruthy();
+      expect(screen.getByText('Carbonara')).toBeTruthy();
+      expect(screen.getByText('Leftovers')).toBeTruthy();
+      expect(screen.queryByText('No meals added yet')).toBeNull();
     });
 
     // Sending `meal: { customMealName }` for an untouched recipe row replaced
@@ -222,6 +258,7 @@ describe('MealTemplateBuilderScreen', () => {
     it('saves an edited recipe item without replacing its recipe', async () => {
       const user = userEvent.setup();
       mockLoadedTemplate = RECIPE_TEMPLATE;
+      mockLoadedItems = RECIPE_ITEMS;
       renderWithApollo(
         <MealTemplateBuilderScreen
           route={{ params: { templateId: 'tmpl-r' } }}
@@ -252,6 +289,7 @@ describe('MealTemplateBuilderScreen', () => {
     it('adds a saved recipe to a slot by its id', async () => {
       const user = userEvent.setup();
       mockLoadedTemplate = RECIPE_TEMPLATE;
+      mockLoadedItems = RECIPE_ITEMS;
       renderWithApollo(
         <MealTemplateBuilderScreen
           route={{ params: { templateId: 'tmpl-r' } }}

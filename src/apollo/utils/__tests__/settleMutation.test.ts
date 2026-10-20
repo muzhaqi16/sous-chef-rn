@@ -1,5 +1,6 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { alertService, type AlertButton } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
 import { t } from '#/i18n';
@@ -18,13 +19,11 @@ import {
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '../documentOperation';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import { settleMutation, settledStatus } from '../settleMutation';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
 import { Telemetry } from '#/services/telemetry';
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 // A payload member, its typename checked against the operation's result union.
 type Member<T extends { __typename: string }> = {
@@ -174,6 +173,40 @@ describe('settleMutation', () => {
       ]);
     });
 
+    it('shows the same copy as an error toast when asked to, and no alert', async () => {
+      await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'input.quantity',
+        }),
+        { ...options, present: 'toast' },
+      );
+
+      expect(alerts()).toEqual([]);
+      expect(toastService.error).toHaveBeenCalledWith(
+        t('errors.field.quantity', { defaultValue: FALLBACK }),
+      );
+    });
+
+    // A nested input's field (`amount.packages.size`) has copy of its own that
+    // its last segment alone could never name.
+    it("shows a nested field's own copy, by its whole path", async () => {
+      const settled = await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'amount.packages.size',
+        }),
+        { ...options, present: 'none' },
+      );
+
+      expect(settled.failure).toMatchObject({
+        field: 'size',
+        body: t('errors.field.amountPackagesSize'),
+      });
+    });
+
     it("shows the code's own copy when it says more than the field does", async () => {
       // Over-consuming reports INSUFFICIENT_QUANTITY on the quantity field. The
       // number the user typed is a valid one, so the field's "that quantity
@@ -281,6 +314,28 @@ describe('settleMutation', () => {
       expect(asData?.[1]).toBe(getVersionConflictMessage());
     });
 
+    it('shows the newer version on either conflict code, and says it is shown', async () => {
+      const onVersionConflict = jest.fn();
+      await settleMutation(
+        create({
+          __typename: 'ConflictError',
+          code: ErrorCode.VersionConflict,
+        }),
+        { ...options, onVersionConflict },
+      );
+      await settleMutation(
+        throwing(graphQLError(TopLevelErrorCode.ResourceVersionConflict)),
+        { ...options, onVersionConflict },
+      );
+
+      expect(onVersionConflict).toHaveBeenCalledTimes(2);
+      const shown = [
+        t('errors.changedElsewhereTitle'),
+        t('errors.changedElsewhereLatestShown'),
+      ];
+      expect(alerts()).toEqual([shown, shown]);
+    });
+
     it('offers no Refresh button when the caller has nothing to refresh', async () => {
       await settleMutation(
         create({
@@ -294,7 +349,7 @@ describe('settleMutation', () => {
       ]);
     });
 
-    it("offers the caller's refresh", async () => {
+    it("offers the caller's refresh, under the same heading whatever changed", async () => {
       const onConflictRefresh = jest.fn();
       await settleMutation(
         create({
@@ -304,7 +359,62 @@ describe('settleMutation', () => {
         { ...options, onConflictRefresh },
       );
 
+      expect(alerts()[0]?.slice(0, 2)).toEqual([
+        t('errors.changedElsewhereTitle'),
+        getVersionConflictMessage(),
+      ]);
       const buttons = alerts()[0]?.[2] as AlertButton[];
+      buttons.find(button => button.style !== 'cancel')?.onPress?.();
+      expect(onConflictRefresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('the error a failure arrived as', () => {
+    it('is handed back, thrown or resolved', async () => {
+      const refused = graphQLError(TopLevelErrorCode.InternalServerError);
+
+      const thrown = await settleMutation(throwing(refused), options);
+      const resolved = await settleMutation(
+        () => Promise.resolve({ error: refused }),
+        options,
+      );
+
+      expect(thrown.error).toBe(refused);
+      expect(resolved.error).toBe(refused);
+    });
+
+    it('is absent for a refusal the payload returned', async () => {
+      const settled = await settleMutation(
+        create({ __typename: 'ConflictError', code: ErrorCode.Conflict }),
+        options,
+      );
+
+      expect(settled.status).toBe('failed');
+      expect(settled).not.toHaveProperty('error');
+    });
+  });
+
+  describe('presentFailure', () => {
+    // A caller that settles with `present: 'none'` shows the failure later
+    // exactly as settling would have.
+    it('shows a failure handed back unshown as settling shows it', async () => {
+      const onConflictRefresh = jest.fn();
+      const conflict = create({
+        __typename: 'ConflictError',
+        code: ErrorCode.VersionConflict,
+      });
+      const settled = await settleMutation(conflict, {
+        ...options,
+        present: 'none',
+      });
+      expect(alerts()).toEqual([]);
+
+      presentFailure(settled.failure!, { onConflictRefresh });
+      await settleMutation(conflict, { ...options, onConflictRefresh });
+
+      const [presented, settledAlert] = alerts();
+      expect(presented).toEqual(settledAlert);
+      const buttons = presented?.[2] as AlertButton[];
       buttons.find(button => button.style !== 'cancel')?.onPress?.();
       expect(onConflictRefresh).toHaveBeenCalledTimes(1);
     });
@@ -404,6 +514,53 @@ describe('settleMutation', () => {
       errorService.getUserFriendlyMessage(ErrorCode.Forbidden, FALLBACK),
     );
     expect(message).not.toContain(SERVER_TEXT);
+  });
+
+  // One settings session against a down API reported 228 failures, all the
+  // same known condition.
+  describe('the report of a failure during a known outage', () => {
+    const setApiUnavailable = (unavailable: boolean) => {
+      storeApi.setState({
+        isOnline: !unavailable,
+        // `null` is what losing the link leaves: the API's state is unknown.
+        // `true` means a probe PROVED it reachable, which is no outage at all.
+        apiReachable: unavailable ? null : true,
+      } as Partial<ReturnType<typeof storeApi.getState>>);
+    };
+    afterEach(() => setApiUnavailable(false));
+
+    it.each([
+      [
+        'skips a network error while the API is unavailable',
+        true,
+        new NetworkRequestError('Network request failed'),
+        0,
+      ],
+      [
+        'skips an offline rejection while the API is unavailable',
+        true,
+        new OfflineRejectedError('Update'),
+        0,
+      ],
+      [
+        'still reports a non-network error while the API is unavailable',
+        true,
+        new Error('Validation failed: name required'),
+        1,
+      ],
+      [
+        'reports a network error while the API is reachable',
+        false,
+        new NetworkRequestError('Network request failed'),
+        1,
+      ],
+    ])('%s', async (_, unavailable, error, reports) => {
+      setApiUnavailable(unavailable);
+
+      await settleMutation(throwing(error), { ...options, present: 'none' });
+
+      expect(reportError).toHaveBeenCalledTimes(reports);
+    });
   });
 
   describe('a committed write whose response also carries an error', () => {

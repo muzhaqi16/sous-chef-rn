@@ -7,9 +7,6 @@ import type { RootState } from '#store/index';
 import type { User } from '#store/slices/authSlice';
 import { CreateShoppingListScreen } from '../CreateShoppingListScreen';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockNavigateToNextStep = jest.fn();
 const mockSkipToStep = jest.fn();
 jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
@@ -52,7 +49,6 @@ jest.mock('#features/onboarding/utils/validation', () => ({
 }));
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService');
-jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({

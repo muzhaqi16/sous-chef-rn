@@ -14,6 +14,7 @@ import {
   RegisterDocument,
 } from '#operations/auth/auth.generated';
 import { operationNameOf } from '../utils/documentOperation';
+import { withinMs } from '#/utils/withinMs';
 
 // Sent without an access token: each runs before a session exists.
 const PUBLIC_OPERATIONS = [
@@ -29,21 +30,13 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 const AWAITED_REFRESH_CEILING_MS = 12_000;
 
 /** The refresh, or null if it outruns the ceiling. Never rejects. */
-const refreshWithinCeiling = async (): Promise<string | null> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const ceiling = new Promise<null>(resolve => {
-    timer = setTimeout(() => resolve(null), AWAITED_REFRESH_CEILING_MS);
-  });
-
-  let winner: string | null = null;
-  try {
-    winner = await Promise.race([proactiveTokenRefresh(), ceiling]);
-  } catch (error) {
-    logger.warn('[AuthLink] Awaited refresh rejected:', error);
-  }
-  clearTimeout(timer);
-  return winner;
-};
+const refreshWithinCeiling = (): Promise<string | null> =>
+  withinMs(proactiveTokenRefresh(), AWAITED_REFRESH_CEILING_MS, null).catch(
+    (error: unknown) => {
+      logger.warn('[AuthLink] Awaited refresh rejected:', error);
+      return null;
+    },
+  );
 
 // Apollo types every context value `any`; an object is spread as the headers.
 const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>
@@ -72,10 +65,9 @@ export const authLink = new SetContextLink(
     // Always include the API key for all requests
     const apiKey = env.API_KEY;
 
-    // This install's device identity. The server registers the device on a
-    // successful sign-in, binds the session to it, and echoes it back on
-    // subscription payloads as `originatorClientId`. Null before storage opens,
-    // and an absent header is not an error — the request is unattributed.
+    // The server binds the session to this device on sign-in and echoes it on
+    // subscription payloads as `originatorClientId`. Null before storage opens;
+    // an absent header leaves the request unattributed, not refused.
     const deviceId = getDeviceId();
 
     // Skip auth header for public operations but keep API key
@@ -109,10 +101,9 @@ export const authLink = new SetContextLink(
       };
     }
 
-    // Refresh ahead of the request when the access token is near expiry. Never
-    // decide LOCALLY that a session is dead — a clock-skew guess misfires, and an
-    // API outage still reports `isOnline`. Only refreshToken.ts confirms it,
-    // server-side, and it preserves the cache on a network failure.
+    // Never decide LOCALLY that a session is dead: a clock-skew guess misfires
+    // and an API outage still reports `isOnline`. Only refreshToken.ts confirms
+    // it, server-side, and it keeps the cache on a network failure.
     if (token && isTokenExpiringSoon(token, REFRESH_BUFFER_MS)) {
       if (!useStore.getState().isOnline) {
         // Offline: skip the refresh attempt (it would only retry-and-fail, adding
@@ -120,11 +111,9 @@ export const authLink = new SetContextLink(
         // the network layer, and we re-auth when back online.
         useStore.getState().setNeedsTokenRefresh(true);
       } else if (isTokenExpired(token)) {
-        // This token cannot authenticate anything, so sending it costs a
-        // guaranteed 401. Awaiting the SINGLE-FLIGHT refresh is what stops N
-        // concurrent operations each presenting the same dead JWT and each
-        // drawing its own rotation. A failure resolves null: fall through on the
-        // old token and let the reactive 401 path decide, as before.
+        // Awaiting the SINGLE-FLIGHT refresh stops N concurrent operations each
+        // presenting the same dead JWT and each drawing a rotation. A failure
+        // resolves null: send the old token and let the reactive 401 decide.
         token = (await refreshWithinCeiling()) ?? token;
       } else {
         // Still valid, so nothing needs the refresh to finish — fire-and-forget

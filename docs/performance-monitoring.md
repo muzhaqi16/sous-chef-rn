@@ -4,11 +4,11 @@
 > example here.** Written as a phase log and not kept in step with the code.
 > Known drift, as of 2026-08-25:
 >
-> | Named here | Reality |
-> |---|---|
-> | `useRenderTime` | Renamed to `useCommitTracking` (`src/hooks/performance/useCommitTracking.ts`). It reports the gap BETWEEN commits, not render cost. |
-> | `useMemoryMonitor` | Deleted. Only the `MemoryMonitor` service survives. |
-> | `useFilterTransition` | Deleted. |
+> | Named here                                    | Reality                                                                                                                                                                                                                                  |
+> | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | `useRenderTime`                               | Renamed to `useCommitTracking` (`src/hooks/performance/useCommitTracking.ts`). It reports the gap BETWEEN commits, not render cost.                                                                                                      |
+> | `useMemoryMonitor`                            | Deleted. Only the `MemoryMonitor` service survives.                                                                                                                                                                                      |
+> | `useFilterTransition`                         | Deleted.                                                                                                                                                                                                                                 |
 > | `useDeferredSearch` "uses `useDeferredValue`" | It does NOT, deliberately. It debounces (150 ms). A deferred render is interruptible, which is exactly what produces `index out of bounds, not enough layouts` when the result feeds a FlashList — see `flashlist-layout-index-race.md`. |
 >
 > The metric list below is also incomplete — `docs/telemetry-setup.md`
@@ -23,6 +23,7 @@ This document describes the performance monitoring infrastructure added to the S
 ## Features
 
 ### 1. Component Render Tracking
+
 - **Hook**: `useRenderTime(componentName, options?)`
 - **Availability**: All builds. Reporting is gated by `enabled` and
   `sampleRate`, not by `__DEV__` — the production `slowRenderThreshold` of 16ms
@@ -39,6 +40,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Automatic telemetry reporting
 
 ### 2. Memory Monitoring
+
 - **Service**: `MemoryMonitor` (singleton)
 - **Hook**: `useMemoryMonitor(componentName, options?)`
 - **Metrics Tracked**:
@@ -53,6 +55,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Uses `react-native-device-info` (`getUsedMemory()`, `getTotalMemory()`) with null return on failure
 
 ### 3. Screen Transition Tracking
+
 - **Hook**: `useScreenTransition(screenName, options?)`
 - **Metrics Tracked**:
   - Mount time
@@ -64,6 +67,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Automatic telemetry reporting
 
 ### 4. FPS Monitoring
+
 - **Hook**: `useFPSMonitor(options?)`
 - **Availability**: Development builds only (`__DEV__`)
 - **Features**:
@@ -74,6 +78,7 @@ This document describes the performance monitoring infrastructure added to the S
   - `useSimpleFPS()` convenience export for simple FPS readout
 
 ### 5. Screen Telemetry
+
 - **Hook**: `useScreenTelemetry(screenName, getProperties, isReady?)`
 - **Features**:
   - One-time screen view tracking via `Telemetry.trackScreen()`
@@ -82,6 +87,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Properties function called lazily via `setTimeout` so refs can be read
 
 ### 6. Filter Transition
+
 - **Hook**: `useFilterTransition(options)`
 - **Features**:
   - Non-blocking filter state transitions via React 18's `useTransition`
@@ -90,6 +96,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Extended variant `useFilterTransitionWithDeps` for additional dependency tracking
 
 ### 7. Deferred Search
+
 - **Hook**: `useDeferredSearch(options)`
 - **Features**:
   - Responsive search-as-you-type via a 150 ms DEBOUNCE — deliberately not
@@ -99,6 +106,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Extended variant `useDeferredSearchWithSort` for combined search + sort
 
 ### 8. Deferred Callback
+
 - **Hook**: `useDeferredCallback(callback, enabled?, timeout?)`
 - **Features**:
   - Defers background work execution via `setTimeout` (default: 1000ms)
@@ -106,6 +114,7 @@ This document describes the performance monitoring infrastructure added to the S
   - `enabled` gate to conditionally run
 
 ### 9. Deferred Render
+
 - **Hook**: `useDeferredRender(delay?)`
 - **Features**:
   - Returns `false` initially, transitions to `true` when React's concurrent scheduler is idle
@@ -113,6 +122,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Ideal for gating heavy renders behind skeleton placeholders
 
 ### 10. After Interaction
+
 - **Hook**: `useAfterInteraction(callback, options?)`
 - **Features**:
   - Runs callback via `requestIdleCallback()` after navigation animations settle
@@ -120,6 +130,7 @@ This document describes the performance monitoring infrastructure added to the S
   - `enabled` gate option
 
 ### 11. Performance Dashboard
+
 - **Location**: Profile → Performance Dashboard (from profile settings list)
 - **Availability**: Development builds only (`__DEV__`)
 - **Views**:
@@ -227,18 +238,19 @@ interface PerformanceConfig {
 
 ```typescript
 const DEFAULT_PERFORMANCE_CONFIG = {
-  enabled: true,          // Enabled in all environments — telemetry pipeline handles routing
-  trackRenders: true,     // Track component renders (sampled in production)
-  trackMemory: false,     // Disabled — RN memory APIs are unreliable
-  trackScreens: true,     // Track screen transitions in all environments
-  sampleRate: __DEV__ ? 1.0 : 0.2,  // 100% in dev, 20% in release
-  slowRenderThreshold: __DEV__ ? 500 : 16,  // Android emulator adds 5-10x overhead; 16ms = 60fps for production
+  enabled: true, // Enabled in all environments — telemetry pipeline handles routing
+  trackRenders: true, // Track component renders (sampled in production)
+  trackMemory: false, // Disabled — RN memory APIs are unreliable
+  trackScreens: true, // Track screen transitions in all environments
+  sampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in release
+  slowRenderThreshold: __DEV__ ? 500 : 16, // Android emulator adds 5-10x overhead; 16ms = 60fps for production
   memoryWarningThreshold: 80, // Warn at 80% memory usage
-  maxMemorySnapshots: 100,    // Keep last 100 snapshots
+  maxMemorySnapshots: 100, // Keep last 100 snapshots
 };
 ```
 
 ### 12. Native Performance Service
+
 - **Service**: `NativePerformanceService` (singleton)
 - **Library**: `react-native-performance` v6
 - **Metrics Reported**:
@@ -308,9 +320,15 @@ export const ImageHeavyComponent: React.FC = () => {
 import { usePerformanceStore } from '#/store/performanceStore';
 
 const MyComponent = () => {
-  const getSlowestComponents = usePerformanceStore(state => state.getSlowestComponents);
-  const getSlowestScreens = usePerformanceStore(state => state.getSlowestScreens);
-  const getRecentMemorySnapshots = usePerformanceStore(state => state.getRecentMemorySnapshots);
+  const getSlowestComponents = usePerformanceStore(
+    state => state.getSlowestComponents,
+  );
+  const getSlowestScreens = usePerformanceStore(
+    state => state.getSlowestScreens,
+  );
+  const getRecentMemorySnapshots = usePerformanceStore(
+    state => state.getRecentMemorySnapshots,
+  );
 
   const slowComponents = getSlowestComponents(10);
   const slowScreens = getSlowestScreens(10);
@@ -338,20 +356,22 @@ const MyComponent = () => {
 
 1. **App.tsx** — NativePerformanceService initialized after Telemetry (startup marks, HTTP timing, measure routing)
 2. **App.tsx** — MemoryMonitor started on app initialization (10s sampling)
-2. **ProfileScreen** (src/screens/profile/ProfileScreen.tsx:143) — navigates to `PerformanceDashboard` from the profile settings list
-3. **RootNavigator** (src/navigation/RootNavigator.tsx) — PerformanceDashboard route registered
+3. **ProfileScreen** (src/screens/profile/ProfileScreen.tsx:143) — navigates to `PerformanceDashboard` from the profile settings list
+4. **RootNavigator** (src/navigation/RootNavigator.tsx) — PerformanceDashboard route registered
 
 ### Telemetry Metrics
 
 All performance data is reported to the Telemetry system:
 
 **Counters:**
+
 - `component_render_count` - Commits per component (re-render churn)
 - `slow_screen_transitions_total` - Count of slow transitions
 - `app_memory_warnings_total` - Memory warning events
 - `app_memory_critical_total` - Critical memory events
 
 **Histograms:**
+
 - `app_native_launch_ms` - Native platform launch time
 - `app_js_bundle_load_ms` - JS bundle load time
 - `app_content_appeared_ms` - Time to first content visible
@@ -366,6 +386,7 @@ All performance data is reported to the Telemetry system:
 - `screen_transition_duration_ms` - Total transition time distribution
 
 **Gauges:**
+
 - `app_memory_used_bytes` - Current memory usage
 - `app_memory_limit_bytes` - Memory limit
 - `app_memory_usage_percent` - Memory usage percentage
@@ -393,6 +414,7 @@ All performance data is reported to the Telemetry system:
 ### When to Use Performance Hooks
 
 ✅ **Good Use Cases:**
+
 - Main navigation screens (always)
 - Complex list components with many items
 - Components with expensive calculations
@@ -400,6 +422,7 @@ All performance data is reported to the Telemetry system:
 - Components with known performance issues
 
 ❌ **Avoid:**
+
 - Simple presentational components
 - Components that render very frequently (animations)
 
@@ -418,16 +441,19 @@ attribution only.
 ### Common Issues
 
 **1. No data in Performance Dashboard**
+
 - Ensure you're in development mode (`__DEV__` is true)
 - Navigate through the app to generate metrics
 - Check that performance tracking is enabled in settings
 
 **2. Performance overhead**
+
 - Reduce sample rate in configuration
 - Disable tracking for non-critical components
 - Consider release mode, where commit sampling is 20%
 
 **3. Memory measurements inaccurate**
+
 - React Native has limited memory APIs
 - Fallback estimates used on some platforms
 - Focus on relative changes, not absolute values
@@ -554,12 +580,12 @@ the current one again as an A/A control, in shuffled order, on the same row.
 
 **Server and payload** — host to the local dev API, 60 samples per arm:
 
-| Write | Response | p50 | p90 | Control p50 |
-|---|---|---|---|---|
-| `ToggleShoppingListItemPurchased`, before | 1.3–1.5 KB | 98.2 ms | 108.9 ms | |
-| `ToggleShoppingListItemPurchased`, readers | 3.5–3.6 KB | 105.9 ms | 117.2 ms | 105.8 ms |
-| `UpdatePantryItemQuantity`, before | 0.4 KB | 87.6 ms | 105.6 ms | |
-| `UpdatePantryItemQuantity`, readers | 5.0 KB | 105.6 ms | 124.1 ms | 104.2 ms |
+| Write                                      | Response   | p50      | p90      | Control p50 |
+| ------------------------------------------ | ---------- | -------- | -------- | ----------- |
+| `ToggleShoppingListItemPurchased`, before  | 1.3–1.5 KB | 98.2 ms  | 108.9 ms |             |
+| `ToggleShoppingListItemPurchased`, readers | 3.5–3.6 KB | 105.9 ms | 117.2 ms | 105.8 ms    |
+| `UpdatePantryItemQuantity`, before         | 0.4 KB     | 87.6 ms  | 105.6 ms |             |
+| `UpdatePantryItemQuantity`, readers        | 5.0 KB     | 105.6 ms | 124.1 ms | 104.2 ms    |
 
 Of the quantity write's +18 ms, the pantry's `stats(today:)` is ~7 ms and the
 storage location ~3 ms — totals the write moves. The stack's catalog `item`
@@ -570,11 +596,11 @@ storage location ~3 ms — totals the write moves. The stack's catalog `item`
 alternating two states so every write changes values; debug build, Hermes, iPhone
 18 Pro and iPhone 17 simulators, 300 samples per arm:
 
-| Write | Before p50 | Readers p50 | Control p50 |
-|---|---|---|---|
-| Toggle (18 Pro / 17) | 0.76 / 0.76 ms | 1.80 / 1.76 ms | 1.76 / 1.79 ms |
-| Quantity (18 Pro / 17) | 0.36 / 0.35 ms | 2.41 / 2.29 ms | 2.34 / 2.27 ms |
-| Quantity, catalog `item` cut to its key (18 Pro) | | 0.87 ms | 0.87 ms |
+| Write                                            | Before p50     | Readers p50    | Control p50    |
+| ------------------------------------------------ | -------------- | -------------- | -------------- |
+| Toggle (18 Pro / 17)                             | 0.76 / 0.76 ms | 1.80 / 1.76 ms | 1.76 / 1.79 ms |
+| Quantity (18 Pro / 17)                           | 0.36 / 0.35 ms | 2.41 / 2.29 ms | 2.34 / 2.27 ms |
+| Quantity, catalog `item` cut to its key (18 Pro) |                | 0.87 ms        | 0.87 ms        |
 
 A debug build overstates this (dev-mode Apollo checks every result) and nothing
 in a release build resolves a few milliseconds of JS: a debug upper bound is the
@@ -595,6 +621,7 @@ the catalog `item` subtree, not the totals.
 ### Doc update (2026-02-22)
 
 Updated documentation to reflect current codebase state:
+
 - Fixed store access pattern (`usePerformanceStore` from isolated store)
 - Added 7 missing hook descriptions (useFPSMonitor, useScreenTelemetry, useFilterTransition, useDeferredSearch, useDeferredCallback, useDeferredRender, useAfterInteraction)
 - Updated file structure to match actual files (removed nonexistent index.ts barrel files)
@@ -606,6 +633,7 @@ Updated documentation to reflect current codebase state:
 ### Session 8 (2025-10-29)
 
 **Added:**
+
 - Performance types and interfaces (types.ts)
 - useRenderTime hook for component tracking
 - useMemoryMonitor hook for memory tracking

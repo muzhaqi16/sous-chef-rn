@@ -3,7 +3,7 @@ import { useMealPlanDisplay, useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UseAddRecipeToMealPlanOptions {
   planId?: string | null;
@@ -47,7 +47,7 @@ export function useAddRecipeToMealPlan(
       mealPlanId: activePlanId,
       meal: { recipeId },
       mealType,
-      date: toMealDateTime(date),
+      date: toDateKey(date),
     });
     if (added) {
       toastService.success(t('toasts.addedToMealPlan'));

@@ -31,6 +31,7 @@ const mockStore = {
   setIsHomeSelectionReady: jest.fn(),
   setSelectedShoppingListId: jest.fn(),
   setPreferredCurrency: jest.fn(),
+  updateUser: jest.fn(),
   getUserNavigationState: jest.fn(),
   setUserNavigationState: jest.fn(),
 };
@@ -63,11 +64,9 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 }));
 jest.mock('#/storage/deviceId');
 
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: (...args: unknown[]) => mockToastError(...args) },
-}));
+const mockToastError = jest.mocked(toastService.error);
 
+import { toastService } from '#/services/toastService';
 import { LoginDocument } from '#operations/auth/auth.generated';
 import { authService } from '#/services/authService';
 

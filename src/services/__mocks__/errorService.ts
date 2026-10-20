@@ -51,6 +51,11 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     getUserFriendlyMessage: jest.fn(
       (_code: string, fallback?: string) => fallback ?? GENERIC,
     ),
+    messageForCode: jest.fn(
+      (_code: string, _translate: unknown, fallback?: string) =>
+        fallback ?? GENERIC,
+    ),
+    codeOf: jest.fn(() => 'UNKNOWN_ERROR'),
     // False, matching the mocked message above: it answers every code with the
     // caller's fallback, so no code has copy of its own here. A suite asserting
     // on a mapped code's sentence overrides both.
@@ -76,6 +81,8 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
 );
 
 export const localizedErrorMessage = jest.fn((): string => GENERIC);
+
+export const errorCopy = jest.fn((): string => GENERIC);
 
 // Derived from the mocked parse the way the real check derives it, so a suite
 // that overrides `parseApolloError` with a code gets that code's verdict. A

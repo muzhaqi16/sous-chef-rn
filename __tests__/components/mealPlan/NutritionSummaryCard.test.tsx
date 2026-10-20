@@ -4,12 +4,12 @@ import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { NutritionSummaryCard } from '../../../src/features/mealPlan/components/NutritionSummaryCard';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
-jest.mock('../../../src/features/mealPlan/components/NutritionGoalProgress', () => ({
-  NutritionGoalProgress: () => null,
-}));
+jest.mock(
+  '../../../src/features/mealPlan/components/NutritionGoalProgress',
+  () => ({
+    NutritionGoalProgress: () => null,
+  }),
+);
 
 type NutritionSummary = React.ComponentProps<
   typeof NutritionSummaryCard

@@ -52,12 +52,6 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   ),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 /** The profile the query itself selects, so the fixture is checked against it. */
 type DietaryProfile = NonNullable<
   NonNullable<GetDietaryProfileQuery['me']>['dietaryProfile']

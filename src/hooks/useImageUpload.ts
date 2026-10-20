@@ -52,10 +52,9 @@ class UserFacingUploadError extends Error {
 }
 
 /**
- * The ONE mapping from an upload failure to copy a user can act on — exported
- * because `validateImageFile` raises the same codes at pick time. `error.message`
- * is NEVER shown: those are English control-flow signals. Branch on
- * `ImageValidationError.code`, never on message text, which shares no wording.
+ * The ONE mapping from an upload failure to copy, shared with pick-time
+ * `validateImageFile`. Branch on `ImageValidationError.code`: `error.message` is
+ * an English control-flow signal, NEVER shown.
  */
 export const imageErrorMessage = (
   t: Translate,
@@ -89,10 +88,9 @@ export const imageErrorMessage = (
 };
 
 /**
- * A confirm refusal, coded so {@link imageErrorMessage} can name the cause. The
- * server checks the uploaded object's magic bytes against the extension its key
- * was minted for and reports a mismatch as a field error on `key` — a field the
- * person never filled in, so it needs copy about the FILE they picked.
+ * The server reports a magic-byte mismatch with the key's extension as a field
+ * error on `key`, a field the person never filled in, so it needs copy about
+ * the FILE they picked.
  */
 function confirmRefusalError(data: unknown): ImageValidationError {
   const isByteMismatch = validationFieldName(data) === 'key';
@@ -123,12 +121,13 @@ export interface ImageUploadOptions {
   onSuccess?: (imageUrl: string) => void;
   onError?: (error: Error) => void;
   /**
-   * Skip the per-call failure alert. Set by batch callers that report once for
-   * the whole run. Lives here rather than on the item-specific options because
-   * `uploadImage`'s offline short-circuit must honour it too — that branch
-   * alerts before any item-specific code runs.
+   * Skip the per-call failure alert, for a batch that reports once. Here, not
+   * on the item options: `uploadImage`'s offline short-circuit alerts before
+   * any item-specific code runs.
    */
   suppressAlert?: boolean;
+  /** Stops the upload where it is: before the presign, or mid-transfer. */
+  signal?: AbortSignal;
 }
 
 export interface ItemImageUploadOptions extends ImageUploadOptions {
@@ -138,10 +137,8 @@ export interface ItemImageUploadOptions extends ImageUploadOptions {
    */
   perspective?: string;
   /**
-   * Make this photo the item's hero. Honoured only once APPROVED and only if
-   * the caller may edit the item, so a PENDING submission to someone else's
-   * catalog item keeps the existing hero. A first photo becomes primary anyway,
-   * so this only matters when repointing a gallery that already has one.
+   * Honoured only once APPROVED and only if the caller may edit the item, so a
+   * PENDING submission keeps the existing hero. A first photo is primary anyway.
    */
   makePrimary?: boolean;
 }
@@ -150,15 +147,18 @@ export const useImageUpload = () => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
 
-  const activeXhrRef = useRef<XMLHttpRequest | null>(null);
+  // Every transfer in flight: a receipt's photos go up together.
+  const activeXhrs = useRef(new Set<XMLHttpRequest>());
+  // A presign that answers after unmount must not start a transfer.
+  const mounted = useRef(false);
 
-  // Abort any pending upload on unmount.
   useEffect(() => {
+    const active = activeXhrs.current;
+    mounted.current = true;
     return () => {
-      if (activeXhrRef.current) {
-        activeXhrRef.current.abort();
-        activeXhrRef.current = null;
-      }
+      mounted.current = false;
+      for (const xhr of active) xhr.abort();
+      active.clear();
     };
   }, []);
 
@@ -168,10 +168,9 @@ export const useImageUpload = () => {
   const [updateProfile] = useMutation(UpdateUserProfileDocument);
 
   /**
-   * Presigned POST to object storage. `uploadData.fields` MUST be appended
-   * before the file, and the file part must be named `file` and come last —
-   * storage answers 400 otherwise. Content-Type is deliberately unset, so the
-   * runtime authors a boundary matching the body.
+   * `uploadData.fields` MUST precede the file, whose part is named `file` and
+   * comes last, or storage answers 400. Content-Type stays unset, so the runtime
+   * authors a boundary matching the body.
    */
   const uploadToObjectStorage = async (
     file: ImageFile,
@@ -181,6 +180,7 @@ export const useImageUpload = () => {
     // back as a mismatch.
     mimeType: string,
     onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
   ): Promise<void> => {
     const form = new FormData();
     for (const field of uploadData.fields) {
@@ -195,19 +195,17 @@ export const useImageUpload = () => {
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-
-      // Store reference for cleanup on unmount
-      activeXhrRef.current = xhr;
+      const active = activeXhrs.current;
+      active.add(xhr);
+      signal?.addEventListener('abort', () => xhr.abort());
 
       xhr.onload = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
-          // 400 here is a policy violation — oversized body or a mime that
-          // doesn't match the one the presign was issued for. Log the status
-          // only: the presigned URL and the response body can carry signed
-          // request context, so they stay out of the logs.
+          // Status only: the presigned URL and response body can carry signed
+          // request context. A 400 is an oversized body or a mismatched mime.
           logger.error(`Image upload failed: status=${xhr.status}`);
           const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
           reject(new Error(`Upload failed: ${xhr.status}${statusText}`));
@@ -215,17 +213,17 @@ export const useImageUpload = () => {
       };
 
       xhr.onerror = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new NetworkRequestError('Network request failed during upload'));
       };
 
       xhr.ontimeout = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new TimeoutError('Upload request timed out', xhr.timeout));
       };
 
       xhr.onabort = () => {
-        activeXhrRef.current = null;
+        active.delete(xhr);
         reject(new Error('Upload was cancelled'));
       };
 
@@ -252,7 +250,7 @@ export const useImageUpload = () => {
     confirmUploadFn: (key: string) => Promise<string | null>,
     options: ImageUploadOptions = {},
   ): Promise<string | null> => {
-    const { onProgress, onSuccess, onError, suppressAlert } = options;
+    const { onProgress, onSuccess, onError, suppressAlert, signal } = options;
 
     // Check if online before attempting upload
     const state = useStore.getState();
@@ -275,10 +273,8 @@ export const useImageUpload = () => {
 
     setUploading(true);
 
-    // Held in a local runner so the try below contains a single plain call —
-    // the React Compiler bails out of this hook when a `?.`/`??`/ternary sits
-    // inside a try body. The catch still covers the whole body, and still
-    // rethrows so callers see the failure.
+    // A local runner, so the try below holds one plain call: a `?.`/`??`/ternary
+    // in a try body bails the React Compiler out of this hook.
     const runUpload = async () => {
       // For profile images, handle missing file size gracefully
       let fileToUpload = { ...file };
@@ -289,22 +285,18 @@ export const useImageUpload = () => {
 
       // Validate the image file
       validateImageFile(fileToUpload, isProfileImage);
+      if (signal?.aborted) throw new Error('Upload was cancelled');
 
       onProgress?.(10);
 
-      // Presign for the type the file's BYTES say it is: confirm checks magic
-      // bytes against the key's extension, so presigning from the picker's
-      // report refuses the upload only after the whole file has transferred.
-      // An unreadable head falls back to the reported type rather than
-      // blocking the upload; 'image/jpg' is normalized either way.
+      // Presign for the type the BYTES say: confirm checks them against the
+      // key's extension, so presigning from the picker's report fails only
+      // after the whole file has transferred.
       const sniffed = await sniffImageMimeType(fileToUpload.uri);
       if (!sniffed) {
-        // Deliberately NOT a refusal. A head that cannot be read means the
-        // bytes are unsupported OR the platform could not slice the blob, and
-        // both arrive as the same `Network request failed` — so refusing here
-        // would block legitimate uploads on any platform that cannot read a
-        // head. The server still checks the bytes; this only loses the early
-        // warning. See docs/verified-library-behaviour.md.
+        // NOT a refusal: unsupported bytes and a blob the platform cannot slice
+        // both arrive as `Network request failed`, and the server still checks
+        // the bytes (docs/verified-library-behaviour.md).
         logger.warn(
           'Image type not determined from bytes; using reported type',
         );
@@ -329,16 +321,17 @@ export const useImageUpload = () => {
 
       const uploadPayload = appliedPayload(uploadData);
       if (!uploadPayload) {
-        // Presign has its own per-user ceiling, and it arrives as a top-level
-        // GraphQL error rather than a member of the result union — so it
-        // lands here with no payload. Without this branch the user is told
-        // the upload simply failed and the server's retryAfter is discarded.
+        // Presign's per-user ceiling arrives as a top-level GraphQL error, not
+        // a union member, so it lands here with no payload; keep its retryAfter.
         if (isRateLimitError(uploadUrlError)) {
           throw new UserFacingUploadError(getRateLimitMessage(uploadUrlError));
         }
         throw new Error('Failed to get upload URL');
       }
       const uploadResult = uploadPayload;
+      if (!mounted.current || signal?.aborted) {
+        throw new Error('Upload was cancelled');
+      }
 
       onProgress?.(30);
 
@@ -350,6 +343,7 @@ export const useImageUpload = () => {
         uploadProgress => {
           onProgress?.(30 + uploadProgress * 0.5);
         },
+        signal,
       );
 
       onProgress?.(80);
@@ -456,10 +450,9 @@ export const useImageUpload = () => {
   };
 
   /**
-   * Sequential multi-angle upload. Presign caps at 20/minute and 100/hour, and a
-   * rate-limit or an outage means every remaining photo fails identically — so
-   * the run stops and reports ONCE; any other failure just skips that photo.
-   * Returns what actually uploaded, so callers MUST check the length.
+   * Sequential: a rate limit or an outage fails every remaining photo alike, so
+   * the run stops and reports ONCE; any other failure skips that photo. Returns
+   * what uploaded, so callers MUST check the length.
    */
   const uploadItemImages = async (
     files: Array<ImageFile & { perspective?: string; isPrimary?: boolean }>,
@@ -510,6 +503,21 @@ export const useImageUpload = () => {
     return results;
   };
 
+  /**
+   * A photo a mutation takes by key (a receipt for `createReceiptParse`):
+   * presigned and posted like any photo but never confirmed, since its
+   * consumer owns it from there. Null offline; a failure throws, unreported.
+   */
+  const uploadUnconfirmed = (
+    file: ImageFile,
+    purpose: ImageUploadPurpose,
+    { signal }: Pick<ImageUploadOptions, 'signal'> = {},
+  ): Promise<string | null> =>
+    uploadImage(file, purpose, false, undefined, key => Promise.resolve(key), {
+      suppressAlert: true,
+      signal,
+    });
+
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
     const settled = await settleMutation(
       () => updateProfile({ variables: { input: { avatar: avatarUrl } } }),
@@ -532,6 +540,7 @@ export const useImageUpload = () => {
     uploading,
     uploadProfileImage,
     uploadItemImages,
+    uploadUnconfirmed,
     updateProfileAvatarUrl,
   };
 };

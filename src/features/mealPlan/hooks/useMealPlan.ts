@@ -3,6 +3,10 @@ import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
+import { useConnectionData } from '#hooks/utils/useConnectionData';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
@@ -10,15 +14,22 @@ import {
 } from '#features/mealPlan/screens/MealPlanMain.generated';
 
 export function useMealPlan(id: string | null) {
-  // `createMealPlan` mints the cuid and writes the plan locally, so until the
-  // create is acknowledged a server read returns null however honestly it
-  // answers — and `planNotFound` would read that null as "deleted". Skipping is
-  // what keeps the distinction sound, and makes the ack the fetch trigger.
+  // `createMealPlan` writes the plan under a minted id, so before the ack a
+  // server read returns null, which `planNotFound` would take for "deleted".
+  // Skipping makes the ack the fetch trigger.
   const isUnconfirmed = useIsCreateUnconfirmed(id);
 
-  const { data, loading, error, refetch } = useQuery(
+  const { data, loading, error, refetch, fetchMore } = useQuery(
     GetMealPlanDocument,
-    !id || isUnconfirmed ? skipToken : { variables: { id } },
+    !id || isUnconfirmed
+      ? skipToken
+      : {
+          variables: {
+            id,
+            mealsFirst: MEALS_PAGE_SIZE,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        },
   );
 
   useApolloErrorLogger(GetMealPlanDocument, error);
@@ -32,26 +43,39 @@ export function useMealPlan(id: string | null) {
     from: id ? { __typename: 'MealPlan', id } : null,
   });
   const mealPlan = id && liveMealPlan.complete ? liveMealPlan.data : null;
-  const items = mealPlan?.mealPlanItems ?? [];
+  // The meals are one cached list however many pages filled it; a plan past
+  // the first page reads the rest before the screen treats it as whole.
+  const meals = useConnectionData({
+    data: mealPlan ?? undefined,
+    selector: plan => plan.mealPlanItemsConnection,
+    key: id ?? '',
+    loading,
+    fetchMore,
+    cursorVariableName: 'mealsAfter',
+    refetch,
+  });
+  const { incomplete: mealsIncomplete, retry: retryRemainingMeals } =
+    useLoadRemainingPages(!!mealPlan, loading, meals, id ?? '');
   const itemDetails = useFragmentList({
     fragment: MealPlanMain_ItemFragmentDoc,
     fragmentName: 'MealPlanMain_item',
-    from: items,
+    from: meals.items,
   }).filter((item): item is MealPlanMain_ItemFragment => item !== null);
 
-  // The server answered with an explicit null for this id: there is no such
-  // row. A by-id query reports a miss as null data, not as an error — only a
-  // mutation raises RESOURCE_NOT_FOUND for the same condition. Gated on
-  // `!loading && !error` so a request still in flight can't read as missing,
-  // and on `data` so a skipped (unacknowledged create) query never does either.
+  // An explicit null: a by-id query reports a miss as null data, not an error
+  // (only a mutation raises RESOURCE_NOT_FOUND). Settled reads only, and never
+  // a skipped one, which an unacknowledged create is.
   const planNotFound = !loading && !error && !!data && data.mealPlan === null;
 
   return {
     mealPlan,
-    items,
+    items: meals.items,
     itemDetails,
     nutritionSummary: mealPlan?.nutritionSummary ?? null,
     mealPlanRef: data?.mealPlan ?? null,
+    /** Pages of meals remain that could not be read: the plan is partial. */
+    mealsIncomplete,
+    retryRemainingMeals,
     planNotFound,
     loading,
     error,

@@ -28,6 +28,8 @@ export interface EmptyStateProps {
     variant?: 'primary' | 'secondary' | 'outline';
     /** Optional leading icon on the action button (e.g. "add" for a CTA) */
     icon?: IconName;
+    /** Shown but not tappable; the `hint` says why. */
+    disabled?: boolean;
   };
 
   /** Secondary action button */
@@ -80,10 +82,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const glyphSize = iconSize ?? (size === 'compact' ? 32 : 64);
   styles.useVariants({ size });
-  // Gentle one-shot entrance so empty states ease in rather than snap. Disabled
-  // under the OS "reduce motion" setting. Safe here because empty states mount
-  // once when a screen has no content (not recycled list cells), so there's no
-  // re-fire-on-scroll risk.
+  // An entering animation is safe here: an empty state mounts once, never in a
+  // recycled cell that would re-fire it on scroll.
   const containerEntering = FadeIn.duration(motion.timing.MODERATE);
   const badgeEntering = ZoomIn.duration(motion.timing.SLOW);
 
@@ -151,6 +151,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           variant={action.variant ?? 'primary'}
           size="medium"
           icon={action.icon}
+          disabled={action.disabled}
           style={styles.actionButton}
         >
           {action.label}

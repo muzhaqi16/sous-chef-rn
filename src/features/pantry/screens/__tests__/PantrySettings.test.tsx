@@ -22,9 +22,6 @@ import {
 import { alertService } from '#/services/alertService';
 import { PantrySettings } from '../PantrySettings';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
@@ -51,12 +48,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     unregisterParentDeletion: jest.fn(),
   },
 }));
-jest.mock('#/utils/finallyHelpers');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 // Spread the real module: the screen imports several of its writers, and a
 // trimmed factory fails at import rather than at the assertion.

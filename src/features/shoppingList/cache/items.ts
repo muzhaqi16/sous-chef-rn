@@ -5,16 +5,22 @@
 
 import type { ApolloCache } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { Items_RowFragmentDoc } from './items.generated';
+import {
+  Items_ItemDepartmentFragmentDoc,
+  Items_RowFragmentDoc,
+} from './items.generated';
 import {
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
 } from './shoppingListItemRowNeutral.generated';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
+import {
+  DisplayFormat,
+  StoreDepartment,
+} from '#/graphql/generated/schemaTypes';
 import {
   settleMutation,
-  settledStatus,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -49,13 +55,14 @@ export const createLocalShoppingListItem = (
   fields: OptimisticShoppingListItemFields,
 ): LocalShoppingListItem => ({ ...fields, id });
 
+/** True when the list already showed the server's line as still to buy. */
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
   listId: string,
   serverItem: { id: string },
   clientId: string | null | undefined,
   { countsSettled = false }: { countsSettled?: boolean } = {},
-): void {
+): boolean {
   if (clientId && serverItem.id !== clientId) {
     // Catalog merge: the server folded the line into an EXISTING row, so the
     // optimistic add counted a row that never came to exist. Its count comes
@@ -64,7 +71,7 @@ export function reconcileShoppingItemCreateUpdate(
       countsSettled,
     });
   }
-  addNewItemToShoppingListCache(cache, listId, serverItem, false);
+  return addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
 // Structural slices the builder below reads, kept loose so every
@@ -76,7 +83,7 @@ interface AddItemsReconcilePayloadLike {
     | readonly ({
         index?: number | null;
         success?: boolean | null;
-        item?: { id: string } | null;
+        item?: { id: string; item?: { id: string } | null } | null;
       } | null)[]
     | null;
 }
@@ -87,9 +94,29 @@ interface AddItemsReconcileDataLike {
 
 interface AddItemsReconcileVariablesLike {
   input: {
-    items?: readonly ({ id?: string | null } | null)[] | null;
+    items?:
+      | readonly ({
+          id?: string | null;
+          item?: { inline?: { id?: string | null } | null } | null;
+        } | null)[]
+      | null;
     shoppingListId?: string | null;
   };
+}
+
+/** What became of one sent line, as its reconcile found it. */
+export interface ReconciledLine {
+  /** Its place in the response's `results`. */
+  position: number;
+  /** The id its caller minted for it. */
+  clientId: string | undefined;
+  refused: boolean;
+  /**
+   * The list showed the server's line as still to buy before this reconcile.
+   * Read off the connection, which the response write leaves alone: the row
+   * itself already carries the answer by the time `update` runs.
+   */
+  listedBefore: boolean;
 }
 
 interface BuildAddItemsReconcileUpdateOptions {
@@ -100,6 +127,8 @@ interface BuildAddItemsReconcileUpdateOptions {
    * message and optional refetch fallback. Omit to apply the reconcile directly.
    */
   wrap?: { operation: string; refetch?: () => void };
+  /** Told each line's outcome as it is reconciled. */
+  onLine?: (line: ReconciledLine) => void;
 }
 
 /**
@@ -110,6 +139,7 @@ interface BuildAddItemsReconcileUpdateOptions {
 export function buildAddItemsReconcileUpdate({
   listId,
   wrap,
+  onLine,
 }: BuildAddItemsReconcileUpdateOptions) {
   return (
     cache: ApolloCache,
@@ -131,22 +161,32 @@ export function buildAddItemsReconcileUpdate({
       const refused: string[] = [];
       results.forEach((result, position) => {
         if (!result) return;
-        // Paired by the input INDEX the server echoes, not by `result.clientId`:
-        // that field is a response-matching token a call site picks freely (the
-        // recipe add sends a Spoonacular ingredient id), never this row's
-        // minted cuid. Array position is the fallback.
-        const clientId = variables.input.items?.[result.index ?? position]?.id;
+        // Paired by the input INDEX the server echoes, not `result.clientId`: a
+        // call site picks that token freely (the recipe add sends a Spoonacular
+        // id), never this row's minted cuid. Array position is the fallback.
+        const sent = variables.input.items?.[result.index ?? position];
+        const clientId = sent?.id ?? undefined;
         const { item } = result;
         if (item && result.success !== false) {
-          reconcileShoppingItemCreateUpdate(
+          const listedBefore = reconcileShoppingItemCreateUpdate(
             cache,
             targetListId,
             item,
             clientId,
             { countsSettled },
           );
-        } else if (clientId) {
-          refused.push(clientId);
+          // A typed name the API matched to an item it holds: the line names
+          // that item, and the one written under the minted id goes.
+          adoptServerEntityId(
+            cache,
+            'Item',
+            item.item?.id,
+            sent?.item?.inline?.id,
+          );
+          onLine?.({ position, clientId, refused: false, listedBefore });
+        } else {
+          if (clientId) refused.push(clientId);
+          onLine?.({ position, clientId, refused: true, listedBefore: false });
         }
       });
       withdrawShoppingListItems(cache, targetListId, refused, {
@@ -166,11 +206,23 @@ export function buildAddItemsReconcileUpdate({
   };
 }
 
+/** The aisle a catalog item is shelved in, when the cache holds it. */
+function heldItemDepartment(
+  cache: ApolloCache,
+  itemId: string | null | undefined,
+): StoreDepartment | undefined {
+  if (!itemId) return undefined;
+  return cache.readFragment({
+    id: cache.identify({ __typename: 'Item', id: itemId }),
+    fragment: Items_ItemDepartmentFragmentDoc,
+    fragmentName: 'items_itemDepartment',
+  })?.storeDepartment;
+}
+
 /**
- * Local-first optimistic add: writes the FULL display entity, the connection edge
- * and recomputed stats PERMANENTLY before the create fires, so it survives a
- * fully-offline create (the queue replays the batch add under the same id).
- * `item.id` MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
+ * Writes the FULL display entity, its edge and recomputed stats PERMANENTLY
+ * before the create fires, so an offline create survives to replay. `item.id`
+ * MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
  */
 export function addLocalShoppingListItem(
   cache: ApolloCache,
@@ -201,6 +253,10 @@ export function addLocalShoppingListItem(
       category: line.category ?? null,
       notes: null,
       sortOrder: '',
+      // Shelved where its item is until the server answers (the API's rule).
+      storeDepartment:
+        heldItemDepartment(cache, line.itemId) ?? StoreDepartment.Other,
+      storeDepartmentOverride: null,
       // Whole rather than through `writePurchaseInfo`, which patches an
       // existing record: a new line has no prior purchase to preserve.
       purchaseInfo: {
@@ -245,11 +301,9 @@ export function addLocalShoppingListItem(
 }
 
 /**
- * Reverse {@link addLocalShoppingListItem} on a rejected create. Evicting the
- * entity alone is NOT enough: the optimistic add also bumped `totalItems` /
- * `remainingItems` / `completionRate`, and the self-healing `itemsConnection` read
- * repairs only its own `totalCount`. That read drops the dangling edge. One line
- * of {@link withdrawShoppingListItems}, so a second run changes nothing.
+ * Reverse {@link addLocalShoppingListItem} on a rejected create: evicting alone
+ * would leave the bumped list stats, which the self-healing `itemsConnection`
+ * read does not repair. Withdrawn as one line, so a second run changes nothing.
  */
 export function revertOptimisticShoppingListItem(
   cache: ApolloCache,
@@ -268,51 +322,6 @@ export function carriesListTotals(list: unknown, listId: string): boolean {
   return (
     isRecord(list) && list.id === listId && typeof list.totalItems === 'number'
   );
-}
-
-/**
- * Reconcile a local-first item create once the mutation resolves: `'failed'`
- * discards the optimistic row, `'applied'` / `'queued'` keep it — a queued create
- * replays later, keyed by the same `id`. Returns which happened, so the caller can
- * drive its own success / error UX.
- */
-export function reconcileShoppingCreate(
-  cache: ApolloCache,
-  listId: string,
-  optimisticId: string,
-  result: { data?: unknown; error?: unknown } | null | undefined,
-): 'kept' | 'reverted' {
-  const failed = settledStatus(result ?? undefined) === 'failed';
-  // The batch can resolve successfully while its single item fails
-  // (`results[0].success === false` — a per-item validation error reported inside
-  // the batch rather than as a top-level error member). Revert that too.
-  const applied = appliedPayload(
-    (
-      result as
-        | {
-            data?: {
-              addItemsToShoppingList?: {
-                __typename?: string;
-                results?: Array<{ success: boolean }>;
-              };
-            };
-          }
-        | null
-        | undefined
-    )?.data,
-  );
-  const itemFailed = applied?.results?.[0]?.success === false;
-  if (failed || itemFailed) {
-    try {
-      revertOptimisticShoppingListItem(cache, listId, optimisticId);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Shopping List Item',
-      });
-    }
-    return 'reverted';
-  }
-  return 'kept';
 }
 
 /** The API refuses a batch add of more lines than this. */

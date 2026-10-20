@@ -1,8 +1,16 @@
 import type { ApolloCache } from '@apollo/client';
-import { shownStock } from '#domain/stockDisplay';
 import {
+  countFactorOver,
+  inCountedUnit,
+  shownStock,
+} from '#domain/stockDisplay';
+import {
+  InTrackingUnit_EnteredUnitFragmentDoc,
+  InTrackingUnit_PantryItemFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
   WriteHeldStock_ShownInFragmentDoc,
+  type InTrackingUnit_EnteredUnitFragment,
+  type InTrackingUnit_PantryItemFragment,
   type WriteHeldStock_PantryItemFragment,
   type WriteHeldStock_ShownInFragment,
 } from './stock.generated';
@@ -35,10 +43,9 @@ function shownAmount(
 }
 
 /**
- * The ONE writer of what a stack holds before the server answers: `heldQuantity`
- * and, with it, `displayAmount` by the server's rule (`shownStock`), so a screen
- * never shows "1 doz" over a stack that now holds 11 pc. `shown` restores the
- * server's own display together with the amount it described. Returns the undo.
+ * The ONE pre-answer writer of a stack's `heldQuantity`, with `displayAmount`
+ * by the server's rule (`shownStock`): "1 doz" never shows over 11 pc. `shown`
+ * restores the server's display with its amount. Returns the undo.
  */
 export function writeHeldStock(
   cache: ApolloCache,
@@ -76,4 +83,74 @@ export function writeHeldStock(
   });
   const before = cached.displayAmount;
   return () => writeHeldStock(cache, pantryItemId, held, before);
+}
+
+/**
+ * An amount entered in `unitId`, in the stack's tracking unit when no
+ * conversion is needed: the tracking unit itself, or a dozen of it. Null when
+ * only the server can convert it.
+ */
+export function inTrackingUnit(
+  cache: ApolloCache,
+  pantryItemId: string,
+  amount: number,
+  unitId: string | null | undefined,
+): number | null {
+  const stackId = cache.identify({
+    __typename: 'PantryItem',
+    id: pantryItemId,
+  });
+  const trackingUnitId = stackId
+    ? cache.readFragment<InTrackingUnit_PantryItemFragment>({
+        id: stackId,
+        fragment: InTrackingUnit_PantryItemFragmentDoc,
+      })?.unit.id
+    : undefined;
+  if (!unitId || unitId === trackingUnitId) return amount;
+  const unitCacheId = cache.identify({ __typename: 'Unit', id: unitId });
+  const entered = unitCacheId
+    ? cache.readFragment<InTrackingUnit_EnteredUnitFragment>({
+        id: unitCacheId,
+        fragment: InTrackingUnit_EnteredUnitFragmentDoc,
+      })
+    : null;
+  const factor = entered ? countFactorOver(entered, trackingUnitId) : null;
+  return factor === null ? null : inCountedUnit(amount, factor);
+}
+
+/**
+ * Moves the cached stock by `delta` tracking units for instant feedback.
+ * `heldQuantity` is what the screens show; `quantity` is settled by the
+ * response. Returns the undo, for a refusal.
+ */
+export function bumpStock(
+  cache: ApolloCache,
+  pantryItemId: string,
+  delta: number,
+): () => void {
+  const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
+  if (!id) return () => {};
+  const now = new Date().toISOString();
+  let before: number | undefined;
+  cache.modify({
+    id,
+    fields: {
+      quantity: (existing: number) => {
+        before = existing;
+        return Math.max(0, existing + delta);
+      },
+      updatedAt: () => now,
+      lastUsedAt: () => now,
+    },
+  });
+  const undoHeld = writeHeldStock(cache, pantryItemId, held =>
+    Math.max(0, held + delta),
+  );
+  return () => {
+    if (before !== undefined) {
+      const quantity = before;
+      cache.modify({ id, fields: { quantity: () => quantity } });
+    }
+    undoHeld();
+  };
 }

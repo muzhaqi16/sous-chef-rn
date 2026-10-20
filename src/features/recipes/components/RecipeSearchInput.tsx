@@ -15,9 +15,8 @@ interface RecipeSearchInputProps {
   onSearch: (query: string) => void;
   extraActions: SearchBarAction[];
   /** Seeds the field so the submitted query survives the screen's
-   * skeleton↔list remounts (this component is rendered in two tree positions).
-   * Read once on mount — keystrokes stay local to keep the parent from
-   * re-rendering on every character. */
+   * skeleton↔list remounts. Read once on mount: keystrokes stay local so the
+   * parent does not re-render per character. */
   initialQuery: string;
   /** Tapped the ✕ — clear the field and cancel the active search. */
   onClear: () => void;
@@ -30,10 +29,9 @@ export const RecipeSearchInput = forwardRef<
 >(({ onSearch, extraActions, initialQuery, onClear }, ref) => {
   const { t } = useTranslation();
   const [inputQuery, setInputQuery] = useState(initialQuery);
-  // `useUnistyles()` is intentional: theme colors are constructed into the
-  // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
-  // shape carries `color`/`backgroundColor` strings, so a `withUnistyles`
-  // wrap on SearchBar would require redesigning the SearchBarAction type.
+  // `useUnistyles()` because theme colours go into the `SearchBarAction[]` prop
+  // as `color`/`backgroundColor` strings, which a `withUnistyles` wrap cannot
+  // theme.
   const { theme } = useUnistyles();
 
   useImperativeHandle(ref, () => ({
@@ -45,6 +43,7 @@ export const RecipeSearchInput = forwardRef<
     {
       icon: 'search',
       onPress: () => onSearch(inputQuery),
+      accessibilityLabel: t('labels.search'),
       color: theme.colors.primary,
       backgroundColor: theme.colors.surface,
       testID: recipesTestIDs.searchSubmit,

@@ -3,9 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { HomeStats } from '../HomeStats';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 describe('HomeStats', () => {
   it('renders stat numbers', () => {
     render(<HomeStats totalHomes={2} totalMembers={5} totalPantries={3} />);

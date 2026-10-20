@@ -42,9 +42,25 @@ export function writeLocalMealTemplate(
       homeId: input.homeId ?? null,
       home: home && isHeld(cache, home) ? home : null,
       user: { __typename: 'User', id: ownerId },
-      items: (input.items ?? []).flatMap(({ id: itemId, ...item }) =>
-        itemId ? [localTemplateItem(cache, itemId, item)] : [],
-      ),
+      itemsConnection: {
+        __typename: 'MealTemplateItemConnection',
+        edges: (input.items ?? []).flatMap(({ id: itemId, ...item }) =>
+          itemId
+            ? [
+                {
+                  __typename: 'MealTemplateItemEdge',
+                  node: localTemplateItem(cache, itemId, item),
+                },
+              ]
+            : [],
+        ),
+        // Everything the template holds is in this write: there is no next page.
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
+      },
       createdAt: now,
       updatedAt: now,
     },

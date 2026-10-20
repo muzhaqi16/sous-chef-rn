@@ -1,6 +1,5 @@
 import { object, string, boolean, date, mixed, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { lazyMessage, quantityRule } from '#/utils/validation/common';
 import {
   StorageState,
   ItemCondition,
@@ -12,14 +11,7 @@ import {
 } from '#features/pantry/utils/itemEnumLabels';
 
 // Shape, defaults and validation for the four-page Add-to-Pantry sheet.
-// Validation lives here and renders ON the field; `usePantryItemSubmission`
-// only submits. An alert covers the form, and once dismissed it cannot say
-// which of the four pages the offending input is on.
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one would freeze whichever language was active at import
-// time. Yup calls this when the rule fails.
-const msg = (key: TranslationKey) => (): string => t(key);
+// Validation renders ON the field; `usePantryItemSubmission` only submits.
 
 // yup types a test's sibling values as `any`; these are the ones the rules read.
 type NetWeightSiblings = Partial<
@@ -115,33 +107,16 @@ export const addPantryItemDefaults = (
   acquisitionMethod: AcquisitionMethod.Purchased,
 });
 
-// Defers to `parseFractionalInput` rather than restating its grammar: a regex
-// mirroring the accepted forms by hand drifts from the parser — one that took
-// only `.` as the decimal separator made `2,5` unreachable in es/it/sq, whose
-// `decimal-pad` offers no `.` at all.
-const isPositiveQuantity = (value: string | undefined): boolean => {
-  if (!value?.trim()) return false;
-  const parsed = parseFractionalInput(value);
-  return parsed !== null && parsed > 0;
-};
-
 export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
-  itemName: string().trim().required(msg('errors.itemNameRequired')),
-  quantityInput: string()
-    .trim()
-    .required(msg('errors.invalidQuantity'))
-    .test(
-      'positive-quantity',
-      msg('errors.invalidQuantity'),
-      isPositiveQuantity,
-    ),
+  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
+  quantityInput: quantityRule('errors.invalidQuantity').trim(),
   // ALL-OR-NOTHING in BOTH directions: the create contract rejects a unit id
   // with no weight, and the submit path drops a weight with no resolved unit
   // id. Each direction reports on the field the user has to fill.
   pantryNetWeight: string()
     .test(
       'net-weight-needs-value',
-      msg('errors.field.netWeight'),
+      lazyMessage('errors.field.netWeight'),
       (value, context: { parent: NetWeightSiblings }) => {
         if ((value ?? '').trim()) return true;
         return !context.parent.pantryNetWeightUnitId;
@@ -152,21 +127,20 @@ export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
     .defined()
     .test(
       'net-weight-needs-unit',
-      msg('labels.pleaseSelectAUnitForTheNetWeight'),
+      lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
       (_value, context: { parent: NetWeightSiblings }) => {
         const weight = (context.parent.pantryNetWeight ?? '').trim();
         if (!weight) return true;
         return Boolean(context.parent.pantryNetWeightUnitId);
       },
     ),
-  // The same all-or-nothing rule one level down, on the per-container weight
-  // that feeds `item.netWeight` + `item.displayUnitId`: without it a unitless
-  // weight is silently dropped. Scoped to `showPackageDetails` so a collapsed
-  // section can never block Save.
+  // The all-or-nothing rule on the per-container weight (`item.netWeight` +
+  // `item.displayUnitId`), where a unitless weight is silently dropped. Scoped
+  // to `showPackageDetails` so a collapsed section never blocks Save.
   itemNetWeight: string()
     .test(
       'item-net-weight-needs-value',
-      msg('errors.field.netWeight'),
+      lazyMessage('errors.field.netWeight'),
       (value, context: { parent: NetWeightSiblings }) => {
         if (!context.parent.showPackageDetails) return true;
         if ((value ?? '').trim()) return true;
@@ -178,7 +152,7 @@ export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
     .defined()
     .test(
       'item-net-weight-needs-unit',
-      msg('labels.pleaseSelectAUnitForTheNetWeight'),
+      lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
       (_value, context: { parent: NetWeightSiblings }) => {
         if (!context.parent.showPackageDetails) return true;
         const weight = (context.parent.itemNetWeight ?? '').trim();

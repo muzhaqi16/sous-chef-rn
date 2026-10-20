@@ -109,7 +109,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
             <View style={styles.unitField}>
               <UnitAutocompleteField
                 variant="inline"
-                label={t('storageLocationForm.unit')}
+                label={t('labels.unit')}
                 value={entry.unitName ?? ''}
                 onChangeText={(text: string) =>
                   handleUnitTextChange(index, text)

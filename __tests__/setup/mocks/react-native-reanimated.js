@@ -5,6 +5,9 @@ jest.mock('react-native-reanimated', () => {
   const returnSelf = jest.fn(function () {
     return this;
   });
+  // Real `Easing.bezier` returns a factory, and a layout builder's `.easing()`
+  // takes its `factory()`.
+  const bezierEasing = Object.assign(jest.fn(), { factory: () => noOp });
   const mockSharedValue = initialValue => {
     const sv = {
       value: initialValue,
@@ -76,7 +79,7 @@ jest.mock('react-native-reanimated', () => {
       elastic: noOp,
       back: noOp,
       bounce: noOp,
-      bezier: jest.fn(() => noOp),
+      bezier: jest.fn(() => bezierEasing),
       bezierFn: jest.fn(() => noOp),
       steps: jest.fn(() => noOp),
       in: noOp,
@@ -95,6 +98,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     FadeOut: {
       duration: returnSelf,
@@ -103,6 +107,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     FadeInDown: {
       duration: returnSelf,
@@ -111,6 +116,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     FadeInUp: {
       duration: returnSelf,
@@ -119,6 +125,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     FadeOutDown: {
       duration: returnSelf,
@@ -127,6 +134,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     FadeOutUp: {
       duration: returnSelf,
@@ -135,6 +143,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideInDown: {
       duration: returnSelf,
@@ -143,6 +152,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideOutUp: {
       duration: returnSelf,
@@ -151,6 +161,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideInRight: {
       duration: returnSelf,
@@ -159,6 +170,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideOutRight: {
       duration: returnSelf,
@@ -167,6 +179,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideInLeft: {
       duration: returnSelf,
@@ -175,6 +188,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SlideOutLeft: {
       duration: returnSelf,
@@ -183,6 +197,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     ZoomIn: {
       duration: returnSelf,
@@ -191,6 +206,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     ZoomOut: {
       duration: returnSelf,
@@ -199,6 +215,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     Layout: {
       duration: returnSelf,
@@ -207,6 +224,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     LinearTransition: {
       duration: returnSelf,
@@ -215,6 +233,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     SequencedTransition: {
       duration: returnSelf,
@@ -223,6 +242,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     EntryExitTransition: {
       duration: returnSelf,
@@ -231,6 +251,7 @@ jest.mock('react-native-reanimated', () => {
       damping: returnSelf,
       stiffness: returnSelf,
       mass: returnSelf,
+      easing: returnSelf,
     },
     measure: jest.fn(() => ({
       x: 0,

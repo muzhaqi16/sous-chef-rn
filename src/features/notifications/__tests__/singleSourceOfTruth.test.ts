@@ -20,9 +20,6 @@ import {
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const node = (
   id: string,
   status: NotificationStatus = NotificationStatus.Sent,
@@ -40,6 +37,7 @@ const node = (
   expiresAt: null,
   sourceId: null,
   sourceType: null,
+  pantryItemId: null,
   actionUrl: null,
   readAt:
     status === NotificationStatus.Read ? '2026-08-23T00:00:00.000Z' : null,

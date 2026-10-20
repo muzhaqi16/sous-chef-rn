@@ -10,6 +10,8 @@ import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { useActiveMealPlan } from '../useActiveMealPlan';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 /**
  * A plan complete for `MealPlanDisplay` — the selection every consumer reads.
  * These tests only need the entity to EXIST, but seeding it against the real
@@ -44,8 +46,6 @@ const seedPlan = (id: string) =>
       },
     },
   ]);
-
-jest.mock('#/apollo/links/tokenScheduler');
 
 /** A by-id miss: null data, no entry in `errors[]`. */
 function missMock(id: string) {
@@ -134,7 +134,11 @@ describe('useActiveMealPlan', () => {
     );
     // The persisted pick is dropped, so the next cold start doesn't repeat it.
     expect(useStore.getState().selectedMealPlanId).toBeNull();
-    expect(fallback.fired).toContainEqual({ id: 'plan-current' });
+    expect(fallback.fired).toContainEqual({
+      id: 'plan-current',
+      mealsFirst: MEALS_PAGE_SIZE,
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    });
   });
 
   it('falls back when the selected plan answers FORBIDDEN (membership revoked)', async () => {
@@ -217,7 +221,11 @@ describe('useActiveMealPlan', () => {
 
     // Going offline must never read as a deletion.
     await waitFor(() =>
-      expect(get.fired).toContainEqual({ id: 'plan-picked' }),
+      expect(get.fired).toContainEqual({
+        id: 'plan-picked',
+        mealsFirst: MEALS_PAGE_SIZE,
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      }),
     );
     expect(result.current.activePlanId).toBe('plan-picked');
     expect(useStore.getState().selectedMealPlanId).toBe('plan-picked');

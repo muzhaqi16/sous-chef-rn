@@ -1,4 +1,5 @@
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
+import { isRecord } from '#/utils/isRecord';
 import { describeValue } from '#/utils/errorSerialization';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
@@ -16,6 +17,8 @@ export interface TopLevelGraphQLError {
   message: string;
   /** The refused argument path (`input.email`) of a value no resolver saw. */
   field: string | null;
+  /** The API's fault class; `infrastructure` is a store it could not reach. */
+  category: string | null;
 }
 
 /** Reads the first top-level GraphQL error's code + message from an Apollo
@@ -30,17 +33,63 @@ export function getTopLevelGraphQLError(
   const first = error.errors[0];
   if (!first) return null;
   const field = first.extensions?.field;
+  const category = first.extensions?.category;
   return {
     code: describeValue(first.extensions?.code ?? ''),
     message: first.message,
     field: typeof field === 'string' && field ? field : null,
+    category: typeof category === 'string' ? category : null,
   };
 }
 
-// FORBIDDEN is the single authorization code, on both channels. A MISSING record
-// is deliberately not here: a by-id query reports a miss as null data, and
-// RESOURCE_NOT_FOUND is the mutation spelling of that same condition.
-const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
+/** What a response refused before execution says about itself. */
+export interface RefusalEnvelope {
+  code: string;
+  /** Seconds the server asks the caller to wait; null when it states none. */
+  retryAfter: number | null;
+}
+
+const positiveSeconds = (value: unknown): number | null => {
+  const seconds = typeof value === 'string' ? Number(value) : value;
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+    ? seconds
+    : null;
+};
+
+/**
+ * The envelope of a response refused before execution (rate limit, timeout,
+ * oversized body). The API sends it non-2xx as `application/json`, which Apollo
+ * leaves unparsed, so it arrives as a `ServerError` holding the envelope as TEXT.
+ */
+export function refusalEnvelopeOf(error: unknown): RefusalEnvelope | null {
+  if (!ServerError.is(error)) return null;
+  let body: unknown;
+  try {
+    body = JSON.parse(error.bodyText);
+  } catch {
+    return null;
+  }
+  const errors = isRecord(body) ? body.errors : undefined;
+  const first: unknown = Array.isArray(errors) ? errors[0] : undefined;
+  const extensions = isRecord(first) ? first.extensions : undefined;
+  if (!isRecord(extensions) || typeof extensions.code !== 'string') {
+    return null;
+  }
+  return {
+    code: extensions.code,
+    retryAfter:
+      positiveSeconds(extensions.retryAfter) ??
+      positiveSeconds(error.response.headers.get('retry-after')),
+  };
+}
+
+// The codes a read is refused with; HOME_NOT_A_MEMBER answers a caller who left
+// the home. A MISSING record is not here: a by-id query reports it as null
+// data, and RESOURCE_NOT_FOUND is the mutation spelling.
+const RESOURCE_ACCESS_LOST_CODES = new Set<string>([
+  ErrorCode.Forbidden,
+  TopLevelErrorCode.HomeNotAMember,
+]);
 
 /** True when a query error means access was revoked: the row exists but is not
  *  the caller's, which is what separates it from a miss (null data). Network
@@ -51,10 +100,9 @@ export function isResourceAccessLostError(error: unknown): boolean {
 }
 
 /**
- * True when the server refused a page request's CURSOR. Keyed on the code plus
- * the cursor the caller SENT — never the message, never the argument's name.
- * Wider than a cursor: the API refuses every pagination argument with
- * VALIDATION_FAILED and no field, so one bounded restart is what caps it.
+ * Keyed on the code plus the cursor the caller SENT, never the message: the API
+ * refuses every pagination argument with VALIDATION_FAILED and no field, so one
+ * bounded restart caps it.
  */
 export function isDeadCursorError(error: unknown, cursor: unknown): boolean {
   if (cursor == null || cursor === '') return false;

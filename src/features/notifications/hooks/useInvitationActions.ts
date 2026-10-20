@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { invitationRefusalCopy } from '#/domain/invitationRefusal';
@@ -6,9 +7,9 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import {
-  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-  InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-} from '#features/notifications/components/InvitationAcceptanceModal.generated';
+  useAnswerListInvite,
+  type ListInviteAnswer,
+} from '#features/shoppingList/hooks/useAnswerListInvite';
 import type { InvitationData } from '#features/notifications/types';
 import {
   createAddToQueryConnectionUpdater,
@@ -17,12 +18,17 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import {
   settleMutation,
+  type Settled,
   type SettledFailure,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import {
+  appliedPayload,
+  extractMutationPayload,
+} from '#/utils/errors/mutationPayload';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
@@ -30,12 +36,6 @@ const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
   'pendingHomeInvitesConnection',
   'HomeInvite',
 );
-const removePendingCollaborationInvite =
-  createRemoveFromParentConnectionUpdater(
-    'User',
-    'pendingCollaborationInvitesConnection',
-    'ShoppingListCollaborator',
-  );
 
 export type InvitationFailure = SettledFailure;
 
@@ -43,6 +43,27 @@ export type InvitationFailure = SettledFailure;
 export type InvitationWriteResult =
   | { status: 'done'; acceptedHomeId?: string }
   | { status: 'failed'; failure: InvitationFailure };
+
+const writeResult = ({
+  failure,
+}: Pick<Settled<unknown>, 'failure'>): InvitationWriteResult =>
+  failure ? { status: 'failed', failure } : { status: 'done' };
+
+const fromListAnswer = (answer: ListInviteAnswer): InvitationWriteResult =>
+  answer.status === 'failed' ? answer : { status: 'done' };
+
+/**
+ * The invite is not pending any more: the server refused the write as a plain
+ * conflict. A full home is a `ConflictError` too, under its own code, and its
+ * invite stays pending until a seat frees.
+ */
+const isSpentInvite = (data: unknown): boolean => {
+  const payload = extractMutationPayload(data);
+  return (
+    payload?.__typename === 'ConflictError' &&
+    payload.code === ErrorCode.Conflict
+  );
+};
 
 const refusalOptions = (
   document: DocumentNode,
@@ -55,10 +76,9 @@ const refusalOptions = (
 });
 
 /**
- * The four invite writes and the token they need. Each `update`
- * prefers the payload's `inviteId` and falls back to the canonical
- * `invitation.id` (the server's `sourceId` correlation), so a notification
- * carrying only a sourceId still evicts its pending record.
+ * Each home `update` prefers the payload's `inviteId`, else `invitation.id` (the
+ * server's `sourceId`), so a notification carrying only a sourceId still evicts
+ * its pending record. A list invite is answered by `useAnswerListInvite`.
  */
 export function useInvitationActions(
   invitation: InvitationData | null,
@@ -67,13 +87,24 @@ export function useInvitationActions(
   const { t } = useTranslation();
   const inviteId = firstNonBlank(invitation?.payload.inviteId, invitation?.id);
 
+  /**
+   * `update` runs for a refusal too. Only a CONFLICT means spent (accepted,
+   * declined or revoked); any other refusal leaves the invite PENDING, so
+   * evicting it would leave nothing to accept later.
+   */
+  const dropSpentHomeInvite = (cache: ApolloCache, data: unknown) => {
+    if (isSpentInvite(data) && inviteId && userId) {
+      removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+    }
+  };
+
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
-      // A refusal is a completed mutation, so this runs for one too. Every
-      // effect stays inside the payload check: the invite is still PENDING on
-      // a refusal, and evicting it here leaves nothing to accept later.
       const payload = appliedPayload(data);
-      if (!payload) return;
+      if (!payload) {
+        dropSpentHomeInvite(cache, data);
+        return;
+      }
       addToHomes(cache, payload.membership.home, { position: 'end' });
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
@@ -81,25 +112,13 @@ export function useInvitationActions(
     },
   });
 
-  const [acceptShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-    {
-      update: (cache, { data }) => {
-        if (!appliedPayload(data)) return;
-        // Not evicted: accepting transitions the pending collaborator record to
-        // active, and Apollo has already normalized the response — only the
-        // reference has to leave the pending list.
-        if (inviteId && userId) {
-          removePendingCollaborationInvite(cache, userId, inviteId);
-        }
-      },
-    },
-  );
-
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
-      if (!payload) return;
+      if (!payload) {
+        dropSpentHomeInvite(cache, data);
+        return;
+      }
       const id = payload.homeInvite.id;
       if (id && userId) {
         removePendingHomeInvite(cache, userId, id, { evictItem: true });
@@ -109,25 +128,12 @@ export function useInvitationActions(
     },
   });
 
-  const [declineShoppingListInvite] = useMutation(
-    InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-    {
-      update: (cache, { data }) => {
-        if (!appliedPayload(data)) return;
-        if (inviteId && userId) {
-          removePendingCollaborationInvite(cache, userId, inviteId, {
-            evictItem: true,
-          });
-        }
-      },
-    },
-  );
+  const { acceptListInvite, declineListInvite } = useAnswerListInvite();
 
   /**
-   * The invite's bearer token, which rides in the notification that delivered
-   * it. There is no lookup behind it: the API discloses the raw token once, to
-   * the inviter, and stores only a digest, so no list can hand one back. Read
-   * at render so a surface holding none can decline to offer the action at all.
+   * The bearer token rides only in the notification that delivered it: the API
+   * stores a digest, so no lookup can hand one back. Read at render so a
+   * surface holding none can decline to offer the action.
    */
   const token = invitation?.token;
 
@@ -148,21 +154,8 @@ export function useInvitationActions(
 
   const acceptList = async (
     inviteToken: string,
-  ): Promise<InvitationWriteResult> => {
-    const settled = await settleMutation(
-      () =>
-        acceptShoppingListInvite({
-          variables: { input: { token: inviteToken } },
-        }),
-      refusalOptions(
-        InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-        t('invitationAcceptance.acceptFailed'),
-      ),
-    );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
-  };
+  ): Promise<InvitationWriteResult> =>
+    fromListAnswer(await acceptListInvite({ token: inviteToken }));
 
   const declineHome = async (
     inviteToken: string,
@@ -174,28 +167,13 @@ export function useInvitationActions(
         t('invitationAcceptance.declineFailed'),
       ),
     );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
+    return writeResult(settled);
   };
 
   const declineList = async (
     inviteToken: string,
-  ): Promise<InvitationWriteResult> => {
-    const settled = await settleMutation(
-      () =>
-        declineShoppingListInvite({
-          variables: { input: { token: inviteToken } },
-        }),
-      refusalOptions(
-        InvitationAcceptanceModalDeclineShoppingListInviteDocument,
-        t('invitationAcceptance.declineFailed'),
-      ),
-    );
-    return settled.failure
-      ? { status: 'failed', failure: settled.failure }
-      : { status: 'done' };
-  };
+  ): Promise<InvitationWriteResult> =>
+    fromListAnswer(await declineListInvite({ token: inviteToken }));
 
   return { token, acceptHome, acceptList, declineHome, declineList };
 }

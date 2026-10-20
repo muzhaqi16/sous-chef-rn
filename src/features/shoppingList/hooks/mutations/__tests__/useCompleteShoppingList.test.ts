@@ -10,10 +10,6 @@ import {
 import { UseCompleteShoppingList_ListFragmentDoc } from '../useCompleteShoppingList.generated';
 import { useCompleteShoppingList } from '../useCompleteShoppingList';
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const LIST = {
   __typename: 'ShoppingList',
   id: 'list-1',
@@ -123,7 +119,6 @@ describe('useCompleteShoppingList', () => {
               markShoppingListActive: {
                 __typename: 'MarkShoppingListActivePayload',
                 shoppingList: {
-                  __typename: 'ShoppingList',
                   id: 'list-1',
                   status: 'ACTIVE',
                   isCompleted: false,

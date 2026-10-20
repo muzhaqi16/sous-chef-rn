@@ -3,20 +3,22 @@ import { useStore } from '#store';
 import { queueManager } from '../offlineQueue/queueManager';
 import { probeApiHealth } from './apiHealthProbe';
 import { logger } from '#/utils/environment';
+import { backoffDelay } from '#/utils/backoff';
 
 /**
- * The single source of truth for "is the API reachable", distinct from device
- * internet. Recovery is ACTIVE — it probes `/health`, because `offlineModeLink`
- * blocks the traffic that would prove it. `recordSuccess` writes unconditionally
- * and the flag is never persisted, so a desync self-heals rather than sticking.
+ * API reachability, distinct from device internet. Recovery probes `/health`,
+ * as `offlineModeLink` blocks the traffic that would prove it. `recordSuccess`
+ * always writes and nothing persists the flag, so a desync heals itself.
  */
 
 /** Consecutive per-operation failures (in the closed state) before opening. */
 const FAILURE_THRESHOLD = 3;
-/** Delay before the first /health probe after the circuit opens. */
-const INITIAL_PROBE_DELAY_MS = 20_000;
-/** Probe backoff cap — keeps probing a long-dead API cheap on battery. */
-const MAX_PROBE_DELAY_MS = 120_000;
+/**
+ * The first /health probe comes 20s after the circuit opens; the cap keeps
+ * probing a long-dead API cheap on battery. Jitter, or every device the outage
+ * tripped together probes the recovering API together.
+ */
+const PROBE_BACKOFF = { baseMs: 20_000, maxMs: 120_000, jitter: 0.25 };
 
 type CircuitState = 'closed' | 'open';
 
@@ -86,20 +88,16 @@ class ApiReachabilityBreaker {
       this.open();
       return;
     }
-    // Don't wait for FAILURE_THRESHOLD operations to each burn through
-    // retryLink's attempts before opening: confirm with one direct /health
-    // probe now. A probe success forgives a transient blip (recordSuccess
-    // resets the counter); a probe failure opens the circuit immediately.
-    // Guarded by `probeInFlight`, so a burst of concurrent failures collapses
-    // to a single probe.
+    // Confirm with one /health probe now rather than wait for FAILURE_THRESHOLD
+    // operations to burn through retryLink: a success forgives the blip, a
+    // failure opens the circuit. `probeInFlight` collapses a burst to one probe.
     void this.probe();
   }
 
   /**
-   * Fresh start, optimistic only while a link exists. With no link reachability
-   * is UNKNOWN, not proven — asserting `true` there makes `shouldTreatAsOffline`
-   * false for a whole offline session, and the probe loop cannot correct it
-   * because this also closes the circuit. So `reset()` reads the link itself.
+   * Fresh start, optimistic only while a link exists: with none, reachability
+   * is UNKNOWN, and `true` would hold `shouldTreatAsOffline` false for the whole
+   * offline session, as the closed circuit runs no probe loop to correct it.
    */
   reset(): void {
     this.consecutiveFailures = 0;
@@ -117,10 +115,9 @@ class ApiReachabilityBreaker {
   }
 
   /**
-   * The device link went down; the store has already moved `apiReachable` to
-   * `null`. Starts the probe loop, the only thing that can turn it back into a
-   * fact — a `/health` success while NetInfo says offline proves NetInfo wrong.
-   * The SAME loop the open circuit uses, capped at one probe every two minutes.
+   * The device link went down and the store set `apiReachable` to `null`; the
+   * probe loop is all that can make it a fact again, as a `/health` success
+   * while NetInfo says offline proves NetInfo wrong.
    */
   onDeviceOffline(): void {
     this.probeAttempt = 0;
@@ -164,10 +161,7 @@ class ApiReachabilityBreaker {
 
   private scheduleProbe(): void {
     this.clearProbeTimer();
-    const delay = Math.min(
-      INITIAL_PROBE_DELAY_MS * 2 ** this.probeAttempt,
-      MAX_PROBE_DELAY_MS,
-    );
+    const delay = backoffDelay(this.probeAttempt, PROBE_BACKOFF);
     logger.info(`🔌 next /health probe in ${Math.round(delay / 1000)}s`);
     this.probeTimer = setTimeout(() => {
       this.probeTimer = null;
@@ -200,21 +194,16 @@ class ApiReachabilityBreaker {
       useStore.getState().apiReachable === false ||
       this.consecutiveFailures > 0
     ) {
-      // The probe confirmed a failure we already saw while the circuit was
-      // still closed — open so the probe loop owns recovery. Two entry points:
-      // a stale stuck flag (apiReachable false while closed, e.g. a foreground
-      // probe), or the first-failure arbiter probe in recordFailure. The
-      // guards also drop stale probe results that resolve after a reset()
-      // (which clears the flag and zeroes consecutiveFailures).
+      // The probe confirmed a failure seen while closed (a stuck flag, or
+      // recordFailure's arbiter probe): open so the probe loop owns recovery.
+      // A result landing after reset() fails both guards and is dropped.
       this.open();
       return;
     }
 
-    // Circuit closed, nothing else to act on — but if the device link is down
-    // this loop is the ONLY thing running, because no traffic is allowed to
-    // produce a failure that would open the circuit. Keep it alive so a
-    // recovery gets noticed; opening would be wrong, since a failed probe with
-    // no link says nothing about the API.
+    // With the device link down no traffic can open the circuit, so this loop
+    // is all that notices a recovery; opening here would be wrong, since a
+    // failed probe with no link says nothing about the API.
     if (!useStore.getState().isOnline) {
       this.probeAttempt += 1;
       this.scheduleProbe();

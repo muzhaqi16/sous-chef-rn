@@ -1,4 +1,10 @@
-import { totalFromUnitPrice, unitPriceFromTotal } from '../purchasePrice';
+import {
+  shownUnitPrice,
+  suggestedLineCost,
+  totalFromUnitPrice,
+  unitPriceFromTotal,
+} from '#features/shoppingList/utils/purchasePrice';
+import { formatCurrency } from '#/utils/formatters/number';
 
 describe('unitPriceFromTotal', () => {
   it('divides the total paid by the quantity', () => {
@@ -35,5 +41,36 @@ describe('totalFromUnitPrice', () => {
 
   it('uses the estimate as-is when there is no quantity to multiply by', () => {
     expect(totalFromUnitPrice(4.99, 0)).toBe(4.99);
+  });
+});
+
+describe('shownUnitPrice', () => {
+  it('splits a total across a quantity other than one', () => {
+    expect(shownUnitPrice(3, 2)).toBe(1.5);
+  });
+
+  it.each([
+    ['one, where the split is the total', 3, 1],
+    ['an unusable quantity', 3, 0],
+    ['no quantity', 3, null],
+    ['no total', null, 2],
+  ])('shows nothing for %s', (_case, total, quantity) => {
+    expect(shownUnitPrice(total, quantity)).toBeNull();
+  });
+});
+
+describe('suggestedLineCost', () => {
+  it("prices the line's quantity at its suggestion, in the suggestion's currency", () => {
+    expect(
+      suggestedLineCost(
+        { amount: 4.99, currency: { code: 'EUR', decimalPlaces: 2 } },
+        3,
+      ),
+    ).toBe(formatCurrency(14.97, 'EUR', 2));
+  });
+
+  it('is null without a suggestion or its currency', () => {
+    expect(suggestedLineCost(null, 3)).toBeNull();
+    expect(suggestedLineCost({ amount: 4.99 }, 3)).toBeNull();
   });
 });

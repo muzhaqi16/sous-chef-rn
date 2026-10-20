@@ -107,7 +107,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           />
           <UnitAutocompleteField
             variant="inline"
-            label={t('storageLocationForm.unit')}
+            label={t('labels.unit')}
             value={unit}
             onChangeText={setUnit}
             onUnitSelected={handleUnitSelected}
@@ -132,7 +132,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             />
             <UnitAutocompleteField
               variant="inline"
-              label={t('storageLocationForm.unit')}
+              label={t('labels.unit')}
               error={pantryNetWeightUnitError}
               value={pantryNetWeightUnit}
               onChangeText={setPantryNetWeightUnit}

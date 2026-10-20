@@ -134,11 +134,9 @@ interface OverlayBackdropProviderProps {
   children: React.ReactNode;
 }
 
-// Owns the claim registry. Global opacity is an owned SharedValue driven by a
-// `useAnimatedReaction` over the max of all claim SVs, plus a JS-thread
-// zero-floor. Every claim has a guaranteed release path through its consumer's
-// unmount cleanup, so there is deliberately NO navigation-state listener wiping
-// slots — that breaks the AddToPantrySheet → Barcode → back flow.
+// Opacity is the max of all claims plus a JS-thread zero-floor. Every claim is
+// released by its consumer's unmount cleanup, so NO navigation listener wipes
+// slots: one breaks the AddToPantrySheet → Barcode → back flow.
 export const OverlayBackdropProvider: React.FC<
   OverlayBackdropProviderProps
 > = ({ children }) => {
@@ -300,9 +298,7 @@ export const GlobalBackdrop: React.FC = () => {
     return null;
   }
 
-  // No themed Unistyles style on the animated node: Unistyles would capture
-  // reanimated's React-side opacity and write it back over the animation, so
-  // the colour sits one level down.
+  // The animated node takes no themed style, so the colour sits one level down.
   return (
     <Animated.View
       style={[StyleSheet.absoluteFill, animatedStyle]}

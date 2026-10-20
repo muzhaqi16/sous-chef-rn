@@ -58,7 +58,9 @@
     },
     "shelfLifeBoth": "{{days}} d ({{openedDays}} d una vez abierto)",
     "shelfLifeOpened": "{{days}} d una vez abierto",
-    "packages": "Paquetes"
+    "packages": "Paquetes",
+    "removedTitle": "Este artículo ya no está en tu despensa",
+    "removedBody": "Se eliminó, quizá desde otro dispositivo."
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
@@ -116,6 +118,7 @@
     "topWastedItems": "Artículos más desperdiciados",
     "activityOverTime": "Actividad a lo largo del tiempo",
     "additionsByUnit": "Adiciones por unidad",
+    "perUnit": "por {{unit}}",
     "consumptionByUnit": "Consumo por unidad",
     "topRestockedItems": "Artículos más reabastecidos",
     "transactionCount": "({{count}} transacciones)",
@@ -249,8 +252,9 @@
     "failedItems_one": "No se pudo mover {{names}}",
     "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}",
     "nothingLeftToMove": "Todo lo comprado ya está en tu despensa",
-    "packageSizeLabel": "Tamaño del paquete",
-    "packageSizeHint": "Solo si este paquete difiere del tamaño habitual, como un frasco de 22 oz. Déjalo vacío para usar el tamaño habitual."
+    "packageSizeHint": "Solo si este paquete difiere del tamaño habitual, como un frasco de 22 oz. Déjalo vacío para usar el tamaño habitual.",
+    "packageSizeNeedsCount": "El tamaño del paquete va con un número entero de paquetes en una unidad contable, como 2 frascos. Déjalo vacío para una cantidad como 500 g.",
+    "unknownUnit": "No conocemos esa unidad. Elige una de la lista, como cartón o frasco."
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
@@ -270,6 +274,7 @@
   },
   "addToPantry": {
     "restocked": "Se reabasteció {{name}}",
+    "fromReceipt": "Añadir desde un recibo",
     "amountLeft_one": "Queda {{amount}}",
     "amountLeft_other": "Quedan {{amount}}",
     "lowStockSettings": "Ajustes de stock bajo",

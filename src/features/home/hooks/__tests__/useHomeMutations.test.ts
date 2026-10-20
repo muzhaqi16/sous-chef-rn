@@ -57,12 +57,6 @@ jest.mock('../homeCacheUpdaters', () => ({
   removeFromHomesCache: jest.fn(),
 }));
 
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const createOptions = () => ({
   refetch: jest.fn().mockResolvedValue(undefined),
   setDefaultHome: jest.fn().mockResolvedValue(true),
@@ -86,8 +80,12 @@ function createHomeMock(home: { id: string; name: string }) {
   });
 }
 
-function createPantryMock(pantry: { id: string; homeId: string }) {
+function createPantryMock(
+  pantry: { id: string; homeId: string },
+  { held = false }: { held?: boolean } = {},
+) {
   return recordMock(CreatePantryDocument, {
+    held,
     data: {
       createPantry: {
         __typename: 'CreatePantryPayload',
@@ -183,8 +181,10 @@ describe('useHomeMutations', () => {
       // submit control reads `creating`, so a second tap during that window
       // must find it disabled — a duplicate home is what it would create.
       const home = createHomeMock({ id: 'new-home', name: 'My Home' });
-      const pantry = createPantryMock({ id: 'new-pantry', homeId: 'new-home' });
-      pantry.mock.delay = 200;
+      const pantry = createPantryMock(
+        { id: 'new-pantry', homeId: 'new-home' },
+        { held: true },
+      );
       const { result } = renderHookWithApollo(
         () => useHomeMutations(createOptions()),
         { operationMocks: [home.mock, pantry.mock] },
@@ -197,9 +197,11 @@ describe('useHomeMutations', () => {
         });
         await Promise.resolve();
       });
-      await waitFor(() => expect(home.fired).toHaveLength(1));
+      await waitFor(() => expect(pantry.fired).toHaveLength(1));
       expect(settled).toBe(false);
       expect(result.current.creating).toBe(true);
+
+      await act(async () => pantry.release());
 
       // `settled` flips in a microtask; `result.current` only after React's
       // re-render and passive effect, so the flag is awaited, not read after.

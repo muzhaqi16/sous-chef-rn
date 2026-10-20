@@ -7,10 +7,7 @@ import {
   acquisitionMethodLabelKey,
   conditionLabelKey,
 } from '#features/pantry/utils/itemEnumLabels';
-// Aliased: despite the `use` prefix this module exports plain functions, not a
-// hook, so there is no component to call `useTranslation` in. Callers that
-// render the result are responsible for re-running these on a language change.
-import { isTranslationKey, t as tGlobal } from '#/i18n';
+import { isTranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
   daysUntilExpiry,
@@ -37,10 +34,13 @@ export interface ExpirationStatus {
   type: ExpirationStatusType;
 }
 
+// Every helper here takes the caller's `t`. A compiled component re-runs a
+// helper only when an argument changes, so one that reached for the module's
+// own `t` would keep the language the row first rendered in.
+
 /**
  * The short register for the detail screen ("Fridge", not "Refrigerated"); its
- * own namespace because `storageState.*` is the long form the pickers show. `t`
- * is a parameter — resolving at module load freezes the first-loaded language.
+ * own namespace because `storageState.*` is the long form the pickers show.
  */
 export const formatStorageState = (
   state: StorageState | null | undefined,
@@ -55,11 +55,12 @@ export const formatStorageState = (
 // Helper to get expiration status
 export const getExpirationStatus = (
   expiresIn: number | null,
+  translate: Translate,
 ): ExpirationStatus => {
   if (expiresIn === null) {
-    return { text: tGlobal('expiration.noExpiryDate'), type: 'normal' };
+    return { text: translate('expiration.noExpiryDate'), type: 'normal' };
   }
-  const text = expiryLabel(expiresIn, tGlobal);
+  const text = expiryLabel(expiresIn, translate);
   if (expiresIn < 0) return { text, type: 'expired' };
   if (expiresIn === 0) return { text, type: 'critical' };
   if (expiresIn <= EXPIRING_SOON_DAYS) return { text, type: 'warning' };
@@ -77,13 +78,14 @@ interface PackageBreakdown {
 // Unit labels are server data with no plural form, so they pass through as-is.
 export const formatPackageBreakdown = (
   breakdown: PackageBreakdown | null | undefined,
+  translate: Translate,
 ): string | null => {
   if (!breakdown) return null;
   const unit =
     firstNonBlank(breakdown.contentUnit.symbol) ?? breakdown.contentUnit.name;
   const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
   if (breakdown.perUnitNetWeight && weightUnit) {
-    return tGlobal('pantryItemCard.packageContents', {
+    return translate('pantryItemCard.packageContents', {
       count: breakdown.count,
       weight: formatQuantityForDisplay(breakdown.perUnitNetWeight, {
         notation: 'decimal',
@@ -92,7 +94,7 @@ export const formatPackageBreakdown = (
       unit,
     });
   }
-  return tGlobal('itemSubtitle.contentUnitCount', {
+  return translate('itemSubtitle.contentUnitCount', {
     count: breakdown.count,
     unit,
   });
@@ -101,12 +103,13 @@ export const formatPackageBreakdown = (
 /** The package breakdown plus its total weight, for detail views. */
 export const formatPackageBreakdownFull = (
   breakdown: PackageBreakdown | null | undefined,
+  translate: Translate,
 ): string | null => {
-  const short = formatPackageBreakdown(breakdown);
+  const short = formatPackageBreakdown(breakdown, translate);
   if (!breakdown || !short) return null;
   const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
   if (breakdown.totalNetWeight && weightUnit) {
-    return tGlobal('pantryItemCard.packageWithTotal', {
+    return translate('pantryItemCard.packageWithTotal', {
       breakdown: short,
       total: formatQuantityForDisplay(breakdown.totalNetWeight, {
         notation: 'decimal',
@@ -115,30 +118,6 @@ export const formatPackageBreakdownFull = (
     });
   }
   return short;
-};
-
-// Helper to format net weight for primary display (no "ea" suffix, with g→kg / ml→L upscaling)
-export const formatNetWeightDisplay = (
-  netWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
-): string | null => {
-  if (!netWeight) return null;
-  const unitStr =
-    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name) ?? '';
-
-  // Same g→kg, mL→L upscaling as formatQuantityDisplay — and the same
-  // case-insensitive match, the canonical symbol being `mL`.
-  if (
-    netWeight >= 1000 &&
-    (unitStr === 'g' || unitStr.toLowerCase() === 'ml')
-  ) {
-    return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
-  }
-
-  const formatted = Number.isInteger(netWeight)
-    ? netWeight.toString()
-    : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
-  return `${formatted} ${unitStr}`.trim();
 };
 
 // Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
@@ -154,6 +133,7 @@ export const formatQuantityBreakdown = (
       }
     | null
     | undefined,
+  translate: Translate,
 ): string | null => {
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
@@ -166,7 +146,7 @@ export const formatQuantityBreakdown = (
     breakdown.contentUnit?.name,
   );
   if (!contentLabel) return null;
-  return tGlobal('itemSubtitle.contentUnitCount', {
+  return translate('itemSubtitle.contentUnitCount', {
     count: total,
     unit: contentLabel,
   });
@@ -176,11 +156,12 @@ export const formatQuantityBreakdown = (
 export const getExpiryInfo = (
   expiresOn: string | null | undefined,
   today: string,
+  translate: Translate,
 ) => {
   if (!expiresOn) return null;
   const diffDays = daysUntilExpiry(expiresOn, today);
   return {
-    text: expiryLabel(diffDays, tGlobal),
+    text: expiryLabel(diffDays, translate),
     isExpired: diffDays < 0,
     isUrgent: diffDays <= EXPIRING_SOON_DAYS,
   };
@@ -228,10 +209,9 @@ export const formatAcquisitionMethod = (
   t: Translate,
 ): string | null => (method ? t(acquisitionMethodLabelKey(method)) : null);
 
-// A cost, or null when the server recorded none — callers omit the row rather
-// than render an em dash beside populated ones. A cost recorded AS zero is a
-// fact somebody entered (a gift, a comped line) and is shown. Distinct from
-// `formatCurrency`, which always returns a string.
+// A cost, or null when none was recorded, so callers omit the row instead of an
+// em dash. A cost recorded AS zero is a fact (a gift) and is shown.
+// `formatCurrency` always returns a string.
 export const formatCostOrNull = (
   amount: number | null | undefined,
   currency: string,

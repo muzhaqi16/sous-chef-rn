@@ -1,8 +1,7 @@
 /**
- * Meal plan item create / toggle-completed / delete, local-first: each writes the
- * cache PERMANENTLY before firing, since an `optimisticResponse` rolls back when
- * the queue completes with a null result. A replayed create collides with the
- * (mealPlanId, date, mealType, recipeId) unique key, so it is idempotent.
+ * Item create, toggle and delete write the cache PERMANENTLY before firing: an
+ * `optimisticResponse` rolls back on the queue's null result. A replayed create
+ * meets the (mealPlanId, date, mealType, recipeId) unique key.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -10,6 +9,7 @@ import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
+  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   MealPlanItemActions_OptimisticFullItemFragmentDoc,
@@ -19,6 +19,7 @@ import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
+  MEAL_PLAN_ITEMS_FIELD,
   addToMealPlanItems,
   adoptServerMealPlanItem,
   removeFromMealPlanItems,
@@ -26,12 +27,13 @@ import {
   writeLocalMealPlanItem,
 } from '#features/mealPlan/cache/mealPlanItem';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { keepMealInsidePlan } from '#/utils/dateUtils';
+import { keepDayInsidePlan } from '#/utils/dateUtils';
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();
@@ -84,7 +86,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     const itemInput = {
       ...input,
       id: generateEntityId(),
-      date: keepMealInsidePlan(input.date, bounds ?? undefined),
+      date: keepDayInsidePlan(input.date, bounds ?? undefined),
     };
     const revertCreate = writeLocalMealPlanItem(client.cache, itemInput);
 
@@ -97,18 +99,11 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         document: CreateMealPlanItemDocument,
         fallback: t('mealTemplateBuilder.failedToAddItem'),
         onFailed: revertCreate,
-        // Meal actions on the plan report failures as toasts.
-        present: 'none',
+        present: 'toast',
       },
     );
-
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
-    // Offline / API down: the meal stays in cache and the create replays keyed
-    // by the same id.
-    return true;
+    // Queued, the meal stays in cache and the create replays under its id.
+    return !settled.failure;
   };
 
   const toggleCompleted = async (
@@ -129,8 +124,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     const deductFromPantry = options?.deductFromPantry;
     const completedAt = markingComplete ? new Date().toISOString() : null;
 
-    // Persist optimistic completion state to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save(
+    // Persisted, so the completion survives a cache-and-network refetch offline.
+    const clearPersisted = optimisticDataPersistence.track(
       'MealPlanItem',
       fullItem.id,
       'isCompleted',
@@ -155,25 +150,18 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       });
     }
 
-    // No idempotencyKey: the server gates the pantry deduction on the
-    // false → true transition read from the pre-update row, so a replayed
-    // completion finds `isCompleted` already true and skips it (sous-chef-api
-    // #178). Only two truly concurrent completions are unguarded — not this
-    // sequential queue-drain path.
-    const updateItemMutationOptions = {
-      variables: {
-        input: {
-          id: fullItem.id,
-          isCompleted: markingComplete,
-          completedAt,
-          ...(markingComplete &&
-            deductFromPantry != null && { deductFromPantry }),
-          ...(markingComplete &&
-            options?.servings != null && { servings: options.servings }),
-          ...(markingComplete &&
-            options?.notes != null && { notes: options.notes }),
-        },
-      },
+    // No idempotencyKey: the write states the `version` it read and every
+    // write steps it, so of two completions sent at one version one lands and
+    // the other is a VERSION_CONFLICT — the pantry is deducted once.
+    const completionInput = {
+      id: fullItem.id,
+      isCompleted: markingComplete,
+      completedAt,
+      ...(markingComplete && deductFromPantry != null && { deductFromPantry }),
+      ...(markingComplete &&
+        options?.servings != null && { servings: options.servings }),
+      ...(markingComplete &&
+        options?.notes != null && { notes: options.notes }),
     };
     const revertToggle = () => {
       try {
@@ -183,44 +171,45 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           operation: 'Revert rejected Meal toggle',
         });
       }
-      optimisticDataPersistence.clear(
-        'MealPlanItem',
-        fullItem.id,
-        'isCompleted',
-      );
+      clearPersisted();
     };
 
+    const refetchPlan = () => {
+      void client.refetchQueries({ include: [GetMealPlanDocument] });
+    };
     const settled = await settleMutation(
-      () => updateItemMutation(updateItemMutationOptions),
+      () =>
+        chainVersionedWrite(
+          client.cache,
+          { __typename: 'MealPlanItem', id: fullItem.id },
+          version =>
+            updateItemMutation({
+              variables: { input: { ...completionInput, version } },
+            }),
+        ),
       {
         document: UpdateMealPlanItemDocument,
         fallback: t('toasts.mealUpdateFailed'),
         onFailed: revertToggle,
-        present: 'none',
+        // A stale version means another member changed the meal: show theirs.
+        onVersionConflict: refetchPlan,
+        present: 'toast',
       },
     );
 
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
+    if (settled.failure) return false;
 
-    if (settled.status === 'applied') {
-      // Clear persisted optimistic state on server confirmation; a queued
-      // toggle keeps it until the replay confirms.
-      optimisticDataPersistence.clear(
-        'MealPlanItem',
-        fullItem.id,
-        'isCompleted',
-      );
-    }
+    // A queued toggle keeps its persisted state until the replay confirms.
+    if (settled.status === 'applied') clearPersisted();
 
     if (markingComplete) {
-      if (hasRecipe && deductFromPantry) {
-        toastService.success(t('toasts.mealCompletedDeducted'));
-      } else {
-        toastService.success(t('toasts.mealCompleted'));
-      }
+      toastService.success(
+        t(
+          hasRecipe && deductFromPantry
+            ? 'toasts.mealCompletedDeducted'
+            : 'toasts.mealCompleted',
+        ),
+      );
     }
 
     return true;
@@ -232,31 +221,26 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     // Local-first: remove from the cache BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
-    // surfaces as NotFound, which the queue drops).
-    try {
-      if (mealPlanId) {
+    // answers `converged`, which settles as applied).
+    if (mealPlanId) {
+      try {
         removeFromMealPlanItems(client.cache, mealPlanId, id, {
           evictItem: true,
         });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Delete Meal (optimistic)',
+        });
       }
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Meal (optimistic)',
-      });
-    }
-
-    // Claim the row for the duration of the mutation. A meal-plan event for
-    // this same id — another member's earlier ITEM_ADDED still in flight, or
-    // the server's own echo — would otherwise re-add it to `mealPlanItems`
-    // after the optimistic removal above, and the meal would reappear.
-    // `useMealPlanSubscriptions` checks this before applying anything.
-    if (mealPlanId) {
+      // Claimed for the mutation's duration: a meal-plan event for this id
+      // (another member's earlier ITEM_ADDED, or the server's echo) would
+      // re-add it. `useMealPlanSubscriptions` checks this before applying.
       subscriptionService.registerPendingDelete(
         id,
         mealPlanId,
         'MealPlanItem',
         'MealPlan',
-        'mealPlanItems',
+        MEAL_PLAN_ITEMS_FIELD,
       );
     }
 
@@ -286,19 +270,14 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         fallback: t('mealTemplateBuilder.failedToRemoveItem'),
         removal: true,
         onFailed: restoreItem,
-        present: 'none',
+        present: 'toast',
       },
     );
 
     // Released on every outcome — settling never throws, so this runs whether
     // the delete committed, was refused, or was queued.
     subscriptionService.unregisterPendingDelete(id);
-
-    if (settled.failure) {
-      toastService.error(settled.failure.body);
-      return false;
-    }
-    return true;
+    return !settled.failure;
   };
 
   return {

@@ -1,3 +1,4 @@
+import { toastService } from '#/services/toastService';
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -17,27 +18,8 @@ function makeCacheWithPossibleTypes() {
   return makeCache();
 }
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-jest.mock('#/services/toastService', () => ({
-  toastService: {
-    success: (
-      ...args: Parameters<
-        typeof import('#/services/toastService').toastService.success
-      >
-    ) => mockToastSuccess(...args),
-    error: (
-      ...args: Parameters<
-        typeof import('#/services/toastService').toastService.error
-      >
-    ) => mockToastError(...args),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-jest.mock('#/apollo/links/tokenScheduler');
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastError = jest.mocked(toastService.error);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -295,7 +277,6 @@ describe('folder actions move the recipes, not just the folder list', () => {
       data: {
         deleteRecipeFolder: {
           __typename: 'ValidationError',
-          message: 'nope',
           code: ErrorCode.ValidationFailed,
         },
       },

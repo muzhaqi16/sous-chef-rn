@@ -3,9 +3,12 @@ import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import {
+  ModerationContentType,
+  RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import { openWebUrl } from '#utils/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -31,11 +34,14 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
+import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -46,9 +52,16 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import {
+  ReportContentSheet,
+  type ReportTarget,
+} from '#features/profile/ui/ReportContentSheet';
+import { formatMonthDayYear } from '#/utils/formatters/date';
 
 const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
@@ -114,6 +127,7 @@ const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
+  const captureSources = useCaptureSources();
   const user = useUser();
   const { forkRecipe, forking } = useForkRecipe();
   const { setSubmitted, publishing } = usePublishRecipe();
@@ -145,6 +159,7 @@ const RecipeDetailScreen: React.FC = () => {
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
@@ -158,8 +173,10 @@ const RecipeDetailScreen: React.FC = () => {
     savedNotes,
     savedRating,
     cookedCount,
+    lastCookedAt,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
+  const loadFailure = useOfflineAwareError(error ?? undefined, !!displayData);
 
   // Scroll component for FlashList instances rendered inside bottom sheets.
 
@@ -185,6 +202,16 @@ const RecipeDetailScreen: React.FC = () => {
   const isOwner = !!user && backendRecipe?.createdBy?.id === user.id;
   const canFork =
     !!backendRecipe && !isOwner && displayData?.details === 'complete';
+  // Another user's recipe only: a catalog recipe has no author to report.
+  const author = backendRecipe?.createdBy;
+  const reportTarget: ReportTarget | null =
+    user && backendRecipe && author && author.id !== user.id
+      ? {
+          reportedUserId: author.id,
+          contentType: ModerationContentType.Recipe,
+          contentId: backendRecipe.id,
+        }
+      : null;
 
   const handleEditRecipe = () => {
     if (recipeId) {
@@ -218,6 +245,7 @@ const RecipeDetailScreen: React.FC = () => {
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
@@ -266,8 +294,23 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  // Pinned action chips for the collapsing hero bar.
+  // Favourite and meal plan lead: they stay in the bar when the rest go behind
+  // its "more".
   const headerActions: HeaderAction[] = [
+    ...(showHeartIcon
+      ? [
+          {
+            icon: isInFavorites ? 'heart' : 'heart-outline',
+            accessibilityLabel: isInFavorites
+              ? t('recipes.unfavoriteA11y')
+              : t('recipes.favoriteA11y'),
+            onPress: handleHeartPress,
+            tone: 'favorite',
+            loading: saving || updatingFolderTags,
+            testID: recipesTestIDs.heartButton,
+          } satisfies HeaderAction,
+        ]
+      : []),
     ...(recipeId
       ? [
           {
@@ -326,26 +369,21 @@ const RecipeDetailScreen: React.FC = () => {
           } satisfies HeaderAction,
         ]
       : []),
-    ...(showHeartIcon
+    ...(reportTarget
       ? [
           {
-            icon: isInFavorites ? 'heart' : 'heart-outline',
-            accessibilityLabel: isInFavorites
-              ? t('recipes.unfavoriteA11y')
-              : t('recipes.favoriteA11y'),
-            onPress: handleHeartPress,
-            tone: 'favorite',
-            loading: saving || updatingFolderTags,
-            testID: recipesTestIDs.heartButton,
+            icon: 'flag-outline',
+            accessibilityLabel: t('reports.reportRecipe'),
+            onPress: () => setShowReportSheet(true),
+            variant: 'secondary',
+            testID: recipesTestIDs.reportButton,
           } satisfies HeaderAction,
         ]
       : []),
   ];
 
-  // Only block on the full-screen loader during a true cold load. On a
-  // cache-and-network refetch `loading` is true while `displayData` is already
-  // materialized from cache — showing the loader there wipes the rendered
-  // recipe and pops it back, which is the most-felt skeleton↔content flicker.
+  // The full-screen loader only on a cold load: on a refetch `loading` is true
+  // while `displayData` is already drawn from cache.
   if (loading && !displayData) {
     // Cold load renders inside the template shell so the pinned back chip
     // stays available during a slow fetch, matching the loaded state.
@@ -379,12 +417,16 @@ const RecipeDetailScreen: React.FC = () => {
         onRefresh={handleRefresh}
       >
         <View style={styles.centerContainer}>
-          <EmptyState
-            icon="alert-circle-outline"
-            title={errorMessage}
-            description={t('errors.codes.genericRetry')}
-            action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
-          />
+          {loadFailure.offline ? (
+            <DataStateView state="offline" onRetry={handleRefresh} />
+          ) : (
+            <EmptyState
+              icon="alert-circle-outline"
+              title={errorMessage}
+              description={t('errors.codes.genericRetry')}
+              action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
+            />
+          )}
         </View>
       </CollapsingHeroDetail>
     );
@@ -479,6 +521,13 @@ const RecipeDetailScreen: React.FC = () => {
               )}
             </Pressable>
           )}
+          {!!isSaved && !!lastCookedAt && (
+            <Text role="caption" tone="secondary">
+              {t('recipes.lastCooked', {
+                date: formatMonthDayYear(new Date(lastCookedAt)),
+              })}
+            </Text>
+          )}
         </View>
 
         <RecipeEnrichment
@@ -491,6 +540,8 @@ const RecipeDetailScreen: React.FC = () => {
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
+          hasPendingRevision={displayData.hasPendingRevision}
+          revisionRejectionNote={displayData.revisionRejectionNote}
         />
 
         {!!isSaved && (
@@ -556,6 +607,14 @@ const RecipeDetailScreen: React.FC = () => {
             </Text>
           </View>
         )}
+
+        {recipeId && captureSources.any ? (
+          <CaptureReviewBanner
+            recipeId={recipeId}
+            ingredients={displayData.ingredients}
+            onReview={handleEditRecipe}
+          />
+        ) : null}
 
         {/* Ingredients */}
         {displayData.ingredients.length > 0 && (
@@ -627,6 +686,15 @@ const RecipeDetailScreen: React.FC = () => {
             )}
           </Pressable>
         )}
+
+        {displayData.dataAttributions.length > 0 && (
+          <View style={styles.dataAttributions}>
+            <DataAttributionNotices
+              attributions={displayData.dataAttributions}
+              centered
+            />
+          </View>
+        )}
       </CollapsingHeroDetail>
 
       <ShoppingListPickerSheet
@@ -657,7 +725,7 @@ const RecipeDetailScreen: React.FC = () => {
         editableMatches={ingredientMatching.editableMatches}
         matchSummary={ingredientMatching.matchSummary}
         onUpdate={ingredientMatching.updateMatch}
-        onConfirm={ingredientMatching.confirmConsumption}
+        onConfirm={handleConfirmReview}
         onSkip={handleSkipReview}
         onClose={ingredientMatching.closeSheet}
         confirmLoading={ingredientMatching.confirmLoading}
@@ -709,6 +777,12 @@ const RecipeDetailScreen: React.FC = () => {
         updating={updatingFolderTags}
         recipeName={displayData.title}
       />
+
+      <ReportContentSheet
+        visible={showReportSheet}
+        target={reportTarget}
+        onDismiss={() => setShowReportSheet(false)}
+      />
     </>
   );
 };
@@ -744,7 +818,9 @@ const styles = StyleSheet.create(theme => ({
   },
   metadata: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    flexWrap: 'wrap',
+    columnGap: theme.spacing.md,
+    rowGap: theme.spacing.xs,
     marginBottom: theme.spacing.md,
   },
   cookedMetadata: {
@@ -795,6 +871,9 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
+  },
+  dataAttributions: {
+    marginTop: theme.spacing.md,
   },
   attributionText: {
     color: theme.colors.textSecondary,

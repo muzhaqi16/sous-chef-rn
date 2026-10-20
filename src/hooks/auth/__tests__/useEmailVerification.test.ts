@@ -6,14 +6,6 @@ import {
 } from '../useEmailVerification';
 import type { RootState } from '#store/index';
 
-// Break circular dependency chain
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
 const mockSetUserNavigationState = jest.fn();
 const mockSetNavigationState = jest.fn();
 let mockUserId: string | undefined = 'u1';

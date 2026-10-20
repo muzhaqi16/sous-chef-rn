@@ -3,9 +3,6 @@ import { renderHook } from '@testing-library/react-native';
 import type { Cache, InMemoryCache, StoreObject } from '@apollo/client';
 import { useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 const mockGetAllForType = jest.fn<
   Map<string, Record<string, unknown>>,
   [string]

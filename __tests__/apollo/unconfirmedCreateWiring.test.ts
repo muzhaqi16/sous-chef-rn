@@ -24,7 +24,7 @@ import { join, relative } from 'path';
  *   - a create that marks but never `confirm`s strands the gate closed, so the
  *     screen never fetches at all.
  *
- * Derived from the tree rather than a hand-kept list, so a fourth pantry create
+ * Derived from the tree rather than a hand-kept list, so another pantry create
  * path cannot ship without the decision being made.
  */
 
@@ -36,8 +36,9 @@ const SRC = join(process.cwd(), 'src');
  */
 const CREATE_DOCUMENTS = [
   'CreatePantryItemDocument',
-  'BarcodeCreatePantryItemDocument',
   'MoveShoppingItemToPantryDocument',
+  // Mints one per stocked line, in `input.lines[].pantryItemId`.
+  'CreateReceiptCheckInDocument',
 ];
 
 const stripComments = (source: string): string =>
@@ -75,6 +76,31 @@ const OPTIMISTIC_PUBLISHERS = [
   'addToPantryItemsCache(',
   'addToPantryItemsConnection(',
   'addPantryItemLocally(',
+  // The shared local writes a door delegates to; the test below proves each
+  // publishes through `addPantryItemLocally(`.
+  'writeLocalMove(',
+  'writeLocalIntake(',
+];
+
+/** The shared writers, and the publisher and reconciler each must call. */
+const SHARED_LOCAL_WRITES = [
+  {
+    file: 'src/features/shoppingList/cache/localMove.ts',
+    publishes: 'addPantryItemLocally(',
+    reconciles: 'reconcileCreatedPantryItem(',
+  },
+  // An add's door reconciles in its own `update`, checked above.
+  {
+    file: 'src/features/pantry/cache/localIntake.ts',
+    publishes: 'addPantryItemLocally(',
+    reconciles: null,
+  },
+  // A check-in publishes through the two writers above.
+  {
+    file: 'src/features/receipts/offline/receiptCheckIn.ts',
+    publishes: null,
+    reconciles: 'reconcileCreatedPantryItem(',
+  },
 ];
 
 /**
@@ -100,12 +126,10 @@ const creators = sources
 
 describe('unconfirmed-create wiring (pantry items)', () => {
   it('finds the create paths at all, so the checks below are not vacuous', () => {
-    expect(creators.length).toBeGreaterThanOrEqual(4);
     expect(creators).toEqual(
       expect.arrayContaining([
-        'src/features/barcode/hooks/useAddScannedItem.ts',
-        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
-        'src/features/pantry/hooks/usePantryItemSubmission.ts',
+        'src/features/pantry/hooks/usePantryIntake.ts',
+        'src/features/receipts/hooks/useReceiptCheckIn.ts',
         'src/features/shoppingList/hooks/useMoveToPantry.ts',
       ]),
     );
@@ -126,15 +150,20 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     //
     // Two valid reconciliations: adopt the server's id, or withdraw the local
     // row and let `update` add the server's. The move path must take the
-    // second — its divergence names a row that already exists.
+    // second — its divergence names a row that already exists. The pantry's
+    // create paths withdraw through `reconcileCreatedPantryItem`.
     file => {
       const code = stripComments(
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
       const adopts = code.includes('adoptServerEntityId(');
       const withdraws =
-        code.includes('removeFromPantryItemsCache(') &&
-        code.includes('evictLocalPantryItemSeeds(');
+        (code.includes('removeFromPantryItemsCache(') &&
+          code.includes('evictLocalPantryItemSeeds(')) ||
+        code.includes('reconcileCreatedPantryItem(') ||
+        // Delegated: the shared writers' own reconcile is checked below.
+        code.includes('applyMoveToPantryCacheUpdate(') ||
+        code.includes('applyReceiptCheckIn(');
 
       expect(adopts || withdraws).toBe(true);
     },
@@ -150,6 +179,17 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
     expect(code).not.toMatch(/\bforceAdd\b/);
   });
+
+  it.each(SHARED_LOCAL_WRITES)(
+    '$file publishes and reconciles the row a delegating door writes',
+    ({ file, publishes, reconciles }) => {
+      const code = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      if (publishes) expect(code).toContain(publishes);
+      if (reconciles) expect(code).toContain(reconciles);
+    },
+  );
 
   // The other half of the contract: the screens that read by that id.
   it.each([

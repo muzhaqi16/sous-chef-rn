@@ -205,6 +205,8 @@ mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
   removeRestriction(input: $input) {
     __typename
     ... on RemoveRestrictionPayload {
+      # True when the removal was already done: a replay, or another device.
+      converged
       dietaryRestriction {
         id
       }

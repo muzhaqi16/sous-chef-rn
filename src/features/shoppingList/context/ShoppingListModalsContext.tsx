@@ -5,6 +5,7 @@ import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantr
 import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
 import { PurchaseAmountSheet } from '#features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet';
+import { AislePickerSheet } from '#features/shoppingList/components/AislePickerSheet';
 import { useAddItemSheet } from '#features/shoppingList/hooks/useAddItemSheet';
 import { useQuantityEditModal } from '#features/shoppingList/hooks/useQuantityEditModal';
 import {
@@ -12,19 +13,20 @@ import {
   type RecordPurchaseAmounts,
 } from '#features/shoppingList/hooks/usePurchaseAmountModal';
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
+import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 /**
- * The four sheets are opened from all over the screen and read back in exactly
- * one place, so they are two contexts: stable commands, and the single boolean
- * that place needs. Handing out the hook results instead gave a tab scene a
- * value whose identity changed every time any sheet opened.
+ * The sheets open from all over the screen and are read back in one place, so
+ * two contexts: stable commands, and the one boolean that place needs; a single
+ * value would change identity for every tab scene whenever a sheet opened.
  */
 interface ShoppingListModalActions {
   openAddItemSheet: () => void;
   openQuantityEdit: (itemId: string) => void;
   openPurchaseAmount: (itemId: string) => void;
   openMoveToPantry: (itemId: string) => void;
+  openMoveToAisle: (itemId: string) => void;
 }
 
 const {
@@ -36,7 +38,7 @@ export { useShoppingListModalActions };
 
 const AnySheetVisibleContext = createContext(false);
 
-/** True while any of the four sheets is on screen. */
+/** True while any of the sheets is on screen. */
 export function useAnyShoppingListSheetVisible(): boolean {
   return useContext(AnySheetVisibleContext);
 }
@@ -86,18 +88,22 @@ export function ShoppingListModalsProvider({
     items,
   });
 
+  const moveToAisle = useMoveToAisleModal();
+
   const actions: ShoppingListModalActions = {
     openAddItemSheet: addItemSheet.open,
     openQuantityEdit: quantityEdit.openForItem,
     openPurchaseAmount: purchaseAmount.openForItem,
     openMoveToPantry: moveToPantry.openForItem,
+    openMoveToAisle: moveToAisle.openForItem,
   };
 
   const anyVisible =
     addItemSheet.visible ||
     quantityEdit.visible ||
     purchaseAmount.visible ||
-    moveToPantry.visible;
+    moveToPantry.visible ||
+    moveToAisle.visible;
 
   return (
     <ShoppingListModalActionsProvider actions={actions}>
@@ -145,6 +151,15 @@ export function ShoppingListModalsProvider({
           tutorial?.notifyLongPressPriceSeen();
         }}
         loading={purchaseAmount.isLoading}
+      />
+
+      <AislePickerSheet
+        visible={moveToAisle.visible}
+        line={moveToAisle.line}
+        onMove={department => {
+          void moveToAisle.moveTo(department);
+        }}
+        onClose={moveToAisle.close}
       />
     </ShoppingListModalActionsProvider>
   );

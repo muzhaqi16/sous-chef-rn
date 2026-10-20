@@ -21,17 +21,30 @@ interface AddButtonConfig {
   iconLibrary: IconLibrary;
 }
 
+/** One entry of a tab's add menu. */
+export interface TabBarAddAction {
+  /** Unique within the menu. */
+  key: string;
+  label: string;
+  icon: string;
+  iconLibrary?: IconLibrary;
+  onPress: () => void;
+  /** Set while the action cannot run: the entry is disabled and shows it. */
+  disabledReason?: string;
+  testID?: string;
+}
+
 interface TabBarSettersContextType {
   setScannerProps: (onScanPress?: () => void, showButton?: boolean) => void;
-  /** Registers the current screen's add handler; visibility follows the active tab. */
-  setAddProps: (
-    handler?: () => void,
-    disabled?: boolean,
-    disabledMessage?: string,
-  ) => void;
   setActiveTab: (tabName: string) => void;
   setOverlayOpen: (isOpen: boolean) => void;
   setAddButtonRect: (rect: TargetRect) => void;
+  /** A tab's add menu; undefined removes it. Kept per tab, so it survives blur. */
+  setAddMenu: (
+    tab: string,
+    actions: readonly TabBarAddAction[] | undefined,
+  ) => void;
+  setAddMenuOpen: (open: boolean) => void;
   /** Written from screens' scroll worklets on the UI thread; no JS re-renders. */
   scrollTabBarHidden: SharedValue<boolean>;
 }
@@ -40,11 +53,12 @@ interface TabBarStateContextType {
   onScanPress?: () => void;
   showScannerButton: boolean;
 
-  onAddPress?: () => void;
   showAddButton: boolean;
   addButtonConfig: AddButtonConfig;
-  isAddButtonDisabled: boolean;
-  addButtonDisabledMessage?: string;
+
+  /** The active tab's add menu; with two or more entries the `+` opens it. */
+  addMenu?: readonly TabBarAddAction[];
+  isAddMenuOpen: boolean;
 
   activeTab: string;
   isOverlayOpen: boolean;
@@ -71,14 +85,6 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   );
   const [showScannerButton, setShowScannerButton] = useState(false);
 
-  const [onAddPress, setOnAddPress] = useState<(() => void) | undefined>(
-    undefined,
-  );
-  const [isAddButtonDisabled, setIsAddButtonDisabled] = useState(false);
-  const [addButtonDisabledMessage, setAddButtonDisabledMessage] = useState<
-    string | undefined
-  >(undefined);
-
   const [activeTab, setActiveTab] = useState<string>('');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [addButtonRect, setAddButtonRect] = useState<TargetRect | null>(null);
@@ -94,10 +100,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   // Shown on every main tab so switching tabs causes no layout shift.
   const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
 
-  // Per-tab so a transition doesn't lose the handler and flicker the button.
-  const [tabHandlers, setTabHandlers] = useState<Record<string, () => void>>(
-    {},
-  );
+  const [tabMenus, setTabMenus] = useState<
+    Partial<Record<string, readonly TabBarAddAction[]>>
+  >({});
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   const setScannerProps = (
     scanPress?: () => void,
@@ -113,50 +119,37 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     });
   };
 
-  const setAddProps = (
-    handler?: () => void,
-    disabled: boolean = false,
-    disabledMessage?: string,
-  ) => {
-    if (handler) {
-      setTabHandlers(prev => {
-        const currentTab = activeTabRef.current;
-        if (currentTab && prev[currentTab] !== handler) {
-          return { ...prev, [currentTab]: handler };
-        }
-        return prev;
-      });
-    }
-
-    setOnAddPress(prev => {
-      if (prev === handler) return prev;
-      return handler;
-    });
-    setIsAddButtonDisabled(prev => {
-      if (prev === disabled) return prev;
-      return disabled;
-    });
-    setAddButtonDisabledMessage(prev => {
-      if (prev === disabledMessage) return prev;
-      return disabledMessage;
-    });
-  };
-
   const setOverlayOpenCb = (isOpen: boolean) => {
     setIsOverlayOpen(isOpen);
+  };
+
+  const setAddMenu = (
+    tab: string,
+    actions: readonly TabBarAddAction[] | undefined,
+  ) => {
+    setTabMenus(prev => {
+      if (prev[tab] === actions) return prev;
+      const next = { ...prev };
+      if (actions) next[tab] = actions;
+      else delete next[tab];
+      return next;
+    });
   };
 
   const handleSetActiveTab = (tabName: string) => {
     activeTabRef.current = tabName; // Sync update before state change to prevent race condition
     setActiveTab(tabName);
+    // An open menu belongs to the tab being left.
+    setIsAddMenuOpen(false);
   };
 
   const settersValue: TabBarSettersContextType = {
     setScannerProps,
-    setAddProps,
     setActiveTab: handleSetActiveTab,
     setOverlayOpen: setOverlayOpenCb,
     setAddButtonRect,
+    setAddMenu,
+    setAddMenuOpen: setIsAddMenuOpen,
     scrollTabBarHidden,
   };
 
@@ -166,9 +159,6 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   // Always shown on an allowed tab, which removes the tab-transition race.
   const shouldShowAdd = allowedAddTabs.includes(activeTab);
 
-  const effectiveAddPress =
-    onAddPress ?? (activeTab ? tabHandlers[activeTab] : undefined);
-
   const addButtonConfig: AddButtonConfig = {
     icon: 'add',
     iconLibrary: 'Ionicons',
@@ -177,11 +167,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const stateValue: TabBarStateContextType = {
     onScanPress,
     showScannerButton: shouldShowScanner,
-    onAddPress: effectiveAddPress,
     showAddButton: shouldShowAdd,
     addButtonConfig,
-    isAddButtonDisabled,
-    addButtonDisabledMessage,
+    addMenu: activeTab ? tabMenus[activeTab] : undefined,
+    isAddMenuOpen,
     activeTab,
     isOverlayOpen,
     addButtonRect,

@@ -11,8 +11,6 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ name: mockRouteName }),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 describe('OnBoardingWrapper', () => {
   beforeEach(() => {
     jest.clearAllMocks();

@@ -75,8 +75,8 @@ function storedDocument(operation: OperationDefinitionNode): DocumentNode {
 
 describe('withoutRemovedFields', () => {
   it('drops a batch line’s old failure fields and keeps an error member’s code', () => {
-    const stored = parseStored(`
-      mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
+    const stored =
+      parseStored(`mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         addItemsToShoppingList(input: $input) {
           __typename
           ... on AddItemsToShoppingListPayload {
@@ -94,87 +94,94 @@ describe('withoutRemovedFields', () => {
     expect(replayed).toMatch(/\.\.\. on Error \{\s+code/);
   });
 
-  it('drops the recipe add’s old lists and the fragment only they spread', () => {
-    expect(
-      errorsAfterRewrite(`
-        mutation CreateShoppingListItemsFromRecipe(
-          $input: CreateShoppingListItemsFromRecipeInput!
-        ) {
-          createShoppingListItemsFromRecipe(input: $input) {
-            __typename
-            ... on CreateShoppingListItemsFromRecipePayload {
-              addedItems { id ...Added }
-              updatedItems { id ...Added }
-              totalAdded
-              totalUpdated
-              totalSkipped
+  it.each([
+    [
+      'the auto-add fields under a shopping line’s source',
+      `mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
+        updateShoppingListItem(input: $input) {
+          __typename
+          ... on UpdateShoppingListItemPayload {
+            shoppingListItem { id ...Line }
+          }
+        }
+      }
+      fragment Line on ShoppingListItem {
+        id
+        source { autoAddReason isAutoAdded isFromMealPlan }
+      }`,
+    ],
+    [
+      'a plan’s bare lists and the fragment only they spread',
+      `mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
+        createMealPlanItem(input: $input) {
+          __typename
+          ... on CreateMealPlanItemPayload {
+            mealPlanItem { id }
+            mealPlan {
+              id
+              name
+              generatedShoppingLists { id name }
+              mealPlanItems { id ...Meal }
             }
           }
         }
-        fragment Added on ShoppingListItem { id itemName }
-      `),
-    ).toEqual([]);
-  });
-
-  it('drops the batch move’s old line lists', () => {
-    expect(
-      errorsAfterRewrite(`
-        mutation MovePurchasedItemsToPantry(
-          $input: MovePurchasedItemsToPantryInput!
-        ) {
-          movePurchasedItemsToPantry(input: $input) {
-            __typename
-            ... on MovePurchasedItemsToPantryPayload {
-              movedItems { shoppingListItemId }
-              failedItems { itemName code errorId }
-              summary { succeeded failed skipped }
-            }
+      }
+      fragment Meal on MealPlanItem { id notes }`,
+    ],
+    [
+      'a template’s bare meal list',
+      `mutation AddTemplateItem($input: AddTemplateItemInput!) {
+        addTemplateItem(input: $input) {
+          __typename
+          ... on AddTemplateItemPayload {
+            mealTemplate { id items { id dayOffset } }
           }
         }
-      `),
-    ).toEqual([]);
-  });
-
-  it('drops a removed field a fragment on its payload selects', () => {
-    expect(
-      errorsAfterRewrite(`
-        mutation MovePurchasedItemsToPantry(
-          $input: MovePurchasedItemsToPantryInput!
-        ) {
-          movePurchasedItemsToPantry(input: $input) { __typename ...Moved }
+      }`,
+    ],
+    [
+      'the region fields the settings row holds now',
+      `mutation CompleteOnboarding {
+        completeOnboarding {
+          __typename
+          ... on CompleteOnboardingPayload {
+            user { id onBoarded timezone preferredCurrency }
+          }
         }
-        fragment Moved on MovePurchasedItemsToPantryPayload {
-          movedItems { shoppingListItemId }
-          summary { succeeded }
+      }`,
+    ],
+    [
+      'the batch move’s old line lists',
+      `mutation MovePurchasedItemsToPantry(
+        $input: MovePurchasedItemsToPantryInput!
+      ) {
+        movePurchasedItemsToPantry(input: $input) {
+          __typename
+          ... on MovePurchasedItemsToPantryPayload {
+            movedItems { shoppingListItemId }
+            failedItems { itemName code errorId }
+            summary { succeeded failed skipped }
+          }
         }
-      `),
-    ).toEqual([]);
+      }`,
+    ],
+    [
+      'a removed field a fragment on its payload selects',
+      `mutation MovePurchasedItemsToPantry(
+        $input: MovePurchasedItemsToPantryInput!
+      ) {
+        movePurchasedItemsToPantry(input: $input) { __typename ...Moved }
+      }
+      fragment Moved on MovePurchasedItemsToPantryPayload {
+        movedItems { shoppingListItemId }
+        summary { succeeded }
+      }`,
+    ],
+  ])('drops %s', (_, source) => {
+    expect(errorsAfterRewrite(source)).toEqual([]);
   });
 
   it.each([
-    [
-      'a consumption’s failed lines',
-      `mutation ConfirmRecipeConsumption($input: ConfirmRecipeConsumptionInput!) {
-        confirmRecipeConsumption(input: $input) {
-          __typename
-          ... on ConfirmRecipeConsumptionPayload {
-            failedItems { recipeIngredientId code errorId }
-          }
-        }
-      }`,
-    ],
-    [
-      'a low-stock add’s lines',
-      `mutation AddLowStock($input: AddLowStockItemsToShoppingListInput!) {
-        addLowStockItemsToShoppingList(input: $input) {
-          __typename
-          ... on AddLowStockItemsToShoppingListPayload {
-            addedItems { shoppingListItemId }
-            skippedItems { pantryItemId code }
-          }
-        }
-      }`,
-    ],
     [
       'a stack’s ledger total',
       `mutation UpdatePantryItem($input: UpdatePantryItemInput!) {

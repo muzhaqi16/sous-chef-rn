@@ -182,7 +182,7 @@ const InviteCard: React.FC<{
             {t('labels.role')}:{' '}
           </Text>
           <Text role="bodyStrong" tone="accent">
-            {formatRole(invite.role)}
+            {formatRole(invite.role, t)}
           </Text>
         </Text>
       </View>

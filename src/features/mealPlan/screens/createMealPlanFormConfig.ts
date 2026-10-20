@@ -1,10 +1,6 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage } from '#/utils/validation/common';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 export const PERSONAL_VALUE = '__personal__';
 
@@ -21,14 +17,14 @@ export interface CreateMealPlanFormValues {
 
 export const createMealPlanSchema: ObjectSchema<CreateMealPlanFormValues> =
   object({
-    name: string().trim().required(msg('mealPlan.nameRequiredMessage')),
+    name: string().trim().required(lazyMessage('mealPlan.nameRequiredMessage')),
     description: string().defined(),
     planType: mixed<MealPlanType>()
       .oneOf(Object.values(MealPlanType))
       .required(),
     startDate: date()
       .nullable()
-      .required(msg('mealPlan.startDateRequiredMessage')),
+      .required(lazyMessage('mealPlan.startDateRequiredMessage')),
     servings: string().defined(),
     budget: string().defined(),
     trackNutrition: boolean().defined(),

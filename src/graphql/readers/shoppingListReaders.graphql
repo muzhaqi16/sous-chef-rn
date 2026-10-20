@@ -58,9 +58,14 @@ fragment ShoppingListReaders on ShoppingList {
   }
   status
   tags
+  targetStore {
+    id
+    name
+  }
   templateName
   totalCost
   totalItems
+  unpricedItems
   updatedAt
   version
 }

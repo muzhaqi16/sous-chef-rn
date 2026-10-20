@@ -33,11 +33,6 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 
-jest.mock('../../links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-  clearRefreshState: jest.fn(),
-}));
-
 jest.mock('../queueStore', () => ({
   queueStore: {
     updateMutation: jest.fn(() => true),

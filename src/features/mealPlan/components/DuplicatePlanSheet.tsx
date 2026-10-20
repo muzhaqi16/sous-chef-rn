@@ -15,7 +15,7 @@ import {
   formatMonthDayYear,
   formatWeekdayMonthDay,
 } from '#/utils/formatters/date';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { toDateKey } from '#/utils/dateUtils';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 interface DuplicatePlanSheetProps {
@@ -80,8 +80,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     onDuplicate({
       mealPlanId: mealPlan.id,
       newName: name.trim(),
-      newStartDate: toMealDateTime(newStartDate),
-      newEndDate: toMealDateTime(newEndDate),
+      newStartDate: toDateKey(newStartDate),
+      newEndDate: toDateKey(newEndDate),
     });
   };
 

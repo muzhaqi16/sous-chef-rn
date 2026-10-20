@@ -11,6 +11,12 @@ import { WriteReviewSheet } from './WriteReviewSheet';
 import type { RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { ModerationContentType } from '#/graphql/generated/schemaTypes';
+import {
+  ReportContentSheet,
+  type ReportTarget,
+} from '#features/profile/ui/ReportContentSheet';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];
@@ -56,6 +62,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   // Other reviews (excluding user's own)
   const otherReviews = userReview
@@ -75,16 +82,9 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     alertService.alert(
       t('recipes.deleteReviewTitle'),
       t('recipes.deleteReviewConfirm'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('labels.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void deleteReview(userReview.id);
-          },
-        },
-      ],
+      destructiveConfirm(t('labels.delete'), () => {
+        void deleteReview(userReview.id);
+      }),
     );
   };
 
@@ -143,6 +143,13 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
               onToggleHelpful={() =>
                 toggleHelpful(review.id, !hasVotedHelpful(review))
               }
+              onReport={authorId =>
+                setReportTarget({
+                  reportedUserId: authorId,
+                  contentType: ModerationContentType.RecipeReview,
+                  contentId: review.id,
+                })
+              }
             />
           ))}
         </View>
@@ -164,6 +171,11 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         onSubmit={handleSubmit}
         onClose={() => setSheetVisible(false)}
         submitting={submitting}
+      />
+      <ReportContentSheet
+        visible={reportTarget !== null}
+        target={reportTarget}
+        onDismiss={() => setReportTarget(null)}
       />
     </View>
   );

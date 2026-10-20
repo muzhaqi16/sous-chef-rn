@@ -2,6 +2,8 @@ name: E2E Smoke Tests
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Installs @muzhaqi16/receipt-rules from GitHub Packages (see .npmrc).
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # Run smoke tests on every PR for quick feedback
 on:
@@ -25,8 +27,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -70,8 +72,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
@@ -79,8 +81,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "17"
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -123,4 +125,3 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: detox test e2e/tests/smoke.e2e.ts --configuration android.emu.debug --record-logs all
-

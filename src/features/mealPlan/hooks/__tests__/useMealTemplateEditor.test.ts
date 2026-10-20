@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { TypedDocumentNode } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   renderHookWithApollo,
   seedCache,
@@ -8,14 +9,12 @@ import {
   CreateMealTemplateDocument,
   UpdateMealTemplateDocument,
   AddTemplateItemDocument,
+  GetMealTemplateForEditDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { UseMealTemplateEditor_TemplateFragmentDoc } from '../useMealTemplateEditor.generated';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { useMealTemplateEditor } from '../useMealTemplateEditor';
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 const TEMPLATE = {
   __typename: 'MealTemplate',
@@ -345,17 +344,63 @@ describe("a row loaded by the editor's own query", () => {
     recipe: null,
   };
 
-  const TEMPLATE_WITH_ITEM = {
-    __typename: 'MealTemplate',
-    id: 'tpl-9',
-    name: 'Week',
-    description: null,
-    category: TemplateCategory.Custom,
-    defaultServings: 2,
-    tags: [],
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    items: [EDITOR_LOADED_ITEM],
+  const EDIT_VARS = { id: 'tpl-9', itemsFirst: MEALS_PAGE_SIZE };
+
+  /** The cache as opening the template in the editor leaves it. */
+  const loadedInEditor = () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: GetMealTemplateForEditDocument,
+      variables: EDIT_VARS,
+      data: {
+        __typename: 'Query',
+        mealTemplate: {
+          __typename: 'MealTemplate',
+          id: 'tpl-9',
+          name: 'Week',
+          description: null,
+          category: TemplateCategory.Custom,
+          defaultServings: 2,
+          tags: [],
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          itemsConnection: {
+            __typename: 'MealTemplateItemConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'MealTemplateItemEdge',
+                node: {
+                  __typename: 'MealTemplateItem',
+                  id: 'item-9',
+                  dayOffset: 1,
+                  mealType: MealType.Lunch,
+                  customMealName: 'Soup',
+                  servings: 2,
+                  notes: null,
+                  recipe: null,
+                },
+              },
+            ],
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      },
+    });
+    return cache;
   };
+
+  /** The template's meals as the editor's query reads them, or null. */
+  const mealsInEditor = (cache: ReturnType<typeof makeCache>) =>
+    cache
+      .readQuery({
+        query: GetMealTemplateForEditDocument,
+        variables: EDIT_VARS,
+      })
+      ?.mealTemplate?.itemsConnection.edges.map(edge => edge.node.id) ?? null;
 
   const queued = (document: TypedDocumentNode, field: string) => ({
     request: { query: document, variables: () => true },
@@ -502,7 +547,7 @@ describe("a row loaded by the editor's own query", () => {
   });
 
   it('puts a refused removal back', async () => {
-    const cache = seedCache([EDITOR_LOADED_ITEM, TEMPLATE_WITH_ITEM]);
+    const cache = loadedInEditor();
     const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
       cache,
       operationMocks: [
@@ -534,5 +579,89 @@ describe("a row loaded by the editor's own query", () => {
     });
     expect(restored?.id).toBe('item-9');
     expect(restored?.servings).toBe(2);
+    // Back as an edge of the template's meals, complete for the editor.
+    expect(mealsInEditor(cache)).toEqual(['item-9']);
+  });
+
+  it('takes a removed row off the template at once, and keeps it off while queued', async () => {
+    const cache = loadedInEditor();
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        queued(RemoveTemplateItemDocument, 'removeTemplateItem'),
+      ],
+    });
+
+    let removed: boolean | undefined;
+    await act(async () => {
+      const pending = result.current.removeItem('item-9', 'tpl-9');
+      // Local-first: gone before the request settles.
+      expect(mealsInEditor(cache)).toEqual([]);
+      removed = await pending;
+    });
+
+    expect(removed).toBe(true);
+    expect(mealsInEditor(cache)).toEqual([]);
+    expect(cache.extract()['MealTemplateItem:item-9']).toBeUndefined();
+  });
+
+  it('lists an added row on the loaded template while its add is queued', async () => {
+    const cache = loadedInEditor();
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: AddTemplateItemDocument, variables: () => true },
+          result: { data: { addTemplateItem: null } }, // queued
+          maxUsageCount: Number.POSITIVE_INFINITY,
+        },
+      ],
+    });
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.addItem({
+        templateId: 'tpl-9',
+        dayOffset: 2,
+        mealType: MealType.Dinner,
+        meal: { customMealName: 'Stew' },
+      });
+    });
+
+    expect(added).toBe(true);
+    // Appended as an edge, and the editor's read of the template stays whole.
+    const meals = mealsInEditor(cache);
+    expect(meals).toHaveLength(2);
+    expect(meals?.[0]).toBe('item-9');
+    expect(
+      cache.extract()[`MealTemplateItem:${meals?.[1] ?? ''}`],
+    ).toMatchObject({ dayOffset: 2, customMealName: 'Stew' });
+  });
+
+  it('takes a refused add back off the loaded template', async () => {
+    const cache = loadedInEditor();
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: AddTemplateItemDocument, variables: () => true },
+          error: new Error('refused'),
+          maxUsageCount: Number.POSITIVE_INFINITY,
+        },
+      ],
+    });
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.addItem({
+        templateId: 'tpl-9',
+        dayOffset: 2,
+        mealType: MealType.Dinner,
+        meal: { customMealName: 'Stew' },
+      });
+    });
+
+    expect(added).toBe(false);
+    expect(mealsInEditor(cache)).toEqual(['item-9']);
   });
 });

@@ -51,12 +51,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-
-jest.mock('#/utils/finallyHelpers');
-
 jest.mock('#utils/dateUtils', () => ({
   extractDateString: jest.fn((val: string) => val || ''),
 }));

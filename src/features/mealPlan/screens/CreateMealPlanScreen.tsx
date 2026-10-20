@@ -38,7 +38,7 @@ import {
   type CreateMealPlanFormValues,
 } from './createMealPlanFormConfig';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { toMealDateTime } from '#/utils/dateUtils';
+import { toDateKey } from '#/utils/dateUtils';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
@@ -145,8 +145,8 @@ export const CreateMealPlanScreen: React.FC = () => {
       name: name.trim(),
       description: descriptionValue,
       planType,
-      startDate: toMealDateTime(startDate),
-      endDate: toMealDateTime(endDate),
+      startDate: toDateKey(startDate),
+      endDate: toDateKey(endDate),
       servings: servingsValue,
       budgetAmount: budgetValue,
       dietaryProfileId:

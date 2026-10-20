@@ -18,18 +18,20 @@ import {
   localizeNumericHint,
 } from '#/utils/formatters/number';
 import {
+  shownUnitPrice,
   totalFromUnitPrice,
-  unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
+import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { parseMoneyInput } from '#/utils/validation/common';
 
 interface PurchaseAmountSheetItem {
   id: string;
   itemName: string;
   requestedQuantity: number;
   unitName: string | null;
-  /** Per unit; the sheet seeds its total from it × `requestedQuantity`. */
+  /** Per unit; the sheet hints its total from it × `requestedQuantity`. */
   estimatedPrice: number | null;
 }
 
@@ -46,7 +48,7 @@ interface PurchaseAmountSheetProps {
 }
 
 /** null for empty, invalid or negative input. */
-const parseNumberInput = (input: string): number | null => {
+const parseQuantityInput = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const num = parseDecimalInput(trimmed);
@@ -61,9 +63,9 @@ const formatPrice = (price: number | null): string =>
   formatNumberForInput(price);
 
 /**
- * Records the actual purchased amounts, pre-filled with the requested quantity
- * and the estimated TOTAL (per-unit estimate × quantity). It asks for the total
- * paid because that is what the receipt shows; a hint gives the per-unit split.
+ * Records the actual purchased amounts, pre-filled with the requested quantity.
+ * It asks for the total paid because that is what the receipt shows; a hint
+ * gives the per-unit split.
  */
 export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   visible,
@@ -95,27 +97,24 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      // The seed is read back by `parseNumberInput`, so it must carry the
-      // device's separator; a period reads as grouping on a comma device.
+      // The seed is read back by the parsers, so it must carry the device's
+      // separator; a period reads as grouping on a comma device.
       setQuantityInput(
         formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
       );
-      setPriceInput(
-        formatPrice(
-          totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity),
-        ),
-      );
+      setPriceInput('');
     }
   }
 
-  const parsedQty = parseNumberInput(quantityInput);
-  const parsedTotal = parseNumberInput(priceInput);
-  // Shown only when the split is not trivial — at quantity 1 the per-unit
-  // price IS the total.
-  const perUnitPrice =
-    parsedQty != null && parsedQty > 0 && parsedQty !== 1 && parsedTotal != null
-      ? unitPriceFromTotal(parsedTotal, parsedQty)
-      : null;
+  // The estimate is the field's hint, never its value: confirmed unread, it
+  // would record a guess as the price paid, which the API never counts.
+  const estimatedTotal = item
+    ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
+    : null;
+
+  const parsedQty = parseQuantityInput(quantityInput);
+  const parsedTotal = parseMoneyInput(priceInput);
+  const perUnitPrice = shownUnitPrice(parsedTotal, parsedQty);
 
   // An empty or unparseable field is NOT a quantity of zero: defaulting it
   // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
@@ -126,9 +125,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   const quantityError = quantityIsUsable
     ? null
     : t('purchaseAmountSheet.quantityRequired');
+  const priceError =
+    parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
 
   const handleConfirm = () => {
-    if (!quantityIsUsable) return;
+    if (!quantityIsUsable || parsedTotal === undefined) return;
     onConfirm(parsedQty, parsedTotal);
   };
 
@@ -145,11 +146,10 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           onClose={onClose}
           confirm={{
             onPress: handleConfirm,
-            disabled: !quantityIsUsable,
+            disabled: !quantityIsUsable || parsedTotal === undefined,
             loading,
           }}
         />
-        <View style={styles.headerSpacer} />
         <View style={styles.sections}>
           <Text role="heading" style={styles.itemName}>
             {item?.itemName ?? ''}
@@ -190,7 +190,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
 
           <View style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('purchaseAmountSheet.totalPrice')}
+              {t('labels.totalPaid')}
             </SectionHeader>
             <View style={styles.inputRow}>
               <Text role="body" tone="secondary" style={styles.prefix}>
@@ -203,25 +203,33 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 keyboardType="decimal-pad"
                 selectTextOnFocus
                 maxLength={10}
-                placeholder={localizeNumericHint(
-                  t('purchaseAmountSheet.pricePlaceholder'),
-                )}
-                accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
+                placeholder={
+                  estimatedTotal == null
+                    ? localizeNumericHint(
+                        t('purchaseAmountSheet.pricePlaceholder'),
+                      )
+                    : formatPrice(estimatedTotal)
+                }
+                accessibilityLabel={t('labels.totalPaid')}
                 testID={shoppingListTestIDs.purchasePriceInput}
               />
             </View>
-            {perUnitPrice != null ? (
-              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
-                {t(
-                  item?.unitName
-                    ? 'purchaseAmountSheet.perUnitOfHint'
-                    : 'purchaseAmountSheet.perUnitHint',
-                  {
-                    price: money(perUnitPrice),
-                    unit: item?.unitName,
-                  },
-                )}
+            {priceError ? (
+              <Text
+                role="error"
+                tone="error"
+                style={styles.fieldError}
+                testID={shoppingListTestIDs.purchasePriceError}
+              >
+                {priceError}
               </Text>
+            ) : null}
+            {perUnitPrice != null ? (
+              <PerUnitHint
+                price={money(perUnitPrice)}
+                unit={item?.unitName}
+                style={styles.perUnitHint}
+              />
             ) : null}
           </View>
         </View>
@@ -237,9 +245,6 @@ const styles = StyleSheet.create(theme => ({
   // On the inner view, so the header still spans the sheet's full width.
   sections: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  headerSpacer: {
-    height: theme.spacing.md,
   },
   itemName: {
     textAlign: 'center',

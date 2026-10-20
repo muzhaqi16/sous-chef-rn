@@ -29,11 +29,6 @@
  * `sessionEndClearsPersistedFeatureStores.test.ts`, which imports none of them.
  */
 
-// authSlice transitively imports tokenScheduler/refreshToken, which need
-// native AppState. Same stubbing as the other store tests.
-jest.mock('../../apollo/links/tokenScheduler');
-jest.mock('../../apollo/links/refreshToken');
-
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
@@ -57,6 +52,7 @@ import {
   textSearchCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
 import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
+import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -220,15 +216,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
     expect(registeredSessionScopedStores()).toContain('notifications');
   });
 
-  it('clears the scanner history, which names what the previous person bought', async () => {
-    useBarcodeScannerStore
-      .getState()
-      .addToRecentlyScanned({ id: 's1', name: 'Pregnancy test', upc: '0123' });
-    expect(useBarcodeScannerStore.getState().recentlyScanned).toHaveLength(1);
+  it('resets the scanner; what it found lives in the cache a session end clears', async () => {
+    useBarcodeScannerStore.getState().setScanning(true);
+    useBarcodeScannerStore.getState().showBottomSheet();
 
     await useStore.getState().resetStore('LOGOUT');
 
-    expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
+    expect(useBarcodeScannerStore.getState()).toMatchObject({
+      isScanning: false,
+      scannerSheetVisible: false,
+    });
     expect(registeredSessionScopedStores()).toContain('barcodeScanner');
   });
 
@@ -256,6 +253,24 @@ describe('a session end leaves no data belonging to the previous person', () => 
         'useRecipeSuggestionsStore',
       ]),
     );
+  });
+
+  it('forgets the recipes this account was capturing', async () => {
+    useRecipeCaptureStore.getState().addReading({
+      id: 'capture-1',
+      source: 'url',
+      label: 'example-cooking.com',
+      createdAt: new Date().toISOString(),
+    });
+    useRecipeCaptureStore.getState().settle('capture-1', 'recipe-1');
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useRecipeCaptureStore.getState()).toMatchObject({
+      entries: [],
+      held: [],
+    });
+    expect(registeredSessionScopedStores()).toContain('recipeCaptures');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

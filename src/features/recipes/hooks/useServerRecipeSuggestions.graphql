@@ -1,0 +1,21 @@
+# Ranked on the server from the household's pantries and dietary profile: one
+# page, with no cursor to follow.
+query RecipeSuggestions($first: Int!, $today: LocalDate!) {
+  recipeSuggestions(first: $first, today: $today) {
+    edges {
+      coverage
+      # The stacks expiring within three days of `today` that it would use.
+      expiringStacks {
+        id
+        itemName
+      }
+      node {
+        id
+        name
+        imageUrl
+        servings
+        totalTimeMinutes
+      }
+    }
+  }
+}

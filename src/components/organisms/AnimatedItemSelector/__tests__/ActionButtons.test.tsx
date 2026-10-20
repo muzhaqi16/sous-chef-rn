@@ -3,8 +3,6 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { ActionButtons } from '../ActionButtons';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');

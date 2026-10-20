@@ -53,11 +53,8 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStoreState },
 }));
 
-const mockToastError = jest.fn();
+const mockToastError = jest.mocked(toastService.error);
 const mockHasCredentials = jest.fn().mockResolvedValue(true);
-jest.mock('#/services/toastService', () => ({
-  toastService: { error: (...args: unknown[]) => mockToastError(...args) },
-}));
 
 jest.mock('#/apollo/logoutCleanup', () => ({
   LogoutCleanup: {
@@ -76,6 +73,7 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/storage/deviceId');
+import { toastService } from '#/services/toastService';
 import { MOCK_DEVICE_ID } from '#/storage/__mocks__/deviceId';
 import { ensureDeviceId } from '#/storage/deviceId';
 

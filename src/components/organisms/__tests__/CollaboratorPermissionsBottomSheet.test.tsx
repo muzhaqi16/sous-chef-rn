@@ -11,9 +11,6 @@ import {
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
-
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
@@ -53,8 +50,6 @@ jest.mock('#components/molecules/BottomSheetHeader', () => ({
     );
   },
 }));
-
-jest.mock('#/utils/finallyHelpers');
 
 const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   __typename: 'ShoppingListCollaborator',

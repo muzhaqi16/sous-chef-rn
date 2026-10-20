@@ -21,10 +21,9 @@ const replaceAction = <Name extends ReplaceableRoute>(
 ) => StackActions.replace(name, params);
 
 /**
- * The one place that knows screen names — always navigate through this hook, so
- * a rename surfaces here as a type error. Root screens use the flat form, nested
- * navigators `navigate(Parent, { screen, params })`. Names stay string LITERALS:
- * a `ROUTES` object loses type safety, as the overloads discriminate on those.
+ * The one place that knows screen names, so a rename surfaces here as a type
+ * error. Names stay string LITERALS: the overloads discriminate on them, and a
+ * `ROUTES` object loses that.
  */
 export function useAppNavigation() {
   const navigation = useNavigation();
@@ -69,18 +68,19 @@ export function useAppNavigation() {
     toOnboardingImageCrop: (params: OnboardingStackParams['ImageCrop']) =>
       navigation.navigate('Onboarding', { screen: 'ImageCrop', params }),
 
-    // ─── Tab main screens (nested under Home) ─────────────────────────────
-    toPantryMain: () => navigation.navigate('Home', { screen: 'Pantry' }),
+    // `pop`: from a modal or a pushed screen, back down to the tabs. Without
+    // it the root stack only reuses a route above the current one, so it
+    // pushes a second `Home` over the screen.
+    toPantryMain: () =>
+      navigation.navigate('Home', { screen: 'Pantry' }, { pop: true }),
     toShoppingListMain: () =>
-      navigation.navigate('Home', { screen: 'ShoppingList' }),
+      navigation.navigate('Home', { screen: 'ShoppingList' }, { pop: true }),
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),
     /**
-     * Email verification reached from INSIDE the app (the profile banner, the
-     * collaborate gate). A pushed screen rather than the root navigator's
-     * `verification` group, so backing out keeps the session and a successful
-     * verify returns to the screen it was opened from.
+     * Pushed, not the root's `verification` group, so backing out keeps the
+     * session and a verify returns to the screen it was opened from.
      */
     toVerifyEmail: () => navigation.navigate('VerifyEmail'),
     toHomeManagement: (params?: RootStackParamList['HomeManagement']) =>
@@ -97,8 +97,14 @@ export function useAppNavigation() {
     toDietaryProfile: () => navigation.navigate('DietaryProfile'),
     toPersonalInformation: () => navigation.navigate('PersonalInformation'),
     toAppSettings: () => navigation.navigate('AppSettings'),
+    toDataSources: () => navigation.navigate('DataSources'),
+    toMyReports: () => navigation.navigate('MyReports'),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
+    toReceiptScan: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptScan' }),
+    toReceiptReview: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptReview' }),
     toChangePassword: () => navigation.navigate('ChangePassword'),
     toAppearance: () => navigation.navigate('Appearance'),
 
@@ -133,17 +139,19 @@ export function useAppNavigation() {
       navigation.navigate('ShareList', params),
     toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>
       navigation.navigate('PurchaseHistory', params),
+    toStoreMode: (params: RootStackParamList['StoreMode']) =>
+      navigation.navigate('StoreMode', params),
 
-    // ─── Recipe detail/sub screens ────────────────────────────────────────
-    // One RecipeDetail serves all three tabs that open it (Pantry, Recipe,
-    // MealPlan), so its own "open the fork I just made" / "edit this recipe"
+    // One RecipeDetail serves every tab that opens it, so its own fork and edit
     // actions stay wherever the user opened it from.
     toRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.navigate('RecipeDetail', params),
     /** A recipe link's resolver hands off to the detail screen and leaves the stack. */
     replaceWithRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.dispatch(replaceAction('RecipeDetail', params)),
-    toRecipeCreate: () => navigation.navigate('RecipeCreate'),
+    /** With `captureId`, the form opens filled with what that capture read. */
+    toRecipeCreate: (params?: RootStackParamList['RecipeCreate']) =>
+      navigation.navigate('RecipeCreate', params),
     toRecipeEdit: (params: RootStackParamList['RecipeEdit']) =>
       navigation.navigate('RecipeEdit', params),
     toSavedRecipes: () => navigation.navigate('SavedRecipes'),

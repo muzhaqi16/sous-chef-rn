@@ -1,16 +1,16 @@
 /**
- * Submit for review, withdraw, or unpublish via `updateRecipe(status)` — an
- * absolute status set keyed by the recipe id, so local-first and idempotent on
- * replay. Submitting lands in PENDING_REVIEW until a moderator approves, never
- * straight in PUBLISHED, so that is what the cache shows before firing; a
- * failure reverts from a snapshot, a queued write keeps it.
+ * Submit, withdraw or unpublish via `updateRecipe(status)`, an absolute set, so
+ * idempotent on replay. Submitting lands in PENDING_REVIEW until a moderator
+ * approves, which the cache shows before firing; a failure reverts it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import {
   snapshotFields,
   writeEntityFields,
@@ -49,9 +49,14 @@ export function usePublishRecipe() {
     const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
     const settled = await settleMutation(
       () =>
-        mutate({
-          variables: { input: { id: recipeId, status } },
-        }),
+        chainVersionedWrite(client.cache, entity, version =>
+          mutate({
+            variables: {
+              input: { id: recipeId, status, version },
+              ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+            },
+          }),
+        ),
       {
         document: UpdateRecipeDocument,
         fallback: t('labels.failedToUpdateRecipe'),

@@ -1,5 +1,6 @@
 import { storage } from '#storage/mmkv';
 import { logger } from '#/utils/environment';
+import { isOwnKey } from '#/utils/isOwnKey';
 import type {
   MealPlanItem,
   PantryItem,
@@ -199,6 +200,21 @@ class OptimisticDataPersistence {
   ): () => void {
     this.save(entityType, entityId, field, value);
     return () => this.clear(entityType, entityId, field);
+  }
+
+  /** {@link track} for each field of one entity; an undefined value is not saved. */
+  trackFields<T extends PersistedEntityType>(
+    entityType: T,
+    entityId: string,
+    fields: { readonly [F in PersistedField<T>]?: PersistedEntities[T][F] },
+  ): () => void {
+    const clears: Array<() => void> = [];
+    for (const [field, value] of Object.entries(fields)) {
+      if (value !== undefined && isOwnKey(fields, field)) {
+        clears.push(this.track(entityType, entityId, field, value));
+      }
+    }
+    return () => clears.forEach(clear => clear());
   }
 
   /** Drops one persisted field, once its mutation has synced. */

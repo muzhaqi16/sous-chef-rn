@@ -14,16 +14,6 @@ import { ChangePasswordScreen } from '../ChangePasswordScreen';
  */
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-    warning: jest.fn(),
-  },
-}));
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',

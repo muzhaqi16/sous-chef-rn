@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { RecipeEnrichment } from '../RecipeEnrichment';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { lightTheme } from '#/theme/themes';
 
 const NUTRITION = {
   nutrients: [
@@ -47,6 +48,18 @@ describe('RecipeEnrichment', () => {
     expect(screen.getByText('Draft — not published')).toBeTruthy();
   });
 
+  // The screen's next block (About) adds no space above itself.
+  it('leaves the gap below its status line', () => {
+    render(
+      <RecipeEnrichment
+        status={RecipeStatus.Draft}
+        reviewNote="Add the oven temperature."
+      />,
+    );
+
+    expect(screen.root).toHaveStyle({ marginBottom: lightTheme.spacing.md });
+  });
+
   // Submitting lands in review, never straight in PUBLISHED: a publish badge
   // there would claim a visibility the recipe does not have.
   it('says a recipe waiting for a moderator is in review', () => {
@@ -66,6 +79,33 @@ describe('RecipeEnrichment', () => {
     );
     expect(
       screen.getByText("Moderator's note: Add the oven temperature."),
+    ).toBeTruthy();
+  });
+
+  // A published recipe stays live while its author's edit waits for review.
+  it('says an edit to a published recipe is waiting for review', () => {
+    render(
+      <RecipeEnrichment status={RecipeStatus.Published} hasPendingRevision />,
+    );
+    expect(
+      screen.getByText(
+        "Changes in review — everyone sees the published version until they're approved",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/In review — only you/)).toBeNull();
+  });
+
+  it("shows the moderator's note on a rejected edit to a published recipe", () => {
+    render(
+      <RecipeEnrichment
+        status={RecipeStatus.Published}
+        revisionRejectionNote="Keep the original photo."
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Your last changes weren't approved. Moderator's note: Keep the original photo.",
+      ),
     ).toBeTruthy();
   });
 });

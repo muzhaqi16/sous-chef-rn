@@ -4,9 +4,6 @@ import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
-
 describe('WeekStrip', () => {
   const baseDate = new Date('2025-03-10'); // Monday
   const weekDays = Array.from({ length: 7 }, (_, i) => {

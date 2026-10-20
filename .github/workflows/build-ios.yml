@@ -1,12 +1,16 @@
-name: "Build iOS app"
+name: 'Build iOS app'
+
+env:
+  # Installs @muzhaqi16/receipt-rules from GitHub Packages (see .npmrc).
+  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   push:
     # branches:
     #   - main
     tags:
-      - "v*"
-      - "ios-v*"
+      - 'v*'
+      - 'ios-v*'
 
 jobs:
   build_with_signing:
@@ -53,8 +57,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Clean workspace
         run: |
