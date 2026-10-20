@@ -128,15 +128,6 @@ export interface Appearance {
   apply(settings: AppearanceSettings): void;
 }
 
-/**
- * No marks: a mark per operation appends to a buffer that lives as long as the
- * session, and clearing it filters the whole buffer each time.
- */
-export interface Clock {
-  /** Milliseconds on a monotonic clock, for durations only. */
-  now(): number;
-}
-
 export interface ImagePrefetch {
   /** Warms the image cache; never throws. */
   prefetch(uris: string[]): void;
@@ -168,7 +159,6 @@ export interface NavigationIntents {
  */
 export interface ScreenHooks {
   useNavigationIntents(): NavigationIntents;
-  useIsScreenFocused(): boolean;
   /** Runs while the screen is focused; a new `effect` identity re-runs it. */
   useScreenFocusEffect(effect: EffectCallback): void;
 }
@@ -180,7 +170,6 @@ export interface PlatformServices {
   platformInfo: PlatformInfo;
   appLifecycle: AppLifecycle;
   appearance: Appearance;
-  clock: Clock;
   imagePrefetch: ImagePrefetch;
   fileParts: FileParts;
   screen: ScreenHooks;

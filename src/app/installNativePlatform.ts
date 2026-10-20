@@ -1,5 +1,4 @@
 import { AppState, Platform, type AppStateStatus } from 'react-native';
-import performance from 'react-native-performance';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
@@ -16,8 +15,9 @@ import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
 
-const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
-  status === 'extension' ? 'unknown' : status;
+// `null` is untyped but real: Android reports no state until its first change.
+const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
+  status === null || status === 'extension' ? 'unknown' : status;
 
 // Every adapter delegates through an arrow or a getter: Metro's inline requires
 // then load each native module at its first use, not during this install,
@@ -50,7 +50,6 @@ installPlatform({
     applyTheme: theme => applyThemeToRuntime(theme),
     apply: settings => applyAppearanceToRuntime(settings),
   },
-  clock: { now: () => performance.now() },
   imagePrefetch: { prefetch: uris => preloadImages(uris) },
   fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,

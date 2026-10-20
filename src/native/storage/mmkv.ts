@@ -1,13 +1,11 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
 import { logger } from '#/utils/environment';
 import { sleep } from '#/utils/backoff';
-import { RETIRED_PERSISTED_KEYS } from '#/store/persistedKeys';
+import { RETIRED_PERSISTED_KEYS, STORAGE_KEY } from '#/store/persistedKeys';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,
 } from '#native/storage/deviceKey';
-
-export const STORAGE_KEY = 'sous-chef-storage';
 
 // Used when the device key is unavailable: MMKV discards a file it cannot
 // decrypt, so a keychain outage quarantines the session here and leaves the

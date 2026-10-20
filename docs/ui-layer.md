@@ -113,9 +113,9 @@ core and have no React Native in them. A host registers what shows them:
 - **Haptics before an action** (a toggle, a delete) fire where it is pressed,
   in the component, not in the data hook.
 - **Navigation and focus:** a core hook navigates with `useNavigationIntents()`
-  (`toRecipeDetail`, `goBack`, …) and reads focus with `useIsScreenFocused()` or
-  `useScreenFocusEffect()`, all from `#platform/screen`. On mobile they are
-  `useAppNavigation` and React Navigation's `useIsFocused` / `useFocusEffect`
+  (`toRecipeDetail`, `goBack`, …) and runs focus work with
+  `useScreenFocusEffect()`, both from `#platform/screen`. On mobile they are
+  `useAppNavigation` and React Navigation's `useFocusEffect`
   (`src/hooks/navigation/screenHooks.ts`), called in the same screen, so their
   meaning is unchanged. A UI component keeps using `useAppNavigation` directly.
 

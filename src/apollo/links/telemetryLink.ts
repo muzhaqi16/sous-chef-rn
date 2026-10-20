@@ -1,6 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind, OperationTypeNode, type GraphQLFormattedError } from 'graphql';
-import { requirePlatform } from '#platform/install';
 import { env as buildEnv } from '#/config/env';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
@@ -53,7 +52,7 @@ export const createTelemetryLink = () => {
       return forward(operation);
     }
 
-    const startTime = requirePlatform('clock').now();
+    const startTime = performance.now();
     const operationName = operation.operationName ?? 'unnamed';
     const [firstDefinition] = operation.query.definitions;
     const operationType =
@@ -94,7 +93,7 @@ export const createTelemetryLink = () => {
     });
 
     const finalizeTiming = (timing: GraphQLTiming, hasErrors: boolean) => {
-      const duration = requirePlatform('clock').now() - timing.startTime;
+      const duration = performance.now() - timing.startTime;
       timings.delete(operationId);
 
       // NOT sample-weighted: latency quantiles are scale-invariant. Its

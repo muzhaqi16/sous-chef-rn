@@ -132,7 +132,6 @@ function createMemoryScreen(): MemoryScreen {
     useSyncExternalStore(subscribe, () => focused);
   return {
     useNavigationIntents: () => memoryNavigationIntents,
-    useIsScreenFocused,
     useScreenFocusEffect: effect => {
       const isFocused = useIsScreenFocused();
       useEffect(() => (isFocused ? effect() : undefined), [isFocused, effect]);
@@ -153,7 +152,6 @@ export function createMemoryPlatform(): PlatformServices {
     platformInfo: { os: 'ios', appVersion: '1.0.0', isEmulator: false },
     appLifecycle: createMemoryAppLifecycle(),
     appearance: { applyTheme: () => {}, apply: () => {} },
-    clock: { now: () => Date.now() },
     imagePrefetch: { prefetch: () => {} },
     fileParts: streamedFileParts,
     screen: createMemoryScreen(),

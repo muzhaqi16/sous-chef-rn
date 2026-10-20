@@ -1,9 +1,6 @@
 import { createMMKV } from 'react-native-mmkv';
-import { RECOVERY_STORAGE_KEY, STORAGE_KEY as MMKV_ID } from '../mmkv';
-import {
-  RETIRED_PERSISTED_KEYS,
-  STORAGE_KEY as ROOT_STORE_KEY,
-} from '#/store/persistedKeys';
+import { RECOVERY_STORAGE_KEY } from '../mmkv';
+import { RETIRED_PERSISTED_KEYS, STORAGE_KEY } from '#/store/persistedKeys';
 
 jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {
@@ -24,9 +21,9 @@ jest.mock('#native/storage/deviceKey', () => ({
  */
 describe('storage identifiers', () => {
   it('are exactly the ids and keys this app has shipped', () => {
-    expect(MMKV_ID).toBe('sous-chef-storage');
+    // The MMKV file's id and the root store's key are one constant.
+    expect(STORAGE_KEY).toBe('sous-chef-storage');
     expect(RECOVERY_STORAGE_KEY).toBe('sous-chef-storage-recovery');
-    expect(ROOT_STORE_KEY).toBe('sous-chef-storage');
     expect(RETIRED_PERSISTED_KEYS).toEqual(['sous-chef-barcode']);
   });
 

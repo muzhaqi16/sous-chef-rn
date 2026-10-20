@@ -5,7 +5,6 @@ import type {
   ApolloLink,
 } from '@apollo/client';
 import { OperationTypeNode, parse } from 'graphql';
-import { requirePlatform } from '#platform/install';
 
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((err: { message?: string; name?: string }) => ({
@@ -20,7 +19,7 @@ jest.mock('#/utils/errorSerialization', () => ({
 
 import { createConsoleLink } from '../consoleLink';
 
-const clockNow = jest.spyOn(requirePlatform('clock'), 'now');
+const clockNow = jest.spyOn(performance, 'now');
 
 // Helper to create a mock operation
 const createMockOperation = (

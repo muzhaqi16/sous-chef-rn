@@ -1,7 +1,6 @@
 import type { ApolloLink } from '@apollo/client';
 import { Observable } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { requirePlatform } from '#platform/install';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -36,7 +35,7 @@ import { createTelemetryLink } from '../telemetryLink';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 const mockedEnvironment = Environment as jest.Mocked<typeof Environment>;
-const clockNow = jest.spyOn(requirePlatform('clock'), 'now');
+const clockNow = jest.spyOn(performance, 'now');
 
 // The mock operation/forward are intentionally partial fixtures.
 interface MockOperation {

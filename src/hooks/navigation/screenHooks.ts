@@ -1,4 +1,4 @@
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationIntents, ScreenHooks } from '#platform/ports';
 import { useAppNavigation } from './useAppNavigation';
 
@@ -22,6 +22,5 @@ function useAppNavigationIntents(): NavigationIntents {
  */
 export const reactNavigationScreenHooks: ScreenHooks = {
   useNavigationIntents: () => useAppNavigationIntents(),
-  useIsScreenFocused: () => useIsFocused(),
   useScreenFocusEffect: effect => useFocusEffect(effect),
 };

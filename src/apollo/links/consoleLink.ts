@@ -1,6 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind } from 'graphql';
-import { requirePlatform } from '#platform/install';
 import { serializeError, safeStringifyError } from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
@@ -70,7 +69,7 @@ export const createConsoleLink = (
         ? firstDefinition.operation.toUpperCase()
         : 'UNKNOWN';
     const isSubscription = operationType === 'SUBSCRIPTION';
-    const startTime = isSubscription ? 0 : requirePlatform('clock').now();
+    const startTime = isSubscription ? 0 : performance.now();
     const operationIndex = isSubscription ? -1 : operationsSeen++;
 
     return new Observable(observer => {
@@ -86,9 +85,7 @@ export const createConsoleLink = (
             emoji = '❌';
             style = 'color: #ef4444; font-weight: bold';
           } else if (!isSubscription) {
-            const duration = Math.round(
-              requirePlatform('clock').now() - startTime,
-            );
+            const duration = Math.round(performance.now() - startTime);
             if (duration > slowQueryThreshold) {
               emoji = '⚠️';
               style = 'color: #f59e0b; font-weight: bold';
@@ -103,9 +100,7 @@ export const createConsoleLink = (
                 style,
               );
             } else {
-              const duration = Math.round(
-                requirePlatform('clock').now() - startTime,
-              );
+              const duration = Math.round(performance.now() - startTime);
               const coldTag =
                 operationIndex < COLD_START_THRESHOLD ? ' [cold]' : '';
               console.log(

@@ -1,4 +1,5 @@
-import { STORAGE_KEY, storage, initializeSecureStorage } from '../mmkv';
+import { storage, initializeSecureStorage } from '../mmkv';
+import { STORAGE_KEY } from '#/store/persistedKeys';
 
 // Mock DeviceKeyManager
 jest.mock('#native/storage/deviceKey', () => ({
@@ -126,7 +127,7 @@ describe('mmkv storage', () => {
         id: mmkvModule.RECOVERY_STORAGE_KEY,
       });
       expect(createMMKV).not.toHaveBeenCalledWith({
-        id: mmkvModule.STORAGE_KEY,
+        id: STORAGE_KEY,
       });
     });
 
@@ -149,14 +150,14 @@ describe('mmkv storage', () => {
 
       expect(getKey).toHaveBeenCalledTimes(2);
       expect(createMMKV).toHaveBeenCalledWith({
-        id: mmkvModule.STORAGE_KEY,
+        id: STORAGE_KEY,
         encryptionKey: 'recovered-key',
         encryptionType: 'AES-256',
       });
       // The session instance is the encrypted one; the only other open is the
       // deferred recovery purge below, which never runs keyless on the primary.
       expect(createMMKV).not.toHaveBeenCalledWith({
-        id: mmkvModule.STORAGE_KEY,
+        id: STORAGE_KEY,
       });
     });
   });

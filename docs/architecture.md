@@ -115,7 +115,6 @@ service if the install has not happened, so nothing degrades silently.
 | `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info               |
 | `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
-| `clock`         | A monotonic `now()` for durations                          | react-native-performance                           |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
 | `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
 | `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
