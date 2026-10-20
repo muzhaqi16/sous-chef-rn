@@ -34,7 +34,7 @@ import type {
   IngredientFormState,
   RecipeFormState,
   StepFormState,
-} from './formState';
+} from '../../types';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';

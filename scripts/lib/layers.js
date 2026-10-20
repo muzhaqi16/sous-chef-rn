@@ -40,7 +40,7 @@ const LAYERS = [
     name: 'graphql',
     layer: 'core',
     patterns: ['src/graphql/**'],
-    enforced: false,
+    enforced: true,
   },
   { name: 'i18n', layer: 'core', patterns: ['src/i18n/**'], enforced: true },
   {
@@ -91,7 +91,7 @@ const LAYERS = [
     name: 'features/utils',
     layer: 'core',
     patterns: ['src/features/*/utils/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'features/graphql',
@@ -103,7 +103,7 @@ const LAYERS = [
     name: 'features/cache',
     layer: 'core',
     patterns: ['src/features/*/cache/**'],
-    enforced: false,
+    enforced: true,
   },
   {
     name: 'features/data',
@@ -118,7 +118,7 @@ const LAYERS = [
       'src/features/*/{manifest.static,types,pushCopy}.ts',
       'src/features/{registry.static,registry.cache,staticTypes}.ts',
     ],
-    enforced: false,
+    enforced: true,
   },
 
   {

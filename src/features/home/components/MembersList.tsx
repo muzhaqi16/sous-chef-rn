@@ -8,8 +8,8 @@ import {
   formatInviteStatus,
   getInviteDisplayName,
   getInviteStatusKey,
-  INVITE_STATUS_TONE,
 } from '#features/home/utils/inviteFormatters';
+import { INVITE_STATUS_TONE } from './inviteStatusTone';
 import {
   getMemberDisplayName,
   type Member,

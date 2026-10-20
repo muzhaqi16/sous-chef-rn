@@ -7,7 +7,7 @@ import { FormTextArea } from '#components/atoms/FormTextArea';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
-import type { StepFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { StepFormState } from '#features/recipes/types';
 
 export interface RecipeStepEditorRef {
   open: (step?: StepFormState) => void;

@@ -15,7 +15,7 @@ import type {
   IngredientFormState,
   StepFormState,
   RecipeFormState,
-} from './formState';
+} from '../../types';
 import {
   recipeFormSchema,
   recipeFormDefaults,

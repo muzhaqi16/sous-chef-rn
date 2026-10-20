@@ -5,7 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';

@@ -18,7 +18,7 @@ import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';

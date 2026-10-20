@@ -83,7 +83,7 @@ jest.mock('#features/recipes/hooks/useRecipeDiscovery', () => ({
 function makeDiscovery(overrides: Record<string, unknown> = {}) {
   return {
     mode: 'random',
-    items: [],
+    rows: [],
     loading: false,
     refresh: mockDiscoveryRefresh,
     pantryItems: [],
@@ -97,14 +97,23 @@ function makeDiscovery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// Sample discovery item shape — a DisplayItem
+// A random suggestion as discovery keeps it, and as the list then shows it.
+const sampleDiscoveryRow = {
+  source: 'random',
+  recipe: {
+    id: 1234,
+    title: 'Sample Random Recipe',
+    image: 'https://img/disc-1.jpg',
+    servings: 4,
+    readyInMinutes: 30,
+  },
+};
 const sampleDiscoveryItem = {
-  id: 'disc-1',
+  id: '1234',
   title: 'Sample Random Recipe',
   subtitle: '4 servings • 30 min',
   badge: { text: 'Suggested' },
   imageUrl: 'https://img/disc-1.jpg',
-  spoonacularId: 1234,
 };
 
 // Sample text-search Spoonacular response (SearchRecipesResult shape)
@@ -298,7 +307,7 @@ describe('useRecipeScreen', () => {
 
   it('shows discovery items when discovery has results and no search performed', () => {
     mockUseRecipeDiscovery.mockReturnValue(
-      makeDiscovery({ items: [sampleDiscoveryItem] }),
+      makeDiscovery({ rows: [sampleDiscoveryRow] }),
     );
 
     const { result } = renderRecipeScreen();
@@ -480,7 +489,7 @@ describe('useRecipeScreen', () => {
 
   it('clearSearch resets search state but preserves discovery', () => {
     mockUseRecipeDiscovery.mockReturnValue(
-      makeDiscovery({ items: [sampleDiscoveryItem] }),
+      makeDiscovery({ rows: [sampleDiscoveryRow] }),
     );
     mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
 

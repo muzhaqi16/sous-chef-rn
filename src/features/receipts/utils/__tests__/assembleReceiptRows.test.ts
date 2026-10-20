@@ -1,5 +1,5 @@
-import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptRows } from '../assembleReceiptRows';
+import type { RecognizedPage } from '#/types/textRecognition';
 
 type Row = [
   text: string,

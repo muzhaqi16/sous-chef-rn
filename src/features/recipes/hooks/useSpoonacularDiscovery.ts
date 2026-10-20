@@ -12,12 +12,7 @@ import type {
 } from '#/services/spoonacular/types';
 import { defaultPantryOf } from '#domain/homePantries';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { useTranslation } from '#/i18n';
-import {
-  toDisplayItems,
-  type DisplayItem,
-  type RecipeRow,
-} from '#features/recipes/utils/recipeDisplayTransforms';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import {
   useRecipeCacheStore,
   ingredientCacheKey,
@@ -58,7 +53,7 @@ const INITIAL_DISCOVERY_STATE: DiscoveryState = {
 export interface SpoonacularDiscoveryResult {
   mode: DiscoveryMode;
   /** Any discovery's rows, so another source can stand in for these. */
-  items: DisplayItem[];
+  rows: RecipeRow[];
   loading: boolean;
   refresh: () => Promise<void>;
   pantryItems: PantryListItemNode[];
@@ -284,7 +279,6 @@ export function useSpoonacularDiscovery(
   dietaryTags?: string,
   { enabled = true }: { enabled?: boolean } = {},
 ): SpoonacularDiscoveryResult {
-  const { t } = useTranslation();
   // From the cache: `useDefaultHome` owns the homes fetch.
   const { currentHome } = useCurrentHome();
   const defaultPantry = defaultPantryOf(currentHome);
@@ -337,7 +331,7 @@ export function useSpoonacularDiscovery(
   };
 
   const discoveryHasMore = !!found && visibleCount < found.recipes.length;
-  const items = toDisplayItems(rowsOf(found, visibleCount), t);
+  const rows = rowsOf(found, visibleCount);
 
   // Fetch-key pattern: compute a stable key that changes when we should re-fetch.
   const [fetchKey, setFetchKey] = useState('');
@@ -419,7 +413,7 @@ export function useSpoonacularDiscovery(
 
   return {
     mode: found?.mode ?? 'none',
-    items,
+    rows,
     loading: discoveryState.loading,
     refresh,
     pantryItems,

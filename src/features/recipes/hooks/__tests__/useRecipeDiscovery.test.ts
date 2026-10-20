@@ -19,11 +19,10 @@ jest.mock('../useSpoonacularDiscovery', () => ({
 
 const spoonacular: SpoonacularDiscoveryResult = {
   mode: 'random',
-  items: [
+  rows: [
     {
-      id: '7',
-      title: 'Spoonacular stew',
-      subtitle: '',
+      source: 'spoonacular',
+      recipe: { id: 7, title: 'Spoonacular stew', image: '', imageType: 'jpg' },
     },
   ],
   loading: false,
@@ -40,7 +39,7 @@ const spoonacular: SpoonacularDiscoveryResult = {
 const server = (
   overrides: Partial<ReturnType<typeof useServerRecipeSuggestions>> = {},
 ): ReturnType<typeof useServerRecipeSuggestions> => ({
-  items: [],
+  rows: [],
   loading: false,
   unanswered: false,
   refresh: jest.fn(),
@@ -68,7 +67,12 @@ describe('useRecipeDiscovery', () => {
 
   it("shows the server's ranking, one page, and keeps Spoonacular idle", () => {
     const ranked = server({
-      items: [{ id: 'local-r-1', title: 'Curry', subtitle: '' }],
+      rows: [
+        {
+          source: 'spoonacular',
+          recipe: { id: 1, title: 'Curry', image: '', imageType: 'jpg' },
+        },
+      ],
     });
     jest.mocked(useServerRecipeSuggestions).mockReturnValue(ranked);
 
@@ -79,7 +83,7 @@ describe('useRecipeDiscovery', () => {
     });
     expect(result.current).toMatchObject({
       mode: 'pantry',
-      items: ranked.items,
+      rows: ranked.rows,
       discoveryHasMore: false,
       refresh: ranked.refresh,
     });
@@ -95,7 +99,7 @@ describe('useRecipeDiscovery', () => {
     expect(useSpoonacularDiscovery).toHaveBeenLastCalledWith(undefined, {
       enabled: true,
     });
-    expect(result.current.items).toBe(spoonacular.items);
+    expect(result.current.rows).toBe(spoonacular.rows);
     expect(result.current.mode).toBe('random');
   });
 

@@ -21,11 +21,8 @@ import {
   INTOLERANCE_ENUM_TO_SPOONACULAR,
 } from '#features/recipes/utils/recipeFilterMaps';
 import { isLifestyleDiet } from '#domain/dietary';
-import {
-  toDisplayItems,
-  type DisplayItem,
-  type RecipeRow,
-} from '#features/recipes/utils/recipeDisplayTransforms';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
+import { toDisplayItems, type DisplayItem } from './recipeDisplayItems';
 import {
   EMPTY_PAGINATION,
   executeRecipeIngredientSearch,
@@ -184,7 +181,7 @@ export function useRecipeScreen() {
 
   // ── Derived display state ──
   const showSearchResults = searchPerformed && searchResults.length > 0;
-  const showDiscovery = !searchPerformed && discovery.items.length > 0;
+  const showDiscovery = !searchPerformed && discovery.rows.length > 0;
 
   // The whole list is shown; pagination is real, not a client-side slice.
   const searchItems = showSearchResults ? searchResults : [];
@@ -224,7 +221,7 @@ export function useRecipeScreen() {
   const items: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery
-    ? discovery.items
+    ? toDisplayItems(discovery.rows, t)
     : [];
 
   // Image preloading is handled by ItemList internally — no duplicate effect needed

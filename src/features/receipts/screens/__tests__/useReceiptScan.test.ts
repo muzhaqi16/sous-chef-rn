@@ -9,11 +9,8 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
-import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
-import {
-  ReceiptStructuring,
-  type ReceiptLineLabels,
-} from '#/native/ReceiptStructuring';
+import { TextRecognition } from '#/native/TextRecognition';
+import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import { LABELLING_TIMEOUT_MS } from '../../utils/onDeviceStructuring';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { errorService } from '#/services/errorService';
@@ -25,6 +22,8 @@ import { useStore } from '#store';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptPhotoConsentStore } from '../../store/receiptPhotoConsentStore';
 import { useReceiptScan } from '../useReceiptScan';
+import type { RecognizedPage } from '#/types/textRecognition';
+import type { ReceiptLineLabels } from '#/types/receiptStructuring';
 
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: {

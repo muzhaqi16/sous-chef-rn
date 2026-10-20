@@ -19,7 +19,6 @@ type Case = {
 
 const VALUE_USE = 'export const y: unknown = x;\n';
 const ENFORCED_CORE = 'src/i18n/featureLocales.ts';
-const UNENFORCED_CORE = 'src/features/recipes/utils/recipeDisplayTransforms.ts';
 
 const CASES: Case[] = [
   {
@@ -62,13 +61,6 @@ const CASES: Case[] = [
     label: 'globalThis, in enforced core',
     filePath: ENFORCED_CORE,
     code: 'export const y: unknown = globalThis;\n',
-    blocked: false,
-  },
-  {
-    // Enforcement is staged: an area is held once it has been cleaned.
-    label: 'react-native, from core not yet enforced',
-    filePath: UNENFORCED_CORE,
-    code: `import { Platform as x } from 'react-native';\n${VALUE_USE}`,
     blocked: false,
   },
 ];

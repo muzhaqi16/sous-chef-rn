@@ -7,10 +7,16 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
+import { getI18n } from '#/i18n/config';
+import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => '2026-10-14',
 }));
+
+// The cards as the list shows them, in the copy of en.json.
+const shown = (rows: RecipeRow[]) => toDisplayItems(rows, getI18n().t);
 
 type Edge = NonNullable<
   NonNullable<
@@ -47,13 +53,13 @@ describe('useServerRecipeSuggestions', () => {
       suggestionsMock([edge('r-own', 80), edge('r-pub', 60)]).mock,
     ]);
 
-    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    await waitFor(() => expect(result.current.rows).toHaveLength(2));
 
-    expect(result.current.items.map(item => item.id)).toEqual([
+    expect(shown(result.current.rows).map(item => item.id)).toEqual([
       'local-r-own',
       'local-r-pub',
     ]);
-    expect(result.current.items[0]?.badge?.text).toBe(
+    expect(shown(result.current.rows)[0]?.badge?.text).toBe(
       '80% of its ingredients in your pantry',
     );
     expect(result.current.unanswered).toBe(false);
@@ -63,7 +69,7 @@ describe('useServerRecipeSuggestions', () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock]);
 
-    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
 
     expect(suggestions.fired[0]).toEqual({ first: 20, today: '2026-10-14' });
   });
@@ -84,15 +90,15 @@ describe('useServerRecipeSuggestions', () => {
       suggestionsMock([edge('r-1', 70, expiring)]).mock,
     ]);
 
-    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
 
-    expect(result.current.items[0]?.subtitle).toContain(uses);
+    expect(shown(result.current.rows)[0]?.subtitle).toContain(uses);
   });
 
   it('asks the server again on refresh', async () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock]);
-    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
 
     await act(async () => {
       await result.current.refresh();
@@ -117,7 +123,7 @@ describe('useServerRecipeSuggestions', () => {
     const { result } = renderSuggestions([answer()]);
 
     await waitFor(() => expect(result.current.unanswered).toBe(true));
-    expect(result.current.items).toEqual([]);
+    expect(result.current.rows).toEqual([]);
   });
 
   it('asks for nothing when switched off', () => {
@@ -126,7 +132,7 @@ describe('useServerRecipeSuggestions', () => {
 
     expect(suggestions.fired).toEqual([]);
     expect(result.current).toMatchObject({
-      items: [],
+      rows: [],
       loading: false,
       unanswered: false,
     });

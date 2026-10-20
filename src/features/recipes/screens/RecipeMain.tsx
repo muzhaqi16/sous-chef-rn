@@ -140,7 +140,7 @@ const RecipeMainInner: React.FC = () => {
     // not this per-field restore path.
     optimisticTypes: [],
     telemetryProperties: () => ({
-      discovery_count: screen.discovery.items.length,
+      discovery_count: screen.discovery.rows.length,
       view: 'discovery',
     }),
   });

@@ -8,8 +8,9 @@ import { errorService } from '#/services/errorService';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { useImageUpload } from '#hooks/data/useImageUpload';
-import { TextRecognition, type PreparedPhoto } from '#/native/TextRecognition';
+import { TextRecognition } from '#/native/TextRecognition';
 import { uploadTogether } from '#/utils/uploadTogether';
+import type { PreparedPhoto } from '#/types/textRecognition';
 
 /** The pages one capture reads, as `createRecipeCapture` takes them. */
 export const MAX_CAPTURE_PHOTOS = 3;

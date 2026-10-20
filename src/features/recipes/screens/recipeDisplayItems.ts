@@ -2,13 +2,15 @@ import type { Translate } from '#/i18n/types';
 import { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
   RecipeInformation,
-  SearchRecipesResult,
   RecipeSearchResult,
 } from '#/services/spoonacular/types';
-import type { SearchRecipesQuery } from '#features/recipes/graphql/recipe.generated';
 import type { BadgeContent } from '#components/atoms/Badge';
-
-// ── Display item type ──
+import type {
+  LocalRecipeNode,
+  RecipeRow,
+  RecipeSuggestionEdge,
+  SpoonacularRecipe,
+} from '#features/recipes/utils/recipeRows';
 
 export interface DisplayItem {
   id: string;
@@ -17,53 +19,6 @@ export interface DisplayItem {
   badge?: BadgeContent;
   imageUrl?: string;
 }
-
-export type LocalRecipeNode =
-  SearchRecipesQuery['searchRecipes']['edges'][number]['node'];
-
-export type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
-
-/**
- * A search result or suggestion as it is kept: the row a source returned, with
- * no copy written. The list writes its copy when it renders, so it reads in the
- * language it is shown in, not the one it was fetched in.
- */
-export type RecipeRow =
-  | { source: 'spoonacular'; recipe: SpoonacularRecipe }
-  | {
-      source: 'local';
-      node: LocalRecipeNode;
-      match: SpoonacularRecipe | undefined;
-    }
-  /** A suggestion for an empty pantry. */
-  | { source: 'random'; recipe: RecipeInformation }
-  /** A suggestion the pantry can make, with its cook time once enriched. */
-  | {
-      source: 'pantry';
-      recipe: RecipeSearchResult;
-      info: RecipeInformation | undefined;
-    };
-
-export const spoonacularRows = (
-  results: readonly SpoonacularRecipe[],
-): RecipeRow[] =>
-  results.map((recipe): RecipeRow => ({ source: 'spoonacular', recipe }));
-
-/**
- * Imported recipes carry no time or likes, so `enrichmentFor` lends each row
- * the live Spoonacular values.
- */
-export const localRows = (
-  nodes: readonly LocalRecipeNode[],
-  enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,
-): RecipeRow[] =>
-  nodes.map(
-    (node): RecipeRow => ({
-      source: 'local',
-      node,
-      match: enrichmentFor(node),
-    }),
-  );
 
 const spoonacularDisplayItem = (
   recipe: SpoonacularRecipe,
@@ -212,6 +167,59 @@ function pantryDisplayItem(
   };
 }
 
+/** A suggestion as its card: the stock it uses up first, its coverage as the badge. */
+function suggestionDisplayItem(
+  edge: RecipeSuggestionEdge,
+  translate: Translate,
+): DisplayItem {
+  const { node, coverage } = edge;
+  // One name per item: two stacks of milk are still "Uses milk".
+  const named = new Set<string>();
+  const expiring = edge.expiringStacks
+    .map(stack => stack.itemName.trim())
+    .filter(name => {
+      const key = name.toLocaleLowerCase();
+      if (name === '' || named.has(key)) return false;
+      named.add(key);
+      return true;
+    });
+  const subtitleParts: string[] = [];
+  if (expiring.length > 0) {
+    subtitleParts.push(
+      translate('recipes.usesExpiringSoon', {
+        names: expiring.join(', '),
+        count: expiring.length,
+      }),
+    );
+  }
+  subtitleParts.push(
+    translate('recipes.servingsCount', { count: node.servings }),
+  );
+  if (node.totalTimeMinutes) {
+    subtitleParts.push(
+      translate('labels.min', { count: node.totalTimeMinutes }),
+    );
+  }
+
+  return {
+    // Opens the recipe itself, as the local rows of a search do.
+    id: `local-${node.id}`,
+    title: node.name,
+    subtitle: subtitleParts.join(' • '),
+    badge: {
+      text: translate('recipes.pantryCoverage', { percent: coverage }),
+      lines: [
+        {
+          icon: 'checkmark-circle',
+          text: translate('recipes.coveragePercent', { percent: coverage }),
+          variant: 'success',
+        },
+      ],
+    },
+    imageUrl: node.imageUrl ?? undefined,
+  };
+}
+
 /** The rows as the list shows them, in the language of the caller's `t`. */
 export const toDisplayItems = (
   rows: readonly RecipeRow[],
@@ -227,5 +235,7 @@ export const toDisplayItems = (
         return randomDisplayItem(row.recipe, translate);
       case 'pantry':
         return pantryDisplayItem(row.recipe, row.info, translate);
+      case 'suggestion':
+        return suggestionDisplayItem(row.edge, translate);
     }
   });

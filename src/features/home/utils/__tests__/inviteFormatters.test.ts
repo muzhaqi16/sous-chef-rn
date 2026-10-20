@@ -3,7 +3,6 @@ import {
   formatInviteStatus,
   getInviteDisplayName,
   getInviteStatusKey,
-  INVITE_STATUS_TONE,
 } from '#features/home/utils/inviteFormatters';
 import { getI18n } from '#/i18n/config';
 
@@ -34,19 +33,6 @@ describe('inviteFormatters', () => {
       [InviteStatus.Used, 'expired'],
     ])('draws %s in the %s tone', (input, expected) => {
       expect(getInviteStatusKey(input)).toBe(expected);
-    });
-  });
-
-  describe('INVITE_STATUS_TONE', () => {
-    it.each([
-      [InviteStatus.Pending, 'warning'],
-      [InviteStatus.Accepted, 'success'],
-      [InviteStatus.Declined, 'danger'],
-      [InviteStatus.Expired, 'tertiary'],
-      [InviteStatus.Revoked, 'tertiary'],
-      [InviteStatus.Used, 'tertiary'],
-    ])('sets %s status text in the %s tone', (input, expected) => {
-      expect(INVITE_STATUS_TONE[input]).toBe(expected);
     });
   });
 

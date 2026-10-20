@@ -29,7 +29,7 @@ import {
   type SpoonacularRecipe,
   spoonacularRows,
   localRows,
-} from '#features/recipes/utils/recipeDisplayTransforms';
+} from '#features/recipes/utils/recipeRows';
 
 /**
  * One page of recipe search from both sources: the local connection pages by

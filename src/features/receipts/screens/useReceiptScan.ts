@@ -10,11 +10,7 @@ import DocumentScanner, {
   ScanDocumentResponseStatus,
   type ScanDocumentResponse,
 } from 'react-native-document-scanner-plugin';
-import {
-  TextRecognition,
-  type PhotoMask,
-  type PreparedPhoto,
-} from '#/native/TextRecognition';
+import { TextRecognition } from '#/native/TextRecognition';
 import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
@@ -44,6 +40,7 @@ import {
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
 import { uploadTogether } from '#/utils/uploadTogether';
+import type { PhotoMask, PreparedPhoto } from '#/types/textRecognition';
 
 const dropPhotos = (uris: readonly string[]) => {
   if (uris.length === 0) return;

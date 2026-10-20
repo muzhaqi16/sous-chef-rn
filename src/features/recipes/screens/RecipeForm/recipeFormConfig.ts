@@ -16,7 +16,7 @@ import type {
   IngredientFormState,
   RecipeFormState,
   StepFormState,
-} from './formState';
+} from '../../types';
 
 // The API's URL scalar takes an absolute http(s) URL of at most 2048 characters
 // and refuses anything else before any resolver runs, with no field to report
