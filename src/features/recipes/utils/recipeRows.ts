@@ -5,9 +5,18 @@ import type {
 } from '#/services/spoonacular/types';
 import type { SearchRecipesQuery } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeSuggestionsQuery } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
+import type { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 export type LocalRecipeNode =
   SearchRecipesQuery['searchRecipes']['edges'][number]['node'];
+
+/** What search reads off an API recipe to page and dedupe it, whatever else its card selects. */
+export interface SearchedRecipe {
+  id: string;
+  name: string;
+  externalSource?: ExternalSource | null;
+  externalId?: string | null;
+}
 
 export type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
 
@@ -19,11 +28,11 @@ export type RecipeSuggestionEdge =
  * no copy written. The list writes its copy when it renders, so it reads in the
  * language it is shown in, not the one it was fetched in.
  */
-export type RecipeRow =
+export type RecipeRow<TNode extends SearchedRecipe = LocalRecipeNode> =
   | { source: 'spoonacular'; recipe: SpoonacularRecipe }
   | {
       source: 'local';
-      node: LocalRecipeNode;
+      node: TNode;
       match: SpoonacularRecipe | undefined;
     }
   /** A suggestion for an empty pantry. */
@@ -37,21 +46,23 @@ export type RecipeRow =
   /** The server's suggestion from what the household holds. */
   | { source: 'suggestion'; edge: RecipeSuggestionEdge };
 
-export const spoonacularRows = (
+export const spoonacularRows = <TNode extends SearchedRecipe>(
   results: readonly SpoonacularRecipe[],
-): RecipeRow[] =>
-  results.map((recipe): RecipeRow => ({ source: 'spoonacular', recipe }));
+): RecipeRow<TNode>[] =>
+  results.map(
+    (recipe): RecipeRow<TNode> => ({ source: 'spoonacular', recipe }),
+  );
 
 /**
  * Imported recipes carry no time or likes, so `enrichmentFor` lends each row
  * the live Spoonacular values.
  */
-export const localRows = (
-  nodes: readonly LocalRecipeNode[],
-  enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,
-): RecipeRow[] =>
+export const localRows = <TNode extends SearchedRecipe>(
+  nodes: readonly TNode[],
+  enrichmentFor: (node: TNode) => SpoonacularRecipe | undefined,
+): RecipeRow<TNode>[] =>
   nodes.map(
-    (node): RecipeRow => ({
+    (node): RecipeRow<TNode> => ({
       source: 'local',
       node,
       match: enrichmentFor(node),

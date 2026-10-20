@@ -1,18 +1,19 @@
 import { knownEntry } from '#/utils/closedEnum';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useTranslation } from '#/i18n';
 import { useAppStore } from '#store/useAppStore';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { t as tGlobal } from '#/i18n';
 import { useDeferredSearch } from '#features/recipes/hooks/useDeferredSearch';
 import { pantryItemSearch } from '#utils/searchUtils';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { useRecipeSearch } from '#features/recipes/hooks/useRecipeSearch';
+import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { IconName } from '#components/atoms/Icon';
 import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 import {
@@ -21,19 +22,37 @@ import {
   INTOLERANCE_ENUM_TO_SPOONACULAR,
 } from '#features/recipes/utils/recipeFilterMaps';
 import { isLifestyleDiet } from '#domain/dietary';
-import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { toDisplayItems, type DisplayItem } from './recipeDisplayItems';
-import {
-  EMPTY_PAGINATION,
-  executeRecipeIngredientSearch,
-  executeRecipeLoadMore,
-  executeRecipeTextSearch,
-  type SearchPagination,
-} from '#features/recipes/utils/recipeSearchPaging';
+import type { SearchOutcome } from '#features/recipes/utils/recipeSearchPaging';
 
-// ── Module-level search helpers (React Compiler safe) ──
-
-// ── Facade hook ──
+/** Says why a search showed nothing, in the screen's words. */
+function presentSearchOutcome(outcome: SearchOutcome): void {
+  if (outcome.status !== 'failed') return;
+  switch (outcome.failure) {
+    case 'offline':
+      // A modal would cover the screen's own offline state.
+      toastService.info(tGlobal('errors.offlineSearchUnavailable'));
+      return;
+    case 'quotaExceeded':
+      alertService.alert(
+        tGlobal('recipes.apiLimitTitle'),
+        tGlobal('recipes.apiLimitMessage'),
+      );
+      return;
+    case 'rateLimited':
+      alertService.alert(
+        tGlobal('recipes.rateLimitTitle'),
+        tGlobal('recipes.rateLimitMessage'),
+      );
+      return;
+    case 'failed':
+      alertService.alert(
+        tGlobal('errors.searchFailed'),
+        tGlobal('recipes.searchErrorMessage'),
+      );
+      return;
+  }
+}
 
 /**
  * The search term for a restriction, or none. A member the server added after
@@ -51,14 +70,6 @@ function spoonacularTerm<K extends string>(
 export function useRecipeScreen() {
   const { t } = useTranslation();
   const apiUnavailable = useAppStore(isApiUnavailable);
-
-  // Apollo client for the imperative local-API search in executeRecipeTextSearch
-  const client = useApolloClient();
-
-  // Monotonic token that supersedes in-flight text searches. Every fresh search
-  // (new query, filter re-run, refresh) bumps it and captures the value; a
-  // search only commits its results if its captured value is still current.
-  const searchGenerationRef = useRef(0);
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
@@ -86,23 +97,16 @@ export function useRecipeScreen() {
   // ── Discovery (includes pantry data) ──
   const discovery = useRecipeDiscovery(dietaryTags);
 
-  // ── Search state ──
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  // Rows and cursors are ONE atom so a load-more commits both together; a
-  // changed pagination identity tells it a new search replaced the state
-  // mid-flight, and the stale page is dropped.
-  const [searchData, setSearchData] = useState<{
-    rows: RecipeRow[];
-    pagination: SearchPagination;
-  }>({ rows: [], pagination: EMPTY_PAGINATION });
+  // ── Search ──
+  const recipeSearch = useRecipeSearch(SearchRecipesDocument);
+  const {
+    query: searchQuery,
+    performed: searchPerformed,
+    loading: searchLoading,
+    loadingMore: searchLoadingMore,
+  } = recipeSearch;
   // Written here, not when a page arrives, so the list follows a language change.
-  const searchResults = toDisplayItems(searchData.rows, t);
-  const searchPagination = searchData.pagination;
-  // Guards against overlapping load-more calls (onEndReached can fire several
-  // times before the next page resolves) and re-appending the same page.
-  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  const searchResults = toDisplayItems(recipeSearch.rows, t);
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
     new Set(),
   );
@@ -120,31 +124,11 @@ export function useRecipeScreen() {
     setIngredientSearchQuery('');
   };
 
-  // A fresh search replaces the list and resets pagination (the cursors come
-  // from executeRecipeTextSearch via setSearchPagination).
-  const setSearchRows = (rows: RecipeRow[]) => {
-    setSearchData(prev => ({ ...prev, rows }));
-  };
-
-  const setSearchPagination = (pagination: SearchPagination) => {
-    setSearchData(prev => ({ ...prev, pagination }));
-  };
-
   // Re-run the current search with an explicit filter set (state updates are
   // async, so the caller passes the next filters rather than reading state).
   const rerunSearchWithFilters = async (nextFilters: RecipeFilters) => {
     if (!searchPerformed || !searchQuery.trim()) return;
-    const generation = (searchGenerationRef.current += 1);
-    await executeRecipeTextSearch(
-      searchQuery,
-      nextFilters,
-      client,
-      setSearchLoading,
-      setSearchPerformed,
-      setSearchRows,
-      setSearchPagination,
-      () => generation === searchGenerationRef.current,
-    );
+    presentSearchOutcome(await recipeSearch.search(searchQuery, nextFilters));
   };
 
   // The profile's Diet/Intolerance enums as the Spoonacular strings
@@ -174,7 +158,7 @@ export function useRecipeScreen() {
   } = useRecipeFilters({
     profileFilters,
     onApplyFilters: nextFilters => {
-      // A search failure is reported inside the fetch, never thrown.
+      // A search failure is an outcome the rerun presents, never thrown.
       void rerunSearchWithFilters(nextFilters);
     },
   });
@@ -186,37 +170,7 @@ export function useRecipeScreen() {
   // The whole list is shown; pagination is real, not a client-side slice.
   const searchItems = showSearchResults ? searchResults : [];
 
-  // More remains while EITHER source still has a page to fetch.
-  const searchHasMore =
-    showSearchResults &&
-    (searchPagination.localHasNextPage ||
-      searchPagination.spoonacularOffset < searchPagination.spoonacularTotal);
-
-  // Fetch the next page from each source, dedupe the new rows against what's
-  // already shown, and append. The loadingMore flag drops re-entrant calls
-  // (onEndReached can fire repeatedly mid-fetch).
-  const loadMoreSearch = async () => {
-    if (!searchHasMore || searchLoadingMore) return;
-    const captured = searchPagination;
-    // executeWithLoadingState guarantees searchLoadingMore is cleared even if
-    // the map/dedup step throws synchronously — otherwise a single throw would
-    // leave the guard stuck and disable load-more permanently.
-    await executeWithLoadingState(async () => {
-      const outcome = await executeRecipeLoadMore(captured, client);
-      if (!outcome) return;
-      // Commit rows + cursors together, and only if the pagination is still
-      // the one this fetch started from — a new search or clear mid-flight
-      // replaced it, and this page belongs to the old query.
-      setSearchData(prev =>
-        prev.pagination === captured
-          ? {
-              rows: [...prev.rows, ...outcome.rows],
-              pagination: outcome.nextPagination,
-            }
-          : prev,
-      );
-    }, setSearchLoadingMore);
-  };
+  const searchHasMore = showSearchResults && recipeSearch.hasMore;
 
   const items: DisplayItem[] = showSearchResults
     ? searchItems
@@ -245,19 +199,7 @@ export function useRecipeScreen() {
 
   const handleTextSearch = async (query: string) => {
     if (!query.trim()) return;
-    setSearchQuery(query);
-
-    const generation = (searchGenerationRef.current += 1);
-    await executeRecipeTextSearch(
-      query,
-      activeFilters,
-      client,
-      setSearchLoading,
-      setSearchPerformed,
-      setSearchRows,
-      setSearchPagination,
-      () => generation === searchGenerationRef.current,
-    );
+    presentSearchOutcome(await recipeSearch.search(query, activeFilters));
   };
 
   const handleIngredientSearch = async () => {
@@ -268,61 +210,23 @@ export function useRecipeScreen() {
       );
       return;
     }
-
-    const ingredientString = Array.from(selectedIngredients).join(',');
-
-    // Ingredient results aren't driven by the text query, and filters don't
-    // apply to them — clearing the query keeps the active-filter row and the
-    // filtered empty state scoped to text searches only.
-    setSearchQuery('');
-
-    // Ingredient search is a single non-paginated Spoonacular call — clear any
-    // text-search pagination so the list doesn't try to "load more".
-    setSearchPagination(EMPTY_PAGINATION);
-
-    // Join the generation scheme: bump so any in-flight text search is
-    // superseded, and capture so a text search fired after this one supersedes
-    // this ingredient search's commit.
-    const generation = (searchGenerationRef.current += 1);
-    await executeRecipeIngredientSearch(
-      ingredientString,
-      setSearchLoading,
-      setSearchPerformed,
-      setSearchRows,
-      () => generation === searchGenerationRef.current,
+    // The search clears the text query, so the active-filter row and the
+    // filtered empty state stay scoped to text searches: filters don't apply.
+    presentSearchOutcome(
+      await recipeSearch.searchByIngredients(Array.from(selectedIngredients)),
     );
   };
 
   const handleRefresh = async () => {
     if (searchPerformed) {
       if (searchQuery.trim()) {
-        const generation = (searchGenerationRef.current += 1);
-        await executeRecipeTextSearch(
-          searchQuery,
-          activeFilters,
-          client,
-          setSearchLoading,
-          setSearchPerformed,
-          setSearchRows,
-          setSearchPagination,
-          () => generation === searchGenerationRef.current,
+        presentSearchOutcome(
+          await recipeSearch.search(searchQuery, activeFilters),
         );
       }
     } else {
       await discovery.refresh();
     }
-  };
-
-  const clearSearch = () => {
-    // Bump the generation so any in-flight text search is superseded and can't
-    // re-populate the list after the user has cleared it.
-    searchGenerationRef.current += 1;
-    setSearchQuery('');
-    setSearchPerformed(false);
-    setSearchData({ rows: [], pagination: EMPTY_PAGINATION });
-    // Clear the loading flag too — a search cleared mid-flight would otherwise
-    // leave the empty state stuck on the "searching…" spinner.
-    setSearchLoading(false);
   };
 
   // ── Empty state ──
@@ -391,7 +295,7 @@ export function useRecipeScreen() {
     searchLoading,
     searchLoadingMore,
     searchHasMore,
-    loadMoreSearch,
+    loadMoreSearch: recipeSearch.loadMore,
     selectedIngredients,
     ingredientSearchQuery,
     setIngredientSearchQuery,
@@ -414,7 +318,7 @@ export function useRecipeScreen() {
     handleTextSearch,
     handleIngredientSearch,
     handleRefresh,
-    clearSearch,
+    clearSearch: recipeSearch.clear,
     toggleIngredient,
     clearSelectedIngredients,
   };
