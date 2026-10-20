@@ -1,6 +1,6 @@
 /**
- * Where the app's source lives, for every tool that reads it: a second host
- * adds its root here and nowhere else.
+ * Where the app's source lives, for every tool that reads it: a new root is
+ * added here and nowhere else.
  *
  * `PRODUCTION_ROOTS` hold production code. `OPERATION_ROOTS` hold the `.graphql`
  * documents that codegen, the persisted-query manifest, the readers and

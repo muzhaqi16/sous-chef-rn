@@ -99,8 +99,7 @@ app calls from `App.tsx` before the first sign-in
   credential while the session can still authorise that, then deletes the
   biometric slot (`src/services/biometric/`).
 
-A host that registers nothing, as the web app will, signs out through the same
-teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
+A host that registers nothing signs out through the same teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
 that it still leaves no tokens, cache, queued writes or session-scoped state.
 
 **A session is bound to the device only if the id is present at sign-in.**

@@ -173,7 +173,8 @@ const LAYER_FILES = LAYERS.flatMap(entry =>
   entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
 );
 
-// What the core may import from node_modules: modules a browser host has too.
+// What the core may import from node_modules: modules that run without React
+// Native.
 const CORE_EXTERNALS = [
   'react',
   '@apollo/client',
@@ -219,7 +220,7 @@ const LAYER_POLICIES = [
       },
     },
     message:
-      'Core code imports only the external modules a browser host has too (CORE_EXTERNALS in eslint/boundaries.js). Reach the device through a port in src/platform/.',
+      'Core code imports only external modules that run without React Native (CORE_EXTERNALS in eslint/boundaries.js). Reach the device through a port in src/platform/.',
   },
 ];
 
@@ -247,7 +248,7 @@ const CORE_RESTRICTED_GLOBALS = [
     ['requestIdleCallback', 'cancelIdleCallback'],
     'Safari and node have no idle callbacks. Use `scheduleIdle` from #/utils/scheduleIdle.',
   ),
-  // Node's own globals: neither React Native nor a browser has them.
+  // Node's own globals, which React Native does not have.
   ...restrictedGlobals(
     ['process', 'Buffer', 'setImmediate', '__dirname', '__filename', 'require'],
     'Core code runs without Node. Read build values through the `environment` port, and import modules with `import`.',

@@ -80,8 +80,7 @@ Map and reasoning: `docs/architecture.md`.
   module named after a feature" (navigation stacks exempt).
 - `src/domain/` is logic 2+ features share; `src/app/` is the composition root.
 - **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without
-  React Native and is shared with the web host; **mobile** is the React Native
-  app. Core imports only core and `CORE_EXTERNALS` (`boundaries/dependencies`),
+  React Native; **mobile** is the React Native app. Core imports only core and `CORE_EXTERNALS` (`boundaries/dependencies`),
   and the `core-portability` Jest project loads every core file in node. A file
   that mixes layers moves; the map grows no exception. In a feature, a hook that
   renders, picks an icon or reaches a device sits beside its UI, and a shape

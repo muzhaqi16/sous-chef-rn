@@ -53,7 +53,7 @@ That goal drives most of the architectural choices below.
 Every production file in `src/` belongs to one of two layers:
 
 - **core** runs without React Native. It holds the data layer, state, copy and
-  domain logic, and is what a second host (the web app) shares.
+  domain logic, and loads in node with nothing from a device.
 - **mobile** is the React Native app: screens, components, navigation, device
   services and the composition root.
 
@@ -94,8 +94,8 @@ The core is held two ways:
   no React Native preset, where every React-Native-family package throws when
   loaded and the in-memory platform is installed. `coreLoadsInNode.test.ts`
   loads every core file, so a reach anywhere in its imports fails, naming
-  the package it got to. Other suites there run core flows a second host
-  relies on: a sign-out with no host steps registered, and the meal-plan writes,
+  the package it got to. Other suites there run core flows with no device: a
+  sign-out with no host steps registered, and the meal-plan writes,
   rendered through a probe component with `react-test-renderer`.
 
 ### Platform ports
@@ -796,8 +796,8 @@ sizes, breakpoints, zIndex, motion durations, the palette derivation and the
 appearance options), theme composition, and the appearance system —
 light/dark/system, brand color, density, font scale, and high contrast, all
 derived at runtime (`foundations/derivePalette.ts`, `applyAppearance.ts`).
-`foundations/` is core and has no React Native in it, so a web host builds its
-styles from the same tokens; the rest of `src/theme/` is the Unistyles runtime.
+`foundations/` is core and has no React Native in it; the rest of `src/theme/`
+is the Unistyles runtime.
 
 ### Internationalization
 

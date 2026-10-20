@@ -1,11 +1,10 @@
 /**
  * The layer every production file in `src/` belongs to, by folder.
  *
- * `core` runs without React Native and is shared with the web host; `mobile`
- * is the React Native app. Lint, Jest and scripts read this one map. A file
- * belongs to exactly one entry (`layerMembership.test.ts`), so a new folder is
- * classified the day it exists; a file that mixes layers moves, the map does
- * not grow an exception.
+ * `core` runs without React Native; `mobile` is the React Native app. Lint,
+ * Jest and scripts read this one map. A file belongs to exactly one entry
+ * (`layerMembership.test.ts`), so a new folder is classified the day it
+ * exists; a file that mixes layers moves, the map does not grow an exception.
  *
  * Patterns use `*`, `**` and `{a,b}` only, so they mean the same here as in
  * eslint-plugin-boundaries' micromatch. CommonJS because the ESLint and Jest
