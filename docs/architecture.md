@@ -57,13 +57,32 @@ Every production file in `src/` belongs to one of two layers:
 - **mobile** is the React Native app: screens, components, navigation, device
   services and the composition root.
 
-| Core                                                                                                                                                                                      | Mobile                                                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `styles`            |
-| `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance,biometric,device}`, `NavigationService.ts`       |
-| `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
-| `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
-| `features/*/{hooks,cache,offline,graphql,utils,store,locales,constants}`, `manifest.static.ts`, `types.ts`, `pushCopy.ts`, and `features/{registry.static,registry.cache,staticTypes}.ts` | `features/*/{screens,components,ui,context}`, `manifest.ts`, `testIDs.ts`, and `features/{registry,types}.ts` |
+| Entry                 | Layer  | Paths under `src/`                                                                                                             |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| platform              | core   | `platform/**`                                                                                                                  |
+| apollo                | core   | `apollo/**`                                                                                                                    |
+| domain                | core   | `domain/**`                                                                                                                    |
+| graphql               | core   | `graphql/**`                                                                                                                   |
+| i18n                  | core   | `i18n/**`                                                                                                                      |
+| config                | core   | `config/**`                                                                                                                    |
+| store                 | core   | `store/**`                                                                                                                     |
+| types                 | core   | `types/**`                                                                                                                     |
+| utils                 | core   | `utils/**`                                                                                                                     |
+| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                                  |
+| services              | core   | `services/{subscriptions,spoonacular,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts` |
+| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                                   |
+| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                                         |
+| theme/foundations     | core   | `theme/foundations/**`                                                                                                         |
+| features/utils        | core   | `features/*/utils/**`                                                                                                          |
+| features/graphql      | core   | `features/*/graphql/**`                                                                                                        |
+| features/cache        | core   | `features/*/cache/**`                                                                                                          |
+| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                                        |
+| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,staticTypes}.ts`                   |
+| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                                |
+| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts`            |
+| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                           |
+| theme runtime         | mobile | `theme/*.ts`                                                                                                                   |
+| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts`            |
 
 **Classify by folder; move only what mixes.** A file takes its layer from where
 it sits, so a new file needs no registration, and a file that would need an
@@ -72,9 +91,10 @@ its top level for that reason.
 
 The map lives in `scripts/lib/layers.js`, the one copy lint, Jest and scripts
 read. `__tests__/architecture/layerMembership.test.ts` fails when a file matches
-no entry or two, naming the file.
+no entry or two, naming the file, and `layerDocs.test.ts` fails when the table
+above or the services table below differs from the code.
 
-The core is held two ways:
+The core is held three ways:
 
 - **Lint** (`eslint/boundaries.js`). Every file carries a `core` or `mobile`
   category, and a `core` file may not import a `mobile` one, type
@@ -121,6 +141,7 @@ the way an eager bundler does.
 | `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
+| `haptics`       | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)     |
 | `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
 | `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
 
