@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as ts from 'typescript';
 import { SRC, walk } from '#/test-utils/queueableOperations';
+import { PRODUCTION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 /**
  * A hook member no production code reads is either dead or a gap: a `loadMore`
@@ -127,9 +128,9 @@ function exportedHooks(
 }
 
 describe('every member a hook returns is read by production code', () => {
-  const files = walk(SRC, name => /\.tsx?$/.test(name)).filter(
-    file => !isTestFile(file),
-  );
+  const files = PRODUCTION_ROOT_DIRS.flatMap(dir =>
+    walk(dir, name => /\.tsx?$/.test(name)),
+  ).filter(file => !isTestFile(file));
   const hookFiles = files.filter(
     file =>
       (/\/features\/[^/]+\/hooks\//.test(file) ||
@@ -242,7 +243,7 @@ describe('every member a hook returns is read by production code', () => {
     ): node is ts.PropertySignature | ts.MethodSignature => {
       const { fileName } = node.getSourceFile();
       return (
-        fileName.startsWith(SRC) &&
+        PRODUCTION_ROOT_DIRS.some(dir => fileName.startsWith(dir)) &&
         !fileName.endsWith('.generated.ts') &&
         (ts.isPropertySignature(node) || ts.isMethodSignature(node))
       );

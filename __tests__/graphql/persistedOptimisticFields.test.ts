@@ -19,6 +19,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, relative } from 'path';
 import { parse, Kind } from 'graphql';
+import { PRODUCTION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ROOT = resolve(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -75,7 +76,7 @@ const collectPersistedFields = (): {
   const fields: PersistedField[] = [];
   const unparsed: string[] = [];
 
-  for (const file of sourceFiles(SRC)) {
+  for (const file of PRODUCTION_ROOT_DIRS.flatMap(dir => sourceFiles(dir))) {
     const source = readFileSync(file, 'utf8');
     for (const match of source.matchAll(CALL)) {
       const args = match[1];

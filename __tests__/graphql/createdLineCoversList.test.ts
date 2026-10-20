@@ -18,6 +18,7 @@ import { resolve } from 'path';
 import { parse, Kind, type SelectionSetNode, type DocumentNode } from 'graphql';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ROOT = resolve(__dirname, '..', '..');
 
@@ -44,7 +45,7 @@ const DOCUMENTS: DocumentNode[] = (() => {
       }
     }
   };
-  walk(resolve(ROOT, 'src'));
+  OPERATION_ROOT_DIRS.forEach(dir => walk(dir));
   return documents;
 })();
 

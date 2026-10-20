@@ -26,6 +26,7 @@ const {
   ENFORCED_CORE_PATTERNS,
 } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
+const { operationGlobs } = require('../scripts/lib/sourceRoots');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -281,7 +282,7 @@ const overrides = [
           schema: './src/graphql/generated/schema.graphql',
           // The cross-document rules (unused fragments, undefined variables,
           // fragment spreads) need the whole operation set, not one file.
-          documents: ['src/**/*.graphql'],
+          documents: operationGlobs(),
         },
       },
     },

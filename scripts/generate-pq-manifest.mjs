@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { parse, print, Kind } = require('graphql');
+const { operationGlobs } = require('./lib/sourceRoots.js');
 const {
   generatePersistedQueryManifest,
 } = require('@apollo/generate-persisted-query-manifest');
@@ -40,7 +41,7 @@ const OUTPUT = join(repoRoot, 'persisted-query-manifest.json');
 // predicate never sees the directory and lets `generated/schema.graphql`
 // through. globSync does not sort, and the manifest's operation order has to be
 // stable across machines.
-const files = globSync('src/**/*.graphql', {
+const files = globSync(operationGlobs(), {
   cwd: repoRoot,
   exclude: p => /(^|\/)graphql\/generated(\/|$)/.test(p),
 })

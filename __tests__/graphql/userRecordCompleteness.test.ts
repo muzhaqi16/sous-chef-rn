@@ -23,6 +23,7 @@ import {
   Kind,
   type SelectionSetNode,
 } from 'graphql';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const SRC = path.resolve(__dirname, '../../src');
 const schema = buildSchema(
@@ -51,7 +52,7 @@ interface UserSelection {
 
 const collectUserSelections = (): UserSelection[] => {
   const found: UserSelection[] = [];
-  for (const file of graphqlFiles(SRC)) {
+  for (const file of OPERATION_ROOT_DIRS.flatMap(dir => graphqlFiles(dir))) {
     const document = parse(fs.readFileSync(file, 'utf8'));
     const typeInfo = new TypeInfo(schema);
     visit(
@@ -62,7 +63,7 @@ const collectUserSelections = (): UserSelection[] => {
           const type = typeInfo.getType();
           if (!type || getNamedType(type).name !== 'User') return;
           found.push({
-            file: path.relative(SRC, file),
+            file: path.relative(path.dirname(SRC), file),
             field: node.name.value,
             fields: scalarNames(node.selectionSet),
           });
