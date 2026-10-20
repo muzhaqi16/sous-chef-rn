@@ -471,6 +471,9 @@ async function addAllTo(result: {
   await act(async () => {
     result.current.handleListSelected('sl-1');
   });
+  // The add runs unawaited and marks its rows outside `act`, just before its
+  // toast; it is over, with every update committed, once it stops adding.
+  await waitFor(() => expect(result.current.addingToList).toBe(false));
 }
 
 const LINES = gql`

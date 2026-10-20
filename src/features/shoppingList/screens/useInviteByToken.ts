@@ -1,21 +1,10 @@
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import {
-  skipToken,
-  useFragment,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
-import type { DocumentNode } from 'graphql';
-import { invitationRefusalCopy } from '#/domain/invitationRefusal';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
-import {
-  AcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
-} from '#features/shoppingList/graphql/collaboration.generated';
-import {
-  AcceptHomeInviteDocument,
-  DeclineHomeInviteDocument,
-} from '#operations/home/home.generated';
+  useInvitationActions,
+  type InvitationWriteResult,
+} from '#features/notifications/hooks/useInvitationActions';
+import { useUserId } from '#store/useAppStore';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import {
   AcceptInvite_ShoppingListInviteFragmentDoc,
   AcceptInvite_HomeInviteFragmentDoc,
@@ -29,18 +18,11 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 
 export type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
-/** False when the write failed; the failure is already alerted. */
-const settleInvite = async (
-  run: () => Promise<{ data?: unknown; error?: unknown }>,
-  document: DocumentNode,
-  fallback: string,
-): Promise<boolean> => {
-  const settled = await settleMutation(run, {
-    document,
-    fallback,
-    copy: invitationRefusalCopy(),
-  });
-  return settled.status !== 'failed';
+/** False when the write failed, after alerting why. */
+const answered = (result: InvitationWriteResult): boolean => {
+  if (result.status === 'done') return true;
+  presentFailure(result.failure);
+  return false;
 };
 
 /**
@@ -49,8 +31,10 @@ const settleInvite = async (
  * cached pending list on a fresh device.
  */
 export function useInviteByToken(token: string | undefined) {
-  const { t } = useTranslation();
   const { requireVerifiedEmail } = useVerifiedEmailGate();
+  // No notification behind a link: the invite is named by its token alone.
+  const { acceptHome, acceptList, declineHome, declineList } =
+    useInvitationActions(null, useUserId() ?? null);
   const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
     GetHomeInviteByTokenDocument,
     token ? { variables: { token } } : skipToken,
@@ -59,15 +43,6 @@ export function useInviteByToken(token: string | undefined) {
     GetShoppingListInviteByTokenDocument,
     token ? { variables: { token } } : skipToken,
   );
-
-  const [acceptShoppingListInvite] = useMutation(
-    AcceptShoppingListInviteDocument,
-  );
-  const [declineShoppingListInvite] = useMutation(
-    DeclineShoppingListInviteDocument,
-  );
-  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
-  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
 
   const shoppingListInvite = listInviteData?.shoppingListInviteByToken ?? null;
   const homeInvite = homeInviteData?.homeInviteByToken ?? null;
@@ -97,37 +72,19 @@ export function useInviteByToken(token: string | undefined) {
     // The API refuses an accept from an unverified email; the gate says so and
     // offers the way to verify, with the invite still pending afterwards.
     if (!requireVerifiedEmail()) return false;
-    const variables = { input: { token: inviteToken } };
-    const fallback = t('invitationAcceptance.acceptFailed');
-    if (invitationType === 'home') {
-      return settleInvite(
-        () => acceptHomeInvite({ variables }),
-        AcceptHomeInviteDocument,
-        fallback,
-      );
-    }
-    return settleInvite(
-      () => acceptShoppingListInvite({ variables }),
-      AcceptShoppingListInviteDocument,
-      fallback,
+    return answered(
+      invitationType === 'home'
+        ? await acceptHome(inviteToken)
+        : await acceptList(inviteToken),
     );
   };
 
   const decline = async (inviteToken: string): Promise<boolean> => {
     if (invitationType === 'unknown') return false;
-    const variables = { input: { token: inviteToken } };
-    const fallback = t('invitationAcceptance.declineFailed');
-    if (invitationType === 'home') {
-      return settleInvite(
-        () => declineHomeInvite({ variables }),
-        DeclineHomeInviteDocument,
-        fallback,
-      );
-    }
-    return settleInvite(
-      () => declineShoppingListInvite({ variables }),
-      DeclineShoppingListInviteDocument,
-      fallback,
+    return answered(
+      invitationType === 'home'
+        ? await declineHome(inviteToken)
+        : await declineList(inviteToken),
     );
   };
 

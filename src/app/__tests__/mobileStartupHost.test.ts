@@ -1,6 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
 import { mockAppStore } from '#/test-utils/mockAppStore';
-import { useStartupInit } from '../useStartupInit';
+import { useCoreStartup } from '#bootstrap/useCoreStartup';
+import { useMobileStartupHost } from '../mobileStartupHost';
+
+/** The start-up the mobile root runs: the core's, with this device's steps. */
+const useStartupInit = () => useCoreStartup(useMobileStartupHost());
 
 jest.mock('#store/useAppStore', () =>
   mockAppStore({
@@ -51,7 +55,7 @@ const { registerDeviceInBackground } = jest.requireMock(
   '#/services/device/deviceRegistration',
 );
 
-describe('useStartupInit — restored-session push registration', () => {
+describe('mobile start-up — restored-session push registration', () => {
   beforeAll(() => {
     (
       global as unknown as { requestIdleCallback: (cb: () => void) => number }
@@ -96,7 +100,7 @@ describe('useStartupInit — restored-session push registration', () => {
   });
 });
 
-describe('useStartupInit — the shared JS-entry origin', () => {
+describe('mobile start-up — the shared JS-entry origin', () => {
   afterEach(() => {
     delete (globalThis as { __APP_START_TIMESTAMP?: number })
       .__APP_START_TIMESTAMP;
@@ -134,7 +138,7 @@ it('purges the legacy registration password at startup', () => {
   expect(clearTempRegistrationPassword).toHaveBeenCalledTimes(1);
 });
 
-describe('useStartupInit — the build gate on launch-arg injection', () => {
+describe('mobile start-up — the build gate on launch-arg injection', () => {
   // Accepting an auth state from launch arguments is a NAMED capability with
   // its own default-off flag. Every gate this has worn before was a property of
   // something else and leaked: `!Environment.isProduction` was a method read

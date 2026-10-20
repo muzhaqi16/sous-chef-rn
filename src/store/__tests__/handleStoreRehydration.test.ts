@@ -3,6 +3,7 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import { errorService } from '#/services/errorService';
 import { storage } from '#/store/deviceStorage';
 import { requirePlatform } from '#platform/install';
+import { telemetryDefaults } from '#store/slices/telemetrySlice';
 
 jest.mock('#/services/errorService');
 
@@ -18,6 +19,30 @@ describe('handleStoreRehydration', () => {
     expect(useStore.getState().isHydrated).toBe(true);
     expect(errorService.reportError).toHaveBeenCalledWith(err, {
       operation: 'storeHydration',
+    });
+  });
+
+  describe('the telemetry flags', () => {
+    const flagsOff = {
+      isEnabled: false,
+      enableMetrics: false,
+      enableLogs: false,
+    } as const;
+
+    it('derives them from the build when hydration succeeds', () => {
+      useStore.setState(flagsOff);
+
+      handleStoreRehydration(undefined, undefined);
+
+      expect(useStore.getState()).toMatchObject(telemetryDefaults());
+    });
+
+    it('derives them when hydration fails too', () => {
+      useStore.setState(flagsOff);
+
+      handleStoreRehydration(undefined, new Error('rehydrate boom'));
+
+      expect(useStore.getState()).toMatchObject(telemetryDefaults());
     });
   });
 

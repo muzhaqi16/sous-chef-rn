@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/data/useDataPreloading';
-import { useOfflineTabPreloading } from '#/app/useOfflineTabPreloading';
+import { useOfflineTabPreloading } from './useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
 
-interface DataProviderProps {
+interface CoreDataProviderProps {
   children: React.ReactNode;
 }
 
@@ -16,7 +16,9 @@ interface DataProviderProps {
  * Must sit inside `ApolloProvider` but ABOVE navigation, or the warm-up starts
  * after the screens that need it.
  */
-export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
+export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
+  children,
+}) => {
   const user = useUser();
   const isLoggingOut = useIsLoggingOut();
   const updateUser = useUpdateUser();

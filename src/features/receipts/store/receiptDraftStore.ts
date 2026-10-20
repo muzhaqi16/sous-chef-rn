@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/store/deviceStorage';
+import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -383,11 +384,14 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       version: 3,
       partialize: state => ({ draft: state.draft }),
     },
   ),
 );
+
+hydrateWhenStarted(useReceiptDraftStore);
 
 registerSessionScopedStore('receiptDraft', () =>
   useReceiptDraftStore.getState().clearDraft(),

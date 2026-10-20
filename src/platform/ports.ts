@@ -132,6 +132,19 @@ export interface ImagePrefetch {
   prefetch(uris: string[]): void;
 }
 
+/** What the network reports; `isConnected: null` is before its first report. */
+export interface ConnectivityState {
+  isConnected: boolean | null;
+  /** `null` until the host has probed it. */
+  isInternetReachable: boolean | null;
+  type: string;
+}
+
+export interface Connectivity {
+  /** Reports the current state soon after, then every change; returns the unsubscribe. */
+  subscribe(listener: (state: ConnectivityState) => void): () => void;
+}
+
 /** The feedback an action gives when it runs; a host without it does nothing. */
 export interface Haptics {
   selection(): void;
@@ -174,6 +187,7 @@ export interface PlatformServices {
   secureStore: SecureStore;
   platformInfo: PlatformInfo;
   appLifecycle: AppLifecycle;
+  connectivity: Connectivity;
   appearance: Appearance;
   imagePrefetch: ImagePrefetch;
   haptics: Haptics;

@@ -61,7 +61,7 @@ class HapticFeedbackService {
   }
 
   isEnabled(): boolean {
-    // useStartupInit defers initialize() to the idle queue, so an early tap can
+    // The mobile start-up host defers initialize() to the idle queue, so an early tap can
     // beat it — self-initialize rather than read an uncached value each time.
     if (!this.initialized) {
       this.initialize();

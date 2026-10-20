@@ -6,10 +6,10 @@ import {
   enableAutoReconnect,
   disableAutoReconnect,
 } from '#/apollo/links/wsLink';
-import { AuthenticatedSubscriptions } from '#/app/providers/AuthenticatedSubscriptions';
-import { AuthenticatedDataProvider } from '#/app/providers/AuthenticatedDataProvider';
+import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
+import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 
-interface SubscriptionProviderProps {
+interface CoreSubscriptionProviderProps {
   children: React.ReactNode;
 }
 
@@ -18,9 +18,9 @@ interface SubscriptionProviderProps {
  * deduplication, cache updates and logout teardown behave the same everywhere.
  * Must sit inside `ApolloProvider`, alongside `DataProvider`.
  */
-export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
-  children,
-}) => {
+export const CoreSubscriptionProvider: React.FC<
+  CoreSubscriptionProviderProps
+> = ({ children }) => {
   const user = useUser();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),

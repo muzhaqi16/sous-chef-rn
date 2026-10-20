@@ -15,8 +15,8 @@ jest.mock('../src/navigation/RootNavigator', () => ({
 }));
 
 // Hooks / services that pull in native SDKs
-jest.mock('../src/hooks/device/useNetworkStatus', () => ({
-  useNetworkStatus: jest.fn(),
+jest.mock('../src/hooks/app/useNetworkStatusSync', () => ({
+  useNetworkStatusSync: jest.fn(),
 }));
 jest.mock('../src/services/performance/MemoryMonitor', () => ({
   MemoryMonitor: { start: jest.fn(), stop: jest.fn() },

@@ -3,7 +3,7 @@ import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { storage } from '#/store/deviceStorage';
 import { logger } from '#/utils/environment';
-import { CLIENT_VERSION } from './clientIdentity';
+import { clientVersion } from './clientIdentity';
 
 /**
  * Tells the user their build is below the server's minimum. The refusal lands
@@ -23,7 +23,7 @@ export function announceClientUpgradeRequired(): void {
   // toward announcing: a duplicate alert beats a link-layer throw.
   const storageReady = storage.isReady();
   if (storageReady) {
-    if (storage.getString(ANNOUNCED_VERSION_KEY) === CLIENT_VERSION) return;
+    if (storage.getString(ANNOUNCED_VERSION_KEY) === clientVersion()) return;
   } else {
     logger.warn(
       'Client-upgrade notice fired before storage init; announcing without the per-version guard',
@@ -34,7 +34,7 @@ export function announceClientUpgradeRequired(): void {
 
   // Recorded only after the alert is raised: burning the key first would
   // silence this build permanently if the notice never reached the user.
-  if (storageReady) storage.set(ANNOUNCED_VERSION_KEY, CLIENT_VERSION);
+  if (storageReady) storage.set(ANNOUNCED_VERSION_KEY, clientVersion());
 }
 
 /**
@@ -57,7 +57,7 @@ export function announceClientReleaseAvailable(recommended: string): void {
   if (storage.getString(ANNOUNCED_RECOMMENDED_KEY) === recommended) return;
 
   logger.info(
-    `A newer client release is available (${recommended}); running ${CLIENT_VERSION}`,
+    `A newer client release is available (${recommended}); running ${clientVersion()}`,
   );
   toastService.info(t('appUpdate.available'));
 

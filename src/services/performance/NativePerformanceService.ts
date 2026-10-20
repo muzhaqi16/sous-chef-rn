@@ -227,7 +227,7 @@ export const NativePerformanceService = {
     // `reportedFullyDrawn` and `sawInteractiveGate` are deliberately NOT reset:
     // they are PROCESS-scoped, like the `__APP_START_TIMESTAMP` they measure
     // against. Resetting them lets a remount emit a second `app_fully_drawn_ms`
-    // measured from the original JS entry. `useStartupInit.ts` does the same for
+    // measured from the original JS entry. `useCoreStartup.ts` does the same for
     // `reportedStartupDuration`.
   },
 

@@ -1,5 +1,6 @@
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import NetInfo from '@react-native-community/netinfo';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
 import { generatedEnv } from '#native/generatedEnv';
@@ -14,19 +15,11 @@ import { alertService } from '#/services/alertService';
 import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
-import { logger } from '#/utils/environment';
+import { HapticService } from '#services/haptic/HapticService';
 
 // `null` is untyped but real: Android reports no state until its first change.
 const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
   status === null || status === 'extension' ? 'unknown' : status;
-
-// Imported at the first haptic, not statically: HapticService reads the store,
-// which reads this install as it loads.
-const haptic = (kind: 'selection' | 'warning') => (): void => {
-  import('#services/haptic/HapticService')
-    .then(({ HapticService }) => HapticService[kind]())
-    .catch((error: unknown) => logger.warn('Haptic feedback failed', error));
-};
 
 // Every adapter delegates through an arrow or a getter: Metro's inline requires
 // then load each native module at its first use, not during this install,
@@ -55,12 +48,25 @@ installPlatform({
       return () => subscription.remove();
     },
   },
+  connectivity: {
+    subscribe: listener =>
+      NetInfo.addEventListener(state =>
+        listener({
+          isConnected: state.isConnected,
+          isInternetReachable: state.isInternetReachable,
+          type: state.type,
+        }),
+      ),
+  },
   appearance: {
     applyTheme: theme => applyThemeToRuntime(theme),
     apply: settings => applyAppearanceToRuntime(settings),
   },
   imagePrefetch: { prefetch: uris => preloadImages(uris) },
-  haptics: { selection: haptic('selection'), warning: haptic('warning') },
+  haptics: {
+    selection: () => HapticService.selection(),
+    warning: () => HapticService.warning(),
+  },
   fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,
 });

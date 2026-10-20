@@ -26,6 +26,11 @@ const LAYERS = [
     patterns: ['src/apollo/**'],
   },
   {
+    name: 'bootstrap',
+    layer: 'core',
+    patterns: ['src/bootstrap/**'],
+  },
+  {
     name: 'domain',
     layer: 'core',
     patterns: ['src/domain/**'],

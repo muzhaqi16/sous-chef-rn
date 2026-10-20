@@ -6,11 +6,14 @@ import { isServerOwned, serverFlagsOf } from '#/config/serverFeatureFlags';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { useUser } from '#store/useAppStore';
 
-// A build's flags cannot change while it runs, so they resolve once.
-const BUILD_FLAGS = resolveFeatureFlags(
-  appConfig.featureFlags,
-  env.FEATURE_FLAGS,
-);
+// A build's flags cannot change while it runs, so they resolve once, at the
+// first read rather than at load: the build config is a platform service.
+let buildFlags: ReturnType<typeof resolveFeatureFlags> | undefined;
+const resolvedBuildFlags = () =>
+  (buildFlags ??= resolveFeatureFlags(
+    appConfig.featureFlags,
+    env.FEATURE_FLAGS,
+  ));
 
 /**
  * Whether a capability is on: the build allows it and, for a flag the server
@@ -25,7 +28,7 @@ export const useFeatureFlag = (flag: FeatureFlag): boolean => {
   );
   // A failed re-read empties `data`; the answer before it still stands.
   const answer = data ?? previousData;
-  if (!BUILD_FLAGS[flag]) return false;
+  if (!resolvedBuildFlags()[flag]) return false;
   if (!isServerOwned(flag)) return true;
   if (!answer) return false;
   return serverFlagsOf(answer.myFeatureFlags)[flag] ?? false;

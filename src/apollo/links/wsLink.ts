@@ -10,7 +10,7 @@ import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { backoffDelay, sleep } from '#/utils/backoff';
 import { getDeviceId } from '#/services/auth/deviceId';
-import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
+import { CLIENT_NAME, clientVersion } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import {
   isProtocolErrorCloseCode,
@@ -39,8 +39,10 @@ const DEFAULT_KEEP_ALIVE_MS = 12_000;
 
 let transport: WebSocketTransport = { webSocketImpl: globalThis.WebSocket };
 
-// Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
-const WS_URL = env.WEB_SOCKET_URL ?? Environment.getApiConfig().wsUrl;
+// env.WEB_SOCKET_URL if set, else the environment's default. Read when a
+// socket dials, not at load: the build config is a platform service.
+const wsUrl = (): string =>
+  env.WEB_SOCKET_URL ?? Environment.getApiConfig().wsUrl;
 
 // Replaceable because `dispose()` is one-way: it latches `disposed` with no
 // reset, after which every retry silently gives up. A session end must drop
@@ -190,7 +192,7 @@ const reportDialFailedBeforeOpen = (
     dial_failure_streak: dialFailureStreak,
     is_online: isOnline,
     api_reachable: apiReachable,
-    url: WS_URL,
+    url: wsUrl(),
   };
   logger.warn('🔌 WebSocket dial closed before the socket opened', detail);
   Telemetry.warn('WebSocket dial closed before the socket opened', detail);
@@ -301,7 +303,7 @@ const createWsClient = () => {
   return createClient({
     url: async () => {
       await awaitDialPermission();
-      return WS_URL;
+      return wsUrl();
     },
     webSocketImpl: transport.webSocketImpl,
     lazy: true, // only connect on first subscribe
@@ -330,7 +332,7 @@ const createWsClient = () => {
       // for its own transport only. Without it the server closes 4411 once a
       // minimum version is configured.
       params['apollographql-client-name'] = CLIENT_NAME;
-      params['apollographql-client-version'] = CLIENT_VERSION;
+      params['apollographql-client-version'] = clientVersion();
 
       // Always include API key if available
       if (apiKey) {
@@ -398,7 +400,7 @@ const createWsClient = () => {
 
         if (__DEV__) {
           logger.info('🔌 WebSocket connected:', {
-            url: WS_URL,
+            url: wsUrl(),
             timestamp: new Date().toISOString(),
           });
         }
@@ -435,7 +437,7 @@ const createWsClient = () => {
         if (code === WS_CLOSE_UPGRADE_REQUIRED) {
           shouldAutoReconnect = false;
           logger.error(
-            `🔌 WebSocket closed: client upgrade required (app version ${CLIENT_VERSION}): ${reason}`,
+            `🔌 WebSocket closed: client upgrade required (app version ${clientVersion()}): ${reason}`,
           );
           // Shared with the HTTP half so the two transports announce once
           // between them, not once each.
@@ -546,7 +548,7 @@ const createWsClient = () => {
         dialStage = 'dialing';
         if (__DEV__) {
           logger.info('🔌 WebSocket connecting...', {
-            url: WS_URL,
+            url: wsUrl(),
             timestamp: new Date().toISOString(),
           });
         }

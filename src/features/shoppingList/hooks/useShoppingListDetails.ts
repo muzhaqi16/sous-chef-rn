@@ -25,7 +25,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   // previous list is dropped.
   const data = variables.id === listId ? result : undefined;
 
-  // Real-time updates via subscription are now handled by SubscriptionProvider.
+  // Real-time updates via subscription are now handled by CoreSubscriptionProvider.
   // The MyShoppingListsEvents subscription automatically updates the cache via
   // Apollo's normalization, eliminating the need for manual client.writeQuery.
 
