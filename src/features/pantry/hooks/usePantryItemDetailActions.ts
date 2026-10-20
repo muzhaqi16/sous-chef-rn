@@ -4,20 +4,20 @@ import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from './usePantryItemDetailActions.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
-import type { PackageSizeCorrectionInput } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
+import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 
 type PantryItemForActions =
   | {

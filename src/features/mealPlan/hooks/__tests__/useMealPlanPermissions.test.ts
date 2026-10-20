@@ -1,10 +1,7 @@
 import { renderHook } from '@testing-library/react-native';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { getMealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
-import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import type { MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { useMealPlanPermissions } from '../useMealPlanPermissions';
-
-type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 
 jest.mock('#features/mealPlan/utils/mealPlanPermissions', () => ({
   getMealPlanPermissions: jest.fn(
@@ -83,7 +80,7 @@ describe('useMealPlanPermissions', () => {
       useMealPlanPermissions({
         homeId: null,
         user: { id: 'user-1' },
-      } as Partial<MealPlanLike> as MealPlanLike),
+      }),
     );
 
     expect(result.current.canEdit).toBe(true);
@@ -96,8 +93,8 @@ describe('useMealPlanPermissions', () => {
       useMealPlanPermissions({
         homeId: 'home-1',
         user: { id: 'user-1' },
-        home: { myMembership: { role: 'MEMBER' } },
-      } as Partial<MealPlanLike> as MealPlanLike),
+        home: { myMembership: { role: MembershipRole.Member } },
+      }),
     );
 
     expect(result.current.canEdit).toBe(true);
@@ -109,8 +106,8 @@ describe('useMealPlanPermissions', () => {
       useMealPlanPermissions({
         homeId: 'home-1',
         user: { id: 'other-user' },
-        home: { myMembership: { role: 'GUEST' } },
-      } as Partial<MealPlanLike> as MealPlanLike),
+        home: { myMembership: { role: MembershipRole.Guest } },
+      }),
     );
 
     expect(result.current.canEdit).toBe(false);
@@ -124,7 +121,7 @@ describe('useMealPlanPermissions', () => {
         homeId: 'home-1',
         user: { id: 'other-user' },
         home: { myMembership: null },
-      } as Partial<MealPlanLike> as MealPlanLike),
+      }),
     );
 
     expect(result.current.canEdit).toBe(false);

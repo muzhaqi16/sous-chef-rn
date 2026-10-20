@@ -11,7 +11,7 @@ import { ShoppingListSkeleton } from '#features/shoppingList/components/skeleton
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
-import { useShoppingListScreen } from '#features/shoppingList/hooks/useShoppingListScreen';
+import { useShoppingListScreen } from '#features/shoppingList/screens/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { ShoppingListTutorialProvider } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';

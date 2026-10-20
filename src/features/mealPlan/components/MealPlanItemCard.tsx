@@ -6,7 +6,7 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';

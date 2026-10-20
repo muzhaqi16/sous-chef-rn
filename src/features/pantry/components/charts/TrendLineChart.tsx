@@ -7,7 +7,7 @@ import { matchFont, Circle } from '@shopify/react-native-skia';
 import type { TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { typography } from '#/theme/foundations/typography';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 // `useUnistyles()` is intentional here: theme colors feed Skia primitives

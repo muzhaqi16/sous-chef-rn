@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { AddItemFieldRefusal } from '#features/catalog/types';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
@@ -16,10 +17,11 @@ import {
   StorageState,
   ItemType,
 } from '#/graphql/generated/schemaTypes';
-import {
-  MultiImagePicker,
-  type SelectedImage,
-} from '#features/catalog/components/MultiImagePicker';
+import { MultiImagePicker } from '#features/catalog/components/MultiImagePicker';
+import type {
+  AddItemSubmitPayload,
+  SelectedImage,
+} from '#features/catalog/types';
 import {
   UnitEntryList,
   type UnitEntry,
@@ -30,7 +32,7 @@ import {
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import type { AddItemFormData } from '#/utils/items/createItemMapping';
+import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
@@ -61,39 +63,6 @@ export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 const ITEM_TYPES = Object.values(ItemType);
 const STORAGE_STATES = Object.values(StorageState);
 const BASE_DIMENSIONS = Object.values(BaseDimension);
-
-export interface AddItemFormInitialData {
-  name?: string;
-  description?: string;
-  upc?: string;
-  vendor?: string;
-  brandId?: string;
-  brandName?: string;
-  imageUrl?: string;
-  type?: string;
-  storageState?: string;
-  shelfLifeDays?: number;
-  shelfLifeOpenedDays?: number;
-  baseDimension?: string;
-  tags?: string[];
-  categoryIds?: string[];
-  netWeights?: Array<{ value: number; unitName: string; unitId?: string }>;
-}
-
-/**
- * The flat payload AddItemForm emits on submit; `mapFormToCreateItemInput`
- * turns it into the nested `CreateItemInput`. `AddItemFormData`'s index
- * signature is what lets extra fields (e.g. `editReason`) pass through.
- */
-export type AddItemSubmitPayload = AddItemFormData & {
-  selectedImages: SelectedImage[];
-};
-
-/** A server refusal the user can fix, shown on the form field it names. */
-export interface AddItemFieldRefusal {
-  field: 'upc';
-  message: string;
-}
 
 /**
  * Editor rows → the shape `createItemSchema` validates. An empty row (the one

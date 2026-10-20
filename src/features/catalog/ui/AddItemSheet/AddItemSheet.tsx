@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
@@ -13,13 +13,9 @@ import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemFo
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { SuggestionListItem } from '#features/catalog/components/SuggestionListItem';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
-import type {
-  AddItemSheetProps,
-  BaseSuggestionItem,
-  SuggestionGroupConfig,
-} from './types';
+import type { AddItemSheetProps, SuggestionGroupConfig } from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
 import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
@@ -27,6 +23,7 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
+import type { BaseSuggestionItem } from '#features/catalog/types';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance

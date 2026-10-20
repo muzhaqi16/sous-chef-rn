@@ -3,10 +3,9 @@ import {
   getMealPlanPermissions,
   type MealPlanPermissions,
 } from '#features/mealPlan/utils/mealPlanPermissions';
-import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import type { MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 
-type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
+/** What the permission rules read off a plan, whichever query fetched it. */
+type MealPlanLike = Parameters<typeof getMealPlanPermissions>[0];
 
 /**
  * Hook that computes permissions for a meal plan based on the current user's

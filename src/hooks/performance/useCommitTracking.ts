@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
-import { usePerformanceStore } from '#/store/performanceStore';
+import { usePerformanceStore } from '#/services/performance/performanceStore';
 
 /**
  * Above this, a measurement is contaminated (batching overhead, backgrounding,

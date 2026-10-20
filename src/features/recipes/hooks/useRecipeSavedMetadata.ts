@@ -10,9 +10,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   UpdateFavoriteRecipeDocument,
   RemoveRecipeFromFavoritesDocument,
-  MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
-  type MySavedRecipesQuery,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
@@ -97,9 +95,7 @@ export function useRecipeSavedMetadata({
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (!payload) return;
-        const updatedSavedRecipe = payload.savedRecipe;
-
-        const folder = updatedSavedRecipe.folder;
+        const { folder } = payload.savedRecipe;
         if (folder) {
           cache.updateQuery<SavedRecipeFoldersQuery>(
             { query: SavedRecipeFoldersDocument },
@@ -115,35 +111,11 @@ export function useRecipeSavedMetadata({
             },
           );
         }
-
-        cache.updateQuery<MySavedRecipesQuery>(
-          { query: MySavedRecipesDocument },
-          existing => {
-            if (!existing?.me) return existing;
-            return {
-              ...existing,
-              me: {
-                ...existing.me,
-                savedRecipesConnection: {
-                  ...existing.me.savedRecipesConnection,
-                  edges: existing.me.savedRecipesConnection.edges.map(edge =>
-                    edge.node.id === updatedSavedRecipe.id
-                      ? {
-                          ...edge,
-                          node: { ...edge.node, ...updatedSavedRecipe },
-                        }
-                      : edge,
-                  ),
-                },
-              },
-            };
-          },
-        );
       },
     },
   );
 
-  // `handleUnfavoriteRecipe` drops the MySavedRecipes edge and
+  // `handleUnfavoriteRecipe` drops the saved-list edge and
   // `Recipe.savedDetails` BEFORE firing, so the un-save sticks offline, and
   // reverts a refusal from a snapshot; hence no update or onError here.
   const [unfavoriteRecipeMutation] = useMutation(

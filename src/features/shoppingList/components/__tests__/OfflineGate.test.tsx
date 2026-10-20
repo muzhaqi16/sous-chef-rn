@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react-native';
 import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { Text } from '#components/atoms/Text';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text: RNText } = require('react-native');
     return <RNText>{name}</RNText>;

@@ -5,7 +5,7 @@ import {
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
 import { alertService } from '#/services/alertService';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents } from '#platform/screen';
 
 /**
  * The post-login gate is a headerless conditional group at the root navigator,
@@ -36,7 +36,7 @@ export function useEmailVerificationActions() {
 export function useVerifiedEmailGate() {
   const { t } = useTranslation();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const { toVerifyEmail } = useAppNavigation();
+  const { toVerifyEmail } = useNavigationIntents();
 
   const requireVerifiedEmail = (): boolean => {
     if (!hasUnverifiedEmail) return true;

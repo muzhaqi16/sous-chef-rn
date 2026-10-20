@@ -2,7 +2,7 @@ import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 
 interface RadioRowProps {
   selected: boolean;

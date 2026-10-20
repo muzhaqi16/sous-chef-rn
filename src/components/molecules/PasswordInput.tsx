@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
 

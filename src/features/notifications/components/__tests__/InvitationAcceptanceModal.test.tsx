@@ -21,7 +21,7 @@ import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

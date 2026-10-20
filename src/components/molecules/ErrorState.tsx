@@ -4,8 +4,8 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import type { IconName, IconTone } from '#/utils/iconUtils';
-import { Icon } from '#/utils/iconUtils';
+import type { IconName, IconTone } from '#components/atoms/Icon';
+import { Icon } from '#components/atoms/Icon';
 import { Text, type TextTone } from '#components/atoms/Text';
 
 export interface ErrorStateProps {

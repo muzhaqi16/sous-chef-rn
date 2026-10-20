@@ -4,9 +4,9 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SheetTutorialHintProps {

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
@@ -31,12 +31,12 @@ import {
   useMealPlanDisplay,
   useMealPlans,
 } from '#features/mealPlan/hooks/useMealPlans';
-import { useActiveMealPlan } from '#features/mealPlan/hooks/useActiveMealPlan';
+import { useActiveMealPlan } from './useActiveMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
-import { useMealPlanSelectorConfig } from '#features/mealPlan/hooks/useMealPlanSelectorConfig';
+import { useMealPlanSelectorConfig } from '#features/mealPlan/screens/useMealPlanSelectorConfig';
 import { MealPlanFilterBar } from '#features/mealPlan/components/MealPlanFilterBar';
 import {
   EMPTY_MEAL_PLAN_FILTERS,

@@ -3,10 +3,7 @@ import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { PantryItemCard } from '../PantryItemCard';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 
-/**
- * The `GetPantry` node shape: direct fields the screen-level hooks read, plus
- * an opaque `PantryItemCard_pantryItem` ref the leaf unmasks via `useFragment`.
- */
+/** The `GetPantry` node shape: the direct fields the screen-level hooks read. */
 export type PantryListNode = PantryListItemNode;
 
 /**
@@ -16,7 +13,7 @@ export type PantryListNode = PantryListItemNode;
  * cache subscription via useFragment.
  */
 export const renderItem = ({ item }: ListRenderItemInfo<PantryListNode>) => (
-  <PantryItemCard pantryItemRef={item} />
+  <PantryItemCard pantryItemId={item.id} />
 );
 
 export const pantryListKeyExtractor = (item: PantryListNode) => item.id;

@@ -1,7 +1,8 @@
 'use no memo';
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { alertService, type AlertButton } from '#/services/alertService';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 import { errorService } from '#/services/errorService';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';

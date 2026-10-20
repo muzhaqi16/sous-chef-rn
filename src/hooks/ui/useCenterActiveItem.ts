@@ -11,7 +11,7 @@ import {
 } from 'react-native-reanimated';
 import type { ScrollMetrics } from '#hooks/ui/useScrollEdgeFades';
 import { SCROLL_SLIDE } from '#constants/animations';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 interface ItemLayout {
   x: number;

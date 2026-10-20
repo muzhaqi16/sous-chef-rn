@@ -56,11 +56,7 @@ query GetMealTemplate($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
 # updatedAt is selected because useMealTemplateEditor's snapshot fragment
 # includes it — without it cached here, readFragment returns null and the
 # editor's optimistic update/revert silently skips.
-query GetMealTemplateForEdit(
-  $id: ID!
-  $itemsFirst: Int!
-  $itemsAfter: String
-) {
+query GetMealTemplateForEdit($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
   mealTemplate(id: $id) {
     id
     name

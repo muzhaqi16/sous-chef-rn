@@ -18,7 +18,7 @@ interface ChildrenProps {
   children?: React.ReactNode;
 }
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   // Mirrors the real return: a mock omitting `contentContainerStyle` is why the
   // sheet went so long without its bottom inset.
   useStandardBottomSheet: jest.fn(() => ({
@@ -108,7 +108,7 @@ describe('PurchaseAmountSheet', () => {
   it('sizes itself to its content so the keyboard seats it', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     const { useStandardBottomSheet } = jest.requireMock(
-      '#hooks/useStandardBottomSheet',
+      '#hooks/ui/useStandardBottomSheet',
     );
     // A fixed detent stretches up the screen under the keyboard and pushes the
     // price field off the bottom edge; measured content seats on it instead.

@@ -1,20 +1,45 @@
-jest.mock('../env.generated', () => ({
-  RAW_ENV: {
-    API_URL: '',
-    WEB_SOCKET_URL: 'ws://localhost:4000/graphql',
-    BUILD_ID: undefined,
-  },
-}));
+import type { PlatformServices } from '#platform/ports';
 
-import { env } from '../env';
+const INSTALLED = Symbol.for('sous-chef.platform');
+const registry = globalThis as { [INSTALLED]?: PlatformServices };
+const setupInstall = registry[INSTALLED];
+
+afterEach(() => {
+  registry[INSTALLED] = setupInstall;
+});
+
+const freshEnv = (): typeof import('../env') => {
+  let loaded!: typeof import('../env');
+  jest.isolateModules(() => {
+    loaded = require('../env');
+  });
+  return loaded;
+};
 
 describe('env', () => {
-  it('reads a blank `KEY=` line as unset, so a consumer falls back', () => {
-    expect(env.API_URL).toBeUndefined();
-    expect('API_URL' in env).toBe(false);
+  it('can be imported before the host installs its services', () => {
+    delete registry[INSTALLED];
+
+    expect(freshEnv).not.toThrow();
   });
 
-  it('keeps every value that has text', () => {
-    expect(env.WEB_SOCKET_URL).toBe('ws://localhost:4000/graphql');
+  it('names the missing service when read before the install', () => {
+    delete registry[INSTALLED];
+    const { env } = freshEnv();
+
+    expect(() => env.API_URL).toThrow('Platform service "environment"');
+  });
+
+  it('reads the installed values on access', () => {
+    registry[INSTALLED] = {
+      ...setupInstall,
+      environment: { API_URL: 'https://api.test/graphql' },
+    } as PlatformServices;
+    const { env } = freshEnv();
+
+    expect(env.API_URL).toBe('https://api.test/graphql');
+    expect('API_URL' in env).toBe(true);
+    expect('WEB_SOCKET_URL' in env).toBe(false);
+    expect(Object.keys(env)).toEqual(['API_URL']);
   });
 });

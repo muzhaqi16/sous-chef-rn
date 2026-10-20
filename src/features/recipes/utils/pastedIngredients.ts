@@ -1,6 +1,6 @@
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { ParseIngredientLinesQuery } from '#features/recipes/hooks/useIngredientPaste.generated';
-import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { IngredientFormState } from '#features/recipes/types';
 
 /** The longest line `parseIngredientLines` reads. */
 export const MAX_PASTED_LINE_LENGTH = 500;

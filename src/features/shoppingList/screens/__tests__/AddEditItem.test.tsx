@@ -12,19 +12,16 @@ import {
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { alertService, type AlertButton } from '#/services/alertService';
-import {
-  AddedContext,
-  DisplayFormat,
-  ErrorCode,
-} from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
+import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
 import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
-  GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ShoppingListItemForEditDocument } from '#features/shoppingList/hooks/useShoppingListItemWrites.generated';
 import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { t } from '#/i18n';
@@ -308,25 +305,24 @@ function buildUpdatedShoppingListItem(id: string) {
   };
 }
 
-/** The shape `GetShoppingListItem` returns — detail fields, no `sortOrder`. */
-function buildDetailShoppingListItem(id: string) {
+/** The line the edit form opens on: exactly what its query selects. */
+function buildItemForEdit(id: string) {
   return {
-    ...SHOPPING_LIST_ITEM_CORE,
     id,
-    priceEstimate: { estimated: null },
-    source: {
-      addedContext: AddedContext.Manual,
-      isFromMealPlan: false,
-    },
+    itemName: SHOPPING_LIST_ITEM_CORE.itemName,
+    quantity: SHOPPING_LIST_ITEM_CORE.quantity,
+    quantityInput: SHOPPING_LIST_ITEM_CORE.quantityInput,
+    unitName: null,
+    notes: null,
+    category: null,
     priority: 0,
-    storeInfo: {
-      preferredStore: null,
-    },
+    version: 1,
+    unit: null,
+    priceEstimate: { estimated: null },
+    storeInfo: { preferredStore: null },
     brand: null,
     netWeight: null,
     netWeightUnit: null,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    addedBy: null,
   };
 }
 
@@ -454,16 +450,16 @@ function buildUpdateItemConflictMock(): MockFor<
   };
 }
 
-function buildGetShoppingListItemMock(
+function buildItemForEditMock(
   itemId: string,
-): MockFor<typeof GetShoppingListItemDocument> {
+): MockFor<typeof ShoppingListItemForEditDocument> {
   return {
     request: {
-      query: GetShoppingListItemDocument,
+      query: ShoppingListItemForEditDocument,
       variables: { id: itemId },
     },
     result: {
-      data: { shoppingListItem: buildDetailShoppingListItem(itemId) },
+      data: { shoppingListItem: buildItemForEdit(itemId) },
     },
     maxUsageCount: 10,
   };
@@ -540,7 +536,7 @@ describe('AddEditItem', () => {
 
   it('renders edit item title', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByText('Edit Item')).toBeTruthy();
   });
@@ -552,7 +548,7 @@ describe('AddEditItem', () => {
 
   it('shows the edit-item modal testID when editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-modal')).toBeTruthy();
   });
@@ -564,7 +560,7 @@ describe('AddEditItem', () => {
 
   it('shows base input for item name when editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-name-input')).toBeTruthy();
   });
@@ -617,7 +613,7 @@ describe('AddEditItem', () => {
 
   it('shows brand and net weight fields when editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-brand-input')).toBeTruthy();
     expect(screen.getByTestId('edit-item-net-weight-input')).toBeTruthy();
@@ -659,7 +655,7 @@ describe('AddEditItem', () => {
 
   it('shows correct submit button testID for editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-submit-button')).toBeTruthy();
   });
@@ -678,7 +674,7 @@ describe('AddEditItem', () => {
 
   it('shows edit-item-quantity-input testID for editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-quantity-input')).toBeTruthy();
   });
@@ -690,7 +686,7 @@ describe('AddEditItem', () => {
 
   it('shows edit-item-unit-picker testID for editing', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(screen.getByTestId('edit-item-unit-picker')).toBeTruthy();
   });
@@ -747,7 +743,7 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     await user.press(screen.getByTestId('edit-item-submit-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
@@ -806,10 +802,7 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildGetShoppingListItemMock('item1'),
-        buildUpdateItemMock(),
-      ],
+      operationMocks: [buildItemForEditMock('item1'), buildUpdateItemMock()],
     });
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
@@ -836,7 +829,7 @@ describe('AddEditItem', () => {
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
-        buildGetShoppingListItemMock('item1'),
+        buildItemForEditMock('item1'),
         buildUpdateItemQueuedMock(),
       ],
     });
@@ -916,7 +909,7 @@ describe('AddEditItem', () => {
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
-        buildGetShoppingListItemMock('item1'),
+        buildItemForEditMock('item1'),
         buildUpdateItemConflictMock(),
       ],
     });
@@ -1029,7 +1022,7 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
 
     await waitFor(() =>
@@ -1056,7 +1049,7 @@ describe('AddEditItem', () => {
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
-        buildGetShoppingListItemMock('item1'),
+        buildItemForEditMock('item1'),
         buildUpdateItemRefusedMock(),
       ],
     });
@@ -1190,7 +1183,7 @@ describe('AddEditItem', () => {
     const user = userEvent.setup();
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
-        buildGetShoppingListItemMock('item1'),
+        buildItemForEditMock('item1'),
         buildUpdateItemRefusedMock(),
       ],
     });
@@ -1238,7 +1231,7 @@ describe('AddEditItem', () => {
 
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
-        buildGetShoppingListItemMock('item1'),
+        buildItemForEditMock('item1'),
         {
           request: {
             query: UpdateShoppingListItemDocument,
@@ -1304,7 +1297,7 @@ describe('AddEditItem', () => {
       params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' },
     };
     renderWithApollo(<AddEditItem route={routeWithBoth} />, {
-      operationMocks: [buildGetShoppingListItemMock('item1')],
+      operationMocks: [buildItemForEditMock('item1')],
     });
     expect(mockSetFieldValue).not.toHaveBeenCalledWith('itemName', 'Bread');
   });

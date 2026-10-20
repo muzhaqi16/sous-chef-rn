@@ -17,32 +17,25 @@ import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';
+import { HapticService } from '#services/haptic/HapticService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
-import type { IconName } from '#utils/iconUtils';
-import { motion } from '#/theme/foundations/motion';
+import type { IconName } from '#components/atoms/Icon';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
+import type {
+  ToastOptions,
+  ToastPresenter,
+  ToastType,
+} from '#platform/presenters';
 
-export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastOptions {
-  message: string;
-  /**
-   * Hold in ms, default `TOAST.AUTO_DISMISS_SHORT`. Prefer a `TOAST` preset. The
-   * hold spans the fade-in and excludes the fade-out, so time on screen is about
-   * `duration + motion.timing.STANDARD`.
-   */
-  duration?: number;
-  type?: ToastType;
-  action?: { label: string; onPress: () => void };
-  /**
-   * A toast replaces a displayed or queued one of its own type, `action` and
-   * all. This marks a state announcement, which also replaces an announcement
-   * of another type: only the latest state is still true.
-   */
-  supersede?: boolean;
-}
-export type ToastFn = (options: ToastOptions) => void;
+// Every toast of an outcome type carries its haptic, so no caller fires its
+// own beside it. `info` is neutral and deliberately silent.
+const TOAST_HAPTICS: Partial<Record<ToastType, () => void>> = {
+  success: () => HapticService.success(),
+  error: () => HapticService.error(),
+  warning: () => HapticService.warning(),
+};
 
 const TOAST_ICONS: Partial<Record<ToastType, IconName>> = {
   success: 'checkmark-circle',
@@ -260,7 +253,8 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   // Rapid same-type calls coalesce into one toast that ends N seconds after the
   // LAST call, not a sequential parade. A replaced toast's action lapses with
   // it; the change it offered to undo stands.
-  const showToast: ToastFn = opts => {
+  const showToast: ToastPresenter = opts => {
+    if (opts.type) TOAST_HAPTICS[opts.type]?.();
     setQueue(prev => {
       const waiting = prev.queue.filter(q => !replaces(q, opts));
       if (!prev.current || replaces(prev.current, opts))

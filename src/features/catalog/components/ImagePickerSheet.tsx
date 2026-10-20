@@ -6,9 +6,9 @@ import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 
 const VariantBottomSheetModal = withUnistyles(BottomSheetModal, theme => ({

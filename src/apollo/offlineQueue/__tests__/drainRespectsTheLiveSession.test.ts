@@ -29,6 +29,7 @@ jest.mock('#store', () => ({
 const mockClient = { mutate: jest.fn(), cache: makeCache() };
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

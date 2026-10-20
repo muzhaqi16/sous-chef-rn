@@ -15,7 +15,7 @@ import {
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
-import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
+import type { DataAttributionValue } from '#/types/attribution';
 
 export type MaterializedRecipe = UseRecipeData_RecipeFragment;
 

@@ -6,8 +6,8 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,

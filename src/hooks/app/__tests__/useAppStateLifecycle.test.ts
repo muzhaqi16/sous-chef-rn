@@ -1,8 +1,8 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
 import { flushCachePersistence } from '#/apollo/client';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { useAppStateLifecycle } from '../useAppStateLifecycle';
 
 jest.mock('#/apollo/client', () => ({
@@ -22,25 +22,16 @@ jest.mock('#store/slices/authSlice', () => ({
   handleTokenRefreshOnResume: jest.fn(() => Promise.resolve()),
 }));
 
-/** The listener the hook registered last; RN's mock `remove()` unregisters nothing. */
-const notifyAppState = (state: AppStateStatus) => {
-  const calls = (AppState.addEventListener as jest.Mock).mock.calls.filter(
-    ([event]) => event === 'change',
-  );
-  const listener = calls.at(-1)?.[1] as
-    | ((next: AppStateStatus) => void)
-    | undefined;
-  if (!listener) throw new Error('no AppState "change" listener registered');
-  listener(state);
-};
-
 describe('useAppStateLifecycle', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    memoryLifecycle().moveTo('active');
+  });
 
   it('writes the owed cache save when the app goes to the background', () => {
     renderHook(() => useAppStateLifecycle());
 
-    notifyAppState('background');
+    memoryLifecycle().moveTo('background');
 
     expect(flushCachePersistence).toHaveBeenCalledTimes(1);
   });
@@ -48,7 +39,9 @@ describe('useAppStateLifecycle', () => {
   it('does not save on a return to the foreground', () => {
     renderHook(() => useAppStateLifecycle());
 
-    notifyAppState('active');
+    memoryLifecycle().moveTo('background');
+    jest.clearAllMocks();
+    memoryLifecycle().moveTo('active');
 
     expect(flushCachePersistence).not.toHaveBeenCalled();
   });

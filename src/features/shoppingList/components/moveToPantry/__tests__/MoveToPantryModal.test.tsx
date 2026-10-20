@@ -16,7 +16,7 @@ import {
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
@@ -227,7 +227,7 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

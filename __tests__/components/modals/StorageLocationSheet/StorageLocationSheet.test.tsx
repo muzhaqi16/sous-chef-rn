@@ -5,7 +5,7 @@ import { render } from '@testing-library/react-native';
 import { StorageLocationSheet } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
 import { StorageType } from '../../../../src/graphql/generated/schemaTypes';
 
-jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
+jest.mock('../../../../src/hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: null },
     modalProps: {},

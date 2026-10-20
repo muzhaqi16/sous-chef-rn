@@ -10,13 +10,21 @@ const MMKV_MESSAGE =
 
 const RESTRICTED_IMPORT_PATHS = [
   {
-    name: '#storage/mmkv',
+    name: '#store/deviceStorage',
     message: MMKV_MESSAGE,
   },
   {
-    name: '#/storage/mmkv',
+    name: '#/store/deviceStorage',
     message: MMKV_MESSAGE,
   },
+  // The raw MMKV instance and its adapter: only the composition root installs
+  // them, as the key-value store port that `#store/deviceStorage` reads.
+  ...[
+    '#native/storage/mmkv',
+    '#/native/storage/mmkv',
+    '#native/storage/keyValueStore',
+    '#/native/storage/keyValueStore',
+  ].map(name => ({ name, message: MMKV_MESSAGE })),
   // The raw scroller gives a sheet the keyboard offset but NOT the input
   // context, so its inputs resolve to React Native's `TextInput`. Only the
   // wrapper itself may import it (allowed in its own override).
@@ -59,7 +67,7 @@ const RESTRICTED_IMPORT_PATHS = [
     name: '@gorhom/bottom-sheet',
     importNames: ['BottomSheetModal', 'BottomSheetTextInput'],
     message:
-      "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'. BottomSheetTextInput → ThemedBottomSheetTextInput from '#components/atoms/themedComponents' (ref type: ThemedBottomSheetTextInputRef).",
+      "Import BottomSheetModal from '#hooks/ui/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet'. BottomSheetTextInput → ThemedBottomSheetTextInput from '#components/atoms/themedComponents' (ref type: ThemedBottomSheetTextInputRef).",
   },
   {
     name: 'react-native-permissions',
@@ -93,7 +101,7 @@ const RESTRICTED_IMPORT_PATHS = [
   {
     name: '@react-native-vector-icons/ionicons',
     message:
-      "Use `Icon` from '#utils/iconUtils' with a `tone`, so the glyph colour follows the theme. For an icon NAME type, import `type { IconName }` from the same module. A colour the tone set cannot express is a missing entry in TONE_TO_COLOR, not a reason to import the glyph package.",
+      "Use `Icon` from '#components/atoms/Icon' with a `tone`, so the glyph colour follows the theme. For an icon NAME type, import `type { IconName }` from the same module. A colour the tone set cannot express is a missing entry in TONE_TO_COLOR, not a reason to import the glyph package.",
   },
   {
     name: '@react-navigation/native',
@@ -120,7 +128,7 @@ const RESTRICTED_IMPORT_PATHS = [
       "Translate through `t` from '#/i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
   },
   {
-    name: '#hooks/useBottomSheetBackdropClaim',
+    name: '#hooks/ui/useBottomSheetBackdropClaim',
     message:
       'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
   },

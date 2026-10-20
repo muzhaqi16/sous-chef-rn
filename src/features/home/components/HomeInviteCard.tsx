@@ -4,13 +4,13 @@ import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import {
   formatInviteStatus,
   getInviteStatusKey,
-  INVITE_STATUS_TONE,
   type InviteStatusKey,
 } from '#features/home/utils/inviteFormatters';
+import { INVITE_STATUS_TONE } from './inviteStatusTone';
 import { Text, type TextTone } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';

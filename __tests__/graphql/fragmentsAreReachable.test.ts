@@ -16,8 +16,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Kind, parse, visit } from 'graphql';
+import {
+  OPERATION_ROOT_DIRS,
+  PRODUCTION_ROOT_DIRS,
+} from '#/test-utils/sourceRoots';
 
-const SRC = path.join(__dirname, '..', '..', 'src');
+const REPO_ROOT = path.join(__dirname, '..', '..');
 
 const filesUnder = (dir: string, match: (file: string) => boolean): string[] =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -26,16 +30,22 @@ const filesUnder = (dir: string, match: (file: string) => boolean): string[] =>
     return match(full) ? [full] : [];
   });
 
-const documents = filesUnder(
-  SRC,
-  file => file.endsWith('.graphql') && !file.includes(`${path.sep}generated`),
+const documents = OPERATION_ROOT_DIRS.flatMap(dir =>
+  filesUnder(
+    dir,
+    file => file.endsWith('.graphql') && !file.includes(`${path.sep}generated`),
+  ),
 );
-const generated = filesUnder(SRC, file => file.endsWith('.generated.ts'));
-const modules = filesUnder(
-  SRC,
-  file =>
-    (file.endsWith('.ts') || file.endsWith('.tsx')) &&
-    !file.endsWith('.generated.ts'),
+const generated = OPERATION_ROOT_DIRS.flatMap(dir =>
+  filesUnder(dir, file => file.endsWith('.generated.ts')),
+);
+const modules = PRODUCTION_ROOT_DIRS.flatMap(dir =>
+  filesUnder(
+    dir,
+    file =>
+      (file.endsWith('.ts') || file.endsWith('.tsx')) &&
+      !file.endsWith('.generated.ts'),
+  ),
 );
 
 /** Fragment name → the identifiers codegen exports for it. */
@@ -66,7 +76,7 @@ for (const file of documents) {
       },
     });
     if (definition.kind === Kind.FRAGMENT_DEFINITION) {
-      definedIn.set(definition.name.value, path.relative(SRC, file));
+      definedIn.set(definition.name.value, path.relative(REPO_ROOT, file));
       spreadsOf.set(definition.name.value, spreads);
     } else if (definition.kind === Kind.OPERATION_DEFINITION) {
       operationRoots.push(...spreads);

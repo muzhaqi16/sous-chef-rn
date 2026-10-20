@@ -1,8 +1,8 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { toastService } from '#/services/toastService';
-import { TOAST } from '#constants/animations';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { TOAST_HOLD_MS } from '#platform/presenters';
+import { useNavigationIntents } from '#platform/screen';
 import { forgetMyRecipesLists } from '#features/recipes/utils/recipeCacheWriters';
 import type { CaptureOutcome } from '#features/recipes/utils/recipeCaptureOutcome';
 import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
@@ -14,7 +14,7 @@ import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureSt
 export function useCaptureOutcomeReporter() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { toRecipeDetail, toRecipeCreate } = useAppNavigation();
+  const { toRecipeDetail, toRecipeCreate } = useNavigationIntents();
   const { settle, markIncomplete } = useRecipeCaptureActions();
 
   return (captureId: string, outcome: CaptureOutcome) => {
@@ -32,7 +32,7 @@ export function useCaptureOutcomeReporter() {
             { name: recipe.name },
           ),
           {
-            duration: TOAST.AUTO_DISMISS_LONG,
+            duration: TOAST_HOLD_MS.LONG,
             action: {
               label: t('labels.open'),
               onPress: () => toRecipeDetail({ recipeId: recipe.id }),
@@ -45,7 +45,7 @@ export function useCaptureOutcomeReporter() {
         // Kept as a row to finish: a missed toast must not lose the draft.
         markIncomplete(captureId);
         toastService.info(t('recipes.captureIncomplete'), {
-          duration: TOAST.AUTO_DISMISS_LONG,
+          duration: TOAST_HOLD_MS.LONG,
           action: {
             label: t('recipes.captureFinish'),
             onPress: () => toRecipeCreate({ captureId }),
@@ -55,7 +55,7 @@ export function useCaptureOutcomeReporter() {
       case 'failed':
         settle(captureId);
         toastService.error(t(outcome.copy), {
-          duration: TOAST.AUTO_DISMISS_LONG,
+          duration: TOAST_HOLD_MS.LONG,
         });
     }
   };

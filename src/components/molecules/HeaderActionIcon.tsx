@@ -4,7 +4,7 @@ import {
   ThemedActivityIndicator,
   ThemedIcon,
 } from '#components/atoms/themedComponents';
-import type { IconName, IconLibrary, IconTone } from '#utils/iconUtils';
+import type { IconName, IconLibrary, IconTone } from '#components/atoms/Icon';
 
 export type ActionVariant =
   | 'default'

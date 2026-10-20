@@ -9,7 +9,7 @@ import {
   UserSubtype,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
-import { getDeviceId } from '#/storage/deviceId';
+import { getDeviceId } from '#/services/auth/deviceId';
 import { useUserSubscriptions } from '../useUserSubscriptions';
 
 const mockRegister = jest.fn().mockReturnValue({});
@@ -22,7 +22,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 const mockToastError = jest.mocked(toastService.error);
 const mockToastSuccess = jest.mocked(toastService.success);
 
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
 jest.mock('#/services/authService', () => ({
   authService: { logout: jest.fn(() => Promise.resolve()) },

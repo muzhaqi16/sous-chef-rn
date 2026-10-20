@@ -2,12 +2,12 @@ import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import type { StepFormState } from '#features/recipes/screens/RecipeForm/formState';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import type { StepFormState } from '#features/recipes/types';
 
 export interface RecipeStepEditorRef {
   open: (step?: StepFormState) => void;

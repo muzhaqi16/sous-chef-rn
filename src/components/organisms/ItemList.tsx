@@ -17,11 +17,11 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { ItemCard } from './ItemCard';
 import type { BadgeContent } from '#components/atoms/Badge';
-import type { IconName } from '#/utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
 import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { StyleSheet } from 'react-native-unistyles';

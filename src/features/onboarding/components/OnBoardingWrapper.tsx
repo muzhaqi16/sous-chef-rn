@@ -11,7 +11,7 @@ import { useRoute } from '@react-navigation/native';
 import {
   ONBOARDING_STEPS,
   onboardingStepIndex,
-} from '#features/onboarding/hooks/useOnboardingNavigation';
+} from '#features/onboarding/screens/useOnboardingNavigation';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 interface OnboardingWrapperProps {

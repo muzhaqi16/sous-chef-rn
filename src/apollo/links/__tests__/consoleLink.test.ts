@@ -5,7 +5,6 @@ import type {
   ApolloLink,
 } from '@apollo/client';
 import { OperationTypeNode, parse } from 'graphql';
-import performance from 'react-native-performance';
 
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((err: { message?: string; name?: string }) => ({
@@ -20,7 +19,7 @@ jest.mock('#/utils/errorSerialization', () => ({
 
 import { createConsoleLink } from '../consoleLink';
 
-const mockedPerformance = performance as jest.Mocked<typeof performance>;
+const clockNow = jest.spyOn(performance, 'now');
 
 // Helper to create a mock operation
 const createMockOperation = (
@@ -54,7 +53,7 @@ describe('createConsoleLink', () => {
     jest.clearAllMocks();
 
     let time = 100;
-    mockedPerformance.now.mockImplementation(() => {
+    clockNow.mockImplementation(() => {
       time += 50;
       return time;
     });
@@ -404,7 +403,7 @@ describe('createConsoleLink', () => {
     it('uses warning style for queries exceeding slowQueryThreshold', done => {
       // Make duration exceed threshold
       let callCount = 0;
-      mockedPerformance.now.mockImplementation(() => {
+      clockNow.mockImplementation(() => {
         callCount++;
         return callCount === 1 ? 0 : 2000;
       });

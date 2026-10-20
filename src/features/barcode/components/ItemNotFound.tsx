@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 

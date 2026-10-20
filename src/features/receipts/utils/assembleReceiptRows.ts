@@ -1,4 +1,4 @@
-import type { RecognizedLine, RecognizedPage } from '#/native/TextRecognition';
+import type { RecognizedLine, RecognizedPage } from '#/types/textRecognition';
 
 // A tilted photo or curled receipt puts a name and its price at different
 // heights, so a line reads its rows along the slope of its nearest lines,

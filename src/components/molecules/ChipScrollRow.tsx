@@ -6,7 +6,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-import { Icon, type IconName } from '#utils/iconUtils';
+import { Icon, type IconName } from '#components/atoms/Icon';
 import { EdgeFade } from '#components/atoms/EdgeFade';
 import { useScrollEdgeFades } from '#hooks/ui/useScrollEdgeFades';
 import { useCenterActiveItem } from '#hooks/ui/useCenterActiveItem';

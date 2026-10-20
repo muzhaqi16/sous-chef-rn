@@ -3,7 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 

@@ -12,7 +12,7 @@ import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { storeApi } from '#store';
-import { hasFeatureHintBeenShown } from '#hooks/useFeatureHint';
+import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
 
 // Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';

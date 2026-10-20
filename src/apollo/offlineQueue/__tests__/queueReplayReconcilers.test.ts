@@ -15,7 +15,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/clientRegistry', () => ({

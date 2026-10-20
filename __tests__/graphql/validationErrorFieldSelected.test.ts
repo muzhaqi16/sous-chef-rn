@@ -37,6 +37,7 @@ import {
   type FieldNode,
   type GraphQLSchema,
 } from 'graphql';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ROOT = resolve(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -57,7 +58,7 @@ function auditMutations(schema: GraphQLSchema) {
   const compliant: string[] = [];
   const missing: string[] = [];
 
-  for (const file of graphqlFiles(SRC)) {
+  for (const file of OPERATION_ROOT_DIRS.flatMap(dir => graphqlFiles(dir))) {
     const source = readFileSync(file, 'utf8');
     let document;
     try {

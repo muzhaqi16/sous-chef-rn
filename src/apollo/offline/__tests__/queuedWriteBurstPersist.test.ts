@@ -1,8 +1,8 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 
-jest.mock('#/storage/mmkv');
+const storageSet = jest.spyOn(storage, 'set');
 
 /**
  * Every queued write flushes the persisted cache so a kill cannot lose the row
@@ -29,14 +29,12 @@ function storeWith(changedRow: number): NormalizedCacheObject {
 }
 
 const persistedWrites = () =>
-  (storage.set as jest.Mock).mock.calls.filter(
-    ([key]) => key === 'apollo-cache-v1',
-  ).length;
+  storageSet.mock.calls.filter(([key]) => key === 'apollo-cache-v1').length;
 
 describe('a burst of queued writes', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    (storage.set as jest.Mock).mockClear();
+    storageSet.mockClear();
     apolloCachePersistence.cancel();
   });
   afterEach(() => jest.useRealTimers());
@@ -66,7 +64,7 @@ describe('a burst of queued writes', () => {
     apolloCachePersistence.scheduleExtractAndSave(() => base);
     apolloCachePersistence.flushPending();
     jest.runOnlyPendingTimers();
-    (storage.set as jest.Mock).mockClear();
+    storageSet.mockClear();
 
     // Apollo writes each mutation's result under ROOT_MUTATION right after
     // the flush; nothing durable changed.

@@ -7,7 +7,7 @@ import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';

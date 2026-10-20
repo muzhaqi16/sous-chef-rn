@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { hitSlop } from '#/theme/foundations/sizes';
 

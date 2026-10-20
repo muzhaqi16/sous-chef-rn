@@ -4,7 +4,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { StorageLocationCard } from '#features/catalog/ui/StorageLocationCard';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, `icon-${name}`);

@@ -1,4 +1,4 @@
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 export const HOLE_PADDING = 8;
 export const TOOLTIP_MARGIN = 12;

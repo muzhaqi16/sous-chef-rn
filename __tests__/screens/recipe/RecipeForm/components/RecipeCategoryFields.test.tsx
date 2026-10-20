@@ -3,7 +3,7 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
-import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { RecipeFormState } from '#features/recipes/types';
 import {
   Cuisine,
   Difficulty,

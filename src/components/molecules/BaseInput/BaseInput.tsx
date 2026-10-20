@@ -13,7 +13,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import styles from '#components/molecules/BaseInput/BaseInput.styles';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import {
   ThemedActivityIndicator,
@@ -22,7 +22,7 @@ import {
   type ThemedTextInputRef,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 

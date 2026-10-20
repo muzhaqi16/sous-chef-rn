@@ -1,6 +1,8 @@
 // Push delivery follows a live session, so every session end must reach
 // `POST /revoke` — now, or once the API is reachable again.
 
+import { requirePlatform } from '#platform/install';
+import type { PendingRevocation } from '#platform/ports';
 import type * as Revocation from '../refreshTokenRevocation';
 
 const mockStoreState: Record<string, unknown> = {};
@@ -8,27 +10,27 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStoreState },
 }));
 
-let mockParked: { refreshToken: string; accessToken: string | null }[] = [];
-const mockAddPending = jest.fn(
-  (entry: { refreshToken: string; accessToken: string | null }) => {
-    mockParked = [
-      ...mockParked.filter(p => p.refreshToken !== entry.refreshToken),
+// The installed platform's secure store, backed by `parked`; it outlives the
+// module resets below the way the keychain outlives a relaunch.
+const secureStore = requirePlatform('secureStore');
+let parked: PendingRevocation[] = [];
+const addPending = jest
+  .spyOn(secureStore, 'addPendingRevocation')
+  .mockImplementation(async entry => {
+    parked = [
+      ...parked.filter(p => p.refreshToken !== entry.refreshToken),
       entry,
     ];
-    return Promise.resolve(true);
-  },
-);
-jest.mock('#/storage/keychain', () => ({
-  addPendingRevocation: (entry: {
-    refreshToken: string;
-    accessToken: string | null;
-  }) => mockAddPending(entry),
-  loadPendingRevocations: () => Promise.resolve([...mockParked]),
-  removePendingRevocation: (refreshToken: string) => {
-    mockParked = mockParked.filter(p => p.refreshToken !== refreshToken);
-    return Promise.resolve();
-  },
-}));
+    return true;
+  });
+jest
+  .spyOn(secureStore, 'loadPendingRevocations')
+  .mockImplementation(async () => [...parked]);
+jest
+  .spyOn(secureStore, 'removePendingRevocation')
+  .mockImplementation(async refreshToken => {
+    parked = parked.filter(p => p.refreshToken !== refreshToken);
+  });
 
 const mockFetch = jest.fn();
 const originalFetch = global.fetch;
@@ -47,8 +49,8 @@ const loadRevocation = (): typeof Revocation =>
 
 beforeEach(() => {
   jest.resetModules();
-  mockParked = [];
-  mockAddPending.mockClear();
+  parked = [];
+  addPending.mockClear();
   mockFetch.mockReset();
   global.fetch = mockFetch;
   const { Environment } = require('#/utils/environment');
@@ -93,7 +95,7 @@ describe('a session end', () => {
         }),
       }),
     );
-    expect(mockParked).toEqual([]);
+    expect(parked).toEqual([]);
   });
 
   it('parks the token before the network, so a kill mid-request loses nothing', async () => {
@@ -101,7 +103,7 @@ describe('a session end', () => {
 
     await endSession();
 
-    expect(mockParked).toEqual([
+    expect(parked).toEqual([
       { refreshToken: 'refresh-1', accessToken: 'access-1' },
     ]);
   });
@@ -116,7 +118,7 @@ describe('a session end', () => {
 
     await endSession();
 
-    expect(mockAddPending).toHaveBeenCalledWith({
+    expect(addPending).toHaveBeenCalledWith({
       refreshToken: 'refresh-1',
       accessToken: 'access-1',
     });
@@ -129,7 +131,7 @@ describe('a session end', () => {
     await endSession();
 
     expect(mockFetch).not.toHaveBeenCalled();
-    expect(mockParked).toHaveLength(1);
+    expect(parked).toHaveLength(1);
   });
 
   it.each([500, 503, 429])(
@@ -139,7 +141,7 @@ describe('a session end', () => {
 
       await endSession();
 
-      expect(mockParked).toHaveLength(1);
+      expect(parked).toHaveLength(1);
     },
   );
 
@@ -148,7 +150,7 @@ describe('a session end', () => {
 
     await endSession();
 
-    expect(mockParked).toHaveLength(1);
+    expect(parked).toHaveLength(1);
   });
 
   it('drops a token the server refuses for good', async () => {
@@ -156,7 +158,7 @@ describe('a session end', () => {
 
     await endSession();
 
-    expect(mockParked).toEqual([]);
+    expect(parked).toEqual([]);
   });
 
   it('does nothing when no session was held', async () => {
@@ -164,14 +166,14 @@ describe('a session end', () => {
 
     await endSession();
 
-    expect(mockAddPending).not.toHaveBeenCalled();
+    expect(addPending).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
 describe('drainPendingRevocations', () => {
   it('revokes what an offline sign-out parked once the API is reachable', async () => {
-    mockParked = [
+    parked = [
       { refreshToken: 'old-1', accessToken: null },
       { refreshToken: 'old-2', accessToken: 'a-2' },
     ];
@@ -180,13 +182,13 @@ describe('drainPendingRevocations', () => {
     await loadRevocation().drainPendingRevocations();
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(mockParked).toEqual([]);
+    expect(parked).toEqual([]);
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(init.headers).not.toHaveProperty('Authorization');
   });
 
   it('stops at the first unanswered request and keeps the rest', async () => {
-    mockParked = [
+    parked = [
       { refreshToken: 'old-1', accessToken: null },
       { refreshToken: 'old-2', accessToken: null },
     ];
@@ -195,21 +197,21 @@ describe('drainPendingRevocations', () => {
     await loadRevocation().drainPendingRevocations();
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockParked).toHaveLength(2);
+    expect(parked).toHaveLength(2);
   });
 
   it('sends nothing while the network is withheld', async () => {
-    mockParked = [{ refreshToken: 'old-1', accessToken: null }];
+    parked = [{ refreshToken: 'old-1', accessToken: null }];
     mockStoreState.offlineModeEnabled = true;
 
     await loadRevocation().drainPendingRevocations();
 
     expect(mockFetch).not.toHaveBeenCalled();
-    expect(mockParked).toHaveLength(1);
+    expect(parked).toHaveLength(1);
   });
 
   it('runs one drain at a time', async () => {
-    mockParked = [{ refreshToken: 'old-1', accessToken: null }];
+    parked = [{ refreshToken: 'old-1', accessToken: null }];
     respond(200);
     const { drainPendingRevocations } = loadRevocation();
 

@@ -161,8 +161,9 @@ deliberate sign-out revokes that lineage, which is the state biometric sign-in
 exists to recover from. So a defeated keychain yielded a reusable password.
 
 It now holds a credential issued by `issueDeviceCredential`, bound to this
-device's id and individually revocable by the server. `autoLogin` exchanges it
-rather than replaying a password, and the password is never passed to enrolment
+device's id and individually revocable by the server. Biometric sign-in
+(`signInWithDeviceCredential` in `src/services/biometric/deviceCredential.ts`)
+exchanges it rather than replaying a password, and the password is never passed to enrolment
 at all — so there is nothing left to retain. A revoked or expired credential
 answers `AUTH_DEVICE_CREDENTIAL_INVALID`, which clears the slot; a rate-limit
 refusal does not, because the credential is still good.

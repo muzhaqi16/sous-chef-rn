@@ -1,14 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
-import {
-  getNotificationCopy,
-  getNotificationIcon,
-} from '#features/notifications/utils/notificationHelpers';
+import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import { getNotificationIcon } from './notificationIcon';
 import { safeParseDate } from '#utils/dateUtils';
 
 import { AppPressable } from '#components/atoms/AppPressable';

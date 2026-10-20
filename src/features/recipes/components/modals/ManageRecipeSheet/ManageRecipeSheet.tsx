@@ -7,7 +7,7 @@ import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';

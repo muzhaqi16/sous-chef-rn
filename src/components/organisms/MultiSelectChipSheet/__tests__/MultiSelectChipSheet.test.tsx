@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { MultiSelectChipSheet } from '../MultiSelectChipSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
@@ -69,7 +69,7 @@ jest.mock('#components/molecules/AnimatedChip', () => ({
   },
 }));
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 

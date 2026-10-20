@@ -15,12 +15,13 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('#/services/authService', () => ({
-  authService: { registerDeviceInBackground: jest.fn() },
+jest.mock('#/services/device/deviceRegistration', () => ({
+  registerDeviceInBackground: jest.fn(),
 }));
 
-const registerDeviceInBackground = jest.requireMock('#/services/authService')
-  .authService.registerDeviceInBackground;
+const { registerDeviceInBackground } = jest.requireMock(
+  '#/services/device/deviceRegistration',
+);
 
 const mockUpdateNotificationSetting = jest.fn().mockResolvedValue(true);
 const mockResetToDefaults = jest.fn().mockResolvedValue(true);
@@ -56,7 +57,7 @@ jest.mock('#features/notifications/hooks/useNotificationSettings', () => ({
   })),
 }));
 
-jest.mock('#features/notifications/hooks/useNotificationPermissions', () => ({
+jest.mock('#features/notifications/screens/useNotificationPermissions', () => ({
   useNotificationPermissions: jest.fn(() => ({
     hasPermission: true,
     requestPermissions: jest.fn().mockResolvedValue(true),
@@ -181,7 +182,7 @@ describe('NotificationSettingsScreen', () => {
 
   it('renders when push is enabled but permission denied', () => {
     const { useNotificationPermissions } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationPermissions',
+      '#features/notifications/screens/useNotificationPermissions',
     );
     useNotificationPermissions.mockReturnValue({
       hasPermission: false,
@@ -440,7 +441,7 @@ describe('NotificationSettingsScreen', () => {
       pushEnabled = true,
     ) => {
       const { useNotificationPermissions } = jest.requireMock(
-        '#features/notifications/hooks/useNotificationPermissions',
+        '#features/notifications/screens/useNotificationPermissions',
       );
       const { useNotificationSettings } = jest.requireMock(
         '#features/notifications/hooks/useNotificationSettings',

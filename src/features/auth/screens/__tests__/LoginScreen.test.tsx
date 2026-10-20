@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
 import { toastService } from '#/services/toastService';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { LoginScreen } from '../LoginScreen';
@@ -14,7 +15,8 @@ import { useStore } from '#store';
 
 // --- Mocks ---
 
-// LoginScreen drives login/biometric through `authService` directly; it only
+// LoginScreen drives login through `authService` and biometrics through
+// `biometricService` directly; it only
 // consumes `useRememberMe` for the remember-login prompt.
 // `mockRealRememberMe` swaps the real hook in for the enrolment cases.
 let mockRealRememberMe = false;
@@ -43,7 +45,7 @@ const mockNavigateToForgotPassword = jest.fn();
 const mockNavigateToSignUp = jest.fn();
 const mockNavigateToLogin = jest.fn();
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToForgotPassword: mockNavigateToForgotPassword,
     navigateToSignUp: mockNavigateToSignUp,
@@ -118,7 +120,7 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
   };
 });
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 
@@ -146,10 +148,12 @@ describe('LoginScreen', () => {
   // affordance is the only thing offering a credential that is already dead.
   it('takes the biometric affordance down when the slot is forgotten', async () => {
     jest
-      .spyOn(authService, 'getLastBiometricEmail')
+      .spyOn(biometricService, 'getLastBiometricEmail')
       .mockResolvedValue('chef@example.com');
-    jest.spyOn(authService, 'checkStoredCredentials').mockResolvedValue(true);
-    jest.spyOn(authService, 'getBiometricInfo').mockResolvedValue({
+    jest
+      .spyOn(biometricService, 'checkStoredCredentials')
+      .mockResolvedValue(true);
+    jest.spyOn(biometricService, 'getBiometricInfo').mockResolvedValue({
       isAvailable: true,
       biometryType: 'Fingerprint',
     });
@@ -162,7 +166,7 @@ describe('LoginScreen', () => {
     expect(button).toBeTruthy();
 
     // What `forgetBiometricSlot` writes when a slot is proven unusable. That
-    // it writes it is covered in authService.biometricPersistence; this is the
+    // it writes it is covered in biometric/__tests__/deviceCredential; this is the
     // half that decides whether the affordance is still offered.
     useStore.getState().setHasStoredCredentials(false);
 
@@ -302,7 +306,7 @@ describe('LoginScreen remembering the sign-in', () => {
 
   it('says so when the sign-in could not be saved, and still enters the app', async () => {
     jest
-      .spyOn(jest.requireActual('#/storage/deviceId'), 'ensureDeviceId')
+      .spyOn(jest.requireActual('#/services/auth/deviceId'), 'ensureDeviceId')
       .mockResolvedValue(null);
     const alert = jest.mocked(alertService.alert);
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });

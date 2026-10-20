@@ -23,10 +23,8 @@ import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
-import {
-  GetShoppingListItemDocument,
-  GetShoppingListItemsFilteredDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -98,11 +96,9 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     quantityInput: '2',
     displayFormat: null,
     unitName: 'loaves',
-    unit: null,
     category: 'Bakery',
     priority: 2,
     notes: 'Get whole wheat',
-    version: 1,
     createdAt: '2024-06-01T00:00:00Z',
     updatedAt: '2024-06-02T00:00:00Z',
     item: null,

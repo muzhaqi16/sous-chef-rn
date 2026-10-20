@@ -13,3 +13,11 @@ fragment favorites_savedDetails on Recipe {
     id
   }
 }
+
+# The signed-in user, whose saved list a favorite joins: any read of `me`
+# caches it.
+query FavoritesViewer {
+  me {
+    id
+  }
+}

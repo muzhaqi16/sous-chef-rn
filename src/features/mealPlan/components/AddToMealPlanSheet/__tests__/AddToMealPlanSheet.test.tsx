@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { AddToMealPlanSheet } from '../AddToMealPlanSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},

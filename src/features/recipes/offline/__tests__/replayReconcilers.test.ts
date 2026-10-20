@@ -1,10 +1,10 @@
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   MySavedRecipesDocument,
-  SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
+} from '#features/recipes/screens/useSavedRecipes.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { reconcileAddRecipeToFavoritesReplay } from '../replayReconcilers';
 

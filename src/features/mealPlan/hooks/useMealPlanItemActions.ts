@@ -9,7 +9,6 @@ import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
-  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   MealPlanItemActions_OptimisticFullItemFragmentDoc,
@@ -175,7 +174,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     };
 
     const refetchPlan = () => {
-      void client.refetchQueries({ include: [GetMealPlanDocument] });
+      void client.refetchQueries({ include: ['GetMealPlan'] });
     };
     const settled = await settleMutation(
       () =>

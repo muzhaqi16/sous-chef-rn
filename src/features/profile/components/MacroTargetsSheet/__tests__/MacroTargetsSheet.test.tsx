@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
 }));
 

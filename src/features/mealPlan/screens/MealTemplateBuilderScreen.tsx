@@ -14,7 +14,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';

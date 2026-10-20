@@ -13,7 +13,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
-import { usePantryItemDetailData } from '#features/pantry/hooks/usePantryItemDetailData';
+import { usePantryItemDetailData } from './usePantryItemDetailData';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,
@@ -44,7 +44,7 @@ import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
@@ -56,7 +56,7 @@ import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItem
 import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
 import type { RecipeInformation } from '#/services/spoonacular/types';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.

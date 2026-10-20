@@ -1,5 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -281,13 +281,6 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
   });
 
   it('follows the device to another zone when the app returns to the foreground', async () => {
-    const listeners: Array<(state: AppStateStatus) => void> = [];
-    jest
-      .mocked(AppState.addEventListener)
-      .mockImplementation((_type, listener) => {
-        listeners.push(listener);
-        return { remove: jest.fn() };
-      });
     const cache = makeCache();
     const settings = settingsUpdate('Europe/Rome');
     const preferences = recordMock(UpdateNotificationPreferencesDocument, {
@@ -308,8 +301,9 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
     );
     expect(settings.fired).toEqual([]);
 
+    act(() => memoryLifecycle().moveTo('background'));
     mockGetDeviceTimezone.mockReturnValue('Europe/Rome');
-    act(() => listeners.forEach(listener => listener('active')));
+    act(() => memoryLifecycle().moveTo('active'));
 
     await waitFor(() =>
       expect(settings.fired).toEqual([

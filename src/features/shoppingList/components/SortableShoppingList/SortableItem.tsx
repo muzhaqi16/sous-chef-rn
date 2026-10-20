@@ -6,6 +6,7 @@ import { View } from 'react-native';
 // doesn't also fire the row's onPress (which would navigate to details).
 import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
+import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -15,7 +16,7 @@ import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedChec
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 
@@ -36,7 +37,7 @@ import {
   useSortableListTheme,
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';
@@ -52,15 +53,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item: rowItem,
   index,
 }) => {
-  // A recycled cell's undefined item is dropped by the list's `renderItem`.
-  const itemRef = rowItem.itemRef;
-
   // Per-entity subscription: this row re-renders only for its own cache record.
-  const { data, complete } = useFragment({
+  // A recycled cell's undefined item is dropped by the list's `renderItem`.
+  const { data, complete, missing } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
-    from: itemRef,
+    from: { __typename: 'ShoppingListItem', id: rowItem.id },
   });
+  useIncompleteCellReport('SortableItem_item', missing);
 
   // One list-level useUnistyles, rather than a theme subscription per row.
   const themeColors = useSortableListTheme();

@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { Cuisine } from '#/graphql/generated/schemaTypes';
 import { POPULAR_CUISINES, getAllCuisineOptions } from '#domain/cuisines';
 

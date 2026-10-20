@@ -14,7 +14,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useInviteUserModal } from '#features/home/hooks/useInviteUserModal';
+import { useInviteUserModal } from '#features/home/screens/useInviteUserModal';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { toastService } from '#/services/toastService';
@@ -30,7 +30,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
@@ -391,7 +391,7 @@ export const HomeManagement: React.FC = () => {
                   .mass(1.5)}
               >
                 <HomeCard
-                  homeRef={home}
+                  homeId={home.id}
                   isDefault={home.id === remoteDefaultHomeId}
                   isHighlighted={home.id === highlightedHomeId}
                   canInvite={userCanInvite}

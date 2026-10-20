@@ -19,6 +19,7 @@
  */
 import babel from '@babel/core';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { relative } from 'node:path';
 import {
   baselineFile,
@@ -28,19 +29,26 @@ import {
   requireNonEmptyScan,
 } from './lib/tooling.mjs';
 
+const { PRODUCTION_ROOTS } = createRequire(import.meta.url)(
+  './lib/sourceRoots.js',
+);
+
 const BASELINE = baselineFile(
   fromRoot('scripts', 'check-compiler-bailouts.baseline.json'),
 );
 const UPDATE = process.argv.includes('--update');
 const LIST = process.argv.includes('--list');
 
-const files = filesUnder(['src/**/*.ts', 'src/**/*.tsx'], {
-  exclude: [
-    /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
-    /\.(test|spec)\.tsx?$/,
-    /\.generated\.ts$/,
-  ],
-});
+const files = filesUnder(
+  PRODUCTION_ROOTS.flatMap(root => [`${root}/**/*.ts`, `${root}/**/*.tsx`]),
+  {
+    exclude: [
+      /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
+      /\.(test|spec)\.tsx?$/,
+      /\.generated\.ts$/,
+    ],
+  },
+);
 const failures = [];
 
 /**

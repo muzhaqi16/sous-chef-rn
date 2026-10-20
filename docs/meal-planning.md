@@ -88,10 +88,12 @@ model in `utils/homeLinkedPermissions.ts`: the owner is `plan.user` (not
 
 ## GraphQL
 
-**`graphql/mealPlan.graphql`** — queries `GetMealPlans`, `GetMealPlan`,
-`MealPlanForEvent`; mutations `CreateMealPlan`, `UpdateMealPlan`, `DeleteMealPlan`,
-`CreateMealPlanItem`, `UpdateMealPlanItem`, `DeleteMealPlanItem`; subscription
-`MealPlanEvents`.
+**`graphql/mealPlan.graphql`** — queries `GetMealPlans`, `MealPlanForEvent`;
+mutations `CreateMealPlan`, `UpdateMealPlan`, `DeleteMealPlan`, `CreateMealPlanItem`,
+`UpdateMealPlanItem`, `DeleteMealPlanItem`; subscription `MealPlanEvents`.
+`GetMealPlan` spreads the plan screen's fragments, so it lives beside that screen
+(`screens/useMealPlan.graphql`) with the hook that runs it; the core hooks refetch it
+by name.
 
 **`graphql/mealTemplate.graphql`** — `GetMealTemplates`, `GetMealTemplate`,
 `GetMealTemplateForEdit`, `MealTemplateForEvent`; `CreateMealTemplate`,
@@ -114,8 +116,9 @@ rest are colocated with their consumer: `MealPlanMain_mealPlan` / `MealPlanMain_
 `MealPlanSettingsSheet_mealPlan`, `SavedRecipeRow_savedRecipe`,
 `useGenerateShoppingList_mealPlan`, `useDuplicateMealPlan_mealPlan`,
 `useMealTemplateActions_template`. `GetMealPlan` spreads the screen, settings-sheet,
-generate and duplicate fragments; meal-item mutations return the four item fragments so
-the cached row stays complete.
+generate and duplicate fragments; meal-item mutations return `MealPlanItemReaders` with
+the daily-meals and actions fragments, so the cached row stays complete for every
+query that reads it.
 
 A plan's meals (`mealPlanItemsConnection`), its generated lists
 (`generatedShoppingListsConnection`) and a template's meals (`itemsConnection`) are
@@ -320,7 +323,7 @@ client-side (name search, active only, weekly/monthly) without changing the acti
 | `src/features/mealPlan/components/MealPlanItemCard.tsx`                      | Meal row: completion, delete, nutrition and pantry badge |
 | `src/features/mealPlan/hooks/useMealPlanItemActions.ts`                      | Local-first meal writes                                  |
 | `src/features/mealPlan/hooks/useMealPlanActions.ts`                          | Local-first plan writes                                  |
-| `src/features/mealPlan/hooks/useActiveMealPlan.ts`                           | Active plan resolution                                   |
+| `src/features/mealPlan/screens/useActiveMealPlan.ts`                         | Active plan resolution                                   |
 | `src/features/mealPlan/hooks/useGenerateShoppingList.ts`                     | Client-derived shopping list                             |
 | `src/features/mealPlan/hooks/useMealTemplateActions.ts`                      | Plan ↔ template conversions                              |
 | `src/features/mealPlan/hooks/useMealPlanSubscriptions.ts`                    | Home meal-plan event stream                              |

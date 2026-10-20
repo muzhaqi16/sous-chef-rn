@@ -19,7 +19,7 @@ jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
   })),
 }));
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},

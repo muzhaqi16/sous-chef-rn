@@ -3,7 +3,10 @@
 jest.unmock('#/utils/environment');
 
 import { Environment, getWebAppUrl, logger } from '../environment';
-import { env } from '#/config/env';
+import { requirePlatform } from '#platform/install';
+
+const installedEnv = () =>
+  requirePlatform('environment') as Record<string, string | undefined>;
 
 beforeEach(() => {
   Environment.clearCache();
@@ -100,9 +103,9 @@ describe('environment', () => {
     };
 
     const withFlag = (value: string | undefined, fn: () => void) => {
-      // The real `env` object, not a mock: this suite tests the real
-      // Environment, and the gate reads the bundled value directly.
-      const mutable = env as Record<string, string | undefined>;
+      // The installed environment the real `env` reads, not a mock: this suite
+      // tests the real Environment, and the gate reads the build value directly.
+      const mutable = installedEnv();
       const previous = mutable.ALLOW_LAUNCH_ARG_AUTH;
       mutable.ALLOW_LAUNCH_ARG_AUTH = value;
       try {
@@ -118,7 +121,7 @@ describe('environment', () => {
     // it. Clearing the cache is what makes the write visible — `getConfig()`
     // memoizes on first read.
     const withNodeEnv = (value: string | undefined, fn: () => void) => {
-      const mutable = env as Record<string, string | undefined>;
+      const mutable = installedEnv();
       const previous = mutable.NODE_ENV;
       mutable.NODE_ENV = value;
       Environment.clearCache();

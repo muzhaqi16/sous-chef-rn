@@ -5,7 +5,7 @@ import type {
   TextStyle,
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { openWebUrl } from '#utils/externalUrl';
+import { openWebUrl } from '#native/externalUrl';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { Text, type TextRole, type TextTone } from './Text';
 

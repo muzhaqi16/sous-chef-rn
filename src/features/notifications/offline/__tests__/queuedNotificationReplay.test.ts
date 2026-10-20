@@ -26,6 +26,7 @@ import { isRecord } from '#/utils/isRecord';
 let mockClient: ApolloClient | null = null;
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));

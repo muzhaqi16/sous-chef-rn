@@ -2,9 +2,9 @@
  * Guard: the persisted Apollo cache must actually be restored.
  *
  * `restorePersistedCache()` cannot be a single inline call in
- * `initializeClient()`, which runs at module import. `initializeSecureStorage()`
- * is async (keychain-backed) and `index.js` does not await it, so at import time
- * `isStorageReady()` is false, `load()` returns null, and nothing is restored —
+ * `createApolloClient()`, which the app runs as it loads. Device storage opens
+ * asynchronously (keychain-backed) and `index.js` does not await it, so then
+ * `storage.isReady()` is false, `load()` returns null, and nothing is restored —
  * a session that only tries then writes a cache it never reads back. Offline
  * reads do not survive a relaunch, and `cache-and-network` hides that whenever
  * the device is online. So App retries at the hydration boundary, and the call
@@ -15,16 +15,12 @@
  * Telemetry is what surfaces it (`app_apollo_restore_ms{outcome="empty"}`
  * beside a 79KB write).
  */
-export {};
+import { storage } from '#/store/deviceStorage';
 
 const mockIsStorageReady = jest.fn<boolean, []>();
 const mockLoad = jest.fn();
 
-jest.mock('#storage/mmkv', () => ({
-  ...jest.requireActual('#storage/mmkv'),
-  isStorageReady: () => mockIsStorageReady(),
-  storage: { getString: jest.fn(), set: jest.fn(), remove: jest.fn() },
-}));
+jest.spyOn(storage, 'isReady').mockImplementation(() => mockIsStorageReady());
 
 jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
@@ -50,7 +46,8 @@ describe('persisted Apollo cache restore', () => {
     mockIsStorageReady.mockReturnValue(false);
     // `require`, not `await import()` — dynamic imports throw under this jest
     // config, which would make these assertions pass vacuously.
-    const { restorePersistedCache } = loadClient();
+    const { createApolloClient, restorePersistedCache } = loadClient();
+    createApolloClient();
 
     restorePersistedCache();
 
@@ -58,9 +55,10 @@ describe('persisted Apollo cache restore', () => {
   });
 
   it('restores once storage is ready — the call at the hydration boundary', () => {
-    // Module scope loads while storage is NOT ready, as in the real app.
+    // The client is built while storage is NOT ready, as in the real app.
     mockIsStorageReady.mockReturnValue(false);
-    const { restorePersistedCache, client } = loadClient();
+    const { createApolloClient, restorePersistedCache } = loadClient();
+    const client = createApolloClient();
     expect(mockLoad).not.toHaveBeenCalled();
 
     // Hydration completes; storage is now ready and App calls again.
@@ -80,9 +78,10 @@ describe('persisted Apollo cache restore', () => {
     mockLoad.mockReturnValue({
       'PantryItem:1': { __typename: 'PantryItem', id: '1' },
     });
-    const { restorePersistedCache } = loadClient();
+    const { createApolloClient, restorePersistedCache } = loadClient();
+    createApolloClient();
 
-    // initializeClient() already restored at load, since storage was ready.
+    // Building the client already restored, since storage was ready.
     expect(mockLoad).toHaveBeenCalledTimes(1);
 
     restorePersistedCache();

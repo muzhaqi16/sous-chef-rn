@@ -4,7 +4,7 @@ import Animated, {
   type CSSTransitionProperties,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 

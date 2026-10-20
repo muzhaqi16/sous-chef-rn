@@ -7,7 +7,7 @@ import Animated, {
   FadeInUp,
   LinearTransition,
 } from 'react-native-reanimated';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
 import type {
@@ -17,7 +17,7 @@ import type {
 } from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface SelectorContentProps<T extends SelectableItem> {

@@ -1,6 +1,7 @@
-import { Platform } from 'react-native';
-import { env, type Env } from '#/config/env';
+import { env } from '#/config/env';
 import { appConfig } from '#/config/appConfig';
+import { requirePlatform } from '#platform/install';
+import type { Env } from '#platform/ports';
 
 type ConfigValue = string | number | boolean | undefined;
 // Pure-JS build-time config (see scripts/generate-env.js). The return type
@@ -50,11 +51,8 @@ export class Environment {
       isDevelopment: nodeEnv === 'development' || __DEV__,
       isProduction: nodeEnv === 'production',
       isStaging: nodeEnv === 'staging',
-      isTesting:
-        nodeEnv === 'testing' ||
-        nodeEnv === 'test' ||
-        process.env.NODE_ENV === 'test',
-      platform: Platform.OS as 'ios' | 'android' | 'web',
+      isTesting: nodeEnv === 'testing' || nodeEnv === 'test',
+      platform: requirePlatform('platformInfo').os,
       buildMode: __DEV__ ? 'debug' : 'release',
     };
 

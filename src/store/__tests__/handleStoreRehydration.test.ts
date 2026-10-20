@@ -1,20 +1,10 @@
 import { handleStoreRehydration, useStore } from '../index';
 import { createTestStore } from '#/test-utils/createTestStore';
 import { errorService } from '#/services/errorService';
-import { openedWithEmptyStore } from '#/storage/mmkv';
-import {
-  addPendingRevocation,
-  clearSessionTokens,
-  loadSessionTokens,
-} from '#/storage/keychain';
+import { storage } from '#/store/deviceStorage';
+import { requirePlatform } from '#platform/install';
 
 jest.mock('#/services/errorService');
-jest.mock('#/storage/mmkv');
-// The store rehydrates on import, before any `beforeEach` can seed the load.
-jest.mock('#/storage/keychain', () => ({
-  ...jest.createMockFromModule<object>('#/storage/keychain'),
-  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
-}));
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {
@@ -152,9 +142,11 @@ describe('home selection readiness', () => {
  * encrypted store opening empty is the signal that nothing stands behind them.
  */
 describe('a fresh install does not resume a session', () => {
-  const emptyStore = openedWithEmptyStore as jest.Mock;
-  const clearTokens = clearSessionTokens as jest.Mock;
-  const loadTokens = loadSessionTokens as jest.Mock;
+  const emptyStore = jest.spyOn(storage, 'openedWithEmptyStore');
+  const secureStore = requirePlatform('secureStore');
+  const clearTokens = jest.spyOn(secureStore, 'clearSessionTokens');
+  const loadTokens = jest.spyOn(secureStore, 'loadSessionTokens');
+  const parkRevocation = jest.spyOn(secureStore, 'addPendingRevocation');
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -185,7 +177,7 @@ describe('a fresh install does not resume a session', () => {
     handleStoreRehydration({ ...useStore.getState(), setTokens }, undefined);
     await new Promise(resolve => setImmediate(resolve));
 
-    expect(addPendingRevocation).toHaveBeenCalledWith(tokens);
+    expect(parkRevocation).toHaveBeenCalledWith(tokens);
     expect(clearTokens).toHaveBeenCalled();
     expect(setTokens).not.toHaveBeenCalled();
   });

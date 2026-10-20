@@ -124,7 +124,7 @@ const defaultPantryScreen = {
 };
 
 const mockUsePantryScreen = jest.fn(() => ({ ...defaultPantryScreen }));
-jest.mock('#features/pantry/hooks/usePantryScreen', () => ({
+jest.mock('#features/pantry/screens/usePantryScreen', () => ({
   usePantryScreen: () => mockUsePantryScreen(),
 }));
 
@@ -151,12 +151,12 @@ jest.mock('#features/pantry/context/PantryModalsContext', () => ({
 }));
 
 // --- Pantry hooks still used directly by PantryMainInner ---
-jest.mock('#features/pantry/hooks/usePantrySelectorConfig', () => ({
+jest.mock('#features/pantry/screens/usePantrySelectorConfig', () => ({
   usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
 }));
 
 // --- Performance / scanner / UI hooks ---
-jest.mock('#features/barcode/hooks/useScannerSetup', () => ({
+jest.mock('#features/barcode/screens/useScannerSetup', () => ({
   useScannerSetup: jest.fn(),
 }));
 jest.mock('#hooks/ui/useSelectorManagement', () => ({
@@ -170,8 +170,8 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
 // the app imports another of its exports — `useTutorialSequence` now calls
 // `hasFeatureHintBeenShown`, and this mock omitting it failed all 22 tests here
 // with "is not a function".
-jest.mock('#hooks/useFeatureHint', () => ({
-  ...jest.requireActual('#hooks/useFeatureHint'),
+jest.mock('#hooks/settings/useFeatureHint', () => ({
+  ...jest.requireActual('#hooks/settings/useFeatureHint'),
   useFeatureHint: () => ({
     isVisible: false,
     hasBeenShown: true,

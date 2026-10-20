@@ -6,7 +6,7 @@ import type {
   ItemUnitInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import type { ImageFile } from '#hooks/useImageUpload';
+import type { ImageFile } from '#/types/media';
 import { useStore } from '#store';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { refByIdOrName } from '#/utils/refInput';
@@ -45,6 +45,25 @@ const toItemUnitInput = (row: ItemUnitRow): ItemUnitInput[] => {
     },
   ];
 };
+
+/** What an add-item form opens with: a scan, a suggestion, or an edit. */
+export interface AddItemFormInitialData {
+  name?: string;
+  description?: string;
+  upc?: string;
+  vendor?: string;
+  brandId?: string;
+  brandName?: string;
+  imageUrl?: string;
+  type?: string;
+  storageState?: string;
+  shelfLifeDays?: number;
+  shelfLifeOpenedDays?: number;
+  baseDimension?: string;
+  tags?: string[];
+  categoryIds?: string[];
+  netWeights?: Array<{ value: number; unitName: string; unitId?: string }>;
+}
 
 /**
  * Shape of the dynamic AddItemForm submission fields this mapper reads. The

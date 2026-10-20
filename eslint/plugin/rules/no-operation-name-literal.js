@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { parse, Kind } = require('graphql');
 const ts = require('typescript');
+const { OPERATION_ROOTS } = require('../../../scripts/lib/sourceRoots');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 
@@ -28,10 +29,12 @@ function readOperationNames() {
       }
     }
   };
-  walk(path.join(ROOT, 'src'));
+  OPERATION_ROOTS.forEach(root => walk(path.join(ROOT, root)));
   // Fail closed: an empty set would make this rule pass on every file.
   if (operationNames.size === 0) {
-    throw new Error(`No GraphQL operations found under ${ROOT}/src.`);
+    throw new Error(
+      `No GraphQL operations found under ${OPERATION_ROOTS.join(', ')}.`,
+    );
   }
   return operationNames;
 }

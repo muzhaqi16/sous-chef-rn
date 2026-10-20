@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 import { Text } from '#components/atoms/Text';
@@ -10,7 +10,7 @@ import {
   InviteStatus,
   type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
-import type { MembershipPermissionKey } from '#features/home/hooks/useHomeDetailManagement';
+import type { MembershipPermissionKey } from '#features/home/screens/useHomeDetailManagement';
 import type { HomeDetailScreen_HomeFragment } from '#features/home/screens/HomeDetailScreen.generated';
 
 type MemberNode =

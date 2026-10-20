@@ -64,7 +64,7 @@ const CASES: Case[] = [
   },
   {
     label: "shared code reaching into a feature's utils",
-    filePath: 'src/hooks/useAppearance.ts',
+    filePath: 'src/hooks/ui/useAppearance.ts',
     code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
     blocked: true,
   },
@@ -81,6 +81,19 @@ const CASES: Case[] = [
     filePath: 'src/features/onboarding/hooks/useCompleteOnboarding.ts',
     code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
     blocked: true,
+  },
+  {
+    label: 'a screen reaching into the data layer',
+    filePath: 'src/features/profile/screens/MyReportsScreen.tsx',
+    code: `import { x } from '#/apollo/utils/settleMutation';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    // A display query belongs to its UI, and so does the hook that runs it.
+    label: 'a data hook beside the UI whose query it runs',
+    filePath: 'src/features/profile/screens/useMyReports.ts',
+    code: `import { x } from '#/apollo/utils/settleMutation';\n${VALUE_USE}`,
+    blocked: false,
   },
 ];
 

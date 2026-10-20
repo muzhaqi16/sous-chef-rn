@@ -11,12 +11,9 @@ import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { useDataState } from '#hooks/data/useDataState';
 import { useDeleteRecipe } from '#features/recipes/hooks/useDeleteRecipe';
 import { MyRecipeCard } from '#features/recipes/components/MyRecipeCard';
-import {
-  useRecipeManagement,
-  type MyRecipeNode,
-} from '#features/recipes/hooks/useRecipeManagement';
+import { useRecipeManagement, type MyRecipeNode } from './useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';

@@ -12,6 +12,7 @@ const mockClient = {
 };
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
+  requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));
@@ -34,8 +35,6 @@ jest.mock('#store', () => ({
     getState: jest.fn(() => ({ isLoggingOut: false })),
   },
 }));
-
-jest.mock('#/storage/mmkv');
 
 // wsLink is a static import here. This stub keeps the assertion at the seam —
 // that cleanup asks the socket to go away — while what disposal DOES with the
@@ -60,7 +59,7 @@ import { LogoutCleanup } from '../logoutCleanup';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
-import { storage } from '#/storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { useStore } from '#store';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
@@ -144,22 +143,30 @@ describe('LogoutCleanup', () => {
     });
 
     it('clears legacy storage keys', async () => {
+      const legacyKeys = [
+        'apollo-cache',
+        'navigation_state',
+        'apollo-client-cache',
+        'persisted-queries',
+      ];
+      for (const key of legacyKeys) storage.set(key, 'stale');
+
       await LogoutCleanup.performLogoutCleanup();
-      expect(storage.remove).toHaveBeenCalledWith('apollo-cache');
-      expect(storage.remove).toHaveBeenCalledWith('navigation_state');
-      expect(storage.remove).toHaveBeenCalledWith('apollo-client-cache');
-      expect(storage.remove).toHaveBeenCalledWith('persisted-queries');
+
+      expect(legacyKeys.filter(key => storage.contains(key))).toEqual([]);
     });
 
     // This cleanup runs on EVERY session end, a rejected refresh token
     // included. Deleting the queue here discards work the user never chose to
     // discard; only `queueManager.onLogout()` may do that.
     it('leaves the offline queue on disk', async () => {
+      storage.set('apollo-mutation-queue', '[]');
+      storage.set('apollo-queue-current-user', 'user-1');
+
       await LogoutCleanup.performLogoutCleanup();
-      expect(storage.remove).not.toHaveBeenCalledWith('apollo-mutation-queue');
-      expect(storage.remove).not.toHaveBeenCalledWith(
-        'apollo-queue-current-user',
-      );
+
+      expect(storage.contains('apollo-mutation-queue')).toBe(true);
+      expect(storage.contains('apollo-queue-current-user')).toBe(true);
     });
 
     it('skips cache clearing when clearCache is false', async () => {

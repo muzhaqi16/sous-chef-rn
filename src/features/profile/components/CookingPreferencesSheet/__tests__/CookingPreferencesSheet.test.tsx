@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
 }));
 

@@ -7,7 +7,7 @@ import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Divider } from '#components/atoms/Divider';

@@ -5,11 +5,6 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
-import type { Unmasked } from '@apollo/client/masking';
-import {
-  MyRecipesDocument,
-  type MyRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
 import { RecipeCacheWriters_RowFragmentDoc } from './recipeCacheWriters.generated';
 import {
   NEUTRAL_LOCAL_RECIPE,
@@ -21,11 +16,17 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+  skipUnmatchedFilterVariants,
+} from '#/apollo/utils/cacheUpdaters';
 
-/** A MyRecipes edge's node, whole. */
-type MyRecipesEdgeNode = NonNullable<
-  Unmasked<MyRecipesQuery>['recipes']
->['edges'][number]['node'];
+const addToMyRecipes = createAddToQueryConnectionUpdater('recipes', 'Recipe');
+const removeFromMyRecipes = createRemoveFromQueryConnectionUpdater(
+  'recipes',
+  'Recipe',
+);
 
 /**
  * The created-by identity a recipe is materialized with. `email` is nullable:
@@ -130,36 +131,17 @@ function writeRecipeRow(
 }
 
 /**
- * Insert-or-replace a recipe edge in MyRecipes: the pre-fire write inserts, and
- * the update callback replaces it in place, since the server row carries the
- * same minted id.
+ * Lists a recipe in the user's recipes, once: the pre-fire write inserts it,
+ * and the server row, under the same minted id, updates the entity in place.
+ * Only the unfiltered list: a filtered one's membership is the server's.
  */
 export function upsertMyRecipesEdge(
   cache: ApolloCache,
-  node: MyRecipesEdgeNode,
+  // The typename makes the cache reference; an id alone adds nothing.
+  recipe: { __typename: 'Recipe'; id: string },
 ): void {
-  cache.updateQuery<MyRecipesQuery>({ query: MyRecipesDocument }, existing => {
-    if (!existing?.recipes) return existing;
-    const present = existing.recipes.edges.some(
-      edge => edge.node.id === node.id,
-    );
-    return {
-      ...existing,
-      recipes: {
-        ...existing.recipes,
-        edges: present
-          ? existing.recipes.edges.map(edge =>
-              edge.node.id === node.id ? { ...edge, node } : edge,
-            )
-          : [
-              { __typename: 'RecipeEdge', cursor: node.id, node },
-              ...existing.recipes.edges,
-            ],
-        totalCount: present
-          ? existing.recipes.totalCount
-          : (existing.recipes.totalCount ?? 0) + 1,
-      },
-    };
+  addToMyRecipes(cache, recipe, {
+    skipStoreField: skipUnmatchedFilterVariants({}),
   });
 }
 
@@ -172,21 +154,9 @@ export function forgetMyRecipesLists(cache: ApolloCache): void {
   cache.gc();
 }
 
-/** Remove a recipe edge from MyRecipes. */
-function removeMyRecipesEdge(cache: ApolloCache, id: string): void {
-  cache.updateQuery<MyRecipesQuery>({ query: MyRecipesDocument }, existing => {
-    if (!existing?.recipes) return existing;
-    const present = existing.recipes.edges.some(edge => edge.node.id === id);
-    if (!present) return existing;
-    return {
-      ...existing,
-      recipes: {
-        ...existing.recipes,
-        edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
-        totalCount: (existing.recipes.totalCount ?? 0) - 1,
-      },
-    };
-  });
+/** Takes a recipe out of every cached list of the user's recipes. */
+export function removeMyRecipesEdge(cache: ApolloCache, id: string): void {
+  removeFromMyRecipes(cache, id);
 }
 
 /** Local-first create write: the recipe's row, then its MyRecipes edge. */

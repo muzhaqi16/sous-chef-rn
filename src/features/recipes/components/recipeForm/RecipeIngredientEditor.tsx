@@ -7,7 +7,7 @@ import { DropdownStack } from '#components/atoms/DropdownStack';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
-} from '#hooks/useStandardBottomSheet';
+} from '#hooks/ui/useStandardBottomSheet';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -18,7 +18,7 @@ import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';

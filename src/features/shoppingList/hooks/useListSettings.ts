@@ -3,7 +3,7 @@ import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents, useScreenFocusEffect } from '#platform/screen';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
@@ -29,7 +29,6 @@ import {
   getShoppingListOwnerInfo,
 } from '#features/shoppingList/utils/ownershipHelpers';
 
-import { useFocusEffect } from '@react-navigation/native';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
@@ -83,7 +82,7 @@ function syncListFormState(
  */
 export const useListSettings = (listId: string | undefined) => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
+  const { goBack } = useNavigationIntents();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -268,7 +267,7 @@ export const useListSettings = (listId: string | undefined) => {
     !currentUserCollaborator &&
     !isHomeMember;
 
-  useFocusEffect(() => {
+  useScreenFocusEffect(() => {
     if (hasLostListAccess) {
       setSelectedShoppingListId(null);
       goBack();

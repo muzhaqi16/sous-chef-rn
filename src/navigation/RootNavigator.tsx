@@ -64,7 +64,7 @@ import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { rootLinking } from './linking';
 
 function RootLayout({ children }: { children: React.ReactNode }) {

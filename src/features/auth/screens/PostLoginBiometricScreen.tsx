@@ -4,7 +4,7 @@ import { Screen } from '#components/templates/Screen';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#features/auth/hooks/useBiometricPrompting';
-import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useAuthPreferences } from '#hooks/auth/useAuthPreferences';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';

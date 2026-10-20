@@ -1,7 +1,7 @@
 import type { ComponentRef } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 import type Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import type { Icon } from '#/utils/iconUtils';
+import type { Icon } from '#components/atoms/Icon';
 import type { TranslationKey } from '#/i18n';
 
 export type SwipeableRef = React.RefObject<ComponentRef<

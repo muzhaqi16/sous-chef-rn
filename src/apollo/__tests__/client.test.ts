@@ -1,5 +1,7 @@
 'use no memo';
 
+import { gql } from '@apollo/client';
+
 // Mock all dependencies before importing the client module
 
 jest.mock('../links/index', () => ({
@@ -40,13 +42,15 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   },
 }));
 
+const loadClient = (): typeof import('../client') => require('../client');
+
 describe('Apollo client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('exports a client instance', () => {
-    const { client } = require('../client');
+  it('builds a client instance', () => {
+    const client = loadClient().createApolloClient();
     expect(client).toBeDefined();
     expect(client.cache).toBeDefined();
   });
@@ -68,7 +72,7 @@ describe('Apollo client', () => {
       mockLoad.mockReturnValueOnce(persisted);
 
       jest.isolateModules(() => {
-        require('../client');
+        loadClient().createApolloClient();
       });
 
       expect(mockLoad).toHaveBeenCalledTimes(1);
@@ -80,7 +84,7 @@ describe('Apollo client', () => {
       mockLoad.mockReturnValueOnce(null);
 
       jest.isolateModules(() => {
-        require('../client');
+        loadClient().createApolloClient();
       });
 
       expect(mockRestore).not.toHaveBeenCalled();
@@ -88,29 +92,36 @@ describe('Apollo client', () => {
   });
 
   it('wraps cache.write to schedule persistence', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
 
     // The write method should have been wrapped
-    client.cache.write({ dataId: 'test', result: {} });
+    client.cache.write({
+      query: gql`
+        query Probe {
+          __typename
+        }
+      `,
+      result: { __typename: 'Query' },
+    });
 
     // scheduleExtractAndSave should be called after write
     expect(mockScheduleExtractAndSave).toHaveBeenCalled();
   });
 
   it('wraps cache.evict to schedule persistence', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
     client.cache.evict({ id: 'test' });
     expect(mockScheduleExtractAndSave).toHaveBeenCalled();
   });
 
   it('wraps cache.modify to schedule persistence', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
     client.cache.modify({ fields: {} });
     expect(mockScheduleExtractAndSave).toHaveBeenCalled();
   });
 
   it('wraps cache.gc to schedule persistence if gc exists', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
     if (client.cache.gc) {
       client.cache.gc();
       expect(mockScheduleExtractAndSave).toHaveBeenCalled();
@@ -118,7 +129,7 @@ describe('Apollo client', () => {
   });
 
   it('client has correct default options', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
     expect(client.defaultOptions.query?.fetchPolicy).toBe('cache-first');
     expect(client.defaultOptions.query?.errorPolicy).toBe('all');
     expect(client.defaultOptions.mutate?.errorPolicy).toBe('all');
@@ -128,7 +139,7 @@ describe('Apollo client', () => {
   });
 
   it('client has clientAwareness configured', () => {
-    const { client } = require('../client');
+    const client = loadClient().createApolloClient();
     // clientAwareness is set in the constructor
     expect(client).toBeDefined();
   });

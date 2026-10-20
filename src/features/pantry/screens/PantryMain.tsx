@@ -12,8 +12,8 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { StyleSheet } from 'react-native-unistyles';
-import { usePantrySelectorConfig } from '#features/pantry/hooks/usePantrySelectorConfig';
-import { useScannerSetup } from '#features/barcode/hooks/useScannerSetup';
+import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
+import { useScannerSetup } from '#features/barcode/screens/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
   useTabBarSetters,
@@ -27,7 +27,7 @@ import {
 } from '#hooks/ui/useTutorialSequence';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
-import { usePantryScreen } from '#features/pantry/hooks/usePantryScreen';
+import { usePantryScreen } from '#features/pantry/screens/usePantryScreen';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import {
   PantryModalsProvider,

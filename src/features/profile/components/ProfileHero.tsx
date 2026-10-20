@@ -10,7 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useTranslation } from '#/i18n';
 import { logger } from '#/utils/environment';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';

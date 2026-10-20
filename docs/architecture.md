@@ -4,6 +4,7 @@ How Sous Chef is built and organized. This is the orientation document — read
 it first, then follow the links into the deep dives.
 
 - [The shape of the app](#the-shape-of-the-app)
+- [Layers](#layers)
 - [Feature modules](#feature-modules)
 - [State: two systems, one rule](#state-two-systems-one-rule)
 - [The data layer](#the-data-layer)
@@ -47,21 +48,117 @@ That goal drives most of the architectural choices below.
 
 ---
 
+## Layers
+
+Every production file in `src/` belongs to one of two layers:
+
+- **core** runs without React Native. It holds the data layer, state, copy and
+  domain logic, and loads in node with nothing from a device.
+- **mobile** is the React Native app: screens, components, navigation, device
+  services and the composition root.
+
+| Core                                                                                                                                                                                      | Mobile                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `platform`, `apollo`, `domain`, `graphql`, `i18n`, `config`, `store`, `types`, `utils`                                                                                                    | `app`, `assets`, `components`, `constants`, `context`, `native`, `navigation`, `screens`, `styles`            |
+| `services/` except the next column                                                                                                                                                        | `services/{push,permissions,haptic,notifications,performance,biometric,device}`, `NavigationService.ts`       |
+| `hooks/{apollo,app,auth,data,deepLink,offline,search,settings,subscriptions,utils}`                                                                                                       | `hooks/{ui,animations,navigation,permissions,performance,device}`                                             |
+| `theme/foundations/`                                                                                                                                                                      | the rest of `theme/`                                                                                          |
+| `features/*/{hooks,cache,offline,graphql,utils,store,locales,constants}`, `manifest.static.ts`, `types.ts`, `pushCopy.ts`, and `features/{registry.static,registry.cache,staticTypes}.ts` | `features/*/{screens,components,ui,context}`, `manifest.ts`, `testIDs.ts`, and `features/{registry,types}.ts` |
+
+**Classify by folder; move only what mixes.** A file takes its layer from where
+it sits, so a new file needs no registration, and a file that would need an
+exception moves to the folder of its layer instead. `src/hooks/` has no files at
+its top level for that reason.
+
+The map lives in `scripts/lib/layers.js`, the one copy lint, Jest and scripts
+read. `__tests__/architecture/layerMembership.test.ts` fails when a file matches
+no entry or two, naming the file.
+
+The core is held two ways:
+
+- **Lint** (`eslint/boundaries.js`). Every file carries a `core` or `mobile`
+  category, and a `core` file may not import a `mobile` one, type
+  imports included, whether by `import`, `import()` or `export … from`. Of
+  packages it imports only `CORE_EXTERNALS`, and it names no host-only global
+  (`window`, `navigator`, …), so `globalThis` it is, and none of Node's
+  (`process`, `Buffer`, `require`, …), so build values come through the
+  `environment` port. `__tests__/lint/layerPolicies.test.ts` pins what is blocked.
+- **Types** (`tsconfig.core.json`, part of `npm run typecheck`). Every core
+  file, checked with no host's ambient types (`types: []`) and React Native's
+  language level plus the DOM's, so a React Native or Node global, or a
+  React-Native-only API shape, fails to compile. `__DEV__`, which every host's
+  bundler defines, is declared in `src/platform/buildGlobals.d.ts`.
+  `layerMembership.test.ts` holds its file list to the core layer and its
+  libraries to React Native's.
+- **At runtime** (the `core-portability` Jest project). A node environment with
+  no React Native preset, where every React-Native-family package throws when
+  loaded and the in-memory platform is installed. `coreLoadsInNode.test.ts`
+  loads every core file, so a reach anywhere in its imports fails, naming
+  the package it got to. Other suites there run core flows with no device: a
+  sign-out with no host steps registered, and the meal-plan writes,
+  rendered through a probe component with `react-test-renderer`.
+
+### Platform ports
+
+The core reaches the device only through ports in `src/platform/`, in two kinds.
+
+**Services** are installed once by the host, before any core module evaluates,
+with `installPlatform()`. A core module reads one with
+`requirePlatform('<name>')`, which throws `PlatformServiceMissing` naming the
+service if the install has not happened, so nothing degrades silently.
+
+| Service         | What it is                                                 | Mobile adapter                                     |
+| --------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv`      |
+| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)              |
+| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)            |
+| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info               |
+| `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
+| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
+| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
+| `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
+| `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
+
+`src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`
+imports it right after the startup clock, the startup profiler and the crypto
+polyfill (`platformInstallOrder.test.ts` pins that). Each adapter delegates
+through an arrow or a getter, so Metro's inline requires load a native module at
+its first use, not during the install. `jest.setup.js` installs the in-memory
+platform (`__tests__/helpers/memoryPlatform.ts`) the same way.
+
+**Presenters** are what the core asks a host to show: toast and alert requests
+(`platform/presenters.ts`), which a host registers. `docs/ui-layer.md`
+§ Presenters has the mobile side.
+
+The `screen` service is hooks rather than an object to call: a screen calls a
+data hook in its own body, above anything a context provider in it could wrap,
+so the host supplies the hooks themselves. `#platform/screen` exports them.
+
+---
+
 ## Feature modules
 
 Everything user-facing lives in a self-contained module under `src/features/`:
 
 ```
 src/features/pantry/
-├── screens/       # Navigation entry points
-├── components/    # Feature UI
-├── hooks/         # Data + behavior
+├── screens/       # Navigation entry points, and the hooks only they use
+├── components/    # Feature UI, and the hooks only it uses
+├── hooks/         # Data + behavior (core)
 │   └── mutations/ # Internal mutation primitives
 ├── graphql/       # Operations and shared fragments
 ├── context/       # Feature-scoped React context
 ├── utils/         # Feature-specific helpers
+├── types.ts       # Shapes the core produces and the UI renders
 └── manifest.ts    # What this feature contributes to navigation
 ```
+
+A feature splits along the layers too (§ Layers). `hooks/` is core, so a hook
+that renders, picks an icon, shapes FlashList rows or reaches a device API sits
+beside the screen or component that uses it, and runs that UI's display query
+there (`COLOCATED_DATA_HOOKS` in `eslint/boundaries.js`). A shape both sides
+read, such as a form's values or a unit a picker lists, is declared in the
+feature's `types.ts`, never in the component that renders it.
 
 Each feature declares itself through a **manifest**, and
 `src/features/registry.ts` holds the canonical list. Navigation iterates the
@@ -173,13 +270,17 @@ code it extends:
   `useServerRecipeSuggestions`).
 
 With the flag off, the feature does what it did before the capability existed. The keychain strings are pinned by
-`src/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
+`src/native/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
 service name, so changing one on a shipped app signs every user out silently.
 
 `src/app/` is the composition root: the modules whose whole job is to know which
 features exist — the provider that mounts each feature's subscriptions, the
-offline tab preloader. They are not reusable and a sibling app writes its own, so
-they sit outside the kit rather than being excused from its rule.
+offline tab preloader — and the ones that assemble the host: the platform
+install, the Apollo client built over the native socket (`apolloClient.ts`),
+the session steps this device adds (`mobileSessionHost.ts`), and the startup
+bootstrap (`useStartupInit`). They are not reusable and a
+sibling app writes its own, so they sit outside the kit rather than being
+excused from its rule.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
 app reuses wholesale. It does not import `#features/…` (a
@@ -691,9 +792,12 @@ sit inside `BottomSheetView`, and why sheet inputs must resolve to
 ### Theming and design tokens
 
 `src/theme/` holds foundations (colors, typography, spacing, radii, shadows,
-sizes, breakpoints, zIndex), theme composition, and the appearance system —
+sizes, breakpoints, zIndex, motion durations, the palette derivation and the
+appearance options), theme composition, and the appearance system —
 light/dark/system, brand color, density, font scale, and high contrast, all
-derived at runtime (`derivePalette.ts`, `applyAppearance.ts`).
+derived at runtime (`foundations/derivePalette.ts`, `applyAppearance.ts`).
+`foundations/` is core and has no React Native in it; the rest of `src/theme/`
+is the Unistyles runtime.
 
 ### Internationalization
 
@@ -789,12 +893,13 @@ src/
 │                    apollo, offline, ui, search, auth, performance,
 │                    navigation, autocomplete, subscriptions, …
 ├── i18n/            i18next config + locale JSON
-├── native/          Native module bindings
+├── native/          Native module bindings, the storage adapters, React
+│                    Native ambient types
+├── platform/        Ports the core reaches the device through (§ Layers)
 ├── navigation/      RootNavigator, stacks, layouts
 ├── screens/         SplashScreen and NotFoundScreen only
 ├── services/        Push, subscriptions, telemetry, Spoonacular,
 │                    haptics, permissions, performance, alerts, errors, toasts
-├── storage/         MMKV wrappers
 ├── store/           Zustand store, slices, reset manager
 ├── styles/
 ├── theme/           Design tokens, themes, appearance system

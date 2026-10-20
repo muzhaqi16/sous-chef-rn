@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { zustandStorage } from '#/storage/mmkv';
+import { zustandStorage } from '#/store/deviceStorage';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 
 /** Whether this user lets receipt photos go to the server to be read; null until asked. */

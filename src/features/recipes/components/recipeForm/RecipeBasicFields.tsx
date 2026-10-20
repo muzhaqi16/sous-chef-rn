@@ -6,7 +6,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import type { FieldErrors } from 'react-hook-form';
-import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
+import type { RecipeFormState } from '#features/recipes/types';
 
 interface RecipeBasicFieldsProps {
   state: RecipeFormState;

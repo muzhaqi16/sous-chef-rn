@@ -4,7 +4,7 @@ import React from 'react';
 import type { ScrollViewProps, ViewProps } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { BottomSheetAutocompleteInput } from '#features/catalog/components/BottomSheetAutocompleteInput';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 
 // Override BottomSheetFlatList to use real FlatList (so ListEmptyComponent renders)
 jest.mock('@gorhom/bottom-sheet', () => {
@@ -72,7 +72,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
 });
 
 // Mock iconUtils
-jest.mock('#utils/iconUtils', () => {
+jest.mock('#components/atoms/Icon', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
@@ -108,7 +108,7 @@ jest.mock('#components/atoms/FormFieldWrapper', () => {
 // Mock useStandardBottomSheet
 const mockPresent = jest.fn();
 const mockDismiss = jest.fn();
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: mockPresent, dismiss: mockDismiss } },
     modalProps: {},

@@ -4,9 +4,8 @@ import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { ErrorState } from '#components/molecules/ErrorState';
-import AddItemForm, {
-  type AddItemSubmitPayload,
-} from '#features/catalog/ui/AddItemForm/AddItemForm';
+import AddItemForm from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { useItemForEdit } from '#features/catalog/hooks/useItemForEdit';
 import { useSuggestItemEdit } from '#features/catalog/hooks/useSuggestItemEdit';
 import {

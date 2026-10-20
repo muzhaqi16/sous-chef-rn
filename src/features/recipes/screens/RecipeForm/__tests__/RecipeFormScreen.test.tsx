@@ -19,7 +19,7 @@ import {
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
 import { t } from '#/i18n';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
@@ -32,7 +32,7 @@ type RecipeFormScreenProps = StaticScreenProps<
 >;
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 

@@ -3,8 +3,8 @@ import { globSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * An outcome haptic is fired by `toastService`, which pairs one with the toast
- * TYPE so every consumer gets it. A caller that fires its own beside a toast
+ * An outcome haptic is fired by the toast host (`Toast.tsx`), which pairs one
+ * with the toast TYPE so every `toastService` caller gets it. A caller that fires its own beside a toast
  * buzzes twice for one failure — which is how the shopping list came to buzz
  * twice where the pantry buzzed once.
  *
@@ -21,7 +21,7 @@ describe('an outcome haptic has one owner', () => {
   it('is not fired again beside the toast that already fires it', () => {
     const offenders: string[] = [];
     for (const file of files) {
-      if (file.endsWith('toastService.ts')) continue;
+      if (file.endsWith('components/molecules/Toast.tsx')) continue;
       const source = readFileSync(file, 'utf8');
       // The two adjacent, in either order, within one statement gap.
       const doubled =
@@ -36,10 +36,13 @@ describe('an outcome haptic has one owner', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('sees the pairing it is guarding — toastService fires one per type', () => {
-    const source = readFileSync(join(SRC, 'services/toastService.ts'), 'utf8');
+  it('sees the pairing it is guarding — the toast host fires one per type', () => {
+    const source = readFileSync(
+      join(SRC, 'components/molecules/Toast.tsx'),
+      'utf8',
+    );
     for (const type of ['success', 'error', 'warning']) {
-      expect(source).toContain(`HapticService.${type}();`);
+      expect(source).toContain(`${type}: () => HapticService.${type}(),`);
     }
     // `info` is neutral and deliberately silent.
     expect(source).not.toContain('HapticService.info(');

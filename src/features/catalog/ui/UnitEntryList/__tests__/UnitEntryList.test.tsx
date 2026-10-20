@@ -3,7 +3,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import type { UnitEntry } from '../UnitEntryList';
 import { UnitEntryList } from '../UnitEntryList';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

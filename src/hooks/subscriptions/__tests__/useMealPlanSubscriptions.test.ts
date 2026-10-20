@@ -14,10 +14,7 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
-import {
-  GetMealPlanDocument,
-  MealPlanEventsDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
+import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 
@@ -357,7 +354,7 @@ describe('useMealPlanSubscriptions', () => {
     // Its totals moved too, which only the plan read restates.
     flushAggregateRefresh();
     expect(client.refetchQueries).toHaveBeenCalledWith({
-      include: [GetMealPlanDocument],
+      include: ['GetMealPlan'],
     });
   });
 

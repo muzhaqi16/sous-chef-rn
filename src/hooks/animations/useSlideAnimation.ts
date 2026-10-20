@@ -12,7 +12,7 @@ import type {
   UseSlideAnimationOptions,
   UseSlideAnimationReturn,
 } from './types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 const defaultEasing = motion.easing.standard;
 

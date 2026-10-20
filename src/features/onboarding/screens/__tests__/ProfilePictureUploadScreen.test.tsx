@@ -14,7 +14,7 @@ type ButtonProps = React.ComponentProps<typeof ButtonComponent>;
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
 const mockSkipToStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     navigateToPreviousStep: mockNavigateToPreviousStep,
@@ -23,7 +23,7 @@ jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: () => ({
     uploadProfileImage: jest.fn(),
     updateProfileAvatarUrl: jest.fn(),
@@ -40,7 +40,6 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/storage/mmkv');
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),
   ImageValidationError: class extends Error {},

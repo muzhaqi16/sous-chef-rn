@@ -12,7 +12,7 @@ import {
   type DisplayNotification as NotificationItemData,
 } from '#features/notifications/utils/toDisplayNotification';
 
-jest.mock('#utils/iconUtils', () => {
+jest.mock('#components/atoms/Icon', () => {
   const R = require('react');
   const RN = require('react-native');
   return {

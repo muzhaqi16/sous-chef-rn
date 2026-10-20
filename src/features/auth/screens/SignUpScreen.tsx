@@ -15,7 +15,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
-import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
+import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { authTestIDs } from '#features/auth/testIDs';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };

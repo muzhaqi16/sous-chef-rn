@@ -19,7 +19,7 @@ import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/sho
 import {
   AddItemsToShoppingListFromRecipeDocument,
   CreateShoppingListForRecipeDocument,
-} from '../useRecipeDetail.generated';
+} from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { authoritativeBiometryName } from './biometryLabel';
 
@@ -49,9 +49,9 @@ async function loadBiometricSnapshot(
 ): Promise<{ info: BiometricInfo; hasCredentials: boolean }> {
   try {
     const [info, hasCredentials] = await Promise.all([
-      authService.getBiometricInfo(),
+      biometricService.getBiometricInfo(),
       mode === 'settings'
-        ? authService.checkStoredCredentials(userEmail)
+        ? biometricService.checkStoredCredentials(userEmail)
         : Promise.resolve(false),
     ]);
     return { info, hasCredentials };
@@ -117,7 +117,7 @@ export const useBiometricSetup = ({
     void executeWithLoadingState(
       async () => {
         if (mode === 'settings' && hasExistingCredentials) {
-          const credentials = await authService.loadStoredCredentials(
+          const credentials = await biometricService.loadStoredCredentials(
             userEmail,
           );
           if (credentials) {
@@ -135,7 +135,7 @@ export const useBiometricSetup = ({
         // The live session authorises the enrolment: the server issues a
         // device-bound credential and the slot takes that, so no password is
         // read here or anywhere else on this path.
-        const outcome = await authService.enrolDeviceCredential(userEmail);
+        const outcome = await biometricService.enrolDeviceCredential(userEmail);
         if (outcome === 'enrolled') {
           onComplete(true);
         } else {

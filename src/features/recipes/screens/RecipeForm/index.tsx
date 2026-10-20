@@ -4,7 +4,7 @@ import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import {
   useRecipeFormWrites,
   type RecipeWriteFailure,
@@ -34,7 +34,7 @@ import type {
   IngredientFormState,
   RecipeFormState,
   StepFormState,
-} from './formState';
+} from '../../types';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';

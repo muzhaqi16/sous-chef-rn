@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { zustandStorage } from '#/storage/mmkv';
+import { zustandStorage } from '#/store/deviceStorage';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';

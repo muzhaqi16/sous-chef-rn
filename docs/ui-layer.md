@@ -98,6 +98,31 @@ optional:
 - **`FormScreen`** is a screen with a form's chrome. The name is the only thing
   it shares with a modal.
 
+## Presenters: toasts, alerts and the screen
+
+Core code asks; the mobile host presents. `toastService` and `alertService` are
+core and have no React Native in them. A host registers what shows them:
+
+- **Toasts:** `ToastProvider` registers itself through `_setToastDispatch` and
+  pairs each outcome type with its haptic (success, error, warning; `info` is
+  silent). No caller fires a haptic beside a toast
+  (`outcomeHapticHasOneOwner.test.ts`).
+- **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
+  alert raised before the app renders still shows. `AlertProvider` replaces it
+  with the app's dialog once it mounts.
+- **Haptics:** a control's press feedback (the `light()` on press-in) belongs
+  to the control. An action's own haptic (the `selection` of a toggle, the
+  `warning` of a delete or clear) is fired by the action, through the
+  `haptics` port (`requirePlatform('haptics')`). Every entry point that runs
+  the action (the checkbox, a swipe, its accessibility action, store mode, a
+  tutorial step) then gives the same feedback without firing any itself.
+- **Navigation and focus:** a core hook navigates with `useNavigationIntents()`
+  (`toRecipeDetail`, `goBack`, …) and runs focus work with
+  `useScreenFocusEffect()`, both from `#platform/screen`. On mobile they are
+  `useAppNavigation` and React Navigation's `useFocusEffect`
+  (`src/hooks/navigation/screenHooks.ts`), called in the same screen, so their
+  meaning is unchanged. A UI component keeps using `useAppNavigation` directly.
+
 ## The list row
 
 Four shells compose one row — `BaseItemCard` (pantry), `ListItem` (shopping list,
@@ -145,7 +170,7 @@ they read it.
   (`ThemedBottomSheetTextInput`, `ThemedActivityIndicator`,
   `OnPrimaryActivityIndicator`, …); a new one goes there, not in a feature file.
   Switches use `BaseSwitch` (`src/components/atoms/BaseSwitch.tsx`); themed icon
-  colours use `<Icon tone="X" />` (`src/utils/iconUtils.tsx`), and the glyph
+  colours use `<Icon tone="X" />` (`src/components/atoms/Icon.tsx`), and the glyph
   package itself is an import ban.
 - **A node reanimated animates takes no themed Unistyles style**
   ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).
@@ -202,7 +227,7 @@ they read it.
   change can hand a host elements carrying the old theme's colours. Unistyles
   updates MOUNTED views natively, but corrects a snapshot at mount only inside a
   scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
-  the next theme change. The sheet wrapper (`#hooks/useStandardBottomSheet`,
+  the next theme change. The sheet wrapper (`#hooks/ui/useStandardBottomSheet`,
   which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
   (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
   `children` on its own open state adds it. A component rendering its own JSX
@@ -266,9 +291,11 @@ they read it.
 
 ## Motion
 
-- **Where the tokens live:** `src/theme/foundations/motion.ts`, read as
+- **Where the tokens live:** durations and springs in
+  `src/theme/foundations/motion.ts`, the curves (Reanimated's) in
+  `src/theme/motion.ts`, which composes all of them. Read as
   `theme.motion.timing.FAST` in a stylesheet and as `motion.timing.FAST` from
-  the module elsewhere.
+  `#/theme/motion` elsewhere.
 - **The scale stops at 300 ms.** A longer number is a loop's own period — a
   1500 ms shimmer, a 1200 ms bob — and stays a literal at its call site rather
   than becoming a token only one animation uses.
@@ -347,7 +374,7 @@ they read it.
 
 - **`BottomSheetModal`, never inline `BottomSheet`.** An inline sheet's backdrop
   conflicts with the global backdrop below.
-  `useStandardBottomSheet` (`src/hooks/useStandardBottomSheet.tsx`) drives it
+  `useStandardBottomSheet` (`src/hooks/ui/useStandardBottomSheet.tsx`) drives it
   with a `visible` boolean and `onDismiss`; `present()`/`dismiss()` are called
   only inside the hook's own effects. It re-exports `BottomSheetModal`
   theme-wrapped, composes the backdrop claim into `modalProps.onChange`, and

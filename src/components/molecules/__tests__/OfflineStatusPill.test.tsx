@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { OfflineStatusPill } from '../OfflineStatusPill';
-import { useOfflineStatus } from '#hooks/app/useOfflineStatus';
+import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 
-jest.mock('#hooks/app/useOfflineStatus');
+jest.mock('#hooks/ui/useOfflineStatus');
 
 const offlineStatus = useOfflineStatus as jest.MockedFunction<
   typeof useOfflineStatus

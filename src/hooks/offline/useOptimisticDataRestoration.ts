@@ -1,5 +1,5 @@
 import { useEffect, startTransition } from 'react';
-import { client } from '#/apollo/client';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import {
   optimisticDataPersistence,
   type PersistedEntityType,
@@ -36,7 +36,7 @@ export function useOptimisticDataRestorationMultiple(
 
     // Non-urgent: restoration must not block navigation or the first render.
     startTransition(() => {
-      client.cache.batch({
+      requireApolloClient().cache.batch({
         update: cache => {
           entityTypes.forEach(entityType => {
             const allUpdates =

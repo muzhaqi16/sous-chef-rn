@@ -1,5 +1,5 @@
-// Unit tests for `authService.login` / `authService.autoLogin` against the
-// `LoginResult` union.
+// Unit tests for `authService.login` against the `LoginResult` union, and for
+// the biometric sign-in's exchange against the same refusal codes.
 //
 // `login` does not return a bare `AuthPayload`: a refusal arrives 200 as an
 // error union member (`AuthenticationError`, `ValidationError`, …) with no
@@ -14,7 +14,6 @@
 
 const mockMutate = jest.fn();
 jest.mock('#/apollo/client', () => ({
-  client: { mutate: (...args: unknown[]) => mockMutate(...args) },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -34,14 +33,13 @@ jest.mock('#store', () => ({
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 const mockHasCredentials = jest.fn().mockResolvedValue(true);
 const mockLoadCredentials = jest.fn();
-const mockGetLastBiometricEmail = jest.fn();
-jest.mock('#/storage/deviceId');
+jest.mock('#/services/auth/deviceId');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...args: unknown[]) => mockClearCredentials(...args),
   hasCredentials: (...args: unknown[]) => mockHasCredentials(...args),
   loadCredentials: (...args: unknown[]) => mockLoadCredentials(...args),
-  getLastBiometricEmail: () => mockGetLastBiometricEmail(),
+  getLastBiometricEmail: jest.fn(),
   saveCredentials: jest.fn(),
   getBiometricCapability: jest.fn(),
   clearTempRegistrationPassword: jest.fn(),
@@ -49,8 +47,16 @@ jest.mock('#/storage/keychain', () => ({
 
 const mockToastError = jest.mocked(toastService.error);
 
+import { registerApolloClient } from '#/apollo/clientRegistry';
+import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+import { biometricService } from '#/services/biometric/deviceCredential';
+
+// The client the code under test reads from the registry.
+registerApolloClient({
+  mutate: (...args: unknown[]) => mockMutate(...args),
+} as unknown as ApolloClient);
 
 const INPUT = { email: 'ada@example.com', password: 'pw-12345' };
 
@@ -58,7 +64,7 @@ const rejection = (code: string, message: string) => ({
   data: { login: { __typename: 'AuthenticationError', code, message } },
 });
 
-/** The same refusal on the exchange, which is what auto-login now runs. */
+/** The same refusal on the exchange, which a biometric sign-in runs. */
 const exchangeRejection = (code: string, message: string) => ({
   data: {
     exchangeDeviceCredential: {
@@ -74,7 +80,6 @@ const STORED_CREDENTIAL = 'dc1:issued-secret';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGetLastBiometricEmail.mockResolvedValue(INPUT.email);
   mockHasCredentials.mockResolvedValue(true);
   mockLoadCredentials.mockResolvedValue({
     username: INPUT.email,
@@ -136,7 +141,7 @@ describe('authService.login — LoginResult union', () => {
 // sends the id it already holds — null on a cold identity.
 describe('authService.login — device binding', () => {
   it('resolves the device id before the session is minted', async () => {
-    const { ensureDeviceId } = require('#/storage/deviceId');
+    const { ensureDeviceId } = require('#/services/auth/deviceId');
     const order: string[] = [];
     (ensureDeviceId as jest.Mock).mockImplementationOnce(() => {
       order.push('ensureDeviceId');
@@ -153,13 +158,13 @@ describe('authService.login — device binding', () => {
   });
 });
 
-describe('authService.autoLogin — stored-credential lifecycle', () => {
+describe('biometric sign-in — stored-credential lifecycle', () => {
   it('keeps the credential when the exchange is refused as credentials-invalid', async () => {
     mockMutate.mockResolvedValueOnce(
       exchangeRejection('AUTH_CREDENTIALS_INVALID', 'Bad credentials'),
     );
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     // AUTH_DEVICE_CREDENTIAL_INVALID, below, is the one clear-the-slot signal
@@ -172,7 +177,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       exchangeRejection('AUTH_ACCOUNT_SUSPENDED', 'Account suspended'),
     );
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(mockClearCredentials).toHaveBeenCalledWith(INPUT.email);
   });
@@ -186,7 +191,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       password: INPUT.password, // unprefixed: the old shape
     });
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     expect(mockMutate).not.toHaveBeenCalled();
@@ -198,7 +203,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
   it('keeps the credential when the exchange fails in transport', async () => {
     mockMutate.mockRejectedValueOnce(new Error('Network request failed'));
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     expect(mockClearCredentials).not.toHaveBeenCalled();
@@ -212,7 +217,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       error: new Error('Network request failed'),
     });
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     expect(mockClearCredentials).not.toHaveBeenCalled();
@@ -226,7 +231,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       exchangeRejection('AUTH_CREDENTIALS_INVALID', 'Wrong'),
     );
 
-    await authService.autoLogin();
+    await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(mockRegisterBiometricRefusal).toHaveBeenCalled();
   });
@@ -236,7 +241,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       exchangeRejection('AUTH_DEVICE_CREDENTIAL_INVALID', 'Revoked'),
     );
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     expect(mockClearCredentials).toHaveBeenCalledWith(INPUT.email);
@@ -247,7 +252,7 @@ describe('authService.autoLogin — stored-credential lifecycle', () => {
       exchangeRejection('AUTH_ACCOUNT_LOCKED', 'Too many attempts'),
     );
 
-    const ok = await authService.autoLogin();
+    const ok = await biometricService.signInWithDeviceCredential(INPUT.email);
 
     expect(ok).toBe(false);
     // The lockout is self-clearing, so discarding the credentials would force a

@@ -4,11 +4,11 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
+import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Title } from '#components/atoms/Title';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { IngredientSelectionProvider } from '#features/recipes/context/IngredientSelectionContext';
@@ -16,7 +16,7 @@ import {
   renderIngredientItem,
   ingredientKeyExtractor,
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
-import type { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
+import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
 

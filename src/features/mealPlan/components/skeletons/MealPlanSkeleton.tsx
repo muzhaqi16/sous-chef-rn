@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 import { MealPlanItemCardSkeleton } from '#features/mealPlan/components/skeletons/MealPlanItemCardSkeleton';
 import { getScrollClearancePadding } from '#constants/layout';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 
 /** Mirrors MealPlanMain's fixed calendar and scrolling meal sections. */
 export const MealPlanSkeleton: React.FC = () => (

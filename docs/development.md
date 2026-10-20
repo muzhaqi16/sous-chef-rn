@@ -52,6 +52,11 @@ your `.env` into `src/config/env.generated.ts`. If you edit `.env`, re-run:
 npm run genenv
 ```
 
+The generated `RAW_ENV` is typed as the core's `Env` (`src/platform/ports.ts`),
+so a key added to the generator's `KEYS` also needs its field there. The app
+reads it through `env` from `#/config/env`, which the mobile host fills from
+this file at startup.
+
 ---
 
 ## Environment files
@@ -491,6 +496,22 @@ canonical mechanisms, the token, typography and tier rules — is either a
 `no-restricted-imports` / `sous-chef/*` / `import/no-restricted-paths`
 entry in `eslint/` (the `sous-chef/*` catalog is `docs/rules/`) or a convention CLAUDE.md states and review holds.
 
+### The layer gates
+
+The core/mobile split (`docs/architecture.md` § Layers) is held by:
+
+| Gate                                               | Holds                                                                                                                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `__tests__/architecture/layerMembership.test.ts`   | every production file in `src/` matches exactly one entry of `scripts/lib/layers.js`                                                                                                                                     |
+| `boundaries/dependencies` (`eslint/boundaries.js`) | a core file imports no mobile file, type imports included, and only the packages in `CORE_EXTERNALS`; `__tests__/lint/layerPolicies.test.ts` pins this                                                                   |
+| `tsconfig.core.json` (`npm run typecheck`)         | every core file compiles with no host's ambient types, at React Native's language level plus the DOM's                                                                                                                   |
+| `core-portability` (Jest project)                  | every core file loads in node with React Native unloadable, and core flows run there with no device: sign-out, the meal-plan writes                                                                                      |
+| `__tests__/architecture/documentOwnership.test.ts` | no core GraphQL document spreads a fragment a mobile file defines; a list a core hook runs spreads its `<entity>_listed` fragment instead, which `listedFragmentsCoverCells.test.ts` holds to the cells its header names |
+| `scripts/lib/sourceRoots.js`                       | one list of production and operation roots, read by codegen, the manifest, readers, GraphQL lint, the bailout check and the GraphQL scanner tests                                                                        |
+
+`core-portability` runs inside `npm test`; the others run with `npm run lint`
+and `npm test`.
+
 ### Bans promoted out of the ratchet
 
 These concerns are hard `no-restricted-imports` bans. Each names the module
@@ -503,7 +524,7 @@ that IS the canonical mechanism as its only exemption:
 | RN `ActivityIndicator`                | a themed spinner from `themedComponents`                                                          | `themedComponents`, and `Loading` for its caller-supplied colour                       |
 | `react-native-permissions`            | `PermissionService`                                                                               | the service                                                                            |
 | `react-native-turbo-image`            | `CachedImage`                                                                                     | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper                 |
-| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name                                                  | `iconUtils`, and `Toast` for a runtime nested-theme lookup                             |
+| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name                                                  | `Icon`, and `Toast` for a runtime nested-theme lookup                                  |
 
 ### Dependency vulnerabilities
 

@@ -16,7 +16,7 @@ const TEST_EMAIL = 'ada@example.com';
 
 const mockNavigateToLogin = jest.fn();
 
-jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
   }),

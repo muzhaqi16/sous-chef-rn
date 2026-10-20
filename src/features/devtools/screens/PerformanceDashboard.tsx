@@ -6,7 +6,7 @@ import { SubScreen } from '#components/templates/SubScreen';
 import { Environment } from '#/utils/environment';
 import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
-import { usePerformanceDashboard } from '#features/devtools/hooks/usePerformanceDashboard';
+import { usePerformanceDashboard } from '#features/devtools/screens/usePerformanceDashboard';
 import { formatTimestamp } from '#features/devtools/utils/formatMetrics';
 import { styles } from '#features/devtools/components/dashboardStyles';
 import { TrackingCard } from '#features/devtools/components/TrackingCard';

@@ -8,7 +8,7 @@ jest.mock('react-native-device-info', () => ({
   getTotalMemory: jest.fn(),
 }));
 
-jest.mock('#/store/performanceStore', () => ({
+jest.mock('#/services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       addMemorySnapshot: jest.fn(),

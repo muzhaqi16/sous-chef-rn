@@ -1,8 +1,3 @@
-import type {
-  LabeledLine,
-  ReceiptLineLabel,
-  ReceiptLineLabels,
-} from '#/native/ReceiptStructuring';
 import {
   readReceiptLine,
   withoutAmount,
@@ -14,6 +9,11 @@ import type {
   ParsedReceipt,
   ParsedReceiptLine,
 } from './parsedReceipt';
+import type {
+  LabeledLine,
+  ReceiptLineLabel,
+  ReceiptLineLabels,
+} from '#/types/receiptStructuring';
 
 // The printed words decide these whatever the model said.
 const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [

@@ -24,6 +24,7 @@ import {
   throwOnMisrepresentedFixtureValues,
   throwOnUnknownFixtureKeys,
 } from '#/test-utils/apolloMockProvider';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ECHO_ITEMS = gql`
   query ProbeEchoItems($filters: ItemFilters) {
@@ -481,7 +482,7 @@ function loadEveryOperation(): Array<{ name: string; document: DocumentNode }> {
       }
     }
   };
-  walk(join(process.cwd(), 'src'));
+  OPERATION_ROOT_DIRS.forEach(walk);
 
   const fragments: FragmentDefinitionNode[] = [];
   const operations: OperationDefinitionNode[] = [];

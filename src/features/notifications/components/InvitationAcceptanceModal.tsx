@@ -10,7 +10,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
 import {
   useInvitationActions,
@@ -18,7 +18,7 @@ import {
 } from '#features/notifications/hooks/useInvitationActions';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';

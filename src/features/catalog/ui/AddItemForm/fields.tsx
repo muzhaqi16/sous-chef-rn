@@ -9,7 +9,7 @@ import {
   BaseDimension,
 } from '#/graphql/generated/schemaTypes';
 import { FormInput } from '#components/atoms/FormInput';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';

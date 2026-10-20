@@ -4,8 +4,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { Icon, type IconTone } from '#/utils/iconUtils';
-import { motion } from '#/theme/foundations/motion';
+import { Icon, type IconTone } from '#components/atoms/Icon';
+import { motion } from '#/theme/motion';
 
 interface ExpandChevronProps {
   expanded: boolean;

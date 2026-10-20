@@ -5,11 +5,11 @@ import {
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { preloadImages } from '#components/atoms/CachedImage';
+import { requirePlatform } from '#platform/install';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
-import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
+import type { SuggestionsHookResult } from '#features/catalog/types';
 
 /**
  * Per-section limit. The sheet shows a small preview of each section that drills
@@ -68,7 +68,7 @@ export function useShoppingListSuggestions({
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
     if (urls.length > 0) {
-      preloadImages(urls);
+      requirePlatform('imagePrefetch').prefetch(urls);
     }
   }, [sections]);
 

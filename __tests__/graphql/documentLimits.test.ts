@@ -49,7 +49,7 @@
  * shape of the documents to match a number nobody checked.
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, resolve, sep } from 'path';
+import { join, relative, resolve, sep } from 'path';
 import {
   parse,
   print,
@@ -65,6 +65,7 @@ import {
 } from 'graphql';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const SRC = resolve(__dirname, '..', '..', 'src');
 
@@ -104,7 +105,9 @@ const fragments = new Map<string, FragmentDefinitionNode>();
 const subscriptions: Operation[] = [];
 const httpOperations: Operation[] = [];
 
-for (const file of collectGraphqlFiles(SRC)) {
+for (const file of OPERATION_ROOT_DIRS.flatMap(dir =>
+  collectGraphqlFiles(dir),
+)) {
   let doc;
   try {
     doc = parse(readFileSync(file, 'utf8'));
@@ -117,7 +120,7 @@ for (const file of collectGraphqlFiles(SRC)) {
     } else if (def.kind === Kind.OPERATION_DEFINITION) {
       const operation: Operation = {
         name: def.name?.value ?? '(anonymous)',
-        file: file.slice(SRC.length + 1),
+        file: relative(resolve(SRC, '..'), file),
         def,
       };
       if (def.operation === 'subscription') subscriptions.push(operation);

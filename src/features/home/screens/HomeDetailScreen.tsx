@@ -10,7 +10,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useHomeDetailManagement,
   ROLE_OPTIONS,
-} from '#features/home/hooks/useHomeDetailManagement';
+} from '#features/home/screens/useHomeDetailManagement';
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -23,7 +23,7 @@ const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
 import { HomeMembersSection } from '#features/home/components/HomeMembersSection';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { useUser } from '#store/useAppStore';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -35,7 +35,8 @@ import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
-import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
+import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
+import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { transformRecipeForDisplay } from '#domain/recipeTransform';
 import { useTranslation } from '#/i18n';
 import { fetchSpoonacularTextPage } from '#features/recipes/utils/recipeSearchPaging';
-import type { SpoonacularRecipe } from '#features/recipes/utils/recipeDisplayTransforms';
+import type { SpoonacularRecipe } from '#features/recipes/utils/recipeRows';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterMaps';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 

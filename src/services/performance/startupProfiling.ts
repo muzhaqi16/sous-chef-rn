@@ -1,4 +1,4 @@
-import { env as buildEnv } from '#/config/env';
+import { generatedEnv as buildEnv } from '#native/generatedEnv';
 
 /**
  * Whether this build should record a Hermes CPU profile of startup. Build-time,

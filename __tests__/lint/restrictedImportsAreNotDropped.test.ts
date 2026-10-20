@@ -48,10 +48,10 @@ const bannedPairs = (rule: RuleConfig) => [
  * standing in for an input. Each entry states which file set allows what.
  */
 const ALLOWED_DROPS: Record<string, string[]> = {
-  'src/hooks/useStandardBottomSheet.tsx': [
+  'src/hooks/ui/useStandardBottomSheet.tsx': [
     '@gorhom/bottom-sheet#BottomSheetModal',
     '@gorhom/bottom-sheet#BottomSheetTextInput',
-    '#hooks/useBottomSheetBackdropClaim#*',
+    '#hooks/ui/useBottomSheetBackdropClaim#*',
   ],
   '**/__tests__/**/*.{ts,tsx}': [
     'react-native#TextInput',
@@ -60,8 +60,8 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     'react-native-permissions#*',
     'react-native-turbo-image#*',
     // A test asserting on what device storage HOLDS has to read it.
-    '#storage/mmkv#*',
-    '#/storage/mmkv#*',
+    '#store/deviceStorage#*',
+    '#/store/deviceStorage#*',
     // A test computes its expected value with the raw library.
     'fraction.js#*',
     'date-fns#format',
@@ -99,8 +99,13 @@ const ALLOWED_DROPS: Record<string, string[]> = {
     'react-native-unistyles/reanimated#useAnimatedTheme',
   ],
   'src/components/molecules/Loading.tsx': ['react-native#ActivityIndicator'],
+  // The composition root installs the device's key-value store as the port.
+  'src/app/installNativePlatform.ts': ['#native/storage/keyValueStore#*'],
   // Device storage's writers.
-  'src/apollo/**/*.{ts,tsx}': ['#storage/mmkv#*', '#/storage/mmkv#*'],
+  'src/apollo/**/*.{ts,tsx}': [
+    '#store/deviceStorage#*',
+    '#/store/deviceStorage#*',
+  ],
   // This file IS the wrapper: it composes the raw scroller with the input
   // context, which is the whole reason every other sheet is banned from it.
   'src/components/atoms/BottomSheetFormScrollView.tsx': [

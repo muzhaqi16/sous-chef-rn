@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { PostLoginBiometricScreen } from '../PostLoginBiometricScreen';
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -20,8 +20,8 @@ jest.mock('#hooks/performance/useScreenTransition', () => ({
   useScreenTransition: jest.fn(),
 }));
 
-jest.mock('#/services/authService', () => ({
-  authService: {
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     getBiometricInfo: jest.fn(() =>
       Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
     ),
@@ -31,8 +31,8 @@ jest.mock('#/services/authService', () => ({
   },
 }));
 
-const { authService: mockAuthService } = jest.requireMock(
-  '#/services/authService',
+const { biometricService: mockBiometricService } = jest.requireMock(
+  '#/services/biometric/deviceCredential',
 );
 
 jest.mock('#/utils/finallyHelpers', () => ({
@@ -76,7 +76,7 @@ jest.mock('#features/auth/hooks/useBiometricPrompting', () => ({
 
 const mockMarkEnabled = jest.fn();
 const mockMarkDeclined = jest.fn();
-jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markBiometricEnabled: mockMarkEnabled,
     markBiometricDeclined: mockMarkDeclined,
@@ -122,7 +122,7 @@ describe('PostLoginBiometricScreen', () => {
     await user.press(await screen.findByText('Enable Now'));
 
     await waitFor(() => {
-      expect(mockAuthService.enrolDeviceCredential).toHaveBeenCalledWith(
+      expect(mockBiometricService.enrolDeviceCredential).toHaveBeenCalledWith(
         'test@example.com',
       );
       expect(mockRecordResponse).toHaveBeenCalledWith(true, undefined);

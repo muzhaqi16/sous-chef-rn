@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
@@ -35,7 +35,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
@@ -285,7 +285,9 @@ describe('FolderPicker', () => {
   });
 
   it('dismisses via close button (handleCancel)', () => {
-    const { useStandardBottomSheet } = require('#hooks/useStandardBottomSheet');
+    const {
+      useStandardBottomSheet,
+    } = require('#hooks/ui/useStandardBottomSheet');
     const mockDismiss = jest.fn();
     useStandardBottomSheet.mockReturnValue({
       ref: { current: { present: jest.fn(), dismiss: mockDismiss } },

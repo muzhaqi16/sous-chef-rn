@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useScreenFocusEffect } from '#platform/screen';
 import type { ApolloCache } from '@apollo/client';
 import {
   useApolloClient,
@@ -11,8 +11,8 @@ import {
   LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
   type UseGenerateShoppingList_MealPlanFragment,
+  GenerateShoppingListPlanDocument,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
-import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
@@ -93,7 +93,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     setIsFocused(true);
     return () => setIsFocused(false);
   });
-  useFocusEffect(onFocusChange);
+  useScreenFocusEffect(onFocusChange);
   const pantry = usePantryQuery(pantryId ?? undefined, null, null, undefined, {
     skip: !isFocused,
     fetchPolicy: 'cache-only',
@@ -132,7 +132,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
     const fetched = await client
       .query({
-        query: GetMealPlanDocument,
+        query: GenerateShoppingListPlanDocument,
         variables: {
           id,
           mealsFirst: MEALS_PAGE_SIZE,

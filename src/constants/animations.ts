@@ -1,6 +1,7 @@
+import { TOAST_HOLD_MS } from '#platform/presenters';
 import { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 /** Alert modal animation. */
 export const ALERT = {
@@ -23,13 +24,9 @@ export const SHEET = {
 
 /** Toast animation. */
 export const TOAST = {
-  /**
-   * The default hold. Armed on the same tick the enter animation starts, so it
-   * spans the fade-in; add `motion.timing.STANDARD` for total time on screen.
-   */
-  AUTO_DISMISS_SHORT: 1400,
-  /** For a full sentence rather than a confirmation — reading time. */
-  AUTO_DISMISS_LONG: 2600,
+  /** The holds are the core's (`TOAST_HOLD_MS`): it picks one per message. */
+  AUTO_DISMISS_SHORT: TOAST_HOLD_MS.SHORT,
+  AUTO_DISMISS_LONG: TOAST_HOLD_MS.LONG,
   SWIPE_THRESHOLD: 50,
   /** Dismissal travel from rest — clears the tallest two-line toast. */
   OFFSCREEN_Y: -150,

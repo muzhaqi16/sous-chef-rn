@@ -11,7 +11,7 @@ type OnBoardingWrapperProps = React.ComponentProps<
 >;
 
 const mockNavigateToNextStep = jest.fn();
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
   }),
@@ -41,14 +41,13 @@ let mockBiometricInfo: { isAvailable: boolean; biometryType: string | null } = {
   biometryType: 'Face ID',
 };
 
-jest.mock('#/services/authService', () => ({
-  authService: {
+jest.mock('#/services/biometric/deviceCredential', () => ({
+  biometricService: {
     getBiometricInfo: jest.fn(() => Promise.resolve(mockBiometricInfo)),
-    storeCredentials: jest.fn(() => Promise.resolve(true)),
   },
 }));
 
-jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
     markBiometricDeclined: jest.fn(),
     markBiometricEnabled: jest.fn(),
@@ -57,7 +56,7 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),

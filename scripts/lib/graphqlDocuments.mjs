@@ -3,6 +3,7 @@
  * scripts, so the check and the readers generator cannot disagree.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import {
   buildSchema,
@@ -12,6 +13,8 @@ import {
   parse,
 } from 'graphql';
 import { filesUnder, fromRoot } from './tooling.mjs';
+
+const { OPERATION_ROOTS } = createRequire(import.meta.url)('./sourceRoots.js');
 
 export const SCHEMA_PATH = fromRoot(
   'src',
@@ -35,18 +38,25 @@ export function loadSchema(check) {
   return buildSchema(readFileSync(SCHEMA_PATH, 'utf8'));
 }
 
-/** The app's documents, or the tree `--src <dir>` names (a test's fixture). */
-export const documentsRoot = (argv = process.argv) => {
+/**
+ * The app's document trees, the core's first, or the one tree `--src <dir>`
+ * names (a test's fixture).
+ */
+export const documentRoots = (argv = process.argv) => {
   const at = argv.indexOf('--src');
-  return at === -1 ? fromRoot('src') : resolve(argv[at + 1]);
+  return at === -1
+    ? OPERATION_ROOTS.map(root => fromRoot(root))
+    : [resolve(argv[at + 1])];
 };
 
-/** Every fragment (by name) and operation under `root`, tests excluded. */
-export function loadDocuments(root = fromRoot('src')) {
-  const files = filesUnder('**/*.graphql', {
-    cwd: root,
-    exclude: [/(^|\/)(generated|__tests__)(\/|$)/],
-  });
+/** Every fragment (by name) and operation under `roots`, tests excluded. */
+export function loadDocuments(roots = documentRoots([])) {
+  const files = roots.flatMap(root =>
+    filesUnder('**/*.graphql', {
+      cwd: root,
+      exclude: [/(^|\/)(generated|__tests__)(\/|$)/],
+    }),
+  );
   const fragments = new Map();
   const operations = [];
   for (const file of files) {

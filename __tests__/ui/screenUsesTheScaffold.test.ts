@@ -62,8 +62,9 @@ const stringAttribute = (
   return undefined;
 };
 
+// A `use*.tsx` beside a screen is the screen's hook, not a screen.
 const screenFiles = glob('src/features/*/screens/**/*.tsx', {
-  ignore: ['**/__tests__/**'],
+  ignore: ['**/__tests__/**', '**/use*.tsx'],
 });
 const featureFiles = glob('src/features/**/*.tsx', {
   ignore: ['**/__tests__/**'],

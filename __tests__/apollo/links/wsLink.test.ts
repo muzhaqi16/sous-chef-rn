@@ -38,7 +38,7 @@ jest.mock('#/utils/errorSerialization', () => ({
   })),
 }));
 
-jest.mock('#/storage/deviceId', () => ({
+jest.mock('#/services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 
@@ -245,7 +245,7 @@ describe('wsLink createClient config', () => {
   // device, so the prior connection is never superseded and its subscriptions
   // sit against the per-user cap until the heartbeat reaps them.
   it('connectionParams omits deviceId when storage has not opened', () => {
-    const { getDeviceId } = require('#/storage/deviceId');
+    const { getDeviceId } = require('#/services/auth/deviceId');
     getDeviceId.mockReturnValueOnce(null);
 
     expect(loadConnectionParams()()).not.toHaveProperty('deviceId');

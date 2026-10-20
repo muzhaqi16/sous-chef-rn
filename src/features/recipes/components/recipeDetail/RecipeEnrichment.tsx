@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { isRecord } from '#/utils/isRecord';

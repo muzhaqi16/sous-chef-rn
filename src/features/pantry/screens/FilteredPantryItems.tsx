@@ -13,7 +13,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
@@ -40,7 +40,7 @@ import {
 } from '#hooks/ui/useTutorialSequence';
 import { commonStyles } from '#/styles/commonStyles';
 
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import {
@@ -58,7 +58,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { useToday } from '#hooks/useToday';
+import { useToday } from '#hooks/app/useToday';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 

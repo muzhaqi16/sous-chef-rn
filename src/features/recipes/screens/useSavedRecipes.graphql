@@ -1,0 +1,33 @@
+query MySavedRecipes($first: Int, $after: String) {
+  me {
+    id
+    savedRecipesConnection(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          recipeId
+          folder
+          tags
+          createdAt
+          updatedAt
+          recipe {
+            id
+            # Selected at the parent so consumers can filter the connection
+            # without materializing each masked node. Already fetched inside
+            # SavedRecipeCard_savedRecipe — this only keeps it visible after
+            # masking, so it costs nothing on the wire.
+            name
+            description
+          }
+          ...SavedRecipeCard_savedRecipe
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 import { DatePickerField } from '../DatePickerField';
 
 const FIELD = 'date-field';

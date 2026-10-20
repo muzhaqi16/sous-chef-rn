@@ -43,7 +43,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
   }),
 }));
 
-jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
+jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
   useConfigurableSettings: () => ({
     sections: [
       {
@@ -131,7 +131,7 @@ beforeEach(() => {
   (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
 });
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 

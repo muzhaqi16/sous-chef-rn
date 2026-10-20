@@ -8,7 +8,7 @@ interface TokenPayload {
   userId: string;
 }
 
-let refreshTimer: NodeJS.Timeout | null = null;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Expiry of the token that last scheduled an IMMEDIATE refresh. Zero-delay

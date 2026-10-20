@@ -1,5 +1,5 @@
-import type { ReceiptLineLabels } from '#/native/ReceiptStructuring';
 import { linesThroughTotal, structureReceipt } from '../structureReceipt';
+import type { ReceiptLineLabels } from '#/types/receiptStructuring';
 
 // Receipt lines and the labels Foundation Models returned for them in the app
 // on the iOS simulator (docs/verified-library-behaviour.md).

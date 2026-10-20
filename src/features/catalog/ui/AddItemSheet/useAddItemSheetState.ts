@@ -85,10 +85,6 @@ export function useAddItemSheetState({
     });
   };
 
-  // Determine what to show based on search query
-  const showSearchResults = searchQuery.length >= 2;
-  const showSuggestions = !showSearchResults;
-
   return {
     searchQuery,
     setSearchQuery,
@@ -97,7 +93,5 @@ export function useAddItemSheetState({
     exitingItems,
     startExitAnimation,
     completeExitAnimation,
-    showSearchResults,
-    showSuggestions,
   };
 }

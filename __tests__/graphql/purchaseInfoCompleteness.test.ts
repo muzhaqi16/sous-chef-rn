@@ -37,6 +37,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, relative, sep } from 'path';
 import { parse, Kind, type SelectionSetNode } from 'graphql';
+import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ROOT = resolve(__dirname, '..', '..');
 const SRC = resolve(ROOT, 'src');
@@ -76,7 +77,7 @@ function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const files = collectGraphqlFiles(SRC);
+const files = OPERATION_ROOT_DIRS.flatMap(dir => collectGraphqlFiles(dir));
 
 interface Offence {
   file: string;

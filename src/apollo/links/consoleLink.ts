@@ -1,6 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind } from 'graphql';
-import performance from 'react-native-performance';
 import { serializeError, safeStringifyError } from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development

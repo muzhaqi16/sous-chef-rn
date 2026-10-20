@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNavigationIntents } from '#platform/screen';
 import { logger } from '#/utils/environment';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
@@ -19,7 +19,7 @@ const STALE_MESSAGE_KEY: Record<DeepLinkAction['type'], TranslationKey> = {
  * through the linking config instead.
  */
 export const useDeepLinkRouter = (): void => {
-  const { toJoinHomeByCode, toJoinByShareCode } = useAppNavigation();
+  const { toJoinHomeByCode, toJoinByShareCode } = useNavigationIntents();
   const isHydrated = useIsHydrated();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),

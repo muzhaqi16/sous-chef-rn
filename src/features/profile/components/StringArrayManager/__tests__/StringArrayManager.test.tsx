@@ -2,11 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
 
-jest.mock('#/utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({}),
 }));
 

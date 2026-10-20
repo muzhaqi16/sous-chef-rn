@@ -5,7 +5,7 @@ import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWra
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import { useOnboardingNavigation } from '#features/onboarding/screens/useOnboardingNavigation';
 import { useSelectableItems } from '#features/onboarding/hooks/useSelectableItems';
 import { useOnboardingItems } from '#features/onboarding/hooks/useOnboardingItems';
 import {

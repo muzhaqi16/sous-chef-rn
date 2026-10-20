@@ -6,7 +6,7 @@ import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPla
 import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},
@@ -91,7 +91,7 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-jest.mock('#utils/iconUtils', () => ({
+jest.mock('#components/atoms/Icon', () => ({
   Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(

@@ -1,5 +1,5 @@
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { derivePalette, onColor } from './derivePalette';
+import { derivePalette, onColor } from './foundations/derivePalette';
 import {
   layout as baseLayout,
   spacing as baseSpacing,
@@ -12,12 +12,13 @@ import {
 } from './foundations/type';
 import { colors } from './foundations/colors';
 import { lightTheme, darkTheme } from './themes';
-import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
-import type {
-  FontScalePreference,
-  DensityPreference,
+import {
+  PREFERENCE_DEFAULTS,
+  ThemePreference,
 } from '#store/slices/preferenceTypes';
-import { DENSITY_META, FONT_SCALE_META } from './appearanceConfig';
+import type { AppearanceSettings } from '#platform/ports';
+import { logger } from '#/utils/environment';
+import { DENSITY_META, FONT_SCALE_META } from './foundations/appearanceConfig';
 
 /** Scales every role's size and leading, leaving weight and tracking alone. */
 function scaleTypeRoles<T extends Record<string, TypeRole>>(
@@ -50,19 +51,12 @@ function withAlpha(hex: string, alpha: string): string {
   return `${hex}${alpha}`;
 }
 
-export interface AppearancePreferences {
-  primaryColorOverride: string | null;
-  densityPreference: DensityPreference | null;
-  fontScalePreference: FontScalePreference | null;
-  highContrast: boolean;
-}
-
 /**
  * Applies brand color, density, font scale and high contrast to both themes.
  * A plain function, so a store setter can call it directly for an instant runtime
  * update with no effect/render delay.
  */
-export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
+export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
   const densityMul =
     DENSITY_META[prefs.densityPreference ?? PREFERENCE_DEFAULTS.density]
       .multiplier;
@@ -174,4 +168,24 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
 
   UnistylesRuntime.updateTheme('light', () => buildNext('light'));
   UnistylesRuntime.updateTheme('dark', () => buildNext('dark'));
+}
+
+/**
+ * The one theme preference → `UnistylesRuntime` translation, shared by the
+ * `setTheme` action and the post-rehydration sync, so the two cannot diverge.
+ */
+export function applyThemeToRuntime(theme: ThemePreference): void {
+  try {
+    if (theme === ThemePreference.SYSTEM) {
+      UnistylesRuntime.setAdaptiveThemes(true);
+    } else {
+      UnistylesRuntime.setAdaptiveThemes(false);
+      const target = theme === ThemePreference.DARK ? 'dark' : 'light';
+      if (UnistylesRuntime.themeName !== target) {
+        UnistylesRuntime.setTheme(target);
+      }
+    }
+  } catch (e) {
+    if (__DEV__) logger.warn('[applyThemeToRuntime] error:', e);
+  }
 }

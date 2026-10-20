@@ -65,19 +65,42 @@ delivery with no re-registration.
 What the server cannot see is a session the client drops without telling it.
 The `refresh-token-revoke` step (`src/services/auth/refreshTokenRevocation.ts`)
 therefore parks the refresh token (plus the access token, which `/revoke`
-denylists) in the keychain and then `POST /revoke`s it. Parking comes first, so
+denylists) in the platform's secure store and then `POST /revoke`s it. Parking comes first, so
 a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
 network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
 parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
 time, stopping at the first unanswered request. The step is fire-and-forget: a
 sign-out never waits on the network. `/revoke` needs no access token and is
 idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`
-end, for one, can leave the lineage live. A launch that finds keychain tokens
+end, for one, can leave the lineage live. A launch that finds stored tokens
 behind an empty store (an iOS reinstall) parks them the same way before clearing
 them.
 
+Session tokens, the durable copy of the device id and the parked revocations
+all go through the `secureStore` platform service (`requirePlatform('secureStore')`).
+On mobile it is the OS keychain (`src/native/storage/keychain.ts`, adapted in
+`secureStore.ts` beside it); stored logins and biometrics stay in that module
+and are mobile-only.
+
 `/revoke` deliberately leaves the device credential exchangeable, so the
 settings sign-out keeps biometric sign-in working.
+
+**What a device adds, its host registers.** `authService` signs in and out
+with no device behind it. The steps that need one come from
+`registerSessionHost` (`src/services/auth/sessionHost.ts`), which the mobile
+app calls from `App.tsx` before the first sign-in
+(`src/app/mobileSessionHost.ts`):
+
+- `afterSignIn` registers the device for push, on idle
+  (`src/services/device/deviceRegistration.ts`);
+- `postSignInGate` decides, before auth state changes, whether a password
+  sign-in goes on to biometric enrolment or the remember-me offer;
+- `forgetStoredSignIn` is a sign-out's first step: it revokes the device
+  credential while the session can still authorise that, then deletes the
+  biometric slot (`src/services/biometric/`).
+
+A host that registers nothing signs out through the same teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
+that it still leaves no tokens, cache, queued writes or session-scoped state.
 
 **A session is bound to the device only if the id is present at sign-in.**
 `login` and `register` await `ensureDeviceId()` before minting, because
@@ -88,7 +111,7 @@ it. Refresh inherits the binding server-side.
 **A device update is read as errors-as-data.** `UpdateDeviceResult` is a union
 (`ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload |
 ValidationError`), so a refusal RESOLVES and a `.catch` never sees it.
-`readDeviceUpdate` in `src/services/auth/deviceRegistration.ts` discriminates on
+`readDeviceUpdate` in `src/services/device/deviceRegistration.ts` discriminates on
 `__typename`; no caller may report a change from the absence of a throw.
 
 Where the identity that names the device comes from, and why it is keychain-
@@ -236,6 +259,13 @@ latches `disposed` inside graphql-ws with no reset, and a disposed client
 connects once and then refuses every retry — silently. `disposeWebSocket()`
 (`src/apollo/links/wsLink.ts`) therefore clears the reference so the next
 `enableAutoReconnect()` builds a fresh one.
+
+**Every socket client comes from the host's transport.** A rebuilt client
+dials with the same `WebSocketTransport` the host passed to
+`createApolloClient()`. On mobile that is React Native's `WebSocket` with
+`x-api-key` on the upgrade, so a rebuilt socket authenticates like the first.
+Whether the app is in the foreground comes from the `appLifecycle` port. See
+[Apollo client patterns § Building the client](apollo-client-patterns.md#building-the-client).
 
 ## See also
 

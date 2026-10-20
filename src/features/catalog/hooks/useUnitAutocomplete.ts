@@ -10,6 +10,7 @@ import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 export interface UnitItem {
   id: string;
@@ -48,7 +49,7 @@ export function useUnitAutocomplete() {
 
     if (isCacheFresh) return;
 
-    requestIdleCallback(() => {
+    scheduleIdle(() => {
       void fromServer(() =>
         client.query({
           query: GetCommonUnitsDocument,

@@ -9,7 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
-import { usePantryItemFormData } from '#features/pantry/hooks/usePantryItemFormData';
+import { usePantryItemFormData } from './usePantryItemFormData';
 import {
   StorageState,
   ItemCondition,

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { TextEditBottomSheet } from '../TextEditBottomSheet/TextEditBottomSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},

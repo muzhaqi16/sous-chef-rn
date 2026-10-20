@@ -1,6 +1,6 @@
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
+import { useAuthPreferences } from '#/hooks/auth/useAuthPreferences';
 
 /** Who the prompt is about. Enrolment authorises off the live session, so the
  * password never travels with it. */

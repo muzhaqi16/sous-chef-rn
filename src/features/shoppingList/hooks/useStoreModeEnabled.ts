@@ -1,4 +1,4 @@
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useUserPreference } from '#hooks/settings/useUserPreferences';
 
 /** The build offers store mode and this user turned it on in Settings. */

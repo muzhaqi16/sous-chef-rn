@@ -1,8 +1,8 @@
-import { useNetworkStatus } from '#hooks/useNetworkStatus';
-import { useAppearance } from '#hooks/useAppearance';
+import { useNetworkStatus } from '#hooks/device/useNetworkStatus';
+import { useAppearance } from '#hooks/ui/useAppearance';
 import { useOnlineQueueSync } from '#hooks/app/useOnlineQueueSync';
 import { usePendingRevocationDrain } from '#hooks/app/usePendingRevocationDrain';
-import { useStartupInit } from '#hooks/app/useStartupInit';
+import { useStartupInit } from './useStartupInit';
 import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
 
 /**

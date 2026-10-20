@@ -29,8 +29,7 @@
  * `sessionEndClearsPersistedFeatureStores.test.ts`, which imports none of them.
  */
 
-jest.mock('#/storage/keychain', () => ({
-  clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
+jest.mock('#native/storage/keychain', () => ({
   clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),

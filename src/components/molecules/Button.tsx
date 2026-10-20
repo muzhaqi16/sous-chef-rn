@@ -2,7 +2,7 @@ import React from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RIPPLE } from '#constants/ripple';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { PressableScale } from '#components/atoms/PressableScale';
 import { Text } from '#components/atoms/Text';
 import {

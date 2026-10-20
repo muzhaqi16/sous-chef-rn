@@ -9,7 +9,7 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { RecipeCaptureHost } from '#features/recipes/components/capture/RecipeCaptureHost';
-import { useRecipeCaptureMenu } from '#features/recipes/hooks/useRecipeCaptureMenu';
+import { useRecipeCaptureMenu } from '#features/recipes/components/capture/useRecipeCaptureMenu';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
@@ -17,7 +17,7 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { Icon } from '#/utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
@@ -28,7 +28,7 @@ import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/Spo
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { useTranslation } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
-import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
+import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
@@ -140,7 +140,7 @@ const RecipeMainInner: React.FC = () => {
     // not this per-field restore path.
     optimisticTypes: [],
     telemetryProperties: () => ({
-      discovery_count: screen.discovery.items.length,
+      discovery_count: screen.discovery.rows.length,
       view: 'discovery',
     }),
   });

@@ -1,5 +1,5 @@
 import { t } from '#/i18n';
-import type { AlertButton } from '#/services/alertService';
+import type { AlertButton } from '#platform/presenters';
 
 /** Cancel, then the destructive action, for an alert that asks before it runs. */
 export function destructiveConfirm(

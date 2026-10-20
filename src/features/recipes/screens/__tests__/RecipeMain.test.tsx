@@ -4,7 +4,7 @@ import React from 'react';
 import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import { useFeatureFlag } from '#hooks/useFeatureFlag';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { transformRecipeForDisplay } from '#domain/recipeTransform';
@@ -43,7 +43,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#hooks/useFeatureFlag', () => ({
+jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => false),
 }));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
@@ -86,7 +86,7 @@ jest.mock('#hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
 }));
 
-jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
+jest.mock('#features/recipes/screens/useRecipeScreen', () => ({
   useRecipeScreen: jest.fn(() => ({
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },
     pantryItems: [],
@@ -133,7 +133,7 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
     isActive: false,
   })),
 }));
-jest.mock('#hooks/useFeatureHint', () => ({}));
+jest.mock('#hooks/settings/useFeatureHint', () => ({}));
 jest.mock('#domain/recipeTransform', () => ({
   transformRecipeForDisplay: jest.fn(
     (r: SearchRecipesResult | RecipeSearchResult) => ({
@@ -215,7 +215,7 @@ jest.mock('../../context/IngredientSelectionContext', () => ({
 // Helper to create a useRecipeScreen mock with overrides
 function mockScreenWith(overrides: Record<string, unknown>) {
   const { useRecipeScreen } = jest.requireMock(
-    '#features/recipes/hooks/useRecipeScreen',
+    '#features/recipes/screens/useRecipeScreen',
   );
   useRecipeScreen.mockReturnValue({
     discovery: { mode: 'none', items: [], loading: false, refresh: jest.fn() },

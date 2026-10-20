@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { CardLeftSlotProps } from './types';

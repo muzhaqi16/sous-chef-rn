@@ -5,16 +5,14 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
-import {
-  PhotoCredit,
-  type PhotoCreditValue,
-} from '#features/catalog/ui/PhotoCredit';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+import type { PhotoCreditValue } from '#/types/attribution';
 
 interface Item {
   id: string;

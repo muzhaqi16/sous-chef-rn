@@ -48,7 +48,7 @@
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "build:prune": "node scripts/prune-build-output.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p __tests__/tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p __tests__/tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
     "i18n:check": "node scripts/check-i18n.mjs",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "NODE_OPTIONS=--max-old-space-size=3072 jest",

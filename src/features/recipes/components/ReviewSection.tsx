@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
 import { WriteReviewSheet } from './WriteReviewSheet';

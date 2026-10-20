@@ -12,7 +12,7 @@ import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { FormInput } from '#components/atoms/FormInput';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 
 interface GenerateShoppingListSheetProps {

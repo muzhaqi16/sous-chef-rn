@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react-native';
 import type { TagInputProps } from '#features/recipes/components/TagInput';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 
-jest.mock('#hooks/useStandardBottomSheet', () => ({
+jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: null },
     modalProps: {},

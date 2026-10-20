@@ -14,7 +14,7 @@ import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import {
   useOnboardingNavigation,
   type OnboardingStepId,
-} from '#features/onboarding/hooks/useOnboardingNavigation';
+} from '#features/onboarding/screens/useOnboardingNavigation';
 import { createShoppingListSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#utils/validation/common';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';

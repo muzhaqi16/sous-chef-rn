@@ -1,10 +1,10 @@
+import { assembleReceiptRows } from '../assembleReceiptRows';
+import { receiptPhotoMasks } from '../receiptPhotoMasks';
 import type {
   PhotoMask,
   RecognizedLine,
   RecognizedPage,
-} from '#/native/TextRecognition';
-import { assembleReceiptRows } from '../assembleReceiptRows';
-import { receiptPhotoMasks } from '../receiptPhotoMasks';
+} from '#/types/textRecognition';
 
 // One printed row per entry, a line pitch apart, each its own recognised line.
 const ROW = 0.04;

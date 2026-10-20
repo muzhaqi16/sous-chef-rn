@@ -1,4 +1,4 @@
-import { AppState } from 'react-native';
+import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { queueManager } from '../offlineQueue/queueManager';
 import { probeApiHealth } from './apiHealthProbe';
@@ -66,7 +66,7 @@ class ApiReachabilityBreaker {
   recordFailure(source?: string): void {
     // Suspension noise: the OS aborts in-flight requests when the app leaves
     // the foreground. Those failures say nothing about the API.
-    if (AppState.currentState !== 'active') {
+    if (requirePlatform('appLifecycle').current() !== 'active') {
       logger.debug(
         `🔌 API failure ignored (app not active): ${source ?? 'unknown'}`,
       );

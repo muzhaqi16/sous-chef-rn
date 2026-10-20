@@ -193,8 +193,8 @@ describe('unconfirmed-create wiring (pantry items)', () => {
 
   // The other half of the contract: the screens that read by that id.
   it.each([
-    'src/features/pantry/hooks/usePantryItemDetailData.ts',
-    'src/features/pantry/hooks/usePantryItemFormData.ts',
+    'src/features/pantry/screens/usePantryItemDetailData.ts',
+    'src/features/pantry/components/form/usePantryItemFormData.ts',
   ])('%s gates its pantry-item read on the create being acknowledged', file => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
     expect(code).toContain('useIsCreateUnconfirmed(');

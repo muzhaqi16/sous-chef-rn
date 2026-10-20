@@ -53,7 +53,7 @@ function seedPlanCache(
 const TODAY = '2026-03-10';
 const YESTERDAY = '2026-03-09';
 const TOMORROW = '2026-03-11';
-jest.mock('#hooks/useToday', () => ({ useToday: () => '2026-03-10' }));
+jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-03-10' }));
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,

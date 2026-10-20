@@ -6,7 +6,7 @@ import {
   type StoreObject,
 } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { storage } from '#storage/mmkv';
+import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 

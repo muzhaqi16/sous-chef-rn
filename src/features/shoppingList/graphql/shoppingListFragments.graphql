@@ -137,9 +137,11 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
 # The item shape returned by every copy of `AddItemsToShoppingList`.
 #
 # Spread by: shoppingList.graphql (AddItemToShoppingList),
-# SearchResults.graphql (BarcodeAddItemToShoppingList),
-# FilteredPantryItems.graphql (AddItemToShoppingListFromFilteredPantry),
-# PantryItemDetail.graphql (AddItemToShoppingListFromPantryItem).
+# useAddScannedItem.graphql (BarcodeAddItemToShoppingList),
+# useAddPantryItemToShoppingList.graphql (AddItemToShoppingListFromFilteredPantry),
+# usePantryItemDetailActions.graphql (AddItemToShoppingListFromPantryItem),
+# useGenerateShoppingList.graphql (AddDerivedItemsToShoppingList),
+# useRecipeShoppingList.graphql (useRecipeShoppingList_addedItem).
 #
 # The Feature API Boundary Convention stops those features importing the
 # shopping-list feature's operations, so each kept a hand-maintained copy of

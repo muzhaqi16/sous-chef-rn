@@ -10,9 +10,9 @@ import {
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
-  RecipeForm_RecipeFragmentDoc,
-  type RecipeForm_RecipeFragment,
-} from '#features/recipes/screens/RecipeForm/RecipeForm.generated';
+  UseRecipeFormWrites_RecipeFragmentDoc,
+  type UseRecipeFormWrites_RecipeFragment,
+} from './useRecipeFormWrites.generated';
 import type {
   CreateRecipeInput,
   UpdateRecipeInput,
@@ -54,6 +54,9 @@ export type RecipeWriteOutcome =
   | { status: 'ok' }
   | { status: 'rejected'; failure: RecipeWriteFailure };
 
+/** The recipe as an edit session loads it. */
+type EditableRecipe = UseRecipeFormWrites_RecipeFragment;
+
 const outcomeOf = (
   failure: RecipeWriteFailure | undefined,
 ): RecipeWriteOutcome =>
@@ -82,11 +85,11 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
    * rather than `useFragment` so the caller can run it from an effect, where a
    * hook cannot go.
    */
-  const readRecipe = (): RecipeForm_RecipeFragment | null =>
+  const readRecipe = (): EditableRecipe | null =>
     recipeRef
-      ? client.cache.readFragment<RecipeForm_RecipeFragment>({
-          fragment: RecipeForm_RecipeFragmentDoc,
-          fragmentName: 'RecipeForm_recipe',
+      ? client.cache.readFragment<EditableRecipe>({
+          fragment: UseRecipeFormWrites_RecipeFragmentDoc,
+          fragmentName: 'useRecipeFormWrites_recipe',
           from: recipeRef,
         })
       : null;
@@ -197,7 +200,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
    * null when it could not be re-read, since the cache still holds the copy the
    * save was refused against.
    */
-  const reloadRecipe = async (): Promise<RecipeForm_RecipeFragment | null> => {
+  const reloadRecipe = async (): Promise<EditableRecipe | null> => {
     const refreshed = await refetchRecipe().catch(() => null);
     return refreshed && !refreshed.error ? readRecipe() : null;
   };

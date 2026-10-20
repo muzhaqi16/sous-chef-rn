@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';

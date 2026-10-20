@@ -67,7 +67,7 @@ credential. No other module mints or persists one.
 |              |                                                                           |
 | ------------ | ------------------------------------------------------------------------- |
 | Value        | `device_` + uuid v4, minted once                                          |
-| Owner        | `src/storage/deviceId.ts`                                                 |
+| Owner        | `src/services/auth/deviceId.ts`                                           |
 | Durable copy | the keychain (`DEVICE_ID_SERVICE`), `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` |
 | Fast copy    | the MMKV `device_id` key, read synchronously                              |
 

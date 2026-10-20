@@ -9,19 +9,19 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { REPO_ROOT } from './lib/tooling.mjs';
 import {
-  documentsRoot,
+  documentRoots,
   loadDocuments,
   loadSchema,
 } from './lib/graphqlDocuments.mjs';
 import { readersDirOf, staleReadersFiles } from './lib/readersFragments.mjs';
 
 const CHECK = process.argv.includes('--check');
-const root = documentsRoot();
-const readersDir = readersDirOf(root);
+const roots = documentRoots();
+const readersDir = readersDirOf(roots[0]);
 const schema = loadSchema('generate-readers-fragments');
 const { expected, stale } = staleReadersFiles(
   schema,
-  loadDocuments(root),
+  loadDocuments(roots),
   readersDir,
 );
 

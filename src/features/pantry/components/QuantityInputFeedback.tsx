@@ -6,7 +6,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import type { ShownQuantity } from '#features/pantry/components/modals/PantryActionModal';
+import type { ShownQuantity } from '#features/pantry/types';
 
 interface QuantityInputFeedbackProps {
   /** What is left after the input, as it will read (null = no valid input) */

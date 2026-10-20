@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';

@@ -21,7 +21,7 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
   }),
 }));
 
-jest.mock('#features/onboarding/hooks/useOnboardingNavigation', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
   }),

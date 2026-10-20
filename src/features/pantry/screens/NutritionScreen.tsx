@@ -5,10 +5,8 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { SubScreen } from '#components/templates/SubScreen';
-import {
-  DataAttributionNotices,
-  type DataAttributionValue,
-} from '#components/molecules/DataAttributionNotices';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import type { DataAttributionValue } from '#/types/attribution';
 import type { NutritionFactsValues } from '#domain/nutrition';
 
 type NutritionScreenParams = {

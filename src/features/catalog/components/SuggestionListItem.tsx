@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Icon, type IconLibrary } from '#utils/iconUtils';
+import { Icon, type IconLibrary } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SLIDE_PRESETS } from '#constants/animations';
 import { Text } from '#components/atoms/Text';

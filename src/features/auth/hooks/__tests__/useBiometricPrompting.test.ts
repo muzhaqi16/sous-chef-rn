@@ -4,7 +4,7 @@ import { useBiometricPrompting } from '../useBiometricPrompting';
 
 // The hook does not touch the keychain — only the session-token stubs are
 // needed to keep the import chain from reaching native code.
-jest.mock('#/storage/keychain', () => ({
+jest.mock('#native/storage/keychain', () => ({
   loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),

@@ -3,8 +3,8 @@ import type {
   NetWeightKind,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
-import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
+import type { PhotoCreditValue } from '#/types/attribution';
+import type { DataAttributionValue } from '#/types/attribution';
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';
 
 /**

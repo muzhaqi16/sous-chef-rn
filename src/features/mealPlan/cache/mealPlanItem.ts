@@ -6,7 +6,6 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
-import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
@@ -53,7 +52,7 @@ export function adoptServerMealPlanItem(
   addToMealPlanItems(cache, mealPlanId, serverItem, { position: 'end' });
 }
 
-/** The flat field union of the five item display fragments. */
+/** What every query reads on a meal (`MealPlanItemReaders`), flat. */
 export type OptimisticMealPlanItem = {
   __typename: 'MealPlanItem';
   id: string;
@@ -63,7 +62,7 @@ export type OptimisticMealPlanItem = {
   customMealName: string | null;
   servings: number | null;
   calories: number | null;
-  usedPantryItems: MealPlanItemCard_ItemFragment['usedPantryItems'];
+  usedPantryItems: Unmasked<MealPlanItem_RowFragment>['usedPantryItems'];
   notes: string | null;
   isCompleted: boolean;
   completedAt: string | null;

@@ -1,7 +1,6 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
-import type { AddPantryItemFormData } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import {
@@ -14,6 +13,7 @@ import { stockAmountOf } from '#domain/stockAmount';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
 import { toDateKey } from '#/utils/dateUtils';
+import type { AddPantryItemFormData } from '#features/pantry/types';
 
 export function usePantryItemSubmission({
   pantryId,

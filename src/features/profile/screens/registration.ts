@@ -3,7 +3,7 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { settingsScreenOptions } from '#navigation/detailScreenOptions';
 import { ProfileScreen } from './ProfileScreen';
 import { devtoolsScreens } from '#features/devtools/screens/registration';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Infrequently visited, so loaded on demand to keep them out of cold start.
 const ProfilePhotoUploadScreen = React.lazy(

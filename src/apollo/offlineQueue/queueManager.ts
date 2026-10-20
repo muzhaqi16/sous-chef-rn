@@ -1,4 +1,4 @@
-import { getApolloClient } from '#/apollo/clientRegistry';
+import { requireApolloClient } from '#/apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -55,19 +55,6 @@ import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isRecord } from '#/utils/isRecord';
-
-/**
- * The queue only ever runs after `client.ts` has evaluated — it is the link
- * chain that starts a drain — so a missing client here is a wiring bug, not a
- * state to handle.
- */
-const requireApolloClient = () => {
-  const client = getApolloClient();
-  if (!client) {
-    throw new Error('Apollo client not registered before a queue drain');
-  }
-  return client;
-};
 
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,

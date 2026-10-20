@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Text } from '#components/atoms/Text';
 

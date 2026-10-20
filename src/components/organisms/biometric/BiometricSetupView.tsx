@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { kitTestIDs } from '#components/testIDs';
 

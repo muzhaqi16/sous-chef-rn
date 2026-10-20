@@ -18,10 +18,7 @@ enableMapSet();
 import type { AuthState } from './slices/authSlice';
 import { createAuthSlice } from './slices/authSlice';
 import type { PreferencesState } from './slices/preferencesSlice';
-import {
-  applyThemePreferenceToRuntime,
-  createPreferencesSlice,
-} from './slices/preferencesSlice';
+import { createPreferencesSlice } from './slices/preferencesSlice';
 import { FontScalePreference } from './slices/preferenceTypes';
 import type { AppState } from './slices/appSlice';
 import { createAppSlice } from './slices/appSlice';
@@ -45,22 +42,15 @@ import {
   createNetworkSlice,
   hydrateOfflineModeFromStorage,
 } from './slices/networkSlice';
-import {
-  zustandStorage,
-  storage,
-  STORAGE_KEY,
-  isRecoveryStorage,
-  openedWithEmptyStore,
-} from '#/storage/mmkv';
-import {
-  loadSessionTokens,
-  pickFresherSessionTokens,
-  clearSessionTokens,
-  addPendingRevocation,
-} from '#/storage/keychain';
+import { storage, zustandStorage } from '#/store/deviceStorage';
+import { STORAGE_KEY } from '#/store/persistedKeys';
+import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
+import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
-// Type-only: a value import would close the telemetry→useStore cycle.
-import type { ErrorService } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
+import { setTelemetryStateSource } from '#services/telemetry/telemetryState';
+
+const secureStore = requirePlatform('secureStore');
 
 /**
  * Loads session tokens from the keychain (their persistence tier) before
@@ -75,17 +65,17 @@ const hydrateSessionTokensThenFinish = async (
   // data — so the session is not resumed and the credentials are dropped. Its
   // lineage is still live server-side and still a push target, so it is parked
   // for `POST /revoke` rather than only forgotten.
-  if (openedWithEmptyStore()) {
-    const orphaned = await loadSessionTokens();
+  if (storage.openedWithEmptyStore()) {
+    const orphaned = await secureStore.loadSessionTokens();
     if (orphaned.status === 'ok') {
-      await addPendingRevocation(orphaned.tokens);
+      await secureStore.addPendingRevocation(orphaned.tokens);
     }
-    await clearSessionTokens();
+    await secureStore.clearSessionTokens();
     state?.setHydrated(true);
     return;
   }
 
-  const result = await loadSessionTokens();
+  const result = await secureStore.loadSessionTokens();
   if (result.status === 'ok') {
     const fallback =
       state?.accessToken && state.refreshToken
@@ -123,18 +113,13 @@ export const handleStoreRehydration = (
   if (error) {
     // Recover first, so a throw in reporting cannot block the boot.
     useStore.getState().setHydrated(true);
-    // Deferred require: telemetry imports `useStore`, so a static import would
-    // close the module-load cycle.
-    const { errorService } = require('#/services/errorService') as {
-      errorService: ErrorService;
-    };
     errorService.reportError(error, { operation: 'storeHydration' });
     return;
   }
 
   // Before `isHydrated`, so no hook needs a side-effect to catch up.
   if (state?.theme) {
-    applyThemePreferenceToRuntime(state.theme);
+    requirePlatform('appearance').applyTheme(state.theme);
   }
 
   // The account record wins over the mirror. Both are restored from the same
@@ -503,7 +488,7 @@ export const useStore = create<RootState>()(
             !state.sessionTokensInKeychain &&
             state.accessToken &&
             state.refreshToken &&
-            !isRecoveryStorage()
+            !storage.isRecovery()
           ) {
             return {
               ...persisted,
@@ -517,6 +502,22 @@ export const useStore = create<RootState>()(
     ),
   ),
 );
+
+setTelemetryStateSource({
+  // `isHydrated` flips on a failed hydration too (persist's own signal does not),
+  // so consent never stays unknown.
+  consentKnown: () => useStore.getState().isHydrated,
+  onConsentKnown: listener => {
+    useStore.subscribe(
+      state => state.isHydrated,
+      isHydrated => {
+        if (isHydrated) listener();
+      },
+    );
+  },
+  userConsent: () => useStore.getState().userConsent,
+  isOnline: () => useStore.getState().isOnline,
+});
 
 /**
  * The store under a non-hook name: the React Compiler refuses a `use*` binding

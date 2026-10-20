@@ -15,7 +15,7 @@ import {
   useShoppingListData,
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 // Module-level flag: once purchased tab content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.

@@ -7,26 +7,31 @@ This document defines the standardized patterns for using Apollo Client in this 
 ## Table of Contents
 
 1. [The data layer stays out of what renders](#the-data-layer-stays-out-of-what-renders)
-2. [Cache Update Patterns](#cache-update-patterns)
-3. [Optimistic Responses](#optimistic-responses)
-4. [Query Data Preservation](#query-data-preservation)
-5. [Resync](#resync)
-6. [Version Conflicts](#version-conflicts)
-7. [Decision Trees](#decision-trees)
-8. [Reading entities before a mutation](#reading-entities-before-a-mutation)
-9. [Reusable Utilities Reference](#reusable-utilities-reference)
-10. [Cache Persistence & Restoration](#cache-persistence--restoration)
-11. [Fragment Composition & Data Masking](#fragment-composition--data-masking)
-12. [Apollo Client 4.x Notes](#apollo-client-4x-notes)
+2. [Building the client](#building-the-client)
+3. [Cache Update Patterns](#cache-update-patterns)
+4. [Optimistic Responses](#optimistic-responses)
+5. [Query Data Preservation](#query-data-preservation)
+6. [Resync](#resync)
+7. [Version Conflicts](#version-conflicts)
+8. [Decision Trees](#decision-trees)
+9. [Reading entities before a mutation](#reading-entities-before-a-mutation)
+10. [Reusable Utilities Reference](#reusable-utilities-reference)
+11. [Cache Persistence & Restoration](#cache-persistence--restoration)
+12. [Fragment Composition & Data Masking](#fragment-composition--data-masking)
+13. [Apollo Client 4.x Notes](#apollo-client-4x-notes)
 
 ---
 
 ## The data layer stays out of what renders
 
-A screen, sheet or list cell gets its data from a hook in its feature's `hooks/`.
-It does not import `#/apollo/*` or `@apollo/client`'s operation hooks, hold the
-client, or write the cache; an `import/no-restricted-paths` zone in `eslint/`
-bans the `src/apollo/**` import.
+A screen, sheet or list cell gets its data from a hook in its feature's `hooks/`,
+or from one beside it when the query is that UI's own: a display query spreads
+the fragments its screen's components own, so the query and the hook that runs
+it live with that screen (`COLOCATED_DATA_HOOKS` in `eslint/boundaries.js`).
+What renders does not import `#/apollo/*` or `@apollo/client`'s operation hooks,
+hold the client, or write the cache; an `import/no-restricted-paths` zone in
+`eslint/` bans the `src/apollo/**` import everywhere but those hooks, which the
+feature-hook rules hold instead.
 
 What a hook HANDS BACK matters as much as what a screen imports: a leaked
 `ApolloError` or `NetworkStatus` couples a screen that imports nothing. A hook
@@ -40,6 +45,40 @@ type in it or one property down.
 `useFragment` and the masking types stay allowed in a cell: with `dataMasking`
 on, a cell subscribing to one entity is the documented pattern
 ([Fragment Composition & Data Masking](#fragment-composition--data-masking)).
+
+A core document includes only core fragments
+(`__tests__/architecture/documentOwnership.test.ts`): a write spreads
+`...<Type>Readers`, and a list a core hook runs (`GetHomes`, `GetPantry`,
+`GetShoppingListItemsFiltered`) spreads a core `<entity>_listed` fragment of
+what its rows show. Each cell of such a list reads its own fragment by id
+(`from: { __typename, id }`). `listedFragmentsCoverCells.test.ts` finds every
+read by id in the source and holds it to a query that selects it whole, and
+holds each listed fragment to the cells its header names. At runtime a strict
+cell calls `useIncompleteCellReport`, which warns once per fragment when its
+entity is cached without a field it reads; a row missing whole, as one deleted
+mid-update is, is not reported.
+
+---
+
+## Building the client
+
+`src/apollo` builds nothing when it is imported. `createApolloClient(options)`
+(`src/apollo/client.ts`) builds the client, wires cache persistence, and
+registers it in `clientRegistry`, together with the token-refresh and reset
+bridges. The host calls it once: the mobile app in `src/app/apolloClient.ts`,
+which is the module that exports `client`.
+
+Core code outside a component reads the client with `requireApolloClient()`,
+which throws if the client has not been built yet. `getApolloClient()` returns
+`null` instead, for a caller with nothing to do before then.
+
+The host supplies the WebSocket transport as `options.webSocket`
+(`WebSocketTransport` in `src/apollo/links/wsLink.ts`): the socket class, and
+optionally a keep-alive interval in place of the 12-second default. On mobile,
+`createNativeWebSocketTransport()` (`src/native/webSocketTransport.ts`)
+subclasses React Native's `WebSocket` to send `x-api-key` on the upgrade, and
+lengthens the keep-alive under Detox. Without the option, the link uses the
+global `WebSocket`.
 
 ---
 
@@ -462,19 +501,19 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event             | Fires when                                                       |
-| ----------------- | ---------------------------------------------------------------- |
-| `appForeground`   | AppState goes from background/inactive to `active`               |
-| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)     |
-| `wsReconnected`   | `onWebSocketReconnected`                                         |
-| `languageChanged` | The resolved language really changes; after one, each navigation |
+| Event             | Fires when                                                        |
+| ----------------- | ----------------------------------------------------------------- |
+| `appForeground`   | The `appLifecycle` port goes from background/inactive to `active` |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)      |
+| `wsReconnected`   | `onWebSocketReconnected`                                          |
+| `languageChanged` | The resolved language really changes; after one, each navigation  |
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is
 passed to the `ApolloClient` constructor with one coalescing default handler;
 `connectResyncSources(client, { onNavigation })` attaches the sources at app
 start in `App.tsx`, because a source subscribes as it is set and importing the client
-must not subscribe to the store, AppState and the socket.
+must not subscribe to the store, the app lifecycle and the socket.
 
 The handler:
 
@@ -699,7 +738,7 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ❌ **Don't**: Pass `skip: !id` with `variables: { id: id ?? '' }`
 ✅ **Do**: `useQuery(Doc, id ? { variables: { id } } : skipToken)`
 
-❌ **Don't**: Add an AppState or reconnect listener that refetches
+❌ **Don't**: Add an app-lifecycle or reconnect listener that refetches
 ✅ **Do**: Rely on [Resync](#resync); opt a transient query out with `refetchOn: false`
 
 ❌ **Don't**: Default to `refetchQueries` for offline-critical paths
@@ -1052,7 +1091,7 @@ given a `confirmMessage`, then settles the write.
 
 ## Cache Persistence & Restoration
 
-The app persists Apollo's normalized cache to MMKV so cold starts paint from cache instantly and so cached data remains available offline. Persistence is implemented in `src/apollo/offline/ApolloCachePersistence.ts` and is wired into `src/apollo/client.ts` at module init and `App.tsx` on mount.
+The app persists Apollo's normalized cache to MMKV so cold starts paint from cache instantly and so cached data remains available offline. Persistence is implemented in `src/apollo/offline/ApolloCachePersistence.ts`; `createApolloClient()` wires it as it builds the client, and `App.tsx` restores it on mount.
 
 ### Why not `apollo3-cache-persist`
 

@@ -3,7 +3,7 @@ import { errorService } from '#/services/errorService';
 import { View, Platform, Linking } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { authService } from '#/services/authService';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
@@ -15,8 +15,8 @@ import {
   useNotificationSettings,
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
-import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
-import { useResyncPermissionOnReturn } from '#features/notifications/hooks/useResyncPermissionOnReturn';
+import { useNotificationPermissions } from '#features/notifications/screens/useNotificationPermissions';
+import { useResyncPermissionOnReturn } from '#features/notifications/screens/useResyncPermissionOnReturn';
 import {
   CHANNEL_SETTINGS,
   PANTRY_SETTINGS,
@@ -159,7 +159,7 @@ export const NotificationSettingsScreen: React.FC = () => {
 
           // This is where permission is granted (the login flow does not
           // prompt), so re-register to deliver the push token to the server.
-          authService.registerDeviceInBackground();
+          registerDeviceInBackground();
         },
         isLoading => setUpdating(isLoading ? key : null),
         error => {

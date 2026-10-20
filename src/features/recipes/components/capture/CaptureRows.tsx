@@ -6,7 +6,7 @@ import {
   Pressable,
   ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#utils/iconUtils';
+import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#/styles/commonStyles';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

@@ -3,10 +3,10 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import type { IconName } from '#/utils/iconUtils';
-import { Icon } from '#/utils/iconUtils';
+import type { IconName } from '#components/atoms/Icon';
+import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/foundations/motion';
+import { motion } from '#/theme/motion';
 
 export interface EmptyStateProps {
   /** Icon to display (can be IconName, emoji string, or React node) */
