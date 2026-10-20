@@ -474,8 +474,8 @@ describe("a merged create's queued writes", () => {
     mockClient.cache.restore({
       ROOT_QUERY: {
         __typename: 'Query',
-        'pantryItem({"id":"minted-1"})': { __ref: 'PantryItem:minted-1' },
-        'pantryItem({"id":"surviving-1"})': { __ref: 'PantryItem:surviving-1' },
+        'pantryItem:{"id":"minted-1"}': { __ref: 'PantryItem:minted-1' },
+        'pantryItem:{"id":"surviving-1"}': { __ref: 'PantryItem:surviving-1' },
       },
       'PantryItem:minted-1': {
         __typename: 'PantryItem',
