@@ -242,6 +242,11 @@ const CORE_RESTRICTED_GLOBALS = [
     ],
     'Core code runs in every host. Use `globalThis`, or reach the host through a port in src/platform/.',
   ),
+  // React Native and most browsers have them; Safari and node do not.
+  ...restrictedGlobals(
+    ['requestIdleCallback', 'cancelIdleCallback'],
+    'Safari and node have no idle callbacks. Use `scheduleIdle` from #/utils/scheduleIdle.',
+  ),
   // Node's own globals: neither React Native nor a browser has them.
   ...restrictedGlobals(
     ['process', 'Buffer', 'setImmediate', '__dirname', '__filename', 'require'],

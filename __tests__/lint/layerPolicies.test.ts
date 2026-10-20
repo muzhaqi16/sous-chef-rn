@@ -70,6 +70,12 @@ const CASES: Case[] = [
     blocked: true,
   },
   {
+    label: 'an idle callback Safari lacks, in core',
+    filePath: CORE_FILE,
+    code: 'export const y = requestIdleCallback(() => {});\n',
+    blocked: true,
+  },
+  {
     label: 'an allowed package, from core',
     filePath: CORE_FILE,
     code: `import x from 'i18next';\n${VALUE_USE}`,

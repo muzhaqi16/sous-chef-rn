@@ -15,6 +15,7 @@ import {
   useIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { errorService } from '#/services/errorService';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 /**
  * Warms reference data into Zustand so autocomplete serves offline matches.
@@ -77,7 +78,7 @@ export function useDataPreloading() {
     ) => {
       if (inFlight.has(key) || !isStale(lastFetchedAt, now)) return;
       inFlight.add(key);
-      requestIdleCallback(() => {
+      scheduleIdle(() => {
         run()
           .catch(error => {
             // A failed warm skips `commitWarm` entirely, which leaves the

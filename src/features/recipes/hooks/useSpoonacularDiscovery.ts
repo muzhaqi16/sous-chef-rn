@@ -18,6 +18,7 @@ import {
   ingredientCacheKey,
   randomCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 type DiscoveryMode = 'pantry' | 'random' | 'none';
 
@@ -131,7 +132,7 @@ function enrichInBackground(
           .getState()
           .updateEnrichment(cacheKey, enrichmentRecordOf(info));
       }
-      requestIdleCallback(() => {
+      scheduleIdle(() => {
         setState(prev =>
           prev.found?.mode === 'pantry'
             ? {

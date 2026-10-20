@@ -1,5 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import { isRecord } from '#/utils/isRecord';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 /**
  * Drops an ended receipt's parse, line lookups and by-item list lines, which
@@ -10,7 +11,7 @@ export function forgetReceipt(
   cache: ApolloCache,
   parseId: string | undefined,
 ): void {
-  requestIdleCallback(() => {
+  scheduleIdle(() => {
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'resolveReceiptLines' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'receiptParse' });
     if (parseId) {

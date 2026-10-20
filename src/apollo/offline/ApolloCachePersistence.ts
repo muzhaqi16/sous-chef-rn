@@ -2,6 +2,7 @@ import type { NormalizedCacheObject } from '@apollo/client';
 import { storage } from '#/store/deviceStorage';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
@@ -75,7 +76,7 @@ class ApolloCachePersistence {
   private burstOpen = false;
   private burstOwed = false;
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
-  private idleCallbackId: number | null = null;
+  private cancelIdleSave: (() => void) | null = null;
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
   private pendingExtractor: Extractor | null = null;
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
@@ -128,8 +129,8 @@ class ApolloCachePersistence {
     this.clearHandles();
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
-      this.idleCallbackId = requestIdleCallback(() => {
-        this.idleCallbackId = null;
+      this.cancelIdleSave = scheduleIdle(() => {
+        this.cancelIdleSave = null;
         this.persist();
       });
     }, DEBOUNCE_MS);
@@ -191,10 +192,8 @@ class ApolloCachePersistence {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    if (this.idleCallbackId !== null) {
-      cancelIdleCallback(this.idleCallbackId);
-      this.idleCallbackId = null;
-    }
+    this.cancelIdleSave?.();
+    this.cancelIdleSave = null;
   }
 
   private persist(): void {
