@@ -1,6 +1,6 @@
-import { useNetworkStatus } from '#hooks/device/useNetworkStatus';
 import { useAppearance } from '#hooks/ui/useAppearance';
 import { useOnlineQueueSync } from '#hooks/app/useOnlineQueueSync';
+import { useNetworkStatusSync } from '#hooks/app/useNetworkStatusSync';
 import { usePendingRevocationDrain } from '#hooks/app/usePendingRevocationDrain';
 import { useStartupInit } from './useStartupInit';
 import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
@@ -12,7 +12,7 @@ import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
  */
 export function useAppLifecycle(): void {
   useAppearance();
-  useNetworkStatus();
+  useNetworkStatusSync();
   useOnlineQueueSync();
   usePendingRevocationDrain();
   useStartupInit();

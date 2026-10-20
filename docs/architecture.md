@@ -139,6 +139,7 @@ the way an eager bundler does.
 | `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)            |
 | `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info               |
 | `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
+| `connectivity`  | Whether the network is up and reachable, and its changes   | NetInfo's `addEventListener`                       |
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
 | `haptics`       | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)     |

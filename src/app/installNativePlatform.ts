@@ -1,5 +1,6 @@
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import NetInfo from '@react-native-community/netinfo';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
 import { generatedEnv } from '#native/generatedEnv';
@@ -46,6 +47,16 @@ installPlatform({
       );
       return () => subscription.remove();
     },
+  },
+  connectivity: {
+    subscribe: listener =>
+      NetInfo.addEventListener(state =>
+        listener({
+          isConnected: state.isConnected,
+          isInternetReachable: state.isInternetReachable,
+          type: state.type,
+        }),
+      ),
   },
   appearance: {
     applyTheme: theme => applyThemeToRuntime(theme),

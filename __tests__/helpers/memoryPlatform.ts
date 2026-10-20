@@ -7,6 +7,8 @@ import { streamedFileParts } from '#native/fileParts';
 import type {
   AppLifecycle,
   AppLifecycleState,
+  Connectivity,
+  ConnectivityState,
   DeviceIdLoadResult,
   KeyValueStore,
   NavigationIntents,
@@ -102,6 +104,34 @@ export function createMemoryAppLifecycle(): AppLifecycle & {
   };
 }
 
+/**
+ * Connectivity a test moves with `report`: connected over wifi until then, and
+ * reported to each subscriber as it subscribes, as NetInfo reports its state.
+ */
+export function createMemoryConnectivity(): Connectivity & {
+  report: (state: ConnectivityState) => void;
+} {
+  let state: ConnectivityState = {
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'wifi',
+  };
+  const listeners = new Set<(next: ConnectivityState) => void>();
+  return {
+    subscribe: listener => {
+      listeners.add(listener);
+      listener(state);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    report: next => {
+      state = next;
+      for (const listener of [...listeners]) listener(next);
+    },
+  };
+}
+
 /** Intents that go nowhere. A test spies on the one it asserts, reached through
  * `requirePlatform('screen').useNavigationIntents()`. */
 const memoryNavigationIntents: NavigationIntents = {
@@ -151,6 +181,7 @@ export function createMemoryPlatform(): PlatformServices {
     secureStore: createMemorySecureStore(),
     platformInfo: { os: 'ios', appVersion: '1.0.0', isEmulator: false },
     appLifecycle: createMemoryAppLifecycle(),
+    connectivity: createMemoryConnectivity(),
     appearance: { applyTheme: () => {}, apply: () => {} },
     imagePrefetch: { prefetch: () => {} },
     haptics: { selection: () => {}, warning: () => {} },
@@ -173,6 +204,14 @@ export const memoryLifecycle = (): ReturnType<
 > =>
   requirePlatform('appLifecycle') as ReturnType<
     typeof createMemoryAppLifecycle
+  >;
+
+/** The installed connectivity, to report the network going and coming back. */
+export const memoryConnectivity = (): ReturnType<
+  typeof createMemoryConnectivity
+> =>
+  requirePlatform('connectivity') as ReturnType<
+    typeof createMemoryConnectivity
   >;
 
 /** The installed screen hooks, to blur and refocus every screen. */
