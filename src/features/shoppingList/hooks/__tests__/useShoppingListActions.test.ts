@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { requirePlatform } from '#platform/install';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListActions } from '../useShoppingListActions';
 import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
@@ -35,18 +36,6 @@ jest.mock('#/utils/finallyHelpers', () => ({
       }
     },
   ),
-}));
-
-jest.mock('#services/haptic/HapticService', () => ({
-  HapticService: {
-    selection: jest.fn(),
-    warning: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-    light: jest.fn(),
-    medium: jest.fn(),
-    heavy: jest.fn(),
-  },
 }));
 
 jest.mock('../mutations/useClearShoppingListItems', () => ({
@@ -255,6 +244,81 @@ describe('useShoppingListActions', () => {
       });
 
       expect(mockClearItems).toHaveBeenCalledWith(false);
+    });
+  });
+
+  // Every control that runs an action gives its feedback through it.
+  describe('haptics', () => {
+    let selection: jest.SpyInstance;
+    let warning: jest.SpyInstance;
+
+    beforeEach(() => {
+      selection = jest.spyOn(requirePlatform('haptics'), 'selection');
+      warning = jest.spyOn(requirePlatform('haptics'), 'warning');
+    });
+
+    afterEach(() => {
+      selection.mockRestore();
+      warning.mockRestore();
+    });
+
+    it('gives a selection when a line is ticked', async () => {
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
+
+      await act(async () => {
+        await result.current.handleTogglePurchase('item-1');
+      });
+
+      expect(selection).toHaveBeenCalledTimes(1);
+      expect(warning).not.toHaveBeenCalled();
+    });
+
+    it('gives a warning when a line is removed', async () => {
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
+
+      await act(async () => {
+        await result.current.handleDeleteItem('item-1');
+      });
+
+      expect(warning).toHaveBeenCalledTimes(1);
+      expect(selection).not.toHaveBeenCalled();
+    });
+
+    it('gives a warning when a clear removes something', async () => {
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions({
+          ...defaultProps,
+          purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleClearAllShopping();
+        await result.current.handleClearAllPurchased();
+      });
+
+      expect(warning).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives nothing when a clear has nothing to remove', async () => {
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions({
+          ...defaultProps,
+          unpurchasedItems: [],
+          purchasedItems: [],
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleClearAllShopping();
+        await result.current.handleClearAllPurchased();
+      });
+
+      expect(warning).not.toHaveBeenCalled();
     });
   });
 

@@ -21,6 +21,14 @@ import { logger } from '#/utils/environment';
 const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
   status === null || status === 'extension' ? 'unknown' : status;
 
+// Imported at the first haptic, not statically: HapticService reads the store,
+// which reads this install as it loads.
+const haptic = (kind: 'selection' | 'warning') => (): void => {
+  import('#services/haptic/HapticService')
+    .then(({ HapticService }) => HapticService[kind]())
+    .catch((error: unknown) => logger.warn('Haptic feedback failed', error));
+};
+
 // Every adapter delegates through an arrow or a getter: Metro's inline requires
 // then load each native module at its first use, not during this install,
 // which runs before the rest of the app has started.
@@ -53,6 +61,7 @@ installPlatform({
     apply: settings => applyAppearanceToRuntime(settings),
   },
   imagePrefetch: { prefetch: uris => preloadImages(uris) },
+  haptics: { selection: haptic('selection'), warning: haptic('warning') },
   fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,
 });

@@ -110,8 +110,12 @@ core and have no React Native in them. A host registers what shows them:
 - **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
   alert raised before the app renders still shows. `AlertProvider` replaces it
   with the app's dialog once it mounts.
-- **Haptics before an action** (a toggle, a delete) fire where it is pressed,
-  in the component, not in the data hook.
+- **Haptics:** a control's press feedback (the `light()` on press-in) belongs
+  to the control. An action's own haptic (the `selection` of a toggle, the
+  `warning` of a delete or clear) is fired by the action, through the
+  `haptics` port (`requirePlatform('haptics')`). Every entry point that runs
+  the action (the checkbox, a swipe, its accessibility action, store mode, a
+  tutorial step) then gives the same feedback without firing any itself.
 - **Navigation and focus:** a core hook navigates with `useNavigationIntents()`
   (`toRecipeDetail`, `goBack`, …) and runs focus work with
   `useScreenFocusEffect()`, both from `#platform/screen`. On mobile they are
