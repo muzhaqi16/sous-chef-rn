@@ -128,7 +128,9 @@ describe('a coalesced move drained against the schema', () => {
         variables: {
           input: {
             shoppingListId: 'list-1',
-            items: [{ id: 'item-X', item: { itemName: 'Eggs' } }],
+            items: [
+              { id: 'item-X', item: { inline: { id: 'cat-x', name: 'Eggs' } } },
+            ],
           },
         },
       }),
