@@ -6463,7 +6463,7 @@ input ItemPriceTrendInput {
 
 """
 Mutually-exclusive item reference: supply exactly one of an existing catalog
-item id, a scanned barcode's product record, or a free-text name. Enforced by
+item id, a scanned barcode's product record, or an item typed inline. Enforced by
 the GraphQL executor (@oneOf) — the request is rejected before any resolver
 runs if zero or two are provided.
 """
@@ -6475,11 +6475,6 @@ input ItemRefInput @oneOf {
   """
   inline: InlineItemInput
   itemId: ID
-  """
-  A typed name, read as `inline: { name }` with no client-minted id.
-  `inline` replaces it: it goes once every supported client sends `inline`.
-  """
-  itemName: String
   """
   A barcode's product record, as Item.matchedVariation returned it: the line
   names its item and stores the net weight, unit, brand and barcode the lookup
