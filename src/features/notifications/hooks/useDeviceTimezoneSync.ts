@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { AppState } from 'react-native';
+import { requirePlatform } from '#platform/install';
 import {
   skipToken,
   useApolloClient,
@@ -91,12 +91,13 @@ export const useDeviceTimezoneSync = (): void => {
   // except the one the zone changes in — the one this hook exists for.
   const [deviceTimezone, setDeviceTimezone] = useState(getDeviceTimezone);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', status => {
-      if (status === 'active') setDeviceTimezone(getDeviceTimezone());
-    });
-    return () => subscription.remove();
-  }, []);
+  useEffect(
+    () =>
+      requirePlatform('appLifecycle').subscribe(status => {
+        if (status === 'active') setDeviceTimezone(getDeviceTimezone());
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!deviceTimezone || !preferencesId) return;

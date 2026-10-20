@@ -28,23 +28,14 @@ import { readNotificationStatus } from '#features/notifications/utils/notificati
 import { useNotifications, useNotificationListener } from '../useNotifications';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import { logger } from '#/utils/environment';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 
 // Mutable so a test can simulate a logged-out session. Prefixed `mock` so the
 // jest.mock factory below may reference it.
 let mockUser: { id: string } | null = { id: 'user-1' };
 
-const mockRegisterFcmTapHandlers = jest.fn(() => jest.fn());
-const mockRegisterIosPushTapHandlers = jest.fn(() => jest.fn());
-
-jest.mock('#/services/push/nativePushMessaging', () => ({
-  registerFcmTapHandlers: () => mockRegisterFcmTapHandlers(),
-}));
-jest.mock('#/services/push/iosPushMessaging', () => ({
-  registerIosPushTapHandlers: () => mockRegisterIosPushTapHandlers(),
-}));
-
-// The store holds no notifications — only the signed-in user (which gates
-// push-tap registration) and the expiration buffer.
+// The store holds no notifications — only the signed-in user and the
+// expiration buffer.
 type MockNotificationsState = {
   user: { id: string } | null;
   pendingExpirationLinks: Record<string, unknown>;
@@ -76,10 +67,6 @@ jest.mock('#store', () => ({
   useStore: {
     getState: () => ({ pendingExpirationLinks: {} }),
   },
-}));
-
-jest.mock('#/services/notifications/localNotificationHelper', () => ({
-  showLocalNotification: jest.fn(),
 }));
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
@@ -380,15 +367,12 @@ describe('useNotificationListener', () => {
     expect(badgeCount(cache)).toBe(0);
   });
 
-  // Android draws the tray entry itself from this event. An admin's
-  // announcement has to reach it in the admin's words — dropped from the
-  // copy source, it was drawn with the template for its notification type.
-  it("draws an authored announcement in its author's words", async () => {
-    const { Platform } = require('react-native');
-    const platform = jest.replaceProperty(Platform, 'OS', 'android');
-    const {
-      showLocalNotification,
-    } = require('#/services/notifications/localNotificationHelper');
+  // The host draws the tray entry from this event. An admin's announcement
+  // has to reach it in the admin's words — dropped from the copy source, it
+  // was drawn with the template for its notification type.
+  it("hands an authored announcement over in its author's words", async () => {
+    memoryLifecycle().moveTo('background');
+    const onArrivedWhileAway = jest.fn();
 
     const event = buildNotificationSubscriptionMock({
       id: 'notif-authored',
@@ -403,23 +387,26 @@ describe('useNotificationListener', () => {
     ).data.notificationEvents.node;
     node.isAuthoredContent = true;
 
-    renderHookWithApollo(() => useNotificationListener(), {
-      cache: seededCache(),
-      operationMocks: [
-        event,
-        recordMock(NotificationSummaryDocument, { data: summaryData }).mock,
-      ],
-    });
+    renderHookWithApollo(
+      () => useNotificationListener({ onArrivedWhileAway }),
+      {
+        cache: seededCache(),
+        operationMocks: [
+          event,
+          recordMock(NotificationSummaryDocument, { data: summaryData }).mock,
+        ],
+      },
+    );
 
     await waitFor(() =>
-      expect(showLocalNotification).toHaveBeenCalledWith(
+      expect(onArrivedWhileAway).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Scheduled maintenance',
           body: 'The app is offline tonight from 2 to 3.',
         }),
       ),
     );
-    platform.restore();
+    memoryLifecycle().moveTo('active');
   });
 
   it('a CREATED event lands in the cache and re-reads the count', async () => {
@@ -545,37 +532,6 @@ describe('useNotificationListener', () => {
     expect(readNotificationStatus(cache, 'notif-1')).toBe(
       NotificationStatus.Sent,
     );
-  });
-
-  it('registers push tap handlers when authenticated', async () => {
-    renderHookWithApollo(() => useNotificationListener());
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockRegisterFcmTapHandlers).toHaveBeenCalledTimes(1);
-    expect(mockRegisterIosPushTapHandlers).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not register push tap handlers (consuming the cold-start tap) when logged out', async () => {
-    mockUser = null;
-    renderHookWithApollo(() => useNotificationListener());
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
-    expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
-  });
-
-  it('does not register push tap handlers when config.skip is true', async () => {
-    renderHookWithApollo(() => useNotificationListener({ skip: true }));
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
-    expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
   });
 
   describe('subscription errors', () => {

@@ -1,11 +1,34 @@
 import React from 'react';
-import { useNotificationListener } from '#features/notifications/hooks/useNotifications';
+import { Platform } from 'react-native';
+import {
+  useNotificationListener,
+  type AwayNotification,
+} from '#features/notifications/hooks/useNotifications';
+import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { useUser } from '#store/useAppStore';
 import { useAppStore } from '#store/useAppStore';
+import { usePushTapHandlers } from './usePushTapHandlers';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
 }
+
+/**
+ * Android only: on iOS the OS already draws the APNs alert for the same event,
+ * so a Notifee draw here would double the tray entry.
+ */
+const drawWhileAway = (notification: AwayNotification): void => {
+  if (Platform.OS !== 'android') return;
+  void showLocalNotification({
+    id: notification.id,
+    title: notification.title,
+    body: notification.body,
+    data: {
+      category: notification.category,
+      notificationId: notification.id,
+    },
+  });
+};
 
 /**
  * Holds the notification subscriptions as side effects. Returns null, so
@@ -21,7 +44,9 @@ const NotificationListener: React.FC = () => {
   // The ONLY mount point for the notification subscriptions — the server caps
   // concurrent subscriptions per client, so screens must use useNotifications
   // (store reads, no subscriptions) instead of mounting another listener.
-  useNotificationListener({ skip: !isAuthenticated || !user });
+  const skip = !isAuthenticated || !user;
+  useNotificationListener({ skip, onArrivedWhileAway: drawWhileAway });
+  usePushTapHandlers(skip ? undefined : user.id);
 
   return null;
 };

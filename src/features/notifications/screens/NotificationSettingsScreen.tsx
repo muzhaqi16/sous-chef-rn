@@ -15,8 +15,8 @@ import {
   useNotificationSettings,
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
-import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
-import { useResyncPermissionOnReturn } from '#features/notifications/hooks/useResyncPermissionOnReturn';
+import { useNotificationPermissions } from '#features/notifications/screens/useNotificationPermissions';
+import { useResyncPermissionOnReturn } from '#features/notifications/screens/useResyncPermissionOnReturn';
 import {
   CHANNEL_SETTINGS,
   PANTRY_SETTINGS,
