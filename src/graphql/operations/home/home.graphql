@@ -9,7 +9,8 @@ query GetHomes($first: Int, $after: String) {
       node {
         # Direct selections cover what `HomeManagement` + hooks read off each
         # node (id, default flag, default-pantry lookup, membership perms).
-        # Leaf rendering lives in the masked `HomeCard_home` spread.
+        # `home_listed` is what a listed home shows, and what a write adding a
+        # home returns; each card reads its own fragment of it by id.
         id
         name
         isDefault
@@ -41,7 +42,7 @@ query GetHomes($first: Int, $after: String) {
         membersConnection(first: 5) {
           totalCount
         }
-        ...HomeCard_home
+        ...home_listed
       }
     }
     pageInfo {

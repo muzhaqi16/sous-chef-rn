@@ -102,6 +102,7 @@ export function homeNode(home: HomeFixture): HomeNode {
         status:
           (m.status as MembershipStatus | undefined) ?? MembershipStatus.Active,
         displayName: m.displayName ?? null,
+        version: 1,
         canManageHome: false,
         canViewPantry: true,
         canEditPantry: true,
@@ -130,6 +131,12 @@ export function homeNode(home: HomeFixture): HomeNode {
         status: (i.status as InviteStatus | undefined) ?? InviteStatus.Pending,
         expiresAt: '2099-01-01T00:00:00Z',
         message: null,
+        home: {
+          __typename: 'Home',
+          id: home.id,
+          name: home.name ?? `Home ${home.id}`,
+        },
+        inviter: null,
       })),
     ),
     pantriesConnection: connection(
@@ -152,7 +159,19 @@ export function homeNode(home: HomeFixture): HomeNode {
       canAddItems: true,
       canRemoveItems: true,
       canInviteOthers: true,
+      status: MembershipStatus.Active,
+      displayName: null,
     },
+    description: null,
+    timezone: 'UTC',
+    currency: 'USD',
+    isPublic: false,
+    joinCode: null,
+    allowJoinCode: false,
+    joinLink: null,
+    maxMembers: 10,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
   };
 }
 
@@ -167,25 +186,10 @@ export function homeDetailNode(home: HomeFixture): HomeDetailNode {
   const listNode = homeNode(home);
   return {
     ...listNode,
-    myMembership: listNode.myMembership && {
-      ...listNode.myMembership,
-      status: MembershipStatus.Active,
-      displayName: null,
-    },
     // The detail fragment selects more per member than the list does; an empty
     // connection satisfies either, and no consumer of this fixture reads them.
     membersConnection: { ...listNode.membersConnection, edges: [] },
     invitesConnection: { ...listNode.invitesConnection, edges: [] },
-    description: null,
-    timezone: 'UTC',
-    currency: 'USD',
-    isPublic: false,
-    joinCode: null,
-    allowJoinCode: false,
-    joinLink: null,
-    maxMembers: 10,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
   };
 }
 

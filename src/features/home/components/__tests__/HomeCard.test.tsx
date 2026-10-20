@@ -1,10 +1,7 @@
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { screen, userEvent } from '@testing-library/react-native';
-import {
-  renderWithApollo,
-  toFragmentRef,
-} from '#/test-utils/apolloMockProvider';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { HomeCard } from '../HomeCard';
 import {
   HomeCard_HomeFragmentDoc,
@@ -147,7 +144,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
   const home = buildHome();
   return renderWithApollo(
     <HomeCard
-      homeRef={toFragmentRef<typeof HomeCard_HomeFragmentDoc>(home)}
+      homeId={home.id}
       isDefault={false}
       onPress={props.onPress ?? jest.fn()}
       onSetDefault={props.onSetDefault ?? jest.fn()}
@@ -212,7 +209,7 @@ describe('HomeCard', () => {
     const home = buildHome({ memberCount: 1 });
     renderWithApollo(
       <HomeCard
-        homeRef={toFragmentRef<typeof HomeCard_HomeFragmentDoc>(home)}
+        homeId={home.id}
         isDefault={false}
         onPress={jest.fn()}
         onSetDefault={jest.fn()}

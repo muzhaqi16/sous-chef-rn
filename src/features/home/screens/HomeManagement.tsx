@@ -391,7 +391,7 @@ export const HomeManagement: React.FC = () => {
                   .mass(1.5)}
               >
                 <HomeCard
-                  homeRef={home}
+                  homeId={home.id}
                   isDefault={home.id === remoteDefaultHomeId}
                   isHighlighted={home.id === highlightedHomeId}
                   canInvite={userCanInvite}

@@ -96,7 +96,7 @@ jest.mock('#features/home/components/CreateHomeForm', () => ({
 // Captures every render's props so tests can assert the gating computed by the
 // screen (the card itself is presentation-only here).
 const mockHomeCardProps: Array<{
-  homeRef?: { name?: string; id?: string };
+  homeId?: string;
   canDelete?: boolean;
   canInvite?: boolean;
   isDefault?: boolean;
@@ -105,7 +105,7 @@ const mockHomeCardProps: Array<{
 }> = [];
 jest.mock('#features/home/components/HomeCard', () => ({
   HomeCard: (props: {
-    homeRef?: { name?: string; id?: string };
+    homeId?: string;
     canDelete?: boolean;
     canInvite?: boolean;
     isDefault?: boolean;
@@ -113,7 +113,7 @@ jest.mock('#features/home/components/HomeCard', () => ({
     onSetDefault?: (homeId: string) => void | Promise<void>;
   }) => {
     mockHomeCardProps.push(props);
-    return props.homeRef?.name;
+    return props.homeId;
   },
 }));
 
@@ -221,7 +221,7 @@ describe('HomeManagement', () => {
     const { queryByTestId } = render(<HomeManagement />);
 
     expect(queryByTestId(kitTestIDs.stateError)).toBeNull();
-    expect(mockHomeCardProps.at(-1)?.homeRef?.id).toBe('home-1');
+    expect(mockHomeCardProps.at(-1)?.homeId).toBe('home-1');
   });
 
   it('renders homes list when homes exist', () => {
@@ -510,9 +510,7 @@ describe('HomeManagement', () => {
 
       render(<HomeManagement />);
 
-      const byId = new Map(
-        mockHomeCardProps.map(p => [p.homeRef?.id, p.isDefault]),
-      );
+      const byId = new Map(mockHomeCardProps.map(p => [p.homeId, p.isDefault]));
       expect(byId.get('home-2')).toBe(true);
       expect(byId.get('home-1')).toBe(false);
     });
@@ -525,7 +523,7 @@ describe('HomeManagement', () => {
 
       render(<HomeManagement />);
 
-      expect(mockHomeCardProps[0]?.homeRef?.id).toBe('home-2');
+      expect(mockHomeCardProps[0]?.homeId).toBe('home-2');
     });
   });
 
@@ -548,7 +546,7 @@ describe('HomeManagement', () => {
       render(<HomeManagement />);
 
       const onSetDefault = mockHomeCardProps.find(
-        p => p.homeRef?.id === 'home-2',
+        p => p.homeId === 'home-2',
       )?.onSetDefault;
 
       await act(async () => {
@@ -570,7 +568,7 @@ describe('HomeManagement', () => {
       render(<HomeManagement />);
 
       const onSetDefault = mockHomeCardProps.find(
-        p => p.homeRef?.id === 'home-2',
+        p => p.homeId === 'home-2',
       )?.onSetDefault;
 
       await act(async () => {
@@ -578,9 +576,7 @@ describe('HomeManagement', () => {
       });
 
       expect(
-        mockHomeCardProps.some(
-          p => p.homeRef?.id === 'home-2' && p.isHighlighted,
-        ),
+        mockHomeCardProps.some(p => p.homeId === 'home-2' && p.isHighlighted),
       ).toBe(true);
     });
   });
