@@ -23,7 +23,7 @@ const {
   LAYER_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
-  ENFORCED_CORE_PATTERNS,
+  CORE_PATTERNS,
 } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
 const { operationGlobs } = require('../scripts/lib/sourceRoots');
@@ -910,7 +910,7 @@ const overrides = [
   },
   {
     // Core runs in every host, so it names no host-only global.
-    files: ENFORCED_CORE_PATTERNS,
+    files: CORE_PATTERNS,
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: { 'no-restricted-globals': ['error', ...CORE_RESTRICTED_GLOBALS] },
   },

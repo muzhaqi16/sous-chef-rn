@@ -7,14 +7,12 @@
  * classified the day it exists; a file that mixes layers moves, the map does
  * not grow an exception.
  *
- * `enforced` turns on per entry as an area is cleaned, and never turns off.
- *
  * Patterns use `*`, `**` and `{a,b}` only, so they mean the same here as in
  * eslint-plugin-boundaries' micromatch. CommonJS because the ESLint and Jest
  * configs load it before any transform runs.
  */
 
-/** @typedef {{ name: string, layer: 'core' | 'mobile', patterns: string[], enforced: boolean }} LayerEntry */
+/** @typedef {{ name: string, layer: 'core' | 'mobile', patterns: string[] }} LayerEntry */
 
 /** @type {LayerEntry[]} */
 const LAYERS = [
@@ -22,41 +20,35 @@ const LAYERS = [
     name: 'platform',
     layer: 'core',
     patterns: ['src/platform/**'],
-    enforced: true,
   },
   {
     name: 'apollo',
     layer: 'core',
     patterns: ['src/apollo/**'],
-    enforced: true,
   },
   {
     name: 'domain',
     layer: 'core',
     patterns: ['src/domain/**'],
-    enforced: true,
   },
   {
     name: 'graphql',
     layer: 'core',
     patterns: ['src/graphql/**'],
-    enforced: true,
   },
-  { name: 'i18n', layer: 'core', patterns: ['src/i18n/**'], enforced: true },
+  { name: 'i18n', layer: 'core', patterns: ['src/i18n/**'] },
   {
     name: 'config',
     layer: 'core',
     patterns: ['src/config/**'],
-    enforced: true,
   },
-  { name: 'store', layer: 'core', patterns: ['src/store/**'], enforced: true },
-  { name: 'types', layer: 'core', patterns: ['src/types/**'], enforced: true },
-  { name: 'utils', layer: 'core', patterns: ['src/utils/**'], enforced: true },
+  { name: 'store', layer: 'core', patterns: ['src/store/**'] },
+  { name: 'types', layer: 'core', patterns: ['src/types/**'] },
+  { name: 'utils', layer: 'core', patterns: ['src/utils/**'] },
   {
     name: 'services/auth',
     layer: 'core',
     patterns: ['src/services/auth/**', 'src/services/authService.ts'],
-    enforced: true,
   },
   {
     name: 'services',
@@ -65,7 +57,6 @@ const LAYERS = [
       'src/services/{subscriptions,spoonacular,telemetry}/**',
       'src/services/{alertService,destructiveConfirm,errorService,toastService}.ts',
     ],
-    enforced: true,
   },
   {
     name: 'hooks',
@@ -73,43 +64,36 @@ const LAYERS = [
     patterns: [
       'src/hooks/{apollo,auth,data,deepLink,search,settings,utils}/**',
     ],
-    enforced: true,
   },
   {
     name: 'hooks/session',
     layer: 'core',
     patterns: ['src/hooks/{app,offline,subscriptions}/**'],
-    enforced: true,
   },
   {
     name: 'theme/foundations',
     layer: 'core',
     patterns: ['src/theme/foundations/**'],
-    enforced: true,
   },
   {
     name: 'features/utils',
     layer: 'core',
     patterns: ['src/features/*/utils/**'],
-    enforced: true,
   },
   {
     name: 'features/graphql',
     layer: 'core',
     patterns: ['src/features/*/graphql/**'],
-    enforced: true,
   },
   {
     name: 'features/cache',
     layer: 'core',
     patterns: ['src/features/*/cache/**'],
-    enforced: true,
   },
   {
     name: 'features/data',
     layer: 'core',
     patterns: ['src/features/*/{hooks,offline,store,locales,constants}/**'],
-    enforced: true,
   },
   {
     name: 'features/declarations',
@@ -118,7 +102,6 @@ const LAYERS = [
       'src/features/*/{manifest.static,types,pushCopy}.ts',
       'src/features/{registry.static,registry.cache,staticTypes}.ts',
     ],
-    enforced: true,
   },
 
   {
@@ -127,7 +110,6 @@ const LAYERS = [
     patterns: [
       'src/{app,assets,components,constants,context,native,navigation,screens,styles}/**',
     ],
-    enforced: false,
   },
   {
     name: 'services (device)',
@@ -136,7 +118,6 @@ const LAYERS = [
       'src/services/{push,permissions,haptic,notifications,performance,biometric,device}/**',
       'src/services/NavigationService.ts',
     ],
-    enforced: false,
   },
   {
     name: 'hooks (UI and device)',
@@ -144,13 +125,11 @@ const LAYERS = [
     patterns: [
       'src/hooks/{ui,animations,navigation,permissions,performance,device}/**',
     ],
-    enforced: false,
   },
   {
     name: 'theme runtime',
     layer: 'mobile',
     patterns: ['src/theme/*.ts'],
-    enforced: false,
   },
   {
     name: 'features (UI)',
@@ -160,7 +139,6 @@ const LAYERS = [
       'src/features/*/{manifest,testIDs}.ts',
       'src/features/{registry,types}.ts',
     ],
-    enforced: false,
   },
 ];
 

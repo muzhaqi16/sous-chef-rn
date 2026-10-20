@@ -1,5 +1,5 @@
 /**
- * The layer boundary, exercised through the config that ships: an enforced core
+ * The layer boundary, exercised through the config that ships: a core
  * file imports only core and the allowed packages, type imports included, and
  * names no host-only global. Each case lints synthetic text at a real file's
  * path, so the type-aware parser has it in the program; a case that fails to
@@ -18,48 +18,48 @@ type Case = {
 };
 
 const VALUE_USE = 'export const y: unknown = x;\n';
-const ENFORCED_CORE = 'src/i18n/featureLocales.ts';
+const CORE_FILE = 'src/i18n/featureLocales.ts';
 
 const CASES: Case[] = [
   {
-    label: 'react-native, from enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'react-native, from core',
+    filePath: CORE_FILE,
     code: `import { Platform as x } from 'react-native';\n${VALUE_USE}`,
     blocked: true,
   },
   {
-    label: 'a mobile file, imported as a TYPE, from enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'a mobile file, imported as a TYPE, from core',
+    filePath: CORE_FILE,
     code: "import type { ToastPresenter as X } from '#components/molecules/Toast';\nexport type Y = X;\n",
     blocked: true,
   },
   {
-    label: 'a package outside the core allow-list, from enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'a package outside the core allow-list, from core',
+    filePath: CORE_FILE,
     code: `import { createMMKV as x } from 'react-native-mmkv';\n${VALUE_USE}`,
     blocked: true,
   },
   {
-    label: 'a host-only global, in enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'a host-only global, in core',
+    filePath: CORE_FILE,
     code: 'export const y: unknown = window;\n',
     blocked: true,
   },
   {
-    label: 'an allowed package, from enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'an allowed package, from core',
+    filePath: CORE_FILE,
     code: `import x from 'i18next';\n${VALUE_USE}`,
     blocked: false,
   },
   {
-    label: 'a core file, from enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'a core file, from core',
+    filePath: CORE_FILE,
     code: `import { requirePlatform as x } from '#platform/install';\n${VALUE_USE}`,
     blocked: false,
   },
   {
-    label: 'globalThis, in enforced core',
-    filePath: ENFORCED_CORE,
+    label: 'globalThis, in core',
+    filePath: CORE_FILE,
     code: 'export const y: unknown = globalThis;\n',
     blocked: false,
   },

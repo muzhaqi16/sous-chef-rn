@@ -168,14 +168,10 @@ const COLOCATED_DATA_HOOK_ZONES = BOUNDARY_ZONES.filter(
 // ── Layers ──
 //
 // File categories, independent of the elements above: `core` or `mobile` for
-// every src file, from `scripts/lib/layers.js`, and `enforced-core` for the
-// core areas held to the layer boundary. `docs/architecture.md` § Layers.
-const LAYER_FILES = LAYERS.flatMap(entry => [
-  ...entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
-  ...(entry.layer === 'core' && entry.enforced
-    ? entry.patterns.map(pattern => ({ category: 'enforced-core', pattern }))
-    : []),
-]);
+// every src file, from `scripts/lib/layers.js`. `docs/architecture.md` § Layers.
+const LAYER_FILES = LAYERS.flatMap(entry =>
+  entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
+);
 
 // What the core may import from node_modules: modules a browser host has too.
 const CORE_EXTERNALS = [
@@ -207,13 +203,13 @@ const CORE_EXTERNALS = [
 // No `dependency.kind`: a type import ties core to mobile as surely as a value.
 const LAYER_POLICIES = [
   {
-    from: { file: { categories: 'enforced-core' } },
+    from: { file: { categories: 'core' } },
     disallow: { to: { file: { categories: 'mobile' } } },
     message:
       'Core code runs without React Native and imports only core. Reach the device through a port in src/platform/, or move this file to the mobile layer. See docs/architecture.md § Layers.',
   },
   {
-    from: { file: { categories: 'enforced-core' } },
+    from: { file: { categories: 'core' } },
     disallow: {
       to: {
         module: {
@@ -244,9 +240,9 @@ const CORE_RESTRICTED_GLOBALS = [
     'Core code runs in every host. Use `globalThis`, or reach the host through a port in src/platform/.',
 }));
 
-const ENFORCED_CORE_PATTERNS = LAYERS.filter(
-  entry => entry.layer === 'core' && entry.enforced,
-).flatMap(entry => entry.patterns);
+const CORE_PATTERNS = LAYERS.filter(entry => entry.layer === 'core').flatMap(
+  entry => entry.patterns,
+);
 
 module.exports = {
   BOUNDARY_ZONES,
@@ -257,5 +253,5 @@ module.exports = {
   LAYER_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
-  ENFORCED_CORE_PATTERNS,
+  CORE_PATTERNS,
 };

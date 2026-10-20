@@ -72,20 +72,19 @@ its top level for that reason.
 
 The map lives in `scripts/lib/layers.js`, the one copy lint, Jest and scripts
 read. `__tests__/architecture/layerMembership.test.ts` fails when a file matches
-no entry or two, naming the file. Each entry carries an `enforced` flag, set
-once its area imports nothing from mobile; it never turns back off.
+no entry or two, naming the file.
 
-An enforced area is held two ways:
+The core is held two ways:
 
 - **Lint** (`eslint/boundaries.js`). Every file carries a `core` or `mobile`
-  category, and an `enforced-core` file may not import a `mobile` one, type
+  category, and a `core` file may not import a `mobile` one, type
   imports included. Of packages it imports only `CORE_EXTERNALS`, and it names
   no host-only global (`window`, `navigator`, …), so `globalThis` it is.
   `__tests__/lint/layerPolicies.test.ts` pins what is blocked.
 - **At runtime** (the `core-portability` Jest project). A node environment with
   no React Native preset, where every React-Native-family package throws when
-  loaded and the in-memory platform is installed. `enforcedCoreLoads.test.ts`
-  loads every enforced file, so a reach anywhere in its imports fails, naming
+  loaded and the in-memory platform is installed. `coreLoadsInNode.test.ts`
+  loads every core file, so a reach anywhere in its imports fails, naming
   the package it got to. Other suites there run core flows a second host
   relies on: a sign-out with no host steps registered, and the meal-plan writes,
   rendered through a probe component with `react-test-renderer`.

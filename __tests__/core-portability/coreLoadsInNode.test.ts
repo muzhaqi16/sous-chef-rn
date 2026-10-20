@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * Every file of an enforced core entry loads with React Native out of reach.
+ * Every core file loads with React Native out of reach.
  * Loading a file loads what it imports, so a reach anywhere in its imports
  * fails here, naming the React Native module it got to.
  */
@@ -10,7 +10,6 @@ type LayerEntry = {
   name: string;
   layer: 'core' | 'mobile';
   patterns: string[];
-  enforced: boolean;
 };
 
 const { LAYERS, isProductionFile, matchingEntries } =
@@ -29,22 +28,20 @@ function filesUnder(dir: string): string[] {
   });
 }
 
-const enforced = LAYERS.filter(
-  entry => entry.layer === 'core' && entry.enforced,
-);
+const core = LAYERS.filter(entry => entry.layer === 'core');
 
-const enforcedModules = filesUnder(path.join(ROOT, 'src'))
+const coreModules = filesUnder(path.join(ROOT, 'src'))
   .map(file => path.relative(ROOT, file).split(path.sep).join('/'))
   .filter(isProductionFile)
   .filter(file => /\.tsx?$/.test(file) && !file.endsWith('.d.ts'))
-  .filter(file => matchingEntries(file, enforced).length > 0);
+  .filter(file => matchingEntries(file, core).length > 0);
 
-describe('enforced core loads without React Native', () => {
-  it('has enforced core files to load', () => {
-    expect(enforcedModules.length).toBeGreaterThan(0);
+describe('core loads without React Native', () => {
+  it('has core files to load', () => {
+    expect(coreModules.length).toBeGreaterThan(500);
   });
 
-  it.each(enforcedModules)('%s', file => {
+  it.each(coreModules)('%s', file => {
     expect(() => require(path.join(ROOT, file))).not.toThrow();
   });
 });

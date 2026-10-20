@@ -10,7 +10,6 @@ type LayerEntry = {
   name: string;
   layer: 'core' | 'mobile';
   patterns: string[];
-  enforced: boolean;
 };
 
 const { LAYERS, isProductionFile, matchingEntries } =
@@ -57,7 +56,6 @@ describe('layer membership', () => {
         name: 'overlap',
         layer: 'mobile',
         patterns: ['src/apollo/client.ts'],
-        enforced: false,
       },
     ];
 
