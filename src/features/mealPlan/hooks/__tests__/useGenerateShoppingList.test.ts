@@ -15,9 +15,15 @@ jest.mock('#features/pantry/hooks/usePantryQuery', () => {
 
 import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
+  completeMockedResponse,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import {
+  GetMealPlanDocument,
+  type GetMealPlanQuery,
+} from '#features/mealPlan/screens/useMealPlan.generated';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   AddDerivedItemsToShoppingListDocument,
   LinkDerivedListToMealPlanDocument,
@@ -379,7 +385,16 @@ describe('generating a shopping list from a cached meal plan', () => {
         planOf([recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked])]),
       );
     // The server's answer, now linked, in the shape the re-read selects.
-    const planMock = ({ overLimit = false } = {}) =>
+    type ExtraMeal = {
+      __typename: 'MealPlanItem';
+      id: string;
+      servings: number;
+      recipe: null;
+    };
+    const planMock = ({
+      overLimit = false,
+      extraMeals = [],
+    }: { overLimit?: boolean; extraMeals?: ExtraMeal[] } = {}) =>
       recordMock(GenerateShoppingListPlanDocument, {
         data: {
           mealPlan: {
@@ -389,8 +404,9 @@ describe('generating a shopping list from a cached meal plan', () => {
             homeId: 'home-1',
             mealPlanItemsConnection: {
               pageInfo: { hasNextPage: false },
-              totalCount: 1,
+              totalCount: 1 + extraMeals.length,
               edges: [
+                ...extraMeals.map(node => ({ node })),
                 {
                   node: {
                     __typename: 'MealPlanItem',
@@ -481,6 +497,64 @@ describe('generating a shopping list from a cached meal plan', () => {
         },
       ]);
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
+    });
+
+    // The re-read writes the plan's one cached connection, which the plan
+    // screen's `GetMealPlan` reads too.
+    it("leaves the plan screen's read of the plan complete", async () => {
+      const variables = {
+        id: PLAN_ID,
+        mealsFirst: MEALS_PAGE_SIZE,
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      };
+      const screenResult = completeMockedResponse({
+        request: { query: GetMealPlanDocument, variables },
+        result: {
+          data: {
+            mealPlan: planOf([
+              recipeMeal([ingredient('ri-1', 'item-1', 3), unlinked]),
+            ]),
+          },
+        },
+      }).result as (vars: typeof variables) => {
+        data: Unmasked<GetMealPlanQuery>;
+      };
+      const cache = seedUnlinked();
+      cache.writeQuery({
+        query: GetMealPlanDocument,
+        variables,
+        data: screenResult(variables).data,
+      });
+      const addedElsewhere: ExtraMeal = {
+        __typename: 'MealPlanItem',
+        id: 'mpi-3',
+        servings: 1,
+        recipe: null,
+      };
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [
+            planMock({ extraMeals: [addedElsewhere] }).mock,
+            createMock().mock,
+            addMock().mock,
+            linkMock().mock,
+          ],
+          cache,
+        },
+      );
+
+      await result.current.generateShoppingList({ checkPantry: false });
+
+      const read = cache.diff({
+        query: GetMealPlanDocument,
+        variables,
+        returnPartialData: true,
+        optimistic: false,
+      });
+      expect(read.missing?.message).toBeUndefined();
+      expect(read.complete).toBe(true);
     });
 
     // The re-read restates a recipe's one page.

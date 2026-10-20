@@ -9,8 +9,8 @@ query GetHomes($first: Int, $after: String) {
       node {
         # Direct selections cover what `HomeManagement` + hooks read off each
         # node (id, default flag, default-pantry lookup, membership perms).
-        # `home_listed` is what a listed home shows, and what a write adding a
-        # home returns; each card reads its own fragment of it by id.
+        # `home_listed` is what a listed home's card shows; each card reads its
+        # own fragment of it by id.
         id
         name
         isDefault
@@ -89,7 +89,7 @@ mutation CreateHome($input: CreateHomeInput!) {
       home {
         id
         ...HomeReaders
-        ...home_listed
+        ...home_gained
       }
     }
     ... on Error {
@@ -272,7 +272,7 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
         home {
           id
           ...HomeReaders
-          ...home_listed
+          ...home_gained
         }
       }
       # The list the invite names, joined with the home: written like any read
@@ -401,7 +401,7 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
       home {
         id
         ...HomeReaders
-        ...home_listed
+        ...home_gained
       }
       # The list the join code names, joined with the home.
       landingShoppingList {

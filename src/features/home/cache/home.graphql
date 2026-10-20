@@ -46,9 +46,8 @@ fragment home_row on Home {
 # A home the homes list gains from a server write: what a query reads on one,
 # with the connections a row of the list reads and the pantries a selection
 # picks from. Join and accept bring a home this device has never read, so the
-# response is their only source. `GetHomes` spreads it, and each card
-# (`HomeCard_home`) reads its own fragment by id (`listedFragmentsCoverCells.test.ts`).
-fragment home_listed on Home {
+# response is their only source.
+fragment home_gained on Home {
   id
   ...HomeReaders
   membersConnection(first: 5) {
@@ -90,6 +89,52 @@ fragment home_listed on Home {
       hasNextPage
       endCursor
     }
+  }
+}
+
+# What a listed home shows: every field the list's card reads
+# (`HomeCard_home`), so `GetHomes` fetches them and each card reads its own
+# fragment by id (`listedFragmentsCoverCells.test.ts`).
+fragment home_listed on Home {
+  id
+  name
+  membersConnection(first: 5) {
+    edges {
+      node {
+        id
+        role
+        userId
+        displayName
+        user {
+          id
+          email
+          displayName
+        }
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+  invitesConnection(first: 5) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        status
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+  pantriesConnection(first: 10) {
+    totalCount
   }
 }
 
