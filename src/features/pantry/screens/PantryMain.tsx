@@ -13,7 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/hooks/usePantrySelectorConfig';
-import { useScannerSetup } from '#features/barcode/hooks/useScannerSetup';
+import { useScannerSetup } from '#features/barcode/screens/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
   useTabBarSetters,

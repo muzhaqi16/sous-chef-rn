@@ -11,10 +11,8 @@ import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
-import {
-  PhotoCredit,
-  type PhotoCreditValue,
-} from '#features/catalog/ui/PhotoCredit';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+import type { PhotoCreditValue } from '#/types/attribution';
 
 interface Item {
   id: string;

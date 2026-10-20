@@ -19,7 +19,7 @@ import type { ScannedItem } from '#features/barcode/types';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import {
   mapFormToCreateItemInput,
   stashPendingFormImages,
@@ -29,7 +29,7 @@ import {
 } from '#/utils/items/createItemMapping';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
-import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { AddItemFieldRefusal } from '#features/catalog/types';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { storeApi } from '#store';

@@ -4,7 +4,7 @@ import {
   CreateItemSuggestionDocument,
   UpdateItemDocument,
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import { alertService } from '#/services/alertService';
 import {
   settleMutation,

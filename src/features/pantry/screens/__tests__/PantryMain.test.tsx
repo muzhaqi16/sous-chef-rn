@@ -156,7 +156,7 @@ jest.mock('#features/pantry/hooks/usePantrySelectorConfig', () => ({
 }));
 
 // --- Performance / scanner / UI hooks ---
-jest.mock('#features/barcode/hooks/useScannerSetup', () => ({
+jest.mock('#features/barcode/screens/useScannerSetup', () => ({
   useScannerSetup: jest.fn(),
 }));
 jest.mock('#hooks/ui/useSelectorManagement', () => ({

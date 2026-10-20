@@ -35,7 +35,7 @@ export interface ImageValidationError extends Error {
 /**
  * `message` is LOG text, deliberately English — it goes to
  * `errorService.reportError` and must NEVER be displayed. `code` is the half
- * that maps to copy, via `imageErrorMessage` in `#hooks/device/useImageUpload`. A
+ * that maps to copy, via `imageErrorMessage` in `#hooks/data/useImageUpload`. A
  * display site reading `.message` is caught by `no-restricted-syntax`.
  */
 export const createImageValidationError = (

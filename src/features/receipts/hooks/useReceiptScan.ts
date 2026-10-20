@@ -19,7 +19,7 @@ import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useIsOnline } from '#store/useAppStore';
 import type { ImageFile } from '#/types/media';

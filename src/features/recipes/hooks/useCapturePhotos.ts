@@ -7,7 +7,7 @@ import DocumentScanner, {
 import { errorService } from '#/services/errorService';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import { TextRecognition, type PreparedPhoto } from '#/native/TextRecognition';
 import { uploadTogether } from '#/utils/uploadTogether';
 

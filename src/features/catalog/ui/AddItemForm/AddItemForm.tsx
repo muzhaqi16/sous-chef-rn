@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { AddItemFieldRefusal } from '#features/catalog/types';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
@@ -73,12 +74,6 @@ const BASE_DIMENSIONS = Object.values(BaseDimension);
 export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
-
-/** A server refusal the user can fix, shown on the form field it names. */
-export interface AddItemFieldRefusal {
-  field: 'upc';
-  message: string;
-}
 
 /**
  * Editor rows → the shape `createItemSchema` validates. An empty row (the one

@@ -40,7 +40,7 @@ jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => ({
   },
 }));
 
-jest.mock('#hooks/device/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: () => ({ uploadItemImages: jest.fn(), uploading: false }),
 }));
 

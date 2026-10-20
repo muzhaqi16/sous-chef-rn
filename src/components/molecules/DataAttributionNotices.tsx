@@ -4,13 +4,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
-import type { DataAttribution } from '#/graphql/generated/schemaTypes';
+import type { DataAttributionValue } from '#/types/attribution';
 import { kitTestIDs } from '#components/testIDs';
-
-export type DataAttributionValue = Pick<
-  DataAttribution,
-  'source' | 'notice' | 'licenseUrl' | 'sourceUrl'
->;
 
 interface DataAttributionNoticesProps {
   attributions: readonly DataAttributionValue[];

@@ -48,7 +48,7 @@ jest.mock('react-native-vision-camera', () => ({
 
 // The screen reads from our platform-shimmed hook, not the underlying
 // vision-camera packages, so mocking this single module is enough.
-jest.mock('../../hooks/useBarcodeOutput', () => ({
+jest.mock('../useBarcodeOutput', () => ({
   useBarcodeOutput: jest.fn(() => ({})),
 }));
 

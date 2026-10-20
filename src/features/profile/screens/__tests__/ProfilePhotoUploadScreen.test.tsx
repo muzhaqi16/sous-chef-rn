@@ -19,7 +19,7 @@ const mockUploadProfileImage = jest
   .fn()
   .mockResolvedValue('https://example.com/photo.jpg');
 const mockUpdateProfileAvatarUrl = jest.fn().mockResolvedValue(true);
-jest.mock('#hooks/device/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({
     uploadProfileImage: mockUploadProfileImage,
     updateProfileAvatarUrl: mockUpdateProfileAvatarUrl,

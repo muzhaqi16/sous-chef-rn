@@ -6,7 +6,7 @@ mutation CreateImageUploadUrl($input: CreateImageUploadUrlInput!) {
       key
       # The presigned POST policy. Every entry must be appended to the
       # multipart body before the file part, or object storage rejects the
-      # upload — see uploadToObjectStorage() in src/hooks/device/useImageUpload.ts.
+      # upload — see uploadToObjectStorage() in src/hooks/data/useImageUpload.ts.
       fields {
         name
         value

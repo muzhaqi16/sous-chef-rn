@@ -13,7 +13,7 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { useOnboardingNavigation } from '#features/onboarding/screens/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

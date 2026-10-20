@@ -11,7 +11,7 @@ jest.mock('#/native/TextRecognition', () => ({
   },
 }));
 const mockUploadUnconfirmed = jest.fn();
-jest.mock('#hooks/device/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: () => ({ uploadUnconfirmed: mockUploadUnconfirmed }),
 }));
 const mockPickPhoto = jest.fn();

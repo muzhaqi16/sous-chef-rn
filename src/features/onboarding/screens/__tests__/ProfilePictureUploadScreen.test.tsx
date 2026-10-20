@@ -23,7 +23,7 @@ jest.mock('#features/onboarding/screens/useOnboardingNavigation', () => ({
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/device/useImageUpload', () => ({
+jest.mock('#hooks/data/useImageUpload', () => ({
   useImageUpload: () => ({
     uploadProfileImage: jest.fn(),
     updateProfileAvatarUrl: jest.fn(),

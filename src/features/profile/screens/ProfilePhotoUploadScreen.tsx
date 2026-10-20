@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
-import { useImageUpload } from '#hooks/device/useImageUpload';
+import { useImageUpload } from '#hooks/data/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
