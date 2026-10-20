@@ -240,9 +240,10 @@ export function useReceiptReview() {
     const need = needs[index];
     if (need) return t(NEED_COPY[need]);
     const code = draft?.failed?.[index];
+    if (code === undefined) return undefined;
     return code
       ? errorService.messageForCode(code, t, t('errors.addItemFailedRetry'))
-      : undefined;
+      : t('errors.addItemFailedRetry');
   };
 
   const rows: ReceiptReviewRow[] = chosen.map(entry => {

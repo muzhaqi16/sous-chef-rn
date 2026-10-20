@@ -136,8 +136,11 @@ export interface ReceiptDraft {
   /** Lines already in the pantry, so a retry sends only what failed. */
   added?: number[];
   checkIn?: ReceiptCheckIn;
-  /** Why each line the API refused failed, by line index. */
-  failed?: Partial<Record<number, ErrorCode>>;
+  /**
+   * Why each line the API refused failed, by line index: null for a code this
+   * build does not know, or none.
+   */
+  failed?: Partial<Record<number, ErrorCode | null>>;
 }
 
 interface ReceiptDraftState {
@@ -253,11 +256,11 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
                   .map(result => result.index),
               ]),
             ].filter(index => !refused.has(index));
-            const failed: Partial<Record<number, ErrorCode>> = {};
+            const failed: Partial<Record<number, ErrorCode | null>> = {};
             for (const { index, success, failure } of results) {
-              if (!success && failure && isErrorCode(failure.code)) {
-                failed[index] = failure.code;
-              }
+              if (success) continue;
+              failed[index] =
+                failure && isErrorCode(failure.code) ? failure.code : null;
             }
             const stillFailed = {
               ...withoutIndexes(draft.failed, added),

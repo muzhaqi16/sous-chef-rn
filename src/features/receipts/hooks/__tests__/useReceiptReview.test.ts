@@ -28,6 +28,7 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
+import { t } from '#/i18n';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
@@ -545,6 +546,21 @@ describe('useReceiptReview', () => {
       expect(result.current.review.pendingCount).toBe(1);
     },
   );
+
+  it('says a line refused with no code this build knows was not added', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      const { draft } = useReceiptDraftStore.getState();
+      useReceiptDraftStore.setState({
+        draft: draft && { ...draft, failed: { 1: null } },
+      });
+    });
+
+    const [milk] = result.current.review.rows;
+    expect(milk?.status).toBe('failed');
+    expect(milk?.failure).toBe(t('errors.addItemFailedRetry'));
+  });
 
   it('sends the server reading it was confirmed from, and a saving off the whole order', async () => {
     const draft = useReceiptDraftStore.getState().draft!;

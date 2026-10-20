@@ -249,7 +249,10 @@ export const reconcileReceiptCheckInReplay: ReplayReconcilerTable[string] = (
   settleReceiptCheckIn(cache, input.id, receiptLineOutcomes(input, results));
 };
 
-/** A queued check-in refused for good: every stack it wrote goes, uncounted. */
+/**
+ * A queued check-in refused for good: every stack it wrote goes, uncounted, and
+ * its lines are back to send on the receipt that holds it.
+ */
 export const withdrawReceiptCheckIn: CountWithdrawalTable[string] = (
   cache,
   variables,
@@ -261,7 +264,11 @@ export const withdrawReceiptCheckIn: CountWithdrawalTable[string] = (
       removePantryItemLocally(cache, input.pantryId, pantryItemId);
     }
   }
-  useReceiptDraftStore.getState().setCheckInState('idle');
+  const refused = input.lines.map((_line, index) => ({
+    index,
+    success: false,
+  }));
+  settleReceiptCheckIn(cache, input.id, receiptLineOutcomes(input, refused));
 };
 
 /**

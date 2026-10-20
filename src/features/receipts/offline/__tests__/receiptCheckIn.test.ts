@@ -270,6 +270,34 @@ describe('a queued check-in', () => {
     expect(useReceiptDraftStore.getState().draft?.added).toBeUndefined();
   });
 
+  it('puts the lines of a check-in refused for good back as failed, on its own receipt', () => {
+    useReceiptDraftStore.getState().markAdded([0, 1, 2, 3]);
+    useReceiptDraftStore.getState().setCheckInState('queued');
+
+    withdrawReceiptCheckIn(cache, { input: queuedInput() }, null);
+    const once = useReceiptDraftStore.getState().draft;
+    withdrawReceiptCheckIn(cache, { input: queuedInput() }, null);
+
+    expect(once?.added).toEqual([]);
+    expect(once?.failed).toEqual({ 0: null, 1: null, 2: null, 3: null });
+    expect(once?.checkIn?.state).toBe('idle');
+    expect(useReceiptDraftStore.getState().draft).toEqual(once);
+  });
+
+  it('leaves a receipt holding another check-in alone when one is refused for good', () => {
+    useReceiptDraftStore.getState().markAdded([0]);
+    useReceiptDraftStore.getState().setCheckInState('sending');
+    const before = useReceiptDraftStore.getState().draft;
+
+    withdrawReceiptCheckIn(
+      cache,
+      { input: { ...INPUT, id: 'an-older-check-in' } },
+      null,
+    );
+
+    expect(useReceiptDraftStore.getState().draft).toEqual(before);
+  });
+
   it('withdraws every stack and list stamp when refused for good', () => {
     withdrawReceiptCheckIn(cache, { input: INPUT }, null);
     restoreReceiptCheckInListLines(cache, { input: INPUT });

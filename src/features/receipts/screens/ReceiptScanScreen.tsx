@@ -164,7 +164,7 @@ export const ReceiptScanScreen: React.FC = () => {
     const itemCount = lines.length;
     // Named as the user chose them, else as printed.
     const failedNames = lines.flatMap(line =>
-      draft.failed?.[line.index]
+      draft.failed?.[line.index] !== undefined
         ? [draft.choices?.[line.index]?.itemName ?? line.printed]
         : [],
     );

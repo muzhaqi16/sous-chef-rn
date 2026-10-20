@@ -270,6 +270,25 @@ describe('receiptDraftStore', () => {
       expect(draft()?.failed).toEqual({ 1: ErrorCode.ValidationFailed });
     });
 
+    it.each([
+      ['a code this build does not know', { code: 'A_NEWER_CODE' }],
+      ['no code', null],
+    ])(
+      'keeps a closed receipt whose line was refused with %s',
+      (_case, failure) => {
+        const checkInId = sending();
+        actions().closeReceipt();
+
+        actions().settleCheckIn(checkInId, [
+          { index: 0, success: true },
+          { index: 1, success: false, failure },
+        ]);
+
+        expect(draft()?.added).toEqual([0]);
+        expect(draft()?.failed).toEqual({ 1: null });
+      },
+    );
+
     it('ignores the answer to a check-in the receipt never sent', () => {
       sending();
       actions().settleCheckIn('another-check-in', [
