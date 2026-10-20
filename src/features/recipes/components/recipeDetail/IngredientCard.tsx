@@ -88,7 +88,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
         </View>
       ) : (
         <View style={styles.addButton}>
-          <Icon name="add" size={16} tone="primary" />
+          <Icon name="add" size={16} tone="onPrimary" />
         </View>
       )}
     </Card>
@@ -135,14 +135,15 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Where the added badge shows, so neither covers the name.
   addButton: {
     position: 'absolute',
-    bottom: 4,
+    top: 4,
     right: 4,
     width: 24,
     height: 24,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
