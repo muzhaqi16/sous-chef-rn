@@ -30,7 +30,7 @@ import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
-import { useRecipeDetail } from '../../hooks/useRecipeDetail';
+import { useRecipeDetail } from './useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';

@@ -12,7 +12,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { alertService } from '#/services/alertService';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { useReceiptScan } from '../hooks/useReceiptScan';
+import { useReceiptScan } from './useReceiptScan';
 import {
   useServerReceiptParse,
   type ServerReadingStatus,

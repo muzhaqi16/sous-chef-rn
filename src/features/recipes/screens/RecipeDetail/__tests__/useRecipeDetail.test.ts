@@ -1,14 +1,14 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import type { useRecipeData } from '../useRecipeData';
-import type { useRecipeFavoriteState } from '../useRecipeFavoriteState';
-import type { useRecipeShoppingList } from '../useRecipeShoppingList';
-import type { useRecipeCookingActions } from '../useRecipeCookingActions';
-import type { useRecipeSavedMetadata } from '../useRecipeSavedMetadata';
+import type { useRecipeData } from '../../../hooks/useRecipeData';
+import type { useRecipeFavoriteState } from '../../../hooks/useRecipeFavoriteState';
+import type { useRecipeShoppingList } from '../../../hooks/useRecipeShoppingList';
+import type { useRecipeCookingActions } from '../../../hooks/useRecipeCookingActions';
+import type { useRecipeSavedMetadata } from '../../../hooks/useRecipeSavedMetadata';
 import type {
   CatalogRecipeHint,
   OpenedCatalogRecipe,
-} from '../useOpenCatalogRecipe';
+} from '../../../hooks/useOpenCatalogRecipe';
 import { useRecipeDetail } from '../useRecipeDetail';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 
@@ -25,7 +25,7 @@ const mockOpenCatalogRecipe = jest.fn<
   Promise<OpenedCatalogRecipe>,
   [CatalogRecipeHint]
 >(() => Promise.resolve({ opened: true, recipeId: 'catalog-1' }));
-jest.mock('../useOpenCatalogRecipe', () => ({
+jest.mock('../../../hooks/useOpenCatalogRecipe', () => ({
   useOpenCatalogRecipe: () => ({ openCatalogRecipe: mockOpenCatalogRecipe }),
 }));
 
@@ -40,7 +40,7 @@ const mockRecipeDataReturn: RecipeData = {
 const mockUseRecipeData = jest.fn<RecipeData, Parameters<typeof useRecipeData>>(
   () => mockRecipeDataReturn,
 );
-jest.mock('../useRecipeData', () => ({
+jest.mock('../../../hooks/useRecipeData', () => ({
   useRecipeData: (...args: Parameters<typeof useRecipeData>) =>
     mockUseRecipeData(...args),
 }));
@@ -54,7 +54,7 @@ const mockUseRecipeFavoriteState = jest.fn<
   typeof mockFavoriteStateReturn,
   Parameters<typeof useRecipeFavoriteState>
 >(() => mockFavoriteStateReturn);
-jest.mock('../useRecipeFavoriteState', () => ({
+jest.mock('../../../hooks/useRecipeFavoriteState', () => ({
   useRecipeFavoriteState: (
     ...args: Parameters<typeof useRecipeFavoriteState>
   ) => mockUseRecipeFavoriteState(...args),
@@ -65,7 +65,7 @@ const mockUseRecipeShoppingList = jest.fn<
   typeof mockShoppingListReturn,
   Parameters<typeof useRecipeShoppingList>
 >(() => mockShoppingListReturn);
-jest.mock('../useRecipeShoppingList', () => ({
+jest.mock('../../../hooks/useRecipeShoppingList', () => ({
   useRecipeShoppingList: (...args: Parameters<typeof useRecipeShoppingList>) =>
     mockUseRecipeShoppingList(...args),
 }));
@@ -75,7 +75,7 @@ const mockUseRecipeCookingActions = jest.fn<
   typeof mockCookingActionsReturn,
   Parameters<typeof useRecipeCookingActions>
 >(() => mockCookingActionsReturn);
-jest.mock('../useRecipeCookingActions', () => ({
+jest.mock('../../../hooks/useRecipeCookingActions', () => ({
   useRecipeCookingActions: (
     ...args: Parameters<typeof useRecipeCookingActions>
   ) => mockUseRecipeCookingActions(...args),
@@ -95,7 +95,7 @@ const mockUseRecipeSavedMetadata = jest.fn<
   typeof mockSavedMetadataReturn,
   Parameters<typeof useRecipeSavedMetadata>
 >(() => mockSavedMetadataReturn);
-jest.mock('../useRecipeSavedMetadata', () => ({
+jest.mock('../../../hooks/useRecipeSavedMetadata', () => ({
   useRecipeSavedMetadata: (
     ...args: Parameters<typeof useRecipeSavedMetadata>
   ) => mockUseRecipeSavedMetadata(...args),

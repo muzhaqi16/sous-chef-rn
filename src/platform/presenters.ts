@@ -5,12 +5,23 @@
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
+/**
+ * How long a toast holds, in ms. Armed on the tick its enter animation starts,
+ * so it spans the fade-in; add `motion.timing.STANDARD` for time on screen.
+ */
+export const TOAST_HOLD_MS = {
+  /** The default: a confirmation. */
+  SHORT: 1400,
+  /** A full sentence rather than a confirmation: reading time. */
+  LONG: 2600,
+};
+
 export interface ToastOptions {
   message: string;
   /**
-   * Hold in ms, default `TOAST.AUTO_DISMISS_SHORT`. Prefer a `TOAST` preset. The
-   * hold spans the fade-in and excludes the fade-out, so time on screen is about
-   * `duration + motion.timing.STANDARD`.
+   * Hold in ms, default `TOAST_HOLD_MS.SHORT`; prefer a `TOAST_HOLD_MS` preset.
+   * The hold spans the fade-in and excludes the fade-out, so time on screen is
+   * about `duration + motion.timing.STANDARD`.
    */
   duration?: number;
   type?: ToastType;

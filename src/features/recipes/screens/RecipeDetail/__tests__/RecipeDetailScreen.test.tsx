@@ -48,7 +48,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#features/recipes/hooks/useRecipeDetail', () => ({
+jest.mock('#features/recipes/screens/RecipeDetail/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(),
 }));
 
@@ -158,7 +158,7 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
 /** Renders the screen over a `useRecipeDetail` holding no recipe and no error, but for `overrides`. */
 function renderDetail(overrides: Record<string, unknown> = {}) {
   const { useRecipeDetail } = jest.requireMock<{ useRecipeDetail: jest.Mock }>(
-    '#features/recipes/hooks/useRecipeDetail',
+    '#features/recipes/screens/RecipeDetail/useRecipeDetail',
   );
   useRecipeDetail.mockReturnValue({
     goBack: jest.fn(),

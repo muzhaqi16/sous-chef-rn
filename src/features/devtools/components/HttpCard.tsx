@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { formatTime } from '#features/devtools/utils/formatMetrics';
-import type { HttpRequestMetric } from '#features/devtools/hooks/usePerformanceDashboard';
+import type { HttpRequestMetric } from '#features/devtools/screens/usePerformanceDashboard';
 import { MetricCard } from './MetricCard';
 import { MetricTable, type MetricColumn } from './MetricTable';
 

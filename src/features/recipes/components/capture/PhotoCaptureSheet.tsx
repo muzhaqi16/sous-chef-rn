@@ -9,7 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { Icon } from '#components/atoms/Icon';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { useCapturePhotos } from '#features/recipes/hooks/useCapturePhotos';
+import { useCapturePhotos } from '#features/recipes/components/capture/useCapturePhotos';
 import type {
   CaptureRequest,
   CaptureStart,

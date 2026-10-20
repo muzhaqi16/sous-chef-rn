@@ -4,7 +4,7 @@ import type { TabBarAddAction } from '#/context/TabBarActionsContext';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { CaptureSheetKind } from '#features/recipes/components/capture/CaptureSheet';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { useCaptureSources } from './useCaptureSources';
+import { useCaptureSources } from '../../hooks/useCaptureSources';
 
 /** The capture sheet a menu entry opens. */
 export type CaptureSheetName = CaptureSheetKind | 'photo';

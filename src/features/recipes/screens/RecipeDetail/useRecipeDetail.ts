@@ -3,16 +3,16 @@ import { useRoute } from '@react-navigation/native';
 import { useNavigationIntents } from '#platform/screen';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { sleep } from '#/utils/backoff';
-import { useRecipeData } from './useRecipeData';
-import { useRecipeFavoriteState } from './useRecipeFavoriteState';
-import { useRecipeSavedMetadata } from './useRecipeSavedMetadata';
-import { useRecipeShoppingList } from './useRecipeShoppingList';
-import { useRecipeCookingActions } from './useRecipeCookingActions';
+import { useRecipeData } from '../../hooks/useRecipeData';
+import { useRecipeFavoriteState } from '../../hooks/useRecipeFavoriteState';
+import { useRecipeSavedMetadata } from '../../hooks/useRecipeSavedMetadata';
+import { useRecipeShoppingList } from '../../hooks/useRecipeShoppingList';
+import { useRecipeCookingActions } from '../../hooks/useRecipeCookingActions';
 import {
   useOpenCatalogRecipe,
   type CatalogRecipeHint,
   type OpenedCatalogRecipe,
-} from './useOpenCatalogRecipe';
+} from '../../hooks/useOpenCatalogRecipe';
 
 // A save asks the API to fetch what a catalog recipe lacks, and nothing
 // announces when that lands, so the recipe is read again after each of these.

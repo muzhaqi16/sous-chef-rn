@@ -9,7 +9,7 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { RecipeCaptureHost } from '#features/recipes/components/capture/RecipeCaptureHost';
-import { useRecipeCaptureMenu } from '#features/recipes/hooks/useRecipeCaptureMenu';
+import { useRecipeCaptureMenu } from '#features/recipes/components/capture/useRecipeCaptureMenu';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';

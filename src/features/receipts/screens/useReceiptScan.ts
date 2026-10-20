@@ -32,7 +32,7 @@ import {
   type PhoneReading,
 } from '../utils/phoneReading';
 import { todayKey } from '#/utils/dateUtils';
-import { parseReceiptOnDevice } from '../screens/onDeviceReceiptParser';
+import { parseReceiptOnDevice } from './onDeviceReceiptParser';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   storedReceiptPhotoConsent,

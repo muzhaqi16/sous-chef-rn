@@ -29,7 +29,7 @@ import {
   ForkRecipeDocument,
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,

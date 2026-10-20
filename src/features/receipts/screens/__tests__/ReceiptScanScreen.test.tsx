@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ReceiptDraft } from '../../store/receiptDraftStore';
-import type { ReceiptScanStatus } from '../../hooks/useReceiptScan';
+import type { ReceiptScanStatus } from '../useReceiptScan';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
@@ -22,7 +22,7 @@ jest.mock('#hooks/settings/useFeatureFlag', () => ({
 const mockAnswerConsent = jest.fn();
 let mockScan: { status: ReceiptScanStatus; draft: ReceiptDraft | null };
 let mockMasksPhotos = true;
-jest.mock('../../hooks/useReceiptScan', () => ({
+jest.mock('../useReceiptScan', () => ({
   useReceiptScan: () => ({
     ...mockScan,
     answerConsent: mockAnswerConsent,

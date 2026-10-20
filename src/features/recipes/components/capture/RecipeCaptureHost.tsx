@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
-import type { CaptureSheetName } from '#features/recipes/hooks/useRecipeCaptureMenu';
+import type { CaptureSheetName } from '#features/recipes/components/capture/useRecipeCaptureMenu';
 import { CapturePollers } from './CapturePollers';
 import { CaptureSheet } from './CaptureSheet';
 import { PhotoCaptureSheet } from './PhotoCaptureSheet';

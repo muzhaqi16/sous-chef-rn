@@ -55,7 +55,7 @@ import {
 } from '#features/mealPlan/cache/mealTemplateItem';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { makeCache } from '#/apollo/cache';
-import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   GetMealPlansDocument,
   MealPlanForEventDocument,
