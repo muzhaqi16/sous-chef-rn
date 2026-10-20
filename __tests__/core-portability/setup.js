@@ -1,21 +1,19 @@
 'use no memo';
 /**
- * The core-portability project's setup: every React-Native-family package the
- * app ships throws when loaded, naming itself, and the in-memory platform
- * is installed before any core module evaluates.
+ * The core-portability project's setup: every dependency outside
+ * CORE_EXTERNALS throws when loaded, naming itself, and the in-memory platform
+ * is installed before any core module evaluates. A subpath of one
+ * (`react-native/Libraries/…`) is another specifier, so `jest.config.js` maps
+ * those to a stub that throws too.
  */
 const { dependencies } = require('../../package.json');
+const { dependenciesOutsideCore } = require('../../scripts/lib/layers');
 
-const REACT_NATIVE_FAMILY =
-  /^(react-native($|-)|@react-native[^/]*\/|@react-navigation\/|@gorhom\/|@shopify\/|@notifee\/)/;
-
-Object.keys(dependencies)
-  .filter(name => REACT_NATIVE_FAMILY.test(name))
-  .forEach(mockedName => {
-    jest.mock(mockedName, () => {
-      throw new Error(`core-portability: the core loaded "${mockedName}"`);
-    });
+dependenciesOutsideCore(dependencies).forEach(mockedName => {
+  jest.mock(mockedName, () => {
+    throw new Error(`core-portability: the core loaded "${mockedName}"`);
   });
+});
 
 // Both hosts schedule frames, React Native and the browser alike; node does
 // not, so a frame is a timer here.

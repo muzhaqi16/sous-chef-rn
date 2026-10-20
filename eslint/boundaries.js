@@ -13,7 +13,7 @@
  * `docs/architecture.md` § The public API boundary carries the reasoning.
  */
 
-const { LAYERS } = require('../scripts/lib/layers');
+const { CORE_EXTERNALS, LAYERS } = require('../scripts/lib/layers');
 
 // A feature's public surface is `screens/`, `manifest.ts`, `testIDs.ts` and its
 // top-level `hooks/`; the catalog also publishes `ui/`. Everything below is not.
@@ -173,34 +173,6 @@ const LAYER_FILES = LAYERS.flatMap(entry =>
   entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
 );
 
-// What the core may import from node_modules: modules that run without React
-// Native.
-const CORE_EXTERNALS = [
-  'react',
-  '@apollo/client',
-  '@apollo/persisted-query-lists',
-  'rxjs',
-  'graphql',
-  'graphql-ws',
-  'zustand',
-  'immer',
-  'i18next',
-  'react-i18next',
-  'yup',
-  'react-hook-form',
-  '@hookform/resolvers',
-  'date-fns',
-  'fraction.js',
-  'fractional-indexing',
-  'fuse.js',
-  '@paralleldrive/cuid2',
-  'uuid',
-  'jwt-decode',
-  'js-sha256',
-  'chroma-js',
-  '@muzhaqi16/receipt-rules',
-];
-
 // No `dependency.kind`: a type import ties core to mobile as surely as a value.
 const LAYER_POLICIES = [
   {
@@ -220,7 +192,7 @@ const LAYER_POLICIES = [
       },
     },
     message:
-      'Core code imports only external modules that run without React Native (CORE_EXTERNALS in eslint/boundaries.js). Reach the device through a port in src/platform/.',
+      'Core code imports only external modules that run without React Native (CORE_EXTERNALS in scripts/lib/layers.js). Reach the device through a port in src/platform/.',
   },
 ];
 
