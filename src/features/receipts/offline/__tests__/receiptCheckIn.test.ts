@@ -8,6 +8,7 @@ import {
   applyMoveToPantryCacheUpdate,
   revertLocalMove,
 } from '#features/shoppingList/cache/localMove';
+import { unstampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
@@ -21,6 +22,7 @@ import {
 
 jest.mock('#features/pantry/cache/items');
 jest.mock('#features/shoppingList/cache/localMove');
+jest.mock('#features/shoppingList/cache/moveToPantry');
 jest.mock('#features/shoppingList/cache/purchase');
 jest.mock('../../utils/forgetReceipt');
 
@@ -29,7 +31,6 @@ const cache = new InMemoryCache();
 const INPUT = {
   id: 'checkin-1',
   pantryId: 'pantry-1',
-  shoppingListId: 'list-1',
   lines: [
     { clientId: '0', pantryItemId: 'pi-0' },
     { clientId: '1', pantryItemId: 'pi-1', shoppingListItemId: 'line-eggs' },
@@ -73,20 +74,46 @@ describe('applyReceiptCheckIn', () => {
     ]);
   });
 
-  it('settles a listed line as a move that keeps it on the list', () => {
+  it("settles a listed line's stack alone: the answer states its list line", () => {
     applyReceiptCheckIn(cache, INPUT, [
       { index: 1, success: true, pantryItem: { id: 'pi-1' } },
     ]);
 
-    expect(applyMoveToPantryCacheUpdate).toHaveBeenCalledWith(cache, {
-      pantryId: 'pantry-1',
-      shoppingListItemId: 'line-eggs',
-      removeFromList: false,
-      currentListId: 'list-1',
-      pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-      clientId: 'pi-1',
-    });
-    expect(reconcileCreatedPantryItem).not.toHaveBeenCalled();
+    expect(reconcileCreatedPantryItem).toHaveBeenCalledWith(
+      cache,
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'pi-1' },
+      'pi-1',
+    );
+    expect(applyMoveToPantryCacheUpdate).not.toHaveBeenCalled();
+  });
+
+  it('unticks the list line of a refused line kept out of the pantry, exactly', () => {
+    const stamp = {
+      listId: 'list-1',
+      itemId: 'line-towels',
+      wasPurchased: false,
+      previousMovedToPantryAt: null,
+      counterChange: undefined,
+    };
+    jest.mocked(unstampItemKeptOnListAfterMoveToPantry).mockReturnValue(true);
+
+    const { exact } = applyReceiptCheckIn(
+      cache,
+      {
+        ...INPUT,
+        lines: [{ clientId: '4', shoppingListItemId: 'line-towels' }],
+      },
+      [{ index: 0, success: false, failure: { code: 'FORBIDDEN' } }],
+      new Map([[0, { kind: 'tick' as const, written: stamp }]]),
+    );
+
+    expect(unstampItemKeptOnListAfterMoveToPantry).toHaveBeenCalledWith(
+      cache,
+      stamp,
+    );
+    expect(writePurchaseInfo).not.toHaveBeenCalled();
+    expect(exact).toBe(true);
   });
 
   it('withdraws only the refused line, exactly, from what it wrote', () => {

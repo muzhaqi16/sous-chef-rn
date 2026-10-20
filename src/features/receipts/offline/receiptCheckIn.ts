@@ -12,10 +12,13 @@ import {
   type PantryItemRef,
 } from '#features/pantry/cache/items';
 import {
-  applyMoveToPantryCacheUpdate,
   revertLocalMove,
   type LocalMove,
 } from '#features/shoppingList/cache/localMove';
+import {
+  unstampItemKeptOnListAfterMoveToPantry,
+  type KeptOnListStamp,
+} from '#features/shoppingList/cache/moveToPantry';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
@@ -33,7 +36,6 @@ import { forgetReceipt } from '../utils/forgetReceipt';
 export interface CheckInSent {
   id: string;
   pantryId: string;
-  shoppingListId?: string | null;
   lines: readonly {
     /** The receipt line it is, as a string. */
     clientId?: string | null;
@@ -54,7 +56,9 @@ export interface CheckInLineResult extends CheckInLineOutcome {
 /** What a line wrote before the check-in fired, so a refusal undoes exactly that. */
 export type WrittenLine =
   | { kind: 'move'; written: LocalMove }
-  | { kind: 'intake' };
+  | { kind: 'intake' }
+  /** A line kept out of the pantry: its list line ticked as bought. */
+  | { kind: 'tick'; written: KeptOnListStamp };
 
 const pantryRef = (id: string): PantryItemRef => ({
   __typename: 'PantryItem',
@@ -79,6 +83,9 @@ const withdrawLine = (
       wrote.written,
     );
   }
+  if (wrote?.kind === 'tick') {
+    return unstampItemKeptOnListAfterMoveToPantry(cache, wrote.written);
+  }
   if (pantryItemId) revertOptimisticPantryItem(cache, pantryId, pantryItemId);
   if (!shoppingListItemId) return true;
   writePurchaseInfo(cache, shoppingListItemId, { movedToPantryAt: null });
@@ -102,7 +109,7 @@ export function applyReceiptCheckIn(
   for (const result of results) {
     const line = input.lines[result.index];
     if (!line) continue;
-    const { pantryItemId, shoppingListItemId } = line;
+    const { pantryItemId } = line;
     if (!result.success) {
       exact =
         withdrawLine(cache, input, line, written?.get(result.index)) && exact;
@@ -114,19 +121,10 @@ export function applyReceiptCheckIn(
       adoptServerEntityId(cache, 'Item', result.item.id, line.item?.inline?.id);
     }
     if (!pantryItemId || !result.pantryItem) continue;
+    // A ticked list line needs nothing more: the answer states it, version
+    // included.
     const pantryItem = pantryRef(result.pantryItem.id);
-    if (shoppingListItemId) {
-      applyMoveToPantryCacheUpdate(cache, {
-        pantryId,
-        shoppingListItemId,
-        removeFromList: false,
-        currentListId: input.shoppingListId ?? undefined,
-        pantryItem,
-        clientId: pantryItemId,
-      });
-    } else {
-      reconcileCreatedPantryItem(cache, pantryId, pantryItem, pantryItemId);
-    }
+    reconcileCreatedPantryItem(cache, pantryId, pantryItem, pantryItemId);
     if (pantryItem.id !== pantryItemId) {
       adopted.push({
         mintedId: pantryItemId,
@@ -192,7 +190,6 @@ const checkInSentOf = (variables: { input?: unknown }): CheckInSent | null => {
   return {
     id: input.id,
     pantryId: input.pantryId,
-    shoppingListId: idOrNull(input.shoppingListId),
     lines: input.lines.map((line: unknown) =>
       isRecord(line)
         ? {

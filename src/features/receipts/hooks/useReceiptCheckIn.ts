@@ -12,6 +12,8 @@ import {
   writeLocalIntake,
 } from '#features/pantry/cache/localIntake';
 import { writeLocalMove } from '#features/shoppingList/cache/localMove';
+import { stampItemBoughtOnList } from '#features/shoppingList/cache/moveToPantry';
+import { readIsPurchased } from '#features/shoppingList/cache/purchase';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -93,7 +95,8 @@ const chunked = <T>(rows: readonly T[], size: number): T[][] =>
 
 // Every line's rows, written before its check-in fires: the pantry row under
 // its minted id and a listed line's list line stamped as moved, keyed by its
-// place in the send as its result is. A line stocking nothing writes nothing.
+// place in the send as its result is. A line kept out of the pantry only ticks
+// its list line.
 const writeLines = (
   cache: ApolloCache,
   pantryId: string,
@@ -103,7 +106,20 @@ const writeLines = (
   const written = new Map<number, WrittenLine>();
   for (const [at, { input, itemName, listLine }] of lines.entries()) {
     const { pantryItemId } = input;
-    if (!pantryItemId) continue;
+    if (!pantryItemId) {
+      if (listLine && listId) {
+        written.set(at, {
+          kind: 'tick',
+          written: stampItemBoughtOnList(
+            cache,
+            listId,
+            listLine.id,
+            readIsPurchased(cache, listLine.id),
+          ),
+        });
+      }
+      continue;
+    }
     unconfirmedCreates.mark(pantryItemId);
     if (listLine) {
       written.set(at, {
