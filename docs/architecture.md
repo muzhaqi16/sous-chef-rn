@@ -266,7 +266,7 @@ code it extends:
 - the existing component takes it as an optional prop, and renders as before
   without it (`RecipeIngredientList`'s `onPasteIngredients`);
 - or a selector picks between the code that predates it and the new code, each
-  a separate hook (`useRecipeDiscovery` over `useSpoonacularDiscovery` and
+  a separate hook (`useRecipeDiscovery` over `useCatalogDiscovery` and
   `useServerRecipeSuggestions`).
 
 With the flag off, the feature does what it did before the capability existed. The keychain strings are pinned by
@@ -898,8 +898,8 @@ src/
 ├── platform/        Ports the core reaches the device through (§ Layers)
 ├── navigation/      RootNavigator, stacks, layouts
 ├── screens/         SplashScreen and NotFoundScreen only
-├── services/        Push, subscriptions, telemetry, Spoonacular,
-│                    haptics, permissions, performance, alerts, errors, toasts
+├── services/        Push, subscriptions, telemetry, haptics, permissions,
+│                    performance, alerts, errors, toasts
 ├── store/           Zustand store, slices, reset manager
 ├── styles/
 ├── theme/           Design tokens, themes, appearance system

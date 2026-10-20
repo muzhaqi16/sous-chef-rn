@@ -33,7 +33,7 @@ Either branch of `?:` and both sides of `??` / `||` are checked.
 
 - Developer-facing text: arguments at any depth to a logger, `console`, `errorService`, `Telemetry`, `performance`, a `this.log` / `trackError` method, `new …Error(…)`, `throw`, or a class that extends an `Error`.
 - Names read by a developer: `logLabel`, `debugMessage`, `devText`.
-- An object literal or assignment target whose declared type names a diagnostic record (`QueueError`, `MemoryWarning`, `SpoonacularApiError`).
+- An object literal or assignment target whose declared type names a diagnostic record (`QueueError`, `MemoryWarning`).
 - URLs, keys and identifiers (no space, not a capitalized word).
 - `eslint/project.js` overrides: `src/i18n/config.ts` (language endonyms ship untranslated), `src/services/performance/**`, `src/services/telemetry/**`, `src/utils/errorSerialization.ts`.
 - Test files and `.graphql` documents.

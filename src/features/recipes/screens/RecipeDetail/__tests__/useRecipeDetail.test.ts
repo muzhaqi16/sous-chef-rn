@@ -11,6 +11,7 @@ import type {
 } from '../../../hooks/useOpenCatalogRecipe';
 import { useRecipeDetail } from '../useRecipeDetail';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 type RecipeData = ReturnType<typeof useRecipeData>;
 type BackendRecipe = RecipeData['backendRecipe'];
@@ -105,6 +106,7 @@ const { useRoute } = jest.requireMock('@react-navigation/native');
 
 // One object across renders, as the route's params are.
 const HINT: CatalogRecipeHint = {
+  provider: ExternalSource.Spoonacular,
   externalId: '716429',
   name: 'Pasta with Garlic',
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',

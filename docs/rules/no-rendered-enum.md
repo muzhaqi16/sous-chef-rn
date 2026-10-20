@@ -32,7 +32,7 @@ An enum value is an API identifier (`SPECIAL_DIET`), not copy. Rendered raw it i
 ## Exempt
 
 - The key argument of `t(…)`: `t(`prefix.${value}`)` is how enum copy is looked up.
-- A comparison or an API parameter (`value.toLowerCase() === 'frozen'`, a Spoonacular tag): not shown.
+- A comparison or an API parameter (`value.toLowerCase() === 'frozen'`, a search filter's value): not shown.
 - Developer-facing text: logger, console, `errorService`, `Telemetry`, `new …Error(…)`, `throw`.
 - Non-copy props (`value`, `status`, `testID`, `key`) and template literals that are ids or keys.
 - Test files, `.graphql` documents and files without type information.

@@ -5,7 +5,6 @@ fragment RecipeReaders on Recipe {
   caloriesPerServing
   category
   cookTimeMinutes
-  createdAt
   createdBy {
     id
     displayName
@@ -21,23 +20,14 @@ fragment RecipeReaders on Recipe {
   description
   diets
   difficulty
-  externalDetails {
-    ... on SpoonacularRecipeDetails {
-      dairyFree
-      glutenFree
-      healthScore
-      vegan
-      vegetarian
-    }
-  }
-  externalId
-  externalSource
   forkedFrom {
     id
     name
   }
   forkedFromId
+  freeOf
   healthGoals
+  healthScore
   imageUrl
   instructions
   intolerances
@@ -51,7 +41,15 @@ fragment RecipeReaders on Recipe {
   }
   name
   notes
-  nutritionData
+  nutritionPerServing {
+    calories
+    dietaryFiber
+    protein
+    sodium
+    totalCarbs
+    totalFat
+    totalSugars
+  }
   originalAuthor
   pendingRevision {
     id
@@ -97,7 +95,6 @@ fragment RecipeReaders on Recipe {
     }
   }
   prepTimeMinutes
-  primarySource
   publishedAt
   rating1Count
   rating2Count
@@ -126,7 +123,6 @@ fragment RecipeReaders on Recipe {
   tips
   totalReviews
   totalTimeMinutes
-  updatedAt
   version
   videoUrl
 }

@@ -1,28 +1,159 @@
 import { useRef, useState } from 'react';
+import type { ApolloClient } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
-import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
-import type {
-  RecipeRow,
-  SearchedRecipe,
-} from '#features/recipes/utils/recipeRows';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
+import { errorService } from '#/services/errorService';
+import { isRateLimitError } from '#/utils/errors/rateLimit';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import {
-  EMPTY_PAGINATION,
-  executeRecipeIngredientSearch,
-  executeRecipeLoadMore,
-  executeRecipeTextSearch,
-  type RecipeSearchDocument,
-  type SearchPagination,
-} from '#features/recipes/utils/recipeSearchPaging';
+import type { RecipeFilters as RecipeFiltersInput } from '#/graphql/generated/schemaTypes';
+import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
+import { foundRow, type RecipeRow } from '#features/recipes/utils/recipeRows';
+import { SearchRecipesDocument } from './useRecipeSearch.generated';
+import { CatalogRecipesByIngredientsDocument } from './useCatalogDiscovery.generated';
+
+const SEARCH_PAGE_SIZE = 25;
+/** The most ingredient names the API takes in one search. */
+export const MAX_SEARCH_INGREDIENTS = 20;
+
+/** Why a search showed nothing; the caller says it in its own words. */
+export type SearchFailure = 'offline' | 'rateLimited' | 'failed';
+
+export type SearchOutcome =
+  /** `partial`: the catalog could not be searched, so only held recipes show. */
+  | { status: 'shown'; partial: boolean }
+  /** A newer search or a clear replaced it before it committed. */
+  | { status: 'superseded' }
+  | { status: 'failed'; failure: SearchFailure };
+
+const SUPERSEDED: SearchOutcome = { status: 'superseded' };
+
+/** Where a text search's next page starts; null when it has none. */
+interface NextPage {
+  query: string;
+  filters: RecipeFilters;
+  after: string;
+}
+
+interface SearchPage {
+  rows: RecipeRow[];
+  next: NextPage | null;
+  partial: boolean;
+}
+
+type Fetched = { page: SearchPage } | { error: unknown };
+
+function failedSearch(error: unknown): SearchOutcome {
+  errorService.reportError(error, { operation: 'searchRecipes' });
+  // Offline is a state, not a failure: the search surface shows its own
+  // offline state rather than "search failed", which the reader cannot act on.
+  if (isApiUnavailable(useStore.getState())) {
+    return { status: 'failed', failure: 'offline' };
+  }
+  if (isRateLimitError(error)) {
+    return { status: 'failed', failure: 'rateLimited' };
+  }
+  return { status: 'failed', failure: 'failed' };
+}
+
+const filtersInput = (filters: RecipeFilters): RecipeFiltersInput => ({
+  ...(filters.diet.length > 0 && { diets: filters.diet }),
+  ...(filters.intolerances.length > 0 && {
+    intolerances: filters.intolerances,
+  }),
+  ...(filters.mealType && { category: filters.mealType }),
+  ...(filters.maxReadyTime && { maxReadyTime: filters.maxReadyTime }),
+});
+
+async function fetchTextPage(
+  client: ApolloClient,
+  query: string,
+  filters: RecipeFilters,
+  after: string | null,
+): Promise<Fetched> {
+  try {
+    const result = await client.query({
+      query: SearchRecipesDocument,
+      variables: {
+        query,
+        filters: filtersInput(filters),
+        first: SEARCH_PAGE_SIZE,
+        after,
+      },
+      fetchPolicy: 'network-only',
+    });
+    const found = result.data?.findRecipes;
+    if (!found) return { error: result.error };
+    const { hasNextPage, endCursor } = found.pageInfo;
+    return {
+      page: {
+        rows: found.edges.map(edge => foundRow(edge.node)),
+        next:
+          hasNextPage && endCursor
+            ? { query, filters, after: endCursor }
+            : null,
+        partial: !found.catalogAvailable,
+      },
+    };
+  } catch (error) {
+    return { error };
+  }
+}
+
+async function fetchIngredientPage(
+  client: ApolloClient,
+  ingredients: readonly string[],
+): Promise<Fetched> {
+  try {
+    const result = await client.query({
+      query: CatalogRecipesByIngredientsDocument,
+      variables: {
+        ingredients: ingredients.slice(0, MAX_SEARCH_INGREDIENTS),
+        first: SEARCH_PAGE_SIZE,
+      },
+      fetchPolicy: 'network-only',
+    });
+    const found = result.data?.catalogRecipesByIngredients;
+    if (!found) return { error: result.error };
+    return {
+      page: {
+        rows: found.edges.map(
+          (edge): RecipeRow => ({ source: 'pantry', edge }),
+        ),
+        next: null,
+        partial: !found.catalogAvailable,
+      },
+    };
+  } catch (error) {
+    return { error };
+  }
+}
+
+/** The next page of a text search; null after a failure it has reported. */
+async function fetchNextPage(
+  client: ApolloClient,
+  next: NextPage,
+): Promise<SearchPage | null> {
+  const fetched = await fetchTextPage(
+    client,
+    next.query,
+    next.filters,
+    next.after,
+  );
+  if ('page' in fetched) return fetched.page;
+  // Shown results stay on screen; the list just stops growing.
+  errorService.reportError(fetched.error, {
+    operation: 'searchRecipesLoadMore',
+  });
+  return null;
+}
 
 /**
- * Recipe search over the API and Spoonacular together. The caller passes its
- * own `searchRecipes` document, so the rows carry its cards' fields, and
- * presents each search's outcome itself.
+ * Recipe search through the API: the recipes it holds, best match first, then
+ * the catalog's, one cursor for both. The caller presents each search's
+ * outcome itself.
  */
-export function useRecipeSearch<TNode extends SearchedRecipe>(
-  document: RecipeSearchDocument<TNode>,
-) {
+export function useRecipeSearch() {
   const client = useApolloClient();
   // Each search captures it and commits only while it is still current, so a
   // newer search or a clear supersedes one in flight.
@@ -32,68 +163,61 @@ export function useRecipeSearch<TNode extends SearchedRecipe>(
   const [loading, setLoading] = useState(false);
   // Drops re-entrant load-mores: onEndReached fires again before a page lands.
   const [loadingMore, setLoadingMore] = useState(false);
-  // Rows and cursors are ONE atom so a load-more commits both together; a
-  // changed pagination identity tells it a new search replaced the state.
+  // Rows and the next page are ONE atom so a load-more commits both together;
+  // a changed `next` identity tells it a new search replaced the state.
   const [results, setResults] = useState<{
-    rows: RecipeRow<TNode>[];
-    pagination: SearchPagination;
-  }>({ rows: [], pagination: EMPTY_PAGINATION });
-  const { pagination } = results;
+    rows: RecipeRow[];
+    next: NextPage | null;
+  }>({ rows: [], next: null });
 
-  const setRows = (rows: RecipeRow<TNode>[]) => {
-    setResults(prev => ({ ...prev, rows }));
-  };
-  const setPagination = (next: SearchPagination) => {
-    setResults(prev => ({ ...prev, pagination: next }));
-  };
   const supersede = () => {
     generationRef.current += 1;
     const generation = generationRef.current;
     return () => generation === generationRef.current;
   };
 
+  const run = async (
+    fetchPage: () => Promise<Fetched>,
+  ): Promise<SearchOutcome> => {
+    const isCurrent = supersede();
+    setLoading(true);
+    setPerformed(true);
+    const fetched = await fetchPage();
+    // A newer search fired mid-flight: discard this response whole, so it
+    // cannot clobber the newer results or the loading flag it now owns.
+    if (!isCurrent()) return SUPERSEDED;
+    setLoading(false);
+    if ('error' in fetched) {
+      setResults({ rows: [], next: null });
+      return failedSearch(fetched.error);
+    }
+    setResults({ rows: fetched.page.rows, next: fetched.page.next });
+    return { status: 'shown', partial: fetched.page.partial };
+  };
+
   const search = (text: string, filters: RecipeFilters) => {
     setQuery(text);
-    return executeRecipeTextSearch(document, text, filters, client, {
-      setLoading,
-      setPerformed,
-      setRows,
-      setPagination,
-      isCurrent: supersede(),
-    });
+    return run(() => fetchTextPage(client, text, filters, null));
   };
 
-  // One Spoonacular call with no pages and no filters.
+  // One page, with no filters: the API ranks by the ingredients alone.
   const searchByIngredients = (ingredients: readonly string[]) => {
     setQuery('');
-    setPagination(EMPTY_PAGINATION);
-    return executeRecipeIngredientSearch(ingredients.join(','), {
-      setLoading,
-      setPerformed,
-      setRows,
-      isCurrent: supersede(),
-    });
+    return run(() => fetchIngredientPage(client, ingredients));
   };
 
-  // More remains while EITHER source still has a page.
-  const hasMore =
-    pagination.localHasNextPage ||
-    pagination.spoonacularOffset < pagination.spoonacularTotal;
+  const { next } = results;
 
   const loadMore = async () => {
-    if (!hasMore || loadingMore) return;
-    const captured = pagination;
+    if (!next || loadingMore) return;
     await executeWithLoadingState(async () => {
-      const page = await executeRecipeLoadMore(document, captured, client);
+      const page = await fetchNextPage(client, next);
       if (!page) return;
-      // A new search or clear mid-flight replaced the pagination; this page
-      // belongs to the old query.
+      // A new search or clear mid-flight replaced `next`; this page belongs to
+      // the old query.
       setResults(prev =>
-        prev.pagination === captured
-          ? {
-              rows: [...prev.rows, ...page.rows],
-              pagination: page.nextPagination,
-            }
+        prev.next === next
+          ? { rows: [...prev.rows, ...page.rows], next: page.next }
           : prev,
       );
     }, setLoadingMore);
@@ -103,7 +227,7 @@ export function useRecipeSearch<TNode extends SearchedRecipe>(
     supersede();
     setQuery('');
     setPerformed(false);
-    setResults({ rows: [], pagination: EMPTY_PAGINATION });
+    setResults({ rows: [], next: null });
     // A search cleared mid-flight would otherwise leave loading stuck on.
     setLoading(false);
   };
@@ -114,7 +238,7 @@ export function useRecipeSearch<TNode extends SearchedRecipe>(
     performed,
     loading,
     loadingMore,
-    hasMore,
+    hasMore: next !== null,
     search,
     searchByIngredients,
     loadMore,

@@ -5,26 +5,21 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#components/atoms/Icon';
-import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import { Text } from '#components/atoms/Text';
+import type { Diet } from '#/graphql/generated/schemaTypes';
+import { isLifestyleDiet } from '#domain/dietary';
 import {
+  type RecipeFilters,
+  DEFAULT_FILTERS,
   LIFESTYLE_DIET_OPTIONS,
   CONSTRAINT_DIET_OPTIONS,
   INTOLERANCE_OPTIONS,
   MEAL_TYPES,
-  isLifestyleDietValue,
 } from '#features/recipes/utils/recipeFilterOptions';
 
 const COOK_TIMES = [15, 30, 45, 60];
 
 // ── Props ──
-
-const DEFAULT_FILTERS: RecipeFilters = {
-  diet: [],
-  intolerances: [],
-  mealType: null,
-  maxReadyTime: null,
-};
 
 interface RecipeFilterSheetProps {
   visible: boolean;
@@ -79,9 +74,9 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
 
   // Lifestyle diets are mutually exclusive: selecting one replaces any prior
   // lifestyle pick while preserving the stackable constraint selections.
-  const toggleLifestyleDiet = (value: string) => {
+  const toggleLifestyleDiet = (value: Diet) => {
     setDraftFilters(prev => {
-      const constraints = prev.diet.filter(d => !isLifestyleDietValue(d));
+      const constraints = prev.diet.filter(d => !isLifestyleDiet(d));
       return {
         ...prev,
         diet: prev.diet.includes(value) ? constraints : [...constraints, value],
@@ -90,7 +85,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   };
 
   // Constraint diets stack freely (gluten-free + low-FODMAP, on any lifestyle).
-  const toggleConstraintDiet = (value: string) => {
+  const toggleConstraintDiet = (value: Diet) => {
     setDraftFilters(prev => ({
       ...prev,
       diet: prev.diet.includes(value)

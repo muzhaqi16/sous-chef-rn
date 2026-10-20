@@ -2,7 +2,10 @@ import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
+  Diet,
+  ExternalSource,
   ExternalSyncStatus,
+  Intolerance,
   RecipeRevisionStatus,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -24,6 +27,7 @@ type RecipeFixture = NonNullable<
 >;
 
 const HINT: CatalogRecipeHint = {
+  provider: ExternalSource.Spoonacular,
   externalId: '716429',
   name: 'Pasta with Garlic',
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
@@ -48,12 +52,11 @@ const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
   id: 'r1',
   isExternal: false,
   sourceMapping: null,
-  externalDetails: null,
   ingredientsConnection: ingredientsPage([]),
   ...overrides,
 });
 
-/** A Spoonacular recipe the API holds, in the given sync state. */
+/** A catalog recipe the API holds, in the given sync state. */
 const catalogRecipe = (
   syncStatus: ExternalSyncStatus,
   overrides: RecipeFixture = {},
@@ -162,9 +165,11 @@ describe('useRecipeData', () => {
       );
     });
 
-    it('carries no provider chips for a recipe the user wrote', async () => {
+    it('carries no diet chips for a recipe with none recorded', async () => {
       const { result } = renderData({ recipeId: 'r1' }, [
-        recipeMock(authoredRecipe()),
+        recipeMock(
+          authoredRecipe({ healthScore: null, diets: [], freeOf: [] }),
+        ),
       ]);
 
       await waitFor(() => expect(result.current.displayData).not.toBeNull());
@@ -172,26 +177,21 @@ describe('useRecipeData', () => {
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           healthScore: undefined,
-          vegetarian: undefined,
-          vegan: undefined,
-          glutenFree: undefined,
-          dairyFree: undefined,
+          vegetarian: false,
+          vegan: false,
+          glutenFree: false,
+          dairyFree: false,
         }),
       );
     });
 
-    it('reads the health score and diet chips from the provider details', async () => {
+    it('reads the health score and diet chips from the recipe', async () => {
       const { result } = renderData({ recipeId: 'r1' }, [
         recipeMock(
           catalogRecipe(ExternalSyncStatus.Synced, {
-            externalDetails: {
-              __typename: 'SpoonacularRecipeDetails',
-              healthScore: 75,
-              vegetarian: true,
-              vegan: false,
-              glutenFree: true,
-              dairyFree: null,
-            },
+            healthScore: 75,
+            diets: [Diet.Vegetarian, Diet.GlutenFree],
+            freeOf: [Intolerance.Dairy],
           }),
         ),
       ]);
@@ -204,7 +204,7 @@ describe('useRecipeData', () => {
           vegetarian: true,
           vegan: false,
           glutenFree: true,
-          dairyFree: undefined,
+          dairyFree: true,
         }),
       );
     });
@@ -353,7 +353,7 @@ describe('useRecipeData', () => {
 
     it('waits without a title when the row gave none', () => {
       const { result } = renderData({
-        hint: { externalId: '716429' },
+        hint: { provider: ExternalSource.Spoonacular, externalId: '716429' },
       });
 
       expect(result.current.displayData).toBeNull();
@@ -374,7 +374,11 @@ describe('useRecipeData', () => {
 
   // `skipToken` keeps serving the last run's data, error and variables.
   describe('an id cleared while its request is suspended', () => {
-    const ROW: CatalogRecipeHint = { externalId: 'x', name: 'Row' };
+    const ROW: CatalogRecipeHint = {
+      provider: ExternalSource.Spoonacular,
+      externalId: 'x',
+      name: 'Row',
+    };
 
     const openThenClear = async (mock: MockedResponse) => {
       const initialProps: UseRecipeDataParams = {

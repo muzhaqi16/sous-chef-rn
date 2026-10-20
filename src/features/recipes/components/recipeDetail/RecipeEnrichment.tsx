@@ -5,73 +5,42 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { isRecord } from '#/utils/isRecord';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import type { RecipeNutritionFacts } from '#domain/nutrition';
+
+type MacroField = Exclude<keyof RecipeNutritionFacts, 'calories'>;
+
+// The macros under the calories, in order, with the unit each is stated in.
+const MACROS: { field: MacroField; labelKey: TranslationKey; unit: string }[] =
+  [
+    { field: 'protein', labelKey: 'recipes.macroProtein', unit: 'g' },
+    { field: 'totalCarbs', labelKey: 'recipes.macroCarbohydrates', unit: 'g' },
+    { field: 'totalFat', labelKey: 'recipes.macroFat', unit: 'g' },
+    { field: 'dietaryFiber', labelKey: 'recipes.macroFiber', unit: 'g' },
+    { field: 'totalSugars', labelKey: 'recipes.macroSugar', unit: 'g' },
+    { field: 'sodium', labelKey: 'recipes.macroSodium', unit: 'mg' },
+  ];
 
 interface NutrientRow {
   labelKey: TranslationKey;
   value: string;
 }
 
-function asRecord(x: unknown): Record<string, unknown> | null {
-  return isRecord(x) ? x : null;
-}
-
-// Keys are the Spoonacular nutrient `name` values (matched against the blob);
-// values are the i18n keys whose label is resolved at render time so the macro
-// names follow the active language.
-type MacroNutrient =
-  | 'Calories'
-  | 'Protein'
-  | 'Carbohydrates'
-  | 'Fat'
-  | 'Fiber'
-  | 'Sugar'
-  | 'Sodium';
-
-const MACRO_LABEL_KEYS: Record<MacroNutrient, TranslationKey> = {
-  Calories: 'labels.calories',
-  Protein: 'recipes.macroProtein',
-  Carbohydrates: 'recipes.macroCarbohydrates',
-  Fat: 'recipes.macroFat',
-  Fiber: 'recipes.macroFiber',
-  Sugar: 'recipes.macroSugar',
-  Sodium: 'recipes.macroSodium',
-};
-const MACRO_ORDER: MacroNutrient[] = [
-  'Calories',
-  'Protein',
-  'Carbohydrates',
-  'Fat',
-  'Fiber',
-  'Sugar',
-  'Sodium',
-];
-
-/** Pull the common macros out of a Spoonacular-style `{ nutrients: [...] }` blob. */
-function parseNutrition(data: unknown): NutrientRow[] {
-  const root = asRecord(data);
-  const nutrients = root?.nutrients;
-  if (!Array.isArray(nutrients)) return [];
-  const rows: NutrientRow[] = [];
-  for (const name of MACRO_ORDER) {
-    const rec = asRecord(nutrients.find(n => asRecord(n)?.name === name));
-    if (!rec) continue;
-    const amount =
-      typeof rec.amount === 'number' ? rec.amount : Number(rec.amount);
-    if (Number.isNaN(amount)) continue;
-    const unit = typeof rec.unit === 'string' ? rec.unit : '';
-    rows.push({
-      labelKey: MACRO_LABEL_KEYS[name],
-      value: `${Math.round(amount)}${unit ? ` ${unit}` : ''}`,
-    });
-  }
-  return rows;
+function macroRows(
+  nutrition: RecipeNutritionFacts | null | undefined,
+): NutrientRow[] {
+  if (!nutrition) return [];
+  return MACROS.flatMap(({ field, labelKey, unit }) => {
+    const amount = nutrition[field];
+    return amount === null
+      ? []
+      : [{ labelKey, value: `${Math.round(amount)} ${unit}` }];
+  });
 }
 
 interface RecipeEnrichmentProps {
   caloriesPerServing?: number;
-  nutritionData?: unknown;
+  nutrition?: RecipeNutritionFacts | null;
   tips?: string;
   videoUrl?: string;
   forkedFromName?: string;
@@ -85,7 +54,7 @@ interface RecipeEnrichmentProps {
 
 export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   caloriesPerServing,
-  nutritionData,
+  nutrition,
   tips,
   videoUrl,
   forkedFromName,
@@ -97,8 +66,9 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   revisionRejectionNote,
 }) => {
   const { t } = useTranslation();
-  const nutrients = parseNutrition(nutritionData);
-  const hasNutrition = caloriesPerServing != null || nutrients.length > 0;
+  const calories = caloriesPerServing ?? nutrition?.calories ?? null;
+  const nutrients = macroRows(nutrition);
+  const hasNutrition = calories !== null || nutrients.length > 0;
   const hasTags = !!tags && tags.length > 0;
 
   return (
@@ -110,9 +80,9 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
             {t('recipes.nutritionTitle')}
           </SectionHeader>
           <View style={styles.nutrientGrid}>
-            {caloriesPerServing != null && (
+            {calories !== null && (
               <View style={styles.nutrientCell}>
-                <Text role="label">{Math.round(caloriesPerServing)}</Text>
+                <Text role="label">{Math.round(calories)}</Text>
                 <Text role="caption" tone="secondary">
                   {t('recipes.caloriesPerServingLabel')}
                 </Text>

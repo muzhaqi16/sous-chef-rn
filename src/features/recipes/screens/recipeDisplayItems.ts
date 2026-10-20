@@ -1,16 +1,21 @@
 import type { Translate } from '#/i18n/types';
-import { transformRecipeForDisplay } from '#domain/recipeTransform';
-import type {
-  RecipeInformation,
-  RecipeSearchResult,
-} from '#/services/spoonacular/types';
 import type { BadgeContent } from '#components/atoms/Badge';
+import {
+  catalogHintOf,
+  type RecipeTarget,
+} from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type {
-  LocalRecipeNode,
+  FoundHit,
+  FoundRecipe,
+  IngredientMatchEdge,
+  RandomHit,
   RecipeRow,
   RecipeSuggestionEdge,
-  SpoonacularRecipe,
 } from '#features/recipes/utils/recipeRows';
+import {
+  catalogKey,
+  timeAndServings,
+} from '#features/recipes/utils/recipeCardText';
 
 export interface DisplayItem {
   id: string;
@@ -18,152 +23,103 @@ export interface DisplayItem {
   subtitle: string;
   badge?: BadgeContent;
   imageUrl?: string;
+  target: RecipeTarget;
 }
 
-const spoonacularDisplayItem = (
-  recipe: SpoonacularRecipe,
+const recipeTarget = (id: string): RecipeTarget => ({ recipeId: id });
+
+/** A recipe the API holds. Its "Saved" badge is the user's own mark. */
+const recipeDisplayItem = (
+  recipe: FoundRecipe,
   translate: Translate,
-): DisplayItem => {
-  const shown = transformRecipeForDisplay(recipe, translate);
-  return {
-    id: shown.id,
-    title: shown.title,
-    subtitle: shown.subtitle,
-    badge: shown.badge
-      ? { text: shown.badge.text, variant: 'primary' }
-      : undefined,
-    imageUrl: shown.imageUrl,
-  };
-};
-
-/** Spoonacular's popularity: `likes` on ingredient-search results,
- * `aggregateLikes` on text-search ones, told apart by the required
- * `usedIngredientCount` (as in recipeTransform). */
-function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
-  return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
-}
-
-/**
- * A local API recipe node in the Spoonacular subtitle format. The `local-` id
- * prefix keeps it collision-free against `spoonacular-<n>` and routes presses
- * to the backend detail view.
- */
-const localDisplayItem = (
-  node: LocalRecipeNode,
-  match: SpoonacularRecipe | undefined,
-  translate: Translate,
-): DisplayItem => {
-  const matchTime =
-    match && 'readyInMinutes' in match ? match.readyInMinutes : undefined;
-  const matchLikes = match ? spoonacularLikes(match) : undefined;
-
-  const totalTime = node.totalTimeMinutes ?? matchTime;
-  const subtitleParts: string[] = [];
-  if (totalTime) {
-    subtitleParts.push(`⏱ ${translate('labels.min', { count: totalTime })}`);
-  }
-  if (node.servings) {
-    subtitleParts.push(
-      translate('recipes.servingsCount', { count: node.servings }),
-    );
-  }
-
-  // A saved recipe keeps its "Saved" badge, else borrows its Spoonacular twin's
-  // like count. Backend results are the app's corpus, not the user's, so no "My
-  // recipe" badge.
-  const badge: DisplayItem['badge'] = node.isSaved
+): DisplayItem => ({
+  id: `recipe-${recipe.id}`,
+  title: recipe.name,
+  subtitle: timeAndServings(
+    recipe.totalTimeMinutes,
+    recipe.servings,
+    translate,
+  ).join(' • '),
+  badge: recipe.isSaved
     ? { text: translate('recipes.savedBadge'), variant: 'success' }
-    : matchLikes && matchLikes > 0
-    ? { text: `❤️ ${matchLikes}`, variant: 'primary' }
-    : undefined;
+    : undefined,
+  imageUrl: recipe.imageUrl ?? undefined,
+  target: recipeTarget(recipe.id),
+});
 
-  return {
-    id: `local-${node.id}`,
-    title: node.name,
-    subtitle: subtitleParts.join(' • '),
-    badge,
-    imageUrl: node.imageUrl ?? undefined,
-  };
-};
-
-function randomDisplayItem(
-  recipe: RecipeInformation,
+/** A catalog recipe from search, its popularity as the badge. */
+const catalogDisplayItem = (
+  hit: FoundHit,
   translate: Translate,
-): DisplayItem {
-  const subtitleParts: string[] = [];
-  if (recipe.servings) {
-    subtitleParts.push(
-      translate('recipes.servingsCount', { count: recipe.servings }),
-    );
-  }
-  const totalTime =
-    recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
-  if (totalTime) {
-    subtitleParts.push(translate('labels.min', { count: totalTime }));
-  }
+): DisplayItem => ({
+  id: catalogKey(hit),
+  title: hit.name,
+  subtitle: timeAndServings(hit.totalTimeMinutes, hit.servings, translate).join(
+    ' • ',
+  ),
+  badge:
+    hit.likes && hit.likes > 0
+      ? { text: `❤️ ${hit.likes}`, variant: 'primary' }
+      : undefined,
+  imageUrl: hit.imageUrl ?? undefined,
+  target: { catalog: catalogHintOf(hit) },
+});
 
+function randomDisplayItem(hit: RandomHit, translate: Translate): DisplayItem {
   return {
-    id: String(recipe.id),
-    title: recipe.title,
-    subtitle: subtitleParts.join(' \u2022 '),
+    id: catalogKey(hit),
+    title: hit.name,
+    subtitle: timeAndServings(
+      hit.totalTimeMinutes,
+      hit.servings,
+      translate,
+    ).join(' • '),
     badge: { text: translate('labels.suggested') },
-    imageUrl: recipe.image,
+    imageUrl: hit.imageUrl ?? undefined,
+    target: { catalog: catalogHintOf(hit) },
   };
 }
 
+/** What the pantry can make, its badge how much of it the pantry holds. */
 function pantryDisplayItem(
-  recipe: RecipeSearchResult,
-  info: RecipeInformation | undefined,
+  edge: IngredientMatchEdge,
   translate: Translate,
 ): DisplayItem {
-  const totalIngredients =
-    recipe.usedIngredientCount + recipe.missedIngredientCount;
-
+  const { node: hit, usedIngredientCount, missedIngredientCount } = edge;
+  const totalIngredients = usedIngredientCount + missedIngredientCount;
   const subtitleParts: string[] = [];
-  if (recipe.likes) {
-    subtitleParts.push(`❤️ ${recipe.likes}`);
+  if (hit.likes) {
+    subtitleParts.push(`❤️ ${hit.likes}`);
   }
-  if (info?.servings) {
-    subtitleParts.push(
-      translate('recipes.servingsCount', { count: info.servings }),
-    );
-  }
-  // Spoonacular reports an unknown duration as 0, so a zero falls through.
-  const totalTime = [
-    info?.readyInMinutes,
-    info?.preparationMinutes,
-    info?.cookingMinutes,
-  ].find(minutes => minutes !== undefined && minutes !== 0);
-  if (totalTime) {
-    subtitleParts.push(translate('labels.min', { count: totalTime }));
-  }
+  subtitleParts.push(
+    ...timeAndServings(hit.totalTimeMinutes, hit.servings, translate),
+  );
 
   return {
-    id: String(recipe.id),
-    title: recipe.title,
-    subtitle:
-      subtitleParts.join(' • ') ||
-      translate('recipes.ingredientCount', { count: totalIngredients }),
+    id: catalogKey(hit),
+    title: hit.name,
+    subtitle: subtitleParts.join(' • '),
     badge: {
       text: translate('recipes.pantryMatchLabel', {
-        used: recipe.usedIngredientCount,
+        used: usedIngredientCount,
         count: totalIngredients,
-        missing: recipe.missedIngredientCount,
+        missing: missedIngredientCount,
       }),
       lines: [
         {
           icon: 'checkmark-circle',
-          text: String(recipe.usedIngredientCount),
+          text: String(usedIngredientCount),
           variant: 'success',
         },
         {
           icon: 'cart-outline',
-          text: String(recipe.missedIngredientCount),
+          text: String(missedIngredientCount),
           variant: 'warning',
         },
       ],
     },
-    imageUrl: recipe.image,
+    imageUrl: hit.imageUrl ?? undefined,
+    target: { catalog: catalogHintOf(hit) },
   };
 }
 
@@ -202,8 +158,7 @@ function suggestionDisplayItem(
   }
 
   return {
-    // Opens the recipe itself, as the local rows of a search do.
-    id: `local-${node.id}`,
+    id: `recipe-${node.id}`,
     title: node.name,
     subtitle: subtitleParts.join(' • '),
     badge: {
@@ -217,6 +172,7 @@ function suggestionDisplayItem(
       ],
     },
     imageUrl: node.imageUrl ?? undefined,
+    target: recipeTarget(node.id),
   };
 }
 
@@ -227,14 +183,14 @@ export const toDisplayItems = (
 ): DisplayItem[] =>
   rows.map(row => {
     switch (row.source) {
-      case 'local':
-        return localDisplayItem(row.node, row.match, translate);
-      case 'spoonacular':
-        return spoonacularDisplayItem(row.recipe, translate);
+      case 'recipe':
+        return recipeDisplayItem(row.recipe, translate);
+      case 'catalog':
+        return catalogDisplayItem(row.hit, translate);
       case 'random':
-        return randomDisplayItem(row.recipe, translate);
+        return randomDisplayItem(row.hit, translate);
       case 'pantry':
-        return pantryDisplayItem(row.recipe, row.info, translate);
+        return pantryDisplayItem(row.edge, translate);
       case 'suggestion':
         return suggestionDisplayItem(row.edge, translate);
     }

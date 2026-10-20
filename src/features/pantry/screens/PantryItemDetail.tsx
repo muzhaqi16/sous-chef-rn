@@ -51,11 +51,14 @@ import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQu
 import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
+import {
+  useRecipeSuggestionsForItem,
+  type ItemRecipeSuggestion,
+} from '#features/pantry/hooks/useRecipeSuggestionsForItem';
+import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
-import type { RecipeInformation } from '#/services/spoonacular/types';
 import { useToday } from '#hooks/app/useToday';
 
 /**
@@ -144,14 +147,8 @@ export const PantryItemDetail: React.FC<
     toPantryItem({ itemId });
   };
 
-  const handleRecipePress = (recipe: RecipeInformation) => {
-    toRecipeDetail({
-      catalog: {
-        externalId: String(recipe.id),
-        name: recipe.title,
-        imageUrl: recipe.image,
-      },
-    });
+  const handleRecipePress = (recipe: ItemRecipeSuggestion) => {
+    toRecipeDetail({ catalog: catalogHintOf(recipe) });
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
@@ -489,21 +486,21 @@ export const PantryItemDetail: React.FC<
             >
               {suggestedRecipes.map(recipe => (
                 <AppPressable
-                  key={String(recipe.id)}
+                  key={`${recipe.provider}-${recipe.providerRecipeId}`}
                   style={styles.recipeCard}
                   onPress={() => handleRecipePress(recipe)}
                 >
                   <CachedImage
-                    uri={recipe.image}
+                    uri={recipe.imageUrl}
                     style={styles.recipeImage}
-                    sharedTransitionTag={`recipe-image-${recipe.id}`}
+                    sharedTransitionTag={`recipe-image-${recipe.providerRecipeId}`}
                   />
                   <Text
                     role="label"
                     style={styles.recipeTitle}
                     numberOfLines={2}
                   >
-                    {recipe.title}
+                    {recipe.name}
                   </Text>
                 </AppPressable>
               ))}
