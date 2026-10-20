@@ -223,22 +223,31 @@ const LAYER_POLICIES = [
   },
 ];
 
-// Globals one host has and another lacks; `globalThis` is the portable spelling.
+const restrictedGlobals = (names, message) =>
+  names.map(name => ({ name, message }));
+
 const CORE_RESTRICTED_GLOBALS = [
-  'window',
-  'document',
-  'navigator',
-  'localStorage',
-  'sessionStorage',
-  'location',
-  'alert',
-  'confirm',
-  'global',
-].map(name => ({
-  name,
-  message:
+  // Globals one host has and another lacks; `globalThis` is the portable spelling.
+  ...restrictedGlobals(
+    [
+      'window',
+      'document',
+      'navigator',
+      'localStorage',
+      'sessionStorage',
+      'location',
+      'alert',
+      'confirm',
+      'global',
+    ],
     'Core code runs in every host. Use `globalThis`, or reach the host through a port in src/platform/.',
-}));
+  ),
+  // Node's own globals: neither React Native nor a browser has them.
+  ...restrictedGlobals(
+    ['process', 'Buffer', 'setImmediate', '__dirname', '__filename', 'require'],
+    'Core code runs without Node. Read build values through the `environment` port, and import modules with `import`.',
+  ),
+];
 
 const CORE_PATTERNS = LAYERS.filter(entry => entry.layer === 'core').flatMap(
   entry => entry.patterns,

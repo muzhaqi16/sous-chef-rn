@@ -40,9 +40,33 @@ const CASES: Case[] = [
     blocked: true,
   },
   {
+    label: 'a mobile file, loaded by dynamic import, from core',
+    filePath: CORE_FILE,
+    code: "export const y = (): Promise<unknown> => import('#components/molecules/Toast');\n",
+    blocked: true,
+  },
+  {
+    label: 'a mobile file, re-exported by name, from core',
+    filePath: CORE_FILE,
+    code: "export type { ToastPresenter } from '#components/molecules/Toast';\n",
+    blocked: true,
+  },
+  {
+    label: 'a mobile file, re-exported whole, from core',
+    filePath: CORE_FILE,
+    code: "export * from '#components/molecules/Toast';\n",
+    blocked: true,
+  },
+  {
     label: 'a host-only global, in core',
     filePath: CORE_FILE,
     code: 'export const y: unknown = window;\n',
+    blocked: true,
+  },
+  {
+    label: "Node's process, in core",
+    filePath: CORE_FILE,
+    code: 'export const y: unknown = process.env;\n',
     blocked: true,
   },
   {

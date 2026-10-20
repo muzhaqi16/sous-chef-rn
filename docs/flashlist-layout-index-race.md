@@ -35,7 +35,7 @@ Error: index out of bounds, not enough layouts
 
 Reproduced by deleting several rows in quick succession, especially near the end of the
 list. It reached `ErrorUtils.reportFatalError` with `isFatal: true`, so
-`setupGlobalErrorHandler` (`src/utils/globalErrorHandler.ts`) recorded it as
+`setupGlobalErrorHandler` (`src/app/globalErrorHandler.ts`) recorded it as
 `app_unhandled_exceptions_total{fatal="true"}` and release builds crashed. An error
 boundary could not catch it: the throw happens inside an event handler, not during
 render.

@@ -51,10 +51,7 @@ export class Environment {
       isDevelopment: nodeEnv === 'development' || __DEV__,
       isProduction: nodeEnv === 'production',
       isStaging: nodeEnv === 'staging',
-      isTesting:
-        nodeEnv === 'testing' ||
-        nodeEnv === 'test' ||
-        process.env.NODE_ENV === 'test',
+      isTesting: nodeEnv === 'testing' || nodeEnv === 'test',
       platform: requirePlatform('platformInfo').os,
       buildMode: __DEV__ ? 'debug' : 'release',
     };

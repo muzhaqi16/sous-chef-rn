@@ -78,9 +78,18 @@ The core is held two ways:
 
 - **Lint** (`eslint/boundaries.js`). Every file carries a `core` or `mobile`
   category, and a `core` file may not import a `mobile` one, type
-  imports included. Of packages it imports only `CORE_EXTERNALS`, and it names
-  no host-only global (`window`, `navigator`, …), so `globalThis` it is.
-  `__tests__/lint/layerPolicies.test.ts` pins what is blocked.
+  imports included, whether by `import`, `import()` or `export … from`. Of
+  packages it imports only `CORE_EXTERNALS`, and it names no host-only global
+  (`window`, `navigator`, …), so `globalThis` it is, and none of Node's
+  (`process`, `Buffer`, `require`, …), so build values come through the
+  `environment` port. `__tests__/lint/layerPolicies.test.ts` pins what is blocked.
+- **Types** (`tsconfig.core.json`, part of `npm run typecheck`). Every core
+  file, checked with no host's ambient types (`types: []`) and React Native's
+  language level plus the DOM's, so a React Native or Node global, or a
+  React-Native-only API shape, fails to compile. `__DEV__`, which every host's
+  bundler defines, is declared in `src/platform/buildGlobals.d.ts`.
+  `layerMembership.test.ts` holds its file list to the core layer and its
+  libraries to React Native's.
 - **At runtime** (the `core-portability` Jest project). A node environment with
   no React Native preset, where every React-Native-family package throws when
   loaded and the in-memory platform is installed. `coreLoadsInNode.test.ts`
@@ -108,6 +117,7 @@ service if the install has not happened, so nothing degrades silently.
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
 | `clock`         | A monotonic `now()` for durations                          | react-native-performance                           |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
+| `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
 | `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
 
 `src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`

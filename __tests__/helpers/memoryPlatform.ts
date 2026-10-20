@@ -3,6 +3,7 @@
 // fakes, losing the state they capture.
 import { useEffect, useSyncExternalStore } from 'react';
 import { installPlatform, requirePlatform } from '#platform/install';
+import { streamedFileParts } from '#native/fileParts';
 import type {
   AppLifecycle,
   AppLifecycleState,
@@ -146,7 +147,7 @@ function createMemoryScreen(): MemoryScreen {
 /** Every service in memory, with the values the native mocks report. */
 export function createMemoryPlatform(): PlatformServices {
   return {
-    environment: {},
+    environment: { NODE_ENV: 'test' },
     keyValueStore: createMemoryKeyValueStore(),
     secureStore: createMemorySecureStore(),
     platformInfo: { os: 'ios', appVersion: '1.0.0', isEmulator: false },
@@ -154,6 +155,7 @@ export function createMemoryPlatform(): PlatformServices {
     appearance: { applyTheme: () => {}, apply: () => {} },
     clock: { now: () => Date.now() },
     imagePrefetch: { prefetch: () => {} },
+    fileParts: streamedFileParts,
     screen: createMemoryScreen(),
   };
 }

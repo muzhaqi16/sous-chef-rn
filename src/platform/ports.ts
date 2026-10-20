@@ -4,6 +4,7 @@ import type {
   FontScalePreference,
   ThemePreference,
 } from '#store/slices/preferenceTypes';
+import type { ImageFile } from '#/types/media';
 
 /**
  * Build-time configuration. Every value is a string or unset, and consumers
@@ -141,6 +142,11 @@ export interface ImagePrefetch {
   prefetch(uris: string[]): void;
 }
 
+/** How a picked file joins a multipart body. */
+export interface FileParts {
+  append(form: FormData, name: string, file: ImageFile, mimeType: string): void;
+}
+
 /**
  * Where the core asks to go, named by destination rather than by route. The
  * host maps each onto its own navigation; the core never names a screen.
@@ -176,5 +182,6 @@ export interface PlatformServices {
   appearance: Appearance;
   clock: Clock;
   imagePrefetch: ImagePrefetch;
+  fileParts: FileParts;
   screen: ScreenHooks;
 }

@@ -31,7 +31,7 @@ import {
   GlobalBackdrop,
 } from '#/components/providers/OverlayBackdropProvider';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+import { setupGlobalErrorHandler } from '#/app/globalErrorHandler';
 import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
 import { nativePushProvider } from '#/services/push/nativePushProvider';
 import { iosPushProvider } from '#/services/push/iosPushProvider';

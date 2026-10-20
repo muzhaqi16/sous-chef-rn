@@ -115,7 +115,10 @@ export class TelemetryService {
   private logBuffer: LogEntry[] = [];
   private metricBuffer: MetricEntry[] = [];
   private isInitialized = false;
-  private flushTimers: { logs?: NodeJS.Timeout; metrics?: NodeJS.Timeout } = {};
+  private flushTimers: {
+    logs?: ReturnType<typeof setInterval>;
+    metrics?: ReturnType<typeof setInterval>;
+  } = {};
   // Guards against overlapping log flushes (the error-triggered immediate flush
   // can race the interval timer); without it, concurrent flushes fire
   // duplicate failing requests and invert the re-buffer order.

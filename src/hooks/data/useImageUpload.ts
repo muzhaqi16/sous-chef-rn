@@ -37,6 +37,7 @@ import {
 import type { Translate } from '#/i18n/types';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { ImageFile } from '#/types/media';
+import { requirePlatform } from '#platform/install';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 
 /**
@@ -180,12 +181,7 @@ export const useImageUpload = () => {
     for (const field of uploadData.fields) {
       form.append(field.name, field.value);
     }
-    // RN's FormData streams a file from disk given `{ uri, type, name }`.
-    form.append('file', {
-      uri: file.uri,
-      type: mimeType,
-      name: firstNonBlank(file.fileName) ?? 'image.jpg',
-    });
+    requirePlatform('fileParts').append(form, 'file', file, mimeType);
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();

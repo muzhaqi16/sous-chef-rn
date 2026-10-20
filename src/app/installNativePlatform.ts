@@ -14,6 +14,7 @@ import { preloadImages } from '#components/atoms/CachedImage';
 import { alertService } from '#/services/alertService';
 import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
+import { streamedFileParts } from '#native/fileParts';
 
 const lifecycleState = (status: AppStateStatus): AppLifecycleState =>
   status === 'extension' ? 'unknown' : status;
@@ -51,6 +52,7 @@ installPlatform({
   },
   clock: { now: () => performance.now() },
   imagePrefetch: { prefetch: uris => preloadImages(uris) },
+  fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,
 });
 
