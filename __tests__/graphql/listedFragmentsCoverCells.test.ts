@@ -185,25 +185,31 @@ const stringProperty = (
   return undefined;
 };
 
-/** `useFragment({ fragmentName, from: { __typename, id } })`, the `from` possibly behind a condition. */
-function byIdReads(file: string): ByIdRead[] {
-  const source = ts.createSourceFile(
-    file,
-    fs.readFileSync(file, 'utf8'),
-    ts.ScriptTarget.Latest,
-    true,
-  );
+const BY_ID_HOOKS = ['useFragment', 'useFragmentList'];
+
+/**
+ * `useFragment` / `useFragmentList({ fragmentName, from })`: the type comes from
+ * a `__typename` in `from` (possibly behind a condition or a `map`), else from
+ * the fragment's own type condition. A call naming no fragment is unreadable.
+ */
+function byIdReads(
+  file: string,
+  text: string,
+): { reads: ByIdRead[]; unreadable: string[] } {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const reads: ByIdRead[] = [];
+  const unreadable: string[] = [];
   const visitNode = (node: ts.Node): void => {
     const [options] = ts.isCallExpression(node) ? node.arguments : [];
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === 'useFragment' &&
-      options &&
-      ts.isObjectLiteralExpression(options)
+      BY_ID_HOOKS.includes(node.expression.text)
     ) {
-      const fragment = stringProperty(options, 'fragmentName');
+      const fragment =
+        options && ts.isObjectLiteralExpression(options)
+          ? stringProperty(options, 'fragmentName')
+          : undefined;
       let typename: string | undefined;
       const findTypename = (child: ts.Node): void => {
         if (ts.isObjectLiteralExpression(child)) {
@@ -211,32 +217,41 @@ function byIdReads(file: string): ByIdRead[] {
         }
         ts.forEachChild(child, findTypename);
       };
-      for (const property of options.properties) {
-        if (
-          ts.isPropertyAssignment(property) &&
-          ts.isIdentifier(property.name) &&
-          property.name.text === 'from'
-        ) {
-          findTypename(property.initializer);
+      if (options && ts.isObjectLiteralExpression(options)) {
+        for (const property of options.properties) {
+          if (
+            ts.isPropertyAssignment(property) &&
+            ts.isIdentifier(property.name) &&
+            property.name.text === 'from'
+          ) {
+            findTypename(property.initializer);
+          }
         }
       }
+      typename ??= fragment
+        ? fragments.get(fragment)?.typeCondition.name.value
+        : undefined;
       if (fragment && typename) {
-        reads.push({
-          file: path.relative(ROOT, file),
-          fragment,
-          typename,
-        });
+        reads.push({ file, fragment, typename });
+      } else {
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart());
+        unreadable.push(`${file}:${line + 1}`);
       }
     }
     ts.forEachChild(node, visitNode);
   };
   visitNode(source);
-  return reads;
+  return { reads, unreadable };
 }
 
-const reads = PRODUCTION_ROOT_DIRS.flatMap(dir =>
+const scans = PRODUCTION_ROOT_DIRS.flatMap(dir =>
   filesUnder(dir, name => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)),
-).flatMap(byIdReads);
+).map(file =>
+  byIdReads(path.relative(ROOT, file), fs.readFileSync(file, 'utf8')),
+);
+const reads = scans.flatMap(scan => scan.reads);
+// The helper forwards its caller's options to `useFragment`; each caller is read.
+const FORWARDING_HELPER = 'src/hooks/apollo/useFragmentList.ts';
 
 describe('cells read by id', () => {
   it('finds the reads, so the check below is not vacuous', () => {
@@ -247,6 +262,36 @@ describe('cells read by id', () => {
         typename: 'PantryItem',
       }),
     );
+  });
+
+  it('reads every by-id call it finds', () => {
+    expect(
+      scans
+        .flatMap(scan => scan.unreadable)
+        .filter(at => !at.startsWith(`${FORWARDING_HELPER}:`)),
+    ).toEqual([]);
+  });
+
+  it('reads a list read through useFragmentList, typed by its fragment', () => {
+    expect(reads).toContainEqual({
+      file: 'src/features/shoppingList/hooks/useShoppingListPermissions.ts',
+      fragment: 'ShoppingListCollaboratorFragment',
+      typename: 'ShoppingListCollaborator',
+    });
+    const fixture = byIdReads(
+      'fixture.ts',
+      "useFragmentList({ fragment: Doc, fragmentName: 'PantryItemCard_pantryItem', from: refs });",
+    );
+    expect(fixture).toEqual({
+      reads: [
+        {
+          file: 'fixture.ts',
+          fragment: 'PantryItemCard_pantryItem',
+          typename: 'PantryItem',
+        },
+      ],
+      unreadable: [],
+    });
   });
 
   it('reads only fragments some query selects whole', () => {
