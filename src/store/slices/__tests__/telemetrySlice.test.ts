@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { initialTelemetryState } from '../telemetrySlice';
+import { telemetryDefaults } from '../telemetrySlice';
 
 describe('telemetrySlice', () => {
   it('has initial state', () => {
@@ -14,6 +14,19 @@ describe('telemetrySlice', () => {
     expect(state.userConsent).toBeNull();
   });
 
+  it('starts with the flags off, and derives them from the build when applied', () => {
+    const store = createTestStore();
+    expect(store.getState()).toMatchObject({
+      isEnabled: false,
+      enableMetrics: false,
+      enableLogs: false,
+    });
+
+    store.getState().applyTelemetryDefaults();
+
+    expect(store.getState()).toMatchObject(telemetryDefaults());
+  });
+
   describe('setTelemetryEnabled', () => {
     it('enables telemetry and restores env-derived metric/log flags', () => {
       const store = createTestStore({
@@ -24,11 +37,9 @@ describe('telemetrySlice', () => {
       store.getState().setTelemetryEnabled(true);
       expect(store.getState().isEnabled).toBe(true);
       expect(store.getState().enableMetrics).toBe(
-        initialTelemetryState.enableMetrics,
+        telemetryDefaults().enableMetrics,
       );
-      expect(store.getState().enableLogs).toBe(
-        initialTelemetryState.enableLogs,
-      );
+      expect(store.getState().enableLogs).toBe(telemetryDefaults().enableLogs);
     });
 
     it('disables telemetry and turns off metrics and logs', () => {
@@ -94,9 +105,9 @@ describe('telemetrySlice', () => {
       store.getState().setUserConsent(true);
       const state = store.getState();
       expect(state.userConsent).toBe(true);
-      expect(state.isEnabled).toBe(initialTelemetryState.isEnabled);
-      expect(state.enableMetrics).toBe(initialTelemetryState.enableMetrics);
-      expect(state.enableLogs).toBe(initialTelemetryState.enableLogs);
+      expect(state.isEnabled).toBe(telemetryDefaults().isEnabled);
+      expect(state.enableMetrics).toBe(telemetryDefaults().enableMetrics);
+      expect(state.enableLogs).toBe(telemetryDefaults().enableLogs);
     });
   });
 
@@ -144,17 +155,17 @@ describe('telemetrySlice', () => {
   describe('resetTelemetry', () => {
     it('resets to initial state', () => {
       const store = createTestStore({
-        isEnabled: !initialTelemetryState.isEnabled,
-        enableMetrics: !initialTelemetryState.enableMetrics,
-        enableLogs: !initialTelemetryState.enableLogs,
+        isEnabled: !telemetryDefaults().isEnabled,
+        enableMetrics: !telemetryDefaults().enableMetrics,
+        enableLogs: !telemetryDefaults().enableLogs,
         enableConsoleInDev: true,
         userConsent: false,
       });
       store.getState().resetTelemetry();
       const state = store.getState();
-      expect(state.isEnabled).toBe(initialTelemetryState.isEnabled);
-      expect(state.enableMetrics).toBe(initialTelemetryState.enableMetrics);
-      expect(state.enableLogs).toBe(initialTelemetryState.enableLogs);
+      expect(state.isEnabled).toBe(telemetryDefaults().isEnabled);
+      expect(state.enableMetrics).toBe(telemetryDefaults().enableMetrics);
+      expect(state.enableLogs).toBe(telemetryDefaults().enableLogs);
       expect(state.enableConsoleInDev).toBe(false);
       expect(state.userConsent).toBeNull();
     });

@@ -61,7 +61,7 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ constructor
   describe('constructor', () => {
-    it('uses DEFAULT_CONFIG when no config is provided', () => {
+    it('uses the default config when no config is provided', () => {
       const service = new TelemetryService();
       // Default has enabled: false, so logging should be a no-op
       service.log('info', 'should not buffer');

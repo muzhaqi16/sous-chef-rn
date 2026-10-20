@@ -6,7 +6,7 @@ import type {
   ErrorDetails,
   TelemetryTransport,
 } from './types';
-import { TransportSendError, DEFAULT_CONFIG } from './types';
+import { TransportSendError, defaultTelemetryConfig } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
@@ -131,7 +131,7 @@ export class TelemetryService {
   private awaitingConsent = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = { ...defaultTelemetryConfig(), ...config };
     this.setupTransports();
   }
 

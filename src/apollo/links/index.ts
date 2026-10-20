@@ -10,30 +10,18 @@ import { createNetworkStatusLink } from './networkStatusLink';
 import { createClientReleaseLink } from './clientReleaseLink';
 import { errorLink } from './errorLink';
 import { retryLink } from './retryLink';
-import { httpLink } from './httpLink';
+import { createHttpLink } from './httpLink';
 import { wsLink } from './wsLink';
 import { persistedQueryLink } from './persistedQueryLink';
 import { createQueueLink } from '../offlineQueue/queueLink';
 
-// HTTP transport with APQ / operation-safelist hashes. The persisted-query
-// link sits on the HTTP branch only: subscriptions ride graphql-ws where the
-// APQ protocol (and the server's safelist plugin) does not apply.
-const httpTransport = ApolloLink.from([persistedQueryLink, httpLink]);
-
-// Transport link routing:
-// • Subscriptions → WebSocket
-// • All other operations → HTTP with retry
-const transportLink = ApolloLink.split(
-  ({ query }) => {
-    const def = getMainDefinition(query);
-    return (
-      def.kind === Kind.OPERATION_DEFINITION &&
-      def.operation === OperationTypeNode.SUBSCRIPTION
-    );
-  },
-  wsLink,
-  httpTransport,
-);
+const isSubscription: Parameters<typeof ApolloLink.split>[0] = ({ query }) => {
+  const def = getMainDefinition(query);
+  return (
+    def.kind === Kind.OPERATION_DEFINITION &&
+    def.operation === OperationTypeNode.SUBSCRIPTION
+  );
+};
 
 /**
  * Create link chain for Apollo client
@@ -68,6 +56,14 @@ export function createLink() {
   // Order matters: offlineModeLink first, so blocked queries never reach
   // retryLink/errorLink as doomed requests. Deduplication is Apollo's own
   // `queryDeduplication: true`.
+  // HTTP transport with APQ / operation-safelist hashes. The persisted-query
+  // link sits on the HTTP branch only: subscriptions ride graphql-ws where the
+  // APQ protocol (and the server's safelist plugin) does not apply.
+  const httpTransport = ApolloLink.from([persistedQueryLink, createHttpLink()]);
+
+  // Subscriptions → WebSocket; all other operations → HTTP with retry.
+  const transportLink = ApolloLink.split(isSubscription, wsLink, httpTransport);
+
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)

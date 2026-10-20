@@ -102,10 +102,15 @@ The core is held two ways:
 
 The core reaches the device only through ports in `src/platform/`, in two kinds.
 
-**Services** are installed once by the host, before any core module evaluates,
-with `installPlatform()`. A core module reads one with
-`requirePlatform('<name>')`, which throws `PlatformServiceMissing` naming the
-service if the install has not happened, so nothing degrades silently.
+**Services** are installed once by the host, before the core runs, with
+`installPlatform()`. A core module reads one with `requirePlatform('<name>')`
+where it uses it, never while it loads
+(`sous-chef/no-module-scope-platform-read`). The read throws
+`PlatformServiceMissing` naming the service when the install has not happened
+or left it out, so nothing degrades silently. Loading the core reads nothing:
+`coreLoadsWithNothingInstalled.test.ts` loads every core file with nothing
+installed, and `installEvaluatesEagerly.test.ts` evaluates the native install
+the way an eager bundler does.
 
 | Service         | What it is                                                 | Mobile adapter                                     |
 | --------------- | ---------------------------------------------------------- | -------------------------------------------------- |
@@ -125,6 +130,12 @@ polyfill (`platformInstallOrder.test.ts` pins that). Each adapter delegates
 through an arrow or a getter, so Metro's inline requires load a native module at
 its first use, not during the install. `jest.setup.js` installs the in-memory
 platform (`__tests__/helpers/memoryPlatform.ts`) the same way.
+
+**Persisted stores hydrate when the host starts them.** Each Zustand store that
+persists sets `skipHydration` and registers with `src/store/persistedStores.ts`,
+so creating it reads nothing; `index.js` calls `startPersistedStores()` right
+after the install, before any headless entry can load a store, and a store
+created later hydrates as it registers.
 
 **Presenters** are what the core asks a host to show: toast and alert requests
 (`platform/presenters.ts`), which a host registers. `docs/ui-layer.md`

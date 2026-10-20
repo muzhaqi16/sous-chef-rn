@@ -29,15 +29,18 @@ const toQueryValue = (value: unknown): string => {
 
 /** Spoonacular API client. Free tier allows 150 requests/day. */
 class SpoonacularService {
-  private apiKey: string;
+  private key: string | undefined;
   private requestCount: number = 0;
   private dailyLimit: number = 150;
 
-  constructor() {
-    this.apiKey = env.SPOONACULAR_API_KEY ?? '';
-    if (!this.apiKey) {
-      logger.warn('Spoonacular API key not configured');
+  // Read at the first request, not at construction: the singleton below is
+  // created as this module loads, and the build config is a platform service.
+  private get apiKey(): string {
+    if (this.key === undefined) {
+      this.key = env.SPOONACULAR_API_KEY ?? '';
+      if (!this.key) logger.warn('Spoonacular API key not configured');
     }
+    return this.key;
   }
 
   private checkRateLimit(): void {

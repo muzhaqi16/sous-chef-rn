@@ -15,22 +15,30 @@ export interface TelemetryState {
   setLogsEnabled: (enabled: boolean) => void;
   setConsoleInDevEnabled: (enabled: boolean) => void;
   setUserConsent: (consent: boolean) => void;
+  applyTelemetryDefaults: () => void;
   getTelemetryConfig: () => Partial<TelemetryConfig>;
   resetTelemetry: () => void;
 }
 
-// isEnabled / enableMetrics / enableLogs / enableConsoleInDev are derived
-// from the build environment on every launch and are intentionally NOT
-// persisted (see partialize in store/index.ts). Only `userConsent` is a real
-// user choice worth persisting. Persisting the derived flags once baked a
-// stale `enableLogs: false` into every device's MMKV blob, which silently
-// killed log shipping even after the in-code default changed.
-export const initialTelemetryState = {
-  isEnabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-  enableMetrics:
-    Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-  enableLogs:
-    Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
+// isEnabled / enableMetrics / enableLogs are derived from the build
+// environment on every launch and are intentionally NOT persisted (see
+// partialize in store/index.ts). Only `userConsent` is a real user choice worth
+// persisting. Persisting the derived flags once baked a stale
+// `enableLogs: false` into every device's MMKV blob, which silently killed log
+// shipping even after the in-code default changed.
+export const telemetryDefaults = () => {
+  const enabled =
+    Environment.shouldEnableAnalytics() || Environment.isDevelopment();
+  return { isEnabled: enabled, enableMetrics: enabled, enableLogs: enabled };
+};
+
+// The flags are off until hydration applies `telemetryDefaults()`: the build
+// environment is a platform service, and creating the store reads none.
+// Telemetry holds what it records until then, since consent is unknown.
+const initialTelemetryState = {
+  isEnabled: false,
+  enableMetrics: false,
+  enableLogs: false,
   enableConsoleInDev: false,
   userConsent: null,
 };
@@ -49,8 +57,9 @@ export const createTelemetrySlice: StateCreator<
       if (enabled) {
         // Re-derive instead of leaving whatever a previous disable zeroed —
         // otherwise a disable→enable round-trip leaves metrics/logs dead.
-        state.enableMetrics = initialTelemetryState.enableMetrics;
-        state.enableLogs = initialTelemetryState.enableLogs;
+        const defaults = telemetryDefaults();
+        state.enableMetrics = defaults.enableMetrics;
+        state.enableLogs = defaults.enableLogs;
       } else {
         state.enableMetrics = false;
         state.enableLogs = false;
@@ -79,15 +88,15 @@ export const createTelemetrySlice: StateCreator<
         // Restore the env-derived defaults: denying consent zeroes the flags
         // below, so re-consenting must re-derive them or telemetry stays
         // permanently dead after one off→on round-trip in settings.
-        state.isEnabled = initialTelemetryState.isEnabled;
-        state.enableMetrics = initialTelemetryState.enableMetrics;
-        state.enableLogs = initialTelemetryState.enableLogs;
+        Object.assign(state, telemetryDefaults());
       } else {
         state.isEnabled = false;
         state.enableMetrics = false;
         state.enableLogs = false;
       }
     }),
+
+  applyTelemetryDefaults: () => set(telemetryDefaults()),
 
   getTelemetryConfig: (): Partial<TelemetryConfig> => {
     const state = get();
@@ -101,5 +110,6 @@ export const createTelemetrySlice: StateCreator<
     };
   },
 
-  resetTelemetry: () => set(initialTelemetryState),
+  resetTelemetry: () =>
+    set({ ...initialTelemetryState, ...telemetryDefaults() }),
 });

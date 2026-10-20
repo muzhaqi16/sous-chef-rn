@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 
 import { immer } from 'zustand/middleware/immer';
@@ -82,6 +83,7 @@ export const useRecipeSuggestionsStore = create<RecipeSuggestionsState>()(
     {
       name: 'recipe-suggestions-cache',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       partialize: state => ({ cache: state.cache }),
     },
   ),
@@ -92,6 +94,8 @@ export const useRecipeSuggestionsStore = create<RecipeSuggestionsState>()(
  * persisted, so a sign-out has to empty it. `SESSION_SCOPED_STATE` reaches only
  * root state, so a feature store must register itself here.
  */
+hydrateWhenStarted(useRecipeSuggestionsStore);
+
 registerSessionScopedStore('useRecipeSuggestionsStore', () =>
   useRecipeSuggestionsStore.getState().clearAllCache(),
 );

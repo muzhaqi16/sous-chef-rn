@@ -19,7 +19,7 @@ import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { storage } from '#/store/deviceStorage';
-import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
+import { CLIENT_NAME, clientVersion } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
 import { createRefetchEventManager } from './refetchEvents';
 
@@ -124,7 +124,7 @@ export function createApolloClient(
     // request. The WebSocket half sends the same pair by hand — see wsLink.
     clientAwareness: {
       name: CLIENT_NAME,
-      version: CLIENT_VERSION,
+      version: clientVersion(),
     },
     dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,

@@ -23,6 +23,13 @@ import 'react-native-get-random-values';
 // same mechanism the startup clock above depends on.
 // `__tests__/architecture/platformInstallOrder.test.ts` pins the position.
 import './src/app/installNativePlatform';
+/**
+ * Hydrate the persisted stores now the platform is installed. Here, not in
+ * App: a headless entry below (a push, a notification event) loads the store
+ * with nothing rendered, and must find it hydrated.
+ */
+import { startPersistedStores } from './src/store/persistedStores';
+startPersistedStores();
 
 // Side-effect import, and it MUST stay eager and near the top.
 //

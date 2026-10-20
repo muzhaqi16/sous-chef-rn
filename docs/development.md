@@ -467,7 +467,7 @@ particular order. Its baseline lists no files.
 **Why `check:version-sync` is a pre-commit hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
 pbxproj. A mismatched platform would ship reporting a version it is not:
-`getVersion()` is native, so `CLIENT_VERSION` reaches the server's
+`getVersion()` is native, so `clientVersion()` reaches the server's
 minimum-version gate wrong — with nothing else failing to warn you. iOS `CURRENT_PROJECT_VERSION` and Android
 `versionCode` are deliberately NOT compared: they are per-platform build
 counters on independent sequences, read by `getBuildNumber()`.
