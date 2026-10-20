@@ -71,6 +71,17 @@ these.
 The selector sees only the hook's own body: a module-level helper that reads
 the cache and is called while rendering passes it, and is held by review.
 
+## Action-caller entries
+
+Scoped by the override in `eslint/project.js` to the `.tsx` files under
+`src/features/shoppingList/{components,screens}/`, whose actions fire their own
+haptic through the `haptics` port. `restrictedSyntaxForActionCallers()` is the
+production set plus these.
+
+| Id                     | Bans                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `actionHapticAtCaller` | `HapticService.selection()` / `.warning()`; the action fires it. A control's press feedback (`HapticService.light()`) is allowed. |
+
 ## Test-only entries
 
 | Id                  | Bans                                                                  |

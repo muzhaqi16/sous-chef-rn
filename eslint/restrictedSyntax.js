@@ -234,6 +234,18 @@ const FEATURE_HOOK_SYNTAX = [
   },
 ];
 
+// UI over actions that fire their own haptic through the `haptics` port. A
+// control that fires one too buzzes twice, and repeats the action's guard.
+const ACTION_CALLER_SYNTAX = [
+  {
+    id: 'actionHapticAtCaller',
+    selector:
+      "CallExpression[callee.object.name='HapticService'][callee.property.name=/^(selection|warning)$/]",
+    message:
+      "These actions fire their own haptic through the `haptics` port, so every control that runs one gives the same feedback. Run the action without a haptic of your own; a control's press feedback (`HapticService.light()`) stays the control's. See docs/ui-layer.md.",
+  },
+];
+
 // Test-suite hygiene. A separate list because the production entries are off
 // for tests, and one rule id cannot carry both sets.
 const TEST_SYNTAX = [
@@ -276,6 +288,10 @@ const restrictedSyntax = ({ allow = [], add = [] } = {}) =>
 const restrictedSyntaxForFeatureHooks = ({ allow = [], add = [] } = {}) =>
   entries([...PRODUCTION_SYNTAX, ...FEATURE_HOOK_SYNTAX], allow, add);
 
+/** The production set plus the bans that hold in UI whose actions own their haptic. */
+const restrictedSyntaxForActionCallers = ({ allow = [], add = [] } = {}) =>
+  entries([...PRODUCTION_SYNTAX, ...ACTION_CALLER_SYNTAX], allow, add);
+
 /** The test-only set; production entries do not apply to test files. */
 const restrictedSyntaxForTests = ({ allow = [], add = [] } = {}) =>
   entries(TEST_SYNTAX, allow, add);
@@ -284,7 +300,9 @@ module.exports = {
   restrictedSyntax,
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
+  restrictedSyntaxForActionCallers,
   PRODUCTION_SYNTAX,
   FEATURE_HOOK_SYNTAX,
+  ACTION_CALLER_SYNTAX,
   TEST_SYNTAX,
 };
