@@ -1,4 +1,3 @@
-import { knownEntry } from '#/utils/closedEnum';
 import { useState } from 'react';
 
 import { useTranslation } from '#/i18n';
@@ -12,32 +11,34 @@ import { pantryItemSearch } from '#utils/searchUtils';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
-import { useRecipeSearch } from '#features/recipes/hooks/useRecipeSearch';
-import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  useRecipeSearch,
+  type SearchOutcome,
+} from '#features/recipes/hooks/useRecipeSearch';
 import type { IconName } from '#components/atoms/Icon';
 import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
-import {
-  type RecipeFilters,
-  DIET_ENUM_TO_SPOONACULAR,
-  INTOLERANCE_ENUM_TO_SPOONACULAR,
-} from '#features/recipes/utils/recipeFilterMaps';
+import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import { isLifestyleDiet } from '#domain/dietary';
+import {
+  MAX_CATALOG_INGREDIENTS,
+  acceptedIngredientNames,
+} from '#domain/catalogRecipes';
 import { toDisplayItems, type DisplayItem } from './recipeDisplayItems';
-import type { SearchOutcome } from '#features/recipes/utils/recipeSearchPaging';
 
-/** Says why a search showed nothing, in the screen's words. */
+/** Says why a search showed less than it could, in the screen's words. */
 function presentSearchOutcome(outcome: SearchOutcome): void {
+  if (outcome.status === 'shown') {
+    // Held recipes show; the catalog's may on a later search.
+    if (outcome.partial) {
+      toastService.info(tGlobal('recipes.catalogUnavailable'));
+    }
+    return;
+  }
   if (outcome.status !== 'failed') return;
   switch (outcome.failure) {
     case 'offline':
       // A modal would cover the screen's own offline state.
       toastService.info(tGlobal('errors.offlineSearchUnavailable'));
-      return;
-    case 'quotaExceeded':
-      alertService.alert(
-        tGlobal('recipes.apiLimitTitle'),
-        tGlobal('recipes.apiLimitMessage'),
-      );
       return;
     case 'rateLimited':
       alertService.alert(
@@ -54,19 +55,6 @@ function presentSearchOutcome(outcome: SearchOutcome): void {
   }
 }
 
-/**
- * The search term for a restriction, or none. A member the server added after
- * this build has no entry, and sending `undefined` along silently changes the
- * search rather than leaving that restriction out.
- */
-function spoonacularTerm<K extends string>(
-  table: Record<K, string>,
-  key: K,
-): string[] {
-  const term = knownEntry(table, key);
-  return term ? [term] : [];
-}
-
 export function useRecipeScreen() {
   const { t } = useTranslation();
   const apiUnavailable = useAppStore(isApiUnavailable);
@@ -74,31 +62,29 @@ export function useRecipeScreen() {
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
-  // The profile's diets as Spoonacular strings: at most one lifestyle diet (the
-  // first) plus every constraint diet. Discovery tags and the search filters'
-  // seed share it, so the two agree.
-  const profileDietRestrictions = (dietaryProfile?.restrictions ?? []).filter(
-    (r): r is typeof r & { diet: Diet } => Boolean(r.diet),
+  // The profile's diets: at most one lifestyle diet (the first) plus every
+  // constraint diet. Discovery and the search filters' seed share them, so the
+  // two agree.
+  const profileDiets = (dietaryProfile?.restrictions ?? []).flatMap(r =>
+    r.diet ? [r.diet] : [],
   );
-  const firstLifestyleDiet = profileDietRestrictions.find(r =>
-    isLifestyleDiet(r.diet),
-  );
-  const reconciledDietValues = [
+  const firstLifestyleDiet = profileDiets.find(isLifestyleDiet);
+  const reconciledDiets: Diet[] = [
     ...(firstLifestyleDiet ? [firstLifestyleDiet] : []),
-    ...profileDietRestrictions.filter(r => !isLifestyleDiet(r.diet)),
-  ].flatMap(r => spoonacularTerm(DIET_ENUM_TO_SPOONACULAR, r.diet));
-
-  // Discovery (random recipe API) takes a comma-separated tag string (AND).
-  const dietaryTags =
-    reconciledDietValues.length > 0
-      ? reconciledDietValues.join(',')
-      : undefined;
+    ...profileDiets.filter(diet => !isLifestyleDiet(diet)),
+  ];
+  const profileIntolerances: Intolerance[] = (
+    dietaryProfile?.restrictions ?? []
+  ).flatMap(r => (r.intolerance ? [r.intolerance] : []));
 
   // ── Discovery (includes pantry data) ──
-  const discovery = useRecipeDiscovery(dietaryTags);
+  const discovery = useRecipeDiscovery({
+    diets: reconciledDiets,
+    intolerances: profileIntolerances,
+  });
 
   // ── Search ──
-  const recipeSearch = useRecipeSearch(SearchRecipesDocument);
+  const recipeSearch = useRecipeSearch();
   const {
     query: searchQuery,
     performed: searchPerformed,
@@ -131,19 +117,11 @@ export function useRecipeScreen() {
     presentSearchOutcome(await recipeSearch.search(searchQuery, nextFilters));
   };
 
-  // The profile's Diet/Intolerance enums as the Spoonacular strings
-  // RecipeFilters stores. `useRecipeFilters` seeds itself from this the first
-  // time it carries data.
+  // `useRecipeFilters` seeds itself from this the first time it carries data.
   const profileFilters: RecipeFilters | null = dietaryProfile
     ? {
-        diet: reconciledDietValues,
-        intolerances: dietaryProfile.restrictions
-          .filter((r): r is typeof r & { intolerance: Intolerance } =>
-            Boolean(r.intolerance),
-          )
-          .flatMap(r =>
-            spoonacularTerm(INTOLERANCE_ENUM_TO_SPOONACULAR, r.intolerance),
-          ),
+        diet: reconciledDiets,
+        intolerances: profileIntolerances,
         mealType: null,
         maxReadyTime: dietaryProfile.maxCookTimeMinutes ?? null,
       }
@@ -182,6 +160,17 @@ export function useRecipeScreen() {
 
   // ── Actions ──
   const toggleIngredient = (name: string) => {
+    // Counted as the API counts them, so a pick that adds no new name is kept.
+    if (
+      !selectedIngredients.has(name) &&
+      acceptedIngredientNames([...selectedIngredients, name]).length >
+        MAX_CATALOG_INGREDIENTS
+    ) {
+      toastService.info(
+        t('recipes.ingredientLimitReached', { count: MAX_CATALOG_INGREDIENTS }),
+      );
+      return;
+    }
     setSelectedIngredients(prev => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -203,7 +192,8 @@ export function useRecipeScreen() {
   };
 
   const handleIngredientSearch = async () => {
-    if (selectedIngredients.size === 0) {
+    // A name the API would refuse is left out, so it alone cannot be searched.
+    if (acceptedIngredientNames([...selectedIngredients]).length === 0) {
       alertService.alert(
         tGlobal('recipes.noIngredientsSelectedTitle'),
         tGlobal('recipes.selectAtLeastOneIngredient'),
@@ -217,16 +207,17 @@ export function useRecipeScreen() {
     );
   };
 
+  // The partial-results toast says to pull down, so a pull repeats any search.
   const handleRefresh = async () => {
     if (searchPerformed) {
-      if (searchQuery.trim()) {
-        presentSearchOutcome(
-          await recipeSearch.search(searchQuery, activeFilters),
-        );
-      }
+      presentSearchOutcome(await recipeSearch.rerun(activeFilters));
     } else {
       await discovery.refresh();
     }
+  };
+
+  const loadMoreSearch = async () => {
+    presentSearchOutcome(await recipeSearch.loadMore());
   };
 
   // ── Empty state ──
@@ -270,6 +261,12 @@ export function useRecipeScreen() {
         title: t('recipes.noRecipesFoundTitle'),
         description: t('recipes.noRecipesFoundDescription'),
       }
+    : discovery.failed
+    ? {
+        icon: 'alert-circle-outline',
+        title: t('recipes.discoveryFailedTitle'),
+        description: t('recipes.discoveryFailedDescription'),
+      }
     : {
         icon: 'restaurant-outline',
         title: t('recipes.discoverTitle'),
@@ -295,7 +292,7 @@ export function useRecipeScreen() {
     searchLoading,
     searchLoadingMore,
     searchHasMore,
-    loadMoreSearch: recipeSearch.loadMore,
+    loadMoreSearch,
     selectedIngredients,
     ingredientSearchQuery,
     setIngredientSearchQuery,

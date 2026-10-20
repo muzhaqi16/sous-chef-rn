@@ -1,40 +1,42 @@
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useServerRecipeSuggestions } from './useServerRecipeSuggestions';
 import {
-  useSpoonacularDiscovery,
-  type SpoonacularDiscoveryResult,
-} from './useSpoonacularDiscovery';
+  useCatalogDiscovery,
+  type CatalogDiscoveryResult,
+  type DiscoveryDiet,
+} from './useCatalogDiscovery';
 
 const noLaterPage = () => undefined;
 
 /**
  * The Recipes tab's discovery. With `pantrySuggestions` on, the server's
- * ranking, which has one page; the Spoonacular discovery that predates it fills
- * in when the server has nothing, and is all there is with the flag off.
+ * ranking, which has one page; the catalog discovery that predates it fills in
+ * when the server has nothing, and is all there is with the flag off.
  */
 export function useRecipeDiscovery(
-  dietaryTags?: string,
-): SpoonacularDiscoveryResult {
+  diet: DiscoveryDiet,
+): CatalogDiscoveryResult {
   const serverEnabled = useFeatureFlag('pantrySuggestions');
   const server = useServerRecipeSuggestions(serverEnabled);
-  const spoonacular = useSpoonacularDiscovery(dietaryTags, {
+  const catalog = useCatalogDiscovery(diet, {
     enabled: !serverEnabled || server.unanswered,
   });
 
-  if (!serverEnabled) return spoonacular;
+  if (!serverEnabled) return catalog;
   if (server.rows.length > 0) {
     return {
-      ...spoonacular,
+      ...catalog,
       mode: 'pantry',
       rows: server.rows,
       loading: server.loading,
+      failed: false,
       refresh: server.refresh,
       discoveryHasMore: false,
       loadMoreDiscovery: noLaterPage,
     };
   }
   return {
-    ...spoonacular,
-    loading: server.loading || (server.unanswered && spoonacular.loading),
+    ...catalog,
+    loading: server.loading || (server.unanswered && catalog.loading),
   };
 }

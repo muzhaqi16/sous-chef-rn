@@ -249,7 +249,7 @@ function getMockedSchema(): GraphQLSchema {
     schema: baseSchema,
     store: sharedMockStore,
   });
-  installAbstractTypePinning(schema);
+  installStatedShape(schema);
   sharedMockedSchema = schema;
   return schema;
 }
@@ -721,6 +721,7 @@ import {
   isListType,
   isNonNullType,
   isObjectType,
+  getNullableType,
   specifiedRules,
   validate,
   KnownDirectivesRule,
@@ -836,38 +837,43 @@ export interface RecordMockOptions<TData = Record<string, unknown>> {
 // that do not satisfy the schema), the caller's data is served verbatim — the
 // completion is an improvement, never a new way to fail.
 
+/** What the caller's data states about the response's shape, by path. */
+interface StatedShape {
+  /** Every `__typename` the caller pinned, by the response path it sits at. */
+  typenames: Map<string, string>;
+  /** The length of every list the caller states, by its response path. */
+  lengths: Map<string, number>;
+}
+
 /**
- * Every `__typename` the caller pinned, by the response path it sits at.
- *
- * The path is what makes a pin local. Keying by TYPE alone — the previous
- * shape — could only say "this union resolves to ValidationError" for the whole
- * response, and all 215 of the schema's result unions carry the same four error
- * members: pinning one member for one field forced it onto every other union
- * field in the operation, and pinning two members of one union disabled pinning
- * entirely (`chosen.length === 1`). Both are positional questions, so the
- * answer has to be positional too.
- *
- * List indices are deliberately NOT part of the path: two entries of one list
- * pinning different members of the same union is the one case this cannot
- * express, and paying for it would mean an execution per entry.
+ * The path is what makes a pin local. Keying by TYPE alone could only say "this
+ * union resolves to ValidationError" for the whole response, and all of the
+ * schema's result unions carry the same error members: pinning one member for
+ * one field forced it onto every other union field in the operation. Both are
+ * positional questions, so the answer has to be positional too. List indices
+ * are part of the path, and each stated list is executed at its stated length,
+ * so two entries of one list can pin different members of one union.
  */
-function collectPinnedTypenames(
+function collectStatedShape(
   value: unknown,
   fieldPath: string,
-  out: Map<string, string>,
+  out: StatedShape,
 ): void {
   if (Array.isArray(value)) {
-    for (const entry of value) collectPinnedTypenames(entry, fieldPath, out);
+    out.lengths.set(fieldPath, value.length);
+    value.forEach((entry, index) =>
+      collectStatedShape(entry, `${fieldPath}.${index}`, out),
+    );
     return;
   }
   if (!value || typeof value !== 'object') return;
   const record = value as Record<string, unknown>;
   if (fieldPath !== '' && typeof record.__typename === 'string') {
-    out.set(fieldPath, record.__typename);
+    out.typenames.set(fieldPath, record.__typename);
   }
   for (const [key, nested] of Object.entries(record)) {
     if (key === '__typename') continue;
-    collectPinnedTypenames(
+    collectStatedShape(
       nested,
       fieldPath === '' ? key : `${fieldPath}.${key}`,
       out,
@@ -875,48 +881,65 @@ function collectPinnedTypenames(
   }
 }
 
-/** Where the pin map travels: on the execution context, so the schema is shared. */
-const PINNED_TYPENAMES = Symbol.for('apolloMockProvider.pinnedTypenames');
+/** Where the stated shape travels: on the execution context, so the schema is shared. */
+const STATED_SHAPE = Symbol.for('apolloMockProvider.statedShape');
 
-type PinContext = { [PINNED_TYPENAMES]?: Map<string, string> };
+type PinContext = { [STATED_SHAPE]?: StatedShape };
 
-/** The response path of the field being resolved, minus list indices. */
+/** The response path of the field being resolved, list indices included. */
 function responsePathKey(from: GraphQLResolveInfo['path']): string {
   const parts: string[] = [];
   for (let node: typeof from | undefined = from; node; node = node.prev) {
-    if (typeof node.key === 'string') parts.unshift(node.key);
+    parts.unshift(String(node.key));
   }
   return parts.join('.');
 }
 
 /**
- * Teach every abstract-typed field to honour a pin for its own position.
+ * Teach every abstract-typed and list field to honour the caller's shape for
+ * its own position: a pinned member, and a list's stated length.
  *
  * `addMocksToSchema` resolves an abstract type by generating a value and
  * reading its `__typename` back (`typeResolver`), and the only hook it offers
  * is a zero-argument `mocks[UnionName]` — no position, no path. So the pin is
  * installed one level up, on the FIELD, where `info.path` is available. When
  * nothing is pinned for this position the original mock resolver runs and
- * `mockGenerationBehavior: 'deterministic'` picks the first possible type.
+ * `mockGenerationBehavior: 'deterministic'` picks the first possible type. A
+ * list longer than the store generates repeats its last entry.
  */
-function installAbstractTypePinning(schema: GraphQLSchema): void {
+function installStatedShape(schema: GraphQLSchema): void {
   for (const type of Object.values(schema.getTypeMap())) {
     if (!isObjectType(type)) continue;
     for (const field of Object.values(type.getFields())) {
       const named = getNamedType(field.type);
-      if (!isAbstractType(named)) continue;
-      const possible = new Set(
-        schema.getPossibleTypes(named).map(member => member.name),
-      );
+      const possible = isAbstractType(named)
+        ? new Set(schema.getPossibleTypes(named).map(member => member.name))
+        : null;
+      const isList = isListType(getNullableType(field.type));
+      if (!possible && !isList) continue;
       const generate = field.resolve ?? defaultFieldResolver;
       field.resolve = (source, args, context, info) => {
-        const pinned = (context as PinContext | undefined)?.[
-          PINNED_TYPENAMES
-        ]?.get(responsePathKey(info.path));
-        if (pinned !== undefined && possible.has(pinned)) {
-          return { __typename: pinned };
+        const stated = (context as PinContext | undefined)?.[STATED_SHAPE];
+        const key = responsePathKey(info.path);
+        const pinnedAt = (at: string) => {
+          const pinned = stated?.typenames.get(at);
+          return pinned !== undefined && possible?.has(pinned)
+            ? { __typename: pinned }
+            : undefined;
+        };
+        if (!isList) {
+          return pinnedAt(key) ?? generate(source, args, context, info);
         }
-        return generate(source, args, context, info);
+        const generated: unknown = generate(source, args, context, info);
+        const length = stated?.lengths.get(key);
+        if (!Array.isArray(generated) || length === undefined) return generated;
+        return Array.from(
+          { length },
+          (_, index): unknown =>
+            pinnedAt(`${key}.${index}`) ??
+            generated[index] ??
+            generated[generated.length - 1],
+        );
       };
     }
   }
@@ -1120,16 +1143,16 @@ function mergeOverSchema(
   if (override === null || typeof override !== 'object') return override;
   if (Array.isArray(override)) {
     const template = Array.isArray(base) ? base : [];
+    // A list longer than the store generates repeats an entry; each repeat
+    // gets fresh ids, or the cache would merge its entries into one.
+    const generatedBefore = new Set<string>();
     return override.map((entry, index) => {
-      const merged = mergeOverSchema(
-        template[index] ?? template[template.length - 1],
-        entry,
-        fieldPath,
-        report,
-      );
-      return index < template.length
-        ? merged
-        : reissueGeneratedIds(merged, entry);
+      const generated: unknown = template[index];
+      const signature = JSON.stringify(generated);
+      const repeated = generatedBefore.has(signature);
+      generatedBefore.add(signature);
+      const merged = mergeOverSchema(generated, entry, fieldPath, report);
+      return repeated ? reissueGeneratedIds(merged, entry) : merged;
     });
   }
   const baseRecord =
@@ -1320,10 +1343,10 @@ function completeFromSchema(
 ): unknown {
   const document = transformLikeTheClient(query);
 
-  const pinnedTypenames = new Map<string, string>();
-  collectPinnedTypenames(overrideData, '', pinnedTypenames);
+  const stated: StatedShape = { typenames: new Map(), lengths: new Map() };
+  collectStatedShape(overrideData, '', stated);
   const schema = getMockedSchema();
-  const contextValue: PinContext = { [PINNED_TYPENAMES]: pinnedTypenames };
+  const contextValue: PinContext = { [STATED_SHAPE]: stated };
 
   // Caller's variables first so a variables-dependent mock sees them; then the
   // schema-valid set alone, because a caller value that fails validation must
@@ -1434,7 +1457,9 @@ export function holdMock<T extends MockedResponse>(
 ): { mock: T; release: () => void } {
   const { variables } = mock.request;
   if (typeof variables !== 'function') {
-    throw new Error('holdMock needs a mock that matches by a variables function');
+    throw new Error(
+      'holdMock needs a mock that matches by a variables function',
+    );
   }
   let release = () => {};
   const released = new Promise<void>(resolve => {

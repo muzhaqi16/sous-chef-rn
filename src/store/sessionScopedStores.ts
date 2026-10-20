@@ -16,10 +16,6 @@ const stores = new Map<string, StoreReset>();
  * missing here survives sign-out on a shared device.
  */
 export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
-  // features/recipes/store/useRecipeCacheStore.ts: search terms and results.
-  'recipe-search-cache',
-  // features/recipes/store/useRecipeSuggestionsStore.ts: from the pantry.
-  'recipe-suggestions-cache',
   // features/recipes/store/recipeCaptureStore.ts: captured pages and recipes.
   'sous-chef-recipe-captures',
   // features/receipts/store/receiptDraftStore.ts: the shop and what was bought.

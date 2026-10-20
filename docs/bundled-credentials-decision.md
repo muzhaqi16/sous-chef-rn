@@ -48,20 +48,21 @@ auth directives. It is a hashed `ApiKey` row carrying `permissions`,
 `rateLimit`, and separate `isActive` / `revokedAt`, so it is throttled and
 revocable server-side without an app release. Same shape as a Sentry DSN.
 
-### `SPOONACULAR_API_KEY` — shipping deliberately
+### Spoonacular — no key on the client (2026-10-20)
 
-**Decision: recipe search stays client-side.** Proxying it through our API would
-couple recipe-search availability to API availability, and search continuing to
-work while our backend is down is worth more than the exposure.
+**Decision: recipe search and discovery go through our API, which alone holds
+the provider key.** The client calls `findRecipes`, `catalogRecipesByIngredients`
+and `randomCatalogRecipes`; no build carries a Spoonacular key, and no client
+calls Spoonacular. The API budgets the key's daily quota, which it learns from
+Spoonacular's own responses, and caches results for every user, so one search
+costs once across the install base.
 
-The trade accepted: the key is metered and billed to us, so a stranger with the
-APK can burn quota. Watch for anomalous consumption; that's the signal that this
-needs revisiting.
+The trade accepted: search follows the API's availability, as every other
+screen does. When the provider cannot be asked, search still returns the
+recipes the API holds and says more may appear later.
 
-If it is ever revisited, the proxy also buys server-side caching by
-`externalId`, which collapses one quota unit _per user per recipe view_ into one
-_per recipe_ across the whole install base. That's a cost argument independent
-of security, and probably the stronger one.
+Builds released before this carry the old key. It is rotated once the
+client-version gate's minimum passes the first release without it.
 
 ### `OTLP_METRICS_AUTH_PASSWORD` / `OTLP_LOGS_AUTH_PASSWORD` — out of scope
 

@@ -180,21 +180,8 @@ const RecipeMainInner: React.FC = () => {
   };
 
   const handleItemPress = (id: string | number) => {
-    const idStr = String(id);
-    // `local-` ids come from the local-API portion of combined search results
-    // and open the backend recipe detail view.
-    if (idStr.startsWith('local-')) {
-      toRecipeDetail({ recipeId: idStr.slice('local-'.length) });
-      return;
-    }
-    const externalId = idStr.startsWith('spoonacular-')
-      ? idStr.replace('spoonacular-', '')
-      : idStr;
-    // The row's own title and image show while the API opens the recipe.
-    const row = screen.items.find(item => item.id === idStr);
-    toRecipeDetail({
-      catalog: { externalId, name: row?.title, imageUrl: row?.imageUrl },
-    });
+    const row = screen.items.find(item => item.id === String(id));
+    if (row) toRecipeDetail(row.target);
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;

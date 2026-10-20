@@ -10,9 +10,24 @@ import type {
 } from '#/types/nutrition';
 import type { TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import type { NutritionFacts } from '#/graphql/generated/schemaTypes';
+import type {
+  NutritionFacts,
+  RecipeNutrition,
+} from '#/graphql/generated/schemaTypes';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { isOwnKey } from '#utils/isOwnKey';
+
+/** A recipe's figures per serving, in `NutritionFacts`' names and units. */
+export type RecipeNutritionFacts = Pick<
+  RecipeNutrition,
+  | 'calories'
+  | 'protein'
+  | 'totalCarbs'
+  | 'totalFat'
+  | 'dietaryFiber'
+  | 'totalSugars'
+  | 'sodium'
+>;
 
 /** The columns the macro summary, its highlights and the data check read. */
 export type NutritionSummaryFacts = Pick<

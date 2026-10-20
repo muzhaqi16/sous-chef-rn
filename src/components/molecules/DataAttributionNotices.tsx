@@ -15,7 +15,7 @@ interface DataAttributionNoticesProps {
 
 /**
  * The notices a licensed dataset requires wherever its data shows (ODbL, USDA,
- * Spoonacular), as the API words them: each links to its source, and to its
+ * a recipe provider), as the API words them: each links to its source, and to its
  * licence when it names one.
  */
 export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({

@@ -11,6 +11,7 @@ import type {
 } from '../../../hooks/useOpenCatalogRecipe';
 import { useRecipeDetail } from '../useRecipeDetail';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 type RecipeData = ReturnType<typeof useRecipeData>;
 type BackendRecipe = RecipeData['backendRecipe'];
@@ -105,6 +106,7 @@ const { useRoute } = jest.requireMock('@react-navigation/native');
 
 // One object across renders, as the route's params are.
 const HINT: CatalogRecipeHint = {
+  provider: ExternalSource.Spoonacular,
   externalId: '716429',
   name: 'Pasta with Garlic',
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
@@ -217,6 +219,32 @@ describe('useRecipeDetail', () => {
       rerender({});
 
       expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(1);
+    });
+
+    it('carries no opened recipe over to another provider’s with the same id', async () => {
+      useRoute.mockReturnValue({ params: { catalog: HINT } });
+      const { rerender } = renderHookWithApollo(() => useRecipeDetail());
+      await waitFor(() =>
+        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+          expect.objectContaining({ recipeId: 'catalog-1' }),
+        ),
+      );
+
+      const otherProvider: CatalogRecipeHint = {
+        ...HINT,
+        provider: ExternalSource.Tasty,
+      };
+      // Still opening when the screen renders it.
+      mockOpenCatalogRecipe.mockReturnValueOnce(new Promise(() => undefined));
+      useRoute.mockReturnValue({ params: { catalog: otherProvider } });
+      rerender({});
+
+      expect(mockOpenCatalogRecipe).toHaveBeenLastCalledWith(otherProvider);
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith({
+        recipeId: undefined,
+        hint: otherProvider,
+        openFailure: null,
+      });
     });
 
     it('hands the data hook the reason it could not be opened', async () => {

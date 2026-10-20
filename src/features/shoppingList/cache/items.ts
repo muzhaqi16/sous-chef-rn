@@ -162,8 +162,8 @@ export function buildAddItemsReconcileUpdate({
       results.forEach((result, position) => {
         if (!result) return;
         // Paired by the input INDEX the server echoes, not `result.clientId`: a
-        // call site picks that token freely (the recipe add sends a Spoonacular
-        // id), never this row's minted cuid. Array position is the fallback.
+        // call site picks that token freely, never this row's minted cuid.
+        // Array position is the fallback.
         const sent = variables.input.items?.[result.index ?? position];
         const clientId = sent?.id ?? undefined;
         const { item } = result;

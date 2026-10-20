@@ -31,7 +31,11 @@ jest.mock('#components/molecules/SearchBar', () => {
   return {
     SearchBar: R.forwardRef(
       (
-        props: { placeholder?: string; onChangeText?: (text: string) => void },
+        props: {
+          placeholder?: string;
+          onChangeText?: (text: string) => void;
+          maxLength?: number;
+        },
         ref: React.Ref<{
           clear: () => void;
           focus: () => void;
@@ -51,6 +55,7 @@ jest.mock('#components/molecules/SearchBar', () => {
           <TextInput
             placeholder={props.placeholder}
             onChangeText={props.onChangeText}
+            maxLength={props.maxLength}
             testID="search-bar"
           />
         );
@@ -127,10 +132,33 @@ const savedRecipesResult = (pagesRemain: boolean) => ({
 // satisfying the row's lookup without coupling the test to operation names.
 import {
   createApolloTestWrapper,
+  recordMock,
   seedCache,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { Diet, ExternalSource } from '#/graphql/generated/schemaTypes';
+import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
+import type { FoundHit, FoundRecipe } from '#features/recipes/utils/recipeRows';
 
-function renderWithApollo(ui: React.ReactElement) {
+// One member type per response: the mock completion pins a list's union
+// members by path, so a mixed list completes as one type.
+const searchAnswering = (
+  nodes: ReadonlyArray<FoundRecipe> | ReadonlyArray<FoundHit>,
+) =>
+  recordMock(SearchRecipesDocument, {
+    data: {
+      findRecipes: {
+        edges: nodes.map(node => ({ node })),
+        catalogAvailable: true,
+      },
+    },
+  });
+
+function renderWithApollo(
+  ui: React.ReactElement,
+  operationMocks: MockedResponse[] = [searchAnswering([]).mock],
+) {
   const cache = seedCache(
     savedRecipeNodes.map(node => ({
       ...node,
@@ -148,35 +176,9 @@ function renderWithApollo(ui: React.ReactElement) {
       data: node,
     });
   }
-  const Wrapper = createApolloTestWrapper({ cache });
+  const Wrapper = createApolloTestWrapper({ cache, operationMocks });
   return render(<Wrapper>{ui}</Wrapper>);
 }
-
-const mockOpenCatalogRecipe = jest.fn();
-jest.mock('#features/recipes/hooks/useOpenCatalogRecipe', () => ({
-  useOpenCatalogRecipe: () => ({ openCatalogRecipe: mockOpenCatalogRecipe }),
-}));
-
-jest.mock('#/services/spoonacular/SpoonacularService', () => ({
-  spoonacularService: {
-    searchRecipes: jest.fn().mockResolvedValue({ results: [] }),
-    searchRecipesWithInfo: jest.fn().mockResolvedValue({ results: [] }),
-  },
-}));
-
-jest.mock('#domain/recipeTransform', () => ({
-  transformRecipeForDisplay: jest.fn((r: unknown) => r),
-}));
-
-jest.mock('#features/recipes/store/useRecipeCacheStore', () => ({
-  useRecipeCacheStore: {
-    getState: jest.fn(() => ({
-      getCached: jest.fn(() => null),
-      setCached: jest.fn(),
-    })),
-  },
-  textSearchCacheKey: jest.fn((q: string) => `text:${q}`),
-}));
 
 const defaultProps = {
   visible: true,
@@ -198,6 +200,11 @@ describe('AddMealSheet', () => {
   it('renders the header title', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Add a meal')).toBeTruthy();
+  });
+
+  it('stops the search at the longest query the API takes', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByTestId('search-bar').props.maxLength).toBe(200);
   });
 
   it('renders all meal type chips', () => {
@@ -349,43 +356,42 @@ describe('AddMealSheet', () => {
     ).toBeTruthy();
   });
 
-  describe('a Spoonacular result', () => {
-    const lasagna = {
-      id: 'spoonacular-42',
-      title: 'Lasagna',
-      subtitle: '',
-      spoonacularId: 42,
+  describe('a catalog result', () => {
+    const lasagna: FoundHit = {
+      __typename: 'CatalogRecipeHit',
+      provider: ExternalSource.Spoonacular,
+      providerRecipeId: '42',
+      name: 'Lasagna',
       imageUrl: 'https://img.spoonacular.com/recipes/42-312x231.jpg',
+      servings: 6,
+      totalTimeMinutes: 45,
+      diets: [],
+      freeOf: [],
+      likes: 3,
     };
 
-    beforeEach(() => {
-      const { spoonacularService } = jest.requireMock<{
-        spoonacularService: { searchRecipesWithInfo: jest.Mock };
-      }>('#/services/spoonacular/SpoonacularService');
-      spoonacularService.searchRecipesWithInfo.mockResolvedValue({
-        results: [lasagna],
-        totalResults: 1,
-      });
-    });
-
-    const pickLasagna = async () => {
-      renderWithApollo(<AddMealSheet {...defaultProps} />);
+    const pickLasagna = async (opened: MockedResponse) => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />, [
+        searchAnswering([lasagna]).mock,
+        opened,
+      ]);
       fireEvent.changeText(
         screen.getByPlaceholderText('Search recipes or add a custom meal...'),
         'Lasagna',
       );
-      // The search is debounced, so the row arrives after it settles.
-      fireEvent.press(
-        await screen.findByText('Lasagna', {}, { timeout: 3000 }),
-      );
+      fireEvent.press(await screen.findByText('Lasagna'));
     };
 
-    it('is added by the id the API gives it', async () => {
-      mockOpenCatalogRecipe.mockResolvedValue({
-        opened: true,
-        recipeId: 'recipe-42',
+    it('is opened through the API by its provider and id, then planned', async () => {
+      const open = recordMock(OpenCatalogRecipeDocument, {
+        data: {
+          upsertExternalRecipe: {
+            __typename: 'UpsertExternalRecipePayload',
+            recipe: { id: 'recipe-42' },
+          },
+        },
       });
-      await pickLasagna();
+      await pickLasagna(open.mock);
 
       await waitFor(() =>
         expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
@@ -393,30 +399,94 @@ describe('AddMealSheet', () => {
           expect.anything(),
         ),
       );
-      expect(mockOpenCatalogRecipe).toHaveBeenCalledWith({
-        externalId: '42',
-        name: 'Lasagna',
-        imageUrl: lasagna.imageUrl,
-      });
+      expect(open.fired).toEqual([
+        expect.objectContaining({
+          input: {
+            source: ExternalSource.Spoonacular,
+            externalId: '42',
+            name: 'Lasagna',
+            imageUrl: lasagna.imageUrl,
+          },
+        }),
+      ]);
     });
 
     it('stays open with the reason when the API cannot open it', async () => {
       const { toastService } = jest.requireMock<{
         toastService: { error: jest.Mock };
       }>('#/services/toastService');
-      mockOpenCatalogRecipe.mockResolvedValue({
-        opened: false,
-        failure: 'Try this one tomorrow',
+      const gone = recordMock(OpenCatalogRecipeDocument, {
+        data: { upsertExternalRecipe: { __typename: 'NotFoundError' } },
       });
-      await pickLasagna();
+      await pickLasagna(gone.mock);
 
       await waitFor(() =>
-        expect(toastService.error).toHaveBeenCalledWith(
-          'Try this one tomorrow',
-        ),
+        expect(toastService.error).toHaveBeenCalledWith('Recipe not found'),
       );
       expect(defaultProps.onAddRecipe).not.toHaveBeenCalled();
       expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a recipe the API holds', () => {
+    const held = (id: string, name: string): FoundRecipe => ({
+      __typename: 'Recipe',
+      id,
+      name,
+      imageUrl: null,
+      servings: 4,
+      totalTimeMinutes: 20,
+      diets: [Diet.Vegetarian],
+      freeOf: [],
+      isSaved: false,
+    });
+
+    it('is planned by its id, with no open', async () => {
+      const open = recordMock(OpenCatalogRecipeDocument);
+      renderWithApollo(<AddMealSheet {...defaultProps} />, [
+        searchAnswering([held('r9', 'Beef Stew')]).mock,
+        open.mock,
+      ]);
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+        'Stew',
+      );
+      fireEvent.press(await screen.findByText('Beef Stew'));
+
+      expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
+        'r9',
+        expect.anything(),
+      );
+      expect(open.fired).toEqual([]);
+    });
+
+    it('is listed once when it is also saved', async () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />, [
+        searchAnswering([
+          held('r1', 'Pasta Carbonara'),
+          held('r10', 'Pasta Bake'),
+        ]).mock,
+      ]);
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+        'Pasta',
+      );
+
+      expect(await screen.findByText('Pasta Bake')).toBeTruthy();
+      expect(screen.getAllByText('Pasta Carbonara')).toHaveLength(1);
+    });
+
+    it('is listed once when it is saved but its name does not hold the search', async () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />, [
+        searchAnswering([held('r2', 'Chicken Salad')]).mock,
+      ]);
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+        'chiken',
+      );
+
+      expect(await screen.findByText('Chicken Salad')).toBeTruthy();
+      expect(screen.getAllByText('Chicken Salad')).toHaveLength(1);
     });
   });
 });

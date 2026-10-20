@@ -10,7 +10,15 @@ fragment useRecipeData_recipe on Recipe {
   servings
   totalTimeMinutes
   caloriesPerServing
-  nutritionData
+  nutritionPerServing {
+    calories
+    protein
+    totalCarbs
+    totalFat
+    dietaryFiber
+    totalSugars
+    sodium
+  }
   status
   isPublished
   publishedAt
@@ -36,7 +44,7 @@ fragment useRecipeData_recipe on Recipe {
   tags
   source
   sourceUrl
-  # The provider's notices (Spoonacular's backlink); empty for an in-app recipe.
+  # The provider's notices (its backlink); empty for an in-app recipe.
   dataAttributions {
     source
     notice
@@ -51,16 +59,9 @@ fragment useRecipeData_recipe on Recipe {
     id
     syncStatus
   }
-  externalDetails {
-    __typename
-    ... on SpoonacularRecipeDetails {
-      healthScore
-      vegetarian
-      vegan
-      glutenFree
-      dairyFree
-    }
-  }
+  healthScore
+  diets
+  freeOf
   # Display/badge fields for the detail screen
   savedDetails {
     id

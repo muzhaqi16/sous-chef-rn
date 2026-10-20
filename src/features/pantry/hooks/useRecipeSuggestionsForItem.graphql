@@ -1,0 +1,17 @@
+# Catalog recipes that use one pantry item, for its detail page.
+query CatalogRecipesForItem($ingredients: [String!]!, $first: Int) {
+  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {
+    edges {
+      cursor
+      node {
+        provider
+        providerRecipeId
+        name
+        imageUrl
+        totalTimeMinutes
+        servings
+      }
+    }
+    catalogAvailable
+  }
+}

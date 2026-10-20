@@ -13,12 +13,14 @@ import {
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
+  catalogHintOf,
   useOpenCatalogRecipe,
   type CatalogRecipeHint,
   type OpenedCatalogRecipe,
 } from '../useOpenCatalogRecipe';
 
 const HINT: CatalogRecipeHint = {
+  provider: ExternalSource.Spoonacular,
   externalId: '716429',
   name: 'Pasta with Garlic',
   imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
@@ -70,34 +72,27 @@ describe('useOpenCatalogRecipe', () => {
     expect(opened).toEqual({ opened: true, recipeId: 'recipe-1' });
   });
 
-  // The API refuses an image off Spoonacular's own host, and one refused hint
-  // fails the whole open.
-  it.each([
-    ['another host', 'https://cdn.example.com/pasta.jpg'],
-    ['plain http', 'http://img.spoonacular.com/recipes/716429.jpg'],
-    ['a look-alike host', 'https://spoonacular.com.example.net/p.jpg'],
-  ])('leaves out an image on %s', async (_case, imageUrl) => {
+  // The hit came from the API, so its image is already on the provider's host.
+  it('sends the image hint as the hit gave it', async () => {
     const m = openedMock();
 
-    await open({ ...HINT, imageUrl }, [m.mock]);
+    await open({ ...HINT, imageUrl: 'https://cdn.example.com/pasta.jpg' }, [
+      m.mock,
+    ]);
 
-    expect(m.fired[0]).toMatchObject({ input: { externalId: '716429' } });
+    expect(m.fired[0]).toMatchObject({
+      input: { imageUrl: 'https://cdn.example.com/pasta.jpg' },
+    });
+  });
+
+  it('sends a hint without an image without one', async () => {
+    const m = openedMock();
+
+    await open({ ...HINT, imageUrl: undefined }, [m.mock]);
+
     expect(
       (m.fired[0]?.input as { imageUrl?: string } | undefined)?.imageUrl,
     ).toBeUndefined();
-  });
-
-  it('keeps an image on Spoonacular’s own host', async () => {
-    const m = openedMock();
-
-    await open(
-      { ...HINT, imageUrl: 'https://spoonacular.com/recipeImages/716429.jpg' },
-      [m.mock],
-    );
-
-    expect(m.fired[0]).toMatchObject({
-      input: { imageUrl: 'https://spoonacular.com/recipeImages/716429.jpg' },
-    });
   });
 
   // The API refuses a name over 200 characters, which would fail the open.
@@ -159,5 +154,29 @@ describe('useOpenCatalogRecipe', () => {
         failure: expect.stringContaining('network down'),
       }),
     );
+  });
+});
+
+describe('catalogHintOf', () => {
+  it('names a hit by its provider and the provider’s id', () => {
+    expect(
+      catalogHintOf({
+        provider: ExternalSource.Spoonacular,
+        providerRecipeId: '716429',
+        name: 'Pasta with Garlic',
+        imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
+      }),
+    ).toEqual(HINT);
+  });
+
+  it('carries no image for a hit without one', () => {
+    expect(
+      catalogHintOf({
+        provider: ExternalSource.Spoonacular,
+        providerRecipeId: '716429',
+        name: 'Pasta with Garlic',
+        imageUrl: null,
+      }),
+    ).toEqual({ ...HINT, imageUrl: undefined });
   });
 });

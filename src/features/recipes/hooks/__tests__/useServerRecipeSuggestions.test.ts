@@ -56,8 +56,8 @@ describe('useServerRecipeSuggestions', () => {
     await waitFor(() => expect(result.current.rows).toHaveLength(2));
 
     expect(shown(result.current.rows).map(item => item.id)).toEqual([
-      'local-r-own',
-      'local-r-pub',
+      'recipe-r-own',
+      'recipe-r-pub',
     ]);
     expect(shown(result.current.rows)[0]?.badge?.text).toBe(
       '80% of its ingredients in your pantry',

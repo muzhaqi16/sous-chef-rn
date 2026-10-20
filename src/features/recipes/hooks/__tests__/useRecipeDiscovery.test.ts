@@ -1,11 +1,18 @@
 import { renderHook } from '@testing-library/react-native';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
+import {
+  Diet,
+  ExternalSource,
+  Intolerance,
+} from '#/graphql/generated/schemaTypes';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import {
-  useSpoonacularDiscovery,
-  type SpoonacularDiscoveryResult,
-} from '../useSpoonacularDiscovery';
+  useCatalogDiscovery,
+  type CatalogDiscoveryResult,
+  type DiscoveryDiet,
+} from '../useCatalogDiscovery';
 
 jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
@@ -13,19 +20,34 @@ jest.mock('#hooks/settings/useFeatureFlag', () => ({
 jest.mock('../useServerRecipeSuggestions', () => ({
   useServerRecipeSuggestions: jest.fn(),
 }));
-jest.mock('../useSpoonacularDiscovery', () => ({
-  useSpoonacularDiscovery: jest.fn(),
+jest.mock('../useCatalogDiscovery', () => ({
+  useCatalogDiscovery: jest.fn(),
 }));
 
-const spoonacular: SpoonacularDiscoveryResult = {
+const DIET: DiscoveryDiet = {
+  diets: [Diet.Vegan],
+  intolerances: [Intolerance.Peanut],
+};
+
+const randomRow = (providerRecipeId: string, name: string): RecipeRow => ({
+  source: 'random',
+  hit: {
+    __typename: 'CatalogRecipeHit',
+    provider: ExternalSource.Spoonacular,
+    providerRecipeId,
+    name,
+    imageUrl: null,
+    servings: 4,
+    totalTimeMinutes: null,
+    likes: null,
+  },
+});
+
+const catalog: CatalogDiscoveryResult = {
   mode: 'random',
-  rows: [
-    {
-      source: 'spoonacular',
-      recipe: { id: 7, title: 'Spoonacular stew', image: '', imageType: 'jpg' },
-    },
-  ],
+  rows: [randomRow('7', 'Catalog stew')],
   loading: false,
+  failed: false,
   refresh: jest.fn(),
   pantryItems: [],
   hasPantryItems: false,
@@ -48,37 +70,30 @@ const server = (
 
 beforeEach(() => {
   jest.mocked(useFeatureFlag).mockReturnValue(true);
-  jest.mocked(useSpoonacularDiscovery).mockReturnValue(spoonacular);
+  jest.mocked(useCatalogDiscovery).mockReturnValue(catalog);
   jest.mocked(useServerRecipeSuggestions).mockReturnValue(server());
 });
 
 describe('useRecipeDiscovery', () => {
-  it('is the Spoonacular discovery, untouched, with pantry suggestions switched off', () => {
+  it('is the catalog discovery, untouched, with pantry suggestions switched off', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(false);
 
-    const { result } = renderHook(() => useRecipeDiscovery('vegan'));
+    const { result } = renderHook(() => useRecipeDiscovery(DIET));
 
-    expect(result.current).toBe(spoonacular);
+    expect(result.current).toBe(catalog);
     expect(useServerRecipeSuggestions).toHaveBeenLastCalledWith(false);
-    expect(useSpoonacularDiscovery).toHaveBeenLastCalledWith('vegan', {
+    expect(useCatalogDiscovery).toHaveBeenLastCalledWith(DIET, {
       enabled: true,
     });
   });
 
-  it("shows the server's ranking, one page, and keeps Spoonacular idle", () => {
-    const ranked = server({
-      rows: [
-        {
-          source: 'spoonacular',
-          recipe: { id: 1, title: 'Curry', image: '', imageType: 'jpg' },
-        },
-      ],
-    });
+  it("shows the server's ranking, one page, and keeps the catalog idle", () => {
+    const ranked = server({ rows: [randomRow('1', 'Curry')] });
     jest.mocked(useServerRecipeSuggestions).mockReturnValue(ranked);
 
-    const { result } = renderHook(() => useRecipeDiscovery());
+    const { result } = renderHook(() => useRecipeDiscovery(DIET));
 
-    expect(useSpoonacularDiscovery).toHaveBeenLastCalledWith(undefined, {
+    expect(useCatalogDiscovery).toHaveBeenLastCalledWith(DIET, {
       enabled: false,
     });
     expect(result.current).toMatchObject({
@@ -89,17 +104,17 @@ describe('useRecipeDiscovery', () => {
     });
   });
 
-  it('lets Spoonacular fill in when the server has nothing to suggest', () => {
+  it('lets the catalog fill in when the server has nothing to suggest', () => {
     jest
       .mocked(useServerRecipeSuggestions)
       .mockReturnValue(server({ unanswered: true }));
 
-    const { result } = renderHook(() => useRecipeDiscovery());
+    const { result } = renderHook(() => useRecipeDiscovery(DIET));
 
-    expect(useSpoonacularDiscovery).toHaveBeenLastCalledWith(undefined, {
+    expect(useCatalogDiscovery).toHaveBeenLastCalledWith(DIET, {
       enabled: true,
     });
-    expect(result.current.rows).toBe(spoonacular.rows);
+    expect(result.current.rows).toBe(catalog.rows);
     expect(result.current.mode).toBe('random');
   });
 
@@ -108,7 +123,7 @@ describe('useRecipeDiscovery', () => {
       .mocked(useServerRecipeSuggestions)
       .mockReturnValue(server({ loading: true }));
 
-    const { result } = renderHook(() => useRecipeDiscovery());
+    const { result } = renderHook(() => useRecipeDiscovery(DIET));
 
     expect(result.current.loading).toBe(true);
   });

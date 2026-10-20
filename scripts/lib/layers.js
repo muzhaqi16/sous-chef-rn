@@ -58,7 +58,7 @@ const LAYERS = [
     name: 'services',
     layer: 'core',
     patterns: [
-      'src/services/{subscriptions,spoonacular,telemetry}/**',
+      'src/services/{subscriptions,telemetry}/**',
       'src/services/{alertService,destructiveConfirm,errorService,toastService}.ts',
     ],
   },

@@ -8,7 +8,8 @@ import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, ExternalSource } from '#/graphql/generated/schemaTypes';
+import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import {
   pantryItemData,
   type PantryItemFixture,
@@ -18,10 +19,11 @@ import { toDateKey, todayKey } from '#/utils/dateUtils';
 
 // Recipe-suggestions hook is its own concern (covered by
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
-// doesn't need to also mock Spoonacular.
+// doesn't need its query's mocks too.
+const mockSuggestedRecipes: ItemRecipeSuggestion[] = [];
 jest.mock('#features/pantry/hooks/useRecipeSuggestionsForItem', () => ({
   useRecipeSuggestionsForItem: () => ({
-    suggestedRecipes: [],
+    suggestedRecipes: mockSuggestedRecipes,
     loadingRecipes: false,
   }),
 }));
@@ -50,11 +52,13 @@ jest.mock('#features/pantry/hooks/usePantryItemDetailActions', () => ({
   }),
 }));
 
+const mockToRecipeDetail = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     goBack: jest.fn(),
     navigateTo: { pantryItem: jest.fn(), nutritionScreen: jest.fn() },
     navigate: jest.fn(),
+    toRecipeDetail: mockToRecipeDetail,
   }),
 }));
 
@@ -122,6 +126,7 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   Object.assign(mockPermissions, FULL_PERMISSIONS);
+  mockSuggestedRecipes.length = 0;
 });
 
 const route = { params: { itemId: 'pi1' } };
@@ -336,6 +341,32 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [itemMock(fullItem)],
     });
     await screen.findByText('Recipes to try');
+  });
+
+  it('opens a suggested catalog recipe with what its card shows', async () => {
+    mockSuggestedRecipes.push({
+      __typename: 'CatalogRecipeHit',
+      provider: ExternalSource.Spoonacular,
+      providerRecipeId: '42',
+      name: 'Tomato soup',
+      imageUrl: 'https://img.example.com/42.jpg',
+      totalTimeMinutes: 20,
+      servings: 4,
+    });
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+
+    fireEvent.press(await screen.findByText('Tomato soup'));
+
+    expect(mockToRecipeDetail).toHaveBeenCalledWith({
+      catalog: {
+        provider: ExternalSource.Spoonacular,
+        externalId: '42',
+        name: 'Tomato soup',
+        imageUrl: 'https://img.example.com/42.jpg',
+      },
+    });
   });
 
   // The server's EXPIRED flag can be a day late east of UTC; the date decides.

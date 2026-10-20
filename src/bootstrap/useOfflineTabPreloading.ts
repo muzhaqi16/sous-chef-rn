@@ -18,7 +18,8 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
  * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an
  * unvisited tab has nothing cached and is unusable offline — and the persisted
  * cache is purged on every version change. The tab stays unmounted; only data is
- * warmed, online-only and `cache-first`. Recipes is excluded (Spoonacular).
+ * warmed, online-only and `cache-first`. Recipes is excluded: its discovery's
+ * variables come from the pantry and the dietary profile as they load.
  */
 
 /**

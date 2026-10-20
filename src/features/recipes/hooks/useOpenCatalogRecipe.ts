@@ -2,31 +2,49 @@ import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  ExternalSource,
+  type ExternalSource,
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 
-/** A Spoonacular recipe as a search row shows it, before the API has it. */
+/** A catalog recipe as a search row shows it, before the API has it. */
 export interface CatalogRecipeHint {
+  provider: ExternalSource;
   externalId: string;
   name?: string;
   imageUrl?: string;
 }
+
+/** What pressing a card opens: a recipe the API holds, or a catalog one. */
+export type RecipeTarget =
+  | { recipeId: string }
+  | { catalog: CatalogRecipeHint };
+
+/** What a catalog hit tells the API to open it, and shows meanwhile. */
+export const catalogHintOf = (hit: {
+  provider: ExternalSource;
+  providerRecipeId: string;
+  name: string;
+  imageUrl?: string | null;
+}): CatalogRecipeHint => ({
+  provider: hit.provider,
+  externalId: hit.providerRecipeId,
+  name: hit.name,
+  imageUrl: hit.imageUrl ?? undefined,
+});
 
 export type OpenedCatalogRecipe =
   | { opened: true; recipeId: string }
   | { opened: false; failure: string };
 
 // A refused hint fails the whole open, and the hints only stand in until the
-// fetch: an image off Spoonacular's own host is left out, a long name is cut.
-const SPOONACULAR_IMAGE = /^https:\/\/([a-z0-9-]+\.)*spoonacular\.com\//i;
+// fetch, so a long name is cut.
 const MAX_NAME_LENGTH = 200;
 
 /**
- * The API's own copy of a Spoonacular recipe, found or brought in by id. Never
+ * The API's own copy of a catalog recipe, found or brought in by id. Never
  * queued: it needs the API, and a recipe with no id cannot be shown.
  */
 export function useOpenCatalogRecipe() {
@@ -36,19 +54,15 @@ export function useOpenCatalogRecipe() {
   const openCatalogRecipe = async (
     hint: CatalogRecipeHint,
   ): Promise<OpenedCatalogRecipe> => {
-    const imageUrl =
-      hint.imageUrl && SPOONACULAR_IMAGE.test(hint.imageUrl)
-        ? hint.imageUrl
-        : undefined;
     const settled = await settleMutation(
       () =>
         open({
           variables: {
             input: {
-              source: ExternalSource.Spoonacular,
+              source: hint.provider,
               externalId: hint.externalId,
               name: hint.name?.slice(0, MAX_NAME_LENGTH),
-              imageUrl,
+              imageUrl: hint.imageUrl,
             },
             ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
           },

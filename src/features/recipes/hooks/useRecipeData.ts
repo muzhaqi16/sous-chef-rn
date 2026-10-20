@@ -10,11 +10,14 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { knownEntry } from '#/utils/closedEnum';
 import {
+  Diet,
   ExternalSyncStatus,
+  Intolerance,
   RecipeRevisionStatus,
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
+import type { RecipeNutritionFacts } from '#domain/nutrition';
 import type { DataAttributionValue } from '#/types/attribution';
 
 export type MaterializedRecipe = UseRecipeData_RecipeFragment;
@@ -55,7 +58,7 @@ export interface RecipeDisplayData {
   /** The provider's notices, shown beside the recipe; empty for an in-app one. */
   dataAttributions: readonly DataAttributionValue[];
   caloriesPerServing?: number;
-  nutritionData?: unknown;
+  nutrition?: RecipeNutritionFacts | null;
   status?: RecipeStatus;
   /** A moderator's note on the last decision; the author's own recipes only. */
   reviewNote?: string;
@@ -92,26 +95,25 @@ export interface UseRecipeDataResult {
 }
 
 function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
-  const provider = recipe.externalDetails;
   const syncStatus = recipe.sourceMapping?.syncStatus;
   return {
     title: recipe.name,
     image: recipe.imageUrl ?? undefined,
     servings: recipe.servings,
     readyInMinutes: recipe.totalTimeMinutes ?? undefined,
-    healthScore: provider?.healthScore ?? undefined,
+    healthScore: recipe.healthScore ?? undefined,
     summary: recipe.description ?? undefined,
     ingredients: extractNodes(recipe.ingredientsConnection),
     instructions: recipe.instructions,
-    vegetarian: provider?.vegetarian ?? undefined,
-    vegan: provider?.vegan ?? undefined,
-    glutenFree: provider?.glutenFree ?? undefined,
-    dairyFree: provider?.dairyFree ?? undefined,
+    vegetarian: recipe.diets.includes(Diet.Vegetarian),
+    vegan: recipe.diets.includes(Diet.Vegan),
+    glutenFree: recipe.diets.includes(Diet.GlutenFree),
+    dairyFree: recipe.freeOf.includes(Intolerance.Dairy),
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,
     dataAttributions: recipe.dataAttributions,
     caloriesPerServing: recipe.caloriesPerServing ?? undefined,
-    nutritionData: recipe.nutritionData ?? undefined,
+    nutrition: recipe.nutritionPerServing ?? null,
     status: recipe.status,
     reviewNote: recipe.reviewNote ?? undefined,
     hasPendingRevision: !!recipe.pendingRevision,

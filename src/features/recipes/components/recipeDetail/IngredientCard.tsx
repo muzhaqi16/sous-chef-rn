@@ -6,7 +6,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-import { getSpoonacularIngredientImageUrl } from '#/services/spoonacular/utils';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { Card } from '#components/atoms/Card';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
@@ -39,11 +38,8 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const unit = unitSymbol ?? '';
   // US dollars, null until the recipe is first saved. Never derived from the name.
   const estimatedPrice = ingredient.estimatedPrice;
-  const imageUrl = ingredient.image
-    ? ingredient.image.startsWith('http')
-      ? ingredient.image
-      : getSpoonacularIngredientImageUrl(ingredient.image) // A bare filename
-    : ingredient.item?.imageUrl;
+  // The API resolves `image` to an absolute address, a catalog item's first.
+  const imageUrl = ingredient.image ?? ingredient.item?.imageUrl;
 
   return (
     <Card

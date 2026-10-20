@@ -66,12 +66,6 @@ const PUBLIC_BY_DESIGN = {
  * so the exception cannot outlive its subject.
  */
 const ACCEPTED_FINDINGS = {
-  SPOONACULAR_API_KEY:
-    'Deliberate, decided 2026-08-17: recipe search stays client-side so it ' +
-    'keeps working when our own API is down. Proxying it would couple search ' +
-    'availability to API availability. The trade accepted is a metered ' +
-    'third-party quota a stranger can burn. Revisit with the telemetry ' +
-    'question — see docs/bundled-credentials-decision.md.',
   OTLP_METRICS_AUTH_PASSWORD:
     'Basic-auth credential for the metrics store OTLP endpoint. Out of scope ' +
     'as of 2026-08-17, to be planned properly later. Blast radius is write ' +
@@ -240,7 +234,7 @@ if (process.argv.includes('--self-test')) {
     process.exit(2);
   }
   const tooShort = isSearchable('abc');
-  const placeholder = isSearchable('your_spoonacular_api_key_here');
+  const placeholder = isSearchable('your_api_key_here');
   if (tooShort || placeholder) {
     console.error(
       `✗ Self-test failed: filter accepted a value it should skip ` +

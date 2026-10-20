@@ -17,7 +17,6 @@ export interface Env {
   API_KEY?: string;
   WEB_APP_URL?: string;
   GRAPHQL_BATCH_ENABLED?: string;
-  SPOONACULAR_API_KEY?: string;
   OTLP_METRICS_ENDPOINT?: string;
   OTLP_METRICS_AUTH_USERNAME?: string;
   OTLP_METRICS_AUTH_PASSWORD?: string;
