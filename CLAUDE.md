@@ -79,6 +79,19 @@ Map and reasoning: `docs/architecture.md`.
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
 - `src/domain/` is logic 2+ features share; `src/app/` is the composition root.
+- **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without
+  React Native and is shared with the web host; **mobile** is the React Native
+  app. Core imports only core and `CORE_EXTERNALS` (`boundaries/dependencies`),
+  and the `core-portability` Jest project loads every core file in node. A file
+  that mixes layers moves; the map grows no exception. In a feature, a hook that
+  renders, picks an icon or reaches a device sits beside its UI, and a shape
+  both sides read goes in its `types.ts`.
+- **Core reaches the device only through a port** (`requirePlatform`,
+  `src/platform/`), installed by the composition root before core loads; a host
+  registers its presenters and its session steps (`registerSessionHost`).
+- **One list of source roots** (`scripts/lib/sourceRoots.js`): codegen, the
+  manifest, readers, GraphQL lint and the scanner tests read it, so a new
+  scanner takes its roots from there and a host's root is added there only.
 - **A capability a fork or build may switch off is a `FeatureFlag`**
   (`src/config/featureFlags.ts`), read only through `useFeatureFlag`; with it off
   its feature works as before, so it plugs in through an optional prop or a
