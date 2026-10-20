@@ -121,6 +121,19 @@ describe('useStartupInit — the shared JS-entry origin', () => {
   });
 });
 
+// An earlier build kept the registration password in the keychain, where it
+// outlives an app deletion. Startup is the only place left that purges it.
+it('purges the legacy registration password at startup', () => {
+  const { clearTempRegistrationPassword } = jest.requireMock(
+    '#native/storage/keychain',
+  );
+  clearTempRegistrationPassword.mockClear();
+
+  renderHook(() => useStartupInit());
+
+  expect(clearTempRegistrationPassword).toHaveBeenCalledTimes(1);
+});
+
 describe('useStartupInit — the build gate on launch-arg injection', () => {
   // Accepting an auth state from launch arguments is a NAMED capability with
   // its own default-off flag. Every gate this has worn before was a property of

@@ -27,6 +27,7 @@ import {
   clearSessionTokens,
 } from '../keychain';
 import { logger } from '#/utils/environment';
+import { errorService } from '#/services/errorService';
 
 // Cast to jest.Mock for type safety
 const mockSetGenericPassword = setGenericPassword as jest.Mock;
@@ -220,11 +221,19 @@ describe('keychain storage', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false on error', async () => {
-      mockGetGenericPassword.mockRejectedValue(new Error('Keychain error'));
+    it('returns false on error, and reports it', async () => {
+      const report = jest
+        .spyOn(errorService, 'reportError')
+        .mockImplementation(() => {});
+      const failure = new Error('Keychain error');
+      mockGetGenericPassword.mockRejectedValue(failure);
 
       const result = await hasCredentials('has-error@test.com');
       expect(result).toBe(false);
+      expect(report).toHaveBeenCalledWith(failure, {
+        operation: 'checkCredentials',
+      });
+      report.mockRestore();
     });
   });
 
