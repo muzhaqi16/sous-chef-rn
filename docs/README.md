@@ -56,6 +56,7 @@ _does_, start at the [project README](../README.md).
 | [Android multi-device guide](android-devices-readme.md)     | How `MODE` / `TARGET` / `DEVICE_ID` drive `scripts/run-android.sh`.                                                                                                                                          |
 | [Android ProGuard debugging](android-proguard-debugging.md) | Crash reporting (Crashlytics, Android) and diagnosing R8/ProGuard-only crashes in release builds.                                                                                                            |
 | [Reanimated](reanimated.md)                                 | The layout-animation engine and its fallback flag, what to run when upgrading Reanimated, the layout-animation device checks, and two standing notes (the keyboard handler's `[]`, the shared-element tags). |
+| [Web host — decision record](web-host-decision.md)          | What the core is for, why the web app runs on react-native-web (and its exit), what every host must run, and what the web host change will need.                                                             |
 
 ## Operations
 

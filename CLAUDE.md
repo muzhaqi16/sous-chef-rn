@@ -78,16 +78,20 @@ Map and reasoning: `docs/architecture.md`.
   molecules, organisms, templates, providers, performance), placed by what a
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
-- `src/domain/` is logic 2+ features share; `src/app/` is the composition root.
+- `src/domain/` is logic 2+ features share; `src/app/` is the composition root;
+  `src/bootstrap/` (core) is what every host runs to start the core.
 - **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without
-  React Native; **mobile** is the React Native app. Core imports only core and `CORE_EXTERNALS` (`boundaries/dependencies`),
+  React Native and loads with nothing installed; **mobile** is the React Native
+  app; the web host's plan is `docs/web-host-decision.md`. Core imports only core and `CORE_EXTERNALS` (`boundaries/dependencies`),
   and the `core-portability` Jest project loads every core file in node. A file
   that mixes layers moves; the map grows no exception. In a feature, a hook that
   renders, picks an icon or reaches a device sits beside its UI, and a shape
   both sides read goes in its `types.ts`.
 - **Core reaches the device only through a port** (`requirePlatform`,
-  `src/platform/`), installed by the composition root before core loads; a host
-  registers its presenters and its session steps (`registerSessionHost`).
+  `src/platform/`), read where it is used and never while a module loads
+  (`sous-chef/no-module-scope-platform-read`); persisted stores hydrate when the
+  host starts them (`startPersistedStores`). A host registers its presenters,
+  its session steps (`registerSessionHost`) and its start-up steps (`StartupHost`).
 - **One list of source roots** (`scripts/lib/sourceRoots.js`): codegen, the
   manifest, readers, GraphQL lint and the scanner tests read it, so a new
   scanner takes its roots from there and a host's root is added there only.
@@ -144,9 +148,12 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 
 - **What renders gets data from a data hook**, as plain values and callbacks: its
   feature's `hooks/`, or a `use*.ts` beside the UI that owns a display query
-  (`COLOCATED_DATA_HOOKS`). The `src/apollo` import zone and `sous-chef/hook-returns-no-library-type`
-  hold part of it; a screen or component calling `useQuery`/`useMutation`/the
-  client directly is caught only by review. `useFragment` and masking types stay allowed.
+  (`COLOCATED_DATA_HOOKS`). **A write is a core hook's**: no mobile-layer module
+  imports `useMutation` (`mobileIssuesNoWrites.test.ts`); a host's device
+  services write about the device through the client. The `src/apollo` import
+  zone and `sous-chef/hook-returns-no-library-type` hold part of the rest; a
+  screen or component calling `useQuery` or the client directly is caught only
+  by review. `useFragment` and masking types stay allowed.
 - **Fragments**: a component or hook owns a sibling `<Consumer>_<entity>`
   fragment; screens spread children's, queries the screen's. A core document
   spreads only core fragments (`documentOwnership.test.ts`), so a list a core

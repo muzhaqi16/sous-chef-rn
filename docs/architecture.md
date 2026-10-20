@@ -57,6 +57,9 @@ Every production file in `src/` belongs to one of two layers:
 - **mobile** is the React Native app: screens, components, navigation, device
   services and the composition root.
 
+What the core is for, and why a web host would run this app on
+react-native-web, is [`web-host-decision.md`](web-host-decision.md).
+
 | Entry                 | Layer  | Paths under `src/`                                                                                                             |
 | --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | platform              | core   | `platform/**`                                                                                                                  |
