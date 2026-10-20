@@ -66,7 +66,7 @@ const pantryRef = (id: string): PantryItemRef => ({
 // reread the caller runs.
 const withdrawLine = (
   cache: ApolloCache,
-  input: CheckInSent,
+  input: Omit<CheckInSent, 'id'>,
   line: CheckInSent['lines'][number],
   wrote: WrittenLine | undefined,
 ): boolean => {
@@ -92,7 +92,7 @@ const withdrawLine = (
  */
 export function applyReceiptCheckIn(
   cache: ApolloCache,
-  input: CheckInSent,
+  input: Omit<CheckInSent, 'id'>,
   results: readonly CheckInLineResult[],
   written?: ReadonlyMap<number, WrittenLine>,
 ): { exact: boolean; adopted: RowAdoption[] } {

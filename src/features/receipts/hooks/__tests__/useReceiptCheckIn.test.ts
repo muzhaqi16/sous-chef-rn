@@ -4,12 +4,14 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import {
   checkInAnswer,
@@ -209,6 +211,53 @@ describe('useReceiptCheckIn', () => {
     expect(outcome).toMatchObject({ status: 'refused' });
     // Back to send again: nothing counts as added.
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([]);
+  });
+
+  it('takes back the sends after one refused whole, unsent, and keeps what landed before it', async () => {
+    const cache = makeCache();
+    const lines = Array.from({ length: 250 }, (_, index) => line(index));
+    useReceiptDraftStore.getState().ensureCheckInIds(
+      lines.map(sent => sent.index),
+      3,
+    );
+    const [, refusedId] = checkInIds();
+    const checkIn = recordMock(CreateReceiptCheckInDocument, {
+      dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> =>
+        inputOf(vars).id === refusedId
+          ? {
+              createReceiptCheckIn: {
+                __typename: 'ForbiddenError',
+                code: ErrorCode.Forbidden,
+              },
+            }
+          : checkInAnswer()(vars),
+      maxUsageCount: 3,
+    });
+    const { result } = renderHookWithApollo(
+      () => useReceiptCheckIn(undefined),
+      { cache, operationMocks: [checkIn.mock] },
+    );
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.checkIn(receipt(checkInIds()), lines);
+    });
+
+    const range = (from: number, to: number) =>
+      Array.from({ length: to - from }, (_, at) => from + at);
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(outcome).toMatchObject({ status: 'refused' });
+    expect(checkIn.fired).toHaveLength(2);
+    expect(draft?.added).toEqual(range(0, 100));
+    expect(draft?.failed).toEqual(
+      Object.fromEntries(
+        range(100, 200).map(index => [index, ErrorCode.Forbidden]),
+      ),
+    );
+    expect(pantryRows(cache)).toHaveLength(100);
+    expect(cache.extract()['PantryItem:pi-249']).toBeUndefined();
+    expect(unconfirmedCreates.has('pi-249')).toBe(false);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
   it('re-points a typed item the API matched to one it holds', async () => {

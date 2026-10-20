@@ -80,7 +80,10 @@ export type ReceiptCheckInOutcome =
   | { status: 'recorded'; added: number[]; failed: number[] }
   /** Kept for delivery: the lines are shown, and land once the API is reached. */
   | { status: 'queued' }
-  /** Refused whole; nothing was recorded, and what it showed is withdrawn. */
+  /**
+   * A send was refused whole: its lines and every later send's are withdrawn,
+   * and an earlier send's stay recorded.
+   */
   | { status: 'refused'; reason: string };
 
 const chunked = <T>(rows: readonly T[], size: number): T[][] =>
@@ -131,6 +134,20 @@ const writeLines = (
   return written;
 };
 
+// Takes back every row a chunk showed: refused whole, or never sent.
+const withdrawChunk = (
+  cache: ApolloCache,
+  receipt: PlacedReceipt,
+  lines: readonly CheckInLineToSend[],
+  written: ReadonlyMap<number, WrittenLine>,
+) =>
+  applyReceiptCheckIn(
+    cache,
+    { ...receipt, lines: lines.map(line => line.input) },
+    lines.map((_line, at) => ({ index: at, success: false })),
+    written,
+  );
+
 const releaseLines = (lines: readonly CheckInLineToSend[]) => {
   for (const { input } of lines) {
     if (input.pantryItemId) unconfirmedCreates.confirm(input.pantryItemId);
@@ -145,11 +162,20 @@ const releaseLines = (lines: readonly CheckInLineToSend[]) => {
 export function useReceiptCheckIn(listId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { setCheckInState, remintCheckInId, markAdded } =
+  const { setCheckInState, remintCheckInId, markAdded, markUnsent } =
     useReceiptDraftActions();
   const [createCheckIn] = useMutation(CreateReceiptCheckInDocument, {
     context: { localFirst: true },
   });
+
+  // Counters a withdrawal could not restore exactly are read again.
+  const reread = () => {
+    client.refetchQueries({ include: 'active' }).catch(error => {
+      errorService.reportError(error, {
+        operation: 'Re-read after a refused receipt line',
+      });
+    });
+  };
 
   // Names the refused lines and, when one code accounts for all of them, its
   // cause in the reader's language; never the server's text.
@@ -215,20 +241,13 @@ export function useReceiptCheckIn(listId: string | undefined) {
       today,
       lines: lines.map(line => line.input),
     };
-    // A whole refusal withdraws every line it showed.
-    const withdrawAll = () =>
-      applyReceiptCheckIn(
-        client.cache,
-        input,
-        lines.map((_line, at) => ({ index: at, success: false })),
-        written,
-      );
     const settled = await settleMutation(
       () => createCheckIn({ variables: { input, today } }),
       {
         document: CreateReceiptCheckInDocument,
         fallback: t('errors.addItemFailedRetry'),
-        onFailed: withdrawAll,
+        // A whole refusal withdraws every line it showed.
+        onFailed: () => withdrawChunk(client.cache, receipt, lines, written),
         present: 'none',
       },
     );
@@ -296,16 +315,29 @@ export function useReceiptCheckIn(listId: string | undefined) {
         continue;
       }
       if (settled.status === 'failed') {
-        // Refused whole: every line it withdrew is back to send again.
+        // Refused whole: its lines are back to send, and the later chunks,
+        // never sent, are taken back out to add again.
         const code = settled.failure?.code;
         settleReceiptCheckIn(
           client.cache,
           input.id,
-          lines.map(line => ({
+          chunk.map(line => ({
             index: line.index,
             success: false,
             failure: code ? { code } : null,
           })),
+        );
+        const unsent = chunks.slice(at + 1);
+        let exact = true;
+        for (const later of unsent) {
+          exact =
+            withdrawChunk(client.cache, placed, later.chunk, later.written)
+              .exact && exact;
+          releaseLines(later.chunk);
+        }
+        if (!exact) reread();
+        markUnsent(
+          unsent.flatMap(later => later.chunk.map(line => line.index)),
         );
         const reason = settled.failure?.body ?? t('errors.addItemFailedRetry');
         toastService.error(reason);
@@ -321,13 +353,7 @@ export function useReceiptCheckIn(listId: string | undefined) {
           sentResults,
           written,
         );
-        if (!exact) {
-          client.refetchQueries({ include: 'active' }).catch(error => {
-            errorService.reportError(error, {
-              operation: 'Re-read after a refused receipt line',
-            });
-          });
-        }
+        if (!exact) reread();
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Settle receipt check-in',

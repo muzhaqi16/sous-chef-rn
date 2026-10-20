@@ -148,6 +148,8 @@ interface ReceiptDraftState {
   saveDraft: (draft: ReceiptDraft) => void;
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
+  /** Lines shown, then taken back without being sent: left to add, not failed. */
+  markUnsent: (indexes: readonly number[]) => void;
   /** Keeps every id already minted. */
   ensureCheckInIds: (indexes: readonly number[], sends: number) => void;
   setCheckInState: (state: ReceiptCheckIn['state']) => void;
@@ -230,6 +232,10 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
           patchDraft(({ added, failed }) => ({
             added: [...new Set([...(added ?? []), ...indexes])],
             failed: withoutIndexes(failed, indexes),
+          })),
+        markUnsent: indexes =>
+          patchDraft(({ added }) => ({
+            added: (added ?? []).filter(index => !indexes.includes(index)),
           })),
         ensureCheckInIds: (indexes, sends) =>
           patchDraft(({ checkIn }) => ({
