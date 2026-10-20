@@ -13630,9 +13630,17 @@ type Recipe {
     orderBy: RecipeOrderBy
   ): RecipeForkConnection!
   """
+  The intolerances the recipe's source says it is free of: DAIRY and GLUTEN
+  only, from a catalog recipe's provider flags; empty when none are recorded.
+  Unlike intolerances, which lists what the recipe contains.
+  """
+  freeOf: [Intolerance!]!
+  """
   Health goals this recipe suits, such as LOW_CARB or HIGH_PROTEIN; empty when none are recorded.
   """
   healthGoals: [HealthGoal!]!
+  """The catalog's health score, 0 to 100; null when the source has none"""
+  healthScore: Int
   """Unique identifier of the recipe."""
   id: ID!
   """URL of the recipe's image, or null when it has none."""
