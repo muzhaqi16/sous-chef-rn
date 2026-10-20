@@ -438,6 +438,26 @@ const overrides = [
     },
   },
   {
+    // React Native Testing Library renders every mobile suite on
+    // react-test-renderer. The core-portability project cannot load it (it
+    // requires React Native), so it calls that renderer's `create` itself.
+    files: ['__tests__/core-portability/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-deprecated': [
+        'error',
+        {
+          allow: [
+            {
+              from: 'package',
+              package: 'react-test-renderer',
+              name: 'create',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/jest.setup.js', '__tests__/setup/**/*.js'],
     languageOptions: {
       globals: {

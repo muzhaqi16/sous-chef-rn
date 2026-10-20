@@ -86,7 +86,9 @@ An enforced area is held two ways:
   no React Native preset, where every React-Native-family package throws when
   loaded and the in-memory platform is installed. `enforcedCoreLoads.test.ts`
   loads every enforced file, so a reach anywhere in its imports fails, naming
-  the package it got to.
+  the package it got to. Other suites there run core flows a second host
+  relies on: a sign-out with no host steps registered, and the meal-plan writes,
+  rendered through a probe component with `react-test-renderer`.
 
 ### Platform ports
 

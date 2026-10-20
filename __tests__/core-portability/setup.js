@@ -17,4 +17,10 @@ Object.keys(dependencies)
     });
   });
 
+// Both hosts schedule frames, React Native and the browser alike; node does
+// not, so a frame is a timer here.
+globalThis.requestAnimationFrame ??= callback =>
+  setTimeout(() => callback(Date.now()), 16);
+globalThis.cancelAnimationFrame ??= handle => clearTimeout(handle);
+
 require('../helpers/memoryPlatform').installMemoryPlatform();
