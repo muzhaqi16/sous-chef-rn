@@ -11,6 +11,7 @@ import {
 } from '@react-native-firebase/messaging';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { routeNotificationTap } from '../pushNotificationRouting';
+import { registerTelemetryStateLoader } from '#services/telemetry/telemetryState';
 import { t } from '#/i18n';
 
 jest.mock('#/services/notifications/localNotificationHelper', () => ({
@@ -18,6 +19,9 @@ jest.mock('#/services/notifications/localNotificationHelper', () => ({
 }));
 jest.mock('../pushNotificationRouting', () => ({
   routeNotificationTap: jest.fn(),
+}));
+jest.mock('#services/telemetry/telemetryState', () => ({
+  registerTelemetryStateLoader: jest.fn(),
 }));
 
 const mockSetBackgroundHandler = setBackgroundMessageHandler as jest.Mock;
@@ -199,6 +203,21 @@ describe('nativePushMessaging', () => {
       await handler({ messageId: 'm4', data: { category: 'SYSTEM' } });
 
       expect(mockShowLocal).not.toHaveBeenCalled();
+    });
+
+    // The headless run renders no App, so telemetry would never read consent.
+    it('lets telemetry load the store only once a background message arrives', async () => {
+      registerFcmBackgroundHandler();
+      // Every launch registers the handler; a foreground start keeps the store
+      // off its entry path.
+      expect(registerTelemetryStateLoader).not.toHaveBeenCalled();
+
+      const handler = mockSetBackgroundHandler.mock.calls[0][1];
+      await handler({ messageId: 'm5', data: { category: 'SYSTEM' } });
+
+      expect(registerTelemetryStateLoader).toHaveBeenCalledWith(
+        expect.any(Function),
+      );
     });
   });
 
