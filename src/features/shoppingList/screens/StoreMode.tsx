@@ -20,7 +20,7 @@ import {
   ShoppingListModalsProvider,
   useShoppingListModalActions,
 } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { useStoreMode } from '#features/shoppingList/hooks/useStoreMode';
+import { useStoreMode } from '#features/shoppingList/screens/useStoreMode';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 type StoreModeProps = StaticScreenProps<{ listId: string }>;

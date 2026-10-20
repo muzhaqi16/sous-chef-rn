@@ -9,11 +9,11 @@ import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { Icon, type IconName } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import type { AisleHeaderRow } from '#features/shoppingList/components/SortableShoppingList/types';
-import type { AisleRouteNote } from '#features/shoppingList/hooks/useAisleView';
+import type { AisleRouteNote } from '#features/shoppingList/screens/useAisleView';
 import type {
   StoreModeEstimate,
   StoreModeTab,
-} from '#features/shoppingList/hooks/useStoreMode';
+} from '#features/shoppingList/screens/useStoreMode';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface StoreModeHeaderProps {

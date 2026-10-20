@@ -9,11 +9,11 @@ import {
 import { aisleAfter, type AisleTab } from '#features/shoppingList/utils/aisles';
 import { linesInAisle } from '#features/shoppingList/components/SortableShoppingList/aisleRows';
 import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
-import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
-import { useShoppingListManagement } from './useShoppingListManagement';
-import { useShoppingListTransformMulti } from './useShoppingListTransform';
-import { useShoppingListPermissions } from './useShoppingListPermissions';
-import { useShoppingListActions } from './useShoppingListActions';
+import type { ShoppingListItemNode } from '../hooks/usePaginatedShoppingItems';
+import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
+import { useShoppingListTransformMulti } from '../hooks/useShoppingListTransform';
+import { useShoppingListPermissions } from '../hooks/useShoppingListPermissions';
+import { useShoppingListActions } from '../hooks/useShoppingListActions';
 import { useAisleView } from './useAisleView';
 
 /** An aisle, every aisle, or what is already in the cart. */

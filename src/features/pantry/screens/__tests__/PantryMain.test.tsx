@@ -124,7 +124,7 @@ const defaultPantryScreen = {
 };
 
 const mockUsePantryScreen = jest.fn(() => ({ ...defaultPantryScreen }));
-jest.mock('#features/pantry/hooks/usePantryScreen', () => ({
+jest.mock('#features/pantry/screens/usePantryScreen', () => ({
   usePantryScreen: () => mockUsePantryScreen(),
 }));
 

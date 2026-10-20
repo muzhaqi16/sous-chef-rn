@@ -25,11 +25,11 @@ jest.mock('../useAisleView', () => {
   };
 });
 
-jest.mock('../useShoppingListPermissions', () => ({
+jest.mock('../../hooks/useShoppingListPermissions', () => ({
   useShoppingListPermissions: () => ({ resolved: true }),
 }));
 
-jest.mock('../useShoppingListActions', () => ({
+jest.mock('../../hooks/useShoppingListActions', () => ({
   useShoppingListActions: () => ({ handleTogglePurchase: jest.fn() }),
 }));
 
@@ -70,7 +70,7 @@ const list = {
   cart: [] as Line[],
 };
 
-jest.mock('../useShoppingListManagement', () => ({
+jest.mock('../../hooks/useShoppingListManagement', () => ({
   useShoppingListManagement: () => ({
     shoppingList: { id: 'list-1', name: 'Groceries', targetStore: null },
     rawUnpurchasedItems: list.lines,

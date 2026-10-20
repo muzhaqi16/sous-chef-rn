@@ -27,7 +27,7 @@ import {
 } from '#hooks/ui/useTutorialSequence';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
-import { usePantryScreen } from '#features/pantry/hooks/usePantryScreen';
+import { usePantryScreen } from '#features/pantry/screens/usePantryScreen';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import {
   PantryModalsProvider,
