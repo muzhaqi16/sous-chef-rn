@@ -628,6 +628,7 @@ export const ShoppingListMainContent: React.FC<
           ) {
             const firstItemId = rawUnpurchasedItems[0]?.id;
             if (firstItemId) {
+              HapticService.selection();
               void handleTogglePurchase(firstItemId);
               tutorial.notifyCheckboxTapped();
             }

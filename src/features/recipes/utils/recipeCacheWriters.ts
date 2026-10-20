@@ -137,7 +137,8 @@ function writeRecipeRow(
  */
 export function upsertMyRecipesEdge(
   cache: ApolloCache,
-  recipe: { id: string },
+  // The typename makes the cache reference; an id alone adds nothing.
+  recipe: { __typename: 'Recipe'; id: string },
 ): void {
   addToMyRecipes(cache, recipe, {
     skipStoreField: skipUnmatchedFilterVariants({}),
