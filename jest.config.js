@@ -106,6 +106,9 @@ const mobile = {
 const corePortability = {
   displayName: 'core-portability',
   testEnvironment: 'node',
+  // A command-line `--testMatch` (reassure's, say) replaces every project's;
+  // `roots` keeps this project's search inside its own folder regardless.
+  roots: ['<rootDir>/__tests__/core-portability'],
   testMatch: ['<rootDir>/__tests__/core-portability/**/*.test.ts'],
   globals: { __DEV__: true },
   setupFiles: ['<rootDir>/__tests__/core-portability/setup.js'],
@@ -145,6 +148,12 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/index.ts',
     '!src/types/**',
+    // A project excludes only its own suites from coverage, so another
+    // project's tests would count as uncovered code.
+    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**',
+    '!src/**/__perf__/**',
+    '!src/**/*.test.{ts,tsx}',
   ],
   // Thresholds are set ~1pp below current actual coverage so they lock in
   // existing test coverage and catch regressions, without forcing an immediate
