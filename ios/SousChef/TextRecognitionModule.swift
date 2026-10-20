@@ -73,15 +73,46 @@ class TextRecognitionModule: NSObject {
     resolve(nil)
   }
 
+  /// Paints each prepared photo's masks opaque and rewrites it in place. A mask
+  /// is a polygon in fractions of the photo, grown on every side by its margin,
+  /// a fraction of the photo's height. A photo is replaced only once its masked
+  /// copy is written.
+  @objc func maskPhotos(
+    _ photos: [[String: Any]],
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Self.queue.async {
+      do {
+        let masked = try photos.map { request in
+          guard let url = (request["uri"] as? String).flatMap(Self.fileURL) else {
+            throw NotAPreparedPhoto()
+          }
+          guard Self.handedOut.contains(url) else { throw NotAPreparedPhoto() }
+          let masks = request["masks"] as? [[String: Any]] ?? []
+          try autoreleasepool { try Self.mask(url, masks) }
+          return Self.describe(url)
+        }
+        resolve(masked)
+      } catch {
+        reject("photo_masking_failed", error.localizedDescription, error)
+      }
+    }
+  }
+
   // Serial, so the photos of a scan are prepared before its pages are read and
   // deleted, and only one full-size page is decoded at a time.
   private static let queue = DispatchQueue(label: "dev.souschef.TextRecognition", qos: .userInitiated)
   private static let photoEdge = 2048
+  // Masking re-encodes at the quality the photo was written at, which loses
+  // least from the blocks it leaves unchanged.
+  private static let photoQuality = 0.8
   private static let photoPrefix = "RECEIPT_PHOTO_"
   // Photos still with JS (going up) are not leftovers, until `deletePhotos`.
   private static let handedOut = PhotoPaths()
 
   private struct UnreadableImage: Error {}
+  private struct NotAPreparedPhoto: Error {}
 
   private final class PhotoPaths: @unchecked Sendable {
     private let lock = NSLock()
@@ -117,17 +148,73 @@ class TextRecognitionModule: NSObject {
       let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnail as CFDictionary)
     else { throw UnreadableImage() }
     let photo = caches.appendingPathComponent("\(photoPrefix)\(UUID().uuidString).jpg")
+    try writeJPEG(image, to: photo)
+    return photo
+  }
+
+  private static func writeJPEG(_ image: CGImage, to url: URL) throws {
     guard
       let destination = CGImageDestinationCreateWithURL(
-        photo as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+        url as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
     else { throw UnreadableImage() }
-    let quality: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.8]
+    let quality: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: photoQuality]
     CGImageDestinationAddImage(destination, image, quality as CFDictionary)
     guard CGImageDestinationFinalize(destination) else {
-      try? FileManager.default.removeItem(at: photo)
+      try? FileManager.default.removeItem(at: url)
       throw UnreadableImage()
     }
-    return photo
+  }
+
+  private static func mask(_ photo: URL, _ masks: [[String: Any]]) throws {
+    guard
+      let source = CGImageSourceCreateWithURL(photo as CFURL, nil),
+      let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+    else { throw UnreadableImage() }
+    let width = CGFloat(image.width)
+    let height = CGFloat(image.height)
+    // A scanner's grayscale page stays grayscale.
+    let space =
+      image.colorSpace.flatMap { ($0.model == .rgb || $0.model == .monochrome) && $0.supportsOutput ? $0 : nil }
+      ?? CGColorSpaceCreateDeviceRGB()
+    let alpha: CGImageAlphaInfo = space.model == .monochrome ? .none : .noneSkipLast
+    guard
+      let context = CGContext(
+        data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+        bytesPerRow: 0, space: space, bitmapInfo: alpha.rawValue)
+    else { throw UnreadableImage() }
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    // The masks' origin is top-left; the context's is bottom-left. Points past
+    // the photo's edge are clipped.
+    context.translateBy(x: 0, y: height)
+    context.scaleBy(x: 1, y: -1)
+    context.setFillColor(gray: 0, alpha: 1)
+    context.setStrokeColor(gray: 0, alpha: 1)
+    context.setLineJoin(.round)
+    for shape in masks {
+      guard let points = shape["points"] as? [Double], points.count >= 6 else { continue }
+      context.beginPath()
+      for at in stride(from: 0, to: points.count - 1, by: 2) {
+        let point = CGPoint(x: points[at] * width, y: points[at + 1] * height)
+        if at == 0 { context.move(to: point) } else { context.addLine(to: point) }
+      }
+      context.closePath()
+      // A round stroke as wide as two margins grows the filled shape by one.
+      let margin = (shape["margin"] as? Double ?? 0) * height
+      if margin > 0 {
+        context.setLineWidth(margin * 2)
+        context.drawPath(using: .fillStroke)
+      } else {
+        context.fillPath()
+      }
+    }
+    guard let painted = context.makeImage() else { throw UnreadableImage() }
+    let written = photo.deletingLastPathComponent()
+      .appendingPathComponent("\(photoPrefix)\(UUID().uuidString).jpg")
+    try writeJPEG(painted, to: written)
+    guard rename(written.path, photo.path) == 0 else {
+      try? FileManager.default.removeItem(at: written)
+      throw UnreadableImage()
+    }
   }
 
   private static func describe(_ photo: URL) -> [String: Any] {
