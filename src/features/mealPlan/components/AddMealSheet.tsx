@@ -101,6 +101,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     searching: searchingApi,
     search: searchRecipes,
     clear: clearSearchResults,
+    pick: pickSearchResult,
   } = useRecipeTextSearch();
   const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
 
@@ -147,7 +148,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   };
 
   const handleSelectSearchResult = (item: PickerRecipe) => {
-    const { target } = item;
+    const target = pickSearchResult(item);
     if ('recipeId' in target) {
       handleSelectRecipe(target.recipeId);
       return;

@@ -4,6 +4,7 @@ import { useApolloClient } from '@apollo/client/react';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { errorService } from '#/services/errorService';
+import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { isRateLimitError } from '#/utils/errors/rateLimit';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { RecipeFilters as RecipeFiltersInput } from '#/graphql/generated/schemaTypes';
@@ -12,6 +13,7 @@ import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions'
 import {
   foundRow,
   rowKey,
+  type FoundRow,
   type RecipeRow,
 } from '#features/recipes/utils/recipeRows';
 import { SearchRecipesDocument } from './useRecipeSearch.generated';
@@ -43,13 +45,41 @@ interface NextPage {
   after: string;
 }
 
-interface SearchPage {
-  rows: RecipeRow[];
+interface SearchPage<TRow extends RecipeRow = RecipeRow> {
+  rows: TRow[];
   next: NextPage | null;
+  /** Where a page the catalog could not finish goes on once it can. */
+  resume: NextPage | null;
   partial: boolean;
 }
 
-type Fetched = { page: SearchPage } | { error: unknown };
+/** The rows shown and where they go on: ONE atom, so a page commits whole. */
+interface Results {
+  rows: RecipeRow[];
+  next: NextPage | null;
+  resume: NextPage | null;
+}
+
+const NO_RESULTS: Results = { rows: [], next: null, resume: null };
+
+/**
+ * A later page added to what is shown. The API caches the catalog's results a
+ * block at a time, so blocks fetched at different times can repeat a hit an
+ * earlier page listed.
+ */
+function withPage(shown: Results, page: SearchPage): Results {
+  const listed = new Set(shown.rows.map(rowKey));
+  const added = page.rows.filter(row => !listed.has(rowKey(row)));
+  return {
+    rows: [...shown.rows, ...added],
+    next: page.next,
+    resume: page.resume,
+  };
+}
+
+type Fetched<TRow extends RecipeRow = RecipeRow> =
+  | { page: SearchPage<TRow> }
+  | { error: unknown };
 
 function failedSearch(error: unknown): SearchOutcome {
   errorService.reportError(error, { operation: 'searchRecipes' });
@@ -73,12 +103,13 @@ const filtersInput = (filters: RecipeFilters): RecipeFiltersInput => ({
   ...(filters.maxReadyTime && { maxReadyTime: filters.maxReadyTime }),
 });
 
-async function fetchTextPage(
+/** One page of a text search; the error, not a throw, when it fails. */
+export async function fetchTextPage(
   client: ApolloClient,
   query: string,
   filters: RecipeFilters,
   after: string | null,
-): Promise<Fetched> {
+): Promise<Fetched<FoundRow>> {
   try {
     const result = await client.query({
       query: SearchRecipesDocument,
@@ -94,13 +125,13 @@ async function fetchTextPage(
     const found = result.data?.findRecipes;
     if (!found) return { error: result.error };
     const { hasNextPage, endCursor } = found.pageInfo;
+    const from = endCursor ? { query, filters, after: endCursor } : null;
     return {
       page: {
         rows: found.edges.map(edge => foundRow(edge.node)),
-        next:
-          hasNextPage && endCursor
-            ? { query, filters, after: endCursor }
-            : null,
+        next: hasNextPage ? from : null,
+        // `hasNextPage` is false while the catalog is out; its cursor resumes it.
+        resume: found.catalogAvailable ? null : from,
         partial: !found.catalogAvailable,
       },
     };
@@ -108,6 +139,9 @@ async function fetchTextPage(
     return { error };
   }
 }
+
+const sameFilters = (a: RecipeFilters, b: RecipeFilters): boolean =>
+  JSON.stringify(filtersInput(a)) === JSON.stringify(filtersInput(b));
 
 async function fetchIngredientPage(
   client: ApolloClient,
@@ -127,6 +161,7 @@ async function fetchIngredientPage(
           (edge): RecipeRow => ({ source: 'pantry', edge }),
         ),
         next: null,
+        resume: null,
         partial: !found.catalogAvailable,
       },
     };
@@ -168,12 +203,9 @@ export function useRecipeSearch() {
   const [loading, setLoading] = useState(false);
   // Drops re-entrant load-mores: onEndReached fires again before a page lands.
   const [loadingMore, setLoadingMore] = useState(false);
-  // Rows and the next page are ONE atom so a load-more commits both together;
-  // a changed `next` identity tells it a new search replaced the state.
-  const [results, setResults] = useState<{
-    rows: RecipeRow[];
-    next: NextPage | null;
-  }>({ rows: [], next: null });
+  // A changed `next` or `resume` identity tells a page in flight that a new
+  // search replaced the state.
+  const [results, setResults] = useState<Results>(NO_RESULTS);
 
   const supersede = () => {
     generationRef.current += 1;
@@ -194,10 +226,11 @@ export function useRecipeSearch() {
     if (!isCurrent()) return SUPERSEDED;
     setLoading(false);
     if ('error' in fetched) {
-      setResults({ rows: [], next: null });
+      setResults(NO_RESULTS);
       return failedSearch(fetched.error);
     }
-    setResults({ rows: fetched.page.rows, next: fetched.page.next });
+    const { rows, next, resume } = fetched.page;
+    setResults({ rows, next, resume });
     return { status: 'shown', partial: fetched.page.partial };
   };
 
@@ -214,7 +247,7 @@ export function useRecipeSearch() {
     );
   };
 
-  /** The last search again; filters apply to a text search only. */
+  // The last search again; filters apply to a text search only.
   const rerun = (filters: RecipeFilters): Promise<SearchOutcome> => {
     if (last === null) return Promise.resolve(SUPERSEDED);
     return last.kind === 'text'
@@ -234,22 +267,47 @@ export function useRecipeSearch() {
       // the old query.
       if (!page || generation !== generationRef.current) return;
       outcome = { status: 'shown', partial: page.partial };
-      // The API caches the catalog's results a block at a time, so blocks
-      // fetched at different times can repeat a hit an earlier page listed.
-      setResults(prev => {
-        if (prev.next !== next) return prev;
-        const listed = new Set(prev.rows.map(rowKey));
-        const added = page.rows.filter(row => !listed.has(rowKey(row)));
-        return { rows: [...prev.rows, ...added], next: page.next };
-      });
+      setResults(prev => (prev.next === next ? withPage(prev, page) : prev));
     }, setLoadingMore);
     return outcome;
+  };
+
+  /**
+   * A pull. A text search the catalog could not finish goes on from where it
+   * stopped, keeping its rows; any other search, or one whose cursor the API
+   * refuses, runs again from its first page.
+   */
+  const retry = async (filters: RecipeFilters): Promise<SearchOutcome> => {
+    const { resume } = results;
+    if (!resume || loadingMore || !sameFilters(resume.filters, filters)) {
+      return rerun(filters);
+    }
+    const generation = generationRef.current;
+    setLoadingMore(true);
+    // Never throws: a failure comes back as `{ error }`.
+    const fetched = await fetchTextPage(
+      client,
+      resume.query,
+      resume.filters,
+      resume.after,
+    );
+    setLoadingMore(false);
+    if (generation !== generationRef.current) return SUPERSEDED;
+    if ('error' in fetched) {
+      // Shown results stay on screen; the pull says why it found no more.
+      return isDeadCursorError(fetched.error, resume.after)
+        ? rerun(filters)
+        : failedSearch(fetched.error);
+    }
+    const { page } = fetched;
+    setResults(prev => (prev.resume === resume ? withPage(prev, page) : prev));
+    return { status: 'shown', partial: page.partial };
   };
 
   const clear = () => {
     supersede();
     setLast(null);
-    setResults({ rows: [], next: null });
+    setResults(NO_RESULTS);
     // A search cleared mid-flight would otherwise leave loading stuck on.
     setLoading(false);
   };
@@ -263,7 +321,7 @@ export function useRecipeSearch() {
     hasMore: next !== null,
     search,
     searchByIngredients,
-    rerun,
+    retry,
     loadMore,
     clear,
   };

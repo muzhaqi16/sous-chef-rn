@@ -630,6 +630,33 @@ describe('useRecipeScreen', () => {
     expect(mockDiscoveryRefresh).not.toHaveBeenCalled();
   });
 
+  it('handleRefresh goes on with a search the catalog cut short, keeping its results', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      dataFor: vars =>
+        vars.after === 'c-r1'
+          ? page([hit('8001', 'Pasta e fagioli')])
+          : page([held('r1', 'Pasta')], {
+              endCursor: 'c-r1',
+              catalogAvailable: false,
+            }),
+    });
+    const { result } = renderRecipeScreen([search.mock]);
+    await act(async () => {
+      await result.current.handleTextSearch('pasta');
+    });
+    expect(result.current.searchResults).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.handleRefresh();
+    });
+
+    expect(search.fired[1]).toMatchObject({ query: 'pasta', after: 'c-r1' });
+    expect(result.current.searchResults.map(item => item.title)).toEqual([
+      'Pasta',
+      'Pasta e fagioli',
+    ]);
+  });
+
   it('handleRefresh repeats an ingredient search, as the partial toast promises', async () => {
     const byIngredients = ingredientsAnswering(
       [{ used: 1, missed: 0, providerRecipeId: '8001', name: 'Tomato Soup' }],

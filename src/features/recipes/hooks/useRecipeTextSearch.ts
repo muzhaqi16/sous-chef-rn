@@ -1,21 +1,17 @@
 import { useRef, useState } from 'react';
-import type { ApolloClient } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { errorService } from '#/services/errorService';
 import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
-import {
-  SearchRecipesDocument,
-  type SearchRecipesQuery,
-} from './useRecipeSearch.generated';
-import { catalogKey } from '#domain/catalogRecipes';
-import { timeAndServings } from '#features/recipes/utils/recipeCardText';
+import { recipeCardBasics } from '#features/recipes/utils/recipeCardText';
+import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterOptions';
+import { rowKey, type FoundRow } from '#features/recipes/utils/recipeRows';
+import { fetchTextPage } from './useRecipeSearch';
+import { UseRecipeTextSearch_PickedRecipeFragmentDoc } from './useRecipeTextSearch.generated';
 import { catalogHintOf, type RecipeTarget } from './useOpenCatalogRecipe';
 
 const MIN_QUERY_LENGTH = 3;
-const PICKER_PAGE_SIZE = 25;
-
-type FoundNode = SearchRecipesQuery['findRecipes']['edges'][number]['node'];
 
 export type PickerDietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
 
@@ -42,49 +38,17 @@ function dietTagsOf(
   return tags;
 }
 
-function pickerRecipeOf(node: FoundNode, translate: Translate): PickerRecipe {
-  const shown = {
-    title: node.name,
-    subtitle: timeAndServings(
-      node.totalTimeMinutes,
-      node.servings,
-      translate,
-    ).join(' • '),
-    imageUrl: node.imageUrl ?? undefined,
-  };
-  if (node.__typename === 'Recipe') {
-    return {
-      ...shown,
-      key: `recipe-${node.id}`,
-      dietTags: dietTagsOf(node.diets, node.freeOf),
-      target: { recipeId: node.id },
-    };
-  }
+function pickerRecipeOf(row: FoundRow, translate: Translate): PickerRecipe {
+  const node = row.source === 'recipe' ? row.recipe : row.hit;
   return {
-    ...shown,
-    key: catalogKey(node),
+    ...recipeCardBasics(node, translate),
+    key: rowKey(row),
     dietTags: dietTagsOf(node.diets, node.freeOf),
-    target: { catalog: catalogHintOf(node) },
+    target:
+      row.source === 'recipe'
+        ? { recipeId: row.recipe.id }
+        : { catalog: catalogHintOf(row.hit) },
   };
-}
-
-/** The first page of a search; empty after a failure. */
-async function firstPage(
-  client: ApolloClient,
-  query: string,
-): Promise<FoundNode[]> {
-  try {
-    const result = await client.query({
-      query: SearchRecipesDocument,
-      variables: { query, first: PICKER_PAGE_SIZE },
-      // Nothing reads a search back from the cache, so it is never written.
-      fetchPolicy: 'no-cache',
-    });
-    return result.data?.findRecipes.edges.map(edge => edge.node) ?? [];
-  } catch {
-    // A failed search leaves the results empty; the caller's own list still shows.
-    return [];
-  }
 }
 
 /**
@@ -98,7 +62,7 @@ export const useRecipeTextSearch = () => {
   const generationRef = useRef(0);
   // Kept as the API returned them: the copy is written below, while rendering,
   // so the rows follow a language change.
-  const [found, setFound] = useState<FoundNode[]>([]);
+  const [found, setFound] = useState<FoundRow[]>([]);
   const [searching, setSearching] = useState(false);
 
   const clear = () => {
@@ -116,14 +80,45 @@ export const useRecipeTextSearch = () => {
     generationRef.current += 1;
     const generation = generationRef.current;
     setSearching(true);
-    void firstPage(client, trimmed).then(nodes => {
+    void fetchTextPage(client, trimmed, DEFAULT_FILTERS, null).then(fetched => {
       if (generation !== generationRef.current) return;
-      setFound(nodes);
+      // A failed search leaves the results empty; the caller's own list still shows.
+      if ('error' in fetched) {
+        errorService.reportError(fetched.error, {
+          operation: 'pickerRecipeSearch',
+        });
+      }
+      setFound('page' in fetched ? fetched.page.rows : []);
       setSearching(false);
     });
   };
 
-  const results = found.map(node => pickerRecipeOf(node, t));
+  /**
+   * Where a picked result goes. A held recipe is written first, so the meal or
+   * template planning it names it before the server answers; the results not
+   * picked are never kept.
+   */
+  const pick = (result: PickerRecipe): RecipeTarget => {
+    const row = found.find(candidate => rowKey(candidate) === result.key);
+    if (row?.source === 'recipe') {
+      const { id, name, imageUrl, servings, totalTimeMinutes } = row.recipe;
+      client.cache.writeFragment({
+        fragment: UseRecipeTextSearch_PickedRecipeFragmentDoc,
+        fragmentName: 'useRecipeTextSearch_pickedRecipe',
+        data: {
+          __typename: 'Recipe',
+          id,
+          name,
+          imageUrl,
+          servings,
+          totalTimeMinutes,
+        },
+      });
+    }
+    return result.target;
+  };
 
-  return { results, searching, search, clear };
+  const results = found.map(row => pickerRecipeOf(row, t));
+
+  return { results, searching, search, clear, pick };
 };

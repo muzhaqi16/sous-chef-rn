@@ -207,10 +207,11 @@ export function useRecipeScreen() {
     );
   };
 
-  // The partial-results toast says to pull down, so a pull repeats any search.
+  // The partial-results toast says to pull down: a pull goes on with a search
+  // the catalog could not finish, and repeats any other.
   const handleRefresh = async () => {
     if (searchPerformed) {
-      presentSearchOutcome(await recipeSearch.rerun(activeFilters));
+      presentSearchOutcome(await recipeSearch.retry(activeFilters));
     } else {
       await discovery.refresh();
     }

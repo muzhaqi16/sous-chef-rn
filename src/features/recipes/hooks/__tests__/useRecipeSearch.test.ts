@@ -17,6 +17,7 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterOptions';
+import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useRecipeSearch, type SearchOutcome } from '../useRecipeSearch';
 import { SearchRecipesDocument } from '../useRecipeSearch.generated';
 import { CatalogRecipesByIngredientsDocument } from '../useCatalogDiscovery.generated';
@@ -75,6 +76,44 @@ const ingredientPage = (providerRecipeId: string, name: string) => ({
     catalogAvailable: true,
   },
 });
+
+const refusedCursor = () =>
+  new CombinedGraphQLErrors({
+    errors: [
+      {
+        message: 'bad cursor',
+        extensions: { code: TopLevelErrorCode.ValidationFailed },
+      },
+    ],
+  });
+
+/** Three pages of "stew", the third cut short by the catalog. */
+const threePagesCutShort = (vars: Record<string, unknown>) => {
+  switch (vars.after) {
+    case 'cursor-1':
+      return page([hit('2', 'Second')], {
+        endCursor: 'cursor-2',
+        hasNextPage: true,
+      });
+    case 'cursor-2':
+      return page([hit('3', 'Third')], {
+        endCursor: 'cursor-3',
+        catalogAvailable: false,
+      });
+    case 'cursor-3':
+      return page([hit('3', 'Third'), hit('4', 'Fourth')]);
+    default:
+      return page([held('r-1', 'First')], {
+        endCursor: 'cursor-1',
+        hasNextPage: true,
+      });
+  }
+};
+
+const ids = (rows: RecipeRow[]) =>
+  rows.map(row =>
+    row.source === 'catalog' ? row.hit.providerRecipeId : row.source,
+  );
 
 const rateLimited = () =>
   new CombinedGraphQLErrors({
@@ -450,7 +489,89 @@ describe('useRecipeSearch', () => {
     ]);
   });
 
-  it('runs the last search again, an ingredient search included', async () => {
+  it('asks for no more on scroll after a page the catalog cut short', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      dataFor: threePagesCutShort,
+    });
+    const { result } = renderSearch([search.mock]);
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    expect(result.current.hasMore).toBe(false);
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(search.fired).toHaveLength(3);
+  });
+
+  it('goes on from where the catalog stopped on a pull, keeping the rows shown', async () => {
+    const search = recordMock(SearchRecipesDocument, {
+      dataFor: threePagesCutShort,
+    });
+    const { result } = renderSearch([search.mock]);
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    let outcome: SearchOutcome | undefined;
+    await act(async () => {
+      outcome = await result.current.retry(DEFAULT_FILTERS);
+    });
+
+    expect(search.fired[3]).toMatchObject({ query: 'stew', after: 'cursor-3' });
+    expect(outcome).toEqual({ status: 'shown', partial: false });
+    expect(ids(result.current.rows)).toEqual(['recipe', '2', '3', '4']);
+  });
+
+  it('runs the search again from its first page, once, when the API refuses where it stopped', async () => {
+    const answers = recordMock(SearchRecipesDocument, {
+      dataFor: threePagesCutShort,
+      match: vars => vars.after !== 'cursor-3',
+    });
+    const refused = recordMock(SearchRecipesDocument, {
+      error: refusedCursor(),
+      match: vars => vars.after === 'cursor-3',
+    });
+    const { result } = renderSearch([answers.mock, refused.mock]);
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    await act(async () => {
+      await result.current.retry(DEFAULT_FILTERS);
+    });
+
+    expect(refused.fired).toHaveLength(1);
+    expect(answers.fired.map(vars => vars.after)).toEqual([
+      null,
+      'cursor-1',
+      'cursor-2',
+      null,
+    ]);
+    expect(ids(result.current.rows)).toEqual(['recipe']);
+  });
+
+  it('runs the last search again on a pull, an ingredient search included', async () => {
     const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
       data: ingredientPage('42', 'Tomato pasta'),
     });
@@ -463,7 +584,7 @@ describe('useRecipeSearch', () => {
       await result.current.searchByIngredients(['Tomato']);
     });
     await act(async () => {
-      await result.current.rerun(DEFAULT_FILTERS);
+      await result.current.retry(DEFAULT_FILTERS);
     });
     expect(byIngredients.fired).toEqual([
       { ingredients: ['tomato'], first: 25 },
@@ -474,7 +595,7 @@ describe('useRecipeSearch', () => {
       await result.current.search('lentil', DEFAULT_FILTERS);
     });
     await act(async () => {
-      await result.current.rerun({ ...DEFAULT_FILTERS, diet: [Diet.Vegan] });
+      await result.current.retry({ ...DEFAULT_FILTERS, diet: [Diet.Vegan] });
     });
     expect(search.fired[1]).toMatchObject({
       query: 'lentil',

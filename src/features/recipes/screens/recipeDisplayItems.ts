@@ -13,7 +13,10 @@ import {
   type RecipeRow,
   type RecipeSuggestionEdge,
 } from '#features/recipes/utils/recipeRows';
-import { timeAndServings } from '#features/recipes/utils/recipeCardText';
+import {
+  recipeCardBasics,
+  timeAndServings,
+} from '#features/recipes/utils/recipeCardText';
 
 export interface DisplayItem {
   id: string;
@@ -34,16 +37,10 @@ const recipeDisplayItem = (
   recipe: FoundRecipe,
   translate: Translate,
 ): CardContent => ({
-  title: recipe.name,
-  subtitle: timeAndServings(
-    recipe.totalTimeMinutes,
-    recipe.servings,
-    translate,
-  ).join(' • '),
+  ...recipeCardBasics(recipe, translate),
   badge: recipe.isSaved
     ? { text: translate('recipes.savedBadge'), variant: 'success' }
     : undefined,
-  imageUrl: recipe.imageUrl ?? undefined,
   target: recipeTarget(recipe.id),
 });
 
@@ -52,28 +49,18 @@ const catalogDisplayItem = (
   hit: FoundHit,
   translate: Translate,
 ): CardContent => ({
-  title: hit.name,
-  subtitle: timeAndServings(hit.totalTimeMinutes, hit.servings, translate).join(
-    ' • ',
-  ),
+  ...recipeCardBasics(hit, translate),
   badge:
     hit.likes && hit.likes > 0
       ? { text: `❤️ ${hit.likes}`, variant: 'primary' }
       : undefined,
-  imageUrl: hit.imageUrl ?? undefined,
   target: { catalog: catalogHintOf(hit) },
 });
 
 function randomDisplayItem(hit: RandomHit, translate: Translate): CardContent {
   return {
-    title: hit.name,
-    subtitle: timeAndServings(
-      hit.totalTimeMinutes,
-      hit.servings,
-      translate,
-    ).join(' • '),
+    ...recipeCardBasics(hit, translate),
     badge: { text: translate('labels.suggested') },
-    imageUrl: hit.imageUrl ?? undefined,
     target: { catalog: catalogHintOf(hit) },
   };
 }

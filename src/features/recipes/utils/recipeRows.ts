@@ -39,7 +39,10 @@ export type RecipeRow =
   /** The server's suggestion from what the household holds. */
   | { source: 'suggestion'; edge: RecipeSuggestionEdge };
 
-export const foundRow = (node: FoundNode): RecipeRow =>
+/** What a text search lists: a recipe the API holds, or a catalog one. */
+export type FoundRow = Extract<RecipeRow, { source: 'recipe' | 'catalog' }>;
+
+export const foundRow = (node: FoundNode): FoundRow =>
   node.__typename === 'Recipe'
     ? { source: 'recipe', recipe: node }
     : { source: 'catalog', hit: node };
