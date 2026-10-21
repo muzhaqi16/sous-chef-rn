@@ -5,6 +5,7 @@ import {
   type CalendarProps,
 } from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
+import { useThemeEpoch } from '#hooks/ui/useThemeEpoch';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 
 const ThemedCalendar = withUnistyles(Calendar, theme => ({
@@ -51,6 +52,8 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   const selectedKey = selectedDate ? toDateKey(selectedDate) : undefined;
   const minKey = minDate ? toDateKey(minDate) : undefined;
   const maxKey = maxDate ? toDateKey(maxDate) : undefined;
+  // react-native-calendars builds its styles from `theme` once, at mount.
+  const themeEpoch = useThemeEpoch();
 
   const handleDayPress = (day: DateData) => {
     onSelectDate(fromDateKey(day.dateString));
@@ -58,6 +61,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
 
   return (
     <ThemedCalendar
+      key={themeEpoch}
       current={selectedKey}
       onDayPress={handleDayPress}
       uniProps={t => ({
