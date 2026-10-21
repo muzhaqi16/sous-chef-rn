@@ -56,6 +56,7 @@ function writeRecipeRow(
 ): void {
   const prep = input.timing?.prepTimeMinutes ?? null;
   const cook = input.timing?.cookTimeMinutes ?? null;
+  const calories = input.nutrition?.caloriesPerServing ?? null;
   writeLocalEntity(cache, {
     fragment: RecipeCacheWriters_RowFragmentDoc,
     fragmentName: 'recipeCacheWriters_row',
@@ -79,8 +80,10 @@ function writeRecipeRow(
       healthGoals: input.dietary?.healthGoals ?? [],
       intolerances: input.dietary?.intolerances ?? [],
       notes: input.notes ?? null,
-      caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
-      nutritionData: input.nutrition?.nutritionData ?? null,
+      caloriesPerServing: calories,
+      // The server's derivation: calories from `caloriesPerServing` when set.
+      nutritionPerServing:
+        calories === null ? null : { __typename: 'RecipeNutrition', calories },
       // A create asking to publish is stored in review until a moderator approves.
       status:
         !input.status || input.status === RecipeStatus.Draft
