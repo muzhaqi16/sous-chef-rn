@@ -174,8 +174,8 @@ export function parseFlags(options) {
 }
 
 /**
- * Fail unless `babel.config.js` runs Unistyles → scope-crawl → compiler in that
- * order: `check-unistyles-variant-staleness` rebuilds that pipeline, and this is
+ * Fail unless `babel.config.js` runs Unistyles → compiler in that order:
+ * `check-unistyles-variant-staleness` rebuilds that pipeline, and this is
  * what ties it to the real config. Read as TEXT — executing the config needs an
  * `api` stub, and `api.env()` differs per branch, so a stub changes the answer.
  */
@@ -183,7 +183,6 @@ export function assertMatchesBabelConfig() {
   const config = readFileSync(fromRoot('babel.config.js'), 'utf8');
   const ORDER = [
     'react-native-unistyles/plugin',
-    './scripts/babel/unistyles-scope-crawl.js',
     'babel-plugin-react-compiler',
   ];
 

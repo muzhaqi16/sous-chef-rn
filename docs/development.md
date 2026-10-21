@@ -456,7 +456,7 @@ otherwise pass; and separately again, the `'use no memo'` opt-out list.
 `scripts/check-compiler-bailouts.baseline.json` does not exist, and a missing
 baseline makes each of the three an INVARIANT (`baselineFile` in
 `scripts/lib/tooling.mjs`): no file may bail, and needing the directive means the
-Babel plugin order or `scripts/babel/unistyles-scope-crawl.js` has regressed.
+Babel plugin order has regressed.
 
 `check-unistyles-variant-staleness` compiles each file to find a style read
 frozen at its first-render value — a defect neither ESLint nor tsc can see,

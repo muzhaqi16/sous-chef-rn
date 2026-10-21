@@ -21,11 +21,10 @@
  * worst form is a read cached against `Symbol.for("react.memo_cache_sentinel")`
  * — read exactly once, ever.
  *
- * `scripts/babel/unistyles-scope-crawl.js` is what keeps the read in the cache
- * key, so the baseline is empty and a finding here is a regression: something
- * defeated that, most likely the plugin order in `babel.config.js` or a shape
- * the guard-aware check below does not recognise. Read the compiled output
- * before acting, and check `node scripts/probe-unistyles-compiler-order.mjs`.
+ * Running Unistyles before the compiler keeps the read in the cache key, so the
+ * baseline is empty and a finding here is a regression: most likely the plugin
+ * order in `babel.config.js`, or a shape the guard-aware check below does not
+ * recognise. Read the compiled output before acting.
  *
  * `'use no memo'` is not the answer — it buys correctness by giving up that
  * component's memoization, and the opt-out ratchet in
@@ -90,12 +89,11 @@ const BABEL_OPTIONS = {
       { disableImportExportTransform: true },
     ],
   ],
-  // The real order from babel.config.js, scope-crawl included. This has to
-  // track that file: a scan that compiles a plugin order the app does not ship
-  // reports on a configuration nobody runs.
+  // The real order from babel.config.js. This has to track that file: a scan
+  // that compiles a plugin order the app does not ship reports on a
+  // configuration nobody runs.
   plugins: [
     [resolveFromRepo('react-native-unistyles/plugin'), { root: 'src' }],
-    join(REPO_ROOT, 'scripts/babel/unistyles-scope-crawl.js'),
     resolveFromRepo('babel-plugin-react-compiler'),
   ],
 };
@@ -376,13 +374,11 @@ if (added.length > 0) {
   }
   console.error(
     '\nThis is a TOOLCHAIN failure, not a defect in the file above. A finding\n' +
-      "here means the Babel plugin order has regressed: Unistyles' `useVariants`\n" +
-      'rewrite declares a shadowing binding without re-crawling scope, so the\n' +
-      'React Compiler caches the variant-resolved style on the wrong\n' +
-      'dependencies and it freezes at its first-render value.\n\n' +
-      '  1. node scripts/probe-unistyles-compiler-order.mjs\n' +
-      '  2. Confirm babel.config.js still runs\n' +
-      '     Unistyles -> unistyles-scope-crawl -> React Compiler, in that order.\n\n' +
+      'here means the Babel plugin order has regressed: the React Compiler\n' +
+      "ran before Unistyles' `useVariants` rewrite, cached the variant-resolved\n" +
+      'style on the wrong dependencies, and it freezes at its first-render\n' +
+      'value. Confirm babel.config.js still runs Unistyles -> React Compiler,\n' +
+      'in that order.\n\n' +
       'Do NOT add `use no memo` to the component. check-compiler-bailouts has\n' +
       'no baseline, so any opt-out is a failure and the next pre-push step\n' +
       'rejects it — and it would hide the regression rather\n' +
