@@ -32,8 +32,7 @@ const StoreModeBody: React.FC<{
   storeMode: ReturnType<typeof useStoreMode>;
 }> = ({ listId, storeMode: { state, actions } }) => {
   const { t } = useTranslation();
-  const { goBack, toListSettings, toShoppingListItemDetail } =
-    useAppNavigation();
+  const { goBack, toShoppingListItemDetail } = useAppNavigation();
   const { openMoveToAisle, openPurchaseAmount, openQuantityEdit } =
     useShoppingListModalActions();
   const showImages = useShowShoppingListImages();
@@ -68,7 +67,8 @@ const StoreModeBody: React.FC<{
         totalCount={state.totalCount}
         estimate={state.estimate}
         storeName={state.storeName}
-        onChooseStore={() => toListSettings({ listId })}
+        canChooseStore={state.canChooseStore}
+        onChooseStore={actions.chooseStore}
         routeNote={state.routeNote}
         aisles={state.aisles}
         lineCount={state.lineCount}

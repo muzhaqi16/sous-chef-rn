@@ -31,6 +31,7 @@ export const shoppingListTestIDs = {
   storeModeScreen: 'store-mode-screen',
   storeModeDone: 'store-mode-done',
   storeModeChooseStore: 'store-mode-choose-store',
+  storeModeStoreField: 'store-mode-store-field',
   /** One aisle's heading, by its department. */
   aisleHeader: (department: string) => `shopping-list-aisle-${department}`,
   aisleRouteNote: 'shopping-list-aisle-route-note',

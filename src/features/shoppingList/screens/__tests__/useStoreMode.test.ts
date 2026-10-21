@@ -33,6 +33,16 @@ jest.mock('../../hooks/useShoppingListActions', () => ({
   useShoppingListActions: () => ({ handleTogglePurchase: jest.fn() }),
 }));
 
+const mockUpdateShoppingList = jest.fn();
+jest.mock('../../hooks/mutations/useUpdateShoppingList', () => ({
+  useUpdateShoppingList: () => ({ updateShoppingList: mockUpdateShoppingList }),
+}));
+
+const mockToastError = jest.fn();
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: (message: string) => mockToastError(message) },
+}));
+
 interface Line {
   id: string;
   itemName: string;
@@ -167,5 +177,30 @@ describe('useStoreMode', () => {
     expect(result.current.state.aisles.map(aisle => aisle.department)).toEqual(
       ROUTE,
     );
+  });
+
+  it("sets the list's store from the trip", async () => {
+    mockUpdateShoppingList.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useStoreMode('list-1'));
+
+    await act(() =>
+      result.current.actions.chooseStore({ id: 'store-1', name: 'Aldi' }),
+    );
+
+    expect(mockUpdateShoppingList).toHaveBeenCalledWith('list-1', {
+      targetStore: { id: 'store-1', name: 'Aldi' },
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it('says so when the store could not be saved', async () => {
+    mockUpdateShoppingList.mockRejectedValueOnce(new Error('refused'));
+    const { result } = renderHook(() => useStoreMode('list-1'));
+
+    await act(() =>
+      result.current.actions.chooseStore({ id: 'store-1', name: 'Aldi' }),
+    );
+
+    expect(mockToastError).toHaveBeenCalledWith('Failed to save settings');
   });
 });
