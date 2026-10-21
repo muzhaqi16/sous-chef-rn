@@ -73,6 +73,8 @@ export interface UsageRecord {
   adjustmentKind?: AdjustmentKind | null;
   adjustmentReason?: string | null;
   usageUnit?: { symbol?: string | null } | null;
+  totalCost?: number | null;
+  currency?: { code: string } | null;
 }
 
 export interface PackageSizeCorrectionInput {

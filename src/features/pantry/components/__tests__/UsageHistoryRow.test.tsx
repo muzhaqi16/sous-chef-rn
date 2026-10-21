@@ -61,6 +61,28 @@ describe('UsageHistoryRow', () => {
     expect(screen.getByText(/^\+/)).toBeTruthy();
   });
 
+  it('shows what a restock was bought for, in its own currency', () => {
+    render(
+      <UsageHistoryRow
+        usage={makeRecord({
+          purpose: UsagePurpose.Restock,
+          totalCost: 1.49,
+          currency: { code: 'USD' },
+        })}
+      />,
+    );
+    expect(screen.getByText('$1.49')).toBeTruthy();
+  });
+
+  it('shows no price when the purchase recorded none', () => {
+    render(
+      <UsageHistoryRow
+        usage={makeRecord({ purpose: UsagePurpose.Restock, totalCost: null })}
+      />,
+    );
+    expect(screen.queryByText(/\$/)).toBeNull();
+  });
+
   it("shows a person's correction reason when their kind says it is theirs", () => {
     render(
       <UsageHistoryRow

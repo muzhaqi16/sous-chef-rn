@@ -198,6 +198,12 @@ fragment PantryItemDetail_pantryItem on PantryItem {
         purpose
         adjustmentReason
         adjustmentKind
+        # A purchase's price: null on every other row, and when unknown.
+        totalCost
+        currency {
+          id
+          code
+        }
       }
     }
   }
