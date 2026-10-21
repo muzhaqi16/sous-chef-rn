@@ -116,7 +116,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     return baseLabel;
   };
 
-  const getAccessibilityHint = () => {
+  const getActionHint = () => {
     if (item.type === 'switch') {
       return item.value
         ? t('settingRow.tapToDisable', { label: item.label })
@@ -129,6 +129,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       return t('settingRow.tapToOpen');
     }
     return undefined;
+  };
+
+  // The row's label replaces the text inside it, the subtitle included, so a
+  // screen reader hears the subtitle here.
+  const getAccessibilityHint = () => {
+    const action = getActionHint();
+    if (!item.subtitle) return action;
+    return action ? `${item.subtitle} ${action}` : item.subtitle;
   };
 
   // A row that reports itself disabled is inert everywhere, not only in the

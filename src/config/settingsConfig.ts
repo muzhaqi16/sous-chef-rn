@@ -15,6 +15,8 @@ export interface SettingItemConfig {
   key: string;
   labelKey: TranslationKey;
   type: string;
+  /** A line under the label: what the setting is for and who sees it. */
+  subtitleKey?: TranslationKey;
   /** `text` only: the example the edit sheet's empty input shows. */
   placeholderKey?: TranslationKey;
   options?: SettingOptionConfig[];
@@ -41,7 +43,11 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
     id: 'personalInformation',
     titleKey: 'labels.personalInformation',
     items: [
-      { key: 'email', labelKey: 'personalInformation.email', type: 'info' },
+      {
+        key: 'email',
+        labelKey: 'personalInformation.email',
+        type: 'info',
+      },
       {
         key: 'firstName',
         labelKey: 'personalInformation.firstName',
@@ -58,6 +64,7 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
         key: 'displayName',
         labelKey: 'personalInformation.displayName',
         type: 'text',
+        subtitleKey: 'personalInformation.displayNameSubtitle',
         placeholderKey: 'personalInformation.displayNamePlaceholder',
       },
       {
@@ -106,6 +113,7 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
         key: 'profileVisibility',
         labelKey: 'personalInformation.profileVisibility',
         type: 'modal',
+        subtitleKey: 'personalInformation.profileVisibilitySubtitle',
         // Values come from the generated enum, never typed by hand: the server
         // refuses a value the schema has no member for.
         options: [
@@ -114,7 +122,7 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
             value: ProfileVisibility.Public,
           },
           {
-            labelKey: 'personalInformation.visibilityFriendsOnly',
+            labelKey: 'labels.members',
             value: ProfileVisibility.Friends,
           },
           {
@@ -122,16 +130,6 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
             value: ProfileVisibility.Private,
           },
         ],
-      },
-      {
-        key: 'showEmail',
-        labelKey: 'personalInformation.showEmail',
-        type: 'switch',
-      },
-      {
-        key: 'showPhone',
-        labelKey: 'personalInformation.showPhone',
-        type: 'switch',
       },
     ],
   },

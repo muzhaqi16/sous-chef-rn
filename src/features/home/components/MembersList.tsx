@@ -78,7 +78,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   return (
     <View style={styles.membersSection}>
       <Text role="label" tone="secondary" style={styles.membersSectionTitle}>
-        {t('homeManagement.cardMembersSectionTitle')}
+        {t('labels.members')}
       </Text>
       <View style={styles.membersList}>
         {members.map(member => {

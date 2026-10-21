@@ -24,8 +24,6 @@ const mockProfile = {
   dateOfBirth: '1990-01-15',
   gender: 'Male',
   profileVisibility: 'PUBLIC',
-  showEmail: true,
-  showPhone: false,
 };
 let mockProfileData: {
   profile: typeof mockProfile | null;
@@ -80,6 +78,7 @@ jest.mock('#/config/settingsConfig', () => ({
           key: 'displayName',
           labelKey: 'personalInformation.displayName',
           type: 'editable',
+          subtitleKey: 'personalInformation.displayNameSubtitle',
         },
         {
           key: 'gender',
@@ -108,7 +107,7 @@ jest.mock('#/config/settingsConfig', () => ({
               value: 'PUBLIC',
             },
             {
-              labelKey: 'personalInformation.visibilityFriendsOnly',
+              labelKey: 'labels.members',
               value: 'FRIENDS',
             },
             {
@@ -116,16 +115,6 @@ jest.mock('#/config/settingsConfig', () => ({
               value: 'PRIVATE',
             },
           ],
-        },
-        {
-          key: 'showEmail',
-          labelKey: 'personalInformation.showEmail',
-          type: 'toggle',
-        },
-        {
-          key: 'showPhone',
-          labelKey: 'personalInformation.showPhone',
-          type: 'toggle',
         },
       ],
     },
@@ -163,6 +152,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
         {items?.map(item => (
           <View key={item.key} testID={`setting-${item.key}`}>
             <Text>{item.label}</Text>
+            {!!item.subtitle && <Text>{item.subtitle}</Text>}
             {item.value !== undefined && (
               <Text testID={`value-${item.key}`}>{String(item.value)}</Text>
             )}
@@ -274,10 +264,10 @@ describe('PersonalInformationScreen', () => {
     expect(screen.getByText('JohnDoe')).toBeTruthy();
   });
 
-  it('displays showEmail toggle value', () => {
+  it('says under the display name who sees it', () => {
     renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByTestId('value-showEmail')).toBeTruthy();
-    expect(screen.getByText('true')).toBeTruthy();
+
+    expect(screen.getByText('Shown to people you share with')).toBeTruthy();
   });
 
   describe('profileVisibility', () => {

@@ -160,6 +160,24 @@ describe('SettingRow', () => {
     expect(row).toBeTruthy();
   });
 
+  // The row's label stands in for everything inside it, the subtitle too.
+  it('reads its subtitle to a screen reader, before what a tap does', () => {
+    const item = {
+      key: 'phone',
+      label: 'Phone',
+      type: 'text',
+      subtitle: 'Only you can see it.',
+      value: '',
+      onSave: jest.fn(),
+    };
+    render(<SettingRow item={item} isFirst={true} isLast={true} />);
+
+    expect(screen.getByText('Only you can see it.')).toBeTruthy();
+    expect(
+      screen.getByAccessibilityHint('Only you can see it. Tap to edit'),
+    ).toBeTruthy();
+  });
+
   it('renders text type with pencil edit indicator', () => {
     const item = {
       key: 'name',

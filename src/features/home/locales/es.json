@@ -76,8 +76,7 @@
     "statsPantry_one": "Despensa",
     "statsPantry_other": "Despensas",
     "cardDefault": "Predeterminado",
-    "cardInvite": "Invitar",
-    "cardMembersSectionTitle": "Miembros"
+    "cardInvite": "Invitar"
   },
   "homeDetail": {
     "shareLinkMessage": "Únete a mi hogar",

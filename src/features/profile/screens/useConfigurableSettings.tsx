@@ -155,7 +155,7 @@ export const useConfigurableSettings = () => {
 
     // Map configuration keys to actual implementation
     switch (config.key) {
-      // The personal-information fields (firstName, gender, showEmail, …) belong
+      // The personal-information fields (firstName, gender, bio, …) belong
       // to PERSONAL_INFO_CONFIG, which PersonalInformationScreen renders with its
       // own builder; this hook only ever sees PROFILE_SETTINGS_CONFIG.
 

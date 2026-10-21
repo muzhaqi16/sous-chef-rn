@@ -24,6 +24,24 @@ describe('settingsConfig', () => {
       expect(section).toBeDefined();
     });
 
+    // Show Email and Show Phone were stored and ignored: the API never gives
+    // another user an email, and nothing shows them a phone.
+    it('offers only the privacy setting the API acts on, and says what it does', () => {
+      const section = PERSONAL_INFO_CONFIG.find(s => s.id === 'privacy')!;
+
+      expect(section.items.map(item => item.key)).toEqual([
+        'profileVisibility',
+      ]);
+    });
+
+    it('says who sees the name others read, and what visibility covers', () => {
+      const explained = PERSONAL_INFO_CONFIG.flatMap(s => s.items)
+        .filter(item => item.subtitleKey !== undefined)
+        .map(item => item.key);
+
+      expect(explained).toEqual(['displayName', 'profileVisibility']);
+    });
+
     it('Personal Information section contains expected fields', () => {
       const section = PERSONAL_INFO_CONFIG.find(
         s => s.id === 'personalInformation',
@@ -67,7 +85,7 @@ describe('settingsConfig', () => {
             value: ProfileVisibility.Public,
           },
           {
-            labelKey: 'personalInformation.visibilityFriendsOnly',
+            labelKey: 'labels.members',
             value: ProfileVisibility.Friends,
           },
           {
