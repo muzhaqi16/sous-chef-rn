@@ -17,6 +17,7 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
   }
   createdBy {
     id
+    displayName
     profile {
       id
       displayName

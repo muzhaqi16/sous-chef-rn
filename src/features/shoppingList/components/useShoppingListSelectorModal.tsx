@@ -23,7 +23,7 @@ import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelecto
 import type { ShoppingListFromQuery } from '../hooks/useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 import type { BarAction } from '#components/molecules/BarActions';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
@@ -245,10 +245,7 @@ export function useShoppingListSelectorModal({
 
     const list = item;
     const [ownership] = list.ownerships;
-    const ownerName = firstNonBlank(
-      ownership?.user.profile?.displayName,
-      ownership?.user.email,
-    );
+    const ownerName = personName(ownership?.user);
 
     if (isDeleteMode) {
       const isSelectedForDelete = selectedForDeletion.has(list.id);

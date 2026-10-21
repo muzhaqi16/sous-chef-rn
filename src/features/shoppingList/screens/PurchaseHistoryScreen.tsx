@@ -23,7 +23,7 @@ import {
 import { formatDateTime, formatMonthDayYear } from '#/utils/formatters/date';
 import { isCalendarDayInstant, purchaseDay } from '#/utils/dateUtils';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 
 const keyExtractor = (item: { id: string }) => item.id;
@@ -168,13 +168,8 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
           >
             {t('purchaseHistory.purchasedBy')}
           </Text>
-          {/* displayName -> email -> "Someone": `email` is null for anyone but
-              the caller themself, and a profile is optional. */}
           <Text role="label" style={styles.purchaseDetailValue}>
-            {firstNonBlank(
-              purchase.user.profile?.displayName,
-              purchase.user.email,
-            ) ?? t('labels.someone')}
+            {personName(purchase.user) ?? t('labels.someone')}
           </Text>
         </View>
       </View>

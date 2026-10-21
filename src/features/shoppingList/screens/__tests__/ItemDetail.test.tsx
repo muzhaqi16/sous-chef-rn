@@ -132,16 +132,13 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
       purchaseCount: 0,
       lastPurchaseDate: null,
     },
+    // A private profile reads null to the list's people; the shared name does not.
     addedBy: {
       __typename: 'User',
       id: 'u1',
       email: 'test@test.com',
-      profile: {
-        __typename: 'UserProfile',
-        id: 'profile-1',
-        displayName: 'Test User',
-        avatar: null,
-      },
+      displayName: 'Test User',
+      profile: null,
     },
     lastEditedBy: null,
     source: {
@@ -415,6 +412,27 @@ describe('ShoppingListItemDetail', () => {
     });
     await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
     expect(screen.getByText('Test User')).toBeTruthy();
+  });
+
+  it('names who last edited the line by the name the list shares', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            lastEditedBy: {
+              __typename: 'User',
+              id: 'u2',
+              displayName: 'Sam',
+              profile: null,
+            },
+          }),
+        ),
+      ],
+    });
+
+    expect(await screen.findByText('Last Edited By')).toBeTruthy();
+    expect(screen.getByText('Sam')).toBeTruthy();
   });
 
   describe('where the line was added from', () => {

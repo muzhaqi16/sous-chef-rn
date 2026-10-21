@@ -6,6 +6,7 @@ fragment MealPlanReaders on MealPlan {
   createdAt
   createdBy {
     id
+    displayName
     profile {
       id
       avatar

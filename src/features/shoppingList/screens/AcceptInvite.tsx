@@ -17,6 +17,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const AcceptInvite: React.FC = () => {
@@ -137,11 +138,13 @@ export const AcceptInvite: React.FC = () => {
     invitationType === 'home'
       ? homeInviteDisplay?.inviter
       : shoppingListInviteDisplay?.invitedBy;
-  const inviterDisplayName = firstNonBlank(
-    inviter?.profile?.displayName,
-    inviter?.email,
-  );
-  const inviterName = inviterDisplayName ?? t('labels.someone');
+  // A list invite names its inviter itself: the invitee shares nothing with
+  // them yet, so their `User.displayName` is withheld.
+  const inviterName =
+    firstNonBlank(
+      shoppingListInviteDisplay?.inviterName,
+      personName(inviter),
+    ) ?? t('labels.someone');
 
   return (
     <Screen header={{ close: () => goBack() }} scroll="none">

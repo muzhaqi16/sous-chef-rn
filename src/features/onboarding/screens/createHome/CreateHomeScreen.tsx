@@ -49,7 +49,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Card } from '#components/atoms/Card';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 
 /** Module scope so the try/catch does not bail the component out of the compiler. */
 async function performCreateHome(
@@ -157,12 +157,7 @@ const InviteCard: React.FC<{
 
   if (!complete) return null;
 
-  // Bound apart: an optional chain inside the `??` test bails the compiler.
-  const namedInviter = firstNonBlank(
-    invite.inviter?.profile?.displayName,
-    invite.inviter?.email,
-  );
-  const inviterName = namedInviter ?? t('labels.someone');
+  const inviterName = personName(invite.inviter) ?? t('labels.someone');
 
   return (
     <Card padding="none" style={styles.inviteCard}>

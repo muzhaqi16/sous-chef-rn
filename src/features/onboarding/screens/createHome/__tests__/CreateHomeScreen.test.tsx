@@ -374,6 +374,9 @@ function buildGetMyPendingInvitesMock(): MockFor<
                       __typename: 'User',
                       id: `inviter-for-${invite.id}`,
                       email: invite.inviter.email ?? null,
+                      // Readable exactly when the profile is: the invitee
+                      // shares nothing with the inviter yet.
+                      displayName: invite.inviter.profile?.displayName ?? null,
                       profile: invite.inviter.profile
                         ? {
                             __typename: 'UserProfile',

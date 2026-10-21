@@ -80,14 +80,16 @@ function buildShoppingListInvite(
 ): MockPart<ShoppingListInvite> {
   return {
     role: input.role ?? CollaboratorRole.Editor,
+    // The invitee shares nothing with the inviter yet, so the invite itself
+    // carries the name and the inviter's own reads null.
+    inviterName: input.invitedByDisplayName ?? null,
     invitedBy:
       input.invitedByEmail === null
         ? null
         : {
             email: input.invitedByEmail ?? 'host@test.com',
-            profile: input.invitedByDisplayName
-              ? { displayName: input.invitedByDisplayName }
-              : null,
+            displayName: null,
+            profile: null,
           },
     shoppingList: {
       name: input.shoppingListName ?? 'My List',
@@ -112,6 +114,8 @@ function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
     home: { name: input.homeName ?? 'Family Home' },
     inviter: {
       email: input.inviterEmail ?? 'owner@test.com',
+      // Readable exactly when the profile is public.
+      displayName: input.inviterDisplayName ?? null,
       profile: input.inviterDisplayName
         ? { displayName: input.inviterDisplayName }
         : null,

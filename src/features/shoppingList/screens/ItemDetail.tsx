@@ -35,6 +35,7 @@ import { formatMonthDayYear } from '#/utils/formatters/date';
 import { purchaseDay } from '#/utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';
 
@@ -225,6 +226,7 @@ export const ShoppingListItemDetail: React.FC<
   // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
   const perUnitSubline =
     purchasedQuantity != null && purchasedQuantity !== 1 ? perUnitPaid : null;
+  const lastEditorName = personName(detail?.lastEditedBy);
 
   return (
     <>
@@ -334,10 +336,7 @@ export const ShoppingListItemDetail: React.FC<
           {!!purchaseInfo?.isPurchased && !!purchaseInfo.purchasedBy && (
             <DetailRow label={t('shoppingListScreens.purchasedBy')}>
               <Text role="label">
-                {firstNonBlank(
-                  purchaseInfo.purchasedBy.displayName,
-                  purchaseInfo.purchasedBy.profile?.displayName,
-                ) ?? t('labels.someone')}
+                {personName(purchaseInfo.purchasedBy) ?? t('labels.someone')}
               </Text>
             </DetailRow>
           )}
@@ -387,19 +386,14 @@ export const ShoppingListItemDetail: React.FC<
             {!!detail.addedBy && (
               <DetailRow label={t('shoppingListScreens.addedBy')}>
                 <Text role="label">
-                  {firstNonBlank(
-                    detail.addedBy.profile?.displayName,
-                    detail.addedBy.email,
-                  ) ?? t('labels.someone')}
+                  {personName(detail.addedBy) ?? t('labels.someone')}
                 </Text>
               </DetailRow>
             )}
-            {!!detail.lastEditedBy?.profile?.displayName &&
-              detail.lastEditedBy.id !== detail.addedBy?.id && (
+            {!!lastEditorName &&
+              detail.lastEditedBy?.id !== detail.addedBy?.id && (
                 <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
-                  <Text role="label">
-                    {detail.lastEditedBy.profile.displayName}
-                  </Text>
+                  <Text role="label">{lastEditorName}</Text>
                 </DetailRow>
               )}
             <DetailRow label={t('shoppingListScreens.addedOn')}>

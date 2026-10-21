@@ -37,11 +37,8 @@ type PurchaseNode = {
     __typename: 'User';
     id: string;
     email: string | null;
-    profile: {
-      __typename: 'UserProfile';
-      id: string;
-      displayName: string | null;
-    } | null;
+    displayName: string | null;
+    profile: null;
   };
 };
 
@@ -55,9 +52,9 @@ const purchaser = (
   __typename: 'User',
   id,
   email,
-  profile: displayName
-    ? { __typename: 'UserProfile', id: `profile-${id}`, displayName }
-    : null,
+  // The name the list's people are owed; the profile is private by default.
+  displayName,
+  profile: null,
 });
 
 const historyMock = (

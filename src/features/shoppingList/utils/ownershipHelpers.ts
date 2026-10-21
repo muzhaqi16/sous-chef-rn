@@ -8,12 +8,15 @@ import {
  * Ownership, roles and user info for shopping lists and homes. `user.email` is
  * nullable — the API returns it only for the caller's own record — so it is
  * never a guaranteed display label; see the `OwnerInfo` consumers' fallbacks.
+ * A name comes from `user.displayName`, which anyone sharing the home or list
+ * may read; `profile` follows the owner's visibility setting.
  */
 interface ShoppingListOwnership {
   userId: string;
   user?: {
     id: string;
     email?: string | null;
+    displayName?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -55,6 +58,7 @@ interface HomeMember {
   user?: {
     id: string;
     email?: string | null;
+    displayName?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -107,7 +111,8 @@ export function getShoppingListOwnerInfo(
   return {
     id: ownership.user.id,
     email: ownership.user.email,
-    displayName: ownership.user.profile?.displayName,
+    displayName:
+      ownership.user.displayName ?? ownership.user.profile?.displayName,
     avatar: ownership.user.profile?.avatar,
   };
 }
@@ -191,7 +196,7 @@ export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
   return {
     id: owner.user.id,
     email: owner.user.email,
-    displayName: owner.user.profile?.displayName,
+    displayName: owner.user.displayName ?? owner.user.profile?.displayName,
     avatar: owner.user.profile?.avatar,
   };
 }

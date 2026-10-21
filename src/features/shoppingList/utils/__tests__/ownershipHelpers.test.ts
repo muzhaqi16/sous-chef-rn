@@ -62,6 +62,18 @@ describe('ownershipHelpers', () => {
       const list = { ownerships: [{ userId: 'u1', user: null }] };
       expect(getShoppingListOwnerInfo(list)).toBeNull();
     });
+
+    it("names a private-profile owner by the user's shared displayName", () => {
+      const list = {
+        ownerships: [
+          {
+            userId: 'u1',
+            user: { id: 'u1', email: null, displayName: 'Ana', profile: null },
+          },
+        ],
+      };
+      expect(getShoppingListOwnerInfo(list)?.displayName).toBe('Ana');
+    });
   });
 
   describe('getShoppingListDisplayAvatarInfo', () => {
@@ -188,6 +200,19 @@ describe('ownershipHelpers', () => {
         members: [{ userId: 'u1', role: MembershipRole.Owner, user: null }],
       };
       expect(getHomeOwnerInfo(home)).toBeNull();
+    });
+
+    it("names a private-profile owner by the user's shared displayName", () => {
+      const home = {
+        members: [
+          {
+            userId: 'u1',
+            role: MembershipRole.Owner,
+            user: { id: 'u1', email: null, displayName: 'Ana', profile: null },
+          },
+        ],
+      };
+      expect(getHomeOwnerInfo(home)?.displayName).toBe('Ana');
     });
   });
 

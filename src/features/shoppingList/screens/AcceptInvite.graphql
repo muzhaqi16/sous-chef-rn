@@ -1,6 +1,7 @@
 fragment AcceptInvite_shoppingListInvite on ShoppingListCollaborator {
   id
   role
+  inviterName
   invitedBy {
     id
     email
