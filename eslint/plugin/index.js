@@ -32,6 +32,5 @@ module.exports = {
     'on-fill-text-uses-its-token': require('./rules/on-fill-text-uses-its-token'),
     'selects-key-field-directly': require('./rules/selects-key-field-directly'),
     'animated-node-takes-no-themed-style': require('./rules/animated-node-takes-no-themed-style'),
-    'no-module-scope-platform-read': require('./rules/no-module-scope-platform-read'),
   },
 };

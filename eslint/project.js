@@ -52,7 +52,6 @@ const PRODUCTION_RULES = [
   'rngh-refresh-control-matches-host',
   'on-fill-text-uses-its-token',
   'animated-node-takes-no-themed-style',
-  'no-module-scope-platform-read',
 ];
 
 const productionRules = severity =>

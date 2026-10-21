@@ -89,8 +89,9 @@ Map and reasoning: `docs/architecture.md`.
   both sides read goes in its `types.ts`.
 - **Core reaches the device only through a port** (`requirePlatform`,
   `src/platform/`), read where it is used and never while a module loads
-  (`sous-chef/no-module-scope-platform-read`); persisted stores hydrate when the
-  host starts them (`startPersistedStores`). A host registers its presenters,
+  (`coreLoadsWithNothingInstalled.test.ts`, `installEvaluatesEagerly.test.ts`,
+  `platformInstallOrder.test.ts`); persisted stores hydrate when the host
+  starts them (`startPersistedStores`). A host registers its presenters,
   its session steps (`registerSessionHost`) and its start-up steps (`StartupHost`).
 - **One list of source roots** (`scripts/lib/sourceRoots.js`): codegen, the
   manifest, readers, GraphQL lint and the scanner tests read it, so a new

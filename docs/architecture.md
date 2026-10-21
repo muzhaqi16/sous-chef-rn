@@ -128,13 +128,13 @@ The core reaches the device only through ports in `src/platform/`, in two kinds.
 
 **Services** are installed once by the host, before the core runs, with
 `installPlatform()`. A core module reads one with `requirePlatform('<name>')`
-where it uses it, never while it loads
-(`sous-chef/no-module-scope-platform-read`). The read throws
+where it uses it, never while it loads. The read throws
 `PlatformServiceMissing` naming the service when the install has not happened
 or left it out, so nothing degrades silently. Loading the core reads nothing:
 `coreLoadsWithNothingInstalled.test.ts` loads every core file with nothing
-installed, and `installEvaluatesEagerly.test.ts` evaluates the native install
-the way an eager bundler does.
+installed, `installEvaluatesEagerly.test.ts` evaluates the native install the
+way an eager bundler does, and `platformInstallOrder.test.ts` loads what
+`index.js` imports before the install.
 
 | Service         | What it is                                                 | Mobile adapter                                     |
 | --------------- | ---------------------------------------------------------- | -------------------------------------------------- |
