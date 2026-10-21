@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { SystemBars } from 'react-native-edge-to-edge';
+import { StatusBar } from 'react-native';
 import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
 import { useIsHydrated, useTheme } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
@@ -23,7 +23,7 @@ export const ThemedStatusBar = () => {
       ? 'dark'
       : 'light';
 
-  const barStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
+  const barStyle = resolvedTheme === 'dark' ? 'light-content' : 'dark-content';
 
   // Read from the *registered* Unistyles theme so any runtime overrides
   // applied by `useAppearance` (e.g. high-contrast text or a future
@@ -31,7 +31,8 @@ export const ThemedStatusBar = () => {
   // the original `themes.ts` exports and skip live overrides.
   const bgColor = UnistylesRuntime.getTheme(resolvedTheme).colors.background;
 
-  // Sync native theme: root view background (cross-platform) and iOS system UI style.
+  // Sync native theme: root view background, iOS system UI style, and the
+  // Android navigation bar's button colour.
   // Skip before hydration to preserve AppDelegate's setup.
   useLayoutEffect(() => {
     if (!isHydrated) return;
@@ -55,5 +56,12 @@ export const ThemedStatusBar = () => {
   // Before hydration, render nothing — AppDelegate's native setup persists.
   if (!isHydrated) return null;
 
-  return <SystemBars style={barStyle} hidden={false} />;
+  return (
+    <StatusBar
+      barStyle={barStyle}
+      hidden={false}
+      animated
+      showHideTransition="fade"
+    />
+  );
 };

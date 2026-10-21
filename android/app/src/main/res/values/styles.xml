@@ -1,7 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="AppTheme" parent="Theme.EdgeToEdge">
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
-        <item name="enforceNavigationBarContrast">false</item>
+        <!-- edgeToEdgeEnabled reads this to leave the navigation bar transparent.
+             Until ThemedStatusBar mounts, the bar icons follow the system theme. -->
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">?attr/isLightTheme</item>
         <!-- React Native measures text by glyph advances. Targeting API 35+ makes
              every TextView break lines by glyph bounds instead, so a line that
              fits when measured can wrap when drawn and its last word is clipped. -->
