@@ -1,6 +1,5 @@
 import React from 'react';
 import { createNativeStackScreen } from '@react-navigation/native-stack';
-import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { SearchResultsScreen } from './SearchResultsScreen';
 
 // Lazy-loaded to defer vision-camera's JS until the scanner is actually opened.
@@ -19,9 +18,6 @@ export const barcodeScreens = {
   BarcodeScanner: createNativeStackScreen({
     screen: BarcodeScannerScreen,
     linking: 'scan',
-    // Full-bleed camera that hides the status bar while focused, so it opts out
-    // of the stack-wide top inset.
-    layout: noInsetScreenLayout,
   }),
   SearchResults: createNativeStackScreen({
     screen: SearchResultsScreen,
