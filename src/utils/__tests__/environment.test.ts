@@ -179,7 +179,7 @@ describe('environment', () => {
       // disables coverage everywhere without failing anything. This mock
       // defaulted to `false` while the real function returns `true` under Jest
       // (`__DEV__` is defined true by @react-native/jest-preset), so every
-      // suite that rendered `useStartupInit` without an explicit override
+      // suite that rendered the start-up without an explicit override
       // skipped `injectDetoxLaunchArgs` entirely — a renamed launch arg or a
       // parse change inside it passed CI untouched, which is how the Detox
       // auth break in deaf9d4c reached main.

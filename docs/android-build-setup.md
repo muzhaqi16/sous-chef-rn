@@ -121,7 +121,6 @@ Secrets:
 - OTLP_METRICS_AUTH_PASSWORD         # Prometheus glc_ token
 - OTLP_LOGS_AUTH_USERNAME            # Loki stack instance ID (separate from Prometheus on Grafana Cloud)
 - OTLP_LOGS_AUTH_PASSWORD            # Loki glc_ token
-- SPOONACULAR_API_KEY
 ```
 
 #### 2. stg
@@ -139,7 +138,6 @@ Secrets:
 - OTLP_METRICS_AUTH_PASSWORD
 - OTLP_LOGS_AUTH_USERNAME
 - OTLP_LOGS_AUTH_PASSWORD
-- SPOONACULAR_API_KEY
 ```
 
 #### 3. prod
@@ -157,7 +155,6 @@ Secrets:
 - OTLP_METRICS_AUTH_PASSWORD
 - OTLP_LOGS_AUTH_USERNAME
 - OTLP_LOGS_AUTH_PASSWORD
-- SPOONACULAR_API_KEY
 ```
 
 ---

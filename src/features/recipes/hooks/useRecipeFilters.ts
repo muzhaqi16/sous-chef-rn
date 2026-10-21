@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   type RecipeFilters,
   DEFAULT_FILTERS,
-} from '#features/recipes/utils/recipeFilterMaps';
+} from '#features/recipes/utils/recipeFilterOptions';
 
 interface UseRecipeFiltersArgs {
   /** Filters normalized from the dietary profile, or null until it loads.

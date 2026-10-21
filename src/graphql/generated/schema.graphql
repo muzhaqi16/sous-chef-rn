@@ -1160,6 +1160,86 @@ Always include a __typename so the variant can be discriminated.
 """
 union CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+"""One page of randomCatalogRecipes; a random draw has no later page"""
+type CatalogRecipeConnection {
+  """False when the catalog could not be asked; the page is then empty"""
+  catalogAvailable: Boolean!
+  edges: [CatalogRecipeEdge!]!
+  pageInfo: PageInfo!
+}
+
+"""One randomCatalogRecipes result"""
+type CatalogRecipeEdge {
+  cursor: String!
+  node: CatalogRecipeHit!
+}
+
+"""
+A recipe in an external catalog that a search found. It is not a stored
+recipe: open it with upsertExternalRecipe, passing provider as source and
+providerRecipeId as externalId. Every field it shares with Recipe has
+Recipe's type, so one selection can read both members of RecipeSearchNode.
+"""
+type CatalogRecipeHit {
+  """The diets the catalog says the recipe suits"""
+  diets: [Diet!]!
+  """
+  The intolerances the catalog says the recipe is free of: DAIRY and GLUTEN only
+  """
+  freeOf: [Intolerance!]!
+  """The catalog's health score, 0 to 100"""
+  healthScore: Int
+  """An image the catalog hosts"""
+  imageUrl: String
+  """How many people liked the recipe in the catalog"""
+  likes: Int
+  name: String!
+  """The catalog the recipe is in; show its attribution"""
+  provider: ExternalSource!
+  """The recipe's id in that catalog"""
+  providerRecipeId: String!
+  """
+  The API's copy of the recipe, when it holds one with content; null until
+  someone opens it or a search keeps it. A snapshot: after
+  upsertExternalRecipe, read the Recipe it returns.
+  """
+  recipe: Recipe
+  """As the stored copy holds it: the catalog's count, else 4"""
+  servings: Int!
+  """The site the recipe is from; credit it, with sourceUrl as the link"""
+  source: String
+  """The recipe's page on that site"""
+  sourceUrl: URL
+  """Minutes from start to table"""
+  totalTimeMinutes: Int
+}
+
+"""
+One ranked page of catalogRecipesByIngredients; a ranked list has no later page
+"""
+type CatalogRecipeMatchConnection {
+  """
+  False when the catalog could not be asked for every result. The results
+  whose details could not be read are left out; asking again later may
+  find them.
+  """
+  catalogAvailable: Boolean!
+  edges: [CatalogRecipeMatchEdge!]!
+  pageInfo: PageInfo!
+}
+
+"""
+One catalogRecipesByIngredients result and how it uses the listed ingredients
+"""
+type CatalogRecipeMatchEdge {
+  cursor: String!
+  """How many ingredients it needs that were not listed"""
+  missedIngredientCount: Int!
+  node: CatalogRecipeHit!
+  """How many of the listed ingredients the recipe uses"""
+  usedIngredientCount: Int!
+}
+
 """Category type for organizing items"""
 type Category {
   """Active child categories the caller can see, by sort order, then name"""
@@ -12224,6 +12304,19 @@ type Query {
   """Check whether the current user's account can be safely deleted."""
   canDeleteAccount: CanDeleteAccountResult!
   """
+  External catalog recipes ranked by how many of the named ingredients they
+  use, ignoring pantry staples such as water, salt and flour. Forward only:
+  the ranking has no later page.
+  """
+  catalogRecipesByIngredients(
+    """How many recipes: 25 when omitted, at most 25"""
+    first: Int
+    """
+    1 to 20 ingredient names, each at most 100 characters; case and order do not matter
+    """
+    ingredients: [String!]!
+  ): CatalogRecipeMatchConnection!
+  """
   Get categories with filtering and cursor-based pagination. The top-level
   categories are `filters: { parentId: null }`.
   """
@@ -12382,6 +12475,26 @@ type Query {
     """The id of the ExpirationNotification to read"""
     id: ID!
   ): ExpirationNotification
+  """
+  Search every recipe the caller can open by text: first the recipes the API
+  holds that the caller may see, best match first, their own (at any status)
+  and saved ones ahead of published ones; then the external catalog's, in
+  its order. A catalog recipe already listed in the first part, or one an
+  admin removed, is left out. Every RecipeFilters field but includeDeleted
+  applies; a difficulty, or a status other than PUBLISHED, has no catalog
+  equivalent, so no catalog result follows. The cursor belongs to this query
+  only.
+  """
+  findRecipes(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Narrows the list: every field given must match"""
+    filters: RecipeFilters
+    """Page size: default 25, at most 25"""
+    first: Int
+    """The search text, at most 200 characters"""
+    query: String!
+  ): RecipeSearchConnection!
   """Fetch a single home by its ID."""
   home(
     """The id of the Home to read"""
@@ -12727,6 +12840,19 @@ type Query {
     """Whose purchases to list; the caller's own when omitted"""
     userId: ID
   ): PurchaseConnection!
+  """
+  A random draw of external catalog recipes suiting every listed diet and
+  free of every listed intolerance. The draw is shared by every caller asking
+  the same, until the catalog cache expires. Forward only.
+  """
+  randomCatalogRecipes(
+    """Diets every recipe must suit"""
+    diets: [Diet!]
+    """How many recipes: 25 when omitted, at most 25"""
+    first: Int
+    """Intolerances no recipe may contain"""
+    intolerances: [Intolerance!]
+  ): CatalogRecipeConnection!
   """
   A receipt parse the caller created; null for any other. Deleted after 7 days.
   """
@@ -13504,9 +13630,17 @@ type Recipe {
     orderBy: RecipeOrderBy
   ): RecipeForkConnection!
   """
+  The intolerances the recipe's source says it is free of: DAIRY and GLUTEN
+  only, from a catalog recipe's provider flags; empty when none are recorded.
+  Unlike intolerances, which lists what the recipe contains.
+  """
+  freeOf: [Intolerance!]!
+  """
   Health goals this recipe suits, such as LOW_CARB or HIGH_PROTEIN; empty when none are recorded.
   """
   healthGoals: [HealthGoal!]!
+  """The catalog's health score, 0 to 100; null when the source has none"""
+  healthScore: Int
   """Unique identifier of the recipe."""
   id: ID!
   """URL of the recipe's image, or null when it has none."""
@@ -13580,6 +13714,12 @@ type Recipe {
   no fixed shape. Null when none was supplied.
   """
   nutritionData: JSON
+  """
+  One serving's nutrition, typed: read from nutritionData whichever shape it
+  holds, with calories from caloriesPerServing when set. Null when nothing
+  is known.
+  """
+  nutritionPerServing: RecipeNutrition
   """
   Name of the person who originally wrote the recipe, when that is not its
   creator. A fork carries the original creator's display name. Null when not
@@ -14047,6 +14187,11 @@ type RecipeIngredient {
   estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
+  """
+  The ingredient's image: an absolute http(s) address, or null. A catalog
+  item's own image wins; a bare provider file name is served from the
+  provider's image host.
+  """
   image: String
   isOptional: Boolean!
   item: Item
@@ -14266,6 +14411,27 @@ input RecipeMetadataInput {
   servings: Int
 }
 
+"""
+One serving of a recipe's nutrition, in NutritionFacts' units. Each field is
+null when the recipe's source did not supply it.
+"""
+type RecipeNutrition {
+  """Energy, kcal"""
+  calories: Float
+  """Grams"""
+  dietaryFiber: Float
+  """Grams"""
+  protein: Float
+  """Milligrams"""
+  sodium: Float
+  """Grams"""
+  totalCarbs: Float
+  """Grams"""
+  totalFat: Float
+  """Grams"""
+  totalSugars: Float
+}
+
 """Order by options for recipes"""
 input RecipeOrderBy {
   createdAt: SortOrder
@@ -14378,6 +14544,33 @@ enum RecipeRevisionStatus {
   """
   WITHDRAWN
 }
+
+"""One page of findRecipes"""
+type RecipeSearchConnection {
+  """
+  False when this page needed the catalog and it could not be asked (its
+  budget spent, the caller's daily allowance spent, or the catalog down).
+  The page still lists the recipes the API holds; fetching after endCursor
+  later resumes the catalog.
+  """
+  catalogAvailable: Boolean!
+  edges: [RecipeSearchEdge!]!
+  """
+  endCursor marks where the catalog continues even when this page has no
+  catalog result; hasNextPage is false while catalogAvailable is false.
+  """
+  pageInfo: PageInfo!
+}
+
+"""One findRecipes result and its position"""
+type RecipeSearchEdge {
+  """Pass as after to resume just past this result"""
+  cursor: String!
+  node: RecipeSearchNode!
+}
+
+"""A findRecipes result: a recipe the API holds, or one the catalog found"""
+union RecipeSearchNode = CatalogRecipeHit | Recipe
 
 type RecipeSourceMapping {
   createdAt: DateTime!

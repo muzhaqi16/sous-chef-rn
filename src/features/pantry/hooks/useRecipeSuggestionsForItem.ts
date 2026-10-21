@@ -1,72 +1,51 @@
-import { useState, useEffect } from 'react';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import type { RecipeInformation } from '#/services/spoonacular/types';
-import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
-import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { catalogIngredientNames } from '#domain/catalogRecipes';
+import { useCatalogReadOptions } from '#features/recipes/hooks/useCatalogReadOptions';
+import {
+  CatalogRecipesForItemDocument,
+  type CatalogRecipesForItemQuery,
+} from './useRecipeSuggestionsForItem.generated';
+
+const SUGGESTION_COUNT = 5;
+const SUGGESTIONS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+export type ItemRecipeSuggestion =
+  CatalogRecipesForItemQuery['catalogRecipesByIngredients']['edges'][number]['node'];
 
 export interface UseRecipeSuggestionsForItemResult {
-  suggestedRecipes: RecipeInformation[];
+  suggestedRecipes: ItemRecipeSuggestion[];
   loadingRecipes: boolean;
 }
 
-/** Module-level setter wrapper. Hides direct setState calls from the
- *  react-hooks/set-state-in-effect lint rule that would otherwise flag the
- *  cache-hit fast path. */
-function syncFromCache(
-  cachedRecipes: RecipeInformation[],
-  setSuggestedRecipes: (v: RecipeInformation[]) => void,
-): void {
-  setSuggestedRecipes(cachedRecipes);
-}
-
 /**
- * Fetches Spoonacular recipe suggestions for a pantry item by name. Hits the
- * in-memory cache (`useRecipeSuggestionsStore`) first; only calls the API on
- * cache miss. Aborts in-flight requests when the item changes or the
- * component unmounts.
+ * Catalog recipes that use a pantry item, by its name. Item names repeat
+ * across households, so the API's cache answers most of these.
  */
 export function useRecipeSuggestionsForItem(
   itemName: string | undefined,
 ): UseRecipeSuggestionsForItemResult {
-  const { getCachedSuggestions, setCachedSuggestions } =
-    useRecipeSuggestionsStore();
-  const [suggestedRecipes, setSuggestedRecipes] = useState<RecipeInformation[]>(
-    [],
+  // Empty for a name the API would refuse, which leaves nothing to ask about.
+  const ingredients = catalogIngredientNames(itemName ? [itemName] : []);
+  const asked = ingredients.length > 0;
+  const variables = asked ? { ingredients, first: SUGGESTION_COUNT } : null;
+  const readOptions = useCatalogReadOptions(
+    CatalogRecipesForItemDocument,
+    variables,
+    {
+      field: 'catalogRecipesByIngredients',
+      maxAgeMs: SUGGESTIONS_MAX_AGE_MS,
+      pageOf: data => data.catalogRecipesByIngredients,
+    },
   );
-  const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const { data, loading } = useQuery(
+    CatalogRecipesForItemDocument,
+    variables ? { variables, ...readOptions } : skipToken,
+  );
+  // A skipped query keeps the last item's suggestions; with nothing asked, none.
+  const edges = asked ? data?.catalogRecipesByIngredients.edges : undefined;
 
-  useEffect(() => {
-    if (!itemName) return;
-
-    const cachedRecipes = getCachedSuggestions(itemName);
-    if (cachedRecipes) {
-      syncFromCache(cachedRecipes, setSuggestedRecipes);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    void executeWithLoadingState(
-      async () => {
-        const recipes = await spoonacularService.searchRecipesWithInfo(
-          { query: itemName, number: 5 },
-          controller.signal,
-        );
-        setSuggestedRecipes(recipes.results);
-        setCachedSuggestions(itemName, recipes.results);
-      },
-      setLoadingRecipes,
-      (error: unknown) => {
-        if (error instanceof Error && error.name === 'AbortError') return;
-        errorService.reportError(error, {
-          operation: 'useRecipeSuggestionsForItem.fetch',
-        });
-      },
-    );
-
-    return () => controller.abort();
-  }, [itemName, getCachedSuggestions, setCachedSuggestions]);
-
-  return { suggestedRecipes, loadingRecipes };
+  return {
+    suggestedRecipes: (edges ?? []).map(edge => edge.node),
+    loadingRecipes: asked && loading && !data,
+  };
 }

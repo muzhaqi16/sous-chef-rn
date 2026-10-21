@@ -102,6 +102,15 @@ app calls from `App.tsx` before the first sign-in
 A host that registers nothing signs out through the same teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
 that it still leaves no tokens, cache, queued writes or session-scoped state.
 
+**Start-up has the same shape.** `useCoreStartup` (`src/bootstrap/`) runs the
+core's steps once storage has hydrated: the device id, the offline-queue
+failure handler and telemetry. A `StartupHost` adds the device's around them
+(`src/app/mobileStartupHost.ts`): launch arguments before, the stored biometric
+sign-in, haptics, performance marks and push registration after. Each host step
+is reported by name when it fails and never stops the core's start;
+`__tests__/core-portability/coreStartsWithoutHostSteps.test.ts` starts the core
+with no host steps at all.
+
 **A session is bound to the device only if the id is present at sign-in.**
 `login` and `register` await `ensureDeviceId()` before minting, because
 `authLink` sends only what the sync `getDeviceId()` already holds. A session

@@ -532,7 +532,7 @@ const RecipeDetailScreen: React.FC = () => {
 
         <RecipeEnrichment
           caloriesPerServing={displayData.caloriesPerServing}
-          nutritionData={displayData.nutritionData}
+          nutrition={displayData.nutrition}
           tips={displayData.tips}
           videoUrl={displayData.videoUrl}
           forkedFromName={displayData.forkedFromName}
@@ -790,7 +790,7 @@ const RecipeDetailScreen: React.FC = () => {
 export const RecipeDetail: React.FC<
   StaticScreenProps<{
     recipeId?: string;
-    /** A Spoonacular recipe the screen opens itself, shown as the row was. */
+    /** A catalog recipe the screen opens itself, shown as the row was. */
     catalog?: CatalogRecipeHint;
   }>
 > = () => (

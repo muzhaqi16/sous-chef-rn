@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { zustandStorage } from '#/store/deviceStorage';
+import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 
 /** Whether this user lets receipt photos go to the server to be read; null until asked. */
@@ -20,6 +21,7 @@ export const useReceiptPhotoConsentStore = create<ReceiptPhotoConsentState>()(
     {
       name: 'sous-chef-receipt-photo-consent',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       version: 1,
       partialize: state => ({ consent: state.consent }),
     },
@@ -36,6 +38,8 @@ export async function storedReceiptPhotoConsent(): Promise<ReceiptPhotoConsent> 
   if (!stored.hasHydrated()) await stored.rehydrate();
   return useReceiptPhotoConsentStore.getState().consent;
 }
+
+hydrateWhenStarted(useReceiptPhotoConsentStore);
 
 // The next person on the phone answers for themselves.
 registerSessionScopedStore('receiptPhotoConsent', () =>

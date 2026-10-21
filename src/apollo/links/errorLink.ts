@@ -16,7 +16,7 @@ import {
   isRateLimitError,
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
-import { CLIENT_VERSION } from '../clientIdentity';
+import { clientVersion } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LogoutCleanup } from '../logoutCleanup';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
@@ -112,7 +112,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // fails identically, so bail out before anything downstream recovers.
       if (code === CLIENT_UPGRADE_REQUIRED) {
         logger.error(
-          `App version ${CLIENT_VERSION} is below the server minimum (${extensionText(
+          `App version ${clientVersion()} is below the server minimum (${extensionText(
             err.extensions?.minimumVersion,
             'unknown',
           )}); ${operation.operationName} refused until the app is updated`,

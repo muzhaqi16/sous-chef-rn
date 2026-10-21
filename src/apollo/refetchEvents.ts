@@ -53,7 +53,7 @@ const wsReconnected = () =>
   );
 
 /** Subscribes to navigation state changes; returns the unsubscribe. */
-type NavigationSubscribe = (listener: () => void) => () => void;
+export type NavigationSubscribe = (listener: () => void) => () => void;
 
 const hasLiveSession = (): boolean =>
   !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();

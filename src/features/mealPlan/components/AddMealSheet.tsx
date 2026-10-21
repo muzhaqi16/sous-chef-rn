@@ -27,9 +27,13 @@ import {
 import { SavedRecipeRow } from './SavedRecipeRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
-import type { TransformedRecipeItem, DietTag } from '#domain/recipeTransform';
+import { MAX_RECIPE_QUERY_LENGTH } from '#domain/catalogRecipes';
 import { useOpenCatalogRecipe } from '#features/recipes/hooks/useOpenCatalogRecipe';
-import { useRecipeTextSearch } from '#features/recipes/hooks/useRecipeTextSearch';
+import {
+  useRecipeTextSearch,
+  type PickerDietTag,
+  type PickerRecipe,
+} from '#features/recipes/hooks/useRecipeTextSearch';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
@@ -45,7 +49,7 @@ interface AddMealSheetProps {
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
 
-const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
+const DIET_TAG_LABEL_KEYS: Record<PickerDietTag, TranslationKey> = {
   vegan: 'addMealSheet.dietVegan',
   vegetarian: 'addMealSheet.dietVegetarian',
   glutenFree: 'addMealSheet.dietGlutenFree',
@@ -57,11 +61,11 @@ function resetSheetState(
   initialMealType: MealType | undefined,
   setSearchQuery: (v: string) => void,
   setSelectedMealType: (v: MealType) => void,
-  setLoadingItemId: (v: number | null) => void,
+  setLoadingItemKey: (v: string | null) => void,
 ) {
   setSearchQuery('');
   setSelectedMealType(initialMealType ?? MealType.Dinner);
-  setLoadingItemId(null);
+  setLoadingItemKey(null);
 }
 
 // Every row is the same component, so one recycling pool is correct.
@@ -93,12 +97,13 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   } = useSavedRecipes({ loadAllPages: hasQuery });
 
   const {
-    results: spoonacularResults,
+    results: searchResults,
     searching: searchingApi,
-    search: searchSpoonacular,
-    clear: clearSpoonacular,
+    search: searchRecipes,
+    clear: clearSearchResults,
+    pick: pickSearchResult,
   } = useRecipeTextSearch();
-  const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
+  const [loadingItemKey, setLoadingItemKey] = useState<string | null>(null);
 
   const { openCatalogRecipe } = useOpenCatalogRecipe();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
@@ -112,21 +117,21 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         initialMealType,
         setSearchQuery,
         setSelectedMealType,
-        setLoadingItemId,
+        setLoadingItemKey,
       );
-      clearSpoonacular();
+      clearSearchResults();
       searchBarRef.current?.clear();
     }
-  }, [visible, initialMealType, clearSpoonacular]);
+  }, [visible, initialMealType, clearSearchResults]);
 
   const handleDebouncedSearch = (text: string) => {
     setSearchQuery(text);
-    searchSpoonacular(text);
+    searchRecipes(text);
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    clearSpoonacular();
+    clearSearchResults();
   };
 
   const handleSelectRecipe = (recipeId: string) => {
@@ -142,17 +147,18 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     onClose();
   };
 
-  const handleSelectSpoonacularRecipe = (item: TransformedRecipeItem) => {
-    setLoadingItemId(item.spoonacularId);
+  const handleSelectSearchResult = (item: PickerRecipe) => {
+    const target = pickSearchResult(item);
+    if ('recipeId' in target) {
+      handleSelectRecipe(target.recipeId);
+      return;
+    }
+    setLoadingItemKey(item.key);
 
     void executeAsyncWithCleanup(
       async () => {
         // Planning asks the API for whatever the recipe still lacks.
-        const result = await openCatalogRecipe({
-          externalId: String(item.spoonacularId),
-          name: item.title,
-          imageUrl: item.imageUrl,
-        });
+        const result = await openCatalogRecipe(target.catalog);
         if (!result.opened) {
           toastService.error(result.failure);
           return;
@@ -160,7 +166,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         onAddRecipe(result.recipeId, selectedMealType);
         onClose();
       },
-      () => setLoadingItemId(null),
+      () => setLoadingItemKey(null),
       () => {
         toastService.error(t('addMealSheet.addRecipeFailed'));
       },
@@ -182,6 +188,13 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     recipes.filter(r => r.recipe !== null),
     searchQuery,
     [r => r.recipe?.name],
+  );
+  // A saved recipe the search also finds is listed once: with the saved ones
+  // when its name matches, else with the results, which the API matches by
+  // more than the name.
+  const savedIds = new Set(filteredRecipes.map(r => r.recipe?.id));
+  const otherResults = searchResults.filter(
+    item => !('recipeId' in item.target) || !savedIds.has(item.target.recipeId),
   );
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
@@ -223,6 +236,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             isLoading={searchingApi}
             debounceMs={500}
             autoCapitalize="none"
+            maxLength={MAX_RECIPE_QUERY_LENGTH}
           />
         </View>
 
@@ -295,7 +309,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               ) : null}
 
               {/* Additional search results */}
-              {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
+              {hasQuery && (searchingApi || otherResults.length > 0) ? (
                 <>
                   {searchingApi ? (
                     <View style={styles.centeredSpinner}>
@@ -303,11 +317,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                     </View>
                   ) : null}
 
-                  {spoonacularResults.map(item => (
+                  {otherResults.map(item => (
                     <AppPressable
-                      key={item.id}
-                      onPress={() => handleSelectSpoonacularRecipe(item)}
-                      disabled={loadingItemId === item.spoonacularId}
+                      key={item.key}
+                      onPress={() => handleSelectSearchResult(item)}
+                      disabled={loadingItemKey === item.key}
                       style={styles.recipeItem}
                     >
                       {item.imageUrl ? (
@@ -331,7 +345,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                             {item.subtitle}
                           </Text>
                         ) : null}
-                        {item.dietTags && item.dietTags.length > 0 ? (
+                        {item.dietTags.length > 0 ? (
                           <View style={styles.dietTagsRow}>
                             {item.dietTags.map(tag => (
                               <View key={tag} style={styles.dietTag}>
@@ -343,7 +357,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                           </View>
                         ) : null}
                       </View>
-                      {loadingItemId === item.spoonacularId ? (
+                      {loadingItemKey === item.key ? (
                         <PrimaryActivityIndicator size="small" />
                       ) : (
                         <Icon
@@ -369,7 +383,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               filteredRecipes.length === 0 &&
               !isLoadingRemainingPages &&
               !searchingApi &&
-              spoonacularResults.length === 0 ? (
+              otherResults.length === 0 ? (
                 <EmptyState
                   size="compact"
                   title={t('addMealSheet.noResults')}

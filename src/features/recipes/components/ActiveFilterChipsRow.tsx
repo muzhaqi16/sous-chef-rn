@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
-import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
+import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import {
   DIET_OPTIONS,
   INTOLERANCE_OPTIONS,
@@ -48,8 +48,11 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
-  // Filters are free strings, so a value no option lists shows as written.
-  const labelFor = (options: RecipeFilterOption[], value: string) => {
+  // A value no option lists (an enum member added after this build) shows as written.
+  const labelFor = <V extends string>(
+    options: readonly RecipeFilterOption<V>[],
+    value: V,
+  ) => {
     const labelKey = filterOptionLabelKey(options, value);
     return labelKey ? t(labelKey) : value;
   };

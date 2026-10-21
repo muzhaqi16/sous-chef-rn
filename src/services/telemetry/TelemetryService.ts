@@ -6,7 +6,7 @@ import type {
   ErrorDetails,
   TelemetryTransport,
 } from './types';
-import { TransportSendError, DEFAULT_CONFIG } from './types';
+import { TransportSendError, defaultTelemetryConfig } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
@@ -131,7 +131,7 @@ export class TelemetryService {
   private awaitingConsent = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = { ...defaultTelemetryConfig(), ...config };
     this.setupTransports();
   }
 
@@ -156,7 +156,7 @@ export class TelemetryService {
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
 
-    // `app_starts_total` belongs in `useStartupInit`'s idle callback, NOT here:
+    // `app_starts_total` belongs in `useCoreStartup`'s idle callback, NOT here:
     // as the cold start's first labelled metric it would resolve `device_type`
     // inside the window the startup metrics measure.
   }

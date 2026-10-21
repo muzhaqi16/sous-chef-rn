@@ -8,7 +8,7 @@
 //     cache when the version changes. A platform whose native version does not
 //     advance keeps a cache written by the previous release — including
 //     entities missing fields the new queries select.
-//   - `CLIENT_VERSION` in `src/apollo/clientIdentity.ts` is what the server
+//   - `clientVersion()` in `src/apollo/clientIdentity.ts` is what the server
 //     matches against its minimum-version gate.
 //
 // `getVersion()` is native (`CFBundleShortVersionString` on iOS,

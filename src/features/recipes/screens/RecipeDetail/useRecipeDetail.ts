@@ -3,6 +3,7 @@ import { useRoute } from '@react-navigation/native';
 import { useNavigationIntents } from '#platform/screen';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { sleep } from '#/utils/backoff';
+import { catalogKey } from '#domain/catalogRecipes';
 import { useRecipeData } from '../../hooks/useRecipeData';
 import { useRecipeFavoriteState } from '../../hooks/useRecipeFavoriteState';
 import { useRecipeSavedMetadata } from '../../hooks/useRecipeSavedMetadata';
@@ -22,11 +23,14 @@ const RECHECK_AFTER_SAVE_MS = [3000, 10000];
 // register as the pull having done anything.
 const MIN_REFRESH_MS = 500;
 
+const hintKey = (hint: CatalogRecipeHint): string =>
+  catalogKey({ provider: hint.provider, providerRecipeId: hint.externalId });
+
 /** The backend id behind a catalog hint, opened once per recipe. */
 function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
   const { openCatalogRecipe } = useOpenCatalogRecipe();
   const [opened, setOpened] = useState<{
-    externalId: string;
+    key: string;
     result: OpenedCatalogRecipe;
   } | null>(null);
 
@@ -41,7 +45,7 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
     if (!hint) return;
     let current = true;
     void openRef.current(hint).then(result => {
-      if (current) setOpened({ externalId: hint.externalId, result });
+      if (current) setOpened({ key: hintKey(hint), result });
     });
     return () => {
       current = false;
@@ -53,20 +57,17 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
   const reopen = async () => {
     if (!hint) return;
     const result = await openRef.current(hint);
+    const key = hintKey(hint);
     setOpened(previous =>
-      !result.opened &&
-      previous?.externalId === hint.externalId &&
-      previous.result.opened
+      !result.opened && previous?.key === key && previous.result.opened
         ? previous
-        : { externalId: hint.externalId, result },
+        : { key, result },
     );
   };
 
   return {
     result:
-      opened && hint && opened.externalId === hint.externalId
-        ? opened.result
-        : null,
+      opened && hint && opened.key === hintKey(hint) ? opened.result : null,
     reopen,
   };
 }

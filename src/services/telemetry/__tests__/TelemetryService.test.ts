@@ -61,7 +61,7 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ constructor
   describe('constructor', () => {
-    it('uses DEFAULT_CONFIG when no config is provided', () => {
+    it('uses the default config when no config is provided', () => {
       const service = new TelemetryService();
       // Default has enabled: false, so logging should be a no-op
       service.log('info', 'should not buffer');
@@ -129,7 +129,7 @@ describe('TelemetryService', () => {
       // that read inside the very window `app_startup_duration_ms` and
       // `app_fully_drawn_ms` measure, on real devices only, biasing the
       // comparison the label exists to enable. `app_starts_total` now comes
-      // from `useStartupInit`'s idle callback instead.
+      // from `useCoreStartup`'s idle callback instead.
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,

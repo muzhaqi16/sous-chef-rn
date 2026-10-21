@@ -1,160 +1,244 @@
 import { waitFor } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type MockDataFor,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  catalogFetchKey,
+  recordCatalogFetch,
+} from '#features/recipes/store/catalogFetchTimes';
 import { useRecipeSuggestionsForItem } from '../useRecipeSuggestionsForItem';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import type { RecipeInformation } from '#/services/spoonacular/types';
+import {
+  CatalogRecipesForItemDocument,
+  type CatalogRecipesForItemQuery,
+} from '../useRecipeSuggestionsForItem.generated';
 
-const mockGetCachedSuggestions = jest.fn();
-const mockSetCachedSuggestions = jest.fn();
+type Edge = NonNullable<
+  NonNullable<
+    MockDataFor<
+      typeof CatalogRecipesForItemDocument
+    >['catalogRecipesByIngredients']
+  >['edges']
+>[number];
 
-jest.mock('#features/recipes/store/useRecipeSuggestionsStore', () => ({
-  useRecipeSuggestionsStore: () => ({
-    getCachedSuggestions: mockGetCachedSuggestions,
-    setCachedSuggestions: mockSetCachedSuggestions,
-  }),
-}));
+const edge = (id: string, name: string): Edge => ({
+  node: { provider: ExternalSource.Spoonacular, providerRecipeId: id, name },
+});
 
-jest.mock('#/services/spoonacular/SpoonacularService', () => {
-  const searchRecipes = jest.fn();
-  return {
-    spoonacularService: {
-      searchRecipes,
-      searchRecipesWithInfo: (...args: unknown[]) => {
-        const [params, ...rest] = args;
-        return searchRecipes(
-          { ...(params as object), addRecipeInformation: true },
-          ...rest,
-        );
-      },
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// When the cached answer for "milk" arrived.
+const milkFetched = (msAgo: number) => {
+  recordCatalogFetch(
+    catalogFetchKey('catalogRecipesByIngredients', {
+      ingredients: ['milk'],
+      first: 5,
+    }),
+    Date.now() - msAgo,
+  );
+};
+
+const suggestionsMock = (edges: Edge[]) =>
+  recordMock(CatalogRecipesForItemDocument, {
+    data: { catalogRecipesByIngredients: { edges, catalogAvailable: true } },
+  });
+
+const renderSuggestions = (
+  itemName: string | undefined,
+  operationMocks: MockedResponse[],
+  cache = makeCache(),
+) =>
+  renderHookWithApollo(() => useRecipeSuggestionsForItem(itemName), {
+    operationMocks,
+    cache,
+  });
+
+// What an earlier visit left in the persisted cache for "milk".
+const cacheHoldingMilk = (
+  names: string[],
+  catalogAvailable: boolean,
+): ReturnType<typeof makeCache> => {
+  const cache = makeCache();
+  const data: CatalogRecipesForItemQuery = {
+    __typename: 'Query',
+    catalogRecipesByIngredients: {
+      __typename: 'CatalogRecipeMatchConnection',
+      catalogAvailable,
+      edges: names.map((name, index) => ({
+        __typename: 'CatalogRecipeMatchEdge',
+        cursor: String(index),
+        node: {
+          __typename: 'CatalogRecipeHit',
+          provider: ExternalSource.Spoonacular,
+          providerRecipeId: `cached-${index}`,
+          name,
+          imageUrl: null,
+          totalTimeMinutes: null,
+          servings: 2,
+        },
+      })),
     },
   };
-});
-
-jest.mock('#/services/errorService');
-import { errorService } from '#/services/errorService';
-
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeWithLoadingState: jest.fn(
-    async (
-      fn: () => Promise<void>,
-      setLoading: (value: boolean) => void,
-      onError?: (error: unknown) => void,
-    ) => {
-      setLoading(true);
-      try {
-        await fn();
-      } catch (e) {
-        onError?.(e);
-      } finally {
-        setLoading(false);
-      }
-    },
-  ),
-}));
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockGetCachedSuggestions.mockReturnValue(null);
-});
+  cache.writeQuery({
+    query: CatalogRecipesForItemDocument,
+    variables: { ingredients: ['milk'], first: 5 },
+    data,
+  });
+  return cache;
+};
 
 describe('useRecipeSuggestionsForItem', () => {
-  it('returns empty state when itemName is undefined', () => {
-    const { result } = renderHookWithApollo(() =>
-      useRecipeSuggestionsForItem(undefined),
+  it('lists catalog recipes that use the item, five at most', async () => {
+    const suggestions = suggestionsMock([
+      edge('1', 'Tomato soup'),
+      edge('2', 'Bruschetta'),
+    ]);
+    const { result } = renderSuggestions('tomatoes', [suggestions.mock]);
+
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes).toHaveLength(2),
     );
 
+    expect(suggestions.fired).toEqual([
+      { ingredients: ['tomatoes'], first: 5 },
+    ]);
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Tomato soup',
+      'Bruschetta',
+    ]);
+    expect(result.current.loadingRecipes).toBe(false);
+  });
+
+  it('asks for nothing, and suggests nothing, without an item name', () => {
+    const suggestions = suggestionsMock([edge('1', 'Tomato soup')]);
+    const { result } = renderSuggestions(undefined, [suggestions.mock]);
+
+    expect(suggestions.fired).toEqual([]);
     expect(result.current.suggestedRecipes).toEqual([]);
     expect(result.current.loadingRecipes).toBe(false);
-    expect(spoonacularService.searchRecipes).not.toHaveBeenCalled();
   });
 
-  it('hits cache and skips API call on cache hit', async () => {
-    const cached = [
-      { id: 1, title: 'Cached Recipe' },
-    ] as Partial<RecipeInformation>[] as RecipeInformation[];
-    mockGetCachedSuggestions.mockReturnValue(cached);
+  it('asks about the name as the API reads it', async () => {
+    const suggestions = suggestionsMock([edge('1', 'Bean salad')]);
+    const { result } = renderSuggestions('  Beans, Black ', [suggestions.mock]);
 
-    const { result } = renderHookWithApollo(() =>
-      useRecipeSuggestionsForItem('Milk'),
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes).toHaveLength(1),
+    );
+    expect(suggestions.fired).toEqual([
+      { ingredients: ['beans', 'black'], first: 5 },
+    ]);
+  });
+
+  it('asks for nothing for a name longer than the API takes', () => {
+    const suggestions = suggestionsMock([edge('1', 'Tomato soup')]);
+    const { result } = renderSuggestions('a'.repeat(150), [suggestions.mock]);
+
+    expect(suggestions.fired).toEqual([]);
+    expect(result.current.suggestedRecipes).toEqual([]);
+    expect(result.current.loadingRecipes).toBe(false);
+  });
+
+  it('asks again for suggestions cached while the catalog was down', async () => {
+    const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
+    const { result } = renderSuggestions(
+      'milk',
+      [suggestions.mock],
+      cacheHoldingMilk([], false),
     );
 
     await waitFor(() =>
-      expect(result.current.suggestedRecipes).toEqual(cached),
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Milkshake',
+      ]),
     );
-    expect(spoonacularService.searchRecipes).not.toHaveBeenCalled();
+    expect(suggestions.fired).toHaveLength(1);
   });
 
-  it('fetches from API and caches the result on cache miss', async () => {
-    const apiResults = [{ id: 2, title: 'API Recipe' }];
-    (spoonacularService.searchRecipes as jest.Mock).mockResolvedValueOnce({
-      results: apiResults,
+  it('answers from the cache when it holds a whole answer', async () => {
+    const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
+    const { result } = renderSuggestions(
+      'milk',
+      [suggestions.mock],
+      cacheHoldingMilk(['Rice pudding'], true),
+    );
+
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Rice pudding',
+      ]),
+    );
+    expect(suggestions.fired).toEqual([]);
+  });
+
+  it('shows suggestions fetched eight days ago while it asks for fresh ones', async () => {
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(8 * DAY_MS);
+    const suggestions = recordMock(CatalogRecipesForItemDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [edge('1', 'Milkshake')],
+          catalogAvailable: true,
+        },
+      },
+      held: true,
     });
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
 
-    const { result } = renderHookWithApollo(() =>
-      useRecipeSuggestionsForItem('Eggs'),
-    );
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
+    expect(result.current.loadingRecipes).toBe(false);
+    await waitFor(() => expect(suggestions.fired).toHaveLength(1));
 
+    suggestions.release();
     await waitFor(() =>
-      expect(result.current.suggestedRecipes).toEqual(apiResults),
-    );
-    expect(spoonacularService.searchRecipes).toHaveBeenCalledWith(
-      expect.objectContaining({
-        query: 'Eggs',
-        number: 5,
-        addRecipeInformation: true,
-      }),
-      expect.any(AbortSignal),
-    );
-    expect(mockSetCachedSuggestions).toHaveBeenCalledWith('Eggs', apiResults);
-  });
-
-  it('reports non-abort errors to errorService', async () => {
-    const err = new Error('Spoonacular down');
-    (spoonacularService.searchRecipes as jest.Mock).mockRejectedValueOnce(err);
-
-    renderHookWithApollo(() => useRecipeSuggestionsForItem('Bread'));
-
-    await waitFor(() =>
-      expect(jest.mocked(errorService.reportError)).toHaveBeenCalledWith(
-        err,
-        expect.objectContaining({
-          operation: 'useRecipeSuggestionsForItem.fetch',
-        }),
-      ),
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Milkshake',
+      ]),
     );
   });
 
-  it('does not report AbortError', async () => {
-    const abortErr = Object.assign(new Error('aborted'), {
-      name: 'AbortError',
+  it('answers from the cache for suggestions fetched yesterday', async () => {
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(DAY_MS);
+    const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
+
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Rice pudding',
+      ]),
+    );
+    expect(suggestions.fired).toEqual([]);
+  });
+
+  it('is loading only until the API answers', async () => {
+    const suggestions = recordMock(CatalogRecipesForItemDocument, {
+      data: { catalogRecipesByIngredients: { edges: [edge('1', 'Soup')] } },
+      held: true,
     });
-    (spoonacularService.searchRecipes as jest.Mock).mockRejectedValueOnce(
-      abortErr,
-    );
+    const { result } = renderSuggestions('tomatoes', [suggestions.mock]);
 
-    renderHookWithApollo(() => useRecipeSuggestionsForItem('Cheese'));
+    expect(result.current.loadingRecipes).toBe(true);
 
-    // Give the effect a tick
-    await new Promise(r => setTimeout(r, 50));
-    expect(jest.mocked(errorService.reportError)).not.toHaveBeenCalled();
-  });
-
-  it('toggles loadingRecipes around the fetch', async () => {
-    let resolveFn!: (value: { results: RecipeInformation[] }) => void;
-    (spoonacularService.searchRecipes as jest.Mock).mockImplementationOnce(
-      () =>
-        new Promise<{ results: RecipeInformation[] }>(r => {
-          resolveFn = r;
-        }),
-    );
-
-    const { result } = renderHookWithApollo(() =>
-      useRecipeSuggestionsForItem('Onion'),
-    );
-
-    await waitFor(() => expect(result.current.loadingRecipes).toBe(true));
-
-    resolveFn({ results: [] });
+    suggestions.release();
     await waitFor(() => expect(result.current.loadingRecipes).toBe(false));
+    expect(result.current.suggestedRecipes).toHaveLength(1);
+  });
+
+  it('suggests nothing when the API cannot answer', async () => {
+    const suggestions = recordMock(CatalogRecipesForItemDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderSuggestions('tomatoes', [suggestions.mock]);
+
+    await waitFor(() => expect(suggestions.fired).toHaveLength(1));
+    await waitFor(() => expect(result.current.loadingRecipes).toBe(false));
+    expect(result.current.suggestedRecipes).toEqual([]);
   });
 });

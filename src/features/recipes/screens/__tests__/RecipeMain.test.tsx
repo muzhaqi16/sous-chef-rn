@@ -7,13 +7,14 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { BarAction } from '#components/molecules/BarActions';
-import type { transformRecipeForDisplay } from '#domain/recipeTransform';
-import type {
-  SearchRecipesResult,
-  RecipeSearchResult,
-} from '#/services/spoonacular/types';
+import {
+  Diet,
+  ExternalSource,
+  Intolerance,
+} from '#/graphql/generated/schemaTypes';
+import type { DisplayItem } from '../recipeDisplayItems';
 
-type RecipeMainItem = ReturnType<typeof transformRecipeForDisplay>;
+type RecipeMainItem = DisplayItem;
 
 interface ItemListMockProps {
   items?: RecipeMainItem[];
@@ -134,18 +135,6 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
   })),
 }));
 jest.mock('#hooks/settings/useFeatureHint', () => ({}));
-jest.mock('#domain/recipeTransform', () => ({
-  transformRecipeForDisplay: jest.fn(
-    (r: SearchRecipesResult | RecipeSearchResult) => ({
-      id: String(r.id),
-      title: r.title,
-      subtitle: 'test',
-      badge: undefined,
-      imageUrl: r.image,
-      spoonacularId: r.id,
-    }),
-  ),
-}));
 jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: () => null,
   useBottomSheetScrollableCreator: jest.fn(
@@ -177,9 +166,13 @@ const mockDeferredScreen = jest.fn(
 jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
-jest.mock('#features/recipes/components/skeletons/RecipeSkeleton', () => ({
-  RecipeSkeleton: () => 'RecipeSkeleton',
-}));
+jest.mock('#features/recipes/components/skeletons/RecipeSkeleton', () => {
+  const R = require('react');
+  const { Text } = require('react-native');
+  return {
+    RecipeSkeleton: () => R.createElement(Text, null, 'RecipeSkeleton'),
+  };
+});
 jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({ title, actions }: TabScreenHeaderMockProps) => {
     const R = require('react');
@@ -346,9 +339,7 @@ describe('RecipeMain', () => {
       showDiscovery: true,
       discovery: {
         mode: 'random',
-        items: [
-          { id: '1', title: 'Soup', subtitle: '4 servings', spoonacularId: 1 },
-        ],
+        items: [{ id: '1', title: 'Soup', subtitle: '4 servings' }],
         loading: false,
         refresh: jest.fn(),
         pantryItems: [],
@@ -375,6 +366,35 @@ describe('RecipeMain', () => {
     expect(capturedItems![0]!.title).toBe('Soup');
   });
 
+  it('keeps shown discovery rows on screen while discovery loads again', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({
+      showDiscovery: true,
+      discovery: {
+        mode: 'pantry',
+        loading: true,
+        refresh: jest.fn(),
+        pantryItems: [],
+        hasPantryItems: true,
+      },
+      items: [{ id: '1', title: 'Soup', subtitle: '4 servings' }],
+    });
+    let capturedItems: RecipeMainItem[] | undefined;
+    mockItemListImpl = (props: ItemListMockProps) => {
+      capturedItems = props.items;
+      return null;
+    };
+
+    const screen = render(<RecipeMain />);
+
+    expect(screen.queryByText('RecipeSkeleton')).toBeNull();
+    expect(capturedItems?.map(item => item.title)).toEqual(['Soup']);
+  });
+
   it('shows pantry discovery header', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
@@ -385,7 +405,7 @@ describe('RecipeMain', () => {
       showDiscovery: true,
       discovery: {
         mode: 'pantry',
-        items: [{ id: '1', title: 'P', subtitle: 's', spoonacularId: 1 }],
+        items: [{ id: '1', title: 'P', subtitle: 's' }],
         loading: false,
         refresh: jest.fn(),
         pantryItems: [],
@@ -398,6 +418,29 @@ describe('RecipeMain', () => {
     expect(tree.getByText('Based on your pantry')).toBeTruthy();
   });
 
+  it('disables the refresh control while a refresh is in flight', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({
+      showDiscovery: true,
+      discovery: {
+        mode: 'pantry',
+        loading: false,
+        refreshing: true,
+        refresh: jest.fn(),
+        pantryItems: [],
+        hasPantryItems: true,
+      },
+      items: [{ id: '1', title: 'P', subtitle: 's' }],
+    });
+
+    const tree = render(<RecipeMain />);
+    expect(tree.getByLabelText('Refresh recipe suggestions')).toBeDisabled();
+  });
+
   it('shows random discovery header', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
@@ -408,7 +451,7 @@ describe('RecipeMain', () => {
       showDiscovery: true,
       discovery: {
         mode: 'random',
-        items: [{ id: '1', title: 'R', subtitle: 's', spoonacularId: 1 }],
+        items: [{ id: '1', title: 'R', subtitle: 's' }],
         loading: false,
         refresh: jest.fn(),
         pantryItems: [],
@@ -442,7 +485,7 @@ describe('RecipeMain', () => {
       showDiscovery: true,
       discovery: {
         mode: 'random',
-        items: [{ id: '999', title: 'R', subtitle: 's', spoonacularId: 999 }],
+        items: [{ id: '999', title: 'R', subtitle: 's' }],
         loading: false,
         refresh: jest.fn(),
         pantryItems: [],
@@ -450,10 +493,18 @@ describe('RecipeMain', () => {
       },
       items: [
         {
-          id: '999',
+          id: 'catalog-SPOONACULAR-999',
           title: 'R',
           subtitle: 's',
           imageUrl: 'https://img.spoonacular.com/recipes/999-312x231.jpg',
+          target: {
+            catalog: {
+              provider: ExternalSource.Spoonacular,
+              externalId: '999',
+              name: 'R',
+              imageUrl: 'https://img.spoonacular.com/recipes/999-312x231.jpg',
+            },
+          },
         },
       ],
     });
@@ -466,11 +517,12 @@ describe('RecipeMain', () => {
 
     render(<RecipeMain />);
     act(() => {
-      capturedOnItemPress!('999');
+      capturedOnItemPress!('catalog-SPOONACULAR-999');
     });
     // The row's own title and image show while the API opens the recipe.
     expect(mockToRecipeDetail).toHaveBeenCalledWith({
       catalog: {
+        provider: ExternalSource.Spoonacular,
         externalId: '999',
         name: 'R',
         imageUrl: 'https://img.spoonacular.com/recipes/999-312x231.jpg',
@@ -478,7 +530,7 @@ describe('RecipeMain', () => {
     });
   });
 
-  it('navigates to RecipeDetail with recipeId for local- prefixed items', () => {
+  it('opens a recipe the API holds by its id', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -496,6 +548,18 @@ describe('RecipeMain', () => {
       goBack: jest.fn(),
     });
 
+    mockScreenWith({
+      showSearchResults: true,
+      items: [
+        {
+          id: 'recipe-abc123',
+          title: 'Lasagna',
+          subtitle: 's',
+          target: { recipeId: 'abc123' },
+        },
+      ],
+    });
+
     let capturedOnItemPress: ((id: string | number) => void) | undefined;
     mockItemListImpl = (props: ItemListMockProps) => {
       capturedOnItemPress = props.onItemPress;
@@ -504,7 +568,7 @@ describe('RecipeMain', () => {
 
     render(<RecipeMain />);
     act(() => {
-      capturedOnItemPress!('local-abc123');
+      capturedOnItemPress!('recipe-abc123');
     });
     expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'abc123' });
   });
@@ -518,8 +582,8 @@ describe('RecipeMain', () => {
     mockScreenWith({
       activeFilterCount: 3,
       activeFilters: {
-        diet: ['vegetarian'],
-        intolerances: ['dairy'],
+        diet: [Diet.Vegetarian],
+        intolerances: [Intolerance.Dairy],
         mealType: null,
         maxReadyTime: 30,
       },
@@ -556,8 +620,8 @@ describe('RecipeMain', () => {
       searchQuery: 'pasta',
       activeFilterCount: 3,
       activeFilters: {
-        diet: ['vegetarian'],
-        intolerances: ['dairy'],
+        diet: [Diet.Vegetarian],
+        intolerances: [Intolerance.Dairy],
         mealType: null,
         maxReadyTime: 30,
       },
@@ -578,7 +642,7 @@ describe('RecipeMain', () => {
     expect(tree.getByText('≤ 30 min')).toBeTruthy();
 
     await user.press(tree.getByText('Vegetarian'));
-    expect(mockRemoveFilter).toHaveBeenCalledWith('diet', 'vegetarian');
+    expect(mockRemoveFilter).toHaveBeenCalledWith('diet', Diet.Vegetarian);
 
     await user.press(tree.getByText('≤ 30 min'));
     expect(mockRemoveFilter).toHaveBeenCalledWith('maxReadyTime', undefined);
@@ -600,7 +664,7 @@ describe('RecipeMain', () => {
       searchQuery: '',
       activeFilterCount: 2,
       activeFilters: {
-        diet: ['vegan'],
+        diet: [Diet.Vegan],
         intolerances: [],
         mealType: null,
         maxReadyTime: 30,

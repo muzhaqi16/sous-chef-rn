@@ -70,7 +70,6 @@ this file at startup.
 | `API_KEY`                       | Backend API key                                                        |
 | `NODE_ENV`                      | `development` · `staging` · `production`                               |
 | `WEB_APP_URL`                   | Used for deep links and redirects                                      |
-| `SPOONACULAR_API_KEY`           | Recipe search and nutrition data                                       |
 | `OTLP_METRICS_*`, `OTLP_LOGS_*` | Optional telemetry — see [`telemetry-setup.md`](telemetry-setup.md)    |
 
 Per-variant files (`.env`, `.env.staging`, `.env.production`) are selected by
@@ -294,7 +293,7 @@ code relies on.
    the resolved result**, not only in the `catch`.
 
 2. **Use `variables: () => true` for complex transformed inputs.** When a
-   mutation's `input` is built from a non-trivial transform (Spoonacular →
+   mutation's `input` is built from a non-trivial transform (a recipe form →
    CreateRecipeInput, device-info → register payload), don't mirror the
    transform in the test — use Apollo's `VariableMatcher` shape:
    `{ request: { query, variables: () => true }, result: { data: ... } }`.
@@ -467,7 +466,7 @@ particular order. Its baseline lists no files.
 **Why `check:version-sync` is a pre-commit hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
 pbxproj. A mismatched platform would ship reporting a version it is not:
-`getVersion()` is native, so `CLIENT_VERSION` reaches the server's
+`getVersion()` is native, so `clientVersion()` reaches the server's
 minimum-version gate wrong — with nothing else failing to warn you. iOS `CURRENT_PROJECT_VERSION` and Android
 `versionCode` are deliberately NOT compared: they are per-platform build
 counters on independent sequences, read by `getBuildNumber()`.

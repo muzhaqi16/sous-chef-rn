@@ -49,8 +49,9 @@ import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
 import { setTelemetryStateSource } from '#services/telemetry/telemetryState';
+import { hydrateWhenStarted } from '#/store/persistedStores';
 
-const secureStore = requirePlatform('secureStore');
+const secureStore = () => requirePlatform('secureStore');
 
 /**
  * Loads session tokens from the keychain (their persistence tier) before
@@ -66,16 +67,16 @@ const hydrateSessionTokensThenFinish = async (
   // lineage is still live server-side and still a push target, so it is parked
   // for `POST /revoke` rather than only forgotten.
   if (storage.openedWithEmptyStore()) {
-    const orphaned = await secureStore.loadSessionTokens();
+    const orphaned = await secureStore().loadSessionTokens();
     if (orphaned.status === 'ok') {
-      await secureStore.addPendingRevocation(orphaned.tokens);
+      await secureStore().addPendingRevocation(orphaned.tokens);
     }
-    await secureStore.clearSessionTokens();
+    await secureStore().clearSessionTokens();
     state?.setHydrated(true);
     return;
   }
 
-  const result = await secureStore.loadSessionTokens();
+  const result = await secureStore().loadSessionTokens();
   if (result.status === 'ok') {
     const fallback =
       state?.accessToken && state.refreshToken
@@ -111,11 +112,16 @@ export const handleStoreRehydration = (
   error: unknown,
 ): void => {
   if (error) {
-    // Recover first, so a throw in reporting cannot block the boot.
+    // Recover first, so a throw in reporting cannot block the boot. The flags
+    // still land before start-up reads them, in an effect after the re-render.
     useStore.getState().setHydrated(true);
+    useStore.getState().applyTelemetryDefaults();
     errorService.reportError(error, { operation: 'storeHydration' });
     return;
   }
+
+  // Each launch derives the telemetry flags, before `isHydrated` flips.
+  useStore.getState().applyTelemetryDefaults();
 
   // Before `isHydrated`, so no hook needs a side-effect to catch up.
   if (state?.theme) {
@@ -474,7 +480,8 @@ export const useStore = create<RootState>()(
           return persistedState;
         },
         onRehydrateStorage: () => handleStoreRehydration,
-        skipHydration: false,
+        // Hydrated by `startPersistedStores()`: creating the store reads nothing.
+        skipHydration: true,
         partialize: state => {
           // Only PERSISTED_KEYS data fields enter the blob; actions and
           // unclassified keys cannot leak in.
@@ -502,6 +509,8 @@ export const useStore = create<RootState>()(
     ),
   ),
 );
+
+hydrateWhenStarted(useStore);
 
 setTelemetryStateSource({
   // `isHydrated` flips on a failed hydration too (persist's own signal does not),

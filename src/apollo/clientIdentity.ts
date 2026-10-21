@@ -14,4 +14,5 @@ export const CLIENT_NAME = 'sous-chef-app';
  * update moves this. Must parse as semver: an unparseable value reads as
  * absent, and the request is refused once a minimum is configured.
  */
-export const CLIENT_VERSION = requirePlatform('platformInfo').appVersion;
+export const clientVersion = (): string =>
+  requirePlatform('platformInfo').appVersion;

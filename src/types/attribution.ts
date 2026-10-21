@@ -13,7 +13,7 @@ export type PhotoCreditValue = Pick<
   'text' | 'license' | 'licenseUrl' | 'sourceUrl'
 >;
 
-/** A data provider's notice, such as Spoonacular's backlink. */
+/** A data provider's notice, such as a recipe provider's backlink. */
 export type DataAttributionValue = Pick<
   DataAttribution,
   'source' | 'notice' | 'licenseUrl' | 'sourceUrl'

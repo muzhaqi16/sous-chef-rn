@@ -17,7 +17,6 @@ export interface Env {
   API_KEY?: string;
   WEB_APP_URL?: string;
   GRAPHQL_BATCH_ENABLED?: string;
-  SPOONACULAR_API_KEY?: string;
   OTLP_METRICS_ENDPOINT?: string;
   OTLP_METRICS_AUTH_USERNAME?: string;
   OTLP_METRICS_AUTH_PASSWORD?: string;
@@ -42,7 +41,8 @@ export interface Env {
 
 /**
  * Synchronous key-value storage. Reads and writes throw until `ready()`
- * resolves; the host starts opening it before any React code runs.
+ * resolves; the host starts opening it before any React code runs. Members are
+ * called with the `deviceStorage` proxy as `this`, so none may rely on it.
  */
 export interface KeyValueStore {
   set(key: string, value: string | number | boolean): void;
@@ -133,6 +133,19 @@ export interface ImagePrefetch {
   prefetch(uris: string[]): void;
 }
 
+/** What the network reports; `isConnected: null` is before its first report. */
+export interface ConnectivityState {
+  isConnected: boolean | null;
+  /** `null` until the host has probed it. */
+  isInternetReachable: boolean | null;
+  type: string;
+}
+
+export interface Connectivity {
+  /** Reports the current state soon after, then every change; returns the unsubscribe. */
+  subscribe(listener: (state: ConnectivityState) => void): () => void;
+}
+
 /** The feedback an action gives when it runs; a host without it does nothing. */
 export interface Haptics {
   selection(): void;
@@ -175,6 +188,7 @@ export interface PlatformServices {
   secureStore: SecureStore;
   platformInfo: PlatformInfo;
   appLifecycle: AppLifecycle;
+  connectivity: Connectivity;
   appearance: Appearance;
   imagePrefetch: ImagePrefetch;
   haptics: Haptics;

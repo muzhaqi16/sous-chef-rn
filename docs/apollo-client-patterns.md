@@ -492,6 +492,21 @@ const items = usePreservedNodes(
 
 `grep -rn "usePreserved" src/` lists the consumers.
 
+### Catalog answers
+
+`catalogRecipesByIngredients` and `randomCatalogRecipes` decline resync
+(`refetchOn: false`) and are kept in the cache instead. The field policy in
+`src/features/recipes/cache/typePolicies.ts` keeps a complete page over one the
+API answered with `catalogAvailable: false`, so a refresh during an outage keeps
+the list. It also records when each complete page arrived
+(`features/recipes/store/catalogFetchTimes.ts`). A reader takes its options
+from `useCatalogReadOptions`: `network-only` when the held page is degraded,
+`cache-and-network` when it has no recorded time or is older than the reader's
+window (24 h for discovery, 7 days for a pantry item's suggestions),
+`cache-first` otherwise; and `refetchWritePolicy: 'merge'`, because Apollo's
+default for `refetch()` overwrites and hands the merge no `existing`. A new
+catalog query reads through the same hook.
+
 ---
 
 ## Resync

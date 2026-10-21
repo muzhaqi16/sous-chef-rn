@@ -27,7 +27,7 @@ query GetUserSettings {
 # Every field here must be in the cache or the WHOLE read yields nothing
 # (`returnPartialData: false`), so the selection is kept to exactly what the
 # screens render: ProfileScreen (avatar, displayName, firstName, lastName),
-# PersonalInformationScreen (the rest), DataProvider (the first four). Five
+# PersonalInformationScreen (the rest), CoreDataProvider (the first four). Five
 # fields no screen read — userId, coverImage, website, createdAt, updatedAt —
 # used to sit here, and each one was another way for the read to come back
 # incomplete. Every writer of the current user's profile matches this shape;

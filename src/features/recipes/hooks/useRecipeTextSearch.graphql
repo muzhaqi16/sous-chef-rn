@@ -1,0 +1,9 @@
+# The recipe a pick plans: what a meal's and a template's rows read on it,
+# written when it is picked so they name it before the server answers.
+fragment useRecipeTextSearch_pickedRecipe on Recipe {
+  id
+  name
+  imageUrl
+  servings
+  totalTimeMinutes
+}

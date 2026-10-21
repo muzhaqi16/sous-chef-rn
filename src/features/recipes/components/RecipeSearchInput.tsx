@@ -5,6 +5,7 @@ import {
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
 import { useTranslation } from '#/i18n';
+import { MAX_RECIPE_QUERY_LENGTH } from '#domain/catalogRecipes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
 export interface RecipeSearchInputRef {
@@ -57,6 +58,7 @@ export const RecipeSearchInput = forwardRef<
       onClear={onClear}
       onSubmitEditing={() => onSearch(inputQuery)}
       returnKeyType="search"
+      maxLength={MAX_RECIPE_QUERY_LENGTH}
       placeholder={t('recipes.searchPlaceholder')}
       rightActions={rightActions}
       testID={recipesTestIDs.searchInput}

@@ -12,7 +12,7 @@ import { getApolloResetBridge } from './apolloResetBridge';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 import { isRecord } from '#/utils/isRecord';
 
-const secureStore = requirePlatform('secureStore');
+const secureStore = () => requirePlatform('secureStore');
 
 /**
  * Which server verdict ended the session — log line only; `endSession` performs
@@ -236,7 +236,7 @@ const clearAuthFromStorage = async () => {
   try {
     // Stored logins (biometrics) deliberately survive a logout; only a full
     // reset or an explicit user action clears them.
-    await secureStore.clearSessionTokens();
+    await secureStore().clearSessionTokens();
 
     storage.remove('accessToken');
     storage.remove('refreshToken');

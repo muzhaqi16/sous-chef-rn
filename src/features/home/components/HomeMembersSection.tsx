@@ -10,7 +10,7 @@ import {
   InviteStatus,
   type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
-import type { MembershipPermissionKey } from '#features/home/screens/useHomeDetailManagement';
+import type { MembershipPermissionKey } from '#features/home/types';
 import type { HomeDetailScreen_HomeFragment } from '#features/home/screens/HomeDetailScreen.generated';
 
 type MemberNode =

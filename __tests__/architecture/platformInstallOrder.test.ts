@@ -2,9 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * Core modules read platform services when they evaluate, so the native install
- * must be evaluated before the first of them. `index.js` imports it right after
- * the startup clock, the startup profiler and the crypto polyfill.
+ * The native install precedes everything that runs the core, and the persisted
+ * stores start right after it, before a headless entry can load one. `index.js`
+ * imports it right after the startup clock, the startup profiler and the crypto
+ * polyfill.
  */
 const ROOT = path.join(__dirname, '..', '..');
 const INSTALL = './src/app/installNativePlatform';
@@ -29,6 +30,18 @@ describe('platform install order', () => {
       ...BEFORE_INSTALL,
       INSTALL,
     ]);
+  });
+
+  it('starts the persisted stores right after the install', () => {
+    const source = fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8');
+    expect(imports[BEFORE_INSTALL.length + 1]).toBe(
+      './src/store/persistedStores',
+    );
+    // Metro hoists every import above the statements, so the call is the
+    // first statement that runs.
+    expect(source.match(/^\w[^\n]*\(\);$/m)?.[0]).toBe(
+      'startPersistedStores();',
+    );
   });
 
   // Jest evaluates every import eagerly, which Metro's inline requires do not,

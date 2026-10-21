@@ -11,6 +11,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
+  GetHomesDocument,
 } from '#operations/home/home.generated';
 import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
 import type { InvitationData } from '#features/notifications/types';
@@ -165,5 +166,48 @@ describe('useInvitationActions: a home invite the server refuses', () => {
     });
     expect(pendingIds(cache)).toEqual(['inv-1', 'inv-2']);
     expect(holdsInvite(cache, 'inv-1')).toBe(true);
+  });
+});
+
+// The accept-invite screen answers a link this way: no notification, only the
+// token, and the home it joins must still reach the homes list.
+describe('useInvitationActions: a home invite answered by link alone', () => {
+  it('writes the joined home into the homes list', async () => {
+    const cache = makeCache();
+    const homes = recordMock(GetHomesDocument, {
+      data: { homes: { edges: [], totalCount: 0 } },
+    });
+    const accept = recordMock(AcceptHomeInviteDocument, {
+      data: {
+        acceptHomeInvite: {
+          __typename: 'AcceptHomeInvitePayload',
+          membership: { homeId: 'home-9', home: { id: 'home-9' } },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => ({
+        client: useApolloClient(),
+        actions: useInvitationActions(null, USER_ID),
+      }),
+      { cache, operationMocks: [homes.mock, accept.mock] },
+    );
+    await act(async () => {
+      await result.current.client.query({ query: GetHomesDocument });
+    });
+
+    let outcome:
+      | Awaited<ReturnType<typeof result.current.actions.acceptHome>>
+      | undefined;
+    await act(async () => {
+      outcome = await result.current.actions.acceptHome(TOKEN);
+    });
+
+    expect(outcome).toEqual({ status: 'done', acceptedHomeId: 'home-9' });
+    expect(
+      cache
+        .readQuery({ query: GetHomesDocument })
+        ?.homes.edges.map(edge => edge.node.id),
+    ).toEqual(['home-9']);
   });
 });

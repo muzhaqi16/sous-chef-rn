@@ -46,12 +46,12 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
-import {
-  useRecipeCacheStore,
-  textSearchCacheKey,
-} from '#features/recipes/store/useRecipeCacheStore';
-import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
+import {
+  catalogFetchedAt,
+  catalogFetchKey,
+  recordCatalogFetch,
+} from '#features/recipes/store/catalogFetchTimes';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -197,10 +197,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
   });
 
   // A feature that owns its own store falls outside `PERSISTED_KEYS`, so the
-  // marker sweep above cannot reach it — exactly how `recipe-search-cache` and
-  // `recipe-suggestions-cache` came to survive a sign-out unnoticed. Feature
-  // stores register a reset instead; this asserts the registry is wired and
-  // that a populated feature store is actually emptied.
+  // marker sweep above cannot reach it. Feature stores register a reset
+  // instead; this asserts the registry is wired and that a populated feature
+  // store is actually emptied.
   it('clears feature-owned stores, which the persisted-key sweep cannot see', async () => {
     useNotificationStore
       .getState()
@@ -228,32 +227,6 @@ describe('a session end leaves no data belonging to the previous person', () => 
     expect(registeredSessionScopedStores()).toContain('barcodeScanner');
   });
 
-  it('clears the recipe caches, which name what the last person cooked', async () => {
-    // These two are the registry's own motivating example — `recipe-search-cache`
-    // and `recipe-suggestions-cache` are how a feature store was first found
-    // surviving a sign-out. Asserted here so they cannot regress to that again.
-    useRecipeCacheStore
-      .getState()
-      .setCached(textSearchCacheKey('chicken'), [
-        { id: 1, title: 'Roast chicken', image: '', imageType: 'jpg' },
-      ]);
-    useRecipeSuggestionsStore
-      .getState()
-      .setCachedSuggestions('insulin pens', []);
-    expect(Object.keys(useRecipeCacheStore.getState().cache)).not.toEqual([]);
-
-    await useStore.getState().resetStore('LOGOUT');
-
-    expect(useRecipeCacheStore.getState().cache).toEqual({});
-    expect(useRecipeSuggestionsStore.getState().cache).toEqual({});
-    expect(registeredSessionScopedStores()).toEqual(
-      expect.arrayContaining([
-        'useRecipeCacheStore',
-        'useRecipeSuggestionsStore',
-      ]),
-    );
-  });
-
   it('forgets the recipes this account was capturing', async () => {
     useRecipeCaptureStore.getState().addReading({
       id: 'capture-1',
@@ -270,6 +243,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
       held: [],
     });
     expect(registeredSessionScopedStores()).toContain('recipeCaptures');
+  });
+
+  it('forgets when this account fetched catalog recipes', async () => {
+    const key = catalogFetchKey('randomCatalogRecipes', { first: 25 });
+    recordCatalogFetch(key, Date.now());
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(catalogFetchedAt(key)).toBeUndefined();
+    expect(registeredSessionScopedStores()).toContain('catalogFetchTimes');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

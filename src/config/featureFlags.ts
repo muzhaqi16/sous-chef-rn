@@ -27,7 +27,7 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   deviceReceiptReading: true,
   // Pasted ingredient lines read by the API's `parseIngredientLines`.
   ingredientPaste: true,
-  // Discovery ranked by the API's `recipeSuggestions`; off, Spoonacular ranks it.
+  // Discovery ranked by the API's `recipeSuggestions`; off, the catalog's discovery.
   pantrySuggestions: true,
   // A receipt read by the API's `createReceiptParse`; off, only the phone reads it.
   receiptParsing: true,

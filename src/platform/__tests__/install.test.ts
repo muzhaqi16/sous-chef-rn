@@ -39,6 +39,17 @@ describe('installPlatform', () => {
     expect((thrown as Error).message).toContain('"keyValueStore"');
   });
 
+  it('names a service the install left out', () => {
+    installPlatform(asServices({ environment }));
+
+    expect(() => requirePlatform('keyValueStore')).toThrow(
+      PlatformServiceMissing,
+    );
+    expect(() => requirePlatform('keyValueStore')).toThrow(
+      'Platform service "keyValueStore" is missing from installPlatform().',
+    );
+  });
+
   it('returns the installed service', () => {
     installPlatform(asServices({ environment }));
 

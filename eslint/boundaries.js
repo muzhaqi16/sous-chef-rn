@@ -194,6 +194,13 @@ const LAYER_POLICIES = [
     message:
       'Core code imports only external modules that run without React Native (CORE_EXTERNALS in scripts/lib/layers.js). Reach the device through a port in src/platform/.',
   },
+  // `origin: 'core'` is the plugin's name for Node's built-ins, `node:` or not.
+  {
+    from: { file: { categories: 'core' } },
+    disallow: { to: { module: { origin: 'core' } } },
+    message:
+      'Core code runs without Node, so it imports no Node built-in (fs, crypto, path, …). Reach the host through a port in src/platform/.',
+  },
 ];
 
 const restrictedGlobals = (names, message) =>

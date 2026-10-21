@@ -301,7 +301,6 @@ git tag v1.2.0 && git push origin v1.2.0       # alternate pattern
 | Secret                         | Purpose                                      |
 | ------------------------------ | -------------------------------------------- |
 | `IOS_API_KEY`                  | Backend API key for iOS builds               |
-| `SPOONACULAR_API_KEY`          | Spoonacular recipe API key                   |
 | `IOS_BUILD_CERTIFICATE_BASE64` | Apple Distribution certificate (p12, base64) |
 | `P12_PASSWORD`                 | Certificate password                         |
 | `PROVISION_PROFILES_BASE64`    | Provisioning profiles archive (tgz, base64)  |

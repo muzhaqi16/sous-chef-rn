@@ -16,7 +16,7 @@ jest.mock('#/i18n', () => ({
   t: jest.fn((key: string) => key),
 }));
 jest.mock('../clientIdentity', () => ({
-  CLIENT_VERSION: '4.2.1',
+  clientVersion: () => '4.2.1',
   CLIENT_NAME: 'sous-chef-app',
 }));
 

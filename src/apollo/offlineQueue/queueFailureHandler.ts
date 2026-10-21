@@ -162,7 +162,7 @@ function handleRemovalKept(entityType: string | null): void {
 }
 
 /**
- * The ONE registration of {@link handleQueueFailure}, from `useStartupInit`.
+ * The ONE registration of {@link handleQueueFailure}, from `useCoreStartup`.
  * `setFailureHandler` is last-write-wins, and effects run after imports, so a
  * second registration at module scope elsewhere would silently be dead.
  */

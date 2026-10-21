@@ -2,69 +2,6 @@
 # QUERIES
 # ============================================
 
-query SearchRecipes(
-  $query: String!
-  $first: Int
-  $after: String
-  $diets: [Diet!]
-  $intolerances: [Intolerance!]
-  $maxReadyTime: Int
-  $category: RecipeCategory
-) {
-  searchRecipes(
-    query: $query
-    first: $first
-    after: $after
-    filters: {
-      diets: $diets
-      intolerances: $intolerances
-      maxReadyTime: $maxReadyTime
-      category: $category
-    }
-  ) {
-    edges {
-      node {
-        # Inline, not a fragment: useRecipeScreen's combined search reads
-        # these off the result, where a spread's fields are masked.
-        id
-        name
-        description
-        imageUrl
-        servings
-        prepTimeMinutes
-        cookTimeMinutes
-        totalTimeMinutes
-        difficulty
-        category
-        cuisines
-        status
-        isExternal
-        externalSource
-        externalId
-        primarySource
-        caloriesPerServing
-        createdAt
-        updatedAt
-        isSaved
-        savedDetails {
-          id
-          folder
-          tags
-          notes
-          personalRating
-          cookedCount
-        }
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 # `$ingredientsFirst` is the server's largest page and the most a recipe holds,
 # so one request is the whole list. No cursor: a recipe over the limit stays
 # marked `hasNextPage`, which every derived write refuses.

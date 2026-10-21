@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/store/deviceStorage';
+import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 
 /** The server reads a capture as UNAVAILABLE past ten minutes; a minute's grace. */
@@ -111,6 +112,7 @@ export const useRecipeCaptureStore = create<RecipeCaptureState>()(
     {
       name: PERSIST_KEY,
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       version: 2,
       // Saved as answered: after a restart no send of it can still be in flight.
       partialize: ({ entries, held }) => ({
@@ -120,6 +122,8 @@ export const useRecipeCaptureStore = create<RecipeCaptureState>()(
     },
   ),
 );
+
+hydrateWhenStarted(useRecipeCaptureStore);
 
 registerSessionScopedStore('recipeCaptures', () =>
   useRecipeCaptureStore.getState().reset(),

@@ -84,7 +84,7 @@ model in `utils/homeLinkedPermissions.ts`: the owner is `plan.user` (not
 | `useMealTemplateEditor`                                           | Builder writes: create/update template, add/update/remove template items                                               |
 | `useMealPlanPermissions`                                          | `canEdit`, `canDelete`, `canDuplicate`, `canGenerateShoppingList`, `canSaveAsTemplate`                                 |
 | `useMealPlanSelectorConfig`                                       | Config for the plan selector (rows, create / from template / new template actions)                                     |
-| `useMealPlanSubscriptions`                                        | `MealPlanEvents` for the selected home; mounted in `src/app/providers/AuthenticatedSubscriptions.tsx`                  |
+| `useMealPlanSubscriptions`                                        | `MealPlanEvents` for the selected home; mounted in `src/bootstrap/AuthenticatedSubscriptions.tsx`                  |
 
 ## GraphQL
 
@@ -202,9 +202,10 @@ template, new template).
      `loadMore`) while the query is empty and filtered client-side by name with
      `filterByTerm`;
    - once the query is non-empty, an "add custom" row that calls `onAddCustomMeal`;
-   - at 3+ characters, Spoonacular results (10, cached in `useRecipeCacheStore`, the
-     previous request aborted). Picking one fetches its full information, imports it
-     through `useRecipePreload`, then adds the imported recipe;
+   - at 3+ characters, the first page of `findRecipes` (`useRecipeTextSearch`; a newer
+     query supersedes the one in flight), leaving out saved recipes already listed. A
+     held recipe is added by id; a catalog one is first opened through
+     `upsertExternalRecipe`, then the recipe it returns is added;
    - `EmptyState` for no saved recipes or no results.
 4. `MealPlanMain` calls `createItem` with `meal: { recipeId }` or
    `meal: { customMealName }` and the selected date.
@@ -317,7 +318,7 @@ client-side (name search, active only, weekly/monthly) without changing the acti
 | `src/features/mealPlan/screens/MealPlanMain.tsx`                             | Tab root: calendar, day list, every sheet, plan selector |
 | `src/features/mealPlan/screens/CreateMealPlanScreen.tsx`                     | Create-plan form                                         |
 | `src/features/mealPlan/screens/MealTemplateBuilderScreen.tsx`                | Create / edit a template                                 |
-| `src/features/mealPlan/components/AddMealSheet.tsx`                          | Saved recipes, custom meal, Spoonacular search           |
+| `src/features/mealPlan/components/AddMealSheet.tsx`                          | Saved recipes, custom meal, recipe search                |
 | `src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx` | Add a given recipe to a plan, date and meal type         |
 | `src/features/mealPlan/components/DayMealList.tsx`                           | Day view grouped by meal type                            |
 | `src/features/mealPlan/components/MealPlanItemCard.tsx`                      | Meal row: completion, delete, nutrition and pantry badge |
@@ -331,5 +332,5 @@ client-side (name search, active only, weekly/monthly) without changing the acti
 | `src/features/mealPlan/graphql/mealTemplate.graphql`                         | Template operations                                      |
 | `src/features/mealPlan/graphql/mealPlanFragments.graphql`                    | Shared plan and template fragments                       |
 | `src/features/recipes/hooks/useSavedRecipes.ts`                              | Saved recipes (paginated), read by `AddMealSheet`        |
-| `src/features/recipes/screens/RecipeMain.tsx`                                | Recipe discovery and Spoonacular search                  |
+| `src/features/recipes/screens/RecipeMain.tsx`                                | Recipe discovery and search                              |
 | `src/features/recipes/screens/RecipeDetail/index.tsx`                        | Recipe detail, incl. "Add to meal plan"                  |

@@ -44,10 +44,12 @@ require('./__tests__/setup/mocks/react-native-vision-camera');
 require('./__tests__/setup/globals');
 
 // ---------------------------------------------------------------------------
-// Platform — the in-memory services, installed before any core module loads,
+// Platform — the in-memory services, installed before the core runs,
 // as `index.js` installs the native ones.
 // ---------------------------------------------------------------------------
 require('./__tests__/helpers/memoryPlatform').installMemoryPlatform();
+// Then the persisted stores, as `index.js` starts them right after its install.
+require('./src/store/persistedStores').startPersistedStores();
 
 // ---------------------------------------------------------------------------
 // i18n — initialize i18next so useTranslation() returns real strings in tests

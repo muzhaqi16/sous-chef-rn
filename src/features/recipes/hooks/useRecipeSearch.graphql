@@ -1,0 +1,44 @@
+# The recipes the API holds, best match first, then the catalog's hits, under
+# one cursor. Inline, not fragments: the search hook reads the cards off the
+# result, where a spread's fields are masked.
+query SearchRecipes(
+  $query: String!
+  $filters: RecipeFilters
+  $first: Int
+  $after: String
+) {
+  findRecipes(query: $query, filters: $filters, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
+        __typename
+        ... on Recipe {
+          id
+          name
+          imageUrl
+          servings
+          totalTimeMinutes
+          diets
+          freeOf
+          isSaved
+        }
+        ... on CatalogRecipeHit {
+          provider
+          providerRecipeId
+          name
+          imageUrl
+          servings
+          totalTimeMinutes
+          diets
+          freeOf
+          likes
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    catalogAvailable
+  }
+}

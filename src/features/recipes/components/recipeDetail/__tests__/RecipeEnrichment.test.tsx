@@ -5,22 +5,29 @@ import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { lightTheme } from '#/theme/themes';
 
 const NUTRITION = {
-  nutrients: [
-    { name: 'Calories', amount: 420, unit: 'kcal' },
-    { name: 'Protein', amount: 22, unit: 'g' },
-    { name: 'Fat', amount: 15, unit: 'g' },
-    { name: 'Unwanted', amount: 999, unit: 'mg' },
-  ],
+  calories: 420,
+  protein: 22,
+  totalCarbs: null,
+  totalFat: 15,
+  dietaryFiber: null,
+  totalSugars: null,
+  sodium: 640,
 };
 
 describe('RecipeEnrichment', () => {
-  it('renders parsed macros from the nutrition JSON blob', () => {
-    render(<RecipeEnrichment nutritionData={NUTRITION} />);
+  it('renders the per-serving macros the API states, each in its unit', () => {
+    render(<RecipeEnrichment nutrition={NUTRITION} />);
     expect(screen.getByText('Nutrition')).toBeTruthy();
+    expect(screen.getByText('420')).toBeTruthy(); // calories
     expect(screen.getByText('22 g')).toBeTruthy(); // protein
     expect(screen.getByText('15 g')).toBeTruthy(); // fat
-    // Nutrients outside the macro allow-list are dropped.
-    expect(screen.queryByText('999 mg')).toBeNull();
+    expect(screen.getByText('640 mg')).toBeTruthy(); // sodium
+  });
+
+  it('prefers the recipe’s own calories to the nutrition’s', () => {
+    render(<RecipeEnrichment caloriesPerServing={380} nutrition={NUTRITION} />);
+    expect(screen.getByText('380')).toBeTruthy();
+    expect(screen.queryByText('420')).toBeNull();
   });
 
   it('renders tips and the forked-from provenance line', () => {

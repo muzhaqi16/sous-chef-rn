@@ -26,12 +26,9 @@ const parseSampleRate = (raw: string | undefined): number => {
   return Math.min(parsed, 1);
 };
 
-const CONFIGURED_SAMPLE_RATE = parseSampleRate(
-  buildEnv.GRAPHQL_TELEMETRY_SAMPLE_RATE,
-);
-
 export const createTelemetryLink = () => {
   const timings = new Map<string, GraphQLTiming>();
+  const sampleRate = parseSampleRate(buildEnv.GRAPHQL_TELEMETRY_SAMPLE_RATE);
 
   return new ApolloLink((operation, forward) => {
     // Skip all telemetry overhead when user has explicitly disabled data sharing
@@ -45,10 +42,7 @@ export const createTelemetryLink = () => {
 
     // Sample telemetry outside dev to reduce overhead. At a rate of 1 this is
     // a no-op comparison — `Math.random()` is never > 1.
-    if (
-      !Environment.isDevelopment() &&
-      Math.random() > CONFIGURED_SAMPLE_RATE
-    ) {
+    if (!Environment.isDevelopment() && Math.random() > sampleRate) {
       return forward(operation);
     }
 
@@ -67,7 +61,7 @@ export const createTelemetryLink = () => {
     // weighted to estimate true volume whatever the rate.
     const sampleWeight = Environment.isDevelopment()
       ? 1
-      : Math.round(1 / CONFIGURED_SAMPLE_RATE);
+      : Math.round(1 / sampleRate);
 
     const operationId = `${operationName}_${startTime}`;
 

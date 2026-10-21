@@ -11,6 +11,7 @@ import {
   getNamedType,
   isAbstractType,
   isObjectType,
+  isUnionType,
   Kind,
   print,
 } from 'graphql';
@@ -133,6 +134,9 @@ function mergeTree(into, from) {
   return into;
 }
 
+const isEntityUnion = type =>
+  isUnionType(type) && type.getTypes().some(isEntity);
+
 /** Per entity type, the union of what every query reads on it. */
 export function computeReaders(schema, { fragments, operations }) {
   const readers = new Map();
@@ -164,7 +168,11 @@ export function computeReaders(schema, { fragments, operations }) {
       if (!field) continue;
       const type = getNamedType(field.type);
       // A connection or view is not owed, but the entities inside it are read.
-      if (isEntity(type) && !isOwnedElsewhere(parentType, field)) {
+      // A union is no entity, but what is read on its member entities is.
+      if (
+        (isEntity(type) || isEntityUnion(type)) &&
+        !isOwnedElsewhere(parentType, field)
+      ) {
         const occurrence = newTree();
         addSelections(
           schema,
@@ -174,7 +182,7 @@ export function computeReaders(schema, { fragments, operations }) {
           fragments,
           seen,
         );
-        record(type.name, occurrence);
+        if (isEntity(type)) record(type.name, occurrence);
         // Reached through an interface or union: each concrete entity type
         // also owes what was read on it and on the abstract type.
         if (isAbstractType(type)) {

@@ -1,0 +1,49 @@
+# Catalog recipes that use the pantry's items, ranked by how many they use.
+# One page: the API offers no next one.
+query CatalogRecipesByIngredients($ingredients: [String!]!, $first: Int) {
+  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {
+    edges {
+      cursor
+      usedIngredientCount
+      missedIngredientCount
+      node {
+        provider
+        providerRecipeId
+        name
+        imageUrl
+        servings
+        totalTimeMinutes
+        likes
+      }
+    }
+    catalogAvailable
+  }
+}
+
+# Catalog recipes for an empty pantry, screened by the dietary profile. The API
+# draws once per tag set and serves every caller that draw while it caches it.
+query RandomCatalogRecipes(
+  $diets: [Diet!]
+  $intolerances: [Intolerance!]
+  $first: Int
+) {
+  randomCatalogRecipes(
+    diets: $diets
+    intolerances: $intolerances
+    first: $first
+  ) {
+    edges {
+      cursor
+      node {
+        provider
+        providerRecipeId
+        name
+        imageUrl
+        servings
+        totalTimeMinutes
+        likes
+      }
+    }
+    catalogAvailable
+  }
+}

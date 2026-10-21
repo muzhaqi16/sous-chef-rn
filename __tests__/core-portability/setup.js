@@ -2,7 +2,7 @@
 /**
  * The core-portability project's setup: every dependency outside
  * CORE_EXTERNALS throws when loaded, naming itself, and the in-memory platform
- * is installed before any core module evaluates. A subpath of one
+ * is installed and the persisted stores started. A subpath of one
  * (`react-native/Libraries/…`) is another specifier, so `jest.config.js` maps
  * those to a stub that throws too.
  */
@@ -22,3 +22,4 @@ globalThis.requestAnimationFrame ??= callback =>
 globalThis.cancelAnimationFrame ??= handle => clearTimeout(handle);
 
 require('../helpers/memoryPlatform').installMemoryPlatform();
+require('../../src/store/persistedStores').startPersistedStores();

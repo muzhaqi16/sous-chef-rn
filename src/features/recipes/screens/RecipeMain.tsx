@@ -180,21 +180,8 @@ const RecipeMainInner: React.FC = () => {
   };
 
   const handleItemPress = (id: string | number) => {
-    const idStr = String(id);
-    // `local-` ids come from the local-API portion of combined search results
-    // and open the backend recipe detail view.
-    if (idStr.startsWith('local-')) {
-      toRecipeDetail({ recipeId: idStr.slice('local-'.length) });
-      return;
-    }
-    const externalId = idStr.startsWith('spoonacular-')
-      ? idStr.replace('spoonacular-', '')
-      : idStr;
-    // The row's own title and image show while the API opens the recipe.
-    const row = screen.items.find(item => item.id === idStr);
-    toRecipeDetail({
-      catalog: { externalId, name: row?.title, imageUrl: row?.imageUrl },
-    });
+    const row = screen.items.find(item => item.id === String(id));
+    if (row) toRecipeDetail(row.target);
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;
@@ -247,6 +234,7 @@ const RecipeMainInner: React.FC = () => {
   const DiscoveryHeader = (() => {
     if (!screen.showDiscovery) return null;
     const isPantry = screen.discovery.mode === 'pantry';
+    const busy = screen.discovery.loading || screen.discovery.refreshing;
     return (
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
@@ -268,14 +256,14 @@ const RecipeMainInner: React.FC = () => {
         <AppPressable
           style={styles.refreshButton}
           onPress={screen.discovery.refresh}
-          disabled={screen.discovery.loading}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.refreshSuggestions')}
         >
           <Icon
             name="refresh"
             size={20}
-            tone={screen.discovery.loading ? 'textSecondary' : 'primary'}
+            tone={busy ? 'textSecondary' : 'primary'}
           />
         </AppPressable>
       </View>

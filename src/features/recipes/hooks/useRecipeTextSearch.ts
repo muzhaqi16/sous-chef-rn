@@ -1,55 +1,72 @@
 import { useRef, useState } from 'react';
-import { transformRecipeForDisplay } from '#domain/recipeTransform';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { fetchSpoonacularTextPage } from '#features/recipes/utils/recipeSearchPaging';
-import type { SpoonacularRecipe } from '#features/recipes/utils/recipeRows';
-import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterMaps';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import type { Translate } from '#/i18n/types';
+import { errorService } from '#/services/errorService';
+import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import { recipeCardBasics } from '#features/recipes/utils/recipeCardText';
+import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterOptions';
+import { rowKey, type FoundRow } from '#features/recipes/utils/recipeRows';
+import { fetchTextPage } from './useRecipeSearch';
+import { UseRecipeTextSearch_PickedRecipeFragmentDoc } from './useRecipeTextSearch.generated';
+import { catalogHintOf, type RecipeTarget } from './useOpenCatalogRecipe';
 
 const MIN_QUERY_LENGTH = 3;
 
-function runSearch(
-  query: string,
-  onResults: (results: SpoonacularRecipe[]) => void,
-  setSearching: (searching: boolean) => void,
-  signal: AbortSignal,
-) {
-  setSearching(true);
-  void executeAsyncWithCleanup(
-    async () => {
-      const page = await fetchSpoonacularTextPage(
-        query,
-        DEFAULT_FILTERS,
-        0,
-        signal,
-      );
-      if (!signal.aborted) onResults(page.results);
-    },
-    () => {
-      if (!signal.aborted) setSearching(false);
-    },
-    () => {
-      // A failed search leaves the results empty; the caller's own list still shows.
-    },
-  );
+export type PickerDietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
+
+/** A search result as a picker row shows it. */
+export interface PickerRecipe {
+  key: string;
+  title: string;
+  subtitle: string;
+  imageUrl?: string;
+  dietTags: PickerDietTag[];
+  /** A held recipe is planned by id; a catalog one is opened through the API first. */
+  target: RecipeTarget;
+}
+
+function dietTagsOf(
+  diets: readonly Diet[],
+  freeOf: readonly Intolerance[],
+): PickerDietTag[] {
+  const tags: PickerDietTag[] = [];
+  if (diets.includes(Diet.Vegan)) tags.push('vegan');
+  else if (diets.includes(Diet.Vegetarian)) tags.push('vegetarian');
+  if (diets.includes(Diet.GlutenFree)) tags.push('glutenFree');
+  if (freeOf.includes(Intolerance.Dairy)) tags.push('dairyFree');
+  return tags;
+}
+
+function pickerRecipeOf(row: FoundRow, translate: Translate): PickerRecipe {
+  const node = row.source === 'recipe' ? row.recipe : row.hit;
+  return {
+    ...recipeCardBasics(node, translate),
+    key: rowKey(row),
+    dietTags: dietTagsOf(node.diets, node.freeOf),
+    target:
+      row.source === 'recipe'
+        ? { recipeId: row.recipe.id }
+        : { catalog: catalogHintOf(row.hit) },
+  };
 }
 
 /**
- * A first-page Spoonacular text search for pickers outside the Recipes tab: a
- * query shorter than three characters clears the results, and a newer query
- * aborts the one in flight.
+ * A first-page recipe search for pickers outside the Recipes tab: a query
+ * shorter than three characters clears the results, and a newer query
+ * supersedes the one in flight.
  */
 export const useRecipeTextSearch = () => {
   const { t } = useTranslation();
-  // Kept as Spoonacular returned them: the copy is written below, while
-  // rendering, so the rows follow a language change.
-  const [found, setFound] = useState<SpoonacularRecipe[]>([]);
+  const client = useApolloClient();
+  const generationRef = useRef(0);
+  // Kept as the API returned them: the copy is written below, while rendering,
+  // so the rows follow a language change.
+  const [found, setFound] = useState<FoundRow[]>([]);
   const [searching, setSearching] = useState(false);
-  const controllerRef = useRef<AbortController | null>(null);
 
   const clear = () => {
-    controllerRef.current?.abort();
-    controllerRef.current = null;
+    generationRef.current += 1;
     setFound([]);
     setSearching(false);
   };
@@ -60,13 +77,48 @@ export const useRecipeTextSearch = () => {
       clear();
       return;
     }
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    runSearch(trimmed, setFound, setSearching, controller.signal);
+    generationRef.current += 1;
+    const generation = generationRef.current;
+    setSearching(true);
+    void fetchTextPage(client, trimmed, DEFAULT_FILTERS, null).then(fetched => {
+      if (generation !== generationRef.current) return;
+      // A failed search leaves the results empty; the caller's own list still shows.
+      if ('error' in fetched) {
+        errorService.reportError(fetched.error, {
+          operation: 'pickerRecipeSearch',
+        });
+      }
+      setFound('page' in fetched ? fetched.page.rows : []);
+      setSearching(false);
+    });
   };
 
-  const results = found.map(recipe => transformRecipeForDisplay(recipe, t));
+  /**
+   * Where a picked result goes. A held recipe is written first, so the meal or
+   * template planning it names it before the server answers; the results not
+   * picked are never kept.
+   */
+  const pick = (result: PickerRecipe): RecipeTarget => {
+    const row = found.find(candidate => rowKey(candidate) === result.key);
+    if (row?.source === 'recipe') {
+      const { id, name, imageUrl, servings, totalTimeMinutes } = row.recipe;
+      client.cache.writeFragment({
+        fragment: UseRecipeTextSearch_PickedRecipeFragmentDoc,
+        fragmentName: 'useRecipeTextSearch_pickedRecipe',
+        data: {
+          __typename: 'Recipe',
+          id,
+          name,
+          imageUrl,
+          servings,
+          totalTimeMinutes,
+        },
+      });
+    }
+    return result.target;
+  };
 
-  return { results, searching, search, clear };
+  const results = found.map(row => pickerRecipeOf(row, t));
+
+  return { results, searching, search, clear, pick };
 };

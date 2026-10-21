@@ -60,19 +60,22 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   };
 };
 
-const apiConfig = Environment.getApiConfig();
-const baseOptions = {
-  uri: env.API_URL ?? apiConfig.baseUrl,
-  headers: { 'Content-Type': 'application/json' },
-  fetch: createTimeoutFetch(apiConfig.timeout),
-};
+/** Built with the client, not at load: the API config is a platform service. */
+export function createHttpLink(): ApolloLink {
+  const apiConfig = Environment.getApiConfig();
+  const baseOptions = {
+    uri: env.API_URL ?? apiConfig.baseUrl,
+    headers: { 'Content-Type': 'application/json' },
+    fetch: createTimeoutFetch(apiConfig.timeout),
+  };
 
-// DO NOT ENABLE against the sous-chef API: it sets
-// `allowBatchedHttpRequests: false`, so every array-bodied POST is rejected.
-// APQ + HTTP/2 multiplexing already cover the bandwidth win. The flag remains
-// only for a server that accepts array bodies.
-const batchEnabled = env.GRAPHQL_BATCH_ENABLED === 'true';
+  // DO NOT ENABLE against the sous-chef API: it sets
+  // `allowBatchedHttpRequests: false`, so every array-bodied POST is rejected.
+  // APQ + HTTP/2 multiplexing already cover the bandwidth win. The flag remains
+  // only for a server that accepts array bodies.
+  const batchEnabled = env.GRAPHQL_BATCH_ENABLED === 'true';
 
-export const httpLink: ApolloLink = batchEnabled
-  ? new BatchHttpLink({ ...baseOptions, batchMax: 10, batchInterval: 20 })
-  : new HttpLink(baseOptions);
+  return batchEnabled
+    ? new BatchHttpLink({ ...baseOptions, batchMax: 10, batchInterval: 20 })
+    : new HttpLink(baseOptions);
+}

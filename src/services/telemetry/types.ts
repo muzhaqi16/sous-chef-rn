@@ -125,7 +125,7 @@ export interface ScreenViewData {
   properties?: Record<string, unknown>;
 }
 
-export const DEFAULT_CONFIG: TelemetryConfig = {
+export const defaultTelemetryConfig = (): TelemetryConfig => ({
   enabled: false,
   enableMetrics: false,
   enableLogs: false,
@@ -143,4 +143,4 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
     http: false,
     console: true,
   },
-};
+});

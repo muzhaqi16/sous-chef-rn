@@ -2,7 +2,9 @@ import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { httpLink } from '../httpLink';
+import { createHttpLink } from '../httpLink';
+
+const httpLink = createHttpLink();
 
 const client = new ApolloClient({
   cache: new InMemoryCache(),

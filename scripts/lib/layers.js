@@ -26,6 +26,11 @@ const LAYERS = [
     patterns: ['src/apollo/**'],
   },
   {
+    name: 'bootstrap',
+    layer: 'core',
+    patterns: ['src/bootstrap/**'],
+  },
+  {
     name: 'domain',
     layer: 'core',
     patterns: ['src/domain/**'],
@@ -53,7 +58,7 @@ const LAYERS = [
     name: 'services',
     layer: 'core',
     patterns: [
-      'src/services/{subscriptions,spoonacular,telemetry}/**',
+      'src/services/{subscriptions,telemetry}/**',
       'src/services/{alertService,destructiveConfirm,errorService,toastService}.ts',
     ],
   },
