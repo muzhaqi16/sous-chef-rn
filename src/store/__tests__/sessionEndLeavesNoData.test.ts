@@ -47,6 +47,11 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
+import {
+  catalogFetchedAt,
+  catalogFetchKey,
+  recordCatalogFetch,
+} from '#features/recipes/store/catalogFetchTimes';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -238,6 +243,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
       held: [],
     });
     expect(registeredSessionScopedStores()).toContain('recipeCaptures');
+  });
+
+  it('forgets when this account fetched catalog recipes', async () => {
+    const key = catalogFetchKey('randomCatalogRecipes', { first: 25 });
+    recordCatalogFetch(key, Date.now());
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(catalogFetchedAt(key)).toBeUndefined();
+    expect(registeredSessionScopedStores()).toContain('catalogFetchTimes');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

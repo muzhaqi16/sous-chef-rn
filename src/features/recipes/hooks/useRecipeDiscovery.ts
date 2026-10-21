@@ -29,6 +29,7 @@ export function useRecipeDiscovery(
       mode: 'pantry',
       rows: server.rows,
       loading: server.loading,
+      refreshing: server.refreshing,
       failed: false,
       refresh: server.refresh,
       discoveryHasMore: false,

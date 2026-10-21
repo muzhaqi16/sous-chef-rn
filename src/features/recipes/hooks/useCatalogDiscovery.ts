@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
+import { NetworkStatus } from '@apollo/client';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { useScreenFocusEffect } from '#platform/screen';
-import { useFirstFetchPolicy } from '#hooks/apollo/useFirstFetchPolicy';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
@@ -9,6 +9,7 @@ import { catalogIngredientNames } from '#domain/catalogRecipes';
 import { defaultPantryOf } from '#domain/homePantries';
 import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
+import { useCatalogReadOptions } from './useCatalogReadOptions';
 import {
   CatalogRecipesByIngredientsDocument,
   RandomCatalogRecipesDocument,
@@ -20,6 +21,7 @@ type DiscoveryMode = 'pantry' | 'random' | 'none';
 
 const DISCOVERY_PAGE_SIZE = 15;
 const DISCOVERY_FETCH_SIZE = 25;
+const DISCOVERY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** The dietary profile discovery screens catalog recipes by. */
 export interface DiscoveryDiet {
@@ -32,6 +34,8 @@ export interface CatalogDiscoveryResult {
   /** Any discovery's rows, so another source can stand in for these. */
   rows: RecipeRow[];
   loading: boolean;
+  /** A refresh is in flight. */
+  refreshing: boolean;
   /** Nothing to show because the API failed or could not ask the catalog. */
   failed: boolean;
   refresh: () => Promise<void>;
@@ -49,40 +53,44 @@ function modeOf(ready: boolean, ingredientCount: number): DiscoveryMode {
   return ingredientCount > 0 ? 'pantry' : 'random';
 }
 
-/** Every row the API found for `mode`. */
-function foundRows(
+/** The page `mode` shows, the same object while unchanged, and its rows. */
+function shownOf(
   mode: DiscoveryMode,
   byIngredients: CatalogRecipesByIngredientsQuery | undefined,
   random: RandomCatalogRecipesQuery | undefined,
-): RecipeRow[] {
+): { page: { catalogAvailable: boolean } | undefined; rows: RecipeRow[] } {
   switch (mode) {
-    case 'pantry':
-      return (byIngredients?.catalogRecipesByIngredients.edges ?? []).map(
-        (edge): RecipeRow => ({ source: 'pantry', edge }),
-      );
-    case 'random':
-      return (random?.randomCatalogRecipes.edges ?? []).map(
-        (edge): RecipeRow => ({ source: 'random', hit: edge.node }),
-      );
+    case 'pantry': {
+      const page = byIngredients?.catalogRecipesByIngredients;
+      return {
+        page,
+        rows: (page?.edges ?? []).map(
+          (edge): RecipeRow => ({ source: 'pantry', edge }),
+        ),
+      };
+    }
+    case 'random': {
+      const page = random?.randomCatalogRecipes;
+      return {
+        page,
+        rows: (page?.edges ?? []).map(
+          (edge): RecipeRow => ({ source: 'random', hit: edge.node }),
+        ),
+      };
+    }
     case 'none':
-      return [];
+      return { page: undefined, rows: [] };
   }
 }
 
-/** The page `mode` shows, the same object while the answer is unchanged. */
-function pageOf(
-  mode: DiscoveryMode,
-  byIngredients: CatalogRecipesByIngredientsQuery | undefined,
-  random: RandomCatalogRecipesQuery | undefined,
-): { catalogAvailable: boolean } | undefined {
-  switch (mode) {
-    case 'pantry':
-      return byIngredients?.catalogRecipesByIngredients;
-    case 'random':
-      return random?.randomCatalogRecipes;
-    case 'none':
-      return undefined;
-  }
+/** Every index below `count`, in a random order. */
+function shuffledIndices(count: number): number[] {
+  return Array.from({ length: count }, (_, index) => ({
+    index,
+    rank: Math.random(),
+  }))
+    .sort((a, b) => a.rank - b.rank)
+    .map(({ index }) => index);
 }
 
 /** Answered without the catalog, so asking again may find more. */
@@ -134,66 +142,77 @@ export function useCatalogDiscovery(
   const pantryPending = pantryLoading && !pantryHasResult;
   const mode = modeOf(enabled && !pantryPending, ingredients.length);
 
-  const client = useApolloClient();
-  const pantryVariables = { ingredients, first: DISCOVERY_FETCH_SIZE };
-  const pantryPolicy = useFirstFetchPolicy(
-    mode === 'pantry' ? JSON.stringify(pantryVariables) : null,
-    () =>
-      isDegraded(
-        client.readQuery({
-          query: CatalogRecipesByIngredientsDocument,
-          variables: pantryVariables,
-        })?.catalogRecipesByIngredients,
-      ),
+  const pantryVariables =
+    mode === 'pantry' ? { ingredients, first: DISCOVERY_FETCH_SIZE } : null;
+  const pantryOptions = useCatalogReadOptions(
+    CatalogRecipesByIngredientsDocument,
+    pantryVariables,
+    {
+      field: 'catalogRecipesByIngredients',
+      maxAgeMs: DISCOVERY_MAX_AGE_MS,
+      pageOf: data => data.catalogRecipesByIngredients,
+    },
   );
   const byIngredients = useQuery(
     CatalogRecipesByIngredientsDocument,
-    mode === 'pantry'
-      ? {
-          variables: pantryVariables,
-          fetchPolicy: pantryPolicy,
-          refetchOn: false,
-        }
+    pantryVariables
+      ? { variables: pantryVariables, ...pantryOptions }
       : skipToken,
   );
 
-  const randomVariables = {
-    diets: diet.diets,
-    intolerances: diet.intolerances,
-    first: DISCOVERY_FETCH_SIZE,
-  };
-  const randomPolicy = useFirstFetchPolicy(
-    mode === 'random' ? JSON.stringify(randomVariables) : null,
-    () =>
-      isDegraded(
-        client.readQuery({
-          query: RandomCatalogRecipesDocument,
-          variables: randomVariables,
-        })?.randomCatalogRecipes,
-      ),
+  const randomVariables =
+    mode === 'random'
+      ? {
+          diets: diet.diets,
+          intolerances: diet.intolerances,
+          first: DISCOVERY_FETCH_SIZE,
+        }
+      : null;
+  const randomOptions = useCatalogReadOptions(
+    RandomCatalogRecipesDocument,
+    randomVariables,
+    {
+      field: 'randomCatalogRecipes',
+      maxAgeMs: DISCOVERY_MAX_AGE_MS,
+      pageOf: data => data.randomCatalogRecipes,
+    },
   );
   const random = useQuery(
     RandomCatalogRecipesDocument,
-    mode === 'random'
-      ? {
-          variables: randomVariables,
-          fetchPolicy: randomPolicy,
-          refetchOn: false,
-        }
+    randomVariables
+      ? { variables: randomVariables, ...randomOptions }
       : skipToken,
   );
 
   // A skipped query keeps its last run's data, so only the current mode's is read.
-  const found = foundRows(mode, byIngredients.data, random.data);
-  const page = pageOf(mode, byIngredients.data, random.data);
+  const { page, rows: answered } = shownOf(
+    mode,
+    byIngredients.data,
+    random.data,
+  );
 
-  // A screenful at a time, from the top again whenever a new list arrives.
+  // The API serves everyone one random draw for a day, so refreshing it
+  // reorders the draw held; a new page drops the order.
+  const [shuffle, setShuffle] = useState<{
+    of: typeof page;
+    order: number[];
+  } | null>(null);
+  const shuffled = shuffle?.of === page ? shuffle : null;
+  const found = shuffled
+    ? shuffled.order.flatMap(index => {
+        const row = answered[index];
+        return row ? [row] : [];
+      })
+    : answered;
+
+  // A screenful at a time, from the top again for a new list or order.
+  const list = shuffled ?? page;
   const [visible, setVisible] = useState({
-    of: page,
+    of: list,
     count: DISCOVERY_PAGE_SIZE,
   });
-  if (visible.of !== page) {
-    setVisible({ of: page, count: DISCOVERY_PAGE_SIZE });
+  if (visible.of !== list) {
+    setVisible({ of: list, count: DISCOVERY_PAGE_SIZE });
   }
 
   const discoveryHasMore = visible.count < found.length;
@@ -217,6 +236,10 @@ export function useCatalogDiscovery(
 
   const refresh = async () => {
     if (mode === 'none') return;
+    if (mode === 'random' && page && !isDegraded(page)) {
+      setShuffle({ of: page, order: shuffledIndices(answered.length) });
+      return;
+    }
     await active.refetch();
   };
 
@@ -224,6 +247,8 @@ export function useCatalogDiscovery(
     mode,
     rows: found.slice(0, visible.count),
     loading,
+    refreshing:
+      mode !== 'none' && active.networkStatus === NetworkStatus.refetch,
     failed,
     refresh,
     pantryItems,

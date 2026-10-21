@@ -418,6 +418,29 @@ describe('RecipeMain', () => {
     expect(tree.getByText('Based on your pantry')).toBeTruthy();
   });
 
+  it('disables the refresh control while a refresh is in flight', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({
+      showDiscovery: true,
+      discovery: {
+        mode: 'pantry',
+        loading: false,
+        refreshing: true,
+        refresh: jest.fn(),
+        pantryItems: [],
+        hasPantryItems: true,
+      },
+      items: [{ id: '1', title: 'P', subtitle: 's' }],
+    });
+
+    const tree = render(<RecipeMain />);
+    expect(tree.getByLabelText('Refresh recipe suggestions')).toBeDisabled();
+  });
+
   it('shows random discovery header', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (

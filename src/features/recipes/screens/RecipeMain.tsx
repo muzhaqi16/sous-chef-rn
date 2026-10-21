@@ -234,6 +234,7 @@ const RecipeMainInner: React.FC = () => {
   const DiscoveryHeader = (() => {
     if (!screen.showDiscovery) return null;
     const isPantry = screen.discovery.mode === 'pantry';
+    const busy = screen.discovery.loading || screen.discovery.refreshing;
     return (
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
@@ -255,14 +256,14 @@ const RecipeMainInner: React.FC = () => {
         <AppPressable
           style={styles.refreshButton}
           onPress={screen.discovery.refresh}
-          disabled={screen.discovery.loading}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.refreshSuggestions')}
         >
           <Icon
             name="refresh"
             size={20}
-            tone={screen.discovery.loading ? 'textSecondary' : 'primary'}
+            tone={busy ? 'textSecondary' : 'primary'}
           />
         </AppPressable>
       </View>

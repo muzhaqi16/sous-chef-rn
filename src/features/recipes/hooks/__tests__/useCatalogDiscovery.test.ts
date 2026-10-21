@@ -16,6 +16,11 @@ import { getI18n } from '#/i18n/config';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import {
+  catalogFetchKey,
+  recordCatalogFetch,
+  useCatalogFetchTimesStore,
+} from '#features/recipes/store/catalogFetchTimes';
+import {
   useCatalogDiscovery,
   type DiscoveryDiet,
 } from '../useCatalogDiscovery';
@@ -121,6 +126,9 @@ const renderDiscovery = (
     cache,
   });
 
+const hitIds = (rows: RecipeRow[]) =>
+  rows.map(row => (row.source === 'random' ? row.hit.providerRecipeId : null));
+
 const ids = (count: number) =>
   Array.from({ length: count }, (_, index) => index + 1);
 
@@ -131,6 +139,8 @@ const hitNode = (id: number) => ({
   totalTimeMinutes: null,
   likes: null,
 });
+
+const PANTRY_VARIABLES = { ingredients: ['tomato'], first: 25 };
 
 const RANDOM_VARIABLES = {
   diets: [Diet.Vegan],
@@ -174,6 +184,7 @@ const cachedPantryPage = (
 });
 
 beforeEach(() => {
+  useCatalogFetchTimesStore.setState({ fetchedAt: {} });
   memoryScreen().setFocused(true);
   mockUseCurrentHome.mockReturnValue({
     currentHome: {
@@ -423,6 +434,153 @@ describe('useCatalogDiscovery', () => {
     });
 
     expect(byIngredients.fired).toHaveLength(2);
+  });
+
+  it('keeps its rows, on screen and in the cache, when a refresh comes back without the catalog', async () => {
+    const cache = makeCache();
+    pantryHolding(['tomato']);
+    const found = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [matchEdge(1), matchEdge(2), matchEdge(3)],
+          catalogAvailable: true,
+        },
+      },
+      maxUsageCount: 1,
+    });
+    const degraded = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: {
+        catalogRecipesByIngredients: { edges: [], catalogAvailable: false },
+      },
+    });
+    const { result } = renderDiscovery(
+      [found.mock, degraded.mock],
+      undefined,
+      cache,
+    );
+    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(degraded.fired).toHaveLength(1);
+    expect(result.current.rows).toHaveLength(3);
+    expect(result.current.failed).toBe(false);
+    // What the next launch restores.
+    expect(
+      cache.readQuery({
+        query: CatalogRecipesByIngredientsDocument,
+        variables: PANTRY_VARIABLES,
+      })?.catalogRecipesByIngredients.edges,
+    ).toHaveLength(3);
+  });
+
+  it('says it is refreshing while a refresh is in flight', async () => {
+    pantryHolding(['tomato']);
+    const found = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [matchEdge(1)],
+          catalogAvailable: true,
+        },
+      },
+      maxUsageCount: 1,
+    });
+    const again = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [matchEdge(2)],
+          catalogAvailable: true,
+        },
+      },
+      held: true,
+    });
+    const { result } = renderDiscovery([found.mock, again.mock]);
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    expect(result.current.refreshing).toBe(false);
+
+    let refreshed: Promise<void> = Promise.resolve();
+    act(() => {
+      refreshed = result.current.refresh();
+    });
+    await waitFor(() => expect(result.current.refreshing).toBe(true));
+    expect(result.current.loading).toBe(false);
+
+    again.release();
+    await act(async () => {
+      await refreshed;
+    });
+    await waitFor(() => expect(result.current.refreshing).toBe(false));
+  });
+
+  it('reorders the random draw it holds on refresh, asking for nothing', async () => {
+    const random = randomMock(ids(25).map(randomEdge));
+    const { result } = renderDiscovery([random.mock]);
+    await waitFor(() => expect(result.current.rows).toHaveLength(15));
+    act(() => result.current.loadMoreDiscovery());
+    expect(result.current.rows).toHaveLength(25);
+
+    // Falling ranks reverse the draw.
+    let rank = 1;
+    const spy = jest.spyOn(Math, 'random').mockImplementation(() => {
+      rank -= 0.01;
+      return rank;
+    });
+    await act(async () => {
+      await result.current.refresh();
+    });
+    spy.mockRestore();
+
+    expect(random.fired).toHaveLength(1);
+    expect(hitIds(result.current.rows)).toEqual(
+      ids(25).reverse().slice(0, 15).map(String),
+    );
+  });
+
+  it('asks the API again on refresh when its random draw came without the catalog', async () => {
+    const degraded = recordMock(RandomCatalogRecipesDocument, {
+      data: { randomCatalogRecipes: { edges: [], catalogAvailable: false } },
+    });
+    const { result } = renderDiscovery([degraded.mock]);
+    await waitFor(() => expect(result.current.failed).toBe(true));
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(degraded.fired).toHaveLength(2);
+  });
+
+  it('shows a page fetched over a day ago while it asks for a fresh one', async () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: CatalogRecipesByIngredientsDocument,
+      variables: PANTRY_VARIABLES,
+      data: cachedPantryPage(3),
+    });
+    recordCatalogFetch(
+      catalogFetchKey('catalogRecipesByIngredients', PANTRY_VARIABLES),
+      Date.now() - 25 * 60 * 60 * 1000,
+    );
+    pantryHolding(['tomato']);
+    const byIngredients = recordMock(CatalogRecipesByIngredientsDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [matchEdge(1), matchEdge(2)],
+          catalogAvailable: true,
+        },
+      },
+      held: true,
+    });
+    const { result } = renderDiscovery([byIngredients.mock], undefined, cache);
+
+    expect(result.current.rows).toHaveLength(3);
+    expect(result.current.loading).toBe(false);
+    await waitFor(() => expect(byIngredients.fired).toHaveLength(1));
+
+    byIngredients.release();
+    await waitFor(() => expect(result.current.rows).toHaveLength(2));
   });
 });
 

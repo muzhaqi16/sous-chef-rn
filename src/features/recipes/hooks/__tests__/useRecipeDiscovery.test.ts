@@ -47,6 +47,7 @@ const catalog: CatalogDiscoveryResult = {
   mode: 'random',
   rows: [randomRow('7', 'Catalog stew')],
   loading: false,
+  refreshing: false,
   failed: false,
   refresh: jest.fn(),
   pantryItems: [],
@@ -63,6 +64,7 @@ const server = (
 ): ReturnType<typeof useServerRecipeSuggestions> => ({
   rows: [],
   loading: false,
+  refreshing: false,
   unanswered: false,
   refresh: jest.fn(),
   ...overrides,

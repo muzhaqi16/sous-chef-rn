@@ -1,3 +1,4 @@
+import { NetworkStatus } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useToday } from '#hooks/app/useToday';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
@@ -12,7 +13,7 @@ const SUGGESTION_COUNT = 20;
  */
 export function useServerRecipeSuggestions(enabled: boolean) {
   const today = useToday();
-  const { data, loading, error, refetch } = useQuery(
+  const { data, loading, error, networkStatus, refetch } = useQuery(
     RecipeSuggestionsDocument,
     enabled ? { variables: { first: SUGGESTION_COUNT, today } } : skipToken,
   );
@@ -23,6 +24,7 @@ export function useServerRecipeSuggestions(enabled: boolean) {
       (edge): RecipeRow => ({ source: 'suggestion', edge }),
     ),
     loading: enabled && loading && !data,
+    refreshing: enabled && networkStatus === NetworkStatus.refetch,
     /** It answered with nothing, or could not answer: someone else may fill in. */
     unanswered: enabled && (edges?.length === 0 || (!!error && !data)),
     refresh: async () => {

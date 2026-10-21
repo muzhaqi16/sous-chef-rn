@@ -7,6 +7,10 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  catalogFetchKey,
+  recordCatalogFetch,
+} from '#features/recipes/store/catalogFetchTimes';
 import { useRecipeSuggestionsForItem } from '../useRecipeSuggestionsForItem';
 import {
   CatalogRecipesForItemDocument,
@@ -24,6 +28,19 @@ type Edge = NonNullable<
 const edge = (id: string, name: string): Edge => ({
   node: { provider: ExternalSource.Spoonacular, providerRecipeId: id, name },
 });
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// When the cached answer for "milk" arrived.
+const milkFetched = (msAgo: number) => {
+  recordCatalogFetch(
+    catalogFetchKey('catalogRecipesByIngredients', {
+      ingredients: ['milk'],
+      first: 5,
+    }),
+    Date.now() - msAgo,
+  );
+};
 
 const suggestionsMock = (edges: Edge[]) =>
   recordMock(CatalogRecipesForItemDocument, {
@@ -149,6 +166,48 @@ describe('useRecipeSuggestionsForItem', () => {
       [suggestions.mock],
       cacheHoldingMilk(['Rice pudding'], true),
     );
+
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Rice pudding',
+      ]),
+    );
+    expect(suggestions.fired).toEqual([]);
+  });
+
+  it('shows suggestions fetched eight days ago while it asks for fresh ones', async () => {
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(8 * DAY_MS);
+    const suggestions = recordMock(CatalogRecipesForItemDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [edge('1', 'Milkshake')],
+          catalogAvailable: true,
+        },
+      },
+      held: true,
+    });
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
+
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
+    expect(result.current.loadingRecipes).toBe(false);
+    await waitFor(() => expect(suggestions.fired).toHaveLength(1));
+
+    suggestions.release();
+    await waitFor(() =>
+      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+        'Milkshake',
+      ]),
+    );
+  });
+
+  it('answers from the cache for suggestions fetched yesterday', async () => {
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(DAY_MS);
+    const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
 
     await waitFor(() =>
       expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
