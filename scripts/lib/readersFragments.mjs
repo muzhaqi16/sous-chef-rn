@@ -134,10 +134,10 @@ function mergeTree(into, from) {
   return into;
 }
 
-/** Per entity type, the union of what every query reads on it. */
 const isEntityUnion = type =>
   isUnionType(type) && type.getTypes().some(isEntity);
 
+/** Per entity type, the union of what every query reads on it. */
 export function computeReaders(schema, { fragments, operations }) {
   const readers = new Map();
   const record = (type, tree) =>

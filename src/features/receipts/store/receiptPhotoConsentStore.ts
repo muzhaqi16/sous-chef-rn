@@ -39,9 +39,9 @@ export async function storedReceiptPhotoConsent(): Promise<ReceiptPhotoConsent> 
   return useReceiptPhotoConsentStore.getState().consent;
 }
 
-// The next person on the phone answers for themselves.
 hydrateWhenStarted(useReceiptPhotoConsentStore);
 
+// The next person on the phone answers for themselves.
 registerSessionScopedStore('receiptPhotoConsent', () =>
   useReceiptPhotoConsentStore.setState({ consent: null }),
 );

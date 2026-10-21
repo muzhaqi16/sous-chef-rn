@@ -41,7 +41,8 @@ export interface Env {
 
 /**
  * Synchronous key-value storage. Reads and writes throw until `ready()`
- * resolves; the host starts opening it before any React code runs.
+ * resolves; the host starts opening it before any React code runs. Members are
+ * called with the `deviceStorage` proxy as `this`, so none may rely on it.
  */
 export interface KeyValueStore {
   set(key: string, value: string | number | boolean): void;
