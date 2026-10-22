@@ -61,4 +61,17 @@ describe('QuantityBadge', () => {
     render(<QuantityBadge quantity={3} onPress={mockOnPress} />);
     expect(screen.getByLabelText('Quantity: 3. Tap to edit')).toBeTruthy();
   });
+
+  it.each([
+    ['disabled', { disabled: true }],
+    ['purchased', { isPurchased: true }],
+  ])('does not offer an edit while %s', (_label, props) => {
+    render(
+      <QuantityBadge quantity={2} unit="pc" onPress={mockOnPress} {...props} />,
+    );
+    const badge = screen.getByRole('button');
+    expect(badge.props.accessibilityLabel).toBe('Quantity: 2 pc');
+    expect(badge.props.accessibilityHint).toBeUndefined();
+    expect(badge.props.accessibilityState).toEqual({ disabled: true });
+  });
 });

@@ -66,10 +66,15 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={t('quantityBadge.a11yLabel', {
-        quantity: accessibilityText,
-      })}
-      accessibilityHint={t('quantityBadge.a11yHint')}
+      // A badge the viewer may not edit says what it holds, not what a tap does.
+      accessibilityLabel={t(
+        isDisabled
+          ? 'quantityBadge.a11yLabelReadOnly'
+          : 'quantityBadge.a11yLabel',
+        { quantity: accessibilityText },
+      )}
+      accessibilityHint={isDisabled ? undefined : t('quantityBadge.a11yHint')}
+      accessibilityState={{ disabled: isDisabled }}
       hitSlop={hitSlop.md}
     >
       <View style={[styles.container, containerOverride]}>

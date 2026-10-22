@@ -674,6 +674,7 @@
   },
   "quantityBadge": {
     "a11yLabel": "Quantità: {{quantity}}. Tocca per modificare",
+    "a11yLabelReadOnly": "Quantità: {{quantity}}",
     "a11yHint": "Apre l'editor della quantità"
   },
   "tutorial": {

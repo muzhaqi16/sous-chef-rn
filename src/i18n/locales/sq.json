@@ -674,6 +674,7 @@
   },
   "quantityBadge": {
     "a11yLabel": "Sasia: {{quantity}}. Prek për të modifikuar",
+    "a11yLabelReadOnly": "Sasia: {{quantity}}",
     "a11yHint": "Hap redaktuesin e sasisë"
   },
   "tutorial": {
