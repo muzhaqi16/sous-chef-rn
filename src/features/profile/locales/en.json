@@ -221,7 +221,7 @@
   "personalInformation": {
     "sectionPrivacySettings": "Privacy Settings",
     "displayNameSubtitle": "Visible to everyone",
-    "profileVisibilitySubtitle": "Who sees your photo",
+    "profileVisibilitySubtitle": "Who sees your photo, name and bio",
     "email": "Email",
     "firstName": "First Name",
     "lastName": "Last Name",
