@@ -61,6 +61,7 @@
       "dateScanned": "Nuk është shtypur në faturë, ndaj është dita kur e skanove.",
       "storePlaceholder": "Zgjidh dyqanin",
       "addsAddress": "Shton adresën e kësaj fature",
+      "storeNumber": "Dyqani nr. {{number}}",
       "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
       "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
       "choose": "Pa përputhje. Prek për të zgjedhur produktin.",
@@ -129,10 +130,9 @@
       "sending": "Po dërgohet fotoja…"
     },
     "photoConsent": {
-      "title": "Të dërgohet një foto kur telefoni yt nuk e lexon dot një faturë?",
-      "body": "Telefoni yt i lexon vetë shumicën e faturave, dhe ato nuk largohen kurrë prej tij. Kur nuk mundet, {{appName}} e lexon faturën më saktë nga fotoja e saj sesa nga teksti. Me pëlqimin tënd, ajo foto dërgohet në serverin e {{appName}} dhe fshihet sapo të lexohet.\n\nNumrat e kartës, numrat e anëtarësisë dhe emrat që gjen telefoni yt mbulohen para se të dërgohet.",
-      "bodyUnmasked": "Telefoni yt i lexon vetë shumicën e faturave, dhe ato nuk largohen kurrë prej tij. Kur nuk mundet, {{appName}} e lexon faturën më saktë nga fotoja e saj sesa nga teksti. Me pëlqimin tënd, ajo foto dërgohet në serverin e {{appName}} dhe fshihet sapo të lexohet.\n\nNdërsa lexohet fotoja, serveri e sheh të gjithë faturën.",
-      "hint": "Zgjidh “Vetëm tekst” për të dërguar vetëm tekstin e faturës, pa numrat e kartës e të besnikërisë, kur telefoni yt nuk e lexon dot. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "title": "Të dërgohen fotot e faturave që telefoni yt nuk i lexon dot?",
+      "body": "Fotot lexohen më saktë se teksti. Numrat e kartës mbulohen më parë, dhe fotot fshihen sapo të lexohen. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "bodyUnmasked": "Fotot lexohen më saktë se teksti. Dërgohet e gjithë fatura, dhe fshihet sapo të lexohet. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
       "send": "Dërgo fotot",
       "textOnly": "Vetëm tekst"
     },

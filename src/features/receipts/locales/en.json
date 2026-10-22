@@ -61,6 +61,7 @@
       "dateScanned": "Not printed on the receipt, so it's the day you scanned it.",
       "storePlaceholder": "Choose the store",
       "addsAddress": "Adds this receipt's address",
+      "storeNumber": "Store #{{number}}",
       "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
       "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
       "choose": "No match. Tap to choose the product.",
@@ -129,10 +130,9 @@
       "sending": "Sending the photo…"
     },
     "photoConsent": {
-      "title": "Send a photo when your phone can't read a receipt?",
-      "body": "Your phone reads most receipts itself, and those never leave it. When it can't, {{appName}} reads the receipt more accurately from its photo than from its text. With your OK, that photo goes to {{appName}}'s server and is deleted once read.\n\nCard numbers, member numbers and names your phone finds are covered before it goes.",
-      "bodyUnmasked": "Your phone reads most receipts itself, and those never leave it. When it can't, {{appName}} reads the receipt more accurately from its photo than from its text. With your OK, that photo goes to {{appName}}'s server and is deleted once read.\n\nWhile the photo is read, the server sees the whole receipt.",
-      "hint": "Choose “Use text only” to send just the receipt's text, without card and loyalty numbers, when your phone can't read it. You can change this in App Settings.",
+      "title": "Send photos of receipts your phone can't read?",
+      "body": "Photos are read more accurately than text. Card numbers are covered first, and photos are deleted once read. You can change this in App Settings.",
+      "bodyUnmasked": "Photos are read more accurately than text. The whole receipt is sent, and deleted once read. You can change this in App Settings.",
       "send": "Send photos",
       "textOnly": "Use text only"
     },

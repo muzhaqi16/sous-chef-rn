@@ -11,7 +11,9 @@ import DocumentScanner, {
   type ScanDocumentResponse,
 } from 'react-native-document-scanner-plugin';
 import { TextRecognition } from '#/native/TextRecognition';
+import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 import { Telemetry } from '#/services/telemetry';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
@@ -88,8 +90,6 @@ export type ReceiptScanStatus =
   | 'scannerUnavailable'
   | 'reading'
   | 'unreadable'
-  /** Asked once, before the first scan made online: may photos be sent? */
-  | 'consent'
   /** The phone could not read it: send the photo to be read, or not. */
   | 'readFailed'
   | 'sending'
@@ -126,6 +126,7 @@ export function useReceiptScan({
   serverParsing,
   deviceReading,
 }: UseReceiptScanOptions) {
+  const { t } = useTranslation();
   const draft = useReceiptDraft();
   const { saveDraft, clearDraft, recordPhotoKeys } = useReceiptDraftActions();
   const client = useApolloClient();
@@ -435,12 +436,35 @@ export function useReceiptScan({
     await readPhoto(await choosePhoto(), true);
   };
 
-  // Asked once, online, before the first scan: what it was asked for runs after.
-  const [asking, setAsking] = useState<ScanStart | null>(null);
   const startOf: Record<ScanStart, () => Promise<void>> = {
     scan: openScanner,
     photo: capture,
     pick: choose,
+  };
+  // Asked once, online, before the first scan. The answer is kept for later
+  // scans (App Settings changes it), then what it was asked for runs.
+  const askConsent = (start: ScanStart) => {
+    const answer = (consent: 'granted' | 'declined') => () => {
+      useReceiptPhotoConsentStore.getState().setConsent(consent);
+      void startOf[start]();
+    };
+    alertService.alert(
+      t('receipts.photoConsent.title'),
+      t(
+        TextRecognition.canMaskPhotos()
+          ? 'receipts.photoConsent.body'
+          : 'receipts.photoConsent.bodyUnmasked',
+      ),
+      [
+        // Dismissing the dialog answers it too: with the one that sends less.
+        {
+          text: t('receipts.photoConsent.textOnly'),
+          style: 'cancel',
+          onPress: answer('declined'),
+        },
+        { text: t('receipts.photoConsent.send'), onPress: answer('granted') },
+      ],
+    );
   };
   const begin = async (start: ScanStart) => {
     if (
@@ -448,18 +472,10 @@ export function useReceiptScan({
       isOnline &&
       (await storedReceiptPhotoConsent()) === null
     ) {
-      setAsking(start);
+      askConsent(start);
       return;
     }
     await startOf[start]();
-  };
-
-  /** Keeps the answer for later scans, then starts what it was asked for. */
-  const answerConsent = async (answer: 'granted' | 'declined') => {
-    useReceiptPhotoConsentStore.getState().setConsent(answer);
-    const start = asking;
-    setAsking(null);
-    if (start) await startOf[start]();
   };
 
   /** Sends the pages the phone could not read for the server to read them. */
@@ -496,15 +512,11 @@ export function useReceiptScan({
   };
 
   return {
-    status: asking ? 'consent' : status,
-    /** Answers the one-time question on sending photos. */
-    answerConsent,
+    status,
     draft,
     pickedFromLibrary: fromLibrary,
     /** Sending the photo needs a connection. */
     canSendPhotos: isOnline,
-    /** A photo sent to be read has the personal details the phone read painted over. */
-    masksPhotos: TextRecognition.canMaskPhotos(),
     scan: () => begin('scan'),
     takePhoto: () => begin('photo'),
     pickPhoto: () => begin('pick'),

@@ -1,0 +1,6 @@
+# Where the receipt's store is: what tells one branch of a chain from another.
+fragment useReceiptReview_store on Store {
+  id
+  address
+  storeNumber
+}

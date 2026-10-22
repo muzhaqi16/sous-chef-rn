@@ -44,6 +44,7 @@ import {
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
 import {
@@ -988,6 +989,66 @@ describe('useReceiptReview', () => {
       });
     });
 
+    it('says where the store the header names is, and where the one the user picks is', async () => {
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: {
+              id: 'store-27',
+              name: 'Kroger #412',
+              address: '100 Main St',
+              storeNumber: '412',
+            },
+          },
+        },
+      });
+      const cache = makeCache();
+      // A store the user picks was read with its address by the picker.
+      cache.writeQuery({
+        query: SearchStoresDocument,
+        variables: { search: 'kroger', limit: 20 },
+        data: {
+          __typename: 'Query',
+          stores: {
+            __typename: 'StoreConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'StoreEdge',
+                node: {
+                  __typename: 'Store',
+                  id: 'store-99',
+                  name: 'Kroger #87',
+                  address: '200 Side St',
+                  storeNumber: '87',
+                },
+              },
+            ],
+          },
+        },
+      });
+      const { result } = await setup({ resolve, cache });
+      await waitFor(() =>
+        expect(result.current.review.storeLocation).toEqual({
+          address: '100 Main St',
+          storeNumber: '412',
+        }),
+      );
+
+      await act(async () => {
+        result.current.review.chooseStore({
+          id: 'store-99',
+          name: 'Kroger #87',
+        });
+      });
+
+      expect(result.current.review.storeLocation).toEqual({
+        address: '200 Side St',
+        storeNumber: '87',
+      });
+    });
+
     it('shows the store the header names, and adds at the one the user picks', async () => {
       const resolve = resolved();
       const { result, checkIn, addChosen } = await setup({ resolve });
@@ -1124,6 +1185,21 @@ describe('useReceiptReview', () => {
       await waitFor(() => expect(checkIn.fired).toHaveLength(1));
       expect(storeCreate.fired).toHaveLength(1);
     });
+  });
+
+  it('says where the shop it proposes to add is', async () => {
+    const resolve = proposing({
+      name: 'East End Food Co-Op',
+      address: '7516 Meade Street',
+    });
+    const { result } = await setup({ resolve });
+
+    await waitFor(() =>
+      expect(result.current.review.storeLocation).toEqual({
+        address: '7516 Meade Street',
+        storeNumber: null,
+      }),
+    );
   });
 
   describe('offering a store the receipt would locate', () => {

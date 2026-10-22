@@ -61,6 +61,7 @@
       "dateScanned": "Non è stampata sullo scontrino, quindi è il giorno in cui l'hai scansionato.",
       "storePlaceholder": "Scegli il negozio",
       "addsAddress": "Aggiunge l'indirizzo di questo scontrino",
+      "storeNumber": "Punto vendita n. {{number}}",
       "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
       "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
       "choose": "Nessuna corrispondenza. Tocca per scegliere il prodotto.",
@@ -129,10 +130,9 @@
       "sending": "Invio della foto…"
     },
     "photoConsent": {
-      "title": "Inviare una foto quando il telefono non riesce a leggere uno scontrino?",
-      "body": "Il telefono legge da solo la maggior parte degli scontrini, e quelli non lo lasciano mai. Quando non ci riesce, {{appName}} legge lo scontrino in modo più preciso dalla sua foto che dal suo testo. Con il tuo consenso, quella foto viene inviata al server di {{appName}} ed eliminata appena letta.\n\nI numeri di carta, i numeri di socio e i nomi che il telefono trova vengono coperti prima dell'invio.",
-      "bodyUnmasked": "Il telefono legge da solo la maggior parte degli scontrini, e quelli non lo lasciano mai. Quando non ci riesce, {{appName}} legge lo scontrino in modo più preciso dalla sua foto che dal suo testo. Con il tuo consenso, quella foto viene inviata al server di {{appName}} ed eliminata appena letta.\n\nMentre la foto viene letta, il server vede l'intero scontrino.",
-      "hint": "Scegli «Solo testo» per inviare solo il testo dello scontrino, senza i numeri di carta e fedeltà, quando il telefono non riesce a leggerlo. Puoi cambiarlo nelle Impostazioni dell'app.",
+      "title": "Inviare le foto degli scontrini che il telefono non riesce a leggere?",
+      "body": "Le foto si leggono con più precisione del testo. I numeri di carta vengono coperti prima, e le foto vengono eliminate appena lette. Puoi cambiarlo nelle Impostazioni dell'app.",
+      "bodyUnmasked": "Le foto si leggono con più precisione del testo. Viene inviato lo scontrino intero, che viene eliminato appena letto. Puoi cambiarlo nelle Impostazioni dell'app.",
       "send": "Invia le foto",
       "textOnly": "Solo testo"
     },

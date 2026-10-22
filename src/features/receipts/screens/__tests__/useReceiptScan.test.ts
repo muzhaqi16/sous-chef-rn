@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import {
   checkReading as rulesCheckReading,
   dateOrderOf,
@@ -13,6 +13,7 @@ import { TextRecognition } from '#/native/TextRecognition';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import { LABELLING_TIMEOUT_MS } from '../../utils/onDeviceStructuring';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
+import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
@@ -249,13 +250,6 @@ describe('useReceiptScan', () => {
     );
     // The device's region, not the app's language.
     expect(dateOrder).toHaveBeenCalledWith(null);
-  });
-
-  it('says whether a photo sent to be read is masked first', () => {
-    expect(renderScan().result.current.masksPhotos).toBe(false);
-
-    canMaskPhotos.mockReturnValue(true);
-    expect(renderScan().result.current.masksPhotos).toBe(true);
   });
 
   it('returns to the add sheet with nothing kept when the scanner is cancelled', async () => {
@@ -551,22 +545,65 @@ describe('useReceiptScan', () => {
       useReceiptPhotoConsentStore.setState({ consent: 'granted' });
     });
 
-    it('asks once, online, before the first scan, then scans', async () => {
+    /** The one-time question, as the dialog asks it. */
+    const consentAsked = () => {
+      const [call] = jest.mocked(alertService.alert).mock.calls;
+      if (!call) throw new Error('the consent dialog was not shown');
+      const [title, message, buttons = []] = call;
+      const press = (label: string) =>
+        buttons.find(button => button.text === label)?.onPress?.();
+      return { title, message, buttons, press };
+    };
+
+    it('asks once, online, in a dialog before the first scan, keeps the answer, then scans', async () => {
       useReceiptPhotoConsentStore.setState({ consent: null });
+      canMaskPhotos.mockReturnValue(true);
       scannedOnePage();
       const { result } = renderScan();
 
       await act(() => result.current.scan());
-      expect(result.current.status).toBe('consent');
+      const dialog = consentAsked();
+      expect(dialog.title).toBe(
+        "Send photos of receipts your phone can't read?",
+      );
+      expect(dialog.message).toMatch(/Card numbers are covered first/);
+      expect(dialog.message).toMatch(/You can change this in App Settings/);
       expect(scanDocument).not.toHaveBeenCalled();
 
-      await act(() => result.current.answerConsent('declined'));
+      await act(async () => {
+        dialog.press('Use text only');
+      });
       expect(useReceiptPhotoConsentStore.getState().consent).toBe('declined');
       expect(scanDocument).toHaveBeenCalledTimes(1);
-      expect(result.current.status).toBe('saved');
+      await waitFor(() => expect(result.current.status).toBe('saved'));
 
       await act(() => result.current.scan());
       expect(scanDocument).toHaveBeenCalledTimes(2);
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+    });
+
+    // A tap beside the dialog presses its cancel button.
+    it('takes a dismissed dialog as text only', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      const cancel = consentAsked().buttons.find(
+        button => button.style === 'cancel',
+      );
+      expect(cancel?.text).toBe('Use text only');
+    });
+
+    it('says the whole receipt is sent where the build cannot cover card numbers', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      canMaskPhotos.mockReturnValue(false);
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(consentAsked().message).toMatch(/The whole receipt is sent/);
+      expect(consentAsked().message).not.toMatch(/Card numbers/);
     });
 
     // Metro's inline requires create the store in the tap's handler, before it
@@ -588,7 +625,7 @@ describe('useReceiptScan', () => {
       await act(() => result.current.scan());
 
       expect(rehydrate).toHaveBeenCalled();
-      expect(result.current.status).not.toBe('consent');
+      expect(alertService.alert).not.toHaveBeenCalled();
       expect(scanDocument).toHaveBeenCalledTimes(1);
       expect(recognizeAndDelete).toHaveBeenCalled();
       hydrated.mockRestore();
