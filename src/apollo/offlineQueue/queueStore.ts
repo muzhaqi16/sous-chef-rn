@@ -126,8 +126,9 @@ export class QueueStore {
       return queue;
     } catch (error) {
       logger.error('Failed to load queue from storage:', error);
-      // Read once: the next save replaces what could not be read.
-      this.cache = [];
+      // Read once: the next save replaces what could not be read. Storage
+      // that is not open yet is not that, so the next read tries again.
+      if (storage.isReady()) this.cache = [];
       return [];
     }
   }

@@ -90,6 +90,40 @@ describe('the stored queue', () => {
     expect(reloaded?.variables).toEqual(variables);
   });
 
+  it('reads the stored queue once storage opens, after a read before it did', () => {
+    const store = new QueueStore();
+    store.addMutation(
+      makeQueuedMutation({
+        id: 'restock-1',
+        ...queuedMutationFor(RestockPantryItemDocument),
+      }),
+    );
+    store.invalidateCache();
+
+    const ready = jest.spyOn(storage, 'isReady').mockReturnValue(false);
+    const read = jest.spyOn(storage, 'getString').mockImplementation(() => {
+      throw new Error('Storage accessed before initialization');
+    });
+    expect(store.getMutationsForUser('user-1')).toEqual([]);
+    ready.mockRestore();
+    read.mockRestore();
+
+    expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
+      'restock-1',
+    ]);
+  });
+
+  it('reads a queue it cannot parse once, as empty', () => {
+    storage.set(QUEUE_KEY, '[{"operationName":');
+    const store = new QueueStore();
+    const read = jest.spyOn(storage, 'getString');
+
+    expect(store.getMutationsForUser('user-1')).toEqual([]);
+    expect(store.getMutationsForUser('user-1')).toEqual([]);
+    expect(read).toHaveBeenCalledTimes(1);
+    read.mockRestore();
+  });
+
   it('drops an entry under an operation this build does not declare', () => {
     const store = new QueueStore();
     store.addMutation(
