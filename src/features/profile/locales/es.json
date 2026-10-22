@@ -220,8 +220,8 @@
   },
   "personalInformation": {
     "sectionPrivacySettings": "Ajustes de Privacidad",
-    "displayNameSubtitle": "Visible para quienes comparten contigo",
-    "profileVisibilitySubtitle": "Quién ve tu foto y tu nombre en las reseñas",
+    "displayNameSubtitle": "Visible para todos",
+    "profileVisibilitySubtitle": "Quién ve tu foto",
     "email": "Correo",
     "firstName": "Nombre",
     "lastName": "Apellido",

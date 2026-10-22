@@ -267,7 +267,7 @@ describe('PersonalInformationScreen', () => {
   it('says under the display name who sees it', () => {
     renderWithApollo(<PersonalInformationScreen />);
 
-    expect(screen.getByText('Shown to people you share with')).toBeTruthy();
+    expect(screen.getByText('Visible to everyone')).toBeTruthy();
   });
 
   describe('profileVisibility', () => {

@@ -220,8 +220,8 @@
   },
   "personalInformation": {
     "sectionPrivacySettings": "Cilësimet e Privatësisë",
-    "displayNameSubtitle": "E shohin ata me të cilët ndan shtëpi ose lista",
-    "profileVisibilitySubtitle": "Kush e sheh foton tënde dhe emrin tënd te vlerësimet",
+    "displayNameSubtitle": "E sheh kushdo",
+    "profileVisibilitySubtitle": "Kush e sheh foton tënde",
     "email": "Email",
     "firstName": "Emri",
     "lastName": "Mbiemri",

@@ -102,6 +102,7 @@ interface HomeInviteInput {
   role?: MembershipRole;
   inviterEmail?: string;
   inviterDisplayName?: string | null;
+  inviterName?: string | null;
   homeName?: string;
 }
 
@@ -111,10 +112,11 @@ type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
 function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
   return {
     role: input.role ?? MembershipRole.Member,
+    inviterName: input.inviterName ?? null,
     home: { name: input.homeName ?? 'Family Home' },
     inviter: {
       email: input.inviterEmail ?? 'owner@test.com',
-      // Readable exactly when the profile is public.
+      // Only a name the inviter chose; their first name comes as inviterName.
       displayName: input.inviterDisplayName ?? null,
       profile: input.inviterDisplayName
         ? { displayName: input.inviterDisplayName }
@@ -342,6 +344,11 @@ describe('AcceptInvite', () => {
       'shows inviter displayName for home invite when available',
       { home: { inviterDisplayName: 'HomeOwner' } },
       [/HomeOwner/],
+    ],
+    [
+      'names a home inviter who chose no display name by the invite itself',
+      { home: { inviterName: 'Ana' } },
+      [/Ana/],
     ],
     [
       'shows "join" text for home invite and "collaborate on" for shopping list',

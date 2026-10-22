@@ -362,6 +362,7 @@ function buildGetMyPendingInvitesMock(): MockFor<
                 __typename: 'HomeInvite',
                 id: invite.id,
                 role: invite.role,
+                inviterName: invite.inviterName ?? null,
                 home: invite.home
                   ? {
                       __typename: 'Home',
@@ -374,8 +375,8 @@ function buildGetMyPendingInvitesMock(): MockFor<
                       __typename: 'User',
                       id: `inviter-for-${invite.id}`,
                       email: invite.inviter.email ?? null,
-                      // Readable exactly when the profile is: the invitee
-                      // shares nothing with the inviter yet.
+                      // A name the inviter chose; their first name reaches the
+                      // invitee only as the invite's inviterName.
                       displayName: invite.inviter.profile?.displayName ?? null,
                       profile: invite.inviter.profile
                         ? {
@@ -832,6 +833,21 @@ describe('CreateHomeScreen', () => {
 
     const { findByText } = renderScreen();
     expect(await findByText('John')).toBeTruthy();
+  });
+
+  it('names an inviter who chose no display name by the invite itself', async () => {
+    mockPendingInvites = [
+      {
+        id: 'invite-1',
+        role: MembershipRole.Member,
+        home: { name: 'Johns Home' },
+        inviterName: 'Ana',
+        inviter: { email: null, profile: null },
+      },
+    ];
+
+    const { findByText } = renderScreen();
+    expect(await findByText('Ana')).toBeTruthy();
   });
 
   it('shows inviter email when displayName is missing', async () => {

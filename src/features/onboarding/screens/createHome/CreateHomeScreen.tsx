@@ -49,6 +49,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Card } from '#components/atoms/Card';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { personName } from '#/utils/formatters/memberFormatters';
 
 /** Module scope so the try/catch does not bail the component out of the compiler. */
@@ -157,7 +158,9 @@ const InviteCard: React.FC<{
 
   if (!complete) return null;
 
-  const inviterName = personName(invite.inviter) ?? t('labels.someone');
+  const inviterName =
+    firstNonBlank(invite.inviterName, personName(invite.inviter)) ??
+    t('labels.someone');
 
   return (
     <Card padding="none" style={styles.inviteCard}>

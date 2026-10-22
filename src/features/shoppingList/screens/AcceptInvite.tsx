@@ -134,17 +134,21 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  const inviter =
+  const invite =
     invitationType === 'home'
-      ? homeInviteDisplay?.inviter
-      : shoppingListInviteDisplay?.invitedBy;
-  // A list invite names its inviter itself: the invitee shares nothing with
-  // them yet, so their `User.displayName` is withheld.
+      ? {
+          inviterName: homeInviteDisplay?.inviterName,
+          inviter: homeInviteDisplay?.inviter,
+        }
+      : {
+          inviterName: shoppingListInviteDisplay?.inviterName,
+          inviter: shoppingListInviteDisplay?.invitedBy,
+        };
+  // An invite names its inviter itself: the invitee shares nothing with them
+  // yet, so `User.displayName` gives only a name the inviter chose.
   const inviterName =
-    firstNonBlank(
-      shoppingListInviteDisplay?.inviterName,
-      personName(inviter),
-    ) ?? t('labels.someone');
+    firstNonBlank(invite.inviterName, personName(invite.inviter)) ??
+    t('labels.someone');
 
   return (
     <Screen header={{ close: () => goBack() }} scroll="none">
