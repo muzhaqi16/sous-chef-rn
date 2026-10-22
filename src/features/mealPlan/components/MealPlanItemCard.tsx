@@ -128,7 +128,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         itemId={item.id}
         accessibilityLabel={accessibilityLabelOf(
           recipeName,
-          item.isCompleted && t('a11y.completed'),
+          item.isCompleted && t('labels.done'),
           metaText,
           hasPantryDeductions && t('mealPlanItem.pantryUpdated'),
         )}
