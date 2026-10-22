@@ -12,11 +12,6 @@ const CACHE_VERSION_KEY = 'apollo-cache-version';
  * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
 const CURRENT_CACHE_VERSION = 'shape-6';
-/** Keys nothing writes; `clear()` removes them so a session end strands nothing. */
-const LEGACY_SPLIT_KEYS = [
-  'apollo-cache-v1-critical',
-  'apollo-cache-v1-deferred',
-];
 /** Freshly allocated by every `extract()`, so its reference is never stable. */
 const META_KEY = '__META';
 const DEBOUNCE_MS = 3000;
@@ -171,11 +166,7 @@ class ApolloCachePersistence {
     if (!storage.isReady()) return;
     try {
       this.cancel();
-      for (const key of [
-        CACHE_STORAGE_KEY,
-        CACHE_VERSION_KEY,
-        ...LEGACY_SPLIT_KEYS,
-      ]) {
+      for (const key of [CACHE_STORAGE_KEY, CACHE_VERSION_KEY]) {
         storage.remove(key);
       }
       this.lastPersistedSnapshot = null;

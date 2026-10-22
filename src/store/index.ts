@@ -12,14 +12,12 @@ import {
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
-import { isRecord } from '#/utils/isRecord';
 
 enableMapSet();
 import type { AuthState } from './slices/authSlice';
 import { createAuthSlice } from './slices/authSlice';
 import type { PreferencesState } from './slices/preferencesSlice';
 import { createPreferencesSlice } from './slices/preferencesSlice';
-import { FontScalePreference } from './slices/preferenceTypes';
 import type { AppState } from './slices/appSlice';
 import { createAppSlice } from './slices/appSlice';
 import type { UIState } from './slices/uiSlice';
@@ -191,20 +189,6 @@ interface NavigationStateManagerState {
   completeLogout: () => boolean;
 }
 
-// Minimal shape of the persisted user touched by the v8 → v9 migration.
-interface MigratableUser {
-  firstName?: string | null;
-  lastName?: string | null;
-  name?: string | null;
-  profilePicture?: string | null;
-  profile?: {
-    firstName?: string | null;
-    lastName?: string | null;
-    displayName?: string | null;
-    avatar?: string | null;
-  } | null;
-}
-
 export type RootState = AuthState &
   PreferencesState &
   AppState &
@@ -293,35 +277,6 @@ const PERSISTED_KEYS = classifyKeys(
 
 type PersistedKey = (typeof PERSISTED_KEYS)[number];
 
-/** Queryable form, for the v13 migration sweep. */
-const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
-
-/** Keys allowed in the blob beyond the allowlist: the keychain-fallback pair. */
-// Where feature-hint and login-count state sat before it moved into the
-// persisted store maps. Read once by the v16 migration, then removed.
-const LEGACY_HINT_PREFIX = 'feature_hint_shown_';
-const LEGACY_LOGIN_COUNT_PREFIX = 'login_count_';
-
-const legacyTutorialKeys = (): string[] => {
-  try {
-    return storage
-      .getAllKeys()
-      .filter(
-        key =>
-          key.startsWith(LEGACY_HINT_PREFIX) ||
-          key.startsWith(LEGACY_LOGIN_COUNT_PREFIX),
-      );
-  } catch {
-    // Storage not initialised yet — nothing to carry over.
-    return [];
-  }
-};
-
-const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
-  'accessToken',
-  'refreshToken',
-]);
-
 export { PERSISTED_KEYS };
 
 const pickPersisted = (
@@ -385,100 +340,6 @@ export const useStore = create<RootState>()(
         name: STORAGE_KEY,
         version: 16,
         storage: createJSONStorage(() => zustandStorage),
-        migrate: (persistedState: unknown, version: number) => {
-          // v8 → v9: lift nested profile fields to top level — the greeting
-          // reads user.firstName / user.name directly.
-          if (version < 9) {
-            const state = persistedState as { user?: MigratableUser } | null;
-            const user = state?.user;
-            const profile = user?.profile;
-            if (user && profile) {
-              user.firstName = profile.firstName ?? user.firstName;
-              user.lastName = profile.lastName ?? user.lastName;
-              user.name = profile.displayName ?? user.name;
-              user.profilePicture = profile.avatar ?? user.profilePicture;
-            }
-          }
-
-          // v9 → v10: remap the dropped 'system' font scale to a valid
-          // FontScalePreference member.
-          if (version < 10) {
-            const state = persistedState as {
-              fontScalePreference?: string;
-            } | null;
-            if (state?.fontScalePreference === 'system') {
-              state.fontScalePreference = FontScalePreference.MD;
-            }
-          }
-
-          // Migration → v14: enforce the PERSISTED_KEYS allowlist over any
-          // older blob. Re-run on every bump that changes the allowlist — a key
-          // REMOVED from it otherwise sits in the blob unreachable and uncleared
-          // until a root write happens to replace it. The keychain-fallback
-          // token pair is the only sanctioned passenger outside the allowlist.
-          if (version < 14) {
-            const state = persistedState as Record<string, unknown> | null;
-            if (state) {
-              for (const key of Object.keys(state)) {
-                if (!PERSISTED_KEY_SET.has(key) && !BLOB_ONLY_KEYS.has(key)) {
-                  delete state[key];
-                }
-              }
-            }
-          }
-
-          // v14 → v15: drop the warmed unit vocabulary — the API merged 46
-          // alias `Unit` rows away, so a warmed row can name an id the server
-          // cannot resolve. The STAMP goes with the list: unit autocomplete is
-          // the only one running `localFirst`, and an empty list left with a
-          // fresh stamp stays empty for the whole TTL instead of re-warming.
-          if (version < 15) {
-            const state = persistedState as Record<string, unknown> | null;
-            if (state) {
-              delete state.cachedUnits;
-              delete state.lastUnitsFetchedAt;
-            }
-          }
-
-          // v15 → v16: carry the feature-hint and login-count state that used
-          // to sit in standalone MMKV keys into the persisted maps that now
-          // hold it. Same key strings, different home — without this every
-          // dismissed coach mark replays and every login count restarts at 0.
-          if (version < 16) {
-            const state = isRecord(persistedState) ? persistedState : {};
-            const hints: Record<string, boolean> = {};
-            if (isRecord(state.featureHintsShown)) {
-              for (const [key, shown] of Object.entries(
-                state.featureHintsShown,
-              )) {
-                if (typeof shown === 'boolean') hints[key] = shown;
-              }
-            }
-            const counts: Record<string, number> = {};
-            if (isRecord(state.loginCounts)) {
-              for (const [userId, count] of Object.entries(state.loginCounts)) {
-                if (typeof count === 'number') counts[userId] = count;
-              }
-            }
-
-            for (const key of legacyTutorialKeys()) {
-              if (key.startsWith(LEGACY_HINT_PREFIX)) {
-                if (storage.getBoolean(key)) hints[key] = true;
-              } else {
-                const userId = key.slice(LEGACY_LOGIN_COUNT_PREFIX.length);
-                const value = storage.getNumber(key);
-                if (userId && typeof value === 'number') counts[userId] = value;
-              }
-              storage.remove(key);
-            }
-
-            state.featureHintsShown = hints;
-            state.loginCounts = counts;
-            persistedState = state;
-          }
-
-          return persistedState;
-        },
         onRehydrateStorage: () => handleStoreRehydration,
         // Hydrated by `startPersistedStores()`: creating the store reads nothing.
         skipHydration: true,

@@ -5,7 +5,6 @@ import {
   LAST_BIOMETRIC_EMAIL_KEY,
   PENDING_REVOCATIONS_SERVICE,
   SESSION_TOKENS_SERVICE,
-  TEMP_REGISTRATION_SERVICE,
 } from '../keychain';
 
 /**
@@ -26,9 +25,6 @@ describe('keychain service names', () => {
     expect(DEFAULT_SERVICE).toBe('dev.souschef.app.credentials');
     expect(CREDENTIALS_INDICATOR_SERVICE).toBe(
       'dev.souschef.app.credentials.indicator',
-    );
-    expect(TEMP_REGISTRATION_SERVICE).toBe(
-      'dev.souschef.app.temp.registration',
     );
     expect(SESSION_TOKENS_SERVICE).toBe('dev.souschef.app.session.tokens');
     expect(DEVICE_ID_SERVICE).toBe('dev.souschef.app.device.id');

@@ -171,9 +171,8 @@ refusal does not, because the credential is still good.
 
 The keychain policy is unchanged and still carries the weight it did: the slot
 is `BIOMETRY_CURRENT_SET`, so enrolling a new face or finger invalidates it and
-the app clears it rather than offering a prompt that cannot succeed; the
-temporary registration password expires after 24 hours and is swept at startup;
-a reinstall with an empty encrypted store clears session tokens instead of
+the app clears it rather than offering a prompt that cannot succeed; a
+reinstall with an empty encrypted store clears session tokens instead of
 resuming a session.
 
 A slot enrolled before this shipped holds a password. It is never presented:

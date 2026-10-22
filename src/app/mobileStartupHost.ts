@@ -16,7 +16,6 @@ import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import {
   hasCredentials,
   getLastBiometricEmail,
-  clearTempRegistrationPassword,
 } from '#native/storage/keychain';
 import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import type { AuthUserInput } from '#store/slices/authSlice';
@@ -113,8 +112,7 @@ function injectDetoxLaunchArgs(flags: EndToEndFlags): void {
 
 /**
  * What start-up does on this device beyond the core: an end-to-end run's
- * launch arguments first, then the stored biometric sign-in, the legacy
- * registration password, haptics, native performance marks, the memory
+ * launch arguments first, then the stored biometric sign-in, haptics, native performance marks, the memory
  * monitor and push registration. One per root mount, which holds the flags an
  * end-to-end run set for `stop` to read.
  */
@@ -143,10 +141,6 @@ export function createMobileStartupHost(
         }
         void hasCredentials(email).then(setHasStoredCredentials);
       });
-
-      // An earlier build kept the registration password in the keychain,
-      // where it outlives an app deletion; this is the only purge left.
-      void clearTempRegistrationPassword();
 
       requestIdleCallback(() => {
         HapticService.initialize();

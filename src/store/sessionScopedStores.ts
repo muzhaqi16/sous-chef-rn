@@ -4,7 +4,6 @@
  * PERSISTED keys are declared as DATA below and deleted without their module.
  */
 import { storage } from '#/store/deviceStorage';
-import { RETIRED_PERSISTED_KEYS } from '#/store/persistedKeys';
 import { logger } from '#/utils/environment';
 
 type StoreReset = () => void;
@@ -49,10 +48,7 @@ export const resetSessionScopedStores = (): void => {
 
   // Independent of the loop above: a store whose module was never evaluated has
   // no registration, but its persisted key is still on disk.
-  for (const key of [
-    ...SESSION_SCOPED_PERSISTED_KEYS,
-    ...RETIRED_PERSISTED_KEYS,
-  ]) {
+  for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
     try {
       storage.remove(key);
     } catch (error) {

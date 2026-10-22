@@ -93,10 +93,3 @@ which `purgeRecoveryStorage` erases on the next healthy launch. `isStorageReady(
 is true for it, so the mirror is gated on `isRecoveryStorage()` as well:
 `ensureDeviceId()` still serves the keychain's value during an outage, and
 nothing is minted into a file that is about to be discarded.
-
-**A superseded identifier's row is retired once.** An install carrying the
-`device_fingerprint` key has a second server `Device` row whose push token no
-other client path reaches. After a confirmed registration,
-`retireLegacyDeviceRow` looks it up with `deviceByDeviceId` and soft-deletes it,
-dropping the key only once the server confirms; any failure leaves the key so
-the next launch retries.

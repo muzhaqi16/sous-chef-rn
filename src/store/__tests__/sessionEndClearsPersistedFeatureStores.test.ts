@@ -65,29 +65,4 @@ describe('session end clears persisted feature stores that were never loaded', (
     }
     expect(storage.getString('sous-chef-theme')).toBe('dark');
   });
-
-  it('clears the retired scanner history, which carries item names, brands and UPCs', () => {
-    storage.set(
-      'sous-chef-barcode',
-      JSON.stringify({
-        state: {
-          recentScans: [{ name: 'Organic Whole Milk', upc: '0123456789012' }],
-        },
-      }),
-    );
-
-    resetSessionScopedStores();
-
-    expect(storage.contains('sous-chef-barcode')).toBe(false);
-  });
-
-  it('clears the two recipe caches that had the identical hole', () => {
-    storage.set('recipe-search-cache', '{"state":{"searches":["pasta"]}}');
-    storage.set('recipe-suggestions-cache', '{"state":{"items":[1]}}');
-
-    resetSessionScopedStores();
-
-    expect(storage.contains('recipe-search-cache')).toBe(false);
-    expect(storage.contains('recipe-suggestions-cache')).toBe(false);
-  });
 });

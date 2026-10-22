@@ -5,11 +5,8 @@ import type {
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { logger } from '#/utils/environment';
 import {
-  DeviceByDeviceIdDocument,
   RegisterDeviceDocument,
-  DeleteDeviceDocument,
   UpdateDeviceDocument,
-  type DeleteDeviceMutation,
   type UpdateDeviceMutation,
 } from '#operations/auth/device.generated';
 import { PermissionService } from '#/services/permissions/PermissionService';
@@ -23,11 +20,8 @@ import {
   validateDeviceInformation,
 } from '#native/deviceInfo';
 import {
-  clearLegacyDeviceFingerprint,
   clearRegisteredLocale,
-  clearRetiredDeviceRow,
   ensureDeviceId,
-  readLegacyDeviceFingerprint,
   recordRegisteredLocale,
 } from '#/services/auth/deviceId';
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
@@ -165,15 +159,12 @@ export type DeviceUpdateOutcome =
 // block, and one inside a `try` body bails the React Compiler out of the whole
 // function.
 function readDeviceUpdate(result: {
-  data?: UpdateDeviceMutation | DeleteDeviceMutation | null;
+  data?: UpdateDeviceMutation | null;
   error?: unknown;
 }): DeviceUpdateOutcome {
   if (appliedPayload(result.data)) return { status: 'ok' };
   // Any other member is a refusal the server resolved, not a success.
-  const refusal =
-    result.data && 'updateDevice' in result.data
-      ? result.data.updateDevice
-      : result.data?.deleteDevice;
+  const refusal = result.data?.updateDevice;
   if (!refusal || !('code' in refusal)) {
     return { status: 'failed', error: result.error ?? null };
   }
@@ -188,20 +179,6 @@ async function updateDevice(
     const result = await requireApolloClient().mutate({
       mutation: UpdateDeviceDocument,
       variables: { input },
-      fetchPolicy: 'no-cache',
-    });
-    return readDeviceUpdate(result);
-  } catch (error) {
-    return { status: 'failed', error };
-  }
-}
-
-/** Removes a device row; a row already gone answers as done (`converged`). */
-async function deleteDevice(id: string): Promise<DeviceUpdateOutcome> {
-  try {
-    const result = await requireApolloClient().mutate({
-      mutation: DeleteDeviceDocument,
-      variables: { input: { id } },
       fetchPolicy: 'no-cache',
     });
     return readDeviceUpdate(result);
@@ -236,53 +213,8 @@ registerSessionTeardown('devicePushToken', () => {
   sessionGeneration += 1;
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
-  clearRetiredDeviceRow();
   clearRegisteredLocale();
 });
-
-/**
- * Retires a superseded identifier's row, whose push token is live and reachable
- * by no other path. After a confirmed registration, so a row always remains;
- * a failure keeps the key so the next launch retries.
- */
-async function retireLegacyDeviceRow(): Promise<void> {
-  const legacy = readLegacyDeviceFingerprint();
-  if (!legacy) return;
-
-  let found;
-  try {
-    found = await requireApolloClient().query({
-      query: DeviceByDeviceIdDocument,
-      variables: { deviceId: legacy },
-      fetchPolicy: 'network-only',
-    });
-  } catch (error) {
-    logger.warn('Could not look up the superseded device row:', error);
-    return;
-  }
-
-  // `errorPolicy: 'all'` RESOLVES a refused lookup with no data, so an absent
-  // row only means "no such device" once the query itself succeeded.
-  if (found.error) {
-    logger.warn('Could not look up the superseded device row:', found.error);
-    return;
-  }
-
-  const row = found.data?.deviceByDeviceId;
-  if (!row) {
-    clearLegacyDeviceFingerprint();
-    return;
-  }
-
-  const outcome = await deleteDevice(row.id);
-  if (outcome.status !== 'ok') {
-    logger.warn('Could not retire the superseded device row:', outcome);
-    return;
-  }
-
-  clearLegacyDeviceFingerprint();
-  logger.info('Retired the superseded device row');
-}
 
 /**
  * `unretryable` is a precondition no later attempt can change, so
@@ -360,7 +292,6 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     if (recordRegisteredLocale(deviceInfo.language)) {
       dropUnitSystemAnswers(requireApolloClient().cache);
     }
-    await retireLegacyDeviceRow();
     return 'ok';
   } catch (error) {
     logger.error('Device registration error:', error);

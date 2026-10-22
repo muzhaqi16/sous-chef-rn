@@ -52,7 +52,6 @@ jest.mock('#/apollo/offlineQueue/queueFailureHandler', () => ({
 jest.mock('#native/storage/keychain', () => ({
   getLastBiometricEmail: jest.fn(),
   hasCredentials: jest.fn(),
-  clearTempRegistrationPassword: jest.fn(),
 }));
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: { initialize: jest.fn() },
@@ -93,9 +92,6 @@ beforeEach(() => {
   );
   keychain.getLastBiometricEmail!.mockImplementation(
     record('storedCredentialCheck', Promise.resolve(null)),
-  );
-  keychain.clearTempRegistrationPassword!.mockImplementation(
-    record('temporaryPasswordPurge', Promise.resolve()),
   );
   const { Telemetry } = mocked<{ Telemetry: Record<string, jest.Mock> }>(
     '#services/telemetry',
@@ -144,7 +140,6 @@ it('runs each start-up step once', () => {
       'deviceId',
       'queueFailureHandler',
       'storedCredentialCheck',
-      'temporaryPasswordPurge',
       'telemetry.configure',
       'telemetry.start',
       'telemetry.app_starts_total',

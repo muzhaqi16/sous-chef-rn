@@ -333,12 +333,6 @@
       "body": "mutation DeleteAccount {\n  deleteAccount {\n    __typename\n    ... on DeleteAccountPayload {\n      user {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "f9d1c7198612959bf77bbb54f3b4b6f41c0dfefd59dc1df0e2fdb5639be46c52",
-      "name": "DeleteDevice",
-      "type": "mutation",
-      "body": "mutation DeleteDevice($input: DeleteDeviceInput!) {\n  deleteDevice(input: $input) {\n    __typename\n    ... on DeleteDevicePayload {\n      converged\n      device {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
-    },
-    {
       "id": "bf5de19d083fb6c1929a2c800e00351abdeed16ffbba3e47ba187fb55affd18a",
       "name": "DeleteHome",
       "type": "mutation",
@@ -427,12 +421,6 @@
       "name": "DeleteStorageLocation",
       "type": "mutation",
       "body": "mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {\n  deleteStorageLocation(input: $input) {\n    __typename\n    ... on DeleteStorageLocationPayload {\n      storageLocation {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
-    },
-    {
-      "id": "1e5816561cfdcd946c9451246251468972b1b593955b0c3812d9d653d2c61acf",
-      "name": "DeviceByDeviceId",
-      "type": "query",
-      "body": "query DeviceByDeviceId($deviceId: String!) {\n  deviceByDeviceId(deviceId: $deviceId) {\n    id\n    deviceId\n    __typename\n  }\n}"
     },
     {
       "id": "178095ffc786b2c6685b0f27a54644a0ce5467c02cf4dd7706cb532fc057cbd8",
@@ -1089,10 +1077,10 @@
       "body": "mutation Register($input: RegisterInput!) {\n  register(input: $input) {\n    __typename\n    ... on RegisterPayload {\n      status\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "921de0526d04d81f5395e11aee76cae72b622a73f92f146bcc51606dc96a526a",
+      "id": "b02b136e2887842d4fdff8e904575121cf9e6e33c747d96a51bdcd71783203f6",
       "name": "RegisterDevice",
       "type": "mutation",
-      "body": "mutation RegisterDevice($input: RegisterDeviceInput!) {\n  registerDevice(input: $input) {\n    __typename\n    ... on RegisterDevicePayload {\n      device {\n        id\n        ...DeviceReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment DeviceReaders on Device {\n  id\n  deviceId\n  __typename\n}"
+      "body": "mutation RegisterDevice($input: RegisterDeviceInput!) {\n  registerDevice(input: $input) {\n    __typename\n    ... on RegisterDevicePayload {\n      device {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "fac7c26132168599fd620338cdc4c9b6778ee7fdc269031235e657e0312879ad",
@@ -1275,10 +1263,10 @@
       "body": "mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {\n  updateCollaboratorRole(input: $input) {\n    __typename\n    ... on UpdateCollaboratorRolePayload {\n      collaborator {\n        id\n        ...ShoppingListCollaboratorReaders\n        __typename\n      }\n      shoppingList {\n        id\n        ...ShoppingListReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment ShoppingListCollaboratorReaders on ShoppingListCollaborator {\n  id\n  canAddItems\n  canEditItems\n  canMarkPurchased\n  canRemoveItems\n  collaborator {\n    id\n    displayName\n    email\n    profile {\n      id\n      avatar\n      displayName\n      __typename\n    }\n    __typename\n  }\n  collaboratorId\n  email\n  invitedAt\n  invitedBy {\n    id\n    displayName\n    email\n    profile {\n      id\n      displayName\n      __typename\n    }\n    __typename\n  }\n  inviterName\n  role\n  shoppingList {\n    id\n    description\n    name\n    __typename\n  }\n  status\n  __typename\n}\n\nfragment ShoppingListReaders on ShoppingList {\n  id\n  basedOnTemplate {\n    id\n    name\n    __typename\n  }\n  budgetAmount\n  canMoveToPantry\n  completedItems\n  completedShopDate\n  completionRate\n  currency\n  description\n  estimatedTotal\n  home {\n    id\n    myMembership {\n      id\n      canAddItems\n      canEditPantry\n      canRemoveItems\n      role\n      __typename\n    }\n    name\n    __typename\n  }\n  homeId\n  isCompleted\n  isDefault\n  isPublic\n  isRecurring\n  isTemplate\n  name\n  nextRecurringDate\n  ownerships {\n    id\n    user {\n      id\n      displayName\n      email\n      profile {\n        id\n        avatar\n        displayName\n        __typename\n      }\n      __typename\n    }\n    userId\n    __typename\n  }\n  priceTracking\n  recurringInterval\n  recurringPattern\n  remainingItems\n  reminderDate\n  reminderEnabled\n  shareCode\n  shareLink {\n    universal\n    __typename\n  }\n  status\n  tags\n  targetStore {\n    id\n    name\n    __typename\n  }\n  templateName\n  totalCost\n  totalItems\n  unpricedItems\n  updatedAt\n  version\n  __typename\n}"
     },
     {
-      "id": "303774cf172ebf563dd606ad06210dc4a3281dde11835b4f74dd95b4500d35f0",
+      "id": "22a2154ef5eaaff70430281d91424fa0d104e985861b941ec2bfb6274f8c9b39",
       "name": "UpdateDevice",
       "type": "mutation",
-      "body": "mutation UpdateDevice($input: UpdateDeviceInput!) {\n  updateDevice(input: $input) {\n    __typename\n    ... on UpdateDevicePayload {\n      device {\n        id\n        ...DeviceReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment DeviceReaders on Device {\n  id\n  deviceId\n  __typename\n}"
+      "body": "mutation UpdateDevice($input: UpdateDeviceInput!) {\n  updateDevice(input: $input) {\n    __typename\n    ... on UpdateDevicePayload {\n      device {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "40e2f60b5dd63f7bbbe67dc45bd9b542c7fe4f0045ed5cee488eb7049b0182a0",

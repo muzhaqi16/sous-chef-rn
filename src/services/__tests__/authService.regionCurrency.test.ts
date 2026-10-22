@@ -63,7 +63,6 @@ jest.mock('#native/storage/keychain', () => ({
   getLastBiometricEmail: jest.fn(),
   saveCredentials: jest.fn(),
   getBiometricCapability: jest.fn().mockResolvedValue({ isAvailable: false }),
-  clearTempRegistrationPassword: jest.fn(),
 }));
 
 import { registerApolloClient } from '#/apollo/clientRegistry';

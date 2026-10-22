@@ -39,7 +39,6 @@ jest.mock('#native/storage/keychain', () => ({
     .fn()
     .mockResolvedValue({ isAvailable: true, biometryType: 'Fingerprint' }),
   getLastBiometricEmail: jest.fn().mockResolvedValue('chef@example.com'),
-  clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('#/apollo/logoutCleanup', () => ({
