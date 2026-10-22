@@ -1,18 +1,4 @@
 # ============================================
-# QUERIES
-# ============================================
-
-# Resolves the server row a device identifier is filed under. Used to retire the
-# row a superseded identifier registered, and to reach this device's row when a
-# session ends before registration completed.
-query DeviceByDeviceId($deviceId: String!) {
-  deviceByDeviceId(deviceId: $deviceId) {
-    id
-    deviceId
-  }
-}
-
-# ============================================
 # MUTATIONS
 # ============================================
 
@@ -22,7 +8,6 @@ mutation RegisterDevice($input: RegisterDeviceInput!) {
     ... on RegisterDevicePayload {
       device {
         id
-        ...DeviceReaders
       }
     }
     ... on Error {
@@ -41,28 +26,6 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
   updateDevice(input: $input) {
     __typename
     ... on UpdateDevicePayload {
-      device {
-        id
-        ...DeviceReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-# Retires a device row: the one a superseded identifier registered. A repeat
-# answers `converged` with no device, so the retirement is safe to re-run.
-mutation DeleteDevice($input: DeleteDeviceInput!) {
-  deleteDevice(input: $input) {
-    __typename
-    ... on DeleteDevicePayload {
-      converged
       device {
         id
       }

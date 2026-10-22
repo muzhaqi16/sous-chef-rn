@@ -12,7 +12,6 @@ import { logger } from '#/utils/environment';
 
 const CACHE_KEY = 'apollo-cache-v1';
 const VERSION_KEY = 'apollo-cache-version';
-const LEGACY_KEYS = ['apollo-cache-v1-critical', 'apollo-cache-v1-deferred'];
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
 const CURRENT_VERSION = 'shape-6';
@@ -376,21 +375,14 @@ describe('ApolloCachePersistence', () => {
   });
 
   describe('clear', () => {
-    it('removes every cache key, the retired split keys included', () => {
-      // Nothing writes the split keys any more; an install that still holds
-      // them must not keep the previous person's entities under a key nothing
-      // reads — that is worse than leaving them readable, it is invisible.
+    it('removes every cache key', () => {
       storage.set(CACHE_KEY, '{"data":"old"}');
       storage.set(VERSION_KEY, CURRENT_VERSION);
-      for (const key of LEGACY_KEYS) storage.set(key, '{"ROOT_QUERY":{}}');
 
       apolloCachePersistence.clear();
 
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
       expect(storage.getString(VERSION_KEY)).toBeUndefined();
-      for (const key of LEGACY_KEYS) {
-        expect(storage.getString(key)).toBeUndefined();
-      }
     });
 
     it('cancels pending saves', () => {

@@ -13,7 +13,7 @@ import {
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
 import { formatRelativeToNow } from '#/utils/formatters/date';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useUser } from '#store/useAppStore';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -53,11 +53,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   // `user` is null once the author permanently deletes their account — the
   // review stays and still counts toward the recipe's rating totals.
   const user = review.user;
-  // `user.email` only resolves for the viewer's own record, so it's null on
-  // every other author's review — the literal fallback is what actually renders.
   const displayName = user
-    ? firstNonBlank(user.profile?.displayName, user.email) ??
-      t('labels.someone')
+    ? personName(user) ?? t('labels.someone')
     : t('labels.deletedUser');
   const avatar = user?.profile?.avatar;
   const authorId = user?.id;

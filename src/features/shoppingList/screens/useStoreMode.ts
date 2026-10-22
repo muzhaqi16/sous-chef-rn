@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from '#/i18n';
+import { toastService } from '#/services/toastService';
 import { useUser } from '#store/useAppStore';
 import { formatCurrency } from '#/utils/formatters/number';
 import {
@@ -14,6 +16,7 @@ import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
 import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListPermissions } from '../hooks/useShoppingListPermissions';
 import { useShoppingListActions } from '../hooks/useShoppingListActions';
+import { useUpdateShoppingList } from '../hooks/mutations/useUpdateShoppingList';
 import { useAisleView } from './useAisleView';
 
 /** An aisle, every aisle, or what is already in the cart. */
@@ -119,10 +122,23 @@ export function useStoreMode(listId: string) {
     refetchItems: refetch,
   });
 
+  const { t } = useTranslation();
+  const { updateShoppingList } = useUpdateShoppingList(
+    t('errors.saveSettingsFailed'),
+  );
+  const chooseStore = async (store: { id: string; name: string }) => {
+    try {
+      await updateShoppingList(listId, { targetStore: store });
+    } catch {
+      toastService.error(t('errors.saveSettingsFailed'));
+    }
+  };
+
   return {
     state: {
       listName: shoppingList?.name ?? null,
       storeName: shoppingList?.targetStore?.name ?? null,
+      canChooseStore: permissions.canEditList,
       tab,
       rows: rowsFor(tab, aisleEntries, cart),
       aisles,
@@ -142,6 +158,7 @@ export function useStoreMode(listId: string) {
     },
     actions: {
       setTab,
+      chooseStore,
       toggleLine: handleTogglePurchase,
       loadMoreCart: loadMorePurchased,
       recordPurchase,

@@ -14,6 +14,8 @@ export type CardVariant =
   | 'dimmed';
 
 export interface BaseItemCardProps {
+  /** What a screen reader says for the row; the slots carry no text of their own to it. */
+  accessibilityLabel: string;
   /** Left element (image, emoji, icon). */
   leftElement?: React.ReactNode;
   children?: React.ReactNode;

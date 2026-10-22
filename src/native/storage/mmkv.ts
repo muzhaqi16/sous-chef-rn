@@ -1,7 +1,7 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
 import { logger } from '#/utils/environment';
 import { sleep } from '#/utils/backoff';
-import { RETIRED_PERSISTED_KEYS, STORAGE_KEY } from '#/store/persistedKeys';
+import { STORAGE_KEY } from '#/store/persistedKeys';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,
@@ -91,29 +91,15 @@ const recoveryStorageHasState = (): boolean => {
   }
 };
 
-const removeRetiredKeys = (instance: MMKV): void => {
-  for (const key of RETIRED_PERSISTED_KEYS) {
-    try {
-      instance.remove(key);
-    } catch (error) {
-      logger.warn(`Could not remove retired key "${key}":`, error);
-    }
-  }
-};
-
-const scheduleStartupCleanup = (instance: MMKV): void => {
-  const cleanUp = () => {
-    purgeRecoveryStorage();
-    removeRetiredKeys(instance);
-  };
+const scheduleRecoveryPurge = (): void => {
   const idle = (
     globalThis as { requestIdleCallback?: (cb: () => void) => void }
   ).requestIdleCallback;
   if (typeof idle === 'function') {
-    idle(cleanUp);
+    idle(purgeRecoveryStorage);
     return;
   }
-  setTimeout(cleanUp, 0);
+  setTimeout(purgeRecoveryStorage, 0);
 };
 
 /**
@@ -161,7 +147,7 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
 
     secureStorageInstance = instance;
     if (!usingRecoveryInstance) {
-      scheduleStartupCleanup(instance);
+      scheduleRecoveryPurge();
     }
     return instance;
   })();

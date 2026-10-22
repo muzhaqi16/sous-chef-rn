@@ -55,6 +55,7 @@ import {
   expiryLabel,
 } from '#domain/expiry';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
@@ -227,7 +228,10 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
     ) : null;
 
   return (
-    <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
+    <SwipeableItem
+      accessibilityLabel={accessibilityLabelOf(item.itemName, subtitleFn(item))}
+      onPress={() => navigateTo({ itemId: item.id })}
+    >
       <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
         <View style={styles.itemInfo}>
           <Text role="bodyStrong">{item.itemName}</Text>

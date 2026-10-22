@@ -39,7 +39,6 @@ jest.mock('#/services/performance/MemoryMonitor', () => ({
 jest.mock('#native/storage/keychain', () => ({
   getLastBiometricEmail: jest.fn().mockResolvedValue(null),
   hasCredentials: jest.fn().mockResolvedValue(false),
-  clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('#/services/auth/deviceId', () => ({
@@ -123,19 +122,6 @@ describe('mobile start-up — the shared JS-entry origin', () => {
       (globalThis as { __APP_START_TIMESTAMP?: number }).__APP_START_TIMESTAMP,
     ).toBe(1_000_000);
   });
-});
-
-// An earlier build kept the registration password in the keychain, where it
-// outlives an app deletion. Startup is the only place left that purges it.
-it('purges the legacy registration password at startup', () => {
-  const { clearTempRegistrationPassword } = jest.requireMock(
-    '#native/storage/keychain',
-  );
-  clearTempRegistrationPassword.mockClear();
-
-  renderHook(() => useStartupInit());
-
-  expect(clearTempRegistrationPassword).toHaveBeenCalledTimes(1);
 });
 
 describe('mobile start-up — the build gate on launch-arg injection', () => {

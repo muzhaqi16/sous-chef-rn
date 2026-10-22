@@ -3,8 +3,13 @@ fragment PantryItemUsageReaders on PantryItemUsage {
   id
   adjustmentKind
   adjustmentReason
+  currency {
+    id
+    code
+  }
   purpose
   quantityUsed
+  totalCost
   usageUnit {
     id
     name

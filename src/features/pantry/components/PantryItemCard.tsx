@@ -28,6 +28,7 @@ import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransfo
 import { daysUntilExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/motion';
 
@@ -231,20 +232,27 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 
+  const stockText = isOutOfStock
+    ? t('pantryScreen.outOfStock')
+    : t('pantryScreen.runningLow');
+  const statusText = isPendingSync
+    ? t('status.syncing')
+    : cardVariant === 'lowStock'
+    ? stockText
+    : expirationText;
+
   const getSubtitle = () => {
     if (isPendingSync) {
       return (
         <Text role="footnote" tone="secondary" style={styles.pendingSync}>
-          {t('status.syncing')}
+          {statusText}
         </Text>
       );
     }
     if (cardVariant === 'lowStock') {
       return (
         <Text role="footnoteStrong" tone="info">
-          {isOutOfStock
-            ? t('pantryScreen.outOfStock')
-            : t('pantryScreen.runningLow')}
+          {stockText}
         </Text>
       );
     }
@@ -273,6 +281,12 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     return (
       <BaseItemCard
         itemId={id}
+        accessibilityLabel={accessibilityLabelOf(
+          name,
+          statusText,
+          quantity,
+          rightSecondary,
+        )}
         variant={cardVariant}
         onPress={itemActions.onPress}
         leftActions={swipe.left}

@@ -54,6 +54,7 @@ export const PersonalInformationScreen: React.FC = () => {
       key: config.key,
       label: t(config.labelKey),
       type: config.type,
+      subtitle: config.subtitleKey ? t(config.subtitleKey) : undefined,
       placeholder: config.placeholderKey ? t(config.placeholderKey) : undefined,
     };
 
@@ -136,24 +137,6 @@ export const PersonalInformationScreen: React.FC = () => {
             if (isProfileVisibility(v)) {
               void updateProfile({ profileVisibility: v });
             }
-          },
-        };
-
-      case 'showEmail':
-        return {
-          ...baseItem,
-          value: profile?.showEmail ?? false,
-          onPress: () => {
-            void updateProfile({ showEmail: !profile?.showEmail });
-          },
-        };
-
-      case 'showPhone':
-        return {
-          ...baseItem,
-          value: profile?.showPhone ?? false,
-          onPress: () => {
-            void updateProfile({ showPhone: !profile?.showPhone });
           },
         };
     }

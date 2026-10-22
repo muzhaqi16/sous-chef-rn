@@ -211,37 +211,6 @@ describe('ensureDeviceId', () => {
   });
 });
 
-describe('the superseded identifier', () => {
-  it('is readable while the row it named still exists', () => {
-    disk.seed('device_fingerprint', 'android-oldfingerprint');
-
-    expect(loadModule().readLegacyDeviceFingerprint()).toBe(
-      'android-oldfingerprint',
-    );
-  });
-
-  it('reads as absent on a fresh install', () => {
-    expect(loadModule().readLegacyDeviceFingerprint()).toBeNull();
-  });
-
-  it('reads as absent from a store whose contents are discarded', () => {
-    disk.seed('device_fingerprint', 'android-oldfingerprint');
-    recoveryMode.mockReturnValue(true);
-
-    expect(loadModule().readLegacyDeviceFingerprint()).toBeNull();
-  });
-
-  it('is removed once the row it named is retired', () => {
-    disk.seed('device_fingerprint', 'android-oldfingerprint');
-    const mod = loadModule();
-
-    mod.clearLegacyDeviceFingerprint();
-
-    expect(mod.readLegacyDeviceFingerprint()).toBeNull();
-    expect(disk.has('device_fingerprint')).toBe(false);
-  });
-});
-
 describe('the registered locale', () => {
   it('is new when none is on record, and recorded', () => {
     const mod = loadModule();

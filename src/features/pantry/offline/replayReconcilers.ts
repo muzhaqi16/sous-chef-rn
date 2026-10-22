@@ -46,12 +46,8 @@ const adoptServerRow =
       return;
     }
 
-    // A document queued by an older build reads its pantry through the row;
-    // one queued before either was returned carries no count.
-    const countsSettled = [
-      isRecord(payload) ? payload.pantry : undefined,
-      isRecord(returned) ? returned.pantry : undefined,
-    ].some(pantry => carriesPantryCount(pantry, pantryId));
+    const countsSettled =
+      isRecord(payload) && carriesPantryCount(payload.pantry, pantryId);
     withdraw(cache, pantryId, mintedId, { countsSettled });
     addPantryItemLocally(
       cache,

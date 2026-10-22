@@ -64,6 +64,7 @@ const replayClient = (
           data: {
             addItemsToShoppingList: {
               __typename: 'AddItemsToShoppingListPayload',
+              shoppingList: { id: 'list-1', totalItems: 4, completedItems: 0 },
               results,
             },
           },

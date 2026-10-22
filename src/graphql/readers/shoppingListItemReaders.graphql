@@ -82,6 +82,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   itemName
   lastEditedBy {
     id
+    displayName
     profile {
       id
       avatar

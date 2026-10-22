@@ -43,15 +43,8 @@ export const reconcileShoppingAddReplay: Reconciler = (
   const payload: unknown = extractMutationPayload(data);
   if (!isRecord(payload) || !Array.isArray(payload.results)) return;
   // The list is resolved after the whole batch, so the refused and merged rows
-  // are already out of its count. An older build's document reads it per row.
-  const countsSettled = [
-    payload.shoppingList,
-    ...payload.results.map((result: unknown) =>
-      isRecord(result) && isRecord(result.item)
-        ? result.item.shoppingList
-        : undefined,
-    ),
-  ].some(list => carriesListTotals(list, shoppingListId));
+  // are already out of its count.
+  const countsSettled = carriesListTotals(payload.shoppingList, shoppingListId);
 
   const withdrawn: string[] = [];
   const merged: { mintedId: string; item: { id: string; version?: number } }[] =

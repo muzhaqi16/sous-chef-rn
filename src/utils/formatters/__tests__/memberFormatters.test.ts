@@ -6,6 +6,7 @@ import type { CollaboratorDisplayShape, Member } from '../memberFormatters';
 import {
   getCollaboratorDisplayName,
   getMemberDisplayName,
+  personName,
 } from '../memberFormatters';
 import { t } from '#/i18n';
 
@@ -255,5 +256,27 @@ describe('getCollaboratorDisplayName', () => {
     expect(getCollaboratorDisplayName(collab, t, 'different-id')).not.toBe(
       'You',
     );
+  });
+});
+
+describe('personName', () => {
+  // A private profile comes back null to the people the user shares with;
+  // `User.displayName` is the name they are owed.
+  it('names a person whose profile is private by their shared displayName', () => {
+    expect(personName({ displayName: 'Tani', profile: null })).toBe('Tani');
+  });
+
+  it("falls back to the profile's name, then the reader's own email", () => {
+    expect(
+      personName({ displayName: ' ', profile: { displayName: 'John' } }),
+    ).toBe('John');
+    expect(personName({ displayName: null, email: 'me@example.com' })).toBe(
+      'me@example.com',
+    );
+  });
+
+  it('names no one when nothing is readable', () => {
+    expect(personName({ displayName: null, profile: null })).toBeUndefined();
+    expect(personName(null)).toBeUndefined();
   });
 });

@@ -212,15 +212,11 @@ they read it.
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
   - `FilteredPantryItems`' loading skeleton, which counts a screenful of rows
     from `theme.spacing` and `theme.type` in JS.
-- **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
-  (`babel.config.js`): the documented order with a crawl between. Unistyles'
-  `useVariants` rewrite declares a shadowing binding without `scope.crawl()`;
-  without the crawl the compiler cannot lower the function and skips it. With
-  the compiler FIRST the file compiles, but the variant-resolved style is cached
-  on the wrong dependencies and freezes at its first-render value — memoized,
-  zero bailouts, and silently wrong. The measured three-way table is in
-  [the useVariants scope re-crawl entry](verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler);
-  `scripts/check-unistyles-variant-staleness.mjs` is the ongoing cover.
+- **Plugin order is Unistyles → React Compiler** (`babel.config.js`), as
+  Unistyles documents. With the compiler FIRST the file compiles, but the
+  variant-resolved style is cached on the wrong dependencies and freezes at its
+  first-render value — memoized, zero bailouts, and silently wrong.
+  `scripts/check-unistyles-variant-staleness.mjs` is the cover.
 - **A host that mounts its children later than they were created wraps them in
   `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
   an element against its other dependencies, so a parent that outlives a theme

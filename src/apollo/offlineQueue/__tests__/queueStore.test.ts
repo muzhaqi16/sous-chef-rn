@@ -6,11 +6,6 @@ import { storage } from '#/store/deviceStorage';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  CreatePantryItemDocument,
-  RestockPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
@@ -862,7 +857,12 @@ describe('QueueStore', () => {
   // -------------------------------------------------------------------------
   describe('persistence', () => {
     it('survives cache invalidation (reloads from MMKV)', () => {
-      store.addMutation(makeMutation({ id: 'persist-1' }));
+      store.addMutation(
+        makeMutation({
+          id: 'persist-1',
+          ...queuedMutationFor(ForkRecipeDocument),
+        }),
+      );
 
       // Invalidate cache, forcing reload from storage
       store.invalidateCache();
@@ -871,26 +871,6 @@ describe('QueueStore', () => {
       expect(m).not.toBeNull();
       expect(m?.id).toBe('persist-1');
     });
-
-    // The registries key on the name: under the old one a scanned create
-    // would replay unprepared and leave its count behind when refused.
-    it.each([
-      ['BarcodeCreatePantryItem', CreatePantryItemDocument],
-      ['BarcodeRestockPantryItem', RestockPantryItemDocument],
-    ])(
-      'reloads a write an earlier build queued as %s under the canonical name',
-      (legacyName, document) => {
-        store.addMutation(
-          makeMutation({ id: 'legacy-1', operationName: legacyName }),
-        );
-
-        store.invalidateCache();
-
-        expect(store.getMutation('legacy-1')?.operationName).toBe(
-          operationNameOf(document),
-        );
-      },
-    );
   });
 
   // -------------------------------------------------------------------------
@@ -972,7 +952,11 @@ describe('QueueStore', () => {
 
     it('persists the reset (survives cache invalidation)', () => {
       store.addMutation(
-        makeMutation({ id: 'stranded-p', status: QueueStatus.PROCESSING }),
+        makeMutation({
+          id: 'stranded-p',
+          ...queuedMutationFor(ForkRecipeDocument),
+          status: QueueStatus.PROCESSING,
+        }),
       );
       store.resetProcessingToPending('user-1');
       store.invalidateCache();

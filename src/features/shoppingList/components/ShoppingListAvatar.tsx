@@ -1,6 +1,5 @@
 import React from 'react';
 import { Avatar } from '#features/shoppingList/components/Avatar';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   getShoppingListDisplayAvatarInfo,
   type ShoppingListWithHome,
@@ -21,7 +20,7 @@ export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = ({
   return (
     <Avatar
       uri={avatarInfo?.avatar}
-      name={firstNonBlank(avatarInfo?.displayName, avatarInfo?.email)}
+      name={avatarInfo?.name}
       size={size}
       fallbackIcon="cart-outline"
     />

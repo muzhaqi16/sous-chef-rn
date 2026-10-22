@@ -24,6 +24,7 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { personName } from '#/utils/formatters/memberFormatters';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -154,6 +155,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   const generatedLists = mealPlan.generatedShoppingListsConnection.edges.map(
     edge => edge.node,
   );
+  const creatorName = personName(mealPlan.createdBy);
 
   // No recorded spend is unknown, not a spend of zero.
   let costLine: string | null = null;
@@ -208,11 +210,9 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}
           </Text>
         )}
-        {!!mealPlan.createdBy?.profile?.displayName && (
+        {!!creatorName && (
           <Text role="caption" tone="tertiary" style={styles.planDate}>
-            {t('mealPlanSettings.createdBy', {
-              name: mealPlan.createdBy.profile.displayName,
-            })}
+            {t('mealPlanSettings.createdBy', { name: creatorName })}
           </Text>
         )}
         {costLine !== null && (

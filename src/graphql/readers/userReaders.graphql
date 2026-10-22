@@ -68,8 +68,6 @@ fragment UserReaders on User {
     lastName
     phone
     profileVisibility
-    showEmail
-    showPhone
   }
   settings {
     id

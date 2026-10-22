@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   type DateData,
   type CalendarProps,
 } from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
+import { useThemeEpoch } from '#hooks/ui/useThemeEpoch';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 
 const ThemedCalendar = withUnistyles(Calendar, theme => ({
@@ -51,6 +52,10 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   const selectedKey = selectedDate ? toDateKey(selectedDate) : undefined;
   const minKey = minDate ? toDateKey(minDate) : undefined;
   const maxKey = maxDate ? toDateKey(maxDate) : undefined;
+  // react-native-calendars builds its styles from `theme` once, at mount.
+  const themeEpoch = useThemeEpoch();
+  // It reads `current` at mount only, so a theme remount opens on this.
+  const [shownMonth, setShownMonth] = useState(selectedKey);
 
   const handleDayPress = (day: DateData) => {
     onSelectDate(fromDateKey(day.dateString));
@@ -58,7 +63,9 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
 
   return (
     <ThemedCalendar
-      current={selectedKey}
+      key={themeEpoch}
+      current={shownMonth}
+      onMonthChange={(month: DateData) => setShownMonth(month.dateString)}
       onDayPress={handleDayPress}
       uniProps={t => ({
         markedDates: (() => {

@@ -6,7 +6,7 @@ const tails = new WeakMap<ApolloCache, Map<string, Promise<void>>>();
 
 const noop = () => {};
 
-export const cachedVersion = (
+const cachedVersion = (
   cache: ApolloCache,
   id: string,
   typename: string,

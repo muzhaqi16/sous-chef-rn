@@ -16,17 +16,11 @@ module.exports = api => {
       ],
     ],
     plugins: [
-      // Unistyles BEFORE the React Compiler, as Unistyles' docs prescribe, with
-      // a scope re-crawl wedged between them. The compiler used to run first
-      // because Unistyles' `useVariants` rewrite made it bail out of the whole
-      // file — but that bail is an upstream scope bug, not an incompatibility,
-      // and running the compiler first bought its memoization at the price of
-      // variant styles freezing at their first-render value.
-      // `unistyles-scope-crawl` fixes the binding so this order compiles AND
-      // keeps the variant read in the compiler's cache key. The crawl only
-      // works at `Program.enter`, hence its position here — see that file.
+      // Unistyles BEFORE the React Compiler, as Unistyles' docs prescribe. With
+      // the compiler first, a `useVariants` style read is cached on the wrong
+      // dependencies and freezes at its first-render value
+      // (`check:unistyles-variants`).
       ['react-native-unistyles/plugin', { root: 'src' }],
-      './scripts/babel/unistyles-scope-crawl.js',
       'babel-plugin-react-compiler',
       [
         'module-resolver',

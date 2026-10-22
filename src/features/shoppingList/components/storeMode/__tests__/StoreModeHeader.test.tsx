@@ -5,6 +5,25 @@ import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { StoreModeHeader } from '../StoreModeHeader';
 
+// The picker's modal stands in as one button that picks a store.
+jest.mock('#features/catalog/ui/autocomplete/StoreAutocompleteField', () => {
+  const { Pressable } = require('react-native');
+  return {
+    StoreAutocompleteField: ({
+      onStoreSelected,
+      testID,
+    }: {
+      onStoreSelected: (id: string, name: string) => void;
+      testID: string;
+    }) => (
+      <Pressable
+        testID={testID}
+        onPress={() => onStoreSelected('store-1', 'Aldi')}
+      />
+    ),
+  };
+});
+
 type Props = React.ComponentProps<typeof StoreModeHeader>;
 
 const props = (overrides: Partial<Props> = {}): Props => ({
@@ -12,6 +31,7 @@ const props = (overrides: Partial<Props> = {}): Props => ({
   totalCount: 5,
   estimate: null,
   storeName: 'Costco',
+  canChooseStore: true,
   onChooseStore: jest.fn(),
   routeNote: null,
   aisles: [
@@ -37,15 +57,32 @@ describe('StoreModeHeader', () => {
     expect(screen.getByText('At Costco')).toBeTruthy();
   });
 
-  it('asks for the store when the list names none', () => {
+  it('asks for the store when the list names none, and picks it here', () => {
     const onChooseStore = jest.fn();
     render(<StoreModeHeader {...props({ storeName: null, onChooseStore })} />);
 
+    expect(screen.getByText('Choose the store you are at')).toBeTruthy();
     fireEvent.press(
       screen.getByTestId(shoppingListTestIDs.storeModeChooseStore),
     );
+    fireEvent.press(
+      screen.getByTestId(shoppingListTestIDs.storeModeStoreField),
+    );
 
-    expect(onChooseStore).toHaveBeenCalled();
+    expect(onChooseStore).toHaveBeenCalledWith({ id: 'store-1', name: 'Aldi' });
+  });
+
+  it('asks no one for a store they cannot set', () => {
+    render(
+      <StoreModeHeader
+        {...props({ storeName: null, canChooseStore: false })}
+      />,
+    );
+
+    expect(screen.queryByText('Choose the store you are at')).toBeNull();
+    expect(
+      screen.queryByTestId(shoppingListTestIDs.storeModeStoreField),
+    ).toBeNull();
   });
 
   it('says what the rest costs, and how much of it is priced', () => {

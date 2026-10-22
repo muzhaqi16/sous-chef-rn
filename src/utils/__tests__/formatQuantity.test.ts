@@ -4,6 +4,7 @@ import {
   formatQuantityAsFraction,
   formatQuantityForDisplay,
   formatQuantityForInput,
+  formatQuantityWithUnit,
   formatNetWeightDisplay,
   getUnitDisplayText,
   parseStoredQuantityText,
@@ -223,6 +224,25 @@ describe('formatQuantityForDisplay', () => {
 // The set measured on device when the fraction stopped being seeded from a
 // float. Every value renders exactly as it did — the fraction-vs-decimal choice
 // included — which is what makes the change safe to take for the speed.
+describe('formatQuantityWithUnit', () => {
+  it('puts the unit after the quantity, as the chip shows them', () => {
+    expect(formatQuantityWithUnit(2, 'pc')).toBe('2 pc');
+    expect(formatQuantityWithUnit(1.5, 'cup')).toBe('1 1/2 cup');
+  });
+
+  it('is the quantity alone when there is no unit', () => {
+    expect(formatQuantityWithUnit(3, null)).toBe('3');
+  });
+
+  it("reads the user's own text over the stored float", () => {
+    expect(
+      formatQuantityWithUnit(0.33333334, 'cup', {
+        quantityInput: '0.33333334',
+      }),
+    ).toBe('1/3 cup');
+  });
+});
+
 describe('the value set the fraction seeding was verified against', () => {
   it.each([
     [0.33333334, '1/3'],

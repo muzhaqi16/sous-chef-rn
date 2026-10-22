@@ -199,10 +199,10 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   failure instead of the old "failure toast + ghost replay on reconnect" behavior. On success it calls
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
   errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
-- **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
-  user-scoped. Survives restart. Each distinct document is stored once and named by the entries that
-  send it (blob v2), so a burst of one operation does not re-serialize its AST per entry per save; the
-  reader still takes the v1 array an older build wrote. The persisted `context` is an **allowlisted subset** (`localFirst`
+- **`queueStore`** persists the queue to MMKV, user-scoped: each entry's operation name and variables,
+  never its document. Survives restart. A reloaded entry is sent as this build's document for its
+  operation (`MUTATION_DOCUMENTS`, which codegen writes from every `.graphql` mutation); an entry whose
+  operation this build does not declare is dropped on load. The persisted `context` is an **allowlisted subset** (`localFirst`
   only) — the live Apollo operation context carries client internals that don't survive JSON
   serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
   enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not
@@ -437,22 +437,10 @@ query-blocking, orthogonal to connectivity.
   operation (no conversion route, a fact the food does not record, a measure the stack cannot
   express), none of which a refresh clears — and the replay re-sends the same unit, so retrying only
   delays the withdrawal. The interactive path refetches the ranked units so the user can pick another.
-- **A queued write outlives the build that shaped it.** `queueStore` rewrites each entry on load,
-  in this order: an operation the API removed becomes the one that replaced it, document and
-  variables both (`legacyRetired.ts`: the purchased toggle and the quantity edit →
-  `UpdateShoppingListItem`, the reviewed cook → `MarkRecipeAsCooked` with `exactStacks`, the
-  expired-batches waste → `ConvertExpiredToWaste`, and a feature's folded copy takes the canonical
-  name); its inputs take this build's shapes, one table keyed by input type (`legacyRefs.ts`: an
-  `expiresAt` instant → `expiresOn`, a meal-plan instant → its calendar day, `@oneOf` references,
-  the waste's `today` and a move's `id`); and its stored document loses the fields the API has
-  removed since (`legacySelections.ts`: the batch lines' old failure fields, a shopping line's
-  auto-add fields, a plan's and a template's bare lists, the user's region fields). An edit stored
-  without a `version` the API now requires is given the cached row's at replay (`prepareReplay.ts`).
-  The API refuses a retired shape or an unknown field before any resolver runs, so an entry left as
-  queued is a write lost after an upgrade. `storedQueueUpgrade.test.ts` loads every mutation of the
-  previous build that the pulled schema refuses and validates what comes out. One is not rewritten:
-  a single recipe-ingredient add, whose replacement needs an item reference the stored input does
-  not carry — its replay is refused and withdrawn through the reported path.
+- **Nothing is carried forward for an older build.** An older build does not work against the
+  current API, so the queue converts nothing an older build stored: an entry is sent as this
+  build's document with its variables as stored (§ 5), and the API refusing it withdraws it
+  through the reported path.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope

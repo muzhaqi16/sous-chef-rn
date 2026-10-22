@@ -42,7 +42,6 @@ jest.mock('#native/storage/keychain', () => ({
   getLastBiometricEmail: jest.fn(),
   saveCredentials: jest.fn(),
   getBiometricCapability: jest.fn(),
-  clearTempRegistrationPassword: jest.fn(),
 }));
 
 const mockToastError = jest.mocked(toastService.error);

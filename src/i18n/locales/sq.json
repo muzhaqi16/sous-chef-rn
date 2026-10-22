@@ -309,6 +309,7 @@
     "clearInput": "Pastro fushën",
     "clearRead": "Pastro të lexuarat",
     "close": "Mbyll",
+    "members": "Anëtarët",
     "open": "Hap",
     "commaSeparated": "Të ndara me presje",
     "condition": "Gjendja",
@@ -673,6 +674,7 @@
   },
   "quantityBadge": {
     "a11yLabel": "Sasia: {{quantity}}. Prek për të modifikuar",
+    "a11yLabelReadOnly": "Sasia: {{quantity}}",
     "a11yHint": "Hap redaktuesin e sasisë"
   },
   "tutorial": {
@@ -729,6 +731,7 @@
     "changePhoto": "Ndrysho foton",
     "markComplete": "Shëno si të përfunduar",
     "markIncomplete": "Shëno si të papërfunduar",
+    "completed": "Përfunduar",
     "revokeInvite": "Anulo ftesën",
     "openBatch": "Hap grupin",
     "wasteBatch": "Regjistro grupin si të humbur",

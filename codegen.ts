@@ -88,6 +88,13 @@ const config: CodegenConfig = {
       },
     },
 
+    // Every mutation by operation name: the offline queue sends a stored write
+    // as this build's document for its operation.
+    'src/graphql/generated/mutationDocuments.generated.ts': {
+      documents: ALL_OPERATIONS,
+      plugins: ['./scripts/lib/mutationDocumentsPlugin.js'],
+    },
+
     // Per-file operation types + TypedDocumentNode.
     // Emits `<name>.generated.ts` next to every `<name>.graphql`.
     'src/': {

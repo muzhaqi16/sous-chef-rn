@@ -25,12 +25,23 @@ jest.mock('../useAisleView', () => {
   };
 });
 
+const mockPermissions = { canEditItems: false, canEditList: false };
 jest.mock('../../hooks/useShoppingListPermissions', () => ({
-  useShoppingListPermissions: () => ({ resolved: true }),
+  useShoppingListPermissions: () => ({ ...mockPermissions, resolved: true }),
 }));
 
 jest.mock('../../hooks/useShoppingListActions', () => ({
   useShoppingListActions: () => ({ handleTogglePurchase: jest.fn() }),
+}));
+
+const mockUpdateShoppingList = jest.fn();
+jest.mock('../../hooks/mutations/useUpdateShoppingList', () => ({
+  useUpdateShoppingList: () => ({ updateShoppingList: mockUpdateShoppingList }),
+}));
+
+const mockToastError = jest.fn();
+jest.mock('#/services/toastService', () => ({
+  toastService: { error: (message: string) => mockToastError(message) },
 }));
 
 interface Line {
@@ -167,5 +178,42 @@ describe('useStoreMode', () => {
     expect(result.current.state.aisles.map(aisle => aisle.department)).toEqual(
       ROUTE,
     );
+  });
+
+  it('offers the store choice to whoever may edit the list, not its items', () => {
+    mockPermissions.canEditItems = true;
+    mockPermissions.canEditList = false;
+    const { result, rerender } = renderHook(() => useStoreMode('list-1'));
+    expect(result.current.state.canChooseStore).toBe(false);
+
+    mockPermissions.canEditItems = false;
+    mockPermissions.canEditList = true;
+    rerender({});
+    expect(result.current.state.canChooseStore).toBe(true);
+  });
+
+  it("sets the list's store from the trip", async () => {
+    mockUpdateShoppingList.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useStoreMode('list-1'));
+
+    await act(() =>
+      result.current.actions.chooseStore({ id: 'store-1', name: 'Aldi' }),
+    );
+
+    expect(mockUpdateShoppingList).toHaveBeenCalledWith('list-1', {
+      targetStore: { id: 'store-1', name: 'Aldi' },
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it('says so when the store could not be saved', async () => {
+    mockUpdateShoppingList.mockRejectedValueOnce(new Error('refused'));
+    const { result } = renderHook(() => useStoreMode('list-1'));
+
+    await act(() =>
+      result.current.actions.chooseStore({ id: 'store-1', name: 'Aldi' }),
+    );
+
+    expect(mockToastError).toHaveBeenCalledWith('Failed to save settings');
   });
 });

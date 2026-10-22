@@ -14,6 +14,7 @@ const VIEWER: ShoppingListPermissions = {
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: false,
+  canEditList: false,
   resolved: true,
 };
 

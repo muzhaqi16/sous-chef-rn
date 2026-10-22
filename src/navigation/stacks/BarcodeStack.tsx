@@ -11,8 +11,7 @@ export const BarcodeStack = createNativeStackNavigator({
   }),
   // The default `inactiveBehavior: 'pause'` releases the scanner's camera once
   // SearchResults is pushed; the screens also handle blur/refocus through
-  // `useFocusEffect` → `camera.unmountOnBlur`. The scanner opts out of the
-  // stack-wide top inset as a full-bleed camera that hides the status bar.
+  // `useFocusEffect` → `camera.unmountOnBlur`.
   screenLayout: topInsetScreenLayout,
   screens: { ...barcodeScreens },
 });

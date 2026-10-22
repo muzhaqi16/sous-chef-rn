@@ -33,7 +33,6 @@ import {
 const NAMESPACE = appConfig.identity.keychainNamespace;
 export const DEFAULT_SERVICE = `${NAMESPACE}.credentials`;
 export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator`;
-export const TEMP_REGISTRATION_SERVICE = `${NAMESPACE}.temp.registration`;
 export const SESSION_TOKENS_SERVICE = `${NAMESPACE}.session.tokens`;
 export const DEVICE_ID_SERVICE = `${NAMESPACE}.device.id`;
 export const PENDING_REVOCATIONS_SERVICE = `${NAMESPACE}.session.pendingRevocations`;
@@ -382,18 +381,6 @@ export async function getLastBiometricEmail(): Promise<string | null> {
   } catch (error) {
     logger.error('Failed to get email:', error);
     return null;
-  }
-}
-
-/**
- * Purges the plaintext registration password an earlier build stored here.
- * Nothing writes it now, but a keychain item survives app deletion.
- */
-export async function clearTempRegistrationPassword(): Promise<void> {
-  try {
-    await resetGenericPassword({ service: TEMP_REGISTRATION_SERVICE });
-  } catch {
-    // Non-fatal — entry may not exist
   }
 }
 

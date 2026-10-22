@@ -1,6 +1,7 @@
 fragment AcceptInvite_shoppingListInvite on ShoppingListCollaborator {
   id
   role
+  inviterName
   invitedBy {
     id
     email
@@ -31,14 +32,15 @@ query GetShoppingListInviteByToken($token: String!) {
 }
 
 # Only selects fields that the `GetMyPendingInvites` query (via
-# `InviteCard_invite`) writes to cache: id, role, home {id name},
-# inviter {id email profile {id displayName avatar}}.
+# `InviteCard_invite`) writes to cache: id, role, inviterName, home {id name},
+# inviter {id email displayName profile {id displayName avatar}}.
 # Fields like `status` and `home.description` are intentionally omitted —
 # they are not fetched by the query, so including them would cause
 # `useFragment` to report `complete: false`.
 fragment AcceptInvite_homeInvite on HomeInvite {
   id
   role
+  inviterName
   home {
     id
     name

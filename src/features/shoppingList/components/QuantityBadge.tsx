@@ -7,7 +7,10 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityWithUnit,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
 
@@ -37,9 +40,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   const formattedQuantity = formatQuantityForDisplay(quantity, {
     quantityInput,
   });
-  const accessibilityText = unit
-    ? `${formattedQuantity} ${unit}`
-    : formattedQuantity;
+  const accessibilityText = formatQuantityWithUnit(quantity, unit, {
+    quantityInput,
+  });
 
   const isDisabled = disabled || isPurchased;
 
@@ -66,10 +69,15 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={t('quantityBadge.a11yLabel', {
-        quantity: accessibilityText,
-      })}
-      accessibilityHint={t('quantityBadge.a11yHint')}
+      // A badge the viewer may not edit says what it holds, not what a tap does.
+      accessibilityLabel={t(
+        isDisabled
+          ? 'quantityBadge.a11yLabelReadOnly'
+          : 'quantityBadge.a11yLabel',
+        { quantity: accessibilityText },
+      )}
+      accessibilityHint={isDisabled ? undefined : t('quantityBadge.a11yHint')}
+      accessibilityState={{ disabled: isDisabled }}
       hitSlop={hitSlop.md}
     >
       <View style={[styles.container, containerOverride]}>

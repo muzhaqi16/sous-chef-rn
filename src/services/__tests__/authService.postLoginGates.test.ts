@@ -50,7 +50,6 @@ jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(),
   loadCredentials: jest.fn(),
   saveCredentials: jest.fn(),
-  clearTempRegistrationPassword: jest.fn(),
 }));
 
 const mockCheckStoredCredentials = jest.fn();

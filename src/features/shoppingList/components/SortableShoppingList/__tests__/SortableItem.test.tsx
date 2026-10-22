@@ -25,16 +25,22 @@ const swipeableProps: {
 jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({
     children,
+    accessibilityLabel,
     leftActions,
     rightActions,
   }: {
     children?: React.ReactNode;
+    accessibilityLabel: string;
     leftActions?: unknown[];
     rightActions?: unknown[];
   }) => {
     const { View } = require('react-native');
     swipeableProps.push({ leftActions, rightActions });
-    return <View testID="swipeable-item">{children}</View>;
+    return (
+      <View testID="swipeable-item" accessibilityLabel={accessibilityLabel}>
+        {children}
+      </View>
+    );
   },
 }));
 
@@ -369,6 +375,33 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderRow(entry, true);
     expect(screen.getByText('checked')).toBeTruthy();
+  });
+
+  // RNGH's button would derive the label from the children: the checkbox's
+  // label is the name too, so the name was read twice.
+  it('names the row once, with its details and quantity', () => {
+    renderRow(seedItem({ quantity: 3, unitName: 'pcs' }));
+
+    expect(screen.getByTestId('swipeable-item').props.accessibilityLabel).toBe(
+      'Milk, 2 liters, 3 pcs',
+    );
+  });
+
+  it('says a purchased line is purchased, and stocked once it is', () => {
+    renderRow(
+      seedItem({
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+        },
+      }),
+      true,
+    );
+
+    expect(screen.getByTestId('swipeable-item').props.accessibilityLabel).toBe(
+      'Milk, Purchased, 2 liters, 1, Already in your pantry',
+    );
   });
 
   it('renders the quantity badge with the cached quantity + unit', () => {

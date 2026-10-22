@@ -123,14 +123,12 @@ const makeMealPlan = (
   actualCost: null,
   dietaryProfile: null,
   home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
+  // A private profile reads null to housemates; the shared name still shows.
   createdBy: {
     __typename: 'User',
     id: 'user-1',
-    profile: {
-      __typename: 'UserProfile',
-      id: 'profile-1',
-      displayName: 'John Doe',
-    },
+    displayName: 'John Doe',
+    profile: null,
   },
   nutritionSummary: {
     __typename: 'MealPlanNutritionSummary',

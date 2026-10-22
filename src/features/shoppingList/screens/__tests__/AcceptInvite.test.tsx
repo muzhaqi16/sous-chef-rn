@@ -80,14 +80,16 @@ function buildShoppingListInvite(
 ): MockPart<ShoppingListInvite> {
   return {
     role: input.role ?? CollaboratorRole.Editor,
+    // The invitee shares nothing with the inviter yet, so the invite itself
+    // carries the name and the inviter's own reads null.
+    inviterName: input.invitedByDisplayName ?? null,
     invitedBy:
       input.invitedByEmail === null
         ? null
         : {
             email: input.invitedByEmail ?? 'host@test.com',
-            profile: input.invitedByDisplayName
-              ? { displayName: input.invitedByDisplayName }
-              : null,
+            displayName: null,
+            profile: null,
           },
     shoppingList: {
       name: input.shoppingListName ?? 'My List',
@@ -100,6 +102,7 @@ interface HomeInviteInput {
   role?: MembershipRole;
   inviterEmail?: string;
   inviterDisplayName?: string | null;
+  inviterName?: string | null;
   homeName?: string;
 }
 
@@ -109,9 +112,12 @@ type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
 function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
   return {
     role: input.role ?? MembershipRole.Member,
+    inviterName: input.inviterName ?? null,
     home: { name: input.homeName ?? 'Family Home' },
     inviter: {
       email: input.inviterEmail ?? 'owner@test.com',
+      // Only a name the inviter chose; their first name comes as inviterName.
+      displayName: input.inviterDisplayName ?? null,
       profile: input.inviterDisplayName
         ? { displayName: input.inviterDisplayName }
         : null,
@@ -338,6 +344,11 @@ describe('AcceptInvite', () => {
       'shows inviter displayName for home invite when available',
       { home: { inviterDisplayName: 'HomeOwner' } },
       [/HomeOwner/],
+    ],
+    [
+      'names a home inviter who chose no display name by the invite itself',
+      { home: { inviterName: 'Ana' } },
+      [/Ana/],
     ],
     [
       'shows "join" text for home invite and "collaborate on" for shopping list',

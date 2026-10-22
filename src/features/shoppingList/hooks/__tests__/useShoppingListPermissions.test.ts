@@ -40,6 +40,7 @@ describe('useShoppingListPermissions', () => {
       canRemoveItems: false,
       canEditItems: false,
       canMarkPurchased: false,
+      canEditList: false,
       resolved: false,
     });
   });
@@ -74,6 +75,7 @@ describe('useShoppingListPermissions', () => {
       role: CollaboratorRole.Viewer,
       status: CollaboratorStatus.Active,
       collaboratorId: 'user-1',
+      canEdit: false,
       canAddItems: false,
       canRemoveItems: false,
       canEditItems: false,

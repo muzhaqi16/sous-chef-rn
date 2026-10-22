@@ -194,7 +194,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.5.3` (2026-10-13).**
+**Verified against `react-native-unistyles@3.6.0` (2026-10-21).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -250,7 +250,7 @@ then reports `dot` / `heroInner` mismatches.
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.5.3` (2026-10-13, in source; on
+**Verified against `react-native-unistyles@3.6.0` (2026-10-21, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -274,7 +274,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.6.0 (2026-10-21).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
@@ -406,39 +406,6 @@ grep -n "opacity: renderId" node_modules/@shopify/flash-list/src/recyclerview/Vi
 grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
 grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
 ```
-
-### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
-
-**Claim:** `react-native-unistyles`' Babel plugin rewrites a component that
-calls `styles.useVariants(...)` without calling `path.scope.crawl()`, so
-Babel's scope table holds no binding for the shadowing `styles` it declares and
-`babel-plugin-react-compiler` cannot lower the function.
-`scripts/babel/unistyles-scope-crawl.js` crawls between the two plugins, at
-`Program.enter` (at `Program.exit` it is a silent no-op).
-
-**Verified against `react-native-unistyles@3.5.3` +
-`babel-plugin-react-compiler@1.0.0`** (2026-10-13). Three orders, three
-outcomes:
-
-| plugin order                             | compiler                  | variant read        |
-| ---------------------------------------- | ------------------------- | ------------------- |
-| `[unistyles, compiler]` (their docs)     | function silently SKIPPED | correct, unmemoized |
-| `[compiler, unistyles]`                  | compiles                  | STALE               |
-| `[unistyles, crawl, compiler]` (shipped) | compiles                  | fresh               |
-
-The middle row is the trap: zero bailouts and full memoization, while every
-variant style freezes at its first-render value.
-
-Re-check (asserts all three legs; fails if any stops holding):
-
-```
-node scripts/probe-unistyles-compiler-order.mjs
-```
-
-If the docs order stops skipping the function, the upstream bug is fixed —
-delete the crawl plugin and the probe, and restore the plain documented order.
-Ongoing regression cover is
-`node scripts/check-unistyles-variant-staleness.mjs`.
 
 ### cache.modify cannot add a field
 

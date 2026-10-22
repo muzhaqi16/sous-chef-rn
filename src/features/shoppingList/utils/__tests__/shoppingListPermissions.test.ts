@@ -1,4 +1,5 @@
 import {
+  CollaboratorRole,
   MembershipRole,
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
@@ -12,6 +13,7 @@ const FULL = {
   canRemoveItems: true,
   canEditItems: true,
   canMarkPurchased: true,
+  canEditList: true,
 };
 
 const NONE = {
@@ -19,6 +21,7 @@ const NONE = {
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: false,
+  canEditList: false,
 };
 
 const GUEST_PERMS = {
@@ -26,6 +29,7 @@ const GUEST_PERMS = {
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: true,
+  canEditList: false,
 };
 
 const makeCollaborator = (
@@ -38,6 +42,8 @@ const makeCollaborator = (
         collaboratorId: userId,
         collaborator: { id: userId },
         status: CollaboratorStatus.Active,
+        role: CollaboratorRole.Editor,
+        canEdit: true,
         canAddItems: true,
         canRemoveItems: true,
         canEditItems: true,
@@ -98,40 +104,9 @@ describe('shoppingListPermissions', () => {
       MembershipRole.Owner,
       MembershipRole.Admin,
       MembershipRole.Member,
-    ])('uses membership permission fields for %s role', role => {
+    ])('grants a %s everything on the list', role => {
       const list = { homeId: 'h1' };
-      const membership = {
-        role,
-        canAddItems: true,
-        canRemoveItems: true,
-        canEditPantry: true,
-      };
-      expect(getShoppingListPermissions(list, 'u1', membership)).toEqual(FULL);
-    });
-
-    it('defaults undefined membership fields to true', () => {
-      const list = { homeId: 'h1' };
-      const membership = { role: MembershipRole.Member };
-      const perms = getShoppingListPermissions(list, 'u1', membership);
-      expect(perms.canAddItems).toBe(true);
-      expect(perms.canRemoveItems).toBe(true);
-      expect(perms.canEditItems).toBe(true);
-      expect(perms.canMarkPurchased).toBe(true);
-    });
-
-    it('respects explicitly false membership fields', () => {
-      const list = { homeId: 'h1' };
-      const membership = {
-        role: MembershipRole.Member,
-        canAddItems: false,
-        canRemoveItems: false,
-        canEditPantry: false,
-      };
-      const perms = getShoppingListPermissions(list, 'u1', membership);
-      expect(perms.canAddItems).toBe(false);
-      expect(perms.canRemoveItems).toBe(false);
-      expect(perms.canEditItems).toBe(false);
-      expect(perms.canMarkPurchased).toBe(false);
+      expect(getShoppingListPermissions(list, 'u1', { role })).toEqual(FULL);
     });
   });
 
@@ -157,6 +132,55 @@ describe('shoppingListPermissions', () => {
       const perms = getShoppingListPermissions(list, 'u1');
       expect(perms.canAddItems).toBe(false);
       expect(perms.canMarkPurchased).toBe(true);
+    });
+
+    it.each([
+      CollaboratorRole.Owner,
+      CollaboratorRole.Admin,
+      CollaboratorRole.Editor,
+      CollaboratorRole.Contributor,
+    ])('lets a %s edit the list whatever canEdit says', role => {
+      const list = {
+        homeId: null,
+        collaboratorsConnection: makeCollaborator('u1', {
+          role,
+          canEdit: false,
+        }),
+      };
+      expect(getShoppingListPermissions(list, 'u1').canEditList).toBe(true);
+    });
+
+    it.each([CollaboratorRole.Shopper, CollaboratorRole.Viewer])(
+      'lets a %s edit the list only through canEdit',
+      role => {
+        const permissionsWith = (canEdit: boolean) =>
+          getShoppingListPermissions(
+            {
+              homeId: null,
+              collaboratorsConnection: makeCollaborator('u1', {
+                role,
+                canEdit,
+              }),
+            },
+            'u1',
+          );
+        expect(permissionsWith(true).canEditList).toBe(true);
+        expect(permissionsWith(false).canEditList).toBe(false);
+      },
+    );
+
+    it('does not let item edits stand for list edits', () => {
+      const list = {
+        homeId: null,
+        collaboratorsConnection: makeCollaborator('u1', {
+          role: CollaboratorRole.Viewer,
+          canEdit: false,
+          canEditItems: true,
+        }),
+      };
+      const perms = getShoppingListPermissions(list, 'u1');
+      expect(perms.canEditItems).toBe(true);
+      expect(perms.canEditList).toBe(false);
     });
 
     it('returns no permissions when no collaborator found', () => {
@@ -208,6 +232,8 @@ describe('shoppingListPermissions', () => {
                 collaboratorId: null,
                 collaborator: { id: 'u1' },
                 status: CollaboratorStatus.Active,
+                role: CollaboratorRole.Editor,
+                canEdit: true,
                 canAddItems: true,
                 canRemoveItems: true,
                 canEditItems: true,

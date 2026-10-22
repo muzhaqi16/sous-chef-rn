@@ -4,14 +4,13 @@ import {
   ShoppingListCollaboratorFragmentDoc,
   ShoppingListOwnershipFragmentDoc,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
+import {
+  getShoppingListPermissionsWithOwner,
+  type ShoppingListPermissionFlags,
+} from '#features/shoppingList/utils/shoppingListPermissions';
 
 /** What the caller may do to the list it is showing. */
-export interface ShoppingListPermissions {
-  canAddItems: boolean;
-  canRemoveItems: boolean;
-  canEditItems: boolean;
-  canMarkPurchased: boolean;
+export interface ShoppingListPermissions extends ShoppingListPermissionFlags {
   /**
    * False while the answer is unknown. Absence is not temporary — the detail
    * query can fail, or the list can come from a cache that never held it — so
@@ -25,6 +24,7 @@ const NOTHING_ALLOWED: ShoppingListPermissions = {
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: false,
+  canEditList: false,
   resolved: false,
 };
 

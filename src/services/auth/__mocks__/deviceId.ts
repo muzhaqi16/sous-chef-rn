@@ -23,18 +23,6 @@ export const ensureDeviceId = jest.fn<Promise<string | null>, []>(() =>
   Promise.resolve(MOCK_DEVICE_ID),
 );
 
-/**
- * No legacy row to retire by default — the fresh-install case. A suite that
- * exercises the migration returns a value from `readLegacyDeviceFingerprint`.
- */
-export const readLegacyDeviceFingerprint = jest.fn<string | null, []>(
-  () => null,
-);
-
-export const clearLegacyDeviceFingerprint = jest.fn<void, []>(() => undefined);
-
-export const clearRetiredDeviceRow = jest.fn<void, []>(() => undefined);
-
 /** An unchanged locale by default: registration drops no cached answers. */
 export const recordRegisteredLocale = jest.fn<boolean, [string | null]>(
   () => false,

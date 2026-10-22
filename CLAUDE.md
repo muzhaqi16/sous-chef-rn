@@ -316,8 +316,8 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.
-- **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler.** Any
-  other order skips or silently freezes `useVariants` (`check:unistyles-variants`). Verified: `#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler`.
+- **Plugin order is Unistyles → React Compiler.** The compiler first silently
+  freezes `useVariants` (`check:unistyles-variants`).
 
 ### Theme: elevation, colour, motion
 
@@ -425,8 +425,8 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   (`syncAsAccountDefault`, `useDefaultHome.ts`). Memoization skips re-renders,
   never a mount: a slow `(mount)` needs fewer elements.
 - **`check-compiler-bailouts` holds production `src` to zero bailouts and zero
-  `'use no memo'`.** Needing one means the plugin order or
-  `unistyles-scope-crawl` regressed: `node scripts/probe-unistyles-compiler-order.mjs`.
+  `'use no memo'`.** Needing one means the plugin order regressed:
+  `npm run check:unistyles-variants`.
 - **A `finally` (or catch-less `try`), or a value block (`?.` `??` `&&` `||`
   ternary) inside a `try` body, bails the whole function** — move the conditional
   after the `try`; `src/utils/finallyHelpers.ts` for `finally`. Verified: `#react-compiler-try-shapes`.

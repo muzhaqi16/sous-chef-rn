@@ -309,6 +309,7 @@
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",
+    "members": "Members",
     "open": "Open",
     "commaSeparated": "Comma-separated",
     "condition": "Condition",
@@ -673,6 +674,7 @@
   },
   "quantityBadge": {
     "a11yLabel": "Quantity: {{quantity}}. Tap to edit",
+    "a11yLabelReadOnly": "Quantity: {{quantity}}",
     "a11yHint": "Opens quantity editor"
   },
   "tutorial": {
@@ -729,6 +731,7 @@
     "changePhoto": "Change photo",
     "markComplete": "Mark complete",
     "markIncomplete": "Mark not complete",
+    "completed": "Completed",
     "revokeInvite": "Revoke invitation",
     "openBatch": "Open batch",
     "wasteBatch": "Record batch as wasted",

@@ -59,6 +59,25 @@ describe('ReviewCard', () => {
     expect(getByText('Helpful (2)')).toBeTruthy();
   });
 
+  // The reviewer's profile is private by default; the name the API shares
+  // with the reader is on the User itself.
+  it("names the reviewer by the User's displayName when the profile is hidden", () => {
+    const review = makeReview({
+      user: {
+        __typename: 'User',
+        id: 'u1',
+        email: null,
+        displayName: 'Sam',
+        profile: null,
+      },
+    });
+    const { getByText, queryByText } = renderWithApollo(
+      <ReviewCard {...defaultProps} review={review} />,
+    );
+    expect(getByText('Sam')).toBeTruthy();
+    expect(queryByText('Someone')).toBeNull();
+  });
+
   it('falls back to email when no displayName', () => {
     const review = makeReview({
       user: {

@@ -46,8 +46,6 @@ query GetUserProfile {
       dateOfBirth
       gender
       profileVisibility
-      showEmail
-      showPhone
     }
   }
 }
@@ -90,8 +88,6 @@ mutation UpdateUserProfile($input: UpdateProfileInput!) {
         dateOfBirth
         gender
         profileVisibility
-        showEmail
-        showPhone
         createdAt
       }
     }
@@ -241,8 +237,6 @@ subscription UserEvents($userId: ID!) {
         dateOfBirth
         gender
         profileVisibility
-        showEmail
-        showPhone
       }
     }
   }

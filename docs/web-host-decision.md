@@ -68,8 +68,8 @@ touching the data layer.
   compiler, so a host that skips it changes behaviour, not only speed.
   `__tests__/core-portability/portabilityTransform.test.ts` holds that the
   portability run compiles the core the same way.
-- **Run the Unistyles plugin, `unistyles-scope-crawl` and the React Compiler,
-  in that order, over the UI**, and define `__DEV__` (CLAUDE.md § Unistyles).
+- **Run the Unistyles plugin and then the React Compiler over the UI**, and
+  define `__DEV__` (CLAUDE.md § Unistyles).
 - **Install the platform before the core runs**, then start it: `startCore`,
   `useCoreReady`, and `useCoreLifecycle` with the host's `StartupHost`
   (`docs/architecture.md` § Platform ports, and the composition root).

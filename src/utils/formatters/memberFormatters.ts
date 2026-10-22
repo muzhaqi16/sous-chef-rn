@@ -34,6 +34,28 @@ export type Member = {
   } | null;
 };
 
+/** What a row names a person by; the queries that name one select these. */
+export type NamedPerson = {
+  displayName?: string | null;
+  email?: string | null;
+  profile?: { displayName?: string | null } | null;
+};
+
+/**
+ * The name a row shows for a person, or undefined when none is readable.
+ * `User.displayName` follows the sharing relationship, so it resolves where a
+ * private `profile` comes back null; `email` is only ever the reader's own.
+ */
+export function personName(
+  person: NamedPerson | null | undefined,
+): string | undefined {
+  return firstNonBlank(
+    person?.displayName,
+    person?.profile?.displayName,
+    person?.email,
+  );
+}
+
 /** Resolves to "You" for `currentUserId`, else the first non-empty name source. */
 export function getMemberDisplayName(
   member: Member,

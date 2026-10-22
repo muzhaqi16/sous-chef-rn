@@ -8,6 +8,7 @@ import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { useMoney } from '#domain/money';
 import type { UsageRecord } from '#features/pantry/types';
 
 /** Local copy for the kinds the server writes itself. */
@@ -40,8 +41,12 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
   usage,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
 
   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
+  // Only a purchase carries one; 0 is a price, null is unknown.
+  const pricePaid =
+    usage.totalCost == null ? null : money(usage.totalCost, usage.currency);
   // Gated on the KIND, not the purpose: a correction that finds stock is
   // recorded as a RESTOCK row and still carries one.
   const correction = correctionText(usage, t);
@@ -76,6 +81,11 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
         {!!correction && (
           <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
             {correction}
+          </Text>
+        )}
+        {pricePaid !== null && (
+          <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
+            {pricePaid}
           </Text>
         )}
       </View>

@@ -65,7 +65,6 @@ jest.mock('#/services/auth/deviceId');
 
 jest.mock('#native/storage/keychain', () => ({
   removeBiometricCredentials: jest.fn().mockResolvedValue(true),
-  clearTempRegistrationPassword: jest.fn().mockResolvedValue(undefined),
 }));
 
 import { registerApolloClient } from '#/apollo/clientRegistry';
@@ -76,14 +75,11 @@ import { registerDeviceInBackground } from '#/services/device/deviceRegistration
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 import { logger } from '#/utils/environment';
 import {
-  clearLegacyDeviceFingerprint,
   clearRegisteredLocale,
   ensureDeviceId,
-  readLegacyDeviceFingerprint,
   recordRegisteredLocale,
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
-import { DeleteDeviceDocument } from '#operations/auth/device.generated';
 
 // A sign-out revokes and drops the slot through the step the app registers.
 registerMobileSessionHost();
@@ -98,26 +94,10 @@ registerApolloClient({
   },
 } as unknown as ApolloClient);
 
-/**
- * Route client.mutate: DeleteDevice by its document (its input is a bare
- * `id`, as UpdateDevice's can be), RegisterDevice by the `deviceId` it carries.
- * `deleteDevice` is what the server answers a delete with; the default is the
- * row it removed.
- */
-const routeMutate = (deleteDevice?: object) =>
-  mockMutate.mockImplementation(({ mutation, variables }) => {
+/** Route client.mutate: RegisterDevice by the `deviceId` it carries. */
+const routeMutate = () =>
+  mockMutate.mockImplementation(({ variables }) => {
     const input = (variables?.input ?? {}) as Record<string, unknown>;
-    if (mutation === DeleteDeviceDocument) {
-      return Promise.resolve({
-        data: {
-          deleteDevice: deleteDevice ?? {
-            __typename: 'DeleteDevicePayload',
-            converged: false,
-            device: { id: input.id },
-          },
-        },
-      });
-    }
     if ('deviceId' in input) {
       return Promise.resolve({
         data: {
@@ -156,19 +136,11 @@ const updateCallsWith = (key: string) =>
         !!input && 'id' in input && key in input,
     );
 
-/** The variables every DeleteDevice was sent with. */
-const deleteCalls = () =>
-  mockMutate.mock.calls
-    .map(([opts]) => opts)
-    .filter(opts => opts?.mutation === DeleteDeviceDocument)
-    .map(opts => opts.variables);
-
 beforeEach(() => {
   jest.clearAllMocks();
   // `clearAllMocks` clears calls, not implementations, so a case that stands the
   // identity down has to be undone here or it leaks into every case after it.
   (ensureDeviceId as jest.Mock).mockResolvedValue(MOCK_DEVICE_ID);
-  (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(null);
   (recordRegisteredLocale as jest.Mock).mockReturnValue(false);
   mockCollect.mockResolvedValue({ deviceId: 'local-1' });
   routeMutate();
@@ -488,115 +460,6 @@ describe('revoking this device’s credential', () => {
   });
 });
 
-// `deleteDevice` returns a union: ConflictError | DeleteDevicePayload |
-// ForbiddenError | NotFoundError | ValidationError. A refusal RESOLVES, so a
-// `.catch` never sees it and the token keeps delivering to a signed-out account.
-// An install that registered under the previous identifier has a second server
-// row. Its push token is live and no other client path can reach it, so it keeps
-// delivering to whoever signed in on this device before the identifier changed.
-describe('retiring the row a superseded identifier registered', () => {
-  const LEGACY = 'android-oldfingerprint';
-
-  const foundRow = (row: { id: string; deviceId: string } | null) =>
-    mockQuery.mockResolvedValue({ data: { deviceByDeviceId: row } });
-
-  it('does not look anything up on an install that has no legacy key', async () => {
-    registerDeviceInBackground();
-    await flush();
-
-    expect(mockQuery).not.toHaveBeenCalled();
-    expect(deleteCalls()).toEqual([]);
-  });
-
-  it('deletes the row and drops the key', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    foundRow({ id: 'srv-old', deviceId: LEGACY });
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { deviceId: LEGACY } }),
-    );
-    // The row's own delete, by the server's row id: `updateDevice` takes none.
-    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
-    expect(clearLegacyDeviceFingerprint).toHaveBeenCalledTimes(1);
-    expect(logger.info).toHaveBeenCalledWith(
-      'Retired the superseded device row',
-    );
-  });
-
-  // A repeat of a delete that already landed: the row is gone, which is what
-  // was asked for, so the key goes too instead of retrying on every launch.
-  it('drops the key when the delete answers converged with no device', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    foundRow({ id: 'srv-old', deviceId: LEGACY });
-    routeMutate({
-      __typename: 'DeleteDevicePayload',
-      converged: true,
-      device: null,
-    });
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
-    expect(clearLegacyDeviceFingerprint).toHaveBeenCalledTimes(1);
-  });
-
-  it('treats a row the server no longer has as already retired', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    foundRow(null);
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(deleteCalls()).toEqual([]);
-    expect(clearLegacyDeviceFingerprint).toHaveBeenCalled();
-  });
-
-  it('keeps the key when the lookup fails, so a later launch retries', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    mockQuery.mockRejectedValue(new Error('offline'));
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(clearLegacyDeviceFingerprint).not.toHaveBeenCalled();
-  });
-
-  it('keeps the key when the server refuses the retirement', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    foundRow({ id: 'srv-old', deviceId: LEGACY });
-    routeMutate({
-      __typename: 'ForbiddenError',
-      code: 'FORBIDDEN',
-      message: 'no',
-    });
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(deleteCalls()).toEqual([{ input: { id: 'srv-old' } }]);
-    expect(clearLegacyDeviceFingerprint).not.toHaveBeenCalled();
-    expect(logger.warn).toHaveBeenCalledWith(
-      'Could not retire the superseded device row:',
-      { status: 'refused', code: 'FORBIDDEN', message: 'no' },
-    );
-  });
-
-  it('is not attempted when the registration itself did not land', async () => {
-    (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(LEGACY);
-    (ensureDeviceId as jest.Mock).mockResolvedValue(null);
-
-    registerDeviceInBackground();
-    await flush();
-
-    expect(mockQuery).not.toHaveBeenCalled();
-    expect(clearLegacyDeviceFingerprint).not.toHaveBeenCalled();
-  });
-});
-
 describe('a device update is judged by its result, not by not throwing', () => {
   const refuse = (typename: string, code: string) =>
     mockMutate.mockImplementation(({ variables }) => {
@@ -655,14 +518,6 @@ describe('a session end leaves the push registration to the server', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it('removes the retired device-row key', async () => {
-    const { clearRetiredDeviceRow } = require('#/services/auth/deviceId');
-
-    await teardown();
-
-    expect(clearRetiredDeviceRow).toHaveBeenCalled();
-  });
-
   it('forgets the registered locale, which the next account has not sent', async () => {
     await teardown();
 
@@ -694,10 +549,9 @@ describe('logout — push/notification teardown', () => {
 
     await authService.logout({ keepBiometricCredentials: true });
 
-    // Neither a clear nor a delete: the row carries the device credential
-    // biometric sign-in exchanges after a deliberate sign-out.
+    // No clear: the row carries the device credential biometric sign-in
+    // exchanges after a deliberate sign-out.
     expect(updateCallsWith('clearPushToken')).toEqual([]);
-    expect(deleteCalls()).toEqual([]);
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mockStoreState.resetStore).toHaveBeenCalledWith(
       expect.objectContaining({ auth: true }),

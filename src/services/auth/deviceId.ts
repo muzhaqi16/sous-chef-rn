@@ -5,8 +5,6 @@ import { generateId } from '#/utils/generateId';
 const secureStore = () => requirePlatform('secureStore');
 
 const DEVICE_ID_KEY = 'device_id';
-const LEGACY_FINGERPRINT_KEY = 'device_fingerprint';
-const DEVICE_ROW_KEY = 'device_row';
 const REGISTERED_LOCALE_KEY = 'registered_locale';
 
 let cachedDeviceId: string | null = null;
@@ -45,9 +43,9 @@ export function getDeviceId(): string | null {
 async function hydrate(): Promise<string | null> {
   const mirrored = getDeviceId();
   if (mirrored) {
-    // An install that predates the keychain copy has the identifier in MMKV
-    // only. Write through, so it and the credential bound to it now share a
-    // lifetime; the value does not change.
+    // A mint whose keychain write failed left the identifier in MMKV only.
+    // Write through, so it and the credential bound to it share a lifetime;
+    // the value does not change.
     await secureStore().saveDeviceId(mirrored);
     return mirrored;
   }
@@ -81,29 +79,6 @@ export function ensureDeviceId(): Promise<string | null> {
     hydration = null;
   });
   return hydration;
-}
-
-/**
- * An install carrying this key has a server device row filed under it, separate
- * from the row {@link getDeviceId}'s value names. The row is retired once and
- * the key removed; a fresh install has neither.
- */
-export function readLegacyDeviceFingerprint(): string | null {
-  if (!mirrorIsUsable()) return null;
-  return storage.getString(LEGACY_FINGERPRINT_KEY) ?? null;
-}
-
-/** Called only once the server confirms the row is gone. */
-export function clearLegacyDeviceFingerprint(): void {
-  if (mirrorIsUsable()) storage.remove(LEGACY_FINGERPRINT_KEY);
-}
-
-/**
- * A retired key: it named the server row a session end once cleared the push
- * token on. Removed on session end so it does not outlive the account it names.
- */
-export function clearRetiredDeviceRow(): void {
-  if (mirrorIsUsable()) storage.remove(DEVICE_ROW_KEY);
 }
 
 /**

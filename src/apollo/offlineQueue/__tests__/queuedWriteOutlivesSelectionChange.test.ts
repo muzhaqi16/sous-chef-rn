@@ -6,6 +6,11 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { storage } from '#/store/deviceStorage';
 import {
+  completeMockedResponse,
+  recordMock,
+  type RecordedMock,
+} from '#/test-utils/apolloMockProvider';
+import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
@@ -17,7 +22,8 @@ import { QueueStore } from '../queueStore';
 /**
  * A change queued by one build replays after an update that widened the
  * mutation's selection (a readers fragment gaining a field): the queue sends
- * the document it stored, and the server's answer to it lands in the cache.
+ * this build's document for the operation, and the server's answer to it
+ * lands in the cache.
  */
 
 let mockClient: ApolloClient | null = null;
@@ -57,6 +63,8 @@ const HOME_NAME = gql`
 const homeId = (client: ApolloClient) =>
   client.cache.identify({ __typename: 'Home', id: 'home-1' });
 
+let update: RecordedMock;
+
 beforeEach(() => {
   storage.clearAll();
   const cache = makeCache();
@@ -65,35 +73,28 @@ beforeEach(() => {
     fragment: HOME_NAME,
     data: { __typename: 'Home', id: 'home-1', name: 'Before' },
   });
+  update = recordMock(UpdateHomeDocument, {
+    data: {
+      updateHome: {
+        __typename: 'UpdateHomePayload',
+        home: { __typename: 'Home', id: 'home-1', name: 'After' },
+      },
+    },
+  });
   mockClient = new ApolloClient({
     cache,
     dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    link: new MockLink([
-      {
-        request: {
-          query: PREVIOUS_BUILD_UPDATE_HOME,
-          variables: () => true,
-        },
-        result: {
-          data: {
-            updateHome: {
-              __typename: 'UpdateHomePayload',
-              home: { __typename: 'Home', id: 'home-1', name: 'After' },
-            },
-          },
-        },
-      },
-    ]),
+    link: new MockLink([completeMockedResponse(update.mock)]),
   });
 });
 
-it('the fixture is an older selection of an operation replayed as stored', () => {
+it('the fixture is an older selection of an operation with no replay preparation', () => {
   expect(print(PREVIOUS_BUILD_UPDATE_HOME)).not.toBe(print(UpdateHomeDocument));
   expect(hasReplayPreparation(operationNameOf(UpdateHomeDocument))).toBe(false);
 });
 
-it('replays the stored document after a restart and applies the answer', async () => {
+it('replays this build’s document after a restart and applies the answer', async () => {
   const store = new QueueStore();
   store.setCurrentUserId('user-1');
   store.addMutation(
@@ -108,10 +109,11 @@ it('replays the stored document after a restart and applies the answer', async (
   const reloaded = store.getMutation('queued-before-update');
   if (!reloaded || !mockClient)
     throw new Error('queued entry was not persisted');
-  expect(print(reloaded.mutation)).toBe(print(PREVIOUS_BUILD_UPDATE_HOME));
+  expect(reloaded.mutation).toBe(UpdateHomeDocument);
 
   await new QueueManager()['executeMutation'](reloaded);
 
+  expect(update.fired).toEqual([{ input: { id: 'home-1', name: 'After' } }]);
   expect(
     mockClient.cache.readFragment<{ name: string }>({
       id: homeId(mockClient),

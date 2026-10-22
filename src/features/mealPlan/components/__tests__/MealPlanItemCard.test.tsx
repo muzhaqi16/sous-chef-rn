@@ -65,6 +65,14 @@ describe('MealPlanItemCard', () => {
     expect(screen.getByText('25 min')).toBeTruthy();
   });
 
+  // RNGH's button would derive it: the toggle's "Mark not complete" and the
+  // check icon's glyph stood in for the meal's state.
+  it('names the row with the meal, its state and its details', () => {
+    renderCard({ ...meal(25), isCompleted: true });
+
+    expect(screen.getByLabelText('Pizza, Completed, 25 min')).toBeTruthy();
+  });
+
   it('renders nothing while the item is not completely cached', () => {
     renderCard(null);
 

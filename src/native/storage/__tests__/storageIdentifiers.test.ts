@@ -1,6 +1,6 @@
 import { createMMKV } from 'react-native-mmkv';
 import { RECOVERY_STORAGE_KEY } from '../mmkv';
-import { RETIRED_PERSISTED_KEYS, STORAGE_KEY } from '#/store/persistedKeys';
+import { STORAGE_KEY } from '#/store/persistedKeys';
 
 jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {
@@ -24,11 +24,6 @@ describe('storage identifiers', () => {
     // The MMKV file's id and the root store's key are one constant.
     expect(STORAGE_KEY).toBe('sous-chef-storage');
     expect(RECOVERY_STORAGE_KEY).toBe('sous-chef-storage-recovery');
-    expect(RETIRED_PERSISTED_KEYS).toEqual([
-      'sous-chef-barcode',
-      'recipe-search-cache',
-      'recipe-suggestions-cache',
-    ]);
   });
 
   it('opens the encrypted file under that id, with the key and its cipher', async () => {

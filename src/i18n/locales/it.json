@@ -309,6 +309,7 @@
     "clearInput": "Cancella campo",
     "clearRead": "Cancella lette",
     "close": "Chiudi",
+    "members": "Membri",
     "open": "Apri",
     "commaSeparated": "Separati da virgole",
     "condition": "Condizione",
@@ -673,6 +674,7 @@
   },
   "quantityBadge": {
     "a11yLabel": "Quantità: {{quantity}}. Tocca per modificare",
+    "a11yLabelReadOnly": "Quantità: {{quantity}}",
     "a11yHint": "Apre l'editor della quantità"
   },
   "tutorial": {
@@ -729,6 +731,7 @@
     "changePhoto": "Cambia foto",
     "markComplete": "Segna come completato",
     "markIncomplete": "Segna come non completato",
+    "completed": "Completato",
     "revokeInvite": "Revoca invito",
     "openBatch": "Apri lotto",
     "wasteBatch": "Registra il lotto come sprecato",

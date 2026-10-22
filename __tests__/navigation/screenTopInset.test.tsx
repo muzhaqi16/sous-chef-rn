@@ -146,8 +146,6 @@ describe('the top inset is applied exactly once', () => {
  */
 describe('every screen that opts out of the inset is a deliberate one', () => {
   const IMMERSIVE = [
-    // A full-bleed camera that hides the status bar while focused.
-    'src/features/barcode/screens/registration.ts',
     // Hero screens: the detail header draws edge-to-edge under the status bar.
     'src/features/pantry/screens/registration.ts',
     'src/features/recipes/screens/registration.ts',

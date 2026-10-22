@@ -19,7 +19,6 @@ import {
   getLastBiometricEmail,
   DEFAULT_SERVICE,
   CREDENTIALS_INDICATOR_SERVICE,
-  clearTempRegistrationPassword,
   saveSessionTokens,
   loadSessionTokens,
   loadDeviceId,
@@ -611,25 +610,6 @@ describe('keychain storage', () => {
       await loadCredentials('user@test.com');
 
       expect(mockResetGenericPassword).toHaveBeenCalled();
-    });
-  });
-
-  describe('clearTempRegistrationPassword', () => {
-    it('resets the temp registration service', async () => {
-      mockResetGenericPassword.mockResolvedValue(true);
-
-      await clearTempRegistrationPassword();
-      expect(mockResetGenericPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          service: 'dev.souschef.app.temp.registration',
-        }),
-      );
-    });
-
-    it('does not throw on error', async () => {
-      mockResetGenericPassword.mockRejectedValue(new Error('Error'));
-
-      await expect(clearTempRegistrationPassword()).resolves.toBeUndefined();
     });
   });
 

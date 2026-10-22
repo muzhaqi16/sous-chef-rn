@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Dimensions, Platform } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -18,14 +18,11 @@ import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/molecules/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
-import { useHiddenStatusBar } from '#features/barcode/screens/useHiddenStatusBar';
 
 import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
 import { motion } from '#/theme/motion';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 export const BarcodeScannerScreen: React.FC<
   StaticScreenProps<
@@ -55,8 +52,6 @@ export const BarcodeScannerScreen: React.FC<
   const hasNavigatedRef = useRef(false);
 
   const { setScanning, resetScanner, isScanning } = useBarcodeScanner();
-
-  useHiddenStatusBar();
 
   // local UI state
   const [isActive, setIsActive] = useState(false);
@@ -338,22 +333,14 @@ export const BarcodeScannerScreen: React.FC<
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: theme.colors.black,
   },
   camera: { flex: 1 },
   centeredContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.black,
@@ -365,7 +352,7 @@ const styles = StyleSheet.create(theme => ({
   },
   header: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
+    top: theme.spacing.md,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -387,7 +374,7 @@ const styles = StyleSheet.create(theme => ({
   },
   instructionsContainer: {
     position: 'absolute',
-    top: screenHeight * 0.25,
+    top: '25%',
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
@@ -409,7 +396,7 @@ const styles = StyleSheet.create(theme => ({
   },
   bottomControls: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 50 : 30,
+    bottom: rt.insets.bottom + theme.spacing.md,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',

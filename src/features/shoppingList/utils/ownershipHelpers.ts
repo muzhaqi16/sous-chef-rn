@@ -4,16 +4,18 @@ import {
   CollaboratorRole,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
+import { personName } from '#/utils/formatters/memberFormatters';
 /**
- * Ownership, roles and user info for shopping lists and homes. `user.email` is
- * nullable — the API returns it only for the caller's own record — so it is
- * never a guaranteed display label; see the `OwnerInfo` consumers' fallbacks.
+ * Ownership, roles and user info for shopping lists and homes. An owner is
+ * named by `personName`, so `OwnerInfo.name` can be undefined: `user.email`
+ * comes back only for the caller's own record.
  */
 interface ShoppingListOwnership {
   userId: string;
   user?: {
     id: string;
     email?: string | null;
+    displayName?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -55,6 +57,7 @@ interface HomeMember {
   user?: {
     id: string;
     email?: string | null;
+    displayName?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -90,8 +93,7 @@ const resolveCollaborators = (
  */
 export interface OwnerInfo {
   id: string;
-  email?: string | null;
-  displayName?: string | null;
+  name?: string;
   avatar?: string | null;
 }
 
@@ -106,8 +108,7 @@ export function getShoppingListOwnerInfo(
 
   return {
     id: ownership.user.id,
-    email: ownership.user.email,
-    displayName: ownership.user.profile?.displayName,
+    name: personName(ownership.user),
     avatar: ownership.user.profile?.avatar,
   };
 }
@@ -190,8 +191,7 @@ export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
 
   return {
     id: owner.user.id,
-    email: owner.user.email,
-    displayName: owner.user.profile?.displayName,
+    name: personName(owner.user),
     avatar: owner.user.profile?.avatar,
   };
 }

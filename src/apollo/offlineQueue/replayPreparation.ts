@@ -74,8 +74,6 @@ const symbolFor = (
   unitId: string,
 ): string | undefined =>
   mutation.replayInputs?.[capturedSymbolKey(unitId)] ??
-  // An entry queued by an older build captured one unnamed symbol.
-  mutation.replayInputs?.unitSymbol ??
   readUnitSymbol(cache, unitId);
 
 /**

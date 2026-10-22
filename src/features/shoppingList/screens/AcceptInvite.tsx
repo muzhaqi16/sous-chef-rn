@@ -17,6 +17,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { personName } from '#/utils/formatters/memberFormatters';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export const AcceptInvite: React.FC = () => {
@@ -133,15 +134,21 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  const inviter =
+  const invite =
     invitationType === 'home'
-      ? homeInviteDisplay?.inviter
-      : shoppingListInviteDisplay?.invitedBy;
-  const inviterDisplayName = firstNonBlank(
-    inviter?.profile?.displayName,
-    inviter?.email,
-  );
-  const inviterName = inviterDisplayName ?? t('labels.someone');
+      ? {
+          inviterName: homeInviteDisplay?.inviterName,
+          inviter: homeInviteDisplay?.inviter,
+        }
+      : {
+          inviterName: shoppingListInviteDisplay?.inviterName,
+          inviter: shoppingListInviteDisplay?.invitedBy,
+        };
+  // An invite names its inviter itself: the invitee shares nothing with them
+  // yet, so `User.displayName` gives only a name the inviter chose.
+  const inviterName =
+    firstNonBlank(invite.inviterName, personName(invite.inviter)) ??
+    t('labels.someone');
 
   return (
     <Screen header={{ close: () => goBack() }} scroll="none">

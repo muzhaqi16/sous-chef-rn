@@ -735,7 +735,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
     {
       keys: [
         'homeManagement.statsMember_other',
-        'homeManagement.cardMembersSectionTitle',
+        'labels.members',
       ],
       reason:
         'The English is one word for two roles: sq "Anëtarë" vs ' +

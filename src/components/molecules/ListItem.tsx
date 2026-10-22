@@ -10,9 +10,12 @@ import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
 import { rowType } from '#/theme/foundations/type';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 
 interface ListItemProps {
   children?: React.ReactNode;
+  /** A pressable row's spoken label; title, subtitle and badge when absent. */
+  accessibilityLabel?: string;
   title?: string;
   /** Max lines for the title before truncating. Defaults to 2. */
   titleNumberOfLines?: number;
@@ -33,6 +36,7 @@ interface ListItemProps {
 
 const ListItemComponent: React.FC<ListItemProps> = ({
   children,
+  accessibilityLabel,
   title,
   titleNumberOfLines = 2,
   subtitle,
@@ -113,9 +117,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   if (onPress) {
     const subtitleText = typeof subtitle === 'string' ? subtitle : '';
-    const accessibilityLabel = [title, subtitleText, badge?.text]
-      .filter(Boolean)
-      .join(', ');
 
     return (
       <View style={commonStyles.rowSurface}>
@@ -123,7 +124,10 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           style={[commonStyles.rowClip, commonStyles.rowContent]}
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel={accessibilityLabel}
+          accessibilityLabel={
+            accessibilityLabel ??
+            accessibilityLabelOf(title, subtitleText, badge?.text)
+          }
           accessibilityHint={t('labels.tapToViewDetails')}
           accessibilityState={{ disabled: isPurchased }}
         >

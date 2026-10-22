@@ -52,8 +52,6 @@ fragment LoginUser on User {
     dateOfBirth
     gender
     profileVisibility
-    showEmail
-    showPhone
   }
   settings {
     id

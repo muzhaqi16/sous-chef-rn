@@ -450,9 +450,8 @@ Session tokens are written through to the **Keychain**, not MMKV — see the
 ### Feature-owned stores
 
 State nothing outside a feature reads lives with that feature rather than as a
-root slice; `src/features/notifications/store/` is the worked example, and the
-recipe result caches (`recipe-search-cache`, `recipe-suggestions-cache`) are
-another. `SESSION_SCOPED_STATE` in `resetManager.ts` reaches only the ROOT
+root slice; `src/features/notifications/store/` is the worked example.
+`SESSION_SCOPED_STATE` in `resetManager.ts` reaches only the ROOT
 store, so a feature store that does not call
 `registerSessionScopedStore(name, reset)` keeps its data across a sign-out with
 nothing failing. `sessionEndLeavesNoData.test.ts` and
