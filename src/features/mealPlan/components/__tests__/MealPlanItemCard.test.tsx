@@ -70,7 +70,7 @@ describe('MealPlanItemCard', () => {
   it('names the row with the meal, its state and its details', () => {
     renderCard({ ...meal(25), isCompleted: true });
 
-    expect(screen.getByLabelText('Pizza, Completed, 25 min')).toBeTruthy();
+    expect(screen.getByLabelText('Pizza, Done, 25 min')).toBeTruthy();
   });
 
   it('renders nothing while the item is not completely cached', () => {
