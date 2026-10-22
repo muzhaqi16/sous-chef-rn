@@ -25,7 +25,6 @@ import { RecurringSection } from '#features/shoppingList/components/listSettings
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
 import { SubScreen } from '#components/templates/SubScreen';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export const ListSettings: React.FC<
   StaticScreenProps<
@@ -173,10 +172,7 @@ export const ListSettings: React.FC<
             {!!ownerInfo && (
               <InfoRow
                 label={t('shoppingListScreens.owner')}
-                value={
-                  firstNonBlank(ownerInfo.displayName, ownerInfo.email) ??
-                  t('labels.unknown')
-                }
+                value={ownerInfo.name ?? t('labels.unknown')}
               />
             )}
 

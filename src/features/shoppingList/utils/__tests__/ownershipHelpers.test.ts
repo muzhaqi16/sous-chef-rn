@@ -44,8 +44,7 @@ describe('ownershipHelpers', () => {
       const info = getShoppingListOwnerInfo(list);
       expect(info).toEqual({
         id: 'u1',
-        email: 'u1@test.com',
-        displayName: 'Test User',
+        name: 'Test User',
         avatar: 'avatar.jpg',
       });
     });
@@ -72,7 +71,24 @@ describe('ownershipHelpers', () => {
           },
         ],
       };
-      expect(getShoppingListOwnerInfo(list)?.displayName).toBe('Ana');
+      expect(getShoppingListOwnerInfo(list)?.name).toBe('Ana');
+    });
+
+    it('passes over a blank displayName to the profile name', () => {
+      const list = {
+        ownerships: [
+          {
+            userId: 'u1',
+            user: {
+              id: 'u1',
+              email: null,
+              displayName: ' ',
+              profile: { displayName: 'Ana' },
+            },
+          },
+        ],
+      };
+      expect(getShoppingListOwnerInfo(list)?.name).toBe('Ana');
     });
   });
 
@@ -212,7 +228,7 @@ describe('ownershipHelpers', () => {
           },
         ],
       };
-      expect(getHomeOwnerInfo(home)?.displayName).toBe('Ana');
+      expect(getHomeOwnerInfo(home)?.name).toBe('Ana');
     });
   });
 
