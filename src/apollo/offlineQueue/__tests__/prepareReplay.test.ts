@@ -22,7 +22,6 @@ import {
   MoveShoppingItemToPantryDocument,
   MoveShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { todayKey } from '#/utils/dateUtils';
 import type { DocumentNode } from 'graphql';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
@@ -149,30 +148,18 @@ describe('prepareReplay', () => {
       );
     });
 
-    it.each([
-      ['an older build’s one symbol', { unitSymbol: 'tbsp' }, makeCache()],
-      [
-        'none, by its cached symbol',
-        undefined,
+    it('names by its cached symbol a single row that captured none', async () => {
+      const replayed = await prepare(
+        queued(UpdatePantryItemDocument, {
+          input: { id: 'row-1', unit: { id: 'unit-1' }, version: 2 },
+        }),
         cacheWithUnit('unit-1', 'tbsp'),
-      ],
-    ])(
-      'names by symbol a single row that captured %s',
-      async (_, replayInputs, cache) => {
-        const replayed = await prepare(
-          queued(
-            UpdatePantryItemDocument,
-            { input: { id: 'row-1', unit: { id: 'unit-1' }, version: 2 } },
-            { replayInputs },
-          ),
-          cache,
-        );
+      );
 
-        expect(replayed.input).toEqual(
-          expect.objectContaining({ unit: { symbol: 'tbsp' } }),
-        );
-      },
-    );
+      expect(replayed.input).toEqual(
+        expect.objectContaining({ unit: { symbol: 'tbsp' } }),
+      );
+    });
 
     it('names every line of a batch add by symbol, its id captured or not', async () => {
       const mutation = queued(AddItemToShoppingListDocument, {
@@ -266,56 +253,5 @@ describe('prepareReplay', () => {
 
       expect(replayed.input).not.toHaveProperty('forceAdd');
     });
-  });
-});
-
-describe('an edit stored without the version the API now requires', () => {
-  const MEAL = gql`
-    fragment PrepareReplayTestMeal on MealPlanItem {
-      id
-      version
-    }
-  `;
-  const completion = { id: 'meal-1', isCompleted: true, completedAt: null };
-
-  it('states the version the cache holds for the row', async () => {
-    const cache = makeCache();
-    cache.writeFragment({
-      fragment: MEAL,
-      data: { __typename: 'MealPlanItem', id: 'meal-1', version: 7 },
-    });
-
-    const prepared = await prepare(
-      queued(UpdateMealPlanItemDocument, { input: completion }),
-      cache,
-    );
-
-    expect(prepared.input).toEqual({ ...completion, version: 7 });
-  });
-
-  it('keeps the version an edit was queued with', async () => {
-    const cache = makeCache();
-    cache.writeFragment({
-      fragment: MEAL,
-      data: { __typename: 'MealPlanItem', id: 'meal-1', version: 7 },
-    });
-
-    const prepared = await prepare(
-      queued(UpdateMealPlanItemDocument, {
-        input: { ...completion, version: 3 },
-      }),
-      cache,
-    );
-
-    expect(prepared.input).toEqual({ ...completion, version: 3 });
-  });
-
-  // Sent as stored: the API refuses it, and the write is withdrawn and reported.
-  it('leaves the input alone when the row is not cached', async () => {
-    const prepared = await prepare(
-      queued(UpdateMealPlanItemDocument, { input: completion }),
-    );
-
-    expect(prepared.input).toEqual(completion);
   });
 });

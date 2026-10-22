@@ -4,11 +4,10 @@ import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
-import { withCurrentInput } from './legacyRefs';
-import { withoutRemovedFields } from './legacySelections';
-import { upgradeRetiredEntry } from './legacyRetired';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { isOwnKey } from '#/utils/isOwnKey';
 import { isRecord } from '#/utils/isRecord';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
@@ -47,116 +46,25 @@ const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
 
-/** Blob v1: every entry carries its own serialized document. */
-type QueueBlobV1 = Array<StoredEntry & { mutation: string }>;
-
-/** Blob v2: each distinct document once, named by the entries that send it. */
-interface QueueBlobV2 {
-  v: 2;
-  documents: Record<string, string>;
-  entries: Array<StoredEntry & { document: string }>;
-}
-
-interface SerializedDocument {
-  json: string;
-  hash: string;
-}
-
-// A generated mutation document is tens of KB of AST, shared by every entry
-// that sends it: each document object is serialized once per process.
-const serializedDocuments = new WeakMap<DocumentNode, SerializedDocument>();
-
-/** FNV-1a: tells one operation's documents from different builds apart. */
-function hashOf(text: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = Math.imul(hash ^ text.charCodeAt(index), 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-function remember(document: DocumentNode, json: string): SerializedDocument {
-  const serialized = { json, hash: hashOf(json) };
-  serializedDocuments.set(document, serialized);
-  return serialized;
-}
-
-function serializedDocument(document: DocumentNode): SerializedDocument {
-  return (
-    serializedDocuments.get(document) ??
-    remember(
-      document,
-      JSON.stringify({
-        kind: document.kind,
-        definitions: document.definitions,
-        loc: document.loc,
-      }),
-    )
-  );
+/** Entries without their documents: each is sent as this build's document. */
+interface QueueBlob {
+  v: 3;
+  entries: StoredEntry[];
 }
 
 function serializeQueue(mutations: readonly QueuedMutation[]): string {
-  const documents = new Map<string, string>();
-  const keys = new Map<DocumentNode, string>();
-  const keyOf = (operationName: string, document: DocumentNode): string => {
-    const { json, hash } = serializedDocument(document);
-    let key = `${operationName}:${hash}`;
-    // A hash collision takes its own key, never another document's.
-    while (documents.has(key) && documents.get(key) !== json) key += "'";
-    documents.set(key, json);
-    keys.set(document, key);
-    return key;
-  };
-  const entries = mutations.map(({ mutation, ...entry }) => ({
-    ...entry,
-    document: keys.get(mutation) ?? keyOf(entry.operationName, mutation),
-  }));
-  const blob: QueueBlobV2 = {
-    v: 2,
-    documents: Object.fromEntries(documents),
-    entries,
+  const blob: QueueBlob = {
+    v: 3,
+    entries: mutations.map(({ mutation: _document, ...entry }) => entry),
   };
   return JSON.stringify(blob);
 }
 
-/** Entries naming one stored document share one parsed object. */
-function documentParser(): (
-  ref: string,
-  json: string | undefined,
-) => DocumentNode {
-  const parsed = new Map<string, DocumentNode>();
-  return (ref, json) => {
-    const known = parsed.get(ref);
-    if (known) return known;
-    if (json === undefined) {
-      throw new Error(`Queue blob holds no document ${ref}`);
-    }
-    const stored = JSON.parse(json) as DocumentNode;
-    const document = withoutRemovedFields(stored);
-    if (document === stored) remember(document, json);
-    parsed.set(ref, document);
-    return document;
-  };
-}
-
-// A retired operation is replaced first, so every later rewrite and every
-// registry reads the write as the operation it replays as.
-const loadedEntry = (
-  entry: StoredEntry,
-  stored: DocumentNode,
-): QueuedMutation => {
-  const { operationName, mutation, variables } = upgradeRetiredEntry({
-    operationName: entry.operationName,
-    mutation: stored,
-    variables: entry.variables,
-  });
-  return {
-    ...entry,
-    operationName,
-    mutation,
-    variables: withCurrentInput(mutation, variables),
-  };
-};
+/** This build's document for an operation; undefined for one it does not declare. */
+const currentDocumentOf = (operationName: string): DocumentNode | undefined =>
+  isOwnKey(MUTATION_DOCUMENTS, operationName)
+    ? MUTATION_DOCUMENTS[operationName]?.()
+    : undefined;
 
 /** User-scoped mutation queue persisted to MMKV. */
 export class QueueStore {
@@ -205,21 +113,21 @@ export class QueueStore {
         return [];
       }
 
-      const blob = JSON.parse(queueJson) as QueueBlobV1 | QueueBlobV2;
-      const documentFor = documentParser();
-      const queue = Array.isArray(blob)
-        ? blob.map(({ mutation, ...entry }) =>
-            loadedEntry(entry, documentFor(mutation, mutation)),
-          )
-        : blob.entries.map(({ document, ...entry }) =>
-            loadedEntry(entry, documentFor(document, blob.documents[document])),
-          );
+      const { entries } = JSON.parse(queueJson) as QueueBlob;
+      const queue = entries.flatMap(entry => {
+        const mutation = currentDocumentOf(entry.operationName);
+        if (mutation) return [{ ...entry, mutation }];
+        logger.warn(`Queue: dropped ${entry.operationName}, not in this build`);
+        return [];
+      });
 
       this.cache = queue;
 
       return queue;
     } catch (error) {
       logger.error('Failed to load queue from storage:', error);
+      // Read once: the next save replaces what could not be read.
+      this.cache = [];
       return [];
     }
   }

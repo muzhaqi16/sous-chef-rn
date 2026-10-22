@@ -203,23 +203,15 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
     );
   });
 
-  // Each accepted row's payload carries the list's totals, resolved after the
-  // whole batch — so the refused row is already out of the count, and a
-  // relative decrement on top would take it out twice.
-  it('leaves the count alone when an accepted row brought the totals', () => {
+  // The payload carries the list's totals, resolved after the whole batch — so
+  // the refused row is already out of the count, and a relative decrement on
+  // top would take it out twice.
+  it('leaves the count alone when the payload brought the totals', () => {
     reconcileReplaySuccess(addOperation, variables, {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
-        results: [
-          {
-            success: true,
-            item: {
-              id: 'row-a',
-              shoppingList: { id: 'list-1', totalItems: 4 },
-            },
-          },
-          { success: false },
-        ],
+        shoppingList: { id: 'list-1', totalItems: 4 },
+        results: [{ success: true, item: { id: 'row-a' } }, { success: false }],
       },
     });
 
