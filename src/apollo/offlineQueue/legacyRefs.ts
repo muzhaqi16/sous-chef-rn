@@ -271,6 +271,13 @@ const dateOfBirthDay = (input: Input): Input => {
   return { ...input, dateOfBirth: value.slice(0, 10) };
 };
 
+/** An email or phone toggle, which the input refuses as an unknown field. */
+const withoutContactToggles = (input: Input): Input => {
+  if (!('showEmail' in input || 'showPhone' in input)) return input;
+  const { showEmail: _email, showPhone: _phone, ...rest } = input;
+  return rest;
+};
+
 const SKILL_LEVELS = new Set<string>(Object.values(CookingSkillLevel));
 
 /** The Title-case level an older build stored, as the enum it became. */
@@ -320,7 +327,7 @@ const REWRITES: Readonly<Record<RewrittenInput, Rewrite>> = {
     stockAmount('quantity', 'unitId')(expiresOn(input)),
   UpdateDietaryProfileInput: dietarySkillLevel,
   AddRestrictionInput: restrictionKind,
-  UpdateProfileInput: dateOfBirthDay,
+  UpdateProfileInput: input => withoutContactToggles(dateOfBirthDay(input)),
   CreateMealPlanInput: planDays,
   UpdateMealPlanInput: planDays,
   CreateMealPlanItemInput: mealDay,

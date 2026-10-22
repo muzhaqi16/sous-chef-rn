@@ -200,6 +200,12 @@ describe('references', () => {
       { dateOfBirth: '1990-01-15T00:00:00.000Z' },
       { dateOfBirth: '1990-01-15' },
     ],
+    [
+      'drops the email and phone toggles the input refuses',
+      UpdateUserProfileDocument,
+      { displayName: 'Ana', showEmail: true, showPhone: false },
+      { displayName: 'Ana' },
+    ],
   ])('%s', (_, document, input, expected) => {
     expect(withCurrentInput(document, { input })).toEqual({ input: expected });
   });

@@ -151,6 +151,30 @@ describe('withoutRemovedFields', () => {
       }`,
     ],
     [
+      'the contact toggles under a profile update’s profile',
+      `mutation UpdateUserProfile($input: UpdateProfileInput!) {
+        updateProfile(input: $input) {
+          __typename
+          ... on UpdateProfilePayload {
+            userProfile { id displayName showEmail showPhone }
+          }
+        }
+      }`,
+    ],
+    [
+      'the contact toggles under a signed-in user’s profile',
+      `mutation VerifyEmail($input: VerifyEmailInput!) {
+        verifyEmail(input: $input) {
+          __typename
+          ... on VerifyEmailPayload { user { id ...Account } }
+        }
+      }
+      fragment Account on User {
+        id
+        profile { id showEmail showPhone }
+      }`,
+    ],
+    [
       'the batch move’s old line lists',
       `mutation MovePurchasedItemsToPantry(
         $input: MovePurchasedItemsToPantryInput!

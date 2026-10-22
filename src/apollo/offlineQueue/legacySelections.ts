@@ -21,6 +21,7 @@ const REMOVED_FIELDS = {
   MealPlan: new Set(['mealPlanItems', 'generatedShoppingLists']),
   MealTemplate: new Set(['items']),
   User: new Set(['timezone', 'preferredCurrency']),
+  UserProfile: new Set(['showEmail', 'showPhone']),
   MovePurchasedItemsToPantryPayload: new Set(['movedItems', 'failedItems']),
   BatchAddShoppingListItemResult: new Set([
     'quantityIncremented',
@@ -47,6 +48,8 @@ const FIELD_TYPE = {
   mealPlan: 'MealPlan',
   mealTemplate: 'MealTemplate',
   user: 'User',
+  profile: 'UserProfile',
+  userProfile: 'UserProfile',
 };
 
 type Ancestors = readonly (ASTNode | readonly ASTNode[])[];
