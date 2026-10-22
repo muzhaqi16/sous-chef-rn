@@ -1,4 +1,5 @@
 import React from 'react';
+import type { AccessibilityProps } from 'react-native';
 import { sizes } from '#/theme/foundations/sizes';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { withUnistyles } from 'react-native-unistyles';
@@ -17,6 +18,13 @@ export type IconLibrary = string;
 // canonical opt-in. uniProps is re-evaluated on every theme change and only
 // this Icon re-renders, not the parent screen.
 const ThemedIonicons = withUnistyles(Ionicons);
+
+// An icon is never the label: its glyph is a private-use character, which a
+// parent's derived label otherwise joins in ("<glyph>, At Giant-Eagle").
+const DECORATIVE: AccessibilityProps = {
+  accessibilityElementsHidden: true,
+  importantForAccessibility: 'no-hide-descendants',
+};
 
 export const TONE_TO_COLOR = {
   primary: (t: Theme) => t.colors.primary,
@@ -87,6 +95,7 @@ export const Icon: React.FC<IconProps> = ({
   if (color != null) {
     return (
       <ThemedIonicons
+        {...DECORATIVE}
         name={name as IoniconsIconName}
         size={px}
         color={color}
@@ -98,6 +107,7 @@ export const Icon: React.FC<IconProps> = ({
     const resolveColor = TONE_TO_COLOR[tone];
     return (
       <ThemedIonicons
+        {...DECORATIVE}
         name={name as IoniconsIconName}
         size={px}
         uniProps={t => ({
@@ -111,6 +121,7 @@ export const Icon: React.FC<IconProps> = ({
   // stay visible in dark mode. Never a hardcoded #000.
   return (
     <ThemedIonicons
+      {...DECORATIVE}
       name={name as IoniconsIconName}
       size={px}
       uniProps={t => ({
