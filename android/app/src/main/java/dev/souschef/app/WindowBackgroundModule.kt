@@ -24,11 +24,11 @@ class WindowBackgroundModule(reactContext: ReactApplicationContext) :
     activity.runOnUiThread {
       val window = activity.window
       // Edge-to-edge paints a scrim below API 29. Button colour is settable from
-      // API 27 only, so below that the scrim stays to keep the buttons legible.
+      // API 26 only, so below that the scrim stays to keep the buttons legible.
       when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
           window.isNavigationBarContrastEnforced = false
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 ->
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ->
           window.navigationBarColor = Color.TRANSPARENT
       }
       WindowCompat.getInsetsController(window, window.decorView)
