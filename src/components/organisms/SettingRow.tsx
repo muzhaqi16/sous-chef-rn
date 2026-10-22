@@ -94,8 +94,12 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
   const textValue = typeof item.value === 'string' ? item.value : undefined;
 
+  // The row's label replaces the text inside it, so the subtitle joins the
+  // label: a screen reader user can turn hints off.
   const getAccessibilityLabel = () => {
-    const baseLabel = item.label;
+    const baseLabel = item.subtitle
+      ? `${item.label}, ${item.subtitle}`
+      : item.label;
     if (item.type === 'switch') {
       return `${baseLabel}, ${
         item.value ? t('settingRow.enabled') : t('settingRow.disabled')
@@ -131,14 +135,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     return undefined;
   };
 
-  // The row's label replaces the text inside it, the subtitle included, so a
-  // screen reader hears the subtitle here.
-  const getAccessibilityHint = () => {
-    const action = getActionHint();
-    if (!item.subtitle) return action;
-    return action ? `${item.subtitle} ${action}` : item.subtitle;
-  };
-
   // A row that reports itself disabled is inert everywhere, not only in the
   // switch it greys: the label area is the rest of the same control.
   const isInert = item.type === 'info' || !!item.disabled;
@@ -163,7 +159,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         ]}
         accessibilityRole={item.type === 'info' ? 'text' : 'button'}
         accessibilityLabel={getAccessibilityLabel()}
-        accessibilityHint={getAccessibilityHint()}
+        accessibilityHint={getActionHint()}
         accessibilityState={{
           disabled: !!item.disabled || item.type === 'info',
         }}
