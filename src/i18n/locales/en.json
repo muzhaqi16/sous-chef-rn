@@ -731,6 +731,7 @@
     "changePhoto": "Change photo",
     "markComplete": "Mark complete",
     "markIncomplete": "Mark not complete",
+    "completed": "Completed",
     "revokeInvite": "Revoke invitation",
     "openBatch": "Open batch",
     "wasteBatch": "Record batch as wasted",

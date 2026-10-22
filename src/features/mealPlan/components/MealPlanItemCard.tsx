@@ -16,6 +16,7 @@ import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 
 interface MealPlanItemCardProps {
   item: FragmentType<typeof MealPlanItemCard_ItemFragmentDoc>;
@@ -125,6 +126,12 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     <View style={commonStyles.rowWrapper}>
       <SwipeableItem
         itemId={item.id}
+        accessibilityLabel={accessibilityLabelOf(
+          recipeName,
+          item.isCompleted && t('a11y.completed'),
+          metaText,
+          hasPantryDeductions && t('mealPlanItem.pantryUpdated'),
+        )}
         onPress={onPress ? () => onPress(item.id) : undefined}
         rightActions={
           onDelete

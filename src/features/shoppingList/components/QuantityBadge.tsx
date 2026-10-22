@@ -7,7 +7,10 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityWithUnit,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
 
@@ -37,9 +40,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   const formattedQuantity = formatQuantityForDisplay(quantity, {
     quantityInput,
   });
-  const accessibilityText = unit
-    ? `${formattedQuantity} ${unit}`
-    : formattedQuantity;
+  const accessibilityText = formatQuantityWithUnit(quantity, unit, {
+    quantityInput,
+  });
 
   const isDisabled = disabled || isPurchased;
 

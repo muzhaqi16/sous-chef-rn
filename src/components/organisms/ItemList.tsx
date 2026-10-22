@@ -51,6 +51,8 @@ interface Item {
   subtitle: string;
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
+  /** The row's spoken label, when `rightElement` shows text. */
+  accessibilityLabel?: string;
   leftElement?: React.ReactNode;
   imageUrl?: string; // Pass URL as data — renderItem creates CachedImage (avoids JSX in transforms)
   /** A heading drawn above this row: the first row of each section carries its section's. */
@@ -91,6 +93,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       badge={item.badge}
       leftElement={leftElement}
       rightElement={item.rightElement}
+      accessibilityLabel={item.accessibilityLabel}
       onPress={() => onItemPress(item.id)}
       leftActions={swipe?.left}
       rightActions={swipe?.right}

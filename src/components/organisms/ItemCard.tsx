@@ -11,6 +11,7 @@ import type { BadgeContent } from '#components/atoms/Badge';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 
 /**
  * The standard title/subtitle/badge row, with the slide-off-screen exit handled
@@ -30,6 +31,8 @@ interface ItemCardProps {
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
+  /** The row's spoken label, when `rightElement` shows text: title, subtitle and badge otherwise. */
+  accessibilityLabel?: string;
   testID?: string;
 }
 
@@ -49,6 +52,7 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
   badge,
   rightElement,
   leftElement,
+  accessibilityLabel,
   testID,
 }) => {
   const { width: screenWidth } = useWindowDimensions();
@@ -73,6 +77,10 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     <View style={commonStyles.rowWrapper} testID={testID}>
       <Animated.View style={animatedSlideStyle}>
         <SwipeableItem
+          accessibilityLabel={
+            accessibilityLabel ??
+            accessibilityLabelOf(title, subtitle, badge?.text)
+          }
           onPress={onPress}
           leftActions={withSlideOut(leftActions)}
           rightActions={withSlideOut(rightActions)}
@@ -102,6 +110,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
     badge,
     rightElement,
     leftElement,
+    accessibilityLabel,
     testID,
   } = props;
 
@@ -119,6 +128,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
           badge={badge}
           rightElement={rightElement}
           leftElement={leftElement}
+          accessibilityLabel={accessibilityLabel}
         />
       </View>
     );

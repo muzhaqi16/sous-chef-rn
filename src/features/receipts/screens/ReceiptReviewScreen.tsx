@@ -17,6 +17,7 @@ import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreA
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/app/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
@@ -209,32 +210,48 @@ export const ReceiptReviewScreen: React.FC = () => {
     return inSection.map((row, at) => {
       const price = row.choice ? row.choice.price : row.price;
       const { icon, tone, badge } = STATUS_LOOK[row.status];
+      const title = row.choice?.itemName ?? row.printed;
+      const subtitle = subtitleOf(row);
+      // A line to add is badged only when it ticks a list line off.
+      const badgeText =
+        badge && (row.status !== 'add' || row.onList) ? t(badge.text) : null;
+      const priceText =
+        price === undefined || price === null
+          ? null
+          : price === 0 && row.discount
+          ? t('receipts.review.free')
+          : money(price);
+      const discountText = row.discount
+        ? t('receipts.review.discountOff', { amount: money(row.discount) })
+        : null;
       return {
         id: String(row.index),
-        title: row.choice?.itemName ?? row.printed,
-        subtitle: subtitleOf(row),
-        // A line to add is badged only when it ticks a list line off.
+        title,
+        subtitle,
         badge:
-          badge && (row.status !== 'add' || row.onList)
-            ? { text: t(badge.text), variant: badge.variant }
+          badge && badgeText
+            ? { text: badgeText, variant: badge.variant }
             : undefined,
+        accessibilityLabel: accessibilityLabelOf(
+          title,
+          subtitle,
+          badgeText,
+          priceText,
+          priceText && discountText,
+        ),
         leftElement: <Icon name={icon} size="md" tone={tone} />,
         rightElement:
-          price === undefined || price === null ? undefined : (
+          priceText === null ? undefined : (
             <View style={styles.price}>
               <Text
                 role={rowType.title}
                 tone={section === 'toAdd' ? 'primary' : 'secondary'}
               >
-                {price === 0 && row.discount
-                  ? t('receipts.review.free')
-                  : money(price)}
+                {priceText}
               </Text>
-              {!!row.discount && (
+              {!!discountText && (
                 <Text role="caption" tone="success">
-                  {t('receipts.review.discountOff', {
-                    amount: money(row.discount),
-                  })}
+                  {discountText}
                 </Text>
               )}
             </View>

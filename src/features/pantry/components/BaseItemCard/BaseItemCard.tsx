@@ -38,6 +38,7 @@ const CardSurface: React.FC<{
 };
 
 export const BaseItemCard: React.FC<BaseItemCardProps> = ({
+  accessibilityLabel,
   leftElement,
   children,
   rightElement,
@@ -84,6 +85,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
       <View style={commonStyles.rowWrapper}>
         <SwipeableItem
           itemId={itemId}
+          accessibilityLabel={accessibilityLabel}
           testIDPrefix={testID}
           onPress={onPress}
           leftActions={leftActions}
@@ -108,6 +110,8 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
       <View style={commonStyles.rowWrapper}>
         <AppPressable
           onPress={handlePress}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
           android_ripple={RIPPLE.SUBTLE}
           style={[]}
         >

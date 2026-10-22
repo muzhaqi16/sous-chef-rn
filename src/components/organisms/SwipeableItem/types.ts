@@ -36,6 +36,12 @@ export interface SwipeAction {
 
 export interface SwipeableItemProps {
   children: React.ReactNode;
+  /**
+   * What a screen reader says for the row. Required: RNGH's button derives one
+   * from its children without skipping hidden views, so an icon's glyph would
+   * be read, and a checkbox labelled with the title repeats it.
+   */
+  accessibilityLabel: string;
   /** Drives the FlashList recycling reset — closes the swipeable on cell reuse. */
   itemId?: string;
   onPress?: () => void;

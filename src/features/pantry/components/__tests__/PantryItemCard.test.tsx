@@ -32,6 +32,7 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
   return {
     BaseItemCard: ({
       children,
+      accessibilityLabel,
       testID,
       itemId,
       leftElement,
@@ -39,6 +40,7 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       variant,
     }: {
       children?: React.ReactNode;
+      accessibilityLabel: string;
       testID?: string;
       itemId?: string;
       leftElement?: React.ReactNode;
@@ -47,7 +49,11 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
     }) =>
       R.createElement(
         RN.View,
-        { testID: testID || `base-item-card-${itemId}`, variant },
+        {
+          testID: testID || `base-item-card-${itemId}`,
+          accessibilityLabel,
+          variant,
+        },
         leftElement || null,
         children,
         rightElement || null,
@@ -332,6 +338,15 @@ describe('PantryItemCard', () => {
     expect(screen.queryByText('Fridge')).toBeNull();
     expect(screen.queryByText('Freezer')).toBeNull();
     expect(screen.queryByText('Pantry')).toBeNull();
+  });
+
+  // The image placeholder is an icon: derived by RNGH's button, its glyph
+  // led the label.
+  it('names the row by what it shows, in reading order', () => {
+    renderCard({ quantity: 0, storageLocationName: 'Kitchen Cabinet' });
+    expect(
+      screen.getByTestId('pantry-item-pantry-1').props.accessibilityLabel,
+    ).toBe('Milk, Out of stock, 0 gal, Kitchen Cabinet');
   });
 
   it('renders with testID based on item id', () => {

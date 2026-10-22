@@ -60,6 +60,7 @@ const EMPTY_ACTIONS: SwipeAction[] = [];
 
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
+  accessibilityLabel,
   itemId,
   onPress,
   onLongPress,
@@ -186,6 +187,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         testID={testIDPrefix}
         onPress={onPress}
         onLongPress={onLongPress}
+        accessibilityLabel={accessibilityLabel}
         accessibilityActions={accessibilityActions}
         onAccessibilityAction={handleAccessibilityAction}
       >

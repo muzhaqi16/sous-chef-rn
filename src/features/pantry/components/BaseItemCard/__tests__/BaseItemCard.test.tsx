@@ -55,13 +55,13 @@ jest.mock('react-native-unistyles', () => {
 
 describe('BaseItemCard', () => {
   it('renders without crashing', () => {
-    const { toJSON } = render(<BaseItemCard />);
+    const { toJSON } = render(<BaseItemCard accessibilityLabel="Row" />);
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders children content', () => {
     const { getByText } = render(
-      <BaseItemCard>
+      <BaseItemCard accessibilityLabel="Row">
         <Text role="body">Item Content</Text>
       </BaseItemCard>,
     );
@@ -71,6 +71,7 @@ describe('BaseItemCard', () => {
   it('renders left and right elements', () => {
     const { getByText } = render(
       <BaseItemCard
+        accessibilityLabel="Row"
         leftElement={<Text role="body">Left</Text>}
         rightElement={<Text role="body">Right</Text>}
       >
@@ -86,7 +87,7 @@ describe('BaseItemCard', () => {
     const user = userEvent.setup();
     const onPress = jest.fn();
     const { getByText } = render(
-      <BaseItemCard onPress={onPress}>
+      <BaseItemCard accessibilityLabel="Row" onPress={onPress}>
         <Text role="body">Pressable</Text>
       </BaseItemCard>,
     );
@@ -105,7 +106,10 @@ describe('BaseItemCard', () => {
       return node;
     };
     const { getByText } = render(
-      <BaseItemCard rightElement={<CardRightSlot primary="1 g" />}>
+      <BaseItemCard
+        accessibilityLabel="Row"
+        rightElement={<CardRightSlot primary="1 g" />}
+      >
         <CardContent title="Feta Cheese" />
       </BaseItemCard>,
     );
@@ -119,6 +123,7 @@ describe('BaseItemCard', () => {
   it('uses SwipeableItem when swipe actions provided', () => {
     const { getByText } = render(
       <BaseItemCard
+        accessibilityLabel="Row"
         rightActions={[
           {
             key: 'edit',

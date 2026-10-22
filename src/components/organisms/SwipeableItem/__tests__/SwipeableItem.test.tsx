@@ -21,11 +21,17 @@ jest.mock('../SwipeActions', () => ({
 }));
 
 jest.mock('../SwipeableContent', () => ({
-  SwipeableContent: ({ children }: { children: React.ReactNode }) => {
+  SwipeableContent: ({
+    children,
+    accessibilityLabel,
+  }: {
+    children: React.ReactNode;
+    accessibilityLabel?: string;
+  }) => {
     const { View } = require('react-native');
     return require('react').createElement(
       View,
-      { testID: 'swipeable-content' },
+      { testID: 'swipeable-content', accessibilityLabel },
       children,
     );
   },
@@ -78,16 +84,29 @@ describe('SwipeableItem', () => {
 
   it('renders children content', () => {
     render(
-      <SwipeableItem {...defaultProps}>
+      <SwipeableItem accessibilityLabel="Row" {...defaultProps}>
         <Text>Item content</Text>
       </SwipeableItem>,
     );
     expect(screen.getByText('Item content')).toBeTruthy();
   });
 
+  // RNGH's button derives a label without skipping hidden views, so the row
+  // carries the one it is given rather than its children's text.
+  it('hands the pressable row the label it is given', () => {
+    render(
+      <SwipeableItem accessibilityLabel="Milk, 2 pc" {...defaultProps}>
+        <Text>Milk</Text>
+      </SwipeableItem>,
+    );
+    expect(
+      screen.getByTestId('swipeable-content').props.accessibilityLabel,
+    ).toBe('Milk, 2 pc');
+  });
+
   it('renders the swipeable content wrapper', () => {
     render(
-      <SwipeableItem {...defaultProps}>
+      <SwipeableItem accessibilityLabel="Row" {...defaultProps}>
         <Text>Hello</Text>
       </SwipeableItem>,
     );
@@ -96,7 +115,7 @@ describe('SwipeableItem', () => {
 
   it('renders without optional callbacks', () => {
     render(
-      <SwipeableItem>
+      <SwipeableItem accessibilityLabel="Row">
         <Text>Basic item</Text>
       </SwipeableItem>,
     );
@@ -112,6 +131,7 @@ describe('SwipeableItem', () => {
     expect(() =>
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           leftActions={[action('archive')]}
           rightActions={[action('archive')]}
         >
@@ -126,10 +146,16 @@ describe('SwipeableItem', () => {
     expect(() =>
       render(
         <>
-          <SwipeableItem rightActions={[action('edit')]}>
+          <SwipeableItem
+            accessibilityLabel="Row"
+            rightActions={[action('edit')]}
+          >
             <Text>Row A</Text>
           </SwipeableItem>
-          <SwipeableItem rightActions={[action('edit')]}>
+          <SwipeableItem
+            accessibilityLabel="Row"
+            rightActions={[action('edit')]}
+          >
             <Text>Row B</Text>
           </SwipeableItem>
         </>,
@@ -139,7 +165,10 @@ describe('SwipeableItem', () => {
 
   it('renders with a single left action', () => {
     render(
-      <SwipeableItem leftActions={[action('togglePurchase')]}>
+      <SwipeableItem
+        accessibilityLabel="Row"
+        leftActions={[action('togglePurchase')]}
+      >
         <Text>Shopping item</Text>
       </SwipeableItem>,
     );
@@ -149,6 +178,7 @@ describe('SwipeableItem', () => {
   it('renders with a three-action tray', () => {
     render(
       <SwipeableItem
+        accessibilityLabel="Row"
         leftActions={[action('consume'), action('waste'), action('restock')]}
       >
         <Text>Pantry item</Text>
@@ -161,6 +191,7 @@ describe('SwipeableItem', () => {
     it('exposes available action callbacks as accessibilityActions', () => {
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           leftActions={[action('consume')]}
           rightActions={[action('edit'), action('delete')]}
         >
@@ -181,7 +212,7 @@ describe('SwipeableItem', () => {
     // explicit list never exercises that path.
     it('exposes no accessibility actions when both lists are omitted', () => {
       render(
-        <SwipeableItem>
+        <SwipeableItem accessibilityLabel="Row">
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -191,7 +222,7 @@ describe('SwipeableItem', () => {
 
     it('tracks the action set when it changes', () => {
       const { rerender } = render(
-        <SwipeableItem rightActions={[action('edit')]}>
+        <SwipeableItem accessibilityLabel="Row" rightActions={[action('edit')]}>
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -201,7 +232,10 @@ describe('SwipeableItem', () => {
       ).toEqual(['edit']);
 
       rerender(
-        <SwipeableItem rightActions={[action('edit'), action('delete')]}>
+        <SwipeableItem
+          accessibilityLabel="Row"
+          rightActions={[action('edit'), action('delete')]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -213,7 +247,7 @@ describe('SwipeableItem', () => {
       // ...and back to none, so the assistive surface cannot outlive the swipe
       // surface it mirrors.
       rerender(
-        <SwipeableItem>
+        <SwipeableItem accessibilityLabel="Row">
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -223,7 +257,7 @@ describe('SwipeableItem', () => {
 
     it('omits actions for callbacks not provided', () => {
       render(
-        <SwipeableItem rightActions={[action('edit')]}>
+        <SwipeableItem accessibilityLabel="Row" rightActions={[action('edit')]}>
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -239,6 +273,7 @@ describe('SwipeableItem', () => {
     it('resolves each action label from its i18n key', () => {
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           rightActions={[action('delete', jest.fn(), 'labels.delete')]}
         >
           <Text>Item</Text>
@@ -252,6 +287,7 @@ describe('SwipeableItem', () => {
       const onEdit = jest.fn();
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           rightActions={[action('edit', onEdit), action('delete')]}
         >
           <Text>Item</Text>
@@ -265,6 +301,7 @@ describe('SwipeableItem', () => {
       const onDelete = jest.fn();
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           rightActions={[action('edit'), action('delete', onDelete)]}
         >
           <Text>Item</Text>
@@ -280,6 +317,7 @@ describe('SwipeableItem', () => {
       const onRestock = jest.fn();
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           leftActions={[
             action('consume', onConsume),
             action('waste', onWaste),
@@ -301,6 +339,7 @@ describe('SwipeableItem', () => {
       const onTogglePurchase = jest.fn();
       render(
         <SwipeableItem
+          accessibilityLabel="Row"
           leftActions={[action('togglePurchase', onTogglePurchase)]}
         >
           <Text>Item</Text>
@@ -313,7 +352,10 @@ describe('SwipeableItem', () => {
     it('ignores unknown action names without crashing', () => {
       const onEdit = jest.fn();
       render(
-        <SwipeableItem rightActions={[action('edit', onEdit)]}>
+        <SwipeableItem
+          accessibilityLabel="Row"
+          rightActions={[action('edit', onEdit)]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );

@@ -14,6 +14,8 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
+import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#components/atoms/Icon';
@@ -128,6 +130,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       )
     : null;
   const isPendingSync = useIsPendingSync(itemId);
+  const detailText =
+    [categoryLabel, estimate].filter(Boolean).join(' · ') || undefined;
   const subtitle = isPendingSync ? (
     <Text
       role="footnote"
@@ -138,7 +142,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       {t('status.syncing')}
     </Text>
   ) : (
-    [categoryLabel, estimate].filter(Boolean).join(' · ') || undefined
+    detailText
   );
   const unitDisplay = firstNonBlank(data.unitName, data.unit?.symbol);
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
@@ -345,6 +349,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         ) : null}
         <SwipeableItem
           itemId={itemId}
+          // The checkbox is labelled with the name too: derived, it is read twice.
+          accessibilityLabel={accessibilityLabelOf(
+            itemName,
+            isPurchased && t('shoppingListScreens.purchased'),
+            isPendingSync ? t('status.syncing') : detailText,
+            formatQuantityWithUnit(quantity, unitDisplay, { quantityInput }),
+            isPurchased && isStocked && t('shoppingList.alreadyInPantry'),
+          )}
           // Keyed by id, not index: a drag would repoint an index-keyed testID at
           // a different row. Swipe actions append `-edit` / `-delete`.
           testIDPrefix={shoppingListTestIDs.itemRow(itemId)}

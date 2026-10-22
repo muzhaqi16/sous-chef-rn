@@ -30,6 +30,7 @@ jest.mock('../SwipeActions', () => ({
 const renderItem = (props: Record<string, unknown> = {}) =>
   render(
     <SwipeableItem
+      accessibilityLabel="Row"
       rightActions={[
         {
           key: 'edit',

@@ -127,6 +127,15 @@ export function formatQuantityForDisplay(
   return formatQuantityAsFraction(value, notation);
 }
 
+/** A quantity and its unit as one phrase, as a row's quantity chip shows them: "2 pc". */
+export function formatQuantityWithUnit(
+  quantity: number | null | undefined,
+  unit: string | null | undefined,
+  options: QuantityDisplayOptions = {},
+): string {
+  return `${formatQuantityForDisplay(quantity, options)} ${unit ?? ''}`.trim();
+}
+
 // Two quantities equal to `MAX_DECIMALS` places are the same quantity.
 const INPUT_ROUND_TRIP_TOLERANCE = 0.5 * 10 ** -MAX_DECIMALS;
 

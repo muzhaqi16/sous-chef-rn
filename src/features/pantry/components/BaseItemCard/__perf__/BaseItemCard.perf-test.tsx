@@ -63,6 +63,7 @@ test('BaseItemCard x40 swipeable rows', async () => {
     <View>
       {ROWS.map(index => (
         <BaseItemCard
+          accessibilityLabel="Row"
           key={index}
           itemId={`item-${index}`}
           testID={pantryTestIDs.item(`item-${index}`)}
