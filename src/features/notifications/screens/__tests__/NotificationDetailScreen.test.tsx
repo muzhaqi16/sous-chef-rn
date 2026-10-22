@@ -1,9 +1,12 @@
 'use no memo';
 import React from 'react';
-import { act, screen, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
 import {
   NotificationCategory,
   NotificationStatus,
@@ -18,7 +21,16 @@ import {
   toDisplayNotification,
   type DisplayNotification,
 } from '#features/notifications/utils/toDisplayNotification';
+import { RecommendedRecipeDocument } from '#features/recipes/ui/useRecommendedRecipe.generated';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
+
+const mockToRecipeDetail = jest.fn();
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    goBack: jest.fn(),
+    toRecipeDetail: mockToRecipeDetail,
+  }),
+}));
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
@@ -200,6 +212,89 @@ describe('NotificationDetailScreen', () => {
 
       await waitFor(() => expect(screen.queryByText(takeAction)).toBeNull());
       expect(screen.getByText('Milk: Expires tomorrow')).toBeTruthy();
+    });
+  });
+
+  describe('recipe recommendations', () => {
+    const server = {
+      title: 'Recipes for your pantry',
+      message: 'Your pantry is ready for Chili and Tacos',
+    };
+    const recommendation = makeNotification(
+      NotificationType.RecipeRecommendations,
+      {
+        week: '2026-W43',
+        recipeCount: 2,
+        recipeIds: ['r-1', 'r-2'],
+        recipeNames: ['Chili', 'Tacos'],
+        matchPercentages: [80, 60],
+      },
+      server,
+    );
+    const recipeAnswer = (
+      id: string,
+      recipe: {
+        name: string;
+        servings: number;
+        totalTimeMinutes: number;
+        matchPercentage: number;
+      } | null,
+    ) => {
+      const data: MockDataFor<typeof RecommendedRecipeDocument> = {
+        recipe: recipe && {
+          __typename: 'Recipe',
+          id,
+          imageUrl: null,
+          ...recipe,
+        },
+      };
+      return {
+        request: { query: RecommendedRecipeDocument, variables: { id } },
+        result: { data },
+      };
+    };
+
+    it('lists each recipe as the recipes tab does, as it is now, and opens it', async () => {
+      renderWithApollo(
+        <NotificationDetailScreen
+          route={makeRoute({ notification: recommendation })}
+        />,
+        {
+          operationMocks: [
+            recipeAnswer('r-1', {
+              name: 'Turkey Chili',
+              servings: 4,
+              totalTimeMinutes: 45,
+              matchPercentage: 75,
+            }),
+            // Removed since it was recommended.
+            recipeAnswer('r-2', null),
+          ],
+        },
+      );
+
+      expect(await screen.findByText('Turkey Chili')).toBeTruthy();
+      expect(screen.getByText(/45 min • 4 servings/)).toBeTruthy();
+      expect(screen.getByText('75%')).toBeTruthy();
+      await waitFor(() => expect(screen.queryByText('Tacos')).toBeNull());
+      expect(screen.queryByText(server.message)).toBeNull();
+
+      await userEvent.setup().press(screen.getByText('Turkey Chili'));
+
+      expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'r-1' });
+    });
+
+    it('shows what it recommended while the recipes cannot be read', () => {
+      renderWithApollo(
+        <NotificationDetailScreen
+          route={makeRoute({ notification: recommendation })}
+        />,
+        { operationMocks: [] },
+      );
+
+      expect(screen.getByText('Chili')).toBeTruthy();
+      expect(screen.getByText('80%')).toBeTruthy();
+      expect(screen.getByText('Tacos')).toBeTruthy();
     });
   });
 });

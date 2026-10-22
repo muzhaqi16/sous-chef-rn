@@ -1,0 +1,12 @@
+# A recommended recipe as its card shows it: a recommendation carries only
+# its id, its name and its coverage when it was sent.
+query RecommendedRecipe($id: ID!) {
+  recipe(id: $id) {
+    id
+    name
+    imageUrl
+    servings
+    totalTimeMinutes
+    matchPercentage
+  }
+}

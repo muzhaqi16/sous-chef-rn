@@ -106,6 +106,42 @@ export const readExpiryReminderFields = (
   };
 };
 
+interface RecommendedRecipe {
+  id: string;
+  name: string;
+  /** Its coverage when it was recommended, 0–100. */
+  matchPercentage: number | null;
+}
+
+const listOf = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [];
+
+/** The recipes a recommendations notification names, in its order. */
+export const readRecommendedRecipes = ({
+  type,
+  payload,
+}: {
+  type: NotificationType;
+  payload: NotificationPayload;
+}): RecommendedRecipe[] => {
+  if (type !== NotificationType.RecipeRecommendations) return [];
+  const names = listOf(payload.recipeNames);
+  const percentages = listOf(payload.matchPercentages);
+  return listOf(payload.recipeIds).flatMap((id, at): RecommendedRecipe[] => {
+    const name = names[at];
+    const percentage = percentages[at];
+    return typeof id === 'string' && typeof name === 'string'
+      ? [
+          {
+            id,
+            name,
+            matchPercentage: typeof percentage === 'number' ? percentage : null,
+          },
+        ]
+      : [];
+  });
+};
+
 // Qualified only when more than one batch is active, by the batch's opened
 // (else added) date in device-local time: the server's UTC-formatted message
 // can be off by a day.

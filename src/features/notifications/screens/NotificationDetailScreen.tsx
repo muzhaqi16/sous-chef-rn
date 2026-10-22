@@ -9,7 +9,11 @@ import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { useNotificationDetail } from '#features/notifications/hooks/useNotificationDetail';
-import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import {
+  getNotificationCopy,
+  readRecommendedRecipes,
+} from '#features/notifications/utils/notificationHelpers';
+import { RecommendedRecipeCard } from '#features/recipes/ui/RecommendedRecipeCard';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
@@ -43,6 +47,7 @@ export const NotificationDetailScreen: React.FC<
   // boundary), so it can be read directly.
   const payload = notification.payload;
   const copy = getNotificationCopy(notification, t, today);
+  const recommended = readRecommendedRecipes(notification);
 
   return (
     <NotificationActionHandler>
@@ -61,9 +66,22 @@ export const NotificationDetailScreen: React.FC<
           </View>
 
           <View style={styles.content}>
-            <Text role="body" style={styles.message}>
-              {copy.message}
-            </Text>
+            {recommended.length > 0 ? (
+              <View style={styles.recipes}>
+                {recommended.map(recipe => (
+                  <RecommendedRecipeCard
+                    key={recipe.id}
+                    recipeId={recipe.id}
+                    name={recipe.name}
+                    matchPercentage={recipe.matchPercentage}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text role="body" style={styles.message}>
+                {copy.message}
+              </Text>
+            )}
 
             {!!payload.details && (
               <View style={styles.detailsContainer}>
@@ -126,6 +144,9 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.lg,
   },
   message: {
+    marginBottom: theme.spacing.lg,
+  },
+  recipes: {
     marginBottom: theme.spacing.lg,
   },
   detailsContainer: {

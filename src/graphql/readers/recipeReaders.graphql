@@ -39,6 +39,7 @@ fragment RecipeReaders on Recipe {
     reviewNote
     status
   }
+  matchPercentage
   name
   notes
   nutritionPerServing {

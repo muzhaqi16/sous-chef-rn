@@ -107,6 +107,21 @@ function pantryDisplayItem(
   };
 }
 
+/** How much of a recipe the pantries hold, as a card's badge. */
+export const coverageBadge = (
+  percent: number,
+  translate: Translate,
+): BadgeContent => ({
+  text: translate('recipes.pantryCoverage', { percent }),
+  lines: [
+    {
+      icon: 'checkmark-circle',
+      text: translate('recipes.coveragePercent', { percent }),
+      variant: 'success',
+    },
+  ],
+});
+
 /** A suggestion as its card: the stock it uses up first, its coverage as the badge. */
 function suggestionDisplayItem(
   edge: RecipeSuggestionEdge,
@@ -144,16 +159,7 @@ function suggestionDisplayItem(
   return {
     title: node.name,
     subtitle: subtitleParts.join(' • '),
-    badge: {
-      text: translate('recipes.pantryCoverage', { percent: coverage }),
-      lines: [
-        {
-          icon: 'checkmark-circle',
-          text: translate('recipes.coveragePercent', { percent: coverage }),
-          variant: 'success',
-        },
-      ],
-    },
+    badge: coverageBadge(coverage, translate),
     imageUrl: node.imageUrl ?? undefined,
     target: recipeTarget(node.id),
   };
