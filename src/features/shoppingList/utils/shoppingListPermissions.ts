@@ -1,16 +1,19 @@
 import {
+  CollaboratorRole,
   MembershipRole,
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 
 /**
- * Permission flags for shopping list item operations
+ * What the caller may do to a shopping list and its items
  */
-export interface ShoppingListPermissions {
+export interface ShoppingListPermissionFlags {
   canAddItems: boolean;
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
+  /** The list's own details (name, store): the API's EDIT, not EDIT_ITEMS. */
+  canEditList: boolean;
 }
 
 /**
@@ -18,9 +21,6 @@ export interface ShoppingListPermissions {
  */
 interface HomeMembership {
   role: MembershipRole;
-  canAddItems?: boolean;
-  canRemoveItems?: boolean;
-  canEditPantry?: boolean;
 }
 
 /**
@@ -30,6 +30,8 @@ interface Collaborator {
   collaboratorId?: string | null;
   collaborator?: { id: string } | null;
   status?: CollaboratorStatus;
+  role?: CollaboratorRole;
+  canEdit?: boolean;
   canAddItems?: boolean;
   canRemoveItems?: boolean;
   canEditItems?: boolean;
@@ -49,32 +51,44 @@ interface ShoppingListData {
 /**
  * Default permissions - no access
  */
-const NO_PERMISSIONS: ShoppingListPermissions = {
+const NO_PERMISSIONS: ShoppingListPermissionFlags = {
   canAddItems: false,
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: false,
+  canEditList: false,
 };
 
 /**
  * Full permissions - all access
  */
-const FULL_PERMISSIONS: ShoppingListPermissions = {
+const FULL_PERMISSIONS: ShoppingListPermissionFlags = {
   canAddItems: true,
   canRemoveItems: true,
   canEditItems: true,
   canMarkPurchased: true,
+  canEditList: true,
 };
 
 /**
  * Guest permissions - mark purchased only
  */
-const GUEST_PERMISSIONS: ShoppingListPermissions = {
+const GUEST_PERMISSIONS: ShoppingListPermissionFlags = {
   canAddItems: false,
   canRemoveItems: false,
   canEditItems: false,
   canMarkPurchased: true,
+  canEditList: false,
 };
+
+// The API lets these roles edit a personal list's details whatever `canEdit`
+// says; below them the flag decides.
+const EDITS_LIST_BY_ROLE: ReadonlySet<CollaboratorRole> = new Set([
+  CollaboratorRole.Owner,
+  CollaboratorRole.Admin,
+  CollaboratorRole.Editor,
+  CollaboratorRole.Contributor,
+]);
 
 /**
  * Find the current user's collaborator from the collaborators connection
@@ -106,32 +120,31 @@ function findMyCollaborator(
   return null;
 }
 
-/** GUEST marks purchased only; every other role reads the membership fields. */
+/**
+ * A home list follows the member's role alone: the membership's flags grant
+ * the home's pantries, and the API reads none of them for a list.
+ */
 function getHomePermissions(
   membership: HomeMembership,
-): ShoppingListPermissions {
-  if (membership.role === MembershipRole.Guest) {
-    return GUEST_PERMISSIONS;
-  }
-
-  // An undefined field falls back to true for these roles.
-  return {
-    canAddItems: membership.canAddItems ?? true,
-    canRemoveItems: membership.canRemoveItems ?? true,
-    canEditItems: membership.canEditPantry ?? true,
-    canMarkPurchased: membership.canAddItems ?? true,
-  };
+): ShoppingListPermissionFlags {
+  return membership.role === MembershipRole.Guest
+    ? GUEST_PERMISSIONS
+    : FULL_PERMISSIONS;
 }
 
 /** For personal lists (no homeId). */
 function getCollaboratorPermissions(
   collaborator: Collaborator,
-): ShoppingListPermissions {
+): ShoppingListPermissionFlags {
   return {
     canAddItems: collaborator.canAddItems ?? false,
     canRemoveItems: collaborator.canRemoveItems ?? false,
     canEditItems: collaborator.canEditItems ?? false,
     canMarkPurchased: collaborator.canMarkPurchased ?? false,
+    canEditList:
+      (collaborator.role !== undefined &&
+        EDITS_LIST_BY_ROLE.has(collaborator.role)) ||
+      (collaborator.canEdit ?? false),
   };
 }
 
@@ -143,7 +156,7 @@ export function getShoppingListPermissions(
   shoppingList: ShoppingListData,
   userId?: string,
   homeMembership?: HomeMembership | null,
-): ShoppingListPermissions {
+): ShoppingListPermissionFlags {
   // If list is linked to a home, use home membership permissions
   if (shoppingList.homeId) {
     if (!homeMembership) {
@@ -185,7 +198,7 @@ export function getShoppingListPermissionsWithOwner(
   shoppingList: ShoppingListData & { ownership?: { userId?: string } | null },
   userId?: string,
   homeMembership?: HomeMembership | null,
-): ShoppingListPermissions {
+): ShoppingListPermissionFlags {
   // Owners always have full permissions
   if (isOwnerId(shoppingList.ownership?.userId, userId)) {
     return FULL_PERMISSIONS;

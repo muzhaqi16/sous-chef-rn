@@ -177,6 +177,7 @@ const render = (ui: React.ReactElement) =>
         canRemoveItems: true,
         canEditItems: true,
         canMarkPurchased: true,
+        canEditList: true,
         resolved: true,
       }}
     >

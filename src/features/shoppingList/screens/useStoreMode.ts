@@ -138,8 +138,7 @@ export function useStoreMode(listId: string) {
     state: {
       listName: shoppingList?.name ?? null,
       storeName: shoppingList?.targetStore?.name ?? null,
-      // The list update's EDIT rung: on a home list it is the item editors'.
-      canChooseStore: permissions.canEditItems,
+      canChooseStore: permissions.canEditList,
       tab,
       rows: rowsFor(tab, aisleEntries, cart),
       aisles,

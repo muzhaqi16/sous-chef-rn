@@ -79,6 +79,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   role
   status
   collaboratorId
+  canEdit
   canAddItems
   canRemoveItems
   canEditItems

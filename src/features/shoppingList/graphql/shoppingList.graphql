@@ -64,9 +64,6 @@ query GetShoppingListDetails($id: ID!) {
       myMembership {
         id
         role
-        canAddItems
-        canRemoveItems
-        canEditPantry
       }
     }
     ownerships {

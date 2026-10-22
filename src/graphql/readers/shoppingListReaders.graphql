@@ -17,9 +17,6 @@ fragment ShoppingListReaders on ShoppingList {
     id
     myMembership {
       id
-      canAddItems
-      canEditPantry
-      canRemoveItems
       role
     }
     name

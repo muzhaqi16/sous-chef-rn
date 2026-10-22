@@ -58,6 +58,7 @@ const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   email: 'test@example.com',
   role: CollaboratorRole.Editor,
   status: CollaboratorStatus.Active,
+  canEdit: true,
   canAddItems: true,
   canRemoveItems: true,
   canEditItems: true,

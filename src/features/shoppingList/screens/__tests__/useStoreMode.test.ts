@@ -25,8 +25,9 @@ jest.mock('../useAisleView', () => {
   };
 });
 
+const mockPermissions = { canEditItems: false, canEditList: false };
 jest.mock('../../hooks/useShoppingListPermissions', () => ({
-  useShoppingListPermissions: () => ({ resolved: true }),
+  useShoppingListPermissions: () => ({ ...mockPermissions, resolved: true }),
 }));
 
 jest.mock('../../hooks/useShoppingListActions', () => ({
@@ -177,6 +178,18 @@ describe('useStoreMode', () => {
     expect(result.current.state.aisles.map(aisle => aisle.department)).toEqual(
       ROUTE,
     );
+  });
+
+  it('offers the store choice to whoever may edit the list, not its items', () => {
+    mockPermissions.canEditItems = true;
+    mockPermissions.canEditList = false;
+    const { result, rerender } = renderHook(() => useStoreMode('list-1'));
+    expect(result.current.state.canChooseStore).toBe(false);
+
+    mockPermissions.canEditItems = false;
+    mockPermissions.canEditList = true;
+    rerender({});
+    expect(result.current.state.canChooseStore).toBe(true);
   });
 
   it("sets the list's store from the trip", async () => {
