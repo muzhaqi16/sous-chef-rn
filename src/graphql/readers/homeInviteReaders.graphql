@@ -17,6 +17,7 @@ fragment HomeInviteReaders on HomeInvite {
       displayName
     }
   }
+  inviterName
   message
   recipientName
   role
