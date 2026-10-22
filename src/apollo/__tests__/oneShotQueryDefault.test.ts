@@ -47,8 +47,6 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     "a unit's current id, asked after a refusal named the cached one retired",
   'services/subscriptions/fetchEventEntity.ts':
     'reads back the entity an event just named',
-  'services/device/deviceRegistration.ts':
-    'device rows decide registration; a stale read re-registers',
   'hooks/data/useDataPreloading.ts':
     'a time-to-live refresh; a cached answer must not be stamped fresh',
   'features/catalog/hooks/useUnitAutocomplete.ts':
