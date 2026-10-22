@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-} from 'react-native';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import {
   FlashList,
@@ -22,8 +18,8 @@ import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
-import { commonStyles } from '#/styles/commonStyles';
+import { preloadImages } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
@@ -72,18 +68,10 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   const itemSwipeActions = useItemSwipeActions();
   const swipe = resolveRowActions(itemSwipeActions, item.id, onRemoveRow);
 
-  // Render CachedImage from imageUrl data — avoids creating JSX in parent transforms
+  // Render the image from imageUrl data — avoids creating JSX in parent transforms
   const leftElement =
     item.leftElement ??
-    (item.imageUrl ? (
-      <View style={commonStyles.listItemImageContainerCompact}>
-        <CachedImage
-          uri={item.imageUrl}
-          style={commonStyles.listItemImageCompact}
-          displaySize={48}
-        />
-      </View>
-    ) : undefined);
+    (item.imageUrl ? <RowThumbnail uri={item.imageUrl} /> : undefined);
 
   const card = (
     <ItemCard
