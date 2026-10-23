@@ -10,7 +10,9 @@ import { Icon } from '#components/atoms/Icon';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
-import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
+import { authService } from '#/services/authService';
 import {
   useResetPassword,
   type ResetPasswordFn,
@@ -84,7 +86,6 @@ export const ResetPasswordScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute();
   const { goBack } = useAppNavigation();
-  const clearAuth = useAppStore(state => state.clearAuth);
   const { navigateToLogin } = useAuthNavigation();
 
   const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
@@ -143,8 +144,9 @@ export const ResetPasswordScreen: React.FC = () => {
       }
 
       // Only now: the link is genuine, and completing the reset requires the
-      // old session to be gone.
-      clearAuth();
+      // old session to be gone, through the one sign-out. A reset revokes the
+      // device credential anyway, so the stored sign-in goes with it.
+      if (holdsSessionTokens(useStore.getState())) await authService.logout();
       setTokenCheck('valid');
     };
 
@@ -154,7 +156,7 @@ export const ResetPasswordScreen: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, hasValidTokenFormat, validateToken, clearAuth]);
+  }, [token, hasValidTokenFormat, validateToken]);
 
   const handleTokenRejected = () => {
     setIsTokenRejected(true);

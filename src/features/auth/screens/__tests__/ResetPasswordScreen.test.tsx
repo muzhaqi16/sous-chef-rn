@@ -7,7 +7,8 @@ import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import type { RootState } from '#store';
+import { useStore } from '#store';
+import { authService } from '#/services/authService';
 import {
   ResetPasswordDocument,
   ValidatePasswordResetTokenDocument,
@@ -23,8 +24,10 @@ import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
-const mockClearAuth = jest.fn();
 const mockToastError = jest.mocked(toastService.error);
+const mockLogout = jest
+  .spyOn(authService, 'logout')
+  .mockResolvedValue(undefined);
 
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
@@ -40,13 +43,6 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: jest.fn(() => true),
     addListener: jest.fn(() => jest.fn()),
   }),
-}));
-
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: Pick<RootState, 'clearAuth'>) => unknown) =>
-    selector({
-      clearAuth: mockClearAuth,
-    }),
 }));
 
 jest.mock('#features/auth/screens/useAuthNavigation', () => ({
@@ -172,6 +168,8 @@ const CONFIRM_PASSWORD_INPUT = () =>
 describe('ResetPasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Signed in: the case the rule below is about.
+    useStore.setState({ accessToken: 'live-access', refreshToken: 'live' });
     // clearAllMocks wipes calls but keeps implementations, and one test below
     // swaps the route params — restore the default link for every test.
     (useRoute as jest.Mock).mockImplementation(() => ({
@@ -242,12 +240,20 @@ describe('ResetPasswordScreen', () => {
     });
 
     expect(screen.getByTestId('reset-password-checking')).toBeTruthy();
-    expect(mockClearAuth).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
-  it('clears the session only once the server accepts the token', async () => {
+  // Through the one sign-out, never a bare `clearAuth`: that left the refresh
+  // token live, the socket open and the account's cache on disk.
+  it('signs the session out only once the server accepts the token', async () => {
     await renderOnForm();
-    expect(mockClearAuth).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('signs nobody out when no session is held', async () => {
+    useStore.setState({ accessToken: null, refreshToken: null });
+    await renderOnForm();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('keeps the session and shows the invalid-link view for a spent token', async () => {
@@ -256,7 +262,7 @@ describe('ResetPasswordScreen', () => {
     });
 
     expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
-    expect(mockClearAuth).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('keeps the session and shows the invalid-link view when the link carries no token', () => {
@@ -271,7 +277,7 @@ describe('ResetPasswordScreen', () => {
     renderWithApollo(<ResetPasswordScreen />);
 
     expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
-    expect(mockClearAuth).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('keeps the session when the token cannot be checked at all', async () => {
@@ -281,7 +287,7 @@ describe('ResetPasswordScreen', () => {
     });
 
     expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
-    expect(mockClearAuth).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('calls goBack when header close button is pressed', async () => {
