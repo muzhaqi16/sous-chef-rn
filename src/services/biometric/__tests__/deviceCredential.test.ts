@@ -30,6 +30,7 @@ jest.mock('#/apollo/client', () => ({
 
 const mockResetStore = jest.fn().mockResolvedValue(undefined);
 const mockSetNavigationState = jest.fn();
+const mockEndSession = jest.fn().mockResolvedValue(undefined);
 const mockStoreState: Record<string, unknown> = {
   user: { id: 'u1', email: 'chef@example.com' },
   isOnline: true,
@@ -39,6 +40,7 @@ const mockStoreState: Record<string, unknown> = {
   setHasStoredCredentials: jest.fn(),
   clearBiometricBackoff: jest.fn(),
   resetStore: (...a: unknown[]) => mockResetStore(...a),
+  endSession: (...a: unknown[]) => mockEndSession(...a),
   setNavigationState: (...a: unknown[]) => mockSetNavigationState(...a),
   setAuthIsLoading: jest.fn(),
   getUserNavigationState: jest.fn().mockReturnValue({}),
@@ -169,10 +171,11 @@ describe('logout and biometric credentials', () => {
   it('still signs the user out of the session itself', async () => {
     await authService.logout();
 
-    expect(mockResetStore).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: true }),
+    // The one session-end body, as the person's own sign-out.
+    expect(mockEndSession).toHaveBeenCalledWith(
+      'signed_out',
+      expect.objectContaining({ deliberate: expect.any(Object) }),
     );
-    expect(mockSetNavigationState).toHaveBeenCalledWith('auth');
   });
 
   it('clears them when the account itself is going away', async () => {

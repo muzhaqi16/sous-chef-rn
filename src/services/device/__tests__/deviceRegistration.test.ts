@@ -67,6 +67,8 @@ jest.mock('#native/storage/keychain', () => ({
   removeBiometricCredentials: jest.fn().mockResolvedValue(true),
 }));
 
+import type { RootState } from '#store';
+import { createResetManager } from '#store/resetManager';
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
@@ -151,7 +153,13 @@ beforeEach(() => {
     accessToken: 'access-1',
     refreshToken: 'refresh-1',
     clearAuth: jest.fn(),
-    resetStore: jest.fn(() => Promise.resolve()),
+    // The real session end over this fake store, so a sign-out runs the
+    // teardown and the reset it runs in the app.
+    endSession: (...args: Parameters<RootState['endSession']>) =>
+      createResetManager(
+        partial => Object.assign(mockStoreState, partial),
+        () => mockStoreState as unknown as RootState,
+      ).endSession(...args),
     setNavigationState: jest.fn(),
     getUserNavigationState: jest.fn(() => ({})),
     setUserNavigationState: jest.fn(),
@@ -402,9 +410,7 @@ describe('logout — session teardown and pacing', () => {
 
     // Nothing to revoke against, so the round trip is not attempted at all.
     expect(mockQuery).not.toHaveBeenCalled();
-    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: true }),
-    );
+    expect(mockStoreState.user).toBeNull();
   });
 });
 
@@ -553,9 +559,7 @@ describe('logout — push/notification teardown', () => {
     // exchanges after a deliberate sign-out.
     expect(updateCallsWith('clearPushToken')).toEqual([]);
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: true }),
-    );
+    expect(mockStoreState.user).toBeNull();
   });
 });
 

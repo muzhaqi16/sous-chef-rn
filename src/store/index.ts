@@ -24,7 +24,11 @@ import type { UIState } from './slices/uiSlice';
 import { createUISlice } from './slices/uiSlice';
 import type { TutorialState } from './slices/tutorialSlice';
 import { createTutorialSlice } from './slices/tutorialSlice';
-import type { ResetOptions, SessionEndReason } from './resetManager';
+import type {
+  ResetOptions,
+  SessionEndOptions,
+  SessionEndReason,
+} from './resetManager';
 import { createResetManager } from './resetManager';
 
 import type { NavigationState } from './slices/navigationSlice';
@@ -168,7 +172,10 @@ export const handleStoreRehydration = (
 
 interface ResetManagerState {
   resetStore: (options: ResetOptions) => Promise<void>;
-  endSession: (reason: SessionEndReason) => Promise<void>;
+  endSession: (
+    reason: SessionEndReason,
+    options?: SessionEndOptions,
+  ) => Promise<void>;
   tokenRefreshFailed: (
     reason: 'auth_rejected' | 'network' | 'unknown',
   ) => Promise<void>;

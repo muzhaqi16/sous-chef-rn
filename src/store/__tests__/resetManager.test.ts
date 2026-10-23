@@ -371,6 +371,7 @@ describe('resetManager', () => {
 
     describe('endSession', () => {
       const REASONS = [
+        'signed_out',
         'refresh_rejected',
         'refresh_token_dead',
         'account_inactive',
@@ -444,6 +445,47 @@ describe('resetManager', () => {
             typeof msg === 'string' && msg.includes('account_inactive'),
         );
         expect(sessionLogs).toHaveLength(1);
+      });
+
+      // The one difference between ends: only a sign-out the person chose may
+      // discard unsynced work, and only it routes to sign-in itself.
+      describe('a deliberate sign-out', () => {
+        afterEach(() => {
+          clearSessionTeardown();
+        });
+
+        it('hands the queue off inside the teardown, then routes to sign-in', async () => {
+          const order: string[] = [];
+          registerSessionTeardown('apollo', () => {
+            order.push('teardown');
+          });
+          const set = jest.fn((state: Partial<RootState>) => {
+            if ('user' in state) order.push('reset');
+          });
+          const get = jest.fn(() => ({
+            setNavigationState: (target: string) =>
+              order.push(`route:${target}`),
+          }));
+
+          await createResetManager(set, get as never).endSession('signed_out', {
+            deliberate: { handOffQueue: () => order.push('handOff') },
+          });
+
+          expect(order).toEqual(['teardown', 'handOff', 'reset', 'route:auth']);
+        });
+
+        it('a server end keeps the queue and leaves routing to the user change', async () => {
+          const setNavigationState = jest.fn();
+          const set = jest.fn();
+          await createResetManager(
+            set,
+            jest.fn(() => ({ setNavigationState })) as never,
+          ).endSession('refresh_rejected');
+
+          expect(setNavigationState).not.toHaveBeenCalled();
+          // Transient hand-offs are the ended session's, not the next person's.
+          expect(findAuthResetCall(set)?.[0].pendingCroppedImage).toBeNull();
+        });
       });
 
       // Clearing the tokens stops nothing already running: the socket keeps

@@ -15,15 +15,27 @@ import { isRecord } from '#/utils/isRecord';
 const secureStore = () => requirePlatform('secureStore');
 
 /**
- * Which server verdict ended the session — log line only; `endSession` performs
- * identical cleanup for every value. `session_revoked` is the subscription
- * socket refused as unrecoverable (close 4412).
+ * What ended the session — log line only; `endSession` performs identical
+ * cleanup for every value. `signed_out` is the person's own sign-out;
+ * `session_revoked` is the subscription socket refused as unrecoverable
+ * (close 4412).
  */
 export type SessionEndReason =
+  | 'signed_out'
   | 'refresh_rejected'
   | 'refresh_token_dead'
   | 'account_inactive'
   | 'session_revoked';
+
+/**
+ * A sign-out the person chose. It also hands the offline queue off — only a
+ * deliberate sign-out may discard unsynced work — and routes to sign-in. The
+ * hand-off is a callback because the queue cannot be imported here: it reads
+ * the store this module builds.
+ */
+export interface SessionEndOptions {
+  deliberate?: { handOffQueue?: () => void };
+}
 
 export interface ResetOptions {
   auth?: boolean;
@@ -73,25 +85,30 @@ const runSessionEnd = async (
   set: SetState,
   get: GetState,
   reason: SessionEndReason,
+  options: SessionEndOptions | undefined,
 ): Promise<void> => {
-  logger.info(`Session ended by the server (${reason}) — clearing session`);
+  logger.info(`Session ended (${reason}) — clearing session`);
 
-  // Every reason gets identical cleanup deliberately — `reason` is for the log
-  // line, not to branch on. Clearing the Apollo cache is the part that must not
-  // vary: the persisted blob holds the signed-out account's entities and
-  // `cache-and-network` restores them on the next sign-in.
+  // Every end gets identical cleanup — `reason` is for the log line, not to
+  // branch on. The cache is cleared here as well as by the teardown's `apollo`
+  // step, which swallows its own failures: the persisted blob holds the
+  // signed-out account's entities and `cache-and-network` restores them on the
+  // next sign-in.
 
   // Transports stop FIRST, so in-flight work is cancelled rather than re-fired
-  // against cleared tokens (the endless-loading symptom).
+  // against cleared tokens (the endless-loading symptom). One scope over the
+  // whole descent: a latched gate refuses the next sign-in until a restart.
   await whileSessionEnds(async () => {
     await runSessionTeardown();
+    options?.deliberate?.handOffQueue?.();
 
     await createResetManager(set, get).resetStore({
       auth: true,
-      ui: false,
+      ui: true,
       preferences: false,
       clearApolloCache: true,
     });
+    if (options?.deliberate) get().setNavigationState('auth');
   });
 };
 
@@ -155,12 +172,13 @@ export const createResetManager = (set: SetState, get: GetState) => ({
     set({ isHydrated: true });
   },
 
-  endSession: async (reason: SessionEndReason) => {
+  endSession: async (reason: SessionEndReason, options?: SessionEndOptions) => {
     // Every transport reporting a dead session fires this unawaited; a second
-    // pass would re-run the teardown under the gate the first one holds.
+    // pass would re-run the teardown under the gate the first one holds. A
+    // sign-out joining a server end finds the session already gone.
     if (sessionEndInFlight) return sessionEndInFlight;
 
-    sessionEndInFlight = runSessionEnd(set, get, reason);
+    sessionEndInFlight = runSessionEnd(set, get, reason, options);
     return sessionEndInFlight.finally(() => {
       sessionEndInFlight = null;
     });

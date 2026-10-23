@@ -13,8 +13,6 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
-import { runSessionTeardown } from '#store/sessionTeardown';
-import { whileSessionEnds } from '#store/sessionEnding';
 import { logger } from '#/utils/environment';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
@@ -486,21 +484,14 @@ async function logout(options?: LogoutOptions): Promise<void> {
       await sessionHost().forgetStoredSignIn(currentUserEmail);
     }
 
-    // The teardown `endSession` runs too, so both exits rest the same. One scope
-    // over the whole descent, released however it exits: a latched gate refuses
-    // the next sign-in until the app restarts.
-    await whileSessionEnds(async () => {
-      await runSessionTeardown();
-
-      if (currentUserId) {
-        queueManager.onLogout(currentUserId);
-      }
-
-      // `resetStore`, not `clearAuth`, which leaves the selections, inbox and
-      // LRUs persisted for whoever signs in next. Apollo is already cleared by
-      // the teardown's `apollo` step.
-      await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
-      store.setNavigationState('auth');
+    // The one session-end body every end runs. Deliberate: only a sign-out
+    // the person chose may discard the offline queue's unsynced work.
+    await store.endSession('signed_out', {
+      deliberate: {
+        handOffQueue: currentUserId
+          ? () => queueManager.onLogout(currentUserId)
+          : undefined,
+      },
     });
   } catch (error) {
     logger.error('Logout error:', error);
