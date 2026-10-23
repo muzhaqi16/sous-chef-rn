@@ -43,10 +43,41 @@ import {
 /** Longest a best-effort revoke may hold the sign-out. */
 const REVOKE_BUDGET_MS = 3000;
 
-async function shouldShowPostLoginBiometricPrompt(targetUser: {
-  id: string;
-  email?: string | null;
-}): Promise<{ shouldShow: boolean; reason?: string }> {
+/**
+ * Whether the server still honours this device's credential, asked with the
+ * sign-in's own token. `null` when it can't be asked: dropping a working
+ * sign-in over a flaky network is worse than offering setup late.
+ */
+async function deviceCredentialIsLive(
+  signInToken: string,
+): Promise<boolean | null> {
+  try {
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) return null;
+    // `no-cache`: this runs before the session commits, so nothing it reads
+    // belongs in the cache yet.
+    const listed = await requireApolloClient().query({
+      query: MyDeviceCredentialsDocument,
+      fetchPolicy: 'no-cache',
+      context: { signInToken },
+    });
+    if (!listed.data) return null;
+    return listed.data.deviceCredentials.some(
+      credential => credential.deviceId === deviceId,
+    );
+  } catch (error) {
+    logger.warn('Could not check the device credential', error);
+    return null;
+  }
+}
+
+async function shouldShowPostLoginBiometricPrompt(
+  targetUser: {
+    id: string;
+    email?: string | null;
+  },
+  signInToken: string,
+): Promise<{ shouldShow: boolean; reason?: string }> {
   // Keychain entries are namespaced by email, so an account with no readable
   // email can't be matched against stored credentials.
   const accountEmail = targetUser.email;
@@ -70,9 +101,15 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
       return { shouldShow: false, reason: 'Biometric not available' };
     }
 
-    const hasCreds = await hasCredentials(accountEmail);
-    if (hasCreds) {
-      return { shouldShow: false, reason: 'Already has biometric setup' };
+    // A password change or reset revokes the credential server-side and tells
+    // no device, so a slot is only trusted once the server lists it.
+    if (await hasCredentials(accountEmail)) {
+      if ((await deviceCredentialIsLive(signInToken)) !== false) {
+        return { shouldShow: false, reason: 'Already has biometric setup' };
+      }
+      logger.warn('Stored device credential was revoked; offering setup again');
+      await removeCredentials(accountEmail);
+      forgetBiometricSlot();
     }
 
     if (navState?.biometricDeclinedPermanently) {
@@ -384,10 +421,14 @@ export async function resolvePostSignInGate(
   user: LoginUserFragment,
   email: string,
   offerRememberMe: boolean,
+  signInToken: string,
 ): Promise<PostSignInGate> {
   let offerBiometrics = false;
   try {
-    const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
+    const biometricResult = await shouldShowPostLoginBiometricPrompt(
+      user,
+      signInToken,
+    );
     offerBiometrics = biometricResult.shouldShow;
   } catch {
     logger.error('Error checking biometric eligibility');

@@ -163,6 +163,27 @@ describe('authLink', () => {
       );
     });
 
+    // The post-sign-in gate runs before the new pair is stored.
+    it("sends a sign-in's own token while none is stored", async () => {
+      const signInToken = makeToken(3600);
+
+      const headers = await run(GetPantryDocument, { signInToken });
+
+      expect(headers.authorization).toBe(`Bearer ${signInToken}`);
+    });
+
+    it('never lets a sign-in token outrank the stored one', async () => {
+      mockStoreState.accessToken = makeToken(3600);
+
+      const headers = await run(GetPantryDocument, {
+        signInToken: makeToken(7200),
+      });
+
+      expect(headers.authorization).toBe(
+        `Bearer ${mockStoreState.accessToken}`,
+      );
+    });
+
     it('omits the authorization header when no token is held', async () => {
       const headers = await run(GetPantryDocument);
 

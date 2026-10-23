@@ -12,11 +12,16 @@ export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
 export interface SessionHost {
   /** After a sign-in commits, off its critical path. */
   afterSignIn(): void;
-  /** Decided before auth state changes, so the gate and the session commit together. */
+  /**
+   * Decided before auth state changes, so the gate and the session commit
+   * together; `signInToken` authorises any call it makes, the pair not yet
+   * being stored.
+   */
   postSignInGate(
     user: LoginUserFragment,
     email: string,
     offerRememberMe: boolean,
+    signInToken: string,
   ): Promise<PostSignInGate>;
   /**
    * Drops the sign-in stored for `email`. The first step of a sign-out, while
@@ -56,11 +61,12 @@ const guarded = (steps: SessionHost): SessionHost => ({
       reportStep('afterSignIn', error);
     }
   },
-  postSignInGate: (user, email, offerRememberMe) =>
+  postSignInGate: (user, email, offerRememberMe, signInToken) =>
     settleStep(
       'postSignInGate',
-      () => steps.postSignInGate(user, email, offerRememberMe),
-      () => NO_HOST_STEPS.postSignInGate(user, email, offerRememberMe),
+      () => steps.postSignInGate(user, email, offerRememberMe, signInToken),
+      () =>
+        NO_HOST_STEPS.postSignInGate(user, email, offerRememberMe, signInToken),
     ),
   forgetStoredSignIn: email =>
     settleStep(

@@ -243,6 +243,7 @@ async function handleLogin(
       user,
       loginCredentials.email,
       showRememberPrompt,
+      accessToken,
     );
   }
 

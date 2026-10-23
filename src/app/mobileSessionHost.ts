@@ -16,8 +16,8 @@ export function registerMobileSessionHost(): void {
     afterSignIn: () => {
       requestIdleCallback(() => registerDeviceInBackground());
     },
-    postSignInGate: (user, email, offerRememberMe) =>
-      resolvePostSignInGate(user, email, offerRememberMe),
+    postSignInGate: (user, email, offerRememberMe, signInToken) =>
+      resolvePostSignInGate(user, email, offerRememberMe, signInToken),
     forgetStoredSignIn: email => forgetStoredSignIn(email),
   });
 }
