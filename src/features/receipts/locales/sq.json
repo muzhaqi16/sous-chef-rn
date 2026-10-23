@@ -61,7 +61,6 @@
       "dateScanned": "Nuk është shtypur në faturë, ndaj është dita kur e skanove.",
       "storePlaceholder": "Zgjidh dyqanin",
       "addsAddress": "Shton adresën e kësaj fature",
-      "storeNumber": "Dyqani nr. {{number}}",
       "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
       "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
       "choose": "Pa përputhje. Prek për të zgjedhur produktin.",
@@ -119,7 +118,8 @@
       "sectionNotMatchedYet_one": "{{count}} rresht ende pa përputhje",
       "sectionNotMatchedYet_other": "{{count}} rreshta ende pa përputhje",
       "matchFailedTitle": "Produktet nuk u kërkuan dot",
-      "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt."
+      "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt.",
+      "storeWhereHint": "Ndryshon dyqanin"
     },
     "photoSend": {
       "title": "Ta dërgojmë foton për ta lexuar?",

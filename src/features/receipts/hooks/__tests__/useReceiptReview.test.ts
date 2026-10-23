@@ -43,6 +43,7 @@ import {
 } from '../../__tests__/helpers/receiptFixtures';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
+import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
@@ -1321,6 +1322,44 @@ describe('useReceiptReview', () => {
       expect(result.current.review.store).toBeNull();
       expect(useReceiptDraftStore.getState().draft?.store).toBeUndefined();
       expect(result.current.review.proposedStoreName).toBe('Kroger');
+    });
+
+    // The check-in places a store with no place of its own where the receipt
+    // says, so the line keeps saying it once the offer is taken.
+    it("keeps the receipt's place on the line once the offered store is picked", async () => {
+      readByServer({
+        printedStore: { name: 'Kroger', address: '412 Main St' },
+      });
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: UseReceiptReview_StoreFragmentDoc,
+        fragmentName: 'useReceiptReview_store',
+        id: cache.identify({ __typename: 'Store', id: 'store-label' }),
+        data: {
+          __typename: 'Store',
+          id: 'store-label',
+          address: null,
+          storeNumber: null,
+        },
+      });
+      const { result } = await setup({ resolve: unplaced(OFFER), cache });
+      await waitFor(() =>
+        expect(result.current.review.storeOffer).toEqual(OFFER),
+      );
+      expect(result.current.review.storeLocation).toEqual({
+        address: '412 Main St',
+        storeNumber: null,
+      });
+
+      await act(async () => {
+        result.current.review.chooseStore(OFFER);
+      });
+
+      expect(result.current.review.store).toEqual(OFFER);
+      expect(result.current.review.storeLocation).toEqual({
+        address: '412 Main St',
+        storeNumber: null,
+      });
     });
 
     it('offers none for a receipt read on the phone: nothing would locate it', async () => {

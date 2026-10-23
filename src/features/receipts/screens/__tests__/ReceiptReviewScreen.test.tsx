@@ -186,6 +186,9 @@ describe('ReceiptReviewScreen store', () => {
 
     const where = screen.getByTestId(receiptsTestIDs.reviewStoreWhere);
     expect(where).toHaveTextContent('100 Main St, Springfield');
+    // A caption-height line: the slop makes it a full-size target.
+    expect(where).toHaveProp('hitSlop', 12);
+    expect(where).toHaveProp('accessibilityHint', 'Changes the store');
     expect(screen.queryByTestId(receiptsTestIDs.reviewStore)).toBeNull();
 
     await userEvent.setup().press(where);

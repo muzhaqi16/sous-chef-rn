@@ -439,5 +439,8 @@
     "noneSelected": "Nessun elemento selezionato",
     "selectedCount_one": "{{count}} elemento selezionato",
     "selectedCount_other": "{{count}} elementi selezionati"
+  },
+  "storeBranch": {
+    "number": "Punto vendita n. {{number}}"
   }
 }

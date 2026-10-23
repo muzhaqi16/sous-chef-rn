@@ -61,7 +61,6 @@
       "dateScanned": "Not printed on the receipt, so it's the day you scanned it.",
       "storePlaceholder": "Choose the store",
       "addsAddress": "Adds this receipt's address",
-      "storeNumber": "Store #{{number}}",
       "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
       "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
       "choose": "No match. Tap to choose the product.",
@@ -119,7 +118,8 @@
       "sectionNotMatchedYet_one": "{{count}} line not matched yet",
       "sectionNotMatchedYet_other": "{{count}} lines not matched yet",
       "matchFailedTitle": "Couldn't look up the products",
-      "matchFailedBody": "Tap to try again once you are online. You can also choose each product yourself."
+      "matchFailedBody": "Tap to try again once you are online. You can also choose each product yourself.",
+      "storeWhereHint": "Changes the store"
     },
     "photoSend": {
       "title": "Send the photo to be read?",

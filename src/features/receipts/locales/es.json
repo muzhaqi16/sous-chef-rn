@@ -61,7 +61,6 @@
       "dateScanned": "No figura en el recibo, así que es el día en que lo escaneaste.",
       "storePlaceholder": "Elige la tienda",
       "addsAddress": "Añade la dirección de este recibo",
-      "storeNumber": "Tienda n.º {{number}}",
       "intro": "Revisa el producto de cada línea. Solo se añaden a tu despensa las líneas con un producto.",
       "introTo": "Revisa el producto de cada línea. Solo se añaden a {{pantry}} las líneas con un producto.",
       "choose": "Sin coincidencia. Toca para elegir el producto.",
@@ -119,7 +118,8 @@
       "sectionNotMatchedYet_one": "{{count}} línea aún sin coincidencia",
       "sectionNotMatchedYet_other": "{{count}} líneas aún sin coincidencia",
       "matchFailedTitle": "No se pudieron buscar los productos",
-      "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo."
+      "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo.",
+      "storeWhereHint": "Cambia la tienda"
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",

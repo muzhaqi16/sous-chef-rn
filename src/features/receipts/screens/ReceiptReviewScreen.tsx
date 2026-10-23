@@ -15,9 +15,11 @@ import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
+import { storeBranchLabel } from '#features/catalog/ui/storeBranchLabel';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
+import { hitSlop } from '#/theme/foundations/sizes';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/app/useToday';
@@ -141,12 +143,9 @@ export const ReceiptReviewScreen: React.FC = () => {
   const storeTitle = store?.name ?? proposedStoreName ?? merchant;
   const showStore = storeUnrecognized || changingStore;
   const toggleStore = () => setChangingStore(open => !open);
-  // A chain's name alone does not say which branch it is.
-  const storeWhere =
-    storeLocation?.address ??
-    (storeLocation?.storeNumber
-      ? t('receipts.review.storeNumber', { number: storeLocation.storeNumber })
-      : null);
+  const storeWhere = storeLocation
+    ? storeBranchLabel(storeLocation, t)
+    : undefined;
 
   // Kept after closing, so the sheet animates out full.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -349,6 +348,8 @@ export const ReceiptReviewScreen: React.FC = () => {
                   disabled={storeUnrecognized}
                   accessibilityRole="button"
                   accessibilityLabel={storeWhere}
+                  accessibilityHint={t('receipts.review.storeWhereHint')}
+                  hitSlop={hitSlop.lg}
                   style={styles.storeWhere}
                   testID={receiptsTestIDs.reviewStoreWhere}
                 >

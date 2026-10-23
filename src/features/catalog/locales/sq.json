@@ -439,5 +439,8 @@
     "noneSelected": "Asnjë element i zgjedhur",
     "selectedCount_one": "{{count}} element i zgjedhur",
     "selectedCount_other": "{{count}} elemente të zgjedhura"
+  },
+  "storeBranch": {
+    "number": "Dyqani nr. {{number}}"
   }
 }

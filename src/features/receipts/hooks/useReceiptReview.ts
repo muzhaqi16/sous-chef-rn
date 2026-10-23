@@ -189,14 +189,17 @@ export function useReceiptReview() {
     fragmentName: 'useReceiptReview_store',
     from: store ? { __typename: 'Store', id: store.id } : null,
   });
-  const located = store
-    ? placed.complete
-      ? placed.data
-      : null
-    : proposedStore;
   // The server's reading, which the check-in locates an unlocated store from.
   const receiptParseId =
     draft?.parsedBy === 'server' ? draft.parseId : undefined;
+  const picked = placed.complete ? placed.data : null;
+  // A pick with no place of its own is placed where the receipt says on check-in.
+  const takesReceiptPlace =
+    !!picked &&
+    !!receiptParseId &&
+    !firstNonBlank(picked.address, picked.storeNumber);
+  const pickedPlace = takesReceiptPlace ? draft?.printedStore ?? null : picked;
+  const located = store ? pickedPlace : proposedStore;
   const heldStores = useHeldStores(listId);
   // Offered, never placed.
   const storeOffer = storeOfferOf(
