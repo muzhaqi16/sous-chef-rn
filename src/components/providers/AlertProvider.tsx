@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Pressable, Modal } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
@@ -21,12 +21,14 @@ import { kitTestIDs } from '#components/testIDs';
 interface AlertCardProps {
   entry: AlertEntry;
   stackIndex: number;
+  onAnswer: (button: AlertButton) => void;
   onDismiss: (id: number) => void;
 }
 
 const AlertCard: React.FC<AlertCardProps> = ({
   entry,
   stackIndex,
+  onAnswer,
   onDismiss,
 }) => {
   const scale = useSharedValue(ALERT.ENTER_SCALE_FROM);
@@ -51,7 +53,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
     if (dismissing.current) return;
     dismissing.current = true;
 
-    button.onPress?.();
+    onAnswer(button);
 
     scale.set(
       withTiming(
@@ -168,28 +170,42 @@ const AlertCard: React.FC<AlertCardProps> = ({
   );
 };
 
-/** Dismiss the top alert by invoking its cancel button (or single button) callback. */
+/** Dismiss the top alert by answering with its cancel button (or single button). */
 function dismissTopAlert(
   alerts: AlertEntry[],
+  onAnswer: (button: AlertButton) => void,
   onDismiss: (id: number) => void,
 ) {
   const topAlert = alerts[alerts.length - 1];
   if (!topAlert) return;
   const cancelButton = topAlert.buttons.find(b => b.style === 'cancel');
+  const [onlyButton] = topAlert.buttons;
   if (cancelButton) {
-    cancelButton.onPress?.();
-  } else if (topAlert.buttons.length === 1) {
-    topAlert.buttons[0]?.onPress?.();
+    onAnswer(cancelButton);
+  } else if (onlyButton && topAlert.buttons.length === 1) {
+    onAnswer(onlyButton);
   }
   onDismiss(topAlert.id);
 }
 
+/** Runs the actions that waited for the dialog to close, each once. */
+function runWaiting(waiting: React.RefObject<(() => void)[]>) {
+  const actions = waiting.current;
+  waiting.current = [];
+  for (const action of actions) action();
+}
+
 interface AlertStackProps {
   alerts: AlertEntry[];
+  onAnswer: (button: AlertButton) => void;
   onDismiss: (id: number) => void;
 }
 
-const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
+const AlertStack: React.FC<AlertStackProps> = ({
+  alerts,
+  onAnswer,
+  onDismiss,
+}) => {
   const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
@@ -207,7 +223,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
   const visibleAlerts = alerts.slice(-ALERT.MAX_VISIBLE).reverse();
 
   const handleBackdropPress = () => {
-    dismissTopAlert(alerts, onDismiss);
+    dismissTopAlert(alerts, onAnswer, onDismiss);
   };
 
   return (
@@ -225,6 +241,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
           key={entry.id}
           entry={entry}
           stackIndex={index}
+          onAnswer={onAnswer}
           onDismiss={onDismiss}
         />
       ))}
@@ -256,6 +273,8 @@ interface AlertProviderProps {
 
 export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
   const [alerts, setAlerts] = useState<AlertEntry[]>([]);
+  const waiting = useRef<(() => void)[]>([]);
+  const open = alerts.length > 0;
 
   useEffect(() => {
     alertService.init((entry: AlertEntry) => {
@@ -265,29 +284,53 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
     });
   }, []);
 
+  // Android drops its Dialog as `visible` turns false and reports nothing:
+  // the waiting actions run a frame later.
+  // Verified: #rns-modal-calls-ondismiss-only-on-ios-after-uikits-dismissal
+  useEffect(() => {
+    if (open || Platform.OS === 'ios') return;
+    const frame = requestAnimationFrame(() => runWaiting(waiting));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  const handleAnswer = (button: AlertButton) => {
+    if (!button.onPress) return;
+    if (button.afterClose) waiting.current.push(button.onPress);
+    else button.onPress();
+  };
+
   const handleDismiss = (id: number) => {
     setAlerts(prev => prev.filter(a => a.id !== id));
   };
 
   const handleRequestClose = () => {
-    dismissTopAlert(alerts, handleDismiss);
+    dismissTopAlert(alerts, handleAnswer, handleDismiss);
   };
 
+  // An alert shown while the last one went waits for its own close.
+  const handleClosed = () => {
+    if (!open) runWaiting(waiting);
+  };
+
+  // Kept mounted and driven by `visible`: iOS reports the dismissal only then.
   return (
     <>
       {children}
-      {alerts.length > 0 ? (
-        <Modal
-          transparent
-          visible
-          statusBarTranslucent
-          navigationBarTranslucent
-          presentationStyle="overFullScreen"
-          onRequestClose={handleRequestClose}
-        >
-          <AlertStack alerts={alerts} onDismiss={handleDismiss} />
-        </Modal>
-      ) : null}
+      <Modal
+        transparent
+        visible={open}
+        statusBarTranslucent
+        navigationBarTranslucent
+        presentationStyle="overFullScreen"
+        onRequestClose={handleRequestClose}
+        onDismiss={handleClosed}
+      >
+        <AlertStack
+          alerts={alerts}
+          onAnswer={handleAnswer}
+          onDismiss={handleDismiss}
+        />
+      </Modal>
     </>
   );
 };

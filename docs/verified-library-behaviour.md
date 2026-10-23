@@ -367,6 +367,22 @@ a no-op stub. `runAfterInteractions` is just `setImmediate`;
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
 ```
 
+### RN's Modal calls onDismiss only on iOS, after UIKit's dismissal
+
+**Claim:**
+- **iOS:** when a `<Modal>`'s `visible` turns false, it stays rendered until UIKit's `dismissViewControllerAnimated:completion:` completes, and only then calls `onDismiss`. Unmounting it instead still dismisses it natively, but `onDismiss` never fires.
+- **Android:** `visible` is ignored natively. `visible={false}` renders nothing, which dismisses the Dialog at once, and `onDismiss` never fires.
+
+So a native screen that must not be presented from the Modal's view controller waits for `onDismiss` on iOS, and for the next frame on Android.
+
+**Verified against `react-native@0.86.3`** by reading the source. Task 2.7 of `pr293-review-fixes-oct22` confirms it on the simulator. `AlertProvider` relies on it for buttons with `afterClose`. Re-check:
+
+```
+grep -n "isRendered\|onDismiss" node_modules/react-native/Libraries/Modal/Modal.js
+grep -n "dismissViewController\|onDismiss" node_modules/react-native/React/Fabric/Mounting/ComponentViews/Modal/RCTModalHostViewComponentView.mm
+grep -n "iOS only" node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/modal/ReactModalHostManager.kt
+```
+
 ### simctl screenshot sampling resolves ~176 ms, no finer
 
 **Claim:** the `xcrun simctl io <device> screenshot` loop in

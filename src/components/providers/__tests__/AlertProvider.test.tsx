@@ -14,8 +14,16 @@
  */
 jest.unmock('#/services/alertService');
 import React from 'react';
-import { act, render, screen, userEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
+import {
+  act,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
+import { Modal } from '#components/atoms/themedComponents';
 import { AlertProvider } from '../AlertProvider';
 import { alertService } from '#/services/alertService';
 
@@ -130,6 +138,119 @@ describe('AlertProvider', () => {
       expect(allWithHidden('alert-modal')).toHaveLength(1);
       expect(allWithHidden('alert-button-0')).toHaveLength(1);
       expect(allWithHidden('alert-modal-behind')).toHaveLength(0);
+    });
+  });
+
+  // An action that presents native UI must not run while the dialog's modal is
+  // still presented: iOS would present it from that modal. The Jest Modal never
+  // reports its dismissal, so the tests report it as iOS does.
+  describe('a button that waits for the dialog to close', () => {
+    const originalOS = Platform.OS;
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', {
+        value: originalOS,
+        configurable: true,
+      });
+    });
+
+    const reportDismissed = () =>
+      act(() => {
+        (
+          screen.UNSAFE_getByType(Modal).props as { onDismiss: () => void }
+        ).onDismiss();
+      });
+
+    it('runs its action once, after the modal has been dismissed', async () => {
+      const user = userEvent.setup();
+      renderProvider();
+      const scan = jest.fn();
+      showAlert('Send photos?', 'consent', [
+        { text: 'Send', onPress: scan, afterClose: true },
+      ]);
+
+      await user.press(await screen.findByText('Send'));
+      expect(screen.queryByText('consent')).toBeNull();
+      expect(scan).not.toHaveBeenCalled();
+
+      reportDismissed();
+      reportDismissed();
+      expect(scan).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs any other action at the press', async () => {
+      const user = userEvent.setup();
+      renderProvider();
+      const remove = jest.fn();
+      showAlert('Delete Item', 'Are you sure?', [
+        { text: 'Delete', onPress: remove },
+      ]);
+
+      await user.press(await screen.findByText('Delete'));
+      expect(remove).toHaveBeenCalledTimes(1);
+    });
+
+    it('answers a dismissal with the waiting cancel button, after close', async () => {
+      renderProvider();
+      const textOnly = jest.fn();
+      const send = jest.fn();
+      showAlert('Send photos?', 'consent', [
+        {
+          text: 'Text only',
+          style: 'cancel',
+          onPress: textOnly,
+          afterClose: true,
+        },
+        { text: 'Send', onPress: send, afterClose: true },
+      ]);
+      expect(await screen.findByText('consent')).toBeTruthy();
+
+      act(() => {
+        (
+          screen.UNSAFE_getByType(Modal).props as {
+            onRequestClose: () => void;
+          }
+        ).onRequestClose();
+      });
+      expect(textOnly).not.toHaveBeenCalled();
+
+      reportDismissed();
+      expect(textOnly).toHaveBeenCalledTimes(1);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('waits for an alert shown before the close to close too', async () => {
+      const user = userEvent.setup();
+      renderProvider();
+      const scan = jest.fn();
+      showAlert('Send photos?', 'consent', [
+        { text: 'Send', onPress: scan, afterClose: true },
+      ]);
+      await user.press(await screen.findByText('Send'));
+
+      // The first close is reported while a new alert is already showing.
+      showAlert('Offline', 'no connection');
+      reportDismissed();
+      expect(scan).not.toHaveBeenCalled();
+
+      await user.press(await screen.findByText('OK'));
+      reportDismissed();
+      expect(scan).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a frame after the close on Android, which reports none', async () => {
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
+      const user = userEvent.setup();
+      renderProvider();
+      const scan = jest.fn();
+      showAlert('Send photos?', 'consent', [
+        { text: 'Send', onPress: scan, afterClose: true },
+      ]);
+
+      await user.press(await screen.findByText('Send'));
+      await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
     });
   });
 });
