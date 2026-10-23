@@ -193,6 +193,26 @@ describe('useSuggestItemEdit', () => {
     expect(outcome).toEqual({ status: 'imagesOnly' });
     expect(fired).toHaveLength(0);
     expect(mockUploadItemImages).toHaveBeenCalled();
+    // A suggester's photo lands PENDING: saying it is on the item is untrue.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Photo sent for review',
+      expect.stringContaining('only you can see it'),
+    );
+  });
+
+  it("says the owner's photo is on their own item", async () => {
+    const { result } = renderHook([]);
+
+    const outcome = await result.current.submitEdit(
+      snapshot({ name: 'Skim Milk', canEdit: true, canSuggest: false }),
+      form({ selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }] }),
+    );
+
+    expect(outcome).toEqual({ status: 'imagesOnly' });
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Photo added',
+      expect.stringContaining('on the item now'),
+    );
   });
 
   // Photos are the whole submission here, so an aborted batch must not close

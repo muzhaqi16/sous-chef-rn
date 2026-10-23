@@ -119,10 +119,12 @@
     "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
     "photosOnlyTitle": "Foto aggiunta",
     "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
+    "photosForReviewTitle": "Foto inviata per la revisione",
+    "photosForReviewBody": "Un amministratore la controlla prima che tutti la vedano. Fino ad allora la vedi solo tu. Modifica anche un campo se c'è altro da correggere.",
     "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
-    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore."
+    "photoNotice": "Un amministratore esamina le foto e le altre modifiche prima che tutti le vedano."
   },
   "reportItem": {
     "footer": "Dettagli sbagliati in uno di questi?",

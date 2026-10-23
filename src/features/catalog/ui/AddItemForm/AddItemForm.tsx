@@ -453,7 +453,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                  the server ignores it; a star would promise an ungranted hero. */
               allowPrimarySelection={!requiresEditNote(mode)}
             />
-            {!!editing && (
+            {requiresEditNote(mode) && (
               <Text role="caption" tone="secondary" style={styles.notice}>
                 {t('suggestItemEdit.photoNotice')}
               </Text>

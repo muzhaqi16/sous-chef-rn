@@ -119,10 +119,12 @@
     "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
     "photosOnlyTitle": "Photo added",
     "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
+    "photosForReviewTitle": "Photo sent for review",
+    "photosForReviewBody": "An admin checks it before everyone sees it. Until then only you can see it. Change a field too if something else needs fixing.",
     "updatedTitle": "Item updated",
     "updatedBody": "Your changes are live.",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
-    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first."
+    "photoNotice": "An admin reviews photos and other changes before everyone sees them."
   },
   "reportItem": {
     "footer": "Wrong details on one of these?",

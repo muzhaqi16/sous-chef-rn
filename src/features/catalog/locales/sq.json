@@ -119,10 +119,12 @@
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
     "photosOnlyTitle": "Fotoja u shtua",
     "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
+    "photosForReviewTitle": "Fotoja u dërgua për shqyrtim",
+    "photosForReviewBody": "Një administrator e kontrollon para se ta shohin të gjithë. Deri atëherë e sheh vetëm ti. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
     "updatedTitle": "Artikulli u përditësua",
     "updatedBody": "Ndryshimet e tua janë publikuar.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
-    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator."
+    "photoNotice": "Një administrator shqyrton fotot dhe ndryshimet e tjera para se t'i shohin të gjithë."
   },
   "reportItem": {
     "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
