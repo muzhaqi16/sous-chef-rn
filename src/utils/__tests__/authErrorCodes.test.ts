@@ -7,6 +7,7 @@ import {
   isDeadRefreshTokenCode,
   isSupersededRefreshCode,
   isAuthRefusalCode,
+  isStaleSignInTokenCode,
 } from '../authErrorCodes';
 
 // The account credentials are gone, so the session ends.
@@ -197,6 +198,24 @@ describe('isDeadRefreshTokenCode', () => {
     const overlap = REFRESHABLE.filter(isDeadRefreshTokenCode);
     expect(overlap).toEqual([]);
   });
+});
+
+// A sign-in that carried a stale token clears it; nothing else it can be
+// refused for touches the stored tokens.
+describe('isStaleSignInTokenCode', () => {
+  it.each(['AUTH_TOKEN_EXPIRED', 'AUTH_REFRESH_TOKEN_INVALID'])(
+    'clears the token on %s',
+    code => {
+      expect(isStaleSignInTokenCode(code)).toBe(true);
+    },
+  );
+
+  it.each(['AUTH_CREDENTIALS_INVALID', 'AUTH_EMAIL_NOT_VERIFIED'])(
+    'leaves the tokens alone on %s',
+    code => {
+      expect(isStaleSignInTokenCode(code)).toBe(false);
+    },
+  );
 });
 
 // The two lists were independent literals, so a code added to the account list

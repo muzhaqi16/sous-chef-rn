@@ -7,18 +7,24 @@
  */
 
 import { requireApolloClient } from '#/apollo/clientRegistry';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { errorService } from '#/services/errorService';
+import { errorService, isTransportFailure } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
 import { logger } from '#/utils/environment';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import {
+  isDeadCredentialCode,
+  isStaleSignInTokenCode,
+} from '#/utils/authErrorCodes';
 import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
+  ExchangeDeviceCredentialDocument,
+  IssueDeviceCredentialDocument,
   LoginDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
@@ -172,13 +178,6 @@ function unmaskAuthPayload<
 
 // --- Core auth operations ---
 
-// `handleApolloError` reports the code as a plain string, so membership is
-// tested against the enum members read as strings.
-const AUTH_CLEARING_CODES: ReadonlySet<string> = new Set([
-  ErrorCode.AuthTokenExpired,
-  ErrorCode.AuthRefreshTokenInvalid,
-]);
-
 function handleAuthError(error: unknown, operation = 'Authentication'): void {
   try {
     const { message, code, isAuthError } = errorService.handleApolloError(
@@ -194,7 +193,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
     // `clearAuth`, deliberately NOT `endSession` as the link layer does for the
     // same codes: this is a refused attempt to START a session, so a full reset
     // would drop selected-entity ids (breaking verification resume) for nothing.
-    if (isAuthError && AUTH_CLEARING_CODES.has(code)) {
+    if (isAuthError && isStaleSignInTokenCode(code)) {
       useStore.getState().clearAuth();
     }
   } catch {
@@ -403,29 +402,25 @@ async function register(input: RegisterInput): Promise<RegisterOutcome> {
   // A refusal, a resolved error and a throw all toast the app's own copy and
   // keep the user on the sign-up screen. A refused attempt to START a session
   // clears a dead token rather than ending a session, as `handleAuthError` does.
-  const clearAuth = () => {
-    store.clearAuth();
-  };
-  // Bound to the device, as `login` explains.
-  await ensureDeviceId();
   const settled = await settleMutation(
-    () =>
-      requireApolloClient().mutate({
+    async () => {
+      // Bound to the device, as `login` explains.
+      await ensureDeviceId();
+      return requireApolloClient().mutate({
         mutation: RegisterDocument,
         variables: { input },
-      }),
+      });
+    },
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
       present: 'toast',
-      on: {
-        [ErrorCode.AuthTokenExpired]: clearAuth,
-        [ErrorCode.AuthRefreshTokenInvalid]: clearAuth,
-      },
     },
   );
 
   if (settled.failure) {
+    const { code } = settled.failure;
+    if (code && isStaleSignInTokenCode(code)) store.clearAuth();
     store.setAuthIsLoading(false);
     return 'failed';
   }
@@ -444,6 +439,103 @@ async function register(input: RegisterInput): Promise<RegisterOutcome> {
     { showRememberPrompt: false, quiet: true },
   );
   return signedIn ? 'signedIn' : 'verificationSent';
+}
+
+/**
+ * What exchanging a device credential did; every failure is already reported.
+ * `dead`: the credential will never authenticate again. `unreachable`: the
+ * request never arrived, so the server refused nothing. `retryAfterMs` is the
+ * server's own deadline.
+ */
+export type DeviceCredentialExchange =
+  | { status: 'signedIn' }
+  | { status: 'incomplete' }
+  | { status: 'discarded' }
+  | { status: 'dead' }
+  | { status: 'refused' }
+  | { status: 'unreachable' }
+  | { status: 'failed'; retryAfterMs?: number };
+
+/** Sign in with a device credential, bound to `deviceId`. */
+async function exchangeDeviceCredential(
+  credential: string,
+  deviceId: string,
+): Promise<DeviceCredentialExchange> {
+  const operation = 'Auto-login';
+  const result = await requireApolloClient().mutate({
+    mutation: ExchangeDeviceCredentialDocument,
+    variables: { input: { credential, deviceId } },
+  });
+
+  const payload = appliedPayload(result.data);
+  if (payload) {
+    const signIn = unmaskAuthPayload(payload);
+    if (!signIn) {
+      // The exchange spent one of the server's attempts and opened no session.
+      logger.error(
+        'Auto-login succeeded but the LoginUser read was incomplete',
+      );
+      toastService.error(t('errors.codes.genericRetry'));
+      return { status: 'incomplete' };
+    }
+    if (!(await handleLogin(signIn))) {
+      toastService.error(t('errors.codes.genericRetry'));
+      return { status: 'discarded' };
+    }
+    return { status: 'signedIn' };
+  }
+
+  const refusal = result.data?.exchangeDeviceCredential;
+  if (refusal && 'code' in refusal) {
+    handleRejectedAuthPayload(refusal, operation);
+    // A token-side refusal leaves THESE credentials good (isDeadCredentialCode).
+    return isDeadCredentialCode(refusal.code)
+      ? { status: 'dead' }
+      : { status: 'refused' };
+  }
+
+  if (result.error) {
+    handleAuthError(result.error, operation);
+    const code = errorService.parseApolloError(result.error, {
+      logError: false,
+    }).error?.code;
+    if (code && isDeadCredentialCode(code)) return { status: 'dead' };
+    if (isTransportFailure(result.error)) return { status: 'unreachable' };
+    const rateLimit = getRateLimitDetails(result.error);
+    return {
+      status: 'failed',
+      retryAfterMs: rateLimit?.retryAfter
+        ? rateLimit.retryAfter * 1000
+        : undefined,
+    };
+  }
+
+  // An answer this client cannot read still spent one of the server's attempts.
+  toastService.error(t('errors.codes.genericRetry'));
+  return { status: 'failed' };
+}
+
+/**
+ * A device credential for `deviceId`, issued from the live session alone.
+ * `refused` is already reported.
+ */
+async function issueDeviceCredential(
+  deviceId: string,
+): Promise<{ status: 'issued'; credential: string } | { status: 'refused' }> {
+  const operation = 'Enrol device credential';
+  const result = await requireApolloClient().mutate({
+    mutation: IssueDeviceCredentialDocument,
+    variables: { input: { deviceId } },
+  });
+
+  const payload = appliedPayload(result.data);
+  if (payload) return { status: 'issued', credential: payload.credential };
+
+  const refusal = result.data?.issueDeviceCredential;
+  if (refusal && 'code' in refusal)
+    handleRejectedAuthPayload(refusal, operation);
+  else if (result.error) handleAuthError(result.error, operation);
+  return { status: 'refused' };
 }
 
 /**
@@ -514,15 +606,14 @@ async function logout(options?: LogoutOptions): Promise<void> {
   }
 }
 
+/** @internal The sign-in commit, for `failingHostSteps.test.ts`. */
+export { handleLogin };
+
 export const authService = {
   login,
   register,
   logout,
   adoptPasswordChangeSession,
-
-  // Post-auth flow handlers, also run by a host's own sign-in paths
-  handleLogin,
-  handleAuthError,
-  handleRejectedAuthPayload,
-  resolveAuthPayload: unmaskAuthPayload,
+  exchangeDeviceCredential,
+  issueDeviceCredential,
 };

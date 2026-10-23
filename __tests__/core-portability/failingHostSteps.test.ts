@@ -10,7 +10,7 @@ import {
   sessionHost,
   type SessionHost,
 } from '#/services/auth/sessionHost';
-import { authService } from '#/services/authService';
+import { authService, handleLogin } from '#/services/authService';
 import { errorService } from '#/services/errorService';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { useStore } from '#store';
@@ -104,9 +104,9 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
   it('opens the session the server issued and routes into the app', async () => {
     const signInsBefore = useStore.getState().loginCounts[USER.id] ?? 0;
 
-    // `login()` reports success exactly when this resolves.
+    // `login()` reports success exactly when this resolves true.
     await expect(
-      authService.handleLogin(
+      handleLogin(
         {
           user: USER,
           accessToken: ACCESS_TOKEN,
@@ -114,7 +114,7 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
         },
         { email: EMAIL },
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
 
     const state = useStore.getState();
     expect(state.user?.id).toBe(USER.id);

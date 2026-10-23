@@ -66,6 +66,13 @@ const DEAD_REFRESH_TOKEN_CODES: string[] = [
   TopLevelErrorCode.AuthRefreshTokenMissing,
 ];
 
+// A refused attempt to START a session over a token it still carried: the
+// token is cleared, never a session ended, since none was started.
+const STALE_SIGN_IN_TOKEN_CODES: string[] = [
+  ErrorCode.AuthTokenExpired,
+  ErrorCode.AuthRefreshTokenInvalid,
+];
+
 // The token we presented was spent by a rotation that beat us to it, and its
 // successor is valid. The exchange failed; the session did not.
 const SUPERSEDED_REFRESH_CODES: string[] = [
@@ -78,6 +85,10 @@ const SUPERSEDED_REFRESH_CODES: string[] = [
  */
 export const isDeadCredentialCode = (code: string): boolean =>
   DEAD_CREDENTIAL_CODES.includes(code);
+
+/** A sign-in refused over a stale token: clear it, end nothing. */
+export const isStaleSignInTokenCode = (code: string): boolean =>
+  STALE_SIGN_IN_TOKEN_CODES.includes(code);
 
 /** This session is unrecoverable — end it rather than retrying the refresh. */
 export const isSessionEndingAuthCode = (code: string): boolean =>

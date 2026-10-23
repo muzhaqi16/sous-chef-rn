@@ -6,8 +6,6 @@
 
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import {
-  ExchangeDeviceCredentialDocument,
-  IssueDeviceCredentialDocument,
   MyDeviceCredentialsDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
@@ -18,15 +16,11 @@ import type {
   PostSignInGate,
   StoredSignInRenewal,
 } from '#/services/auth/sessionHost';
-import { isTransportFailure, errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import { isDeadCredentialCode } from '#/utils/authErrorCodes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { withinMs } from '#/utils/withinMs';
 import {
   getBiometricCapability,
@@ -193,88 +187,38 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     logger.info('Exchanging the stored device credential');
-    const result = await requireApolloClient().mutate({
-      mutation: ExchangeDeviceCredentialDocument,
-      variables: { input: { credential, deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-
-    if (payload) {
-      const unmaskedLogin = authService.resolveAuthPayload(payload);
-      if (!unmaskedLogin) {
-        // The exchange spent one of the server's attempts and opened no
-        // session, so the backoff protecting that budget has to stay on.
-        logger.error(
-          'Auto-login succeeded but the LoginUser read was incomplete',
-        );
-        useStore.getState().registerBiometricRefusal();
-        toastService.error(t('errors.codes.genericRetry'));
-        return false;
-      }
-
-      if (!(await authService.handleLogin(unmaskedLogin))) {
-        toastService.error(t('errors.codes.genericRetry'));
-        return false;
-      }
-      useStore.getState().clearBiometricBackoff();
-      logger.info('Auto-login successful');
-      return true;
-    }
-
-    const refusal = result.data?.exchangeDeviceCredential;
-    if (refusal && 'code' in refusal) {
-      // Dropped only when THESE credentials will never authenticate; a
-      // token-side refusal ends the session but leaves them good
-      // (isDeadCredentialCode).
-      if (isDeadCredentialCode(refusal.code)) {
-        logger.warn(
-          `Auto-login rejected (${refusal.code}), clearing stored credentials`,
-        );
+    const exchange = await authService.exchangeDeviceCredential(
+      credential,
+      deviceId,
+    );
+    switch (exchange.status) {
+      case 'signedIn':
+        useStore.getState().clearBiometricBackoff();
+        logger.info('Auto-login successful');
+        return true;
+      case 'dead':
+        logger.warn('Auto-login refused the credential; clearing the slot');
         await removeCredentials(email);
         forgetBiometricSlot();
-      } else {
+        return false;
+      case 'incomplete':
+      case 'refused':
         // The slot survives, so the button is offered again — hold it off, or
         // every tap spends another of the server's attempts for nothing.
         useStore.getState().registerBiometricRefusal();
-      }
-      authService.handleRejectedAuthPayload(refusal, 'Auto-login');
-      return false;
-    }
-
-    if (result.error) {
-      // Same rule: a transport failure says the request did not ARRIVE, so
-      // clearing on one un-enrols the device after a single blip.
-      const parsed = errorService.parseApolloError(result.error, {
-        logError: false,
-      });
-      const code = parsed.error?.code;
-      if (code && isDeadCredentialCode(code)) {
-        logger.warn(
-          `Auto-login rejected (${code}), clearing stored credentials`,
-        );
-        await removeCredentials(email);
-        forgetBiometricSlot();
-      } else if (isTransportFailure(result.error)) {
-        // The request never arrived, so the server refused nothing. A lockout
-        // recorded here is PERSISTED and not session-scoped, so one launch
-        // without connectivity would outlast the outage that caused it.
-        logger.warn('Auto-login could not reach the server; nothing recorded');
-      } else {
+        return false;
+      case 'failed':
         logger.warn('Auto-login failed; stored credentials kept');
-        // A throttle carries the server's own deadline, and it knows what
-        // budget is left better than the local schedule does.
-        const rateLimit = getRateLimitDetails(result.error);
-        useStore
-          .getState()
-          .registerBiometricRefusal(
-            rateLimit?.retryAfter ? rateLimit.retryAfter * 1000 : undefined,
-          );
-      }
-      authService.handleAuthError(result.error, 'Auto-login');
+        useStore.getState().registerBiometricRefusal(exchange.retryAfterMs);
+        return false;
+      case 'unreachable':
+        // A lockout recorded here is PERSISTED and not session-scoped, so one
+        // launch without connectivity would outlast the outage that caused it.
+        logger.warn('Auto-login could not reach the server; nothing recorded');
+        return false;
+      case 'discarded':
+        return false;
     }
-
-    return false;
   } catch (error) {
     // Deliberately does NOT clear. A throw here is a transport or client fault,
     // never the server saying these credentials are dead — and the branches
@@ -369,27 +313,12 @@ async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
       return 'unsaved';
     }
 
-    const result = await requireApolloClient().mutate({
-      mutation: IssueDeviceCredentialDocument,
-      variables: { input: { deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-    if (!payload) {
-      const refusal = result.data?.issueDeviceCredential;
-      if (refusal && 'code' in refusal)
-        authService.handleRejectedAuthPayload(
-          refusal,
-          'Enrol device credential',
-        );
-      else if (result.error)
-        authService.handleAuthError(result.error, 'Enrol device credential');
-      return 'refused';
-    }
+    const issued = await authService.issueDeviceCredential(deviceId);
+    if (issued.status === 'refused') return 'refused';
 
     const stored = await storeCredentials(
       email,
-      markDeviceCredential(payload.credential),
+      markDeviceCredential(issued.credential),
     );
     return stored ? 'enrolled' : 'unsaved';
   } catch (error) {

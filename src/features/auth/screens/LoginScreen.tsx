@@ -213,7 +213,7 @@ export function LoginScreen(): React.JSX.Element {
             biometric_type: biometricInfo.biometryType,
           },
         );
-        authService.handleAuthError(error, 'Biometric login');
+        toastService.error(t('errors.codes.genericRetry'));
       },
     );
   };
