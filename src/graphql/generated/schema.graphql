@@ -1476,6 +1476,8 @@ enum ChangeType {
   CREATED
   DELETED
   EXPIRATION_UPDATED
+  """The stack moved to another catalog item"""
+  ITEM_CHANGED
   LOCATION_UPDATED
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
