@@ -54,6 +54,7 @@ import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoH
 import { entryGallery } from '#features/catalog/ui/entryGallery';
 import { EntryPhotoSheet } from '#features/catalog/ui/EntryPhotoSheet';
 import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
+import { RelinkItemSheet } from '#features/pantry/components/RelinkItemSheet';
 import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -113,6 +114,7 @@ export const PantryItemDetail: React.FC<
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
+  const [relinkVisible, setRelinkVisible] = useState(false);
 
   const {
     item,
@@ -330,6 +332,12 @@ export const PantryItemDetail: React.FC<
             accessibilityLabel: t('a11y.changePhoto'),
             onPress: () => setPhotoSheetVisible(true),
             testID: catalogTestIDs.entryPhotoChangeButton,
+          },
+          {
+            icon: 'swap-horizontal-outline',
+            accessibilityLabel: t('relinkItem.action'),
+            onPress: () => setRelinkVisible(true),
+            testID: pantryTestIDs.itemRelinkButton,
           },
         ] satisfies HeaderAction[])
       : []),
@@ -586,6 +594,19 @@ export const PantryItemDetail: React.FC<
                 }
               : null
           }
+        />
+      )}
+      {!!permissions.canEditItems && (
+        <RelinkItemSheet
+          visible={relinkVisible}
+          onDismiss={() => setRelinkVisible(false)}
+          stack={{
+            id: item.id,
+            version: item.version,
+            itemId: item.itemId,
+            itemName: item.itemName,
+          }}
+          onConflictRefresh={handleRefresh}
         />
       )}
       {!!permissions.canEditItems && (

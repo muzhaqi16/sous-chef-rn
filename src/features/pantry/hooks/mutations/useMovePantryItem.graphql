@@ -1,0 +1,35 @@
+# Moves a stack onto another catalog item. The payload's stack is the whole
+# entry, so the list row and the detail settle from it with no refetch.
+mutation ChangePantryItemItem(
+  $input: ChangePantryItemItemInput!
+  $today: LocalDate!
+) {
+  changePantryItemItem(input: $input) {
+    __typename
+    ... on ChangePantryItemItemPayload {
+      receiptCorrectionRecorded
+      pantryItem {
+        id
+        ...PantryItemReaders
+      }
+      pantry {
+        id
+        ...PantryReaders
+      }
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
+    }
+    ... on DuplicatePantryItemError {
+      existingPantryItemIds
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

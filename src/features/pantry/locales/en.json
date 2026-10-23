@@ -376,6 +376,20 @@
     "body": "This item is already in your pantry in this unit. Would you like to restock it?",
     "restock": "Restock"
   },
+  "relinkItem": {
+    "action": "Not this item?",
+    "title": "Which item is this?",
+    "hint": "Pick the item this really is. Its quantity, costs and history stay.",
+    "searchPlaceholder": "Search items",
+    "moveTo": "Move to {{name}}",
+    "moving": "Moving…",
+    "moved": "Done. It's now {{name}}.",
+    "movedLearned": "Done. It's now {{name}}, and your next receipts will match it too.",
+    "duplicateBody": "Your pantry already has {{name}} in this unit, so this entry stays as it was. Open that entry to add to it instead.",
+    "openExisting": "Open it",
+    "failedTitle": "Couldn't move this entry",
+    "failedBody": "It's as it was. Check your connection and try again."
+  },
   "expirationAction": {
     "cooked": "Cooked",
     "consumed": "Consumed",

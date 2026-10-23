@@ -376,6 +376,20 @@
     "body": "Este artículo ya está en tu despensa en esta unidad. ¿Quieres reponerlo?",
     "restock": "Reponer"
   },
+  "relinkItem": {
+    "action": "¿No es este artículo?",
+    "title": "¿Qué artículo es?",
+    "hint": "Elige el artículo que realmente es. Se conservan su cantidad, costes e historial.",
+    "searchPlaceholder": "Buscar artículos",
+    "moveTo": "Mover a {{name}}",
+    "moving": "Moviendo…",
+    "moved": "Hecho: ahora es {{name}}.",
+    "movedLearned": "Hecho: ahora es {{name}}, y tus próximos recibos también lo reconocerán.",
+    "duplicateBody": "Tu despensa ya tiene {{name}} en esta unidad, así que esta entrada sigue como estaba. Abre esa entrada para añadirlo ahí.",
+    "openExisting": "Abrir",
+    "failedTitle": "No se pudo mover esta entrada",
+    "failedBody": "Sigue como estaba. Comprueba tu conexión e inténtalo de nuevo."
+  },
   "expirationAction": {
     "cooked": "Cocinado",
     "consumed": "Consumido",

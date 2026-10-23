@@ -84,6 +84,7 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
   useSelectedHomeId: jest.fn(() => 'home-1'),
+  useIsOnline: jest.fn(() => true),
   // The screen classifies its own data state via useDataState ->
   // useOfflineAwareError -> useIsApiUnavailable, which calls
   // useAppStore(selector). Online by default; individual tests override.
@@ -502,6 +503,23 @@ describe('PantryItemDetail (integration)', () => {
     });
     await screen.findAllByText('Milk');
     expect(headerAction('entry-photo-change-button')).toBeNull();
+  });
+
+  it('offers "Not this item?" to a member who can edit', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-relink-button')).toBeTruthy();
+  });
+
+  it('offers no "Not this item?" to a member who cannot edit', async () => {
+    Object.assign(mockPermissions, { canEditItems: false });
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-relink-button')).toBeNull();
   });
 
   it('offers no photo report on an item with no photo', async () => {

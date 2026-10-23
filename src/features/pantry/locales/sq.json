@@ -376,6 +376,20 @@
     "body": "Ky artikull është tashmë në qilarin tënd në këtë njësi. Dëshiron ta riplotësosh?",
     "restock": "Riplotëso"
   },
+  "relinkItem": {
+    "action": "Nuk është ky artikull?",
+    "title": "Cili artikull është?",
+    "hint": "Zgjidh artikullin që është në të vërtetë. Sasia, kostot dhe historiku mbeten.",
+    "searchPlaceholder": "Kërko artikuj",
+    "moveTo": "Kalo te {{name}}",
+    "moving": "Po kalohet…",
+    "moved": "U krye: tani është {{name}}.",
+    "movedLearned": "U krye: tani është {{name}}, dhe edhe faturat e ardhshme do ta njohin.",
+    "duplicateBody": "Qilari yt ka tashmë {{name}} në këtë njësi, prandaj kjo hyrje mbetet siç ishte. Hap atë hyrje për të shtuar aty.",
+    "openExisting": "Hap",
+    "failedTitle": "Kjo hyrje nuk u kalua",
+    "failedBody": "Mbeti siç ishte. Kontrollo lidhjen dhe provo përsëri."
+  },
   "expirationAction": {
     "cooked": "Gatuar",
     "consumed": "Konsumuar",
