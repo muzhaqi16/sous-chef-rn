@@ -171,6 +171,38 @@ describe('StoreAutocompleteField', () => {
     await expectAddedAndPicked('Kroger', field);
   });
 
+  it('tells branches apart by address, else by store number', async () => {
+    const branches: MockDataFor<typeof SearchStoresDocument> = {
+      stores: {
+        edges: [
+          {
+            node: {
+              id: 'store-0',
+              name: 'Giant Eagle',
+              address: '7516 Meade St',
+              storeNumber: '12',
+            },
+          },
+          {
+            node: {
+              id: 'store-1',
+              name: 'Giant Eagle',
+              address: null,
+              storeNumber: '1234',
+            },
+          },
+        ],
+        totalCount: 2,
+      },
+    };
+    renderField('inline', searchFor('Giant Eagle', branches));
+
+    fireEvent.changeText(screen.getByTestId('store-field'), 'Giant Eagle');
+
+    expect(await screen.findByText('7516 Meade St')).toBeTruthy();
+    expect(screen.getByText('Store #1234')).toBeTruthy();
+  });
+
   it('asks for more letters only until two are typed', async () => {
     renderField('modal', searchFor('Corner Shop', found()));
 

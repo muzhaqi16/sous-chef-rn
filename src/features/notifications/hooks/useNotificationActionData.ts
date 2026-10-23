@@ -1,9 +1,7 @@
 import { useApolloClient } from '@apollo/client/react';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
-import { readExpiryReminderFields } from '#features/notifications/utils/notificationHelpers';
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
 import { errorService } from '#/services/errorService';
-import { todayKey } from '#/utils/dateUtils';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 /** The cache reads and writes a notification's action buttons need. */
@@ -11,17 +9,9 @@ export function useNotificationActionData() {
   const client = useApolloClient();
   const { syncDelete } = useNotificationSync();
 
-  /**
-   * Finds the expiration record by the stack the server names. A null there
-   * means no stack, so the payload's copy stands in only for a notification
-   * that predates the field.
-   */
+  /** Finds the expiration record by the stack the server names, if any. */
   const resolveExpirationLink = async (notification: DisplayNotification) => {
-    const pantryItemId =
-      notification.pantryItemId === undefined
-        ? readExpiryReminderFields(notification.payload, todayKey())
-            ?.pantryItemId
-        : notification.pantryItemId;
+    const { pantryItemId } = notification;
     if (!pantryItemId) return null;
 
     let result;

@@ -18,6 +18,10 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
 
 let mockRows: ReceiptReviewRow[] = [];
 let mockStoreOffer: { id: string; name: string } | null = null;
+let mockStoreLocation: {
+  address: string | null;
+  storeNumber: string | null;
+} | null = null;
 const mockChooseStore = jest.fn();
 const mockAddChosen = jest.fn<Promise<{ sent: number; held: number }>, []>();
 const mockFinish = jest.fn();
@@ -27,6 +31,7 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     merchant: 'giant eagle',
     store: mockStoreOffer ? null : { id: 'store-1', name: 'Giant Eagle' },
     proposedStoreName: mockStoreOffer ? 'Giant Eagle' : null,
+    storeLocation: mockStoreLocation,
     storeOffer: mockStoreOffer,
     storeUnrecognized: false,
     purchasedOn: '2026-10-15',
@@ -169,6 +174,42 @@ describe('ReceiptReviewScreen store', () => {
   });
   afterEach(() => {
     mockStoreOffer = null;
+    mockStoreLocation = null;
+  });
+
+  it('says which branch of the chain it is, and opens the store field from it', async () => {
+    mockStoreLocation = {
+      address: '100 Main St, Springfield',
+      storeNumber: '42',
+    };
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    const where = screen.getByTestId(receiptsTestIDs.reviewStoreWhere);
+    expect(where).toHaveTextContent('100 Main St, Springfield');
+    // A caption-height line: the slop makes it a full-size target.
+    expect(where).toHaveProp('hitSlop', 12);
+    expect(where).toHaveProp('accessibilityHint', 'Changes the store');
+    expect(screen.queryByTestId(receiptsTestIDs.reviewStore)).toBeNull();
+
+    await userEvent.setup().press(where);
+
+    expect(screen.getByTestId(receiptsTestIDs.reviewStore)).toBeTruthy();
+  });
+
+  it('names the branch by its number when no address is on file', () => {
+    mockStoreLocation = { address: null, storeNumber: '42' };
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(
+      screen.getByTestId(receiptsTestIDs.reviewStoreWhere),
+    ).toHaveTextContent('Store #42');
+  });
+
+  it('says nothing of where the store is when nothing is known', () => {
+    mockStoreLocation = { address: null, storeNumber: null };
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByTestId(receiptsTestIDs.reviewStoreWhere)).toBeNull();
   });
 
   it("offers the unlocated store, saying it takes the receipt's address, and picks it on a tap", async () => {

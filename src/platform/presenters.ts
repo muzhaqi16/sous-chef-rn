@@ -42,6 +42,9 @@ export interface AlertButton {
   text: string;
   style?: AlertButtonStyle;
   onPress?: () => void;
+  /** `onPress` waits until the dialog has left the screen: for an action that
+   *  presents native UI, which iOS would present from the dialog's own modal. */
+  afterClose?: boolean;
 }
 
 export interface AlertEntry {

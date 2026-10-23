@@ -9,6 +9,7 @@ export type StoreItem = {
   id: string;
   name: string;
   address?: string | null;
+  storeNumber?: string | null;
 };
 
 export function useStoreAutocomplete() {
@@ -23,6 +24,7 @@ export function useStoreAutocomplete() {
     id: store.id,
     name: store.name,
     address: store.address ?? null,
+    storeNumber: store.storeNumber ?? null,
   }));
 
   const isOnline = useIsOnline();
@@ -40,6 +42,7 @@ export function useStoreAutocomplete() {
       id: store.id,
       name: store.name,
       address: store.address,
+      storeNumber: store.storeNumber,
     }));
   };
 

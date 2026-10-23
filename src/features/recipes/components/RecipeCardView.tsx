@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
@@ -56,15 +56,7 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
         commonStyles.rowContent,
       ]}
     >
-      {!!imageUrl && (
-        <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage
-            uri={imageUrl}
-            style={commonStyles.listItemImageCompact}
-            displaySize={48}
-          />
-        </View>
-      )}
+      {!!imageUrl && <RowThumbnail uri={imageUrl} />}
       <View style={styles.body}>
         <Text role={rowType.title} numberOfLines={1}>
           {name}

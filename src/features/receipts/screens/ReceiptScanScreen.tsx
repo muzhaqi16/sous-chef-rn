@@ -107,11 +107,9 @@ export const ReceiptScanScreen: React.FC = () => {
   const deviceReading = useFeatureFlag('deviceReceiptReading');
   const {
     status,
-    answerConsent,
     draft,
     pickedFromLibrary,
     canSendPhotos,
-    masksPhotos,
     scan,
     takePhoto,
     pickPhoto,
@@ -154,6 +152,7 @@ export const ReceiptScanScreen: React.FC = () => {
         {
           text: t('receipts.replace.confirm'),
           onPress: startScan,
+          afterClose: true,
         },
       ],
     );
@@ -283,33 +282,6 @@ export const ReceiptScanScreen: React.FC = () => {
               onPress: startPick,
               icon: 'images-outline',
             }}
-          />
-        );
-      case 'consent':
-        return (
-          <EmptyState
-            icon="cloud-upload-outline"
-            title={t('receipts.photoConsent.title')}
-            description={t(
-              masksPhotos
-                ? 'receipts.photoConsent.body'
-                : 'receipts.photoConsent.bodyUnmasked',
-            )}
-            hint={t('receipts.photoConsent.hint')}
-            action={{
-              label: t('receipts.photoConsent.send'),
-              onPress: () => {
-                void answerConsent('granted');
-              },
-              icon: 'cloud-upload-outline',
-            }}
-            secondaryAction={{
-              label: t('receipts.photoConsent.textOnly'),
-              onPress: () => {
-                void answerConsent('declined');
-              },
-            }}
-            testID={receiptsTestIDs.photoConsent}
           />
         );
       case 'readFailed':

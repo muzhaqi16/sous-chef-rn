@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { NetworkStatus } from '@apollo/client';
 import type { WatchQueryFetchPolicy } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
@@ -86,7 +85,6 @@ export function usePantryQuery(
     error,
     refetch,
     fetchMore,
-    networkStatus,
   } = useQuery(
     GetPantryDocument,
     shouldSkip || !pantryId
@@ -114,9 +112,6 @@ export function usePantryQuery(
   // `skipToken` keeps the last run's variables AND data: a switch to a pantry
   // that is not yet queried must not serve the previous pantry's result.
   const data = variables.id === pantryId ? result : undefined;
-
-  // Pull-to-refresh state — derived directly from Apollo's networkStatus.
-  const isRefreshing = networkStatus === NetworkStatus.refetch;
 
   const pantry = data?.pantry;
 
@@ -191,7 +186,6 @@ export function usePantryQuery(
       stats,
       totalCount,
       loading,
-      isRefreshing,
       error,
       // `errorPolicy: 'ignore'` leaves `data === undefined` on failure, but a
       // preserved connection still counts as an answer — hence not `!!data`.

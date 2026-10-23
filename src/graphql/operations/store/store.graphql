@@ -5,6 +5,8 @@ query SearchStores($search: String!, $limit: Int) {
         id
         name
         address
+        # Read with the address where a picked store's branch is shown.
+        storeNumber
       }
     }
     totalCount

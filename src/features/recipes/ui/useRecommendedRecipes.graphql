@@ -1,0 +1,8 @@
+# A recipe a notification recommends, as it is now. No query takes a list of
+# ids, so each recipe is read on its own.
+query RecommendedRecipe($id: ID!) {
+  recipe(id: $id) {
+    id
+    ...RecommendedRecipeCard_recipe
+  }
+}

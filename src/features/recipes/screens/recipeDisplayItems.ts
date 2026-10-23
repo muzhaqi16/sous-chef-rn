@@ -17,6 +17,7 @@ import {
   recipeCardBasics,
   timeAndServings,
 } from '#features/recipes/utils/recipeCardText';
+import { coverageBadge } from '#features/recipes/ui/coverageBadge';
 
 export interface DisplayItem {
   id: string;
@@ -144,16 +145,7 @@ function suggestionDisplayItem(
   return {
     title: node.name,
     subtitle: subtitleParts.join(' • '),
-    badge: {
-      text: translate('recipes.pantryCoverage', { percent: coverage }),
-      lines: [
-        {
-          icon: 'checkmark-circle',
-          text: translate('recipes.coveragePercent', { percent: coverage }),
-          variant: 'success',
-        },
-      ],
-    },
+    badge: coverageBadge(coverage, translate),
     imageUrl: node.imageUrl ?? undefined,
     target: recipeTarget(node.id),
   };

@@ -164,26 +164,23 @@ export const SuccessActivityIndicator = withUnistyles(
  *  by the host's top edge; iOS shifts the control's frame and needs none. */
 const REFRESH_SPINNER_OFFSET = Platform.OS === 'android' ? 40 : 0;
 
-// RNGH's ScrollView clones `block` into its refreshControl, and only a
-// `createNativeWrapper` control routes it to `useNativeGesture`; RN's drops it.
 // Android draws the arc on a disc that defaults to white in every theme.
-export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+const refreshTheme = (theme: Theme) => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
   progressBackgroundColor: theme.colors.surface,
   progressViewOffset: REFRESH_SPINNER_OFFSET,
-}));
+});
+
+// RNGH's ScrollView clones `block` into its refreshControl, and only a
+// `createNativeWrapper` control routes it to `useNativeGesture`; RN's drops it.
+export const ThemedRefreshControl = withUnistyles(RefreshControl, refreshTheme);
 
 /** The same theming on RN's own control, for plain RN `ScrollView` hosts. RNGH's
  *  throws at render without an RNGH scrollable above it, so pick by host. */
 export const PlainScrollRefreshControl = withUnistyles(
   RNRefreshControl,
-  theme => ({
-    colors: [theme.colors.primary],
-    tintColor: theme.colors.primary,
-    progressBackgroundColor: theme.colors.surface,
-    progressViewOffset: REFRESH_SPINNER_OFFSET,
-  }),
+  refreshTheme,
 );
 
 /** Theme-reactive Icon wrapper: re-renders so derived `tone`/`color` stay in sync. */

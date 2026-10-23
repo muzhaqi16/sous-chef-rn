@@ -46,7 +46,14 @@ const makeNotification = (
     priority: Priority.Normal,
     title: SERVER_TITLE,
     message: SERVER_MESSAGE,
-    payload: { inviterName: 'Alice', homeName: 'The Smiths' },
+    payload: {},
+    data: {
+      __typename: 'HomeInvitationNotificationData',
+      homeName: 'The Smiths',
+      inviterName: 'Alice',
+      inviteId: 'invite-1',
+      token: 'token-1',
+    },
     category: NotificationCategory.Home,
     sentAt: '2026-03-01T12:00:00Z',
     expiresAt: null,
@@ -75,7 +82,7 @@ describe('NotificationItem', () => {
     expect(screen.getByText('Home invitation')).toBeTruthy();
   });
 
-  it('renders the message built from the payload names', () => {
+  it('renders the message built from the names in its data', () => {
     render(<NotificationItem {...defaultProps} />);
     expect(
       screen.getByText('Alice invited you to join The Smiths'),

@@ -25,7 +25,7 @@ const invitation: InvitationData = {
   id: 'inv-1',
   entityName: "Alice's Home",
   token: TOKEN,
-  payload: {},
+  data: null,
 };
 
 type Refusal = 'ConflictError' | 'ForbiddenError';

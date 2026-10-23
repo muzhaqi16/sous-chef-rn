@@ -18,6 +18,7 @@ const base: UseNotificationsOnLaunch_NotificationFragment = {
   title: 'Expiring soon',
   message: 'milk expires tomorrow',
   payload: null,
+  data: null,
   category: NotificationCategory.Pantry,
   sentAt: '2026-01-01T00:00:00Z',
   expiresAt: null,

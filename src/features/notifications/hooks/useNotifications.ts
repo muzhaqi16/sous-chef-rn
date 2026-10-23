@@ -7,10 +7,12 @@ import {
   GetUnreadNotificationsDocument,
   NotificationSummaryDocument,
 } from '#features/notifications/graphql/notifications.generated';
+import { NotificationForEventDocument } from './useNotifications.generated';
 import {
-  UseNotifications_NotificationFragmentDoc,
-  type UseNotifications_NotificationFragment,
-} from './useNotifications.generated';
+  UseNotificationsOnLaunch_NotificationFragmentDoc,
+  type UseNotificationsOnLaunch_NotificationFragment,
+} from './useNotificationsOnLaunch.generated';
+import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import {
   NotificationType,
   NotificationCategory,
@@ -24,11 +26,9 @@ import { requirePlatform } from '#platform/install';
 import {
   getNotificationAction,
   getNotificationCopy,
+  isTestNotification,
 } from '#features/notifications/utils/notificationHelpers';
-import {
-  isNotificationPayload,
-  type NotificationPayload,
-} from '#features/notifications/types';
+import type { NotificationCopyData } from '#features/notifications/types';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import {
   addNotificationToFeed,
@@ -198,7 +198,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       id?: string;
       type?: NotificationType;
       priority?: Priority;
-      payload?: JsonValue | null;
+      data?: NotificationCopyData | null;
+      isTest?: boolean;
       sentAt?: string;
       expiresAt?: string | null;
       sourceId?: string | null;
@@ -212,12 +213,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     category: NotificationCategory,
     sourceUserId?: string,
   ) => {
-    // Narrow the untyped JSON payload to NotificationPayload at the boundary.
-    const payload: NotificationPayload = isNotificationPayload(
-      notification.payload,
-    )
-      ? notification.payload
-      : {};
     if (!finalConfig.showInAppNotifications) return;
 
     // Filter out notifications triggered by the current user
@@ -239,7 +234,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       type: resolvedType,
       category,
       priority: notification.priority ?? Priority.Normal,
-      payload,
+      data: notification.data ?? null,
+      isTest: notification.isTest,
       sentAt: notification.sentAt ?? new Date().toISOString(),
       expiresAt: notification.expiresAt,
       isRead: false,
@@ -254,12 +250,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       message: notification.message,
       requiresAction,
       actionType,
-      actionData: payload,
     };
 
-    // The entity is already normalized — the subscription delivered it. What
-    // is missing is the feed edge, scoped to the variants this notification
-    // belongs to. The count is re-seeded from the server by the caller.
+    // The read-back normalized the row. What is missing is the feed edge,
+    // scoped to the variants this notification belongs to. The count is
+    // re-seeded from the server by the caller.
     addNotificationToFeed(
       client.cache,
       user?.id,
@@ -285,6 +280,44 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     }
   };
 
+  /** Reads a new row back, then adds it to the feed. */
+  const addArrivedNotification = async (id: string) => {
+    const data = await fetchEventEntity(
+      client,
+      NotificationForEventDocument,
+      { id },
+      'Notification',
+    );
+    // Offline, or gone before it could be read: the feed's next read has it.
+    if (!data?.notification) return;
+    const row =
+      client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>({
+        fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+        fragmentName: 'useNotificationsOnLaunch_notification',
+        from: { __typename: 'Notification', id },
+      });
+    if (!row) return;
+    processNotification(
+      {
+        id: row.id,
+        type: row.type,
+        priority: row.priority,
+        data: row.data,
+        isTest: isTestNotification(row.payload),
+        sentAt: row.sentAt,
+        expiresAt: row.expiresAt,
+        sourceId: row.sourceId,
+        sourceType: row.sourceType,
+        actionUrl: row.actionUrl,
+        readAt: row.readAt,
+        isAuthoredContent: row.isAuthoredContent,
+        title: row.title,
+        message: row.message,
+      },
+      row.category ?? NotificationCategory.System,
+    );
+  };
+
   // Transport churn auto-reconnects; only other failures are warned about.
   const handleError = (error: Error) => {
     const subscriptionName = operationNameOf(NotificationEventsDocument);
@@ -299,6 +332,8 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   const notificationEventsSkip = config.skip === true || !user?.id;
   const notificationEvents = useSubscription(NotificationEventsDocument, {
     skip: notificationEventsSkip,
+    // The event carries the row's id and status only; a new row is read back.
+    fetchPolicy: 'no-cache',
     onData: ({ data }) => {
       const event = data.data?.notificationEvents;
       if (!event) return;
@@ -314,76 +349,44 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         return;
       }
 
-      const maskedNotification = event.node;
-      if (!maskedNotification) return;
-
-      // Dedicated read/dismiss transition subtypes only need the id — the
-      // server routes these as READ / DISMISSED, never as UPDATED.
-      if (event.subtype === NotificationSubtype.Read) {
-        // Apollo's own write of the payload already carries this, but stating
-        // it keeps the transition legible and covers a payload that omits it.
-        writeNotificationStatus(
-          client.cache,
-          maskedNotification.id,
-          NotificationStatus.Read,
-        );
-        reseedUnreadCount();
-        return;
-      }
-      if (event.subtype === NotificationSubtype.Dismissed) {
-        // Evicting rather than `applyNotificationRemoved`: the badge delta
-        // that helper applies is the part that cannot be trusted here.
-        evictNotification(client.cache, maskedNotification.id);
-        reseedUnreadCount();
-        return;
-      }
-
-      const rawNotification =
-        client.cache.readFragment<UseNotifications_NotificationFragment>({
-          fragment: UseNotifications_NotificationFragmentDoc,
-          fragmentName: 'useNotifications_notification',
-          from: { __typename: 'Notification', id: maskedNotification.id },
-        });
-      if (!rawNotification) return;
+      const { node } = event;
+      if (!node) return;
 
       switch (event.subtype) {
-        case NotificationSubtype.Created:
-          processNotification(
-            {
-              id: rawNotification.id,
-              type: rawNotification.type,
-              priority: rawNotification.priority,
-              payload: rawNotification.payload,
-              sentAt: rawNotification.sentAt,
-              expiresAt: rawNotification.expiresAt,
-              sourceId: rawNotification.sourceId,
-              sourceType: rawNotification.sourceType,
-              actionUrl: rawNotification.actionUrl,
-              readAt: rawNotification.readAt,
-              isAuthoredContent: rawNotification.isAuthoredContent,
-              title: rawNotification.title,
-              message: rawNotification.message,
-            },
-            rawNotification.category ?? NotificationCategory.System,
+        // Dedicated read/dismiss transition subtypes only need the id — the
+        // server routes these as READ / DISMISSED, never as UPDATED.
+        case NotificationSubtype.Read:
+          writeNotificationStatus(
+            client.cache,
+            node.id,
+            NotificationStatus.Read,
           );
+          reseedUnreadCount();
           break;
-        case NotificationSubtype.Updated: {
+        case NotificationSubtype.Dismissed:
+          // Evicting rather than `applyNotificationRemoved`: the badge delta
+          // that helper applies is the part that cannot be trusted here.
+          evictNotification(client.cache, node.id);
+          reseedUnreadCount();
+          break;
+        case NotificationSubtype.Created:
+          void addArrivedNotification(node.id);
+          break;
+        case NotificationSubtype.Updated:
           // Read/dismiss arrive as the dedicated subtypes handled above; the
           // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
-          const status = rawNotification.status;
-          if (status === NotificationStatus.Clicked) {
+          if (node.status === NotificationStatus.Clicked) {
             writeNotificationStatus(
               client.cache,
-              rawNotification.id,
+              node.id,
               NotificationStatus.Read,
             );
             reseedUnreadCount();
-          } else if (status === NotificationStatus.Expired) {
-            evictNotification(client.cache, rawNotification.id);
+          } else if (node.status === NotificationStatus.Expired) {
+            evictNotification(client.cache, node.id);
             reseedUnreadCount();
           }
           break;
-        }
       }
     },
     onError: (error: Error) => {

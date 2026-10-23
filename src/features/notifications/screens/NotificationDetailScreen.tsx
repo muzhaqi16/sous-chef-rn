@@ -10,6 +10,7 @@ import { SubScreen } from '#components/templates/SubScreen';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { useNotificationDetail } from '#features/notifications/hooks/useNotificationDetail';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import { RecommendedRecipeList } from '#features/recipes/ui/RecommendedRecipeList';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
@@ -39,10 +40,13 @@ export const NotificationDetailScreen: React.FC<
     );
   }
 
-  // payload is always a NotificationPayload object (narrowed at the ingestion
-  // boundary), so it can be read directly.
-  const payload = notification.payload;
+  const { data, details } = notification;
   const copy = getNotificationCopy(notification, t, today);
+  const recommended =
+    data?.__typename === 'RecipeRecommendationsNotificationData'
+      ? data.recipes
+      : [];
+  const message = <Text role="body">{copy.message}</Text>;
 
   return (
     <NotificationActionHandler>
@@ -61,17 +65,24 @@ export const NotificationDetailScreen: React.FC<
           </View>
 
           <View style={styles.content}>
-            <Text role="body" style={styles.message}>
-              {copy.message}
-            </Text>
+            <View style={styles.body}>
+              {recommended.length > 0 ? (
+                <RecommendedRecipeList
+                  recipes={recommended}
+                  fallback={message}
+                />
+              ) : (
+                message
+              )}
+            </View>
 
-            {!!payload.details && (
+            {!!details && (
               <View style={styles.detailsContainer}>
                 <Text role="label" tone="secondary" style={styles.detailsTitle}>
                   {t('labels.details')}
                 </Text>
                 <Text role="caption" tone="primary">
-                  {payload.details}
+                  {details}
                 </Text>
               </View>
             )}
@@ -125,7 +136,7 @@ const styles = StyleSheet.create(theme => ({
   content: {
     paddingTop: theme.spacing.lg,
   },
-  message: {
+  body: {
     marginBottom: theme.spacing.lg,
   },
   detailsContainer: {

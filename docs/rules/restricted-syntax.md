@@ -50,6 +50,7 @@ property, so the helper strips it before ESLint sees the entry.
 | `asRecord`                     | `as Record<…>`.                                                             |
 | `asKeyof`                      | `as keyof …`, and a key list asserted as `(keyof …)[]` or `Array<keyof …>`. |
 | `asTranslationKey`             | `as TranslationKey` / `as ParseKeys`.                                       |
+| `refetchNetworkStatus`         | `NetworkStatus.refetch`; use `executeRefreshWithFinally`.                   |
 
 `as any` and `as any[]` are not here: `@typescript-eslint/no-explicit-any`
 reports the `any` itself, everywhere. `optimisticResponseCast` overlaps

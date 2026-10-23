@@ -16,7 +16,7 @@ import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedChec
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
 import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
@@ -280,18 +280,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const leftElement = (() => {
     if (!showImage || !imageUrl) return null;
     return (
-      <View
-        style={[
-          commonStyles.listItemImageContainerCompact,
-          isPurchased && styles.dimmed,
-        ]}
-      >
-        <CachedImage
-          uri={imageUrl}
-          style={commonStyles.listItemImageCompact}
-          displaySize={48}
-        />
-      </View>
+      <RowThumbnail
+        uri={imageUrl}
+        style={isPurchased ? styles.dimmed : undefined}
+      />
     );
   })();
 

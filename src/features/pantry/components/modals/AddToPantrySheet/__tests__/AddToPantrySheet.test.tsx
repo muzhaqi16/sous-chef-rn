@@ -120,13 +120,18 @@ describe('AddToPantrySheet', () => {
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 
-  it('offers a receipt scan, which opens the receipt scanner', () => {
+  it('offers a receipt scan, which closes the sheet and opens the receipt scanner', () => {
     renderWithApollo(<AddToPantrySheet {...defaultProps} />);
-    const { receiptAction } = sheetProps.current;
-    expect(receiptAction).toEqual({
-      onPress: useAppNavigation().toReceiptScan,
-      accessibilityLabel: 'Add from a receipt',
-    });
+    const receiptAction = sheetProps.current.receiptAction as {
+      onPress: () => void;
+      accessibilityLabel: string;
+    };
+    expect(receiptAction.accessibilityLabel).toBe('Add from a receipt');
+
+    receiptAction.onPress();
+
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    expect(useAppNavigation().toReceiptScan).toHaveBeenCalledTimes(1);
   });
 
   it('renders without crashing when pantryId is undefined', () => {

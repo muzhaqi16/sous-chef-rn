@@ -6,6 +6,7 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
     store {
       id
       name
+      ...useReceiptReview_store
     }
     # No store is placed: the one to add, on confirm, for this receipt.
     proposedStore {

@@ -251,7 +251,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
       receiptAction={{
-        onPress: toReceiptScan,
+        // A receipt scan ends on the pantry, not back on this sheet.
+        onPress: () => {
+          onClose();
+          toReceiptScan();
+        },
         accessibilityLabel: t('addToPantry.fromReceipt'),
       }}
       exitingItems={state.exitingItems}

@@ -15,7 +15,7 @@ import {
   filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { logger } from '#/utils/environment';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
@@ -83,7 +83,6 @@ export function usePantryScreen() {
       stats,
       totalCount,
       loading,
-      isRefreshing,
       error: pantryError,
       hasResult,
       skipped,
@@ -279,18 +278,9 @@ export function usePantryScreen() {
     setLocationFilter(filter);
   };
 
-  // No `refreshing` flag to clear — the control reads Apollo's `networkStatus`
-  // (see `usePantryQuery`), which resets itself. The catch is still needed:
-  // `refetch()` rejects on a network error, and an uncaught rejection here is
-  // just noise on top of the error state the query already surfaces. Plain
-  // statements only in the try body, so the compiler still lowers this hook.
-  const handleRefresh = async () => {
-    try {
-      await refetch();
-    } catch {
-      logger.debug('Pantry pull-to-refresh failed; query error state stands');
-    }
-  };
+  // Set by this refresh only: a resync refetches the same query unseen.
+  const [isRefreshing, setRefreshing] = useState(false);
+  const handleRefresh = () => executeRefreshWithFinally(refetch, setRefreshing);
 
   const itemsFailure: PantryItemsFailure | null =
     itemsState === 'error' || itemsState === 'offline'

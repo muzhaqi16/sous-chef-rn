@@ -77,6 +77,7 @@ const seedRows = (rows: Array<{ id: string; status: NotificationStatus }>) =>
       category: 'SYSTEM',
       priority: 'NORMAL',
       payload: null,
+      data: null,
       actionUrl: null,
       sourceId: null,
       sourceType: null,

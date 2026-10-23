@@ -109,7 +109,10 @@ core and have no React Native in them. A host registers what shows them:
   (`outcomeHapticHasOneOwner.test.ts`).
 - **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
   alert raised before the app renders still shows. `AlertProvider` replaces it
-  with the app's dialog once it mounts.
+  with the app's dialog once it mounts. A button whose action presents native UI
+  (a scanner, the camera, a picker) sets `afterClose`, so the action runs once the
+  dialog's modal has gone; on iOS it would otherwise be presented from that
+  modal and stop responding.
 - **Haptics:** a control's press feedback (the `light()` on press-in) belongs
   to the control. An action's own haptic (the `selection` of a toggle, the
   `warning` of a delete or clear) is fired by the action, through the

@@ -118,7 +118,8 @@
       "sectionNotMatchedYet_one": "{{count}} rresht ende pa përputhje",
       "sectionNotMatchedYet_other": "{{count}} rreshta ende pa përputhje",
       "matchFailedTitle": "Produktet nuk u kërkuan dot",
-      "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt."
+      "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt.",
+      "storeWhereHint": "Ndryshon dyqanin"
     },
     "photoSend": {
       "title": "Ta dërgojmë foton për ta lexuar?",
@@ -129,10 +130,9 @@
       "sending": "Po dërgohet fotoja…"
     },
     "photoConsent": {
-      "title": "Të dërgohet një foto kur telefoni yt nuk e lexon dot një faturë?",
-      "body": "Telefoni yt i lexon vetë shumicën e faturave, dhe ato nuk largohen kurrë prej tij. Kur nuk mundet, {{appName}} e lexon faturën më saktë nga fotoja e saj sesa nga teksti. Me pëlqimin tënd, ajo foto dërgohet në serverin e {{appName}} dhe fshihet sapo të lexohet.\n\nNumrat e kartës, numrat e anëtarësisë dhe emrat që gjen telefoni yt mbulohen para se të dërgohet.",
-      "bodyUnmasked": "Telefoni yt i lexon vetë shumicën e faturave, dhe ato nuk largohen kurrë prej tij. Kur nuk mundet, {{appName}} e lexon faturën më saktë nga fotoja e saj sesa nga teksti. Me pëlqimin tënd, ajo foto dërgohet në serverin e {{appName}} dhe fshihet sapo të lexohet.\n\nNdërsa lexohet fotoja, serveri e sheh të gjithë faturën.",
-      "hint": "Zgjidh “Vetëm tekst” për të dërguar vetëm tekstin e faturës, pa numrat e kartës e të besnikërisë, kur telefoni yt nuk e lexon dot. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "title": "Të dërgohen fotot e faturave që telefoni yt nuk i lexon dot?",
+      "body": "Fotot lexohen më saktë se teksti. Numrat e kartës që gjen telefoni yt mbulohen më parë, dhe fotot fshihen sapo të lexohen. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "bodyUnmasked": "Fotot lexohen më saktë se teksti. Dërgohet e gjithë fatura, dhe fshihet sapo të lexohet. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
       "send": "Dërgo fotot",
       "textOnly": "Vetëm tekst"
     },

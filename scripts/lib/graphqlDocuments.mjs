@@ -92,6 +92,9 @@ const OWNED_BY_WRITER = new Set([
   // Follows the given pantry's stacks, which pantry writes change; read only by
   // the barcode lookup, under its own route's pantry.
   'Item.trackingUnit',
+  // A notification's payload typed, parsed on every read and fixed once the
+  // server writes the row: no mutation changes it.
+  'Notification.data',
 ]);
 export const isOwnedElsewhere = (parentType, field) =>
   /Connection$/.test(getNamedType(field.type).name) ||

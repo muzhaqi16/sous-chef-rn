@@ -43,7 +43,9 @@ import {
 } from '../../__tests__/helpers/receiptFixtures';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
+import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
 import {
@@ -988,6 +990,66 @@ describe('useReceiptReview', () => {
       });
     });
 
+    it('says where the store the header names is, and where the one the user picks is', async () => {
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: {
+              id: 'store-27',
+              name: 'Kroger #412',
+              address: '100 Main St',
+              storeNumber: '412',
+            },
+          },
+        },
+      });
+      const cache = makeCache();
+      // A store the user picks was read with its address by the picker.
+      cache.writeQuery({
+        query: SearchStoresDocument,
+        variables: { search: 'kroger', limit: 20 },
+        data: {
+          __typename: 'Query',
+          stores: {
+            __typename: 'StoreConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'StoreEdge',
+                node: {
+                  __typename: 'Store',
+                  id: 'store-99',
+                  name: 'Kroger #87',
+                  address: '200 Side St',
+                  storeNumber: '87',
+                },
+              },
+            ],
+          },
+        },
+      });
+      const { result } = await setup({ resolve, cache });
+      await waitFor(() =>
+        expect(result.current.review.storeLocation).toEqual({
+          address: '100 Main St',
+          storeNumber: '412',
+        }),
+      );
+
+      await act(async () => {
+        result.current.review.chooseStore({
+          id: 'store-99',
+          name: 'Kroger #87',
+        });
+      });
+
+      expect(result.current.review.storeLocation).toEqual({
+        address: '200 Side St',
+        storeNumber: '87',
+      });
+    });
+
     it('shows the store the header names, and adds at the one the user picks', async () => {
       const resolve = resolved();
       const { result, checkIn, addChosen } = await setup({ resolve });
@@ -1126,6 +1188,21 @@ describe('useReceiptReview', () => {
     });
   });
 
+  it('says where the shop it proposes to add is', async () => {
+    const resolve = proposing({
+      name: 'East End Food Co-Op',
+      address: '7516 Meade Street',
+    });
+    const { result } = await setup({ resolve });
+
+    await waitFor(() =>
+      expect(result.current.review.storeLocation).toEqual({
+        address: '7516 Meade Street',
+        storeNumber: null,
+      }),
+    );
+  });
+
   describe('offering a store the receipt would locate', () => {
     // The household's "Kroger", added before any receipt located it, and a
     // branch of that name, which has its address.
@@ -1245,6 +1322,44 @@ describe('useReceiptReview', () => {
       expect(result.current.review.store).toBeNull();
       expect(useReceiptDraftStore.getState().draft?.store).toBeUndefined();
       expect(result.current.review.proposedStoreName).toBe('Kroger');
+    });
+
+    // The check-in places a store with no place of its own where the receipt
+    // says, so the line keeps saying it once the offer is taken.
+    it("keeps the receipt's place on the line once the offered store is picked", async () => {
+      readByServer({
+        printedStore: { name: 'Kroger', address: '412 Main St' },
+      });
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: UseReceiptReview_StoreFragmentDoc,
+        fragmentName: 'useReceiptReview_store',
+        id: cache.identify({ __typename: 'Store', id: 'store-label' }),
+        data: {
+          __typename: 'Store',
+          id: 'store-label',
+          address: null,
+          storeNumber: null,
+        },
+      });
+      const { result } = await setup({ resolve: unplaced(OFFER), cache });
+      await waitFor(() =>
+        expect(result.current.review.storeOffer).toEqual(OFFER),
+      );
+      expect(result.current.review.storeLocation).toEqual({
+        address: '412 Main St',
+        storeNumber: null,
+      });
+
+      await act(async () => {
+        result.current.review.chooseStore(OFFER);
+      });
+
+      expect(result.current.review.store).toEqual(OFFER);
+      expect(result.current.review.storeLocation).toEqual({
+        address: '412 Main St',
+        storeNumber: null,
+      });
     });
 
     it('offers none for a receipt read on the phone: nothing would locate it', async () => {

@@ -118,7 +118,8 @@
       "sectionNotMatchedYet_one": "{{count}} línea aún sin coincidencia",
       "sectionNotMatchedYet_other": "{{count}} líneas aún sin coincidencia",
       "matchFailedTitle": "No se pudieron buscar los productos",
-      "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo."
+      "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo.",
+      "storeWhereHint": "Cambia la tienda"
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",
@@ -129,10 +130,9 @@
       "sending": "Enviando la foto…"
     },
     "photoConsent": {
-      "title": "¿Enviar una foto cuando tu teléfono no pueda leer un recibo?",
-      "body": "Tu teléfono lee la mayoría de los recibos por sí mismo, y esos nunca salen de él. Cuando no puede, {{appName}} lee el recibo con más precisión a partir de su foto que de su texto. Con tu permiso, esa foto se envía al servidor de {{appName}} y se elimina en cuanto se lee.\n\nLos números de tarjeta, los números de socio y los nombres que encuentra tu teléfono se tapan antes de enviarla.",
-      "bodyUnmasked": "Tu teléfono lee la mayoría de los recibos por sí mismo, y esos nunca salen de él. Cuando no puede, {{appName}} lee el recibo con más precisión a partir de su foto que de su texto. Con tu permiso, esa foto se envía al servidor de {{appName}} y se elimina en cuanto se lee.\n\nMientras se lee la foto, el servidor ve el recibo completo.",
-      "hint": "Elige «Solo texto» para enviar solo el texto del recibo, sin los números de tarjeta ni de fidelidad, cuando tu teléfono no pueda leerlo. Puedes cambiarlo en Ajustes de la app.",
+      "title": "¿Enviar fotos de los recibos que tu teléfono no puede leer?",
+      "body": "Las fotos se leen con más precisión que el texto. Los números de tarjeta que encuentra tu teléfono se tapan antes, y las fotos se eliminan en cuanto se leen. Puedes cambiarlo en Ajustes de la app.",
+      "bodyUnmasked": "Las fotos se leen con más precisión que el texto. Se envía el recibo completo, y se elimina en cuanto se lee. Puedes cambiarlo en Ajustes de la app.",
       "send": "Enviar fotos",
       "textOnly": "Solo texto"
     },

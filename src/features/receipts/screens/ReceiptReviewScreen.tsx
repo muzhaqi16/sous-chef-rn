@@ -10,13 +10,16 @@ import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { Reveal } from '#components/atoms/Reveal';
 import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconTone } from '#components/atoms/Icon';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
+import { storeBranchLabel } from '#features/catalog/ui/storeBranchLabel';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
+import { hitSlop } from '#/theme/foundations/sizes';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/app/useToday';
@@ -102,6 +105,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     merchant,
     store,
     proposedStoreName,
+    storeLocation,
     storeOffer,
     storeUnrecognized,
     purchasedOn,
@@ -138,6 +142,10 @@ export const ReceiptReviewScreen: React.FC = () => {
   const [storeText, setStoreText] = useState<string | null>(null);
   const storeTitle = store?.name ?? proposedStoreName ?? merchant;
   const showStore = storeUnrecognized || changingStore;
+  const toggleStore = () => setChangingStore(open => !open);
+  const storeWhere = storeLocation
+    ? storeBranchLabel(storeLocation, t)
+    : undefined;
 
   // Kept after closing, so the sheet animates out full.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -317,7 +325,7 @@ export const ReceiptReviewScreen: React.FC = () => {
       title={storeTitle ?? t('receipts.review.title')}
       {...(storeTitle && !storeUnrecognized
         ? {
-            onTitlePress: () => setChangingStore(open => !open),
+            onTitlePress: toggleStore,
             titleAccessory: (
               <ExpandChevron expanded={changingStore} tone="textPrimary" />
             ),
@@ -334,6 +342,31 @@ export const ReceiptReviewScreen: React.FC = () => {
         ListHeaderComponent={
           rows.length > 0 ? (
             <View style={styles.intro}>
+              {storeWhere ? (
+                <AppPressable
+                  onPress={toggleStore}
+                  disabled={storeUnrecognized}
+                  accessibilityRole="button"
+                  accessibilityLabel={storeWhere}
+                  accessibilityHint={t('receipts.review.storeWhereHint')}
+                  hitSlop={hitSlop.lg}
+                  style={styles.storeWhere}
+                  testID={receiptsTestIDs.reviewStoreWhere}
+                >
+                  <Icon
+                    name="location-outline"
+                    size="xs"
+                    tone="textSecondary"
+                  />
+                  <Text
+                    role="caption"
+                    tone="secondary"
+                    style={styles.storeWhereText}
+                  >
+                    {storeWhere}
+                  </Text>
+                </AppPressable>
+              ) : null}
               <View>
                 <Reveal open={showStore}>
                   <View style={styles.revealedStore}>
@@ -462,6 +495,14 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
+  },
+  storeWhere: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  storeWhereText: {
+    flexShrink: 1,
   },
   // A price over the discount that made it.
   price: {

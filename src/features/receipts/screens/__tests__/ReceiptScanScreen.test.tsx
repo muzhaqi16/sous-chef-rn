@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { userEvent } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ReceiptDraft } from '../../store/receiptDraftStore';
 import type { ReceiptScanStatus } from '../useReceiptScan';
@@ -19,16 +20,12 @@ jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
 }));
 
-const mockAnswerConsent = jest.fn();
 let mockScan: { status: ReceiptScanStatus; draft: ReceiptDraft | null };
-let mockMasksPhotos = true;
 jest.mock('../useReceiptScan', () => ({
   useReceiptScan: () => ({
     ...mockScan,
-    answerConsent: mockAnswerConsent,
     pickedFromLibrary: false,
     canSendPhotos: true,
-    masksPhotos: mockMasksPhotos,
     scan: jest.fn(),
     takePhoto: jest.fn(),
     pickPhoto: jest.fn(),
@@ -115,44 +112,10 @@ const SAVED: [
 beforeEach(() => {
   jest.clearAllMocks();
   mockReading = { readingStatus: 'none', slowPhotoRead: false };
-  mockMasksPhotos = true;
   jest.mocked(useFeatureFlag).mockReturnValue(true);
 });
 
 describe('ReceiptScanScreen', () => {
-  it('asks whether to send a photo of a receipt the phone cannot read, and passes the answer on', async () => {
-    mockScan = { status: 'consent', draft: null };
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-    const user = userEvent.setup();
-
-    expect(
-      screen.getByText("Send a photo when your phone can't read a receipt?"),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/Your phone reads most receipts itself/),
-    ).toBeTruthy();
-    expect(screen.getByText(/names your phone finds are covered/)).toBeTruthy();
-    expect(screen.queryByText(/the server sees the whole receipt/)).toBeNull();
-
-    await user.press(screen.getByText('Send photos'));
-    expect(mockAnswerConsent).toHaveBeenLastCalledWith('granted');
-    await user.press(screen.getByText('Use text only'));
-    expect(mockAnswerConsent).toHaveBeenLastCalledWith('declined');
-  });
-
-  it('says the server sees the whole photo where the build cannot mask it', () => {
-    mockScan = { status: 'consent', draft: null };
-    mockMasksPhotos = false;
-    const screen = renderWithApollo(<ReceiptScanScreen />);
-
-    expect(
-      screen.getByText(
-        /While the photo is read, the server sees the whole receipt/,
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/names your phone finds are covered/)).toBeNull();
-  });
-
   it.each([
     ['a code', ErrorCode.ValidationFailed],
     ['no code this build knows', null],
@@ -207,6 +170,21 @@ describe('ReceiptScanScreen', () => {
 
     expect(screen.getByText("Adding when you're back online")).toBeTruthy();
     expect(screen.queryByTestId(receiptsTestIDs.savedFailed)).toBeNull();
+  });
+
+  // The scanner presents over the app, never over the confirmation's modal.
+  it('opens the scanner for a replacement only once the confirmation has closed', () => {
+    mockScan = {
+      status: 'saved',
+      draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    fireEvent.press(screen.getByText('Scan another receipt'));
+
+    const [call] = jest.mocked(alertService.alert).mock.calls;
+    const replace = call?.[2]?.find(button => button.text === 'Replace');
+    expect(replace?.afterClose).toBe(true);
   });
 
   it.each(SAVED)(

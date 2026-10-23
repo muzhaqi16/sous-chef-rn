@@ -1,21 +1,9 @@
-fragment useNotifications_notification on Notification {
-  id
-  type
-  status
-  priority
-  # Gates whether `title`/`message` may be shown as written. A subscription
-  # node missing it is an INCOMPLETE entity for the feed's own read, which
-  # blanks the whole list rather than adding a row.
-  isAuthoredContent
-  title
-  message
-  payload
-  category
-  sentAt
-  expiresAt
-  sourceId
-  sourceType
-  pantryItemId
-  actionUrl
-  readAt
+# A live event's row, read back over HTTP: `NotificationEvents` carries only
+# the id, because a subscription is refused past depth 4 and the row's typed
+# `data` sits deeper. The feed's own fragment, so the row it adds is complete.
+query NotificationForEvent($id: ID!) {
+  notification(id: $id) {
+    id
+    ...useNotificationsOnLaunch_notification
+  }
 }

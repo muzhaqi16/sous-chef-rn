@@ -13,8 +13,6 @@ export const receiptsTestIDs = {
   savedQueued: 'receipt-scan-saved-queued',
   /** The ask to send a receipt the phone could not read as photos. */
   photoSend: 'receipt-photo-send',
-  /** The one-time ask whether receipts may be read from their photos. */
-  photoConsent: 'receipt-photo-consent',
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
   reviewTotalsGap: 'receipt-review-totals-gap',
@@ -22,6 +20,8 @@ export const receiptsTestIDs = {
   reviewListIncomplete: 'receipt-review-list-incomplete',
   /** The review's store field. */
   reviewStore: 'receipt-review-store',
+  /** Where the receipt's store is; opens the store field. */
+  reviewStoreWhere: 'receipt-review-store-where',
   /** A store on file with no address, offered to take the receipt's. */
   reviewStoreOffer: 'receipt-review-store-offer',
   /** The purchase date field; its calendar is the kit's `datePickerCalendar`. */

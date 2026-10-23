@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useFragment } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/app/useToday';
 import { errorService } from '#/services/errorService';
@@ -34,12 +34,14 @@ import {
   type CheckInLineToSend,
 } from './useReceiptCheckIn';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import { UseReceiptReview_StoreFragmentDoc } from './useReceiptReview.generated';
 import { useHeldStores } from './useHeldStores';
 import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
 import { storeOfferOf } from '../utils/storeOfferOf';
 import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { toDateKey } from '#/utils/dateUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
@@ -181,9 +183,23 @@ export function useReceiptReview() {
   const store =
     draft?.store ??
     (resolvedStore ? { id: resolvedStore.id, name: resolvedStore.name } : null);
+  // Read live by id: a store the user picks was read with its address.
+  const placed = useFragment({
+    fragment: UseReceiptReview_StoreFragmentDoc,
+    fragmentName: 'useReceiptReview_store',
+    from: store ? { __typename: 'Store', id: store.id } : null,
+  });
   // The server's reading, which the check-in locates an unlocated store from.
   const receiptParseId =
     draft?.parsedBy === 'server' ? draft.parseId : undefined;
+  const picked = placed.complete ? placed.data : null;
+  // A pick with no place of its own is placed where the receipt says on check-in.
+  const takesReceiptPlace =
+    !!picked &&
+    !!receiptParseId &&
+    !firstNonBlank(picked.address, picked.storeNumber);
+  const pickedPlace = takesReceiptPlace ? draft?.printedStore ?? null : picked;
+  const located = store ? pickedPlace : proposedStore;
   const heldStores = useHeldStores(listId);
   // Offered, never placed.
   const storeOffer = storeOfferOf(
@@ -375,6 +391,13 @@ export function useReceiptReview() {
     store,
     /** The shop the receipt names that is not on file; added on confirm. */
     proposedStoreName: proposedStore?.name ?? null,
+    /** Where the store, or the proposed one, is: which branch of a chain. */
+    storeLocation: located
+      ? {
+          address: firstNonBlank(located.address) ?? null,
+          storeNumber: located.storeNumber ?? null,
+        }
+      : null,
     /**
      * A store on file with no address that this receipt's address would
      * complete, offered before adding a new one; picked with `chooseStore`.

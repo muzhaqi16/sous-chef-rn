@@ -309,17 +309,4 @@ describe('useShoppingListDetails', () => {
     );
     expect(result.current.isShared).toBe(true);
   });
-
-  it('exposes isRefetching boolean from network status', async () => {
-    const { result } = renderHookWithApollo(
-      () => useShoppingListDetails('list-1'),
-      {
-        operationMocks: [buildDetailsMock('list-1', buildShoppingList())],
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(typeof result.current.isRefetching).toBe('boolean');
-    expect(result.current.isRefetching).toBe(false);
-  });
 });
