@@ -302,7 +302,18 @@
       "top": "Alto",
       "nutrition_label": "Valori nutrizionali",
       "ingredient_list": "Ingredienti"
-    }
+    },
+    "householdPhoto": "La foto della tua casa"
+  },
+  "entryPhoto": {
+    "title": "Foto per la tua casa",
+    "privacyNote": "Solo le persone della tua casa vedono questa foto. Il catalogo mantiene la sua.",
+    "pickItemPhoto": "Usa una delle foto di questo articolo",
+    "useCatalogPhoto": "Usa la foto del catalogo",
+    "useThisPhoto": "Usa questa foto",
+    "saving": "Salvataggio della foto…",
+    "failedTitle": "Impossibile cambiare la foto",
+    "failedBody": "La foto è rimasta com'era. Controlla la connessione e riprova."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" non è un'unità che riconosciamo. Scegline una dall'elenco.",

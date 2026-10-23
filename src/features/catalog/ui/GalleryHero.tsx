@@ -11,6 +11,8 @@ interface GalleryHeroProps {
   photos: readonly ItemPhotoRef[] | null | undefined;
   /** Fallback image URL for items with no photo rows yet. */
   fallbackImageUrl?: string | null;
+  /** A household's own photo, leading the item's (`entryGallery`). */
+  leadImageUrl?: string | null;
   /** Hero height supplied by CollapsingHeroDetail's renderHero callback. */
   height: number;
   /** Opens the fullscreen viewer at the tapped page. */
@@ -28,6 +30,7 @@ interface GalleryHeroProps {
 export const GalleryHero: React.FC<GalleryHeroProps> = ({
   photos,
   fallbackImageUrl,
+  leadImageUrl,
   height,
   onPhotoPress,
   onUnrenderable,
@@ -35,6 +38,7 @@ export const GalleryHero: React.FC<GalleryHeroProps> = ({
   <ItemPhotoCarousel
     photos={photos}
     fallbackImageUrl={fallbackImageUrl}
+    leadImageUrl={leadImageUrl}
     imageHeight={height}
     resizeMode="cover"
     style={styles.heroInner}

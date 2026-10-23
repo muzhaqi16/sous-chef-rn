@@ -62,6 +62,8 @@ interface ItemPhotoCarouselProps {
   photos: readonly ItemPhotoRef[] | null | undefined;
   /** Shown when the item has no photos yet (the single-asset `imageUrl`). */
   fallbackImageUrl?: string | null;
+  /** A household's own photo, leading the item's: no viewer, no credit. */
+  leadImageUrl?: string | null;
   /** Container style */
   style?: ViewStyle;
   /** Image height (default: 200) */
@@ -94,6 +96,7 @@ interface ItemPhotoCarouselProps {
 export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   photos,
   fallbackImageUrl,
+  leadImageUrl,
   style,
   imageHeight = 200,
   resizeMode = 'contain',
@@ -102,11 +105,19 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   onPhotoPress,
   onUnrenderable,
 }) => {
+  const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const [pageWidth, setPageWidth] = useState(windowWidth);
   const [index, setIndex] = useState(0);
 
-  const pages = galleryPhotos(photos);
+  const leadPages: CarouselPage[] = leadImageUrl
+    ? [{ kind: 'lead', uri: leadImageUrl }]
+    : [];
+  // `photoIndex` stays the photo's own index, so the viewer it opens lines up.
+  const photoPages = galleryPhotos(photos).map(
+    (ref, photoIndex): CarouselPage => ({ kind: 'photo', ref, photoIndex }),
+  );
+  const pages = [...leadPages, ...photoPages];
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
@@ -166,18 +177,31 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
           index: i,
         })}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item, index: pageIndex }) => (
-          <PhotoPage
-            photoRef={item}
-            width={pageWidth}
-            height={imageHeight}
-            resizeMode={resizeMode}
-            creditDotsOffset={creditDotsOffset}
-            showDots={showDots}
-            onPress={onPhotoPress ? () => onPhotoPress(pageIndex) : undefined}
-            onFailed={pages.length === 1 ? onUnrenderable : undefined}
-          />
-        )}
+        renderItem={({ item: page }) =>
+          page.kind === 'lead' ? (
+            <PhotoFrame
+              uri={page.uri}
+              width={pageWidth}
+              height={imageHeight}
+              resizeMode={resizeMode}
+              accessibilityLabel={t('itemPhotos.householdPhoto')}
+              onFailed={pages.length === 1 ? onUnrenderable : undefined}
+            />
+          ) : (
+            <PhotoPage
+              photoRef={page.ref}
+              width={pageWidth}
+              height={imageHeight}
+              resizeMode={resizeMode}
+              creditDotsOffset={creditDotsOffset}
+              showDots={showDots}
+              onPress={
+                onPhotoPress ? () => onPhotoPress(page.photoIndex) : undefined
+              }
+              onFailed={pages.length === 1 ? onUnrenderable : undefined}
+            />
+          )
+        }
       />
 
       {/* Page dots: in-flow strip below the photo, or floated over its bottom
@@ -204,6 +228,10 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
     </View>
   );
 };
+
+type CarouselPage =
+  | { kind: 'lead'; uri: string }
+  | { kind: 'photo'; ref: ItemPhotoRef; photoIndex: number };
 
 /**
  * One page. Reads its own fragment (Pattern A) rather than the carousel reading

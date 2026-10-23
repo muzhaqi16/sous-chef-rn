@@ -28,6 +28,11 @@ fragment SortableItem_item on ShoppingListItem {
       decimalPlaces
     }
   }
+  # The photo this entry shows: the household's choice, else the catalog's.
+  image {
+    url
+    source
+  }
   item {
     id
     imageUrl

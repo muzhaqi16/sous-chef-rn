@@ -39,6 +39,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   netWeight: null,
   netWeightUnit: null,
   id: 'si1',
+  image: null,
   itemName: 'Lemon juice',
   quantity: 1,
   quantityInput: '1',

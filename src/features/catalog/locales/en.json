@@ -302,7 +302,18 @@
       "top": "Top",
       "nutrition_label": "Nutrition",
       "ingredient_list": "Ingredients"
-    }
+    },
+    "householdPhoto": "Your home's photo"
+  },
+  "entryPhoto": {
+    "title": "Photo for your home",
+    "privacyNote": "Only people in your home see this photo. The catalog keeps its own.",
+    "pickItemPhoto": "Use one of this item's photos",
+    "useCatalogPhoto": "Use the catalog photo",
+    "useThisPhoto": "Use this photo",
+    "saving": "Saving the photo…",
+    "failedTitle": "Couldn't change the photo",
+    "failedBody": "The photo is as it was. Check your connection and try again."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" isn't a unit we recognise. Pick one from the list.",

@@ -87,6 +87,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     itemName: item.itemName ?? `Item ${item.id}`,
     quantity: item.quantity ?? 1,
     heldQuantity: item.heldQuantity ?? item.quantity ?? 1,
+    image: null,
     // Shown in the unit it counts in, as the server shows a stack of pieces.
     displayAmount: {
       __typename: 'DisplayAmount',

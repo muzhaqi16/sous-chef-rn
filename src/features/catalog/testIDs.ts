@@ -13,6 +13,15 @@ export const catalogTestIDs = {
   dropdownSpacer: 'dropdown-spacer',
   /** `ItemPhotoViewer`'s "report wrong photo" on a public item's photo. */
   photoViewerReportButton: 'photo-viewer-report-button',
+  /** `ItemPhotoViewer`'s "use this photo" for a household's entries. */
+  photoViewerUseButton: 'photo-viewer-use-button',
+  /** A detail screen's "change photo", and `EntryPhotoSheet`'s choices. */
+  entryPhotoChangeButton: 'entry-photo-change-button',
+  entryPhotoSheet: 'entry-photo-sheet',
+  entryPhotoTake: 'entry-photo-take',
+  entryPhotoChoose: 'entry-photo-choose',
+  entryPhotoPickItemPhoto: 'entry-photo-pick-item-photo',
+  entryPhotoUseCatalog: 'entry-photo-use-catalog',
   /** `PhotoCredit`: a licensed photo's credit and licence links. */
   photoCreditSource: 'photo-credit-source',
   photoCreditLicense: 'photo-credit-license',

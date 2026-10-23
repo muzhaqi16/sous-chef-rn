@@ -14,7 +14,8 @@ import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
-import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
+import { entryGallery } from '#features/catalog/ui/entryGallery';
 import { hasNutritionData } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -115,6 +116,7 @@ export const ShoppingListItemDetail: React.FC<
 
   const reportPhotoActions = useReportPhotoHeaderAction(
     detail?.item,
+    detail?.image,
     shoppingListTestIDs.itemDetailReportPhotoButton,
   );
 
@@ -135,9 +137,10 @@ export const ShoppingListItemDetail: React.FC<
     item?.netWeightUnit,
   );
 
-  const itemPhotos = galleryPhotos(detail?.item?.photos);
+  const gallery = entryGallery(detail?.image, detail?.item?.photos);
+  const itemPhotos = gallery.photos;
   const nutritionFacts = detail?.item?.nutritionFacts ?? null;
-  const showImages = itemPhotos.length > 0;
+  const showImages = itemPhotos.length > 0 || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
 
   if (notFound || !item) {
@@ -256,6 +259,7 @@ export const ShoppingListItemDetail: React.FC<
                   <GalleryHero
                     photos={itemPhotos}
                     fallbackImageUrl={imageUrl}
+                    leadImageUrl={gallery.leadImageUrl}
                     height={heroHeight}
                     onPhotoPress={setViewerIndex}
                     // The collapse guard for the gallery branch: a dead CDN url

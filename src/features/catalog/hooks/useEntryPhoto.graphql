@@ -1,0 +1,59 @@
+# The photo a household's entries for one catalog item show. Each write answers
+# with every live entry of the household for the item, so the rows and the
+# detail settle from the response with no refetch.
+
+mutation UpdateHomeItemPhoto($input: UpdateHomeItemPhotoInput!) {
+  updateHomeItemPhoto(input: $input) {
+    __typename
+    ... on HomeItemPhotoPayload {
+      homeId
+      item {
+        id
+        ...ItemReaders
+      }
+      pantryItems {
+        id
+        ...PantryItemReaders
+      }
+      shoppingListItems {
+        id
+        ...ShoppingListItemReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation DeleteHomeItemPhoto($input: DeleteHomeItemPhotoInput!) {
+  deleteHomeItemPhoto(input: $input) {
+    __typename
+    ... on HomeItemPhotoPayload {
+      homeId
+      item {
+        id
+        ...ItemReaders
+      }
+      pantryItems {
+        id
+        ...PantryItemReaders
+      }
+      shoppingListItems {
+        id
+        ...ShoppingListItemReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

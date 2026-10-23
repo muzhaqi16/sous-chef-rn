@@ -13,6 +13,7 @@ const sentReport = () =>
     data: {
       markItemForReview: {
         __typename: 'MarkItemForReviewPayload',
+        alreadyReported: false,
         item: { id: 'item-1' },
       },
     },
@@ -86,6 +87,28 @@ describe('useReportWrongPhoto', () => {
         'Report sent',
         expect.stringContaining('admin'),
       ),
+    );
+  });
+
+  it('names the photo on screen when it is given', async () => {
+    const { mock, fired } = sentReport();
+    const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
+      operationMocks: [mock],
+    });
+
+    result.current.reportWrongPhoto('item-1', 'photo-9');
+    press('Report');
+
+    await waitFor(() =>
+      expect(fired).toEqual([
+        {
+          input: {
+            itemId: 'item-1',
+            reason: 'The photo shows a different product.',
+            imageId: 'photo-9',
+          },
+        },
+      ]),
     );
   });
 });

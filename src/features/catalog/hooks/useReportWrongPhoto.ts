@@ -10,7 +10,8 @@ export function useReportWrongPhoto() {
   const { t } = useTranslation();
   const { reportItem, loading } = useReportItem();
 
-  const reportWrongPhoto = (itemId: string) => {
+  /** `imageId`: the approved photo on screen, which the report names. */
+  const reportWrongPhoto = (itemId: string, imageId?: string) => {
     alertService.alert(
       t('reportItem.wrongPhotoConfirmTitle'),
       t('reportItem.wrongPhotoConfirmBody'),
@@ -19,7 +20,7 @@ export function useReportWrongPhoto() {
         {
           text: t('reportItem.wrongPhotoConfirm'),
           onPress: () => {
-            void reportItem(itemId, t('reportItem.wrongPhotoReason'));
+            void reportItem(itemId, t('reportItem.wrongPhotoReason'), imageId);
           },
         },
       ],

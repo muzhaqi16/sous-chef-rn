@@ -18,6 +18,11 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   category
   createdAt
   displayFormat
+  image {
+    catalogImageId
+    source
+    url
+  }
   item {
     id
     canEdit

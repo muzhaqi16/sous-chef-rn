@@ -200,6 +200,10 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
   # Store mode groups by it; a write that leaves it out blanks the row.
   storeDepartment
   storeDepartmentOverride
+  image {
+    url
+    source
+  }
   item {
     id
     imageUrl

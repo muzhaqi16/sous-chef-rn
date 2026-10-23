@@ -77,6 +77,14 @@ interface ItemPhotoViewerProps {
    * instead. Omitted means read-only — no affordance.
    */
   item?: (Parameters<typeof writesItemDirectly>[0] & { id: string }) | null;
+  /**
+   * A household entry's photo: "use this photo" on an approved photo other
+   * than the one its entries show. Omitted means not offered.
+   */
+  entryPhoto?: {
+    currentPhotoId: string | null;
+    onUse: (photoId: string) => void;
+  } | null;
 }
 
 /**
@@ -90,6 +98,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   initialIndex,
   onClose,
   item,
+  entryPhoto,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -177,6 +186,13 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
             <ReportPhotoAction
               photoRef={photos[index]}
               itemId={reportableItemId}
+            />
+          )}
+          {!!entryPhoto && !!photos[index] && (
+            <UsePhotoAction
+              photoRef={photos[index]}
+              currentPhotoId={entryPhoto.currentPhotoId}
+              onUse={entryPhoto.onUse}
             />
           )}
           <View style={styles.captionStack} pointerEvents="none">
@@ -451,7 +467,7 @@ const ReportPhotoAction: React.FC<{
   return (
     <Pressable
       style={styles.captionAction}
-      onPress={() => reportWrongPhoto(itemId)}
+      onPress={() => reportWrongPhoto(itemId, photo.id)}
       accessibilityRole="button"
       accessibilityState={{ busy: loading }}
       accessibilityLabel={t('reportItem.wrongPhotoAction')}
@@ -460,6 +476,36 @@ const ReportPhotoAction: React.FC<{
       <Icon name="flag-outline" size={14} tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('reportItem.wrongPhotoAction')}
+      </Text>
+    </Pressable>
+  );
+};
+
+/**
+ * "Use this photo" for a household's entries. An APPROVED photo only: the
+ * server refuses a pending one, and the current choice is already in use.
+ */
+const UsePhotoAction: React.FC<{
+  photoRef: ItemPhotoRef;
+  currentPhotoId: string | null;
+  onUse: (photoId: string) => void;
+}> = ({ photoRef, currentPhotoId, onUse }) => {
+  const { t } = useTranslation();
+  const photo = useItemPhoto(photoRef);
+  if (!photo || photo.status !== ItemImageStatus.Approved) return null;
+  if (photo.id === currentPhotoId) return null;
+
+  return (
+    <Pressable
+      style={styles.captionAction}
+      onPress={() => onUse(photo.id)}
+      accessibilityRole="button"
+      accessibilityLabel={t('entryPhoto.useThisPhoto')}
+      testID={catalogTestIDs.photoViewerUseButton}
+    >
+      <Icon name="checkmark-circle-outline" size={14} tone="onScrim" />
+      <Text role="label" style={styles.captionText}>
+        {t('entryPhoto.useThisPhoto')}
       </Text>
     </Pressable>
   );

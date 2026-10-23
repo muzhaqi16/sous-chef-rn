@@ -228,6 +228,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
   > = {
     __typename: 'ShoppingListItem',
     id: 'item-1',
+    image: null,
     itemName: 'Milk',
     quantity: 1,
     quantityInput: null,

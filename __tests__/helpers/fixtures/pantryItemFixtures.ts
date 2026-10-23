@@ -52,6 +52,8 @@ export interface PantryItemFixture {
   canSuggest?: boolean;
   /** The catalog item's approved main photo. */
   imageUrl?: string | null;
+  /** The photo the entry shows (`PantryItem.image`); none by default. */
+  image?: PantryItemNode['image'];
 }
 
 function unit(
@@ -88,6 +90,7 @@ export function pantryItemData(
       id,
       pantryId: 'p1',
       itemId: 'item1',
+      image: fixture.image ?? null,
       itemName: fixture.itemName ?? 'Milk',
       quantity: fixture.quantity ?? 2,
       heldQuantity: held,

@@ -9,6 +9,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
+import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { alertService } from '#/services/alertService';
 import { ItemPhotoViewer } from '../ItemPhotoViewer';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
@@ -153,6 +154,65 @@ describe('ItemPhotoViewer report action', () => {
       expect.any(String),
       expect.any(Array),
     );
+  });
+
+  it('names the photo on screen in the report', async () => {
+    const report = recordMock(MarkItemForReviewDocument, {
+      data: {
+        markItemForReview: {
+          __typename: 'MarkItemForReviewPayload',
+          alreadyReported: false,
+          item: { id: 'item-1' },
+        },
+      },
+    });
+    renderViewer({ item: PUBLIC_ITEM }, [report.mock]);
+
+    fireEvent.press(screen.getByLabelText('Report wrong photo'));
+    const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
+    buttons?.find(button => button.text === 'Report')?.onPress?.();
+
+    await waitFor(() =>
+      expect(report.fired).toEqual([
+        expect.objectContaining({
+          input: expect.objectContaining({ imageId: 'photo-1' }),
+        }),
+      ]),
+    );
+  });
+});
+
+describe('ItemPhotoViewer use-this-photo action', () => {
+  const choice = (currentPhotoId: string | null, onUse = jest.fn()) => ({
+    currentPhotoId,
+    onUse,
+  });
+
+  it("uses the approved photo on screen for the household's entries", () => {
+    const onUse = jest.fn();
+    renderViewer({ entryPhoto: choice(null, onUse) });
+
+    fireEvent.press(screen.getByLabelText('Use this photo'));
+
+    expect(onUse).toHaveBeenCalledWith('photo-1');
+  });
+
+  it('is hidden on the photo the entries already show', () => {
+    renderViewer({ entryPhoto: choice('photo-1') });
+    expect(screen.queryByLabelText('Use this photo')).toBeNull();
+  });
+
+  it('is hidden for a pending photo, which the server refuses', () => {
+    renderViewer({
+      photos: [photo('photo-1', { status: ItemImageStatus.Pending })],
+      entryPhoto: choice(null),
+    });
+    expect(screen.queryByLabelText('Use this photo')).toBeNull();
+  });
+
+  it('is not offered without a household choice to make', () => {
+    renderViewer({ item: PUBLIC_ITEM });
+    expect(screen.queryByLabelText('Use this photo')).toBeNull();
   });
 });
 

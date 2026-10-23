@@ -302,7 +302,18 @@
       "top": "Lart",
       "nutrition_label": "Ushqyesit",
       "ingredient_list": "Përbërësit"
-    }
+    },
+    "householdPhoto": "Fotoja e shtëpisë sate"
+  },
+  "entryPhoto": {
+    "title": "Foto për shtëpinë tënde",
+    "privacyNote": "Vetëm njerëzit e shtëpisë sate e shohin këtë foto. Katalogu mban të vetën.",
+    "pickItemPhoto": "Përdor një nga fotot e këtij artikulli",
+    "useCatalogPhoto": "Përdor foton e katalogut",
+    "useThisPhoto": "Përdor këtë foto",
+    "saving": "Po ruhet fotoja…",
+    "failedTitle": "Fotoja nuk u ndryshua",
+    "failedBody": "Fotoja mbeti siç ishte. Kontrollo lidhjen dhe provo përsëri."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" nuk është njësi që e njohim. Zgjidhni një nga lista.",

@@ -79,6 +79,13 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       avatar
     }
   }
+  # The photo this entry shows: the household's choice, else the catalog's.
+  # `catalogImageId` names the item photo it is, so the hero can lead with it.
+  image {
+    url
+    source
+    catalogImageId
+  }
   item {
     id
     # With canSuggest, gates the photo viewer's "set as main photo" action
