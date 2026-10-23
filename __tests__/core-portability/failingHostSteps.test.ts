@@ -48,6 +48,9 @@ const HOSTS: [string, SessionHost][] = [
       postSignInGate: () => Promise.reject(fail('postSignInGate')),
       forgetStoredSignIn: () => Promise.reject(fail('forgetStoredSignIn')),
       renewStoredSignIn: () => Promise.reject(fail('renewStoredSignIn')),
+      onSessionEnd: () => {
+        throw fail('onSessionEnd');
+      },
     },
   ],
   [
@@ -64,6 +67,9 @@ const HOSTS: [string, SessionHost][] = [
       },
       renewStoredSignIn: () => {
         throw fail('renewStoredSignIn');
+      },
+      onSessionEnd: () => {
+        throw fail('onSessionEnd');
       },
     },
   ],
@@ -136,7 +142,10 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
     expect(state.user).toBeNull();
     expect(state.accessToken).toBeNull();
     expect(state.navigationState).toBe('auth');
-    expect(reportedSteps(report)).toEqual(['sessionHost.forgetStoredSignIn']);
+    expect(reportedSteps(report)).toEqual([
+      'sessionHost.forgetStoredSignIn',
+      'sessionHost.onSessionEnd',
+    ]);
   });
 
   // A password change this session survived: a failed renewal is the host's

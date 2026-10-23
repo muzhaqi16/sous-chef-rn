@@ -1,5 +1,6 @@
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { errorService } from '#/services/errorService';
+import { registerSessionTeardown } from '#store/sessionTeardown';
 
 /** What follows a password sign-in before the app opens, if anything. */
 export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
@@ -37,6 +38,8 @@ export interface SessionHost {
    * `none` when there was none.
    */
   renewStoredSignIn(email: string): Promise<StoredSignInRenewal>;
+  /** As any session ends, before the transports stop: the host's own state. */
+  onSessionEnd(): void;
 }
 
 /** What each step settles to when it fails: the session goes on without it. */
@@ -45,6 +48,7 @@ const NO_HOST_STEPS: SessionHost = {
   postSignInGate: () => Promise.resolve(null),
   forgetStoredSignIn: () => Promise.resolve(),
   renewStoredSignIn: () => Promise.resolve('none'),
+  onSessionEnd: () => {},
 };
 
 const reportStep = (step: keyof SessionHost, error: unknown): void => {
@@ -90,6 +94,13 @@ const guarded = (steps: SessionHost): SessionHost => ({
       () => steps.renewStoredSignIn(email),
       () => NO_HOST_STEPS.renewStoredSignIn(email),
     ),
+  onSessionEnd: () => {
+    try {
+      steps.onSessionEnd();
+    } catch (error) {
+      reportStep('onSessionEnd', error);
+    }
+  },
 });
 
 let host: SessionHost = NO_HOST_STEPS;
@@ -101,6 +112,9 @@ let host: SessionHost = NO_HOST_STEPS;
  */
 export const registerSessionHost = (steps: SessionHost): void => {
   host = guarded(steps);
+  registerSessionTeardown('session-host', () => {
+    host.onSessionEnd();
+  });
 };
 
 export const sessionHost = (): SessionHost => host;

@@ -37,6 +37,7 @@ const HOST: SessionHost = {
   postSignInGate: () => Promise.resolve(null),
   forgetStoredSignIn: () => Promise.resolve(),
   renewStoredSignIn,
+  onSessionEnd: () => {},
 };
 
 const INPUT = { currentPassword: 'OldPass1', newPassword: 'NewPass1' };

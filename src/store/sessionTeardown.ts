@@ -32,7 +32,7 @@ export const registerSessionTeardown = (
  */
 const TEARDOWN_ORDER: readonly string[] = [
   'refresh-token-revoke',
-  'devicePushToken',
+  'session-host',
   'token-refresh',
   'notification-reseed',
   'offline-queue',
