@@ -28,6 +28,25 @@ Example (type):
 directive @auth on FIELD_DEFINITION | OBJECT
 
 """
+Mark a field whose value is derived on each read from rows beyond its own
+object's columns and relations: a per-viewer figure, an aggregate, a
+cross-entity match, an analytic.
+
+It is metadata for clients and changes no execution. A client cache refreshes
+such a field by re-querying it, not by selecting it in every mutation that
+returns the object: a write to the object does not store the value, and
+reading it costs a computation each time.
+
+A column or a relation of the object never carries it.
+
+Example:
+  type Recipe {
+    matchPercentage: Int! @computed
+  }
+"""
+directive @computed on FIELD_DEFINITION
+
+"""
 Mark a field as supporting OPTIONAL authentication.
 
 - If the caller provides a valid JWT, the resolver sees a populated
@@ -1477,9 +1496,109 @@ enum ChangeType {
   WEIGHT_CORRECTED
 }
 
+"""
+Someone accepted the recipient's invitation to a shared list (COLLABORATION_ACCEPTED).
+"""
+type CollaborationAcceptedNotificationData {
+  """The user who accepted."""
+  accepterId: ID!
+  """The display name of who accepted."""
+  accepterName: String!
+  """Their collaborator record."""
+  collaboratorId: ID!
+  """The shared list."""
+  listId: ID!
+  """The list's name when the invitation was accepted."""
+  listName: String!
+  """The role they joined with."""
+  role: CollaboratorRole!
+}
+
+"""
+Someone declined the recipient's invitation to a shared list (COLLABORATION_DECLINED).
+"""
+type CollaborationDeclinedNotificationData {
+  """Their collaborator record."""
+  collaboratorId: ID!
+  """The user who declined."""
+  declinerId: ID!
+  """The display name of who declined."""
+  declinerName: String!
+  """The shared list."""
+  listId: ID!
+  """The list's name when the invitation was declined."""
+  listName: String!
+}
+
+"""
+An invitation to collaborate on a shopping list (COLLABORATION_INVITE).
+"""
+type CollaborationInviteNotificationData {
+  """The invitation."""
+  inviteId: ID!
+  """The inviter's email address, when they shared one."""
+  inviterEmail: EmailAddress
+  """The inviting user."""
+  inviterId: ID!
+  """The inviter's display name when the invitation was sent."""
+  inviterName: String!
+  """The list the recipient is invited to."""
+  listId: ID!
+  """The list's name when the invitation was sent."""
+  listName: String!
+  """The role the invitation grants."""
+  role: CollaboratorRole!
+  """The token that accepts or declines the invitation."""
+  token: String!
+}
+
 """Order by options for collaborators"""
 input CollaboratorOrderBy {
   invitedAt: SortOrder
+}
+
+"""
+The recipient's permissions on a shared list changed (COLLABORATOR_PERMISSIONS_UPDATED).
+"""
+type CollaboratorPermissionsUpdatedNotificationData {
+  """Whether the recipient may now add items."""
+  canAddItems: Boolean!
+  """Whether the recipient may now edit the list."""
+  canEdit: Boolean!
+  """Whether the recipient may now edit items."""
+  canEditItems: Boolean!
+  """Whether the recipient may now invite others."""
+  canInviteOthers: Boolean!
+  """Whether the recipient may now mark items purchased."""
+  canMarkPurchased: Boolean!
+  """Whether the recipient may now remove items."""
+  canRemoveItems: Boolean!
+  """The permission names that changed."""
+  changedFields: [String!]!
+  """The user who changed the permissions."""
+  changerId: ID!
+  """The display name of who changed the permissions."""
+  changerName: String!
+  """The recipient's collaborator record."""
+  collaboratorId: ID!
+  """The shared list."""
+  listId: ID!
+  """The list's name at the time, null when it was not known."""
+  listName: String
+}
+
+"""The recipient was removed from a shared list (COLLABORATOR_REMOVED)."""
+type CollaboratorRemovedNotificationData {
+  """The recipient's collaborator record."""
+  collaboratorId: ID!
+  """The list the recipient left."""
+  listId: ID!
+  """The list's name at the time, null when it was not known."""
+  listName: String
+  """The user who removed them."""
+  removerId: ID!
+  """The display name of who removed them."""
+  removerName: String!
 }
 
 """
@@ -1498,6 +1617,26 @@ enum CollaboratorRole {
   SHOPPER
   """Read-only access to view the list and its items"""
   VIEWER
+}
+
+"""
+The recipient's role on a shared list changed (COLLABORATOR_ROLE_CHANGED).
+"""
+type CollaboratorRoleChangedNotificationData {
+  """The user who changed the role."""
+  changerId: ID!
+  """The display name of who changed the role."""
+  changerName: String!
+  """The recipient's collaborator record."""
+  collaboratorId: ID!
+  """The shared list."""
+  listId: ID!
+  """The list's name at the time, null when it was not known."""
+  listName: String
+  """The role after the change."""
+  newRole: CollaboratorRole!
+  """The role before the change."""
+  previousRole: CollaboratorRole!
 }
 
 enum CollaboratorStatus {
@@ -1791,6 +1930,24 @@ input CookingLogOrderBy {
 enum CookingLogSubtype {
   """A cooking log was created, updated, or deleted."""
   COOKING_LOG_CHANGED
+}
+
+"""It is time to start cooking a planned recipe (COOKING_REMINDER)."""
+type CookingReminderNotificationData {
+  """Its meal plan."""
+  mealPlanId: ID!
+  """The meal-plan entry."""
+  mealPlanItemId: ID!
+  """The meal's local time, as HH:MM."""
+  mealTime: String!
+  """Which meal of the day it is."""
+  mealType: MealType!
+  """The recipe to cook."""
+  recipeId: ID!
+  """The recipe's name when the reminder was sent."""
+  recipeName: String!
+  """The minutes the recipe takes, as the reminder counted them."""
+  totalTimeMinutes: Int!
 }
 
 """How much cooking experience a dietary profile claims."""
@@ -4588,6 +4745,42 @@ enum ExpirationNotificationType {
   WEEKLY_DIGEST
 }
 
+"""A weekly digest of expiring items (EXPIRY_REMINDER)."""
+type ExpiryDigestNotificationData {
+  """How many items the digest covers."""
+  itemCount: Int!
+  """Each item the digest covers."""
+  items: [NotificationPantryItem!]!
+  """The soonest expiry date among them, null when none had one."""
+  soonestExpiresOn: LocalDate
+}
+
+"""One expiring pantry item or package (EXPIRY_REMINDER)."""
+type ExpiryReminderNotificationData {
+  """How many packages of the item were active when the reminder was sent."""
+  activeBatchCount: Int!
+  """When the package was added, null without package tracking."""
+  batchAddedAt: DateTime
+  """The package's number within its item, null without package tracking."""
+  batchNumber: Int
+  """When the package was opened, null when it was not."""
+  batchOpenedAt: DateTime
+  """Days from the reminder to the expiry date."""
+  daysUntilExpiry: Int!
+  """The expiry date, null when none was set."""
+  expiresOn: LocalDate
+  """Whether the item held more than one active package."""
+  isMultiBatch: Boolean!
+  """The item's name when the reminder was sent."""
+  itemName: String!
+  """
+  The package the reminder is for, null for an item without package tracking.
+  """
+  pantryItemBatchId: ID
+  """The pantry item."""
+  pantryItemId: ID!
+}
+
 """A catalog recipe's provider-specific data, one member per provider."""
 union ExternalRecipeDetails = SpoonacularRecipeDetails
 
@@ -5121,6 +5314,28 @@ input HomeFilters {
   search: String
   """Filter by home type"""
   type: HomeType
+}
+
+"""An invitation to join a home (HOME_INVITATION)."""
+type HomeInvitationNotificationData {
+  """The home the recipient is invited to."""
+  homeId: ID!
+  """The home's name when the invitation was sent."""
+  homeName: String!
+  """The invitation."""
+  inviteId: ID!
+  """The inviter's email address, when they shared one."""
+  inviterEmail: EmailAddress
+  """The inviting user."""
+  inviterId: ID!
+  """The inviter's display name when the invitation was sent."""
+  inviterName: String!
+  """The note the inviter wrote, if any."""
+  message: String
+  """The role the invitation grants."""
+  role: MembershipRole!
+  """The token that accepts or declines the invitation."""
+  token: String!
 }
 
 """An invitation to join a home, sent to an email address"""
@@ -6977,6 +7192,18 @@ Always include a __typename so the variant can be discriminated.
 """
 union LinkShoppingListToMealPlanResult = ConflictError | ForbiddenError | LinkShoppingListToMealPlanPayload | NotFoundError | ValidationError
 
+"""A shopping list's reminder date has come (LIST_REMINDER)."""
+type ListReminderNotificationData {
+  """Items still to buy when the reminder was sent."""
+  itemCount: Int!
+  """The list."""
+  listId: ID!
+  """The list's name when the reminder was sent."""
+  listName: String!
+  """The reminder's day in the owner's zone."""
+  reminderDate: LocalDate!
+}
+
 enum ListStatus {
   ACTIVE
   ARCHIVED
@@ -6984,6 +7211,18 @@ enum ListStatus {
   COMPLETED
   PAUSED
   TEMPLATE
+}
+
+"""A shared list was completed (LIST_UPDATED)."""
+type ListUpdatedNotificationData {
+  """The user who completed it."""
+  actorId: ID!
+  """What happened to the list; `complete` is the one event written."""
+  eventType: String!
+  """The list."""
+  listId: ID!
+  """The list's name when it was completed."""
+  listName: String!
 }
 
 """
@@ -7251,6 +7490,22 @@ type LowStockItem {
   restockQuantity: Float
   unitId: ID!
   unitName: String!
+}
+
+"""A pantry item fell to its minimum (LOW_STOCK)."""
+type LowStockNotificationData {
+  """
+  The quantity left when the alert was sent, in the item's tracking unit.
+  """
+  currentQuantity: Float!
+  """The item's name when the alert was sent."""
+  itemName: String!
+  """The minimum the alert fires below, in the same unit."""
+  minQuantity: Float!
+  """Its pantry."""
+  pantryId: ID!
+  """The pantry item."""
+  pantryItemId: ID!
 }
 
 type MarkAllNotificationsAsReadPayload {
@@ -7889,6 +8144,16 @@ input MealPlanOrderBy {
   startDate: SortOrder
 }
 
+"""The day's planned, not-yet-completed meals (MEAL_PLAN_REMINDER)."""
+type MealPlanReminderNotificationData {
+  """The day."""
+  date: LocalDate!
+  """How many meals were planned."""
+  mealCount: Int!
+  """Each planned meal."""
+  meals: [NotificationPlannedMeal!]!
+}
+
 """
 Subtype discriminator for meal-plan / meal-template collaboration events.
 """
@@ -8491,6 +8756,40 @@ type ModerationViolationEdge implements Edge {
   cursor: String!
   """The ModerationViolation this edge wraps."""
   node: ModerationViolation!
+}
+
+"""
+The previous month's figures for the recipient's households (MONTHLY_REPORT).
+"""
+type MonthlyReportNotificationData {
+  """
+  The cooking logs that drew stock from the households' pantries; null when not recorded or no pantry is viewable.
+  """
+  cookedMealCount: Int
+  """
+  What such a meal cost, per currency; null when not recorded or no pantry is viewable.
+  """
+  costPerCookedMeal: [CurrencyAmount!]
+  """The month, as YYYY-MM."""
+  month: String!
+  """How many purchases the households recorded."""
+  purchaseCount: Int!
+  """The recipient's own cooking logs."""
+  recipesCooked: Int!
+  """
+  The discounts recorded on the purchases, per currency; null on a report sent before discounts were recorded.
+  """
+  saved: [CurrencyAmount!]
+  """What the purchases cost, per currency."""
+  spending: [CurrencyAmount!]!
+  """The most-bought items' names."""
+  topItemNames: [String!]!
+  """How many items were wasted, over the pantries the recipient may view."""
+  wastedItemCount: Int!
+  """
+  What the wasted items cost, per currency, a waste of unknown cost left out; null when the recipient may view no pantry.
+  """
+  wastedValue: [CurrencyAmount!]
 }
 
 input MovePurchasedItemsToPantryInput {
@@ -9635,6 +9934,12 @@ type Notification {
   """
   category: NotificationCategory
   createdAt: DateTime!
+  """
+  The payload as typed data, one member per stored shape. Null for a type
+  the server does not write (authored content) and for a stored payload that
+  fits none of its type's shapes; `payload` still holds it.
+  """
+  data: NotificationData
   """When this notification expires. Null if it does not expire."""
   expiresAt: DateTime
   id: ID!
@@ -9674,6 +9979,14 @@ type Notification {
   userId: ID!
 }
 
+"""A catalog item a notification names, as it was named when sent."""
+type NotificationCatalogItem {
+  """The household's own product."""
+  itemId: ID!
+  """Its name when the notification was sent."""
+  name: String!
+}
+
 enum NotificationCategory {
   HOME
   PANTRY
@@ -9702,6 +10015,14 @@ type NotificationConnection implements Connection {
   """
   totalCount: Int
 }
+
+"""
+A notification's payload as typed data: one member per shape the server
+stores, read from `Notification.payload`. Every figure is the one stored when
+the notification was sent, never recomputed. A client handles a member its
+build does not know by rendering from `type` and `payload`.
+"""
+union NotificationData = CollaborationAcceptedNotificationData | CollaborationDeclinedNotificationData | CollaborationInviteNotificationData | CollaboratorPermissionsUpdatedNotificationData | CollaboratorRemovedNotificationData | CollaboratorRoleChangedNotificationData | CookingReminderNotificationData | ExpiryDigestNotificationData | ExpiryReminderNotificationData | HomeInvitationNotificationData | ListReminderNotificationData | ListUpdatedNotificationData | LowStockNotificationData | MealPlanReminderNotificationData | MonthlyReportNotificationData | PantryChangeNotificationData | PantryWeeklyDigestNotificationData | RecipeRecommendationsNotificationData | RunningLowNotificationData | SharedListChangedNotificationData
 
 """Whether an expiry reminder has been read."""
 enum NotificationDeliveryStatus {
@@ -9787,6 +10108,24 @@ enum NotificationOrderBy {
   STATUS_DESC
   TYPE_ASC
   TYPE_DESC
+}
+
+"""A pantry item a notification names, as it was named when sent."""
+type NotificationPantryItem {
+  """Its name when the notification was sent."""
+  name: String!
+  """The pantry item."""
+  pantryItemId: ID!
+}
+
+"""A planned meal a notification names, as it was when sent."""
+type NotificationPlannedMeal {
+  """The meal-plan entry."""
+  mealPlanItemId: ID!
+  """Which meal of the day it is."""
+  mealType: MealType!
+  """Its name when the notification was sent."""
+  name: String!
 }
 
 """User notification preferences"""
@@ -10447,6 +10786,24 @@ type Pantry {
   usageStats: PantryUsageStats
   version: Int!
   wasteAnalytics(filters: AnalyticsFilters): WasteAnalytics!
+}
+
+"""
+Other members changed pantry items in one 15-minute window (NEW_ITEM_ADDED, ITEM_UPDATED, ITEM_DELETED; the type says which).
+"""
+type PantryChangeNotificationData {
+  """The display names of who made the changes."""
+  actorNames: [String!]!
+  """How many items changed."""
+  itemCount: Int!
+  """Each item that changed."""
+  items: [NotificationPantryItem!]!
+  """The pantry."""
+  pantryId: ID!
+  """The pantry's name when the notification was sent."""
+  pantryName: String!
+  """When the 15-minute window the changes fell in opened."""
+  windowStart: DateTime!
 }
 
 """
@@ -11557,6 +11914,28 @@ type PantryUsageStats {
   lastActivityAt: DateTime
   """Number of low stock items"""
   lowStockItemCount: Int!
+}
+
+"""
+A week of pantry activity across the pantries the recipient can see (WEEKLY_DIGEST).
+"""
+type PantryWeeklyDigestNotificationData {
+  """The names of those expiring items."""
+  expiringItemNames: [String!]!
+  """Items added during the week."""
+  itemsAdded: Int!
+  """Items expiring soon at the week's end."""
+  itemsExpiringSoon: Int!
+  """Items used during the week."""
+  itemsUsed: Int!
+  """Items wasted during the week."""
+  itemsWasted: Int!
+  """The day after the last one summarised."""
+  periodEnd: LocalDate!
+  """The first day summarised."""
+  periodStart: LocalDate!
+  """The ISO week the digest is for, as YYYY-Www."""
+  week: String!
 }
 
 input ParseIngredientLinesInput {
@@ -14443,6 +14822,16 @@ input RecipeOrderBy {
   createdAt: SortOrder
 }
 
+"""Recipes matching the recipient's pantries (RECIPE_RECOMMENDATIONS)."""
+type RecipeRecommendationsNotificationData {
+  """How many recipes were recommended."""
+  recipeCount: Int!
+  """Each recommended recipe, best match first."""
+  recipes: [RecommendedRecipe!]!
+  """The ISO week the recommendations are for, as YYYY-Www."""
+  week: String!
+}
+
 type RecipeReview {
   comment: String
   createdAt: DateTime!
@@ -14640,6 +15029,18 @@ type RecipeSuggestionEdge {
   """
   expiringStacks: [PantryItem!]!
   node: Recipe!
+}
+
+"""A recipe a recommendation named, as it matched when sent."""
+type RecommendedRecipe {
+  """
+  The share of its ingredients the pantries held when sent, 0-100, rounded. Never recomputed.
+  """
+  matchPercentage: Int!
+  """Its name when the recommendation was sent."""
+  name: String!
+  """The recipe."""
+  recipeId: ID!
 }
 
 input RecordPantryStockCheckInput {
@@ -15406,6 +15807,20 @@ Always include a __typename so the variant can be discriminated.
 """
 union RevokeDeviceSessionsResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceSessionsPayload | ValidationError
 
+"""
+What a household is predicted to run out of within two days, soonest first (RUNNING_LOW).
+"""
+type RunningLowNotificationData {
+  """The recipient's local date the prediction ran for."""
+  date: LocalDate!
+  """The households the items are named for."""
+  homeIds: [ID!]!
+  """How many items are running low."""
+  itemCount: Int!
+  """Each item running low."""
+  items: [NotificationCatalogItem!]!
+}
+
 type SavedRecipe {
   cookedCount: Int!
   createdAt: DateTime!
@@ -15495,6 +15910,30 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError
+
+"""
+Other participants changed a shared list's items in one 15-minute window (SHARED_LIST_CHANGED).
+"""
+type SharedListChangedNotificationData {
+  """The display names of who made the changes."""
+  actorNames: [String!]!
+  """How many changes the window held."""
+  changeCount: Int!
+  """Items added."""
+  itemsAdded: Int!
+  """Items marked purchased."""
+  itemsPurchased: Int!
+  """Items removed."""
+  itemsRemoved: Int!
+  """Items updated."""
+  itemsUpdated: Int!
+  """The shared list."""
+  listId: ID!
+  """The list's name when the notification was sent."""
+  listName: String!
+  """When the 15-minute window the changes fell in opened."""
+  windowStart: DateTime!
+}
 
 """Shopping list for a home"""
 type ShoppingList {
