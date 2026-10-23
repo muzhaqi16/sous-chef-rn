@@ -4,6 +4,9 @@ import { errorService } from '#/services/errorService';
 /** What follows a password sign-in before the app opens, if anything. */
 export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
 
+/** What became of a stored sign-in a password change revoked. */
+export type StoredSignInRenewal = 'renewed' | 'dropped' | 'none';
+
 /**
  * What a host adds to a session. The core signs in and out; a host with a
  * device behind it also registers that device and guards the sign-in it
@@ -28,6 +31,12 @@ export interface SessionHost {
    * the session can still authorise a server-side revoke.
    */
   forgetStoredSignIn(email: string): Promise<void>;
+  /**
+   * After a password change this session survived. The change revoked every
+   * stored sign-in, so the one held for `email` is issued again or dropped;
+   * `none` when there was none.
+   */
+  renewStoredSignIn(email: string): Promise<StoredSignInRenewal>;
 }
 
 /** What each step settles to when it fails: the session goes on without it. */
@@ -35,6 +44,7 @@ const NO_HOST_STEPS: SessionHost = {
   afterSignIn: () => {},
   postSignInGate: () => Promise.resolve(null),
   forgetStoredSignIn: () => Promise.resolve(),
+  renewStoredSignIn: () => Promise.resolve('none'),
 };
 
 const reportStep = (step: keyof SessionHost, error: unknown): void => {
@@ -73,6 +83,12 @@ const guarded = (steps: SessionHost): SessionHost => ({
       'forgetStoredSignIn',
       () => steps.forgetStoredSignIn(email),
       () => NO_HOST_STEPS.forgetStoredSignIn(email),
+    ),
+  renewStoredSignIn: email =>
+    settleStep(
+      'renewStoredSignIn',
+      () => steps.renewStoredSignIn(email),
+      () => NO_HOST_STEPS.renewStoredSignIn(email),
     ),
 });
 

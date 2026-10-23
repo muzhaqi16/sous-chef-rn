@@ -105,7 +105,10 @@ jest.mock('#/hooks/settings/useFeatureHint', () => ({
 
 import { logger } from '#/utils/environment';
 import { authService } from '#/services/authService';
-import { biometricService } from '#/services/biometric/deviceCredential';
+import {
+  biometricService,
+  renewStoredSignIn,
+} from '#/services/biometric/deviceCredential';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 
 // A sign-out drops the slot through the step the app registers.
@@ -533,5 +536,58 @@ describe('logout and biometric credentials', () => {
     await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).toHaveBeenCalled();
+  });
+});
+
+// A password change this session survived revoked every device credential, so
+// a slot left as it was would fail on the next fingerprint sign-in.
+describe('renewing a stored sign-in after a password change', () => {
+  const EMAIL = 'chef@example.com';
+
+  beforeEach(() => {
+    mockMutate.mockReset();
+    mockClearCredentials.mockClear();
+    mockHasCredentials.mockResolvedValue(true);
+    keychainMock().saveCredentials.mockClear();
+    setHasStoredCredentials().mockClear();
+  });
+
+  it('issues nothing for an account with no slot', async () => {
+    mockHasCredentials.mockResolvedValueOnce(false);
+
+    expect(await renewStoredSignIn(EMAIL)).toBe('none');
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('stores a freshly issued credential in the slot', async () => {
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        issueDeviceCredential: {
+          __typename: 'DeviceCredentialPayload',
+          credential: 'renewed',
+        },
+      },
+    });
+
+    expect(await renewStoredSignIn(EMAIL)).toBe('renewed');
+    expect(keychainMock().saveCredentials).toHaveBeenCalled();
+    expect(mockClearCredentials).not.toHaveBeenCalled();
+  });
+
+  it('drops the slot when no new credential can be issued', async () => {
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        issueDeviceCredential: {
+          __typename: 'AuthenticationError',
+          code: 'UNAUTHENTICATED',
+          message: 'No live session',
+        },
+      },
+    });
+
+    expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
+    expect(mockClearCredentials).toHaveBeenCalledWith(EMAIL);
+    expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
   });
 });

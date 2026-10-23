@@ -7,6 +7,7 @@
 import { createApolloClient } from '#/apollo/client';
 import {
   registerSessionHost,
+  sessionHost,
   type SessionHost,
 } from '#/services/auth/sessionHost';
 import { authService } from '#/services/authService';
@@ -46,6 +47,7 @@ const HOSTS: [string, SessionHost][] = [
       },
       postSignInGate: () => Promise.reject(fail('postSignInGate')),
       forgetStoredSignIn: () => Promise.reject(fail('forgetStoredSignIn')),
+      renewStoredSignIn: () => Promise.reject(fail('renewStoredSignIn')),
     },
   ],
   [
@@ -59,6 +61,9 @@ const HOSTS: [string, SessionHost][] = [
       },
       forgetStoredSignIn: () => {
         throw fail('forgetStoredSignIn');
+      },
+      renewStoredSignIn: () => {
+        throw fail('renewStoredSignIn');
       },
     },
   ],
@@ -78,14 +83,18 @@ afterAll(() => {
 });
 
 const reportedSteps = (report: jest.SpyInstance): unknown[] =>
-  report.mock.calls.map(([, context]) => (context as { operation: string }).operation);
+  report.mock.calls.map(
+    ([, context]) => (context as { operation: string }).operation,
+  );
 
 describe.each(HOSTS)('a host whose steps %s', (_, host) => {
   let report: jest.SpyInstance;
 
   beforeEach(() => {
     registerSessionHost(host);
-    report = jest.spyOn(errorService, 'reportError').mockImplementation(() => {});
+    report = jest
+      .spyOn(errorService, 'reportError')
+      .mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -129,5 +138,18 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
     expect(state.accessToken).toBeNull();
     expect(state.navigationState).toBe('auth');
     expect(reportedSteps(report)).toEqual(['sessionHost.forgetStoredSignIn']);
+  });
+
+  // A password change this session survived: a failed renewal is the host's
+  // to report, and nothing it does may end or alter the session.
+  it('keeps the session when renewing a stored sign-in fails', async () => {
+    useStore.getState().setAuth(USER, ACCESS_TOKEN, 'refresh-token');
+
+    await expect(sessionHost().renewStoredSignIn(EMAIL)).resolves.toBe('none');
+
+    const state = useStore.getState();
+    expect(state.user?.id).toBe(USER.id);
+    expect(state.accessToken).toBe(ACCESS_TOKEN);
+    expect(reportedSteps(report)).toEqual(['sessionHost.renewStoredSignIn']);
   });
 });

@@ -48,11 +48,19 @@ const asFormField = (
 function reportChangePassword(
   outcome: ChangePasswordOutcome,
   goBack: () => void,
-  successMessage: string,
+  successMessage: { signedIn: string; signedOut: string; biometricOff: string },
   setFieldError: (field: keyof ChangePasswordForm, message: string) => void,
 ): void {
   if (outcome.status === 'completed') {
-    toastService.success(successMessage);
+    if (outcome.storedSignInDropped) {
+      toastService.warning(successMessage.biometricOff);
+    } else {
+      toastService.success(
+        outcome.staysSignedIn
+          ? successMessage.signedIn
+          : successMessage.signedOut,
+      );
+    }
     setTimeout(() => {
       goBack();
     }, 1500);
@@ -96,7 +104,11 @@ export const ChangePasswordScreen: React.FC = () => {
             newPassword: data.newPassword,
           }),
           goBack,
-          t('changePassword.success'),
+          {
+            signedIn: t('changePassword.successOtherDevicesSignedOut'),
+            signedOut: t('changePassword.success'),
+            biometricOff: t('changePassword.successBiometricOff'),
+          },
           (field, message) => form.setError(field, { message }),
         ),
       setIsSubmitting,

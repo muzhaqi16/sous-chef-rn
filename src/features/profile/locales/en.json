@@ -5,6 +5,8 @@
     "currentPasswordPlaceholder": "Enter your current password",
     "confirmPassword": "Confirm New Password",
     "success": "Password changed successfully!",
+    "successOtherDevicesSignedOut": "Password changed. Your other devices have been signed out.",
+    "successBiometricOff": "Password changed, but biometric sign-in is now off. Turn it back on in Settings.",
     "failed": "Failed to change password",
     "failedFallback": "Failed to change password. Please try again."
   },
@@ -274,6 +276,7 @@
     "description": "Authenticate to access your saved login information",
     "checkCredentials": "Check credentials",
     "keychainTitle": "Unlock saved credentials",
+    "saveTitle": "Save your sign-in on this device",
     "useManualLogin": "Use manual login"
   },
   "profileValidation": {

@@ -162,6 +162,12 @@ export async function saveCredentials(
         securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
         // Only accessible when device is unlocked
         accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        // Android asks for the finger to save as well; without a title it shows
+        // the library's "Authenticate to retrieve secret".
+        authenticationPrompt: {
+          title: t('biometricPrompt.saveTitle'),
+          cancel: t('labels.cancel'),
+        },
       },
     );
 

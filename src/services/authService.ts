@@ -39,7 +39,11 @@ import type {
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { type PostSignInGate, sessionHost } from '#/services/auth/sessionHost';
+import {
+  type PostSignInGate,
+  type StoredSignInRenewal,
+  sessionHost,
+} from '#/services/auth/sessionHost';
 
 // --- Store bootstrap (pre-populate Zustand from auth response) ---
 
@@ -459,6 +463,25 @@ async function register(
   return signedIn ? 'signedIn' : 'verificationSent';
 }
 
+/**
+ * A password change this session survived. The server refused every earlier
+ * token, this device's included, so the new pair is stored before anything
+ * else sends on the old one; the host then renews the sign-in it stores.
+ */
+async function adoptPasswordChangeSession(session: {
+  accessToken: string;
+  refreshToken: string;
+}): Promise<StoredSignInRenewal> {
+  const store = useStore.getState();
+  store.setTokens({
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+  });
+  const email = store.user?.email;
+  if (!email) return 'none';
+  return sessionHost().renewStoredSignIn(email);
+}
+
 interface LogoutOptions {
   /**
    * KEEP the sign-in the host stores across the sign-out — on mobile a
@@ -513,6 +536,7 @@ export const authService = {
   login,
   register,
   logout,
+  adoptPasswordChangeSession,
 
   // Post-auth flow handlers, also run by a host's own sign-in paths
   handleLogin,

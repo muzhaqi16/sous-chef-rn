@@ -64,6 +64,11 @@ describe('keychain storage', () => {
         'password123',
         expect.objectContaining({
           service: 'dev.souschef.app.credentials.user@test.com',
+          // Android asks for the finger to save too; the library's own title
+          // reads "Authenticate to retrieve secret".
+          authenticationPrompt: expect.objectContaining({
+            title: 'Save your sign-in on this device',
+          }),
         }),
       );
     });

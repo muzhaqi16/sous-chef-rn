@@ -5,6 +5,8 @@
     "currentPasswordPlaceholder": "Shkruaj fjalëkalimin aktual",
     "confirmPassword": "Konfirmo fjalëkalimin e ri",
     "success": "Fjalëkalimi u ndryshua!",
+    "successOtherDevicesSignedOut": "Fjalëkalimi u ndryshua. U dole nga llogaria në pajisjet e tjera.",
+    "successBiometricOff": "Fjalëkalimi u ndryshua, por hyrja biometrike tani është e çaktivizuar. Aktivizoje sërish te Cilësimet.",
     "failed": "Nuk u ndryshua dot fjalëkalimi",
     "failedFallback": "Nuk u ndryshua dot fjalëkalimi. Provoje sërish."
   },
@@ -274,6 +276,7 @@
     "description": "Vërtetohu për të përdorur të dhënat e ruajtura të hyrjes",
     "checkCredentials": "Kontrollo kredencialet",
     "keychainTitle": "Shkyç të dhënat e ruajtura",
+    "saveTitle": "Ruaj hyrjen në këtë pajisje",
     "useManualLogin": "Hyr manualisht"
   },
   "profileValidation": {

@@ -14,7 +14,10 @@ import {
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { authService } from '#/services/authService';
 import { ensureDeviceId } from '#/services/auth/deviceId';
-import type { PostSignInGate } from '#/services/auth/sessionHost';
+import type {
+  PostSignInGate,
+  StoredSignInRenewal,
+} from '#/services/auth/sessionHost';
 import { isTransportFailure, errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
@@ -438,6 +441,21 @@ export async function resolvePostSignInGate(
     return 'rememberMe';
   }
   return null;
+}
+
+/**
+ * A password change revokes every device credential, so a slot kept through
+ * one is issued again; one that can't be is dropped rather than left to fail.
+ */
+export async function renewStoredSignIn(
+  email: string,
+): Promise<StoredSignInRenewal> {
+  if (!(await hasCredentials(email))) return 'none';
+  if ((await enrolDeviceCredential(email)) === 'enrolled') return 'renewed';
+  logger.warn('Could not renew the device credential; dropping the slot');
+  await removeCredentials(email);
+  forgetBiometricSlot();
+  return 'dropped';
 }
 
 /**
