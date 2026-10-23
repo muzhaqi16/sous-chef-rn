@@ -31,8 +31,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   container: {
-    // This IS the list rendering the skeleton row, and `commonStyles.rowWrapper`
-    // carries no horizontal inset by design, so the gutter has to come from here.
+    // This IS the list rendering the skeleton row, and a `RowCard` carries no
+    // horizontal inset by design, so the gutter has to come from here.
     paddingHorizontal: theme.layout.pageGutter,
     // `sm`, matching the inset the real list leaves above its first row — this
     // list stands beside that one, so a different step is a jump on release.

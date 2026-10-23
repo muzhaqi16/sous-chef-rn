@@ -4,10 +4,31 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useUnistyles } from 'react-native-unistyles';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+type RampStop = { offset: number; opacity: number };
+
+/**
+ * The right band's opacity toward its opaque edge, on a smoothstep curve: a
+ * straight ramp shows a hard start and end, this one eases in and out. Offsets
+ * ascend; RN-SVG renders descending stops incorrectly.
+ */
+const RIGHT_RAMP: readonly RampStop[] = [
+  { offset: 0, opacity: 0 },
+  { offset: 0.2, opacity: 0.1 },
+  { offset: 0.4, opacity: 0.35 },
+  { offset: 0.6, opacity: 0.65 },
+  { offset: 0.8, opacity: 0.9 },
+  { offset: 1, opacity: 1 },
+];
+
+// The same ramp mirrored, its offsets ascending again.
+const LEFT_RAMP: readonly RampStop[] = RIGHT_RAMP.map(
+  ({ offset, opacity }) => ({ offset: 1 - offset, opacity }),
+).reverse();
+
 interface EdgeFadeProps {
   /** Which edge to fade toward (the opaque side sits on this edge). */
   side: 'left' | 'right';
-  /** Width of the fade band in px. */
+  /** Width of the fade band in pt. */
   width?: number;
   /**
    * The surface the scroller sits on: `background` for a screen, `surface` for a
@@ -24,14 +45,13 @@ interface EdgeFadeProps {
  */
 export const EdgeFade: React.FC<EdgeFadeProps> = ({
   side,
-  width = 24,
+  width = 56,
   colorKey = 'background',
 }) => {
   const { theme } = useUnistyles();
   const bg =
     colorKey === 'surface' ? theme.colors.surface : theme.colors.background;
-  const startOpacity = side === 'left' ? 1 : 0;
-  const endOpacity = side === 'left' ? 0 : 1;
+  const stops = side === 'right' ? RIGHT_RAMP : LEFT_RAMP;
 
   return (
     <View
@@ -51,8 +71,14 @@ export const EdgeFade: React.FC<EdgeFadeProps> = ({
             x2="1"
             y2="0"
           >
-            <Stop offset="0" stopColor={bg} stopOpacity={startOpacity} />
-            <Stop offset="1" stopColor={bg} stopOpacity={endOpacity} />
+            {stops.map(({ offset, opacity }) => (
+              <Stop
+                key={offset}
+                offset={offset}
+                stopColor={bg}
+                stopOpacity={opacity}
+              />
+            ))}
           </LinearGradient>
         </Defs>
         <Rect

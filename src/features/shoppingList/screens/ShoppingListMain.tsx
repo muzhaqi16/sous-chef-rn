@@ -89,7 +89,6 @@ const ShoppingListMainFallback: React.FC = () => {
       testID={shoppingListTestIDs.screen}
       header={{
         variant: 'tab',
-        label: t('shoppingListScreen.label'),
         title: t('labels.shoppingList'),
       }}
       scroll="list"
@@ -100,7 +99,6 @@ const ShoppingListMainFallback: React.FC = () => {
           value=""
           onChangeText={noop}
           placeholder={t('shoppingListScreen.searchPlaceholder')}
-          showSearchIcon
           editable={false}
         />
       </View>

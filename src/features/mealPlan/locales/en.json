@@ -36,7 +36,8 @@
     "dietDairyFree": "DF"
   },
   "emptyDay": {
-    "title": "No meals planned"
+    "title": "No meals planned",
+    "addHint": "Tap + to add a meal"
   },
   "mealPlanEmpty": {
     "title": "Plan Your Meals",
@@ -60,7 +61,7 @@
     "sharedWith": "Shared with {{name}}",
     "createdBy": "Created by {{name}}",
     "actionsLabel": "Actions",
-    "generateShoppingListDesc": "Create a list from this plan's recipes",
+    "saveAsTemplateDesc": "Reuse this plan's meals for another week",
     "duplicatePlanDesc": "Copy this plan to a new date range",
     "viewNutrition": "View Nutrition",
     "hideNutrition": "Hide Nutrition",
@@ -157,9 +158,7 @@
     "duplicateNameLabel": "New Template Name"
   },
   "mealPlanMain": {
-    "label": "Plan your meals",
     "generateShoppingListLabel": "Generate shopping list",
-    "saveAsTemplateLabel": "Save as template",
     "planSettingsLabel": "Plan settings",
     "deleteMealPlanFailed": "Failed to delete meal plan",
     "mealPlanDeleted": "Meal plan deleted",

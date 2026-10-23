@@ -4,10 +4,25 @@ import { sizes } from '#/theme/foundations/sizes';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { withUnistyles } from 'react-native-unistyles';
 import type { Theme } from '#/theme/themes';
+import SortGlyph from '#assets/icons/svg/glyphs/sort.svg';
 
 type IoniconsIconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export type IconName = IoniconsIconName;
+/**
+ * The app's own glyphs, drawn by name beside Ionicons' set. Each fills with
+ * `currentColor`, so `color` paints it as it paints a font glyph. Sources and
+ * licences: `src/assets/icons/svg/glyphs/NOTICE.md`.
+ */
+const GLYPHS = {
+  sort: withUnistyles(SortGlyph),
+};
+
+type GlyphName = keyof typeof GLYPHS;
+
+const isGlyph = (name: string): name is GlyphName =>
+  Object.hasOwn(GLYPHS, name);
+
+export type IconName = IoniconsIconName | GlyphName;
 
 // Kept for backward compatibility — all icons now use Ionicons
 export type IconLibrary = string;
@@ -89,6 +104,24 @@ export const Icon: React.FC<IconProps> = ({
   const px = typeof size === 'number' ? size : sizes.icon[size];
   const sizeProps = (t: Theme) =>
     typeof size === 'number' ? {} : { size: t.sizes.icon[size] };
+  if (isGlyph(name)) {
+    const Glyph = GLYPHS[name];
+    const side = (t: Theme) =>
+      typeof size === 'number' ? size : t.sizes.icon[size];
+    return (
+      <Glyph
+        {...DECORATIVE}
+        width={px}
+        height={px}
+        uniProps={t => ({
+          color:
+            color ?? (tone ? TONE_TO_COLOR[tone](t) : t.colors.textPrimary),
+          width: side(t),
+          height: side(t),
+        })}
+      />
+    );
+  }
   // `color` is an explicit override and wins over `tone`. This supports the
   // pattern `<Icon color={maybeOverride} tone="textSecondary" />` where the
   // tone is the theme-reactive fallback when the override is undefined.

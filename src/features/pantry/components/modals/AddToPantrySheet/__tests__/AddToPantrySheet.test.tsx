@@ -15,7 +15,6 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -120,18 +119,14 @@ describe('AddToPantrySheet', () => {
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 
-  it('offers a receipt scan, which closes the sheet and opens the receipt scanner', () => {
-    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
-    const receiptAction = sheetProps.current.receiptAction as {
-      onPress: () => void;
-      accessibilityLabel: string;
-    };
-    expect(receiptAction.accessibilityLabel).toBe('Add from a receipt');
-
-    receiptAction.onPress();
-
-    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
-    expect(useAppNavigation().toReceiptScan).toHaveBeenCalledTimes(1);
+  // Scanning a receipt is in Pantry's + menu now; the sheet only opens on the
+  // step it is asked for.
+  it("opens on the details form for the + menu's Add manually", () => {
+    renderWithApollo(
+      <AddToPantrySheet {...defaultProps} startStep="details" />,
+    );
+    expect(sheetProps.current.startStep).toBe('details');
+    expect(sheetProps.current.receiptAction).toBeUndefined();
   });
 
   it('renders without crashing when pantryId is undefined', () => {

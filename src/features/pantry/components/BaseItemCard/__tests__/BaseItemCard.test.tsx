@@ -95,9 +95,10 @@ describe('BaseItemCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  // The row centres its slots; both text columns must leave that centre for its
-  // top, or a title with no subtitle sits half a line below its meta.
-  it('stacks the title and the meta from the row top, subtitle or not', () => {
+  // The row centres its slots, text columns included: pinned to the top, a
+  // one-line row sat over an empty band, and the trailing meta sits level with
+  // the text beside it, as a list's trailing detail does.
+  it('centres the title and the meta in the row, subtitle or not', () => {
     type Node = ReturnType<ReturnType<typeof render>['getByText']>;
     // The nearest host View above a text: the column it sits in.
     const columnOf = (text: Node) => {
@@ -114,10 +115,12 @@ describe('BaseItemCard', () => {
       </BaseItemCard>,
     );
 
-    expect(columnOf(getByText('Feta Cheese'))).toHaveStyle({
+    expect(columnOf(getByText('Feta Cheese'))).not.toHaveStyle({
       alignSelf: 'stretch',
     });
-    expect(columnOf(getByText('1 g'))).toHaveStyle({ alignSelf: 'stretch' });
+    expect(columnOf(getByText('1 g'))).not.toHaveStyle({
+      alignSelf: 'stretch',
+    });
   });
 
   it('uses SwipeableItem when swipe actions provided', () => {

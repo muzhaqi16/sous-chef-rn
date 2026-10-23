@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { RowCard } from '#components/atoms/RowCard';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { useTranslation, type TranslationKey } from '#/i18n';
@@ -57,10 +57,7 @@ export const MyReportRow: React.FC<MyReportRowProps> = ({ reportRef }) => {
     key ? t(key) : t('labels.unknown');
 
   return (
-    <View
-      style={commonStyles.rowWrapper}
-      testID={profileTestIDs.reportRow(report.id)}
-    >
+    <RowCard testID={profileTestIDs.reportRow(report.id)}>
       <ListItem
         title={labelOf(
           report.contentType
@@ -87,8 +84,7 @@ export const MyReportRow: React.FC<MyReportRowProps> = ({ reportRef }) => {
           text: labelOf(STATUS_LABEL_KEYS[report.status]),
           variant: STATUS_BADGE[report.status],
         }}
-        rightIcon={null}
       />
-    </View>
+    </RowCard>
   );
 };

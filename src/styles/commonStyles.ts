@@ -169,22 +169,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     resizeMode: 'cover',
   },
-  // The list row: `rowWrapper` its place in the list, `rowSurface` the card,
-  // `rowContent` its slots. No horizontal inset: the list that renders the row
-  // owns the page gutter.
-  rowWrapper: {
-    marginBottom: theme.layout.rowGap,
-  },
+  // The list row: `RowCard` its card, `rowSurface` its fill, `rowContent` its
+  // slots. No gap, radius or shadow of its own: the card owns those. No
+  // horizontal inset: the list that renders the row owns the page gutter.
   rowSurface: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    // A status variant paints this border; the default row relies on the
-    // shadow alone and keeps a transparent one, so every row is the same
-    // height whether or not it carries a status.
-    borderWidth: theme.borderWidth.medium,
-    borderColor: 'transparent',
-    ...theme.shadows.card,
     // Keeps the row's slots inside this view. A background-only view lends its
     // children to the nearest ancestor that holds its own, and Fabric can
     // re-insert them there under this fill: the checkbox and badge vanish.
@@ -194,19 +183,13 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.layout.rowSlotGap,
-    padding: theme.layout.rowInset,
+    paddingVertical: theme.layout.rowInset,
+    paddingHorizontal: theme.layout.rowInsetHorizontal,
     // `minHeight`, not a height: a two-line title grows rather than clips.
     minHeight: theme.sizes.itemCard.compact.height,
   },
   rowTextGap: {
     marginTop: theme.layout.rowTextGap,
-  },
-  // Rounds a press ripple to the row. It sits on the node INSIDE `rowSurface`,
-  // never on the surface itself, which would clip its own shadow away.
-  rowClip: {
-    overflow: 'hidden',
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
   },
 
   shadow: theme.shadows.card,

@@ -36,7 +36,8 @@
     "dietDairyFree": "SL"
   },
   "emptyDay": {
-    "title": "Nessun pasto pianificato"
+    "title": "Nessun pasto pianificato",
+    "addHint": "Tocca + per aggiungere un pasto"
   },
   "mealPlanEmpty": {
     "title": "Pianifica i tuoi pasti",
@@ -60,7 +61,7 @@
     "sharedWith": "Condiviso con {{name}}",
     "createdBy": "Creato da {{name}}",
     "actionsLabel": "Azioni",
-    "generateShoppingListDesc": "Crea una lista dalle ricette di questo piano",
+    "saveAsTemplateDesc": "Riusa i pasti di questo piano per un'altra settimana",
     "duplicatePlanDesc": "Copia questo piano in un nuovo intervallo di date",
     "viewNutrition": "Mostra nutrizione",
     "hideNutrition": "Nascondi nutrizione",
@@ -157,9 +158,7 @@
     "duplicateNameLabel": "Nome del nuovo modello"
   },
   "mealPlanMain": {
-    "label": "Pianifica i tuoi pasti",
     "generateShoppingListLabel": "Genera lista della spesa",
-    "saveAsTemplateLabel": "Salva come modello",
     "planSettingsLabel": "Impostazioni piano",
     "deleteMealPlanFailed": "Impossibile eliminare il piano pasti",
     "mealPlanDeleted": "Piano pasti eliminato",

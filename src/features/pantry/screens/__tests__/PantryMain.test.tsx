@@ -9,6 +9,8 @@ import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryMain } from '../PantryMain';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -140,7 +142,8 @@ const mockPantryModals = {
   handleRestockItem: jest.fn(),
   handleEditItem: jest.fn(),
   handleDeleteItem: jest.fn(),
-  setAddSheetVisible: jest.fn(),
+  openAddSheet: jest.fn(),
+  openAddManually: jest.fn(),
   setAddLocationSheetVisible: jest.fn(),
 };
 jest.mock('#features/pantry/context/PantryModalsContext', () => ({
@@ -268,6 +271,42 @@ describe('PantryMain', () => {
       .mockImplementation(defaultPermissionsImpl);
     capturedPantryContentProps = {};
     mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen });
+  });
+
+  describe('the + menu', () => {
+    const menu = () =>
+      jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
+    const entry = (key: string) => menu().find(action => action.key === key);
+
+    it('offers every way to add, in order', () => {
+      renderWithApollo(<PantryMain />);
+      expect(menu().map(action => action.key)).toEqual([
+        'search',
+        'barcode',
+        'receipt',
+        'manual',
+      ]);
+    });
+
+    it('opens each flow directly', () => {
+      renderWithApollo(<PantryMain />);
+      const nav = jest.mocked(useAppNavigation)();
+
+      entry('search')?.onPress();
+      expect(mockPantryModals.openAddSheet).toHaveBeenCalled();
+
+      entry('barcode')?.onPress();
+      expect(nav.toBarcode).toHaveBeenCalledWith({
+        source: 'pantry',
+        pantryId: 'p1',
+      });
+
+      entry('receipt')?.onPress();
+      expect(nav.toReceiptScan).toHaveBeenCalled();
+
+      entry('manual')?.onPress();
+      expect(mockPantryModals.openAddManually).toHaveBeenCalled();
+    });
   });
 
   it('renders the pantry screen container', () => {

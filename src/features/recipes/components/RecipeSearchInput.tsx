@@ -1,5 +1,4 @@
 import { useState, useImperativeHandle, forwardRef } from 'react';
-import { useUnistyles } from 'react-native-unistyles';
 import {
   SearchBar,
   type SearchBarAction,
@@ -14,7 +13,8 @@ export interface RecipeSearchInputRef {
 
 interface RecipeSearchInputProps {
   onSearch: (query: string) => void;
-  extraActions: SearchBarAction[];
+  /** The one control beside the field: the diet filter. */
+  accessory?: SearchBarAction;
   /** Seeds the field so the submitted query survives the screen's
    * skeleton↔list remounts. Read once on mount: keystrokes stay local so the
    * parent does not re-render per character. */
@@ -23,33 +23,20 @@ interface RecipeSearchInputProps {
   onClear: () => void;
 }
 
-/** The recipe search field; keystrokes re-render only this component. */
+/**
+ * The recipe name search; keystrokes re-render only this component. The
+ * keyboard's Search key runs it, so no button beside the field repeats that.
+ */
 export const RecipeSearchInput = forwardRef<
   RecipeSearchInputRef,
   RecipeSearchInputProps
->(({ onSearch, extraActions, initialQuery, onClear }, ref) => {
+>(({ onSearch, accessory, initialQuery, onClear }, ref) => {
   const { t } = useTranslation();
   const [inputQuery, setInputQuery] = useState(initialQuery);
-  // `useUnistyles()` because theme colours go into the `SearchBarAction[]` prop
-  // as `color`/`backgroundColor` strings, which a `withUnistyles` wrap cannot
-  // theme.
-  const { theme } = useUnistyles();
 
   useImperativeHandle(ref, () => ({
     clear: () => setInputQuery(''),
   }));
-
-  const rightActions: SearchBarAction[] = [
-    ...extraActions,
-    {
-      icon: 'search',
-      onPress: () => onSearch(inputQuery),
-      accessibilityLabel: t('labels.search'),
-      color: theme.colors.primary,
-      backgroundColor: theme.colors.surface,
-      testID: recipesTestIDs.searchSubmit,
-    },
-  ];
 
   return (
     <SearchBar
@@ -60,7 +47,7 @@ export const RecipeSearchInput = forwardRef<
       returnKeyType="search"
       maxLength={MAX_RECIPE_QUERY_LENGTH}
       placeholder={t('recipes.searchPlaceholder')}
-      rightActions={rightActions}
+      accessory={accessory}
       testID={recipesTestIDs.searchInput}
     />
   );

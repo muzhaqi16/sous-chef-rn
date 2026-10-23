@@ -5,41 +5,32 @@ import React, {
   useImperativeHandle,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
 import type { StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import {
-  StyleSheet,
-  useUnistyles,
-  withUnistyles,
-} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import type {
   ThemedBottomSheetTextInputRef,
   ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
-import { ActionButton } from '#components/atoms/ActionButton';
+import { CountBadge } from '#components/atoms/CountBadge';
+import { Pressable } from '#components/atoms/themedComponents';
+import { hitSlop } from '#/theme/foundations/sizes';
 import { commonStyles } from '#/styles/commonStyles';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, type IconName } from '#components/atoms/Icon';
 
 export interface SearchBarAction {
-  icon: string;
+  icon: IconName;
   onPress: () => void;
-  color?: string;
-  backgroundColor?: string;
+  /** A count over the icon, such as active filters; hidden at zero. */
   badge?: number;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  library?: string;
-  style?: StyleProp<ViewStyle>;
-  /** What the button does; its icon's name is no label. */
+  /** What the control does; its icon's name is no label. */
   accessibilityLabel: string;
-  animated?: boolean;
-  isHighlighted?: boolean;
-  testID?: string; // Optional testID for E2E testing
-  /** Callback with screen-coordinate rect when the button lays out (for spotlight tutorials) */
+  testID?: string;
+  /** Its screen rect once laid out, for a spotlight tutorial to point at. */
   onButtonLayout?: (rect: {
     x: number;
     y: number;
@@ -78,55 +69,35 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   listName?: string;
   itemCount?: number;
   completedCount?: number;
-  leftActions?: SearchBarAction[];
-  rightActions?: SearchBarAction[];
-  /** Show search icon inside the input field (left side) */
-  showSearchIcon?: boolean;
-  /** Custom icon/element to show inside the input field (right side, when not showing clear) */
-  innerRightIcon?: ReactNode;
+  /**
+   * The one control beside the field, which sorts or filters the list below.
+   * Nothing else sits beside or inside a search field.
+   */
+  accessory?: SearchBarAction;
   /** Extra handler invoked when the clear (✕) button is tapped, in addition to
    * emptying the field. Use to also reset dependent state (e.g. cancel a search
    * and return to the default list). */
   onClear?: () => void;
 };
 
-const ThemedActionButton = withUnistyles(ActionButton);
-
-/**
- * Measures an action button's rect for spotlight tutorials, trimming the
- * ActionButton's `marginLeft` so the rect covers only the visible button.
- */
-const MeasuredAction: FC<{
-  onButtonLayout: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
-  children: ReactNode;
-}> = ({ onButtonLayout, children }) => {
-  // Reads the theme so the trimmed margin follows `useAppearance`'s spacing
-  // override.
-  const { theme } = useUnistyles();
-  const margin = theme.spacing.sm;
-
-  const { ref, measure } = useMeasuredRect(rect =>
-    onButtonLayout({
-      ...rect,
-      x: rect.x + margin,
-      width: rect.width - margin,
-    }),
-  );
-
-  // `measure` changes exactly when `margin` or `onButtonLayout` does: a spacing
-  // change need not resize the button, so onLayout may not re-fire.
-  useEffect(() => {
-    measure();
-  }, [measure]);
-
+/** The one control beside the field: a plain icon, its count badge over it. */
+const SearchAccessory: FC<{ action: SearchBarAction }> = ({ action }) => {
+  const { ref, measure } = useMeasuredRect(action.onButtonLayout);
   return (
     <View ref={ref} collapsable={false} onLayout={measure}>
-      {children}
+      <Pressable
+        onPress={action.onPress}
+        hitSlop={hitSlop.lg}
+        accessibilityRole="button"
+        accessibilityLabel={action.accessibilityLabel}
+        testID={action.testID}
+        style={styles.accessory}
+      >
+        <View>
+          <Icon name={action.icon} size="md" tone="primary" />
+          <CountBadge count={action.badge} />
+        </View>
+      </Pressable>
     </View>
   );
 };
@@ -142,10 +113,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
       placeholder,
       containerStyle,
       inputStyle,
-      leftActions = [],
-      rightActions = [],
-      showSearchIcon = false,
-      innerRightIcon,
+      accessory,
       onClear,
       ...textInputProps
     },
@@ -226,55 +194,8 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
       onClear?.();
     };
 
-    const renderActionButtons = (
-      actions: SearchBarAction[],
-      side: 'left' | 'right',
-    ) => {
-      if (actions.length === 0) return null;
-
-      return (
-        <View style={styles.actionsContainer}>
-          {actions.map((action, index) => {
-            const key = `${side}-${index}-${action.icon}`;
-            const button = (
-              <ThemedActionButton
-                key={key}
-                name={action.icon}
-                onPress={action.onPress}
-                style={[commonStyles.shadow, action.style]}
-                uniProps={theme => ({
-                  color: action.color ?? theme.colors.onPrimary,
-                  backgroundColor:
-                    action.backgroundColor ?? theme.colors.primary,
-                })}
-                size={action.size}
-                accessibilityLabel={action.accessibilityLabel}
-                isHighlighted={action.animated ? action.isHighlighted : false}
-                testID={action.testID}
-              />
-            );
-
-            if (action.onButtonLayout) {
-              return (
-                <MeasuredAction
-                  key={key}
-                  onButtonLayout={action.onButtonLayout}
-                >
-                  {button}
-                </MeasuredAction>
-              );
-            }
-
-            return button;
-          })}
-        </View>
-      );
-    };
-
     return (
       <View style={[styles.container, containerStyle]}>
-        {renderActionButtons(leftActions, 'left')}
-
         <BaseInput
           value={debounced ? undefined : value}
           defaultValue={debounced ? defaultValue : undefined}
@@ -287,16 +208,12 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
           showClearIcon={debounced ? hasText : true}
           isLoading={isLoading}
           onClear={handleClear}
-          leftIcon={
-            showSearchIcon ? (
-              <Icon name="search" size={16} tone="textTertiary" />
-            ) : undefined
-          }
-          rightIcon={!value ? innerRightIcon : undefined}
+          // Every search field shows it, so every one reads as the same field.
+          leftIcon={<Icon name="search" size={16} tone="textTertiary" />}
           {...textInputProps}
         />
 
-        {renderActionButtons(rightActions, 'right')}
+        {accessory ? <SearchAccessory action={accessory} /> : null}
       </View>
     );
   },
@@ -309,12 +226,15 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // The icon's own width, so it ends on the gutter; `hitSlop` makes the 44pt.
+  accessory: {
+    marginLeft: theme.spacing.sm,
+    minHeight: theme.sizes.touchTarget.md,
+    justifyContent: 'center',
+  },
   inputContainer: {
     flex: 1,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-  },
-  actionsContainer: {
-    flexDirection: 'row',
   },
 }));

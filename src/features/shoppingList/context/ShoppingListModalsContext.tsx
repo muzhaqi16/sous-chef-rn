@@ -23,6 +23,8 @@ import { useShoppingListTutorialActions } from '#features/shoppingList/context/S
  */
 interface ShoppingListModalActions {
   openAddItemSheet: () => void;
+  /** Opens the add sheet on its details form, for "Add manually". */
+  openAddItemManually: () => void;
   openQuantityEdit: (itemId: string) => void;
   openPurchaseAmount: (itemId: string) => void;
   openMoveToPantry: (itemId: string) => void;
@@ -92,6 +94,7 @@ export function ShoppingListModalsProvider({
 
   const actions: ShoppingListModalActions = {
     openAddItemSheet: addItemSheet.open,
+    openAddItemManually: addItemSheet.openManually,
     openQuantityEdit: quantityEdit.openForItem,
     openPurchaseAmount: purchaseAmount.openForItem,
     openMoveToPantry: moveToPantry.openForItem,
@@ -122,6 +125,7 @@ export function ShoppingListModalsProvider({
 
       <AddToShoppingListSheet
         visible={addItemSheet.visible}
+        startStep={addItemSheet.startStep}
         shoppingListId={currentListId}
         onClose={() => {
           addItemSheet.close();

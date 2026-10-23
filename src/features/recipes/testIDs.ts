@@ -6,7 +6,8 @@
 export const recipesTestIDs = {
   recipesScreen: 'recipes-screen',
   searchInput: 'recipe-main-search-input',
-  searchSubmit: 'recipe-main-search-submit',
+  searchModeTab: (mode: string) => `recipe-search-mode-${mode}`,
+  ingredientPicker: 'recipe-ingredient-picker',
   activeFiltersSummary: 'active-filters-summary',
 
   myRecipesScreen: 'my-recipes-screen',

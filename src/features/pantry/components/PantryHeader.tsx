@@ -33,6 +33,15 @@ interface PantryHeaderProps {
   onAvatarPress?: () => void;
   onHomePress?: () => void;
   onNotificationPress?: () => void;
+  /** Opens the sheet listing the household's pantries. */
+  onSelectPantryPress?: () => void;
+  /** Screen-coordinate rect of the Select pantry action, for the tutorial. */
+  onSelectPantryLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
   /** Screen-coordinate rect, measured after native layout settles. */
   onHomeBadgeLayout?: (rect: {
     x: number;
@@ -50,11 +59,15 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   onAvatarPress,
   onHomePress,
   onNotificationPress,
+  onSelectPantryPress,
+  onSelectPantryLayout,
   onHomeBadgeLayout,
 }) => {
   const { t } = useTranslation();
   const { ref: badgeRef, measure: measureBadge } =
     useMeasuredRect(onHomeBadgeLayout);
+  const { ref: selectPantryRef, measure: measureSelectPantry } =
+    useMeasuredRect(onSelectPantryLayout);
 
   // A whole greeting written for the no-name case, not a filler word
   // interpolated into the named one — "Hello, there!" does not translate.
@@ -118,6 +131,25 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
 
       {/* Offline indicator — sits next to the notification bell */}
       <OfflineStatusPill style={styles.offlinePill} />
+
+      {!!onSelectPantryPress && (
+        <View
+          ref={selectPantryRef}
+          collapsable={false}
+          onLayout={measureSelectPantry}
+          style={styles.headerAction}
+        >
+          <Pressable
+            onPress={onSelectPantryPress}
+            hitSlop={hitSlop.md}
+            accessibilityRole="button"
+            accessibilityLabel={t('labels.selectPantry')}
+            testID={pantryTestIDs.selectPantryButton}
+          >
+            <Icon name="swap-vertical" size={24} tone="textSecondary" />
+          </Pressable>
+        </View>
+      )}
 
       {/* Notification bell */}
       {!!onNotificationPress && (
@@ -194,6 +226,10 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xsPlus,
   },
   offlinePill: {
+    marginRight: theme.spacing.sm,
+  },
+  headerAction: {
+    padding: theme.spacing.xs,
     marginRight: theme.spacing.sm,
   },
   notificationButton: {

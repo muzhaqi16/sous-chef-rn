@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -47,56 +48,54 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
   const { t } = useTranslation();
 
   return (
-    <AppPressable
-      onPress={onPress}
-      accessibilityLabel={name}
-      style={[
-        commonStyles.rowWrapper,
-        commonStyles.rowSurface,
-        commonStyles.rowContent,
-      ]}
-    >
-      {!!imageUrl && <RowThumbnail uri={imageUrl} />}
-      <View style={styles.body}>
-        <Text role={rowType.title} numberOfLines={1}>
-          {name}
-        </Text>
-        {(servings != null || totalMinutes != null) && (
-          <Text
-            role={rowType.subtitle}
-            tone="secondary"
-            numberOfLines={1}
-            style={commonStyles.rowTextGap}
-          >
-            {[
-              servings != null
-                ? t('recipes.servingsCount', { count: servings })
-                : null,
-              totalMinutes != null
-                ? t('labels.min', { count: totalMinutes })
-                : null,
-            ]
-              .filter(part => part !== null)
-              .join(' • ')}
+    <RowCard>
+      <AppPressable
+        onPress={onPress}
+        accessibilityLabel={name}
+        style={[commonStyles.rowSurface, commonStyles.rowContent]}
+      >
+        <RowThumbnail uri={imageUrl} />
+        <View style={styles.body}>
+          <Text role={rowType.title} numberOfLines={1}>
+            {name}
           </Text>
-        )}
-      </View>
-      {!!actions?.length && (
-        <View style={styles.actions}>
-          {actions.map(action => (
-            <Pressable
-              key={action.key}
-              onPress={action.onPress}
-              hitSlop={hitSlop.md}
-              style={({ pressed }) => pressed && styles.pressed}
-              accessibilityLabel={t(action.labelKey)}
+          {(servings != null || totalMinutes != null) && (
+            <Text
+              role={rowType.subtitle}
+              tone="secondary"
+              numberOfLines={1}
+              style={commonStyles.rowTextGap}
             >
-              <Icon name={action.icon} size={20} tone={action.tone} />
-            </Pressable>
-          ))}
+              {[
+                servings != null
+                  ? t('recipes.servingsCount', { count: servings })
+                  : null,
+                totalMinutes != null
+                  ? t('labels.min', { count: totalMinutes })
+                  : null,
+              ]
+                .filter(part => part !== null)
+                .join(' • ')}
+            </Text>
+          )}
         </View>
-      )}
-    </AppPressable>
+        {!!actions?.length && (
+          <View style={styles.actions}>
+            {actions.map(action => (
+              <Pressable
+                key={action.key}
+                onPress={action.onPress}
+                hitSlop={hitSlop.md}
+                style={({ pressed }) => pressed && styles.pressed}
+                accessibilityLabel={t(action.labelKey)}
+              >
+                <Icon name={action.icon} size={20} tone={action.tone} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </AppPressable>
+    </RowCard>
   );
 };
 

@@ -181,11 +181,6 @@ const PantryMainInner: React.FC = () => {
   const handleNotificationPress = toNotifications;
   const handleHomePress = () =>
     toHomeManagement({ selectedHomeId: screen.selectedHomeId ?? undefined });
-  const handleAnalyticsPress = () => {
-    if (screen.pantry?.id) {
-      toPantryAnalytics({ pantryId: screen.pantry.id });
-    }
-  };
   const handleLowStockNavigate = () =>
     toFilteredPantryItems({ mode: 'lowStock' });
   const handleExpiringNavigate = () =>
@@ -219,7 +214,6 @@ const PantryMainInner: React.FC = () => {
         onNotificationPress={handleNotificationPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
-        onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
         onExpiringNavigate={handleExpiringNavigate}
         onExpiredNavigate={handleExpiredNavigate}
@@ -252,7 +246,6 @@ interface PantryMainContentProps {
   onNotificationPress: () => void;
   onHomePress: () => void;
   onSettingsPress: () => void;
-  onAnalyticsPress: () => void;
   onLowStockNavigate: () => void;
   onExpiringNavigate: () => void;
   onExpiredNavigate: () => void;
@@ -280,7 +273,6 @@ function PantryMainContent({
   onNotificationPress,
   onHomePress,
   onSettingsPress,
-  onAnalyticsPress,
   onLowStockNavigate,
   onExpiringNavigate,
   onExpiredNavigate,
@@ -297,13 +289,15 @@ function PantryMainContent({
 }: PantryMainContentProps) {
   const unreadNotificationCount = useUnreadNotificationCount();
   const { t } = useTranslation();
+  const { toBarcode, toReceiptScan } = useAppNavigation();
   const {
     handleConsumeItem,
     handleWasteItem,
     handleRestockItem,
     handleEditItem,
     handleDeleteItem,
-    setAddSheetVisible,
+    openAddSheet,
+    openAddManually,
     setAddLocationSheetVisible,
   } = usePantryModals();
 
@@ -340,7 +334,7 @@ function PantryMainContent({
     1: onSettingsPress,
     2: () => {
       Telemetry.trackEvent('add_pantry_item_clicked');
-      setAddSheetVisible(true);
+      openAddSheet();
     },
   };
 
@@ -350,21 +344,45 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Always registered, so the `+` says why it cannot add rather than doing nothing.
+  // Always registered, so the `+` says why it cannot add rather than doing
+  // nothing. Every way to add is one tap from here, as on Recipes.
+  const addRefusal = canAdd ? undefined : t('errors.codes.forbidden');
   useTabBarAddMenu([
     {
-      key: 'item',
-      label: t('labels.addItem'),
-      icon: 'add',
+      key: 'search',
+      label: t('labels.searchToAdd'),
+      icon: 'search',
       onPress: () => {
         Telemetry.trackEvent('add_pantry_item_clicked');
-        setAddSheetVisible(true);
+        openAddSheet();
       },
-      disabledReason: canAdd ? undefined : t('errors.codes.forbidden'),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'barcode',
+      label: t('labels.scanBarcode'),
+      icon: 'barcode-outline',
+      onPress: () =>
+        toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'receipt',
+      label: t('labels.scanReceipt'),
+      icon: 'receipt-outline',
+      onPress: () => toReceiptScan(),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'manual',
+      label: t('labels.addManually'),
+      icon: 'create-outline',
+      onPress: openAddManually,
+      disabledReason: addRefusal,
     },
   ]);
 
-  const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
+  const handleAddItem = canAdd ? openAddSheet : undefined;
 
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -403,7 +421,6 @@ function PantryMainContent({
         onNotificationPress={onNotificationPress}
         onHomePress={onHomePress}
         onSettingsPress={onSettingsPress}
-        onAnalyticsPress={onAnalyticsPress}
         onLowStockNavigate={onLowStockNavigate}
         onExpiringNavigate={onExpiringNavigate}
         onExpiredNavigate={onExpiredNavigate}
@@ -497,7 +514,6 @@ const PantryMainFallback: React.FC = () => {
           value=""
           onChangeText={noop}
           placeholder={t('pantryScreen.searchPlaceholder')}
-          showSearchIcon
           editable={false}
         />
       </View>

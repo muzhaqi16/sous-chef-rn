@@ -6,21 +6,14 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  Pressable,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
-import { Icon } from '#components/atoms/Icon';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import {
-  PantrySortDirection,
-  PREFERENCE_DEFAULTS,
-} from '#store/slices/preferenceTypes';
+import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
-import { PantrySortModal } from './PantrySortModal';
+import { PantrySortModal, sortOptionLabelKey } from './PantrySortModal';
 import {
   PantryActionsProvider,
   type PantryItemActions,
@@ -53,8 +46,6 @@ import type {
   PantryContentProps,
   PantryContentRef,
 } from './pantryDisplay/types';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 // Survives unmount/remount (stack navigation) so a return visit skips the
 // skeletons; resets on app restart.
@@ -93,7 +84,6 @@ export const PantryContent = React.forwardRef<
       onHomePress,
       onNotificationPress,
       onSettingsPress,
-      onAnalyticsPress,
       onLowStockNavigate,
       onExpiringNavigate,
       onExpiredNavigate,
@@ -128,8 +118,6 @@ export const PantryContent = React.forwardRef<
     const { bottom: safeBottom } = useSafeAreaInsets();
     const flashListRef = useRef<FlashListRef<PantryListNode>>(null);
     const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
-    const { ref: settingsIconRef, measure: measureSettingsIcon } =
-      useMeasuredRect(onSettingsIconLayout);
 
     useImperativeHandle(ref, () => ({
       scrollToTop() {
@@ -336,23 +324,6 @@ export const PantryContent = React.forwardRef<
           { paddingBottom: getScrollClearancePadding(safeBottom) },
         ];
 
-    const settingsIcon = (
-      <View
-        ref={settingsIconRef}
-        collapsable={false}
-        onLayout={measureSettingsIcon}
-      >
-        <Pressable
-          onPress={onSettingsPress}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
-          accessibilityLabel={t('labels.pantrySettings')}
-        >
-          <Icon name="settings-outline" size={18} tone="textTertiary" />
-        </Pressable>
-      </View>
-    );
-
     return (
       <PantryActionsProvider actions={itemActions}>
         <View style={styles.container}>
@@ -368,6 +339,8 @@ export const PantryContent = React.forwardRef<
                 onAvatarPress={onAvatarPress}
                 onHomePress={onHomePress}
                 onNotificationPress={onNotificationPress}
+                onSelectPantryPress={onSettingsPress}
+                onSelectPantryLayout={onSettingsIconLayout}
                 onHomeBadgeLayout={onHomeBadgeLayout}
               />
             </View>
@@ -375,21 +348,22 @@ export const PantryContent = React.forwardRef<
               value={searchQuery}
               onChangeText={onSearchChange}
               placeholder={t('pantryScreen.searchPlaceholder')}
-              showSearchIcon={true}
               testID={pantryTestIDs.searchInput}
-              innerRightIcon={settingsIcon}
+              accessory={{
+                icon: 'sort',
+                onPress: openSortModal,
+                accessibilityLabel: t('pantryScreen.sortedBy', {
+                  field: t(sortOptionLabelKey(sortOption)),
+                }),
+                testID: pantryTestIDs.sortButton,
+              }}
             />
             {!!stats && (
               <PantryAlertBar
                 stats={stats}
-                onAnalyticsPress={onAnalyticsPress}
                 onLowStockNavigate={onLowStockNavigate}
                 onExpiringNavigate={onExpiringNavigate}
                 onExpiredNavigate={onExpiredNavigate}
-                sortLabel={`${t('pantryScreen.sort')} ${
-                  sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
-                }`}
-                onSortPress={openSortModal}
               />
             )}
             <View style={styles.tabs}>

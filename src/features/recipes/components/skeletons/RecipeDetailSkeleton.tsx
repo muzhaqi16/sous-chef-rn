@@ -2,18 +2,16 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
-import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
-import { radii } from '#/theme/foundations/radii';
 import { type } from '#/theme/foundations/type';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { RecipeItemSkeleton } from './RecipeItemSkeleton';
 
 // The bars stand in for the screen's own text, so they take the heights of the
-// roles that text uses; the tiles match IngredientCard's image.
+// roles that text uses.
 const TITLE = type.title.fontSize;
 const HEADING = type.heading.fontSize;
 const BODY = type.body.fontSize;
 const META = type.caption.fontSize;
-const INGREDIENT_IMAGE = 64;
 const INGREDIENT_PLACEHOLDERS = [0, 1, 2, 3];
 
 /**
@@ -41,16 +39,9 @@ export const RecipeDetailSkeleton: React.FC<{ showTitle?: boolean }> = ({
 
     <View style={styles.section}>
       <SkeletonLine width="40%" height={HEADING} style={styles.heading} />
-      <View style={styles.ingredients}>
-        {INGREDIENT_PLACEHOLDERS.map(index => (
-          <SkeletonRectangle
-            key={index}
-            width={INGREDIENT_IMAGE}
-            height={INGREDIENT_IMAGE}
-            borderRadius={radii.md}
-          />
-        ))}
-      </View>
+      {INGREDIENT_PLACEHOLDERS.map(index => (
+        <RecipeItemSkeleton key={index} />
+      ))}
     </View>
 
     <View style={styles.section}>
@@ -79,9 +70,5 @@ const styles = StyleSheet.create(theme => ({
   },
   line: {
     marginBottom: theme.spacing.sm,
-  },
-  ingredients: {
-    flexDirection: 'row',
-    gap: theme.spacing.xl,
   },
 }));

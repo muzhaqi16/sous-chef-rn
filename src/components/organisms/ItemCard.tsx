@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type {
@@ -8,7 +8,7 @@ import type {
 } from '#components/organisms/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
 import type { BadgeContent } from '#components/atoms/Badge';
-import { commonStyles } from '#/styles/commonStyles';
+import { RowCard } from '#components/atoms/RowCard';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
@@ -74,7 +74,7 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <View style={commonStyles.rowWrapper} testID={testID}>
+    <RowCard testID={testID}>
       <Animated.View style={animatedSlideStyle}>
         <SwipeableItem
           accessibilityLabel={
@@ -96,7 +96,7 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
           />
         </SwipeableItem>
       </Animated.View>
-    </View>
+    </RowCard>
   );
 };
 
@@ -120,7 +120,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
   // and the `Animated.View` wrapper entirely.
   if (!hasSwipeActions) {
     return (
-      <View style={commonStyles.rowWrapper} testID={testID}>
+      <RowCard testID={testID}>
         <ListItem
           title={title}
           subtitle={subtitle}
@@ -130,7 +130,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
           leftElement={leftElement}
           accessibilityLabel={accessibilityLabel}
         />
-      </View>
+      </RowCard>
     );
   }
 

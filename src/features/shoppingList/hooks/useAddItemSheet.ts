@@ -10,8 +10,12 @@ export interface UseAddItemSheetOptions {
 
 export interface UseAddItemSheetResult {
   visible: boolean;
+  /** The step the sheet opens on: its search, or its form for "Add manually". */
+  startStep: 'search' | 'details';
   /** Opens only once a list is selected; otherwise offers to create one. */
   open: () => void;
+  /** As `open`, on the details form. */
+  openManually: () => void;
   close: () => void;
 }
 
@@ -21,8 +25,9 @@ export function useAddItemSheet(
   const { currentListId, onNavigateToListSettings } = options;
 
   const [visible, setVisible] = useState(false);
+  const [startStep, setStartStep] = useState<'search' | 'details'>('search');
 
-  const open = () => {
+  const openOn = (step: 'search' | 'details') => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
       alertService.alert(
@@ -42,6 +47,7 @@ export function useAddItemSheet(
       return;
     }
     Telemetry.trackEvent('add_item_clicked', { list_id: currentListId });
+    setStartStep(step);
     setVisible(true);
   };
 
@@ -49,5 +55,11 @@ export function useAddItemSheet(
     setVisible(false);
   };
 
-  return { visible, open, close };
+  return {
+    visible,
+    startStep,
+    open: () => openOn('search'),
+    openManually: () => openOn('details'),
+    close,
+  };
 }

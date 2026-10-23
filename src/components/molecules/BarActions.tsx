@@ -1,4 +1,5 @@
 import React from 'react';
+import { CountBadge } from '#components/atoms/CountBadge';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -85,13 +86,7 @@ const BarActionButton: React.FC<{
   ) : (
     <View>
       <HeaderActionIcon action={action} />
-      {action.badge !== undefined && action.badge > 0 && (
-        <View style={styles.badge}>
-          <Text role="caption" tone="onPrimary" style={styles.badgeText}>
-            {String(action.badge)}
-          </Text>
-        </View>
-      )}
+      <CountBadge count={action.badge} />
     </View>
   );
 
@@ -155,21 +150,5 @@ const styles = StyleSheet.create(theme => {
             alignItems: 'center',
           }
         : { justifyContent: 'center', alignItems: 'center' },
-    badge: {
-      position: 'absolute',
-      top: -theme.spacing.xs,
-      right: -theme.spacing.xsPlus,
-      minWidth: theme.spacing.md,
-      height: theme.spacing.md,
-      paddingHorizontal: theme.spacing['2xsPlus'],
-      borderRadius: theme.radii.full,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    badgeText: {
-      fontSize: theme.fonts.size['3xs'],
-      fontWeight: theme.fonts.weight.bold,
-    },
   };
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
@@ -34,9 +35,8 @@ export const PendingListInvites: React.FC<
         const inFlight =
           answering?.inviteId === invite.id ? answering.answer : null;
         return (
-          <View
+          <RowCard
             key={invite.id}
-            style={commonStyles.rowWrapper}
             testID={shoppingListTestIDs.pendingInvite(invite.id)}
           >
             <View style={commonStyles.rowSurface}>
@@ -80,7 +80,7 @@ export const PendingListInvites: React.FC<
                 </Button>
               </View>
             </View>
-          </View>
+          </RowCard>
         );
       })}
     </View>

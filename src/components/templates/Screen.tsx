@@ -14,7 +14,11 @@ import {
   ThemedKeyboardAwareScrollView,
 } from '#components/atoms/themedComponents';
 import { Header } from '#components/organisms/Header';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import {
+  TabScreenHeader,
+  type TitleSwitch,
+} from '#components/molecules/TabScreenHeader';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type { BarAction } from '#components/molecules/BarActions';
@@ -35,11 +39,12 @@ export interface ScreenHeaderConfig {
    */
   variant?: 'standard' | 'tab' | 'none';
   title?: string;
-  /** `tab` only: the small label above the title. */
-  label?: string;
-  /** The title's own affordances: what pressing it opens, and its sign. */
-  onTitlePress?: () => void;
-  titleAccessory?: React.ReactNode;
+  /**
+   * The title names one of several things the user can switch between: it
+   * shows a chevron, and pressing it opens the picker. No other control opens
+   * the same picker.
+   */
+  switchable?: TitleSwitch;
   /** The trailing actions on either variant, icon or text — never a bare node. */
   actions?: BarAction[];
   /** A handler shows the back control; omit it for a root screen. */
@@ -126,17 +131,22 @@ export const Screen: React.FC<ScreenProps> = props => {
         onBack={header?.back}
         onClose={header?.close}
         rightActions={header?.actions}
-        onTitlePress={header?.onTitlePress}
-        titleAccessory={header?.titleAccessory}
+        onTitlePress={header?.switchable?.onPress}
+        titleAccessory={
+          header?.switchable ? (
+            <ExpandChevron
+              expanded={header.switchable.open ?? false}
+              tone="textPrimary"
+            />
+          ) : undefined
+        }
         centerTitle
       />
     ) : variant === 'tab' ? (
       <TabScreenHeader
-        label={header?.label ?? ''}
         title={header?.title ?? ''}
         actions={header?.actions}
-        onTitlePress={header?.onTitlePress}
-        titleAccessory={header?.titleAccessory}
+        switchable={header?.switchable}
       />
     ) : null;
 

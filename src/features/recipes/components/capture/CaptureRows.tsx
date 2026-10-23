@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { ListItem } from '#components/molecules/ListItem';
@@ -7,7 +8,6 @@ import {
   ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
-import { commonStyles } from '#/styles/commonStyles';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -43,14 +43,14 @@ export const CaptureRows: React.FC = () => {
     <View testID={recipesTestIDs.captureRows}>
       {entries.map(entry =>
         entry.state === 'reading' ? (
-          <View key={entry.id} style={commonStyles.rowWrapper}>
+          <RowCard key={entry.id}>
             <ListItem
               title={readingTitle(entry)}
               leftElement={<ThemedActivityIndicator size="small" />}
             />
-          </View>
+          </RowCard>
         ) : (
-          <View key={entry.id} style={commonStyles.rowWrapper}>
+          <RowCard key={entry.id}>
             <ListItem
               title={
                 entry.label
@@ -70,7 +70,7 @@ export const CaptureRows: React.FC = () => {
                 </Pressable>
               }
             />
-          </View>
+          </RowCard>
         ),
       )}
     </View>

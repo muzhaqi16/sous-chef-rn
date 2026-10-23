@@ -53,6 +53,19 @@ optional:
   and one a spotlight measures always stay; callers lead with the most used. A
   menu action runs once the tray has closed, so a sheet it opens never stacks on
   one animating out.
+- **A tab header is its title and at most two actions for that tab.** Nothing
+  above or below the title restates it, and `TabScreenHeader` refuses a third
+  action in development (`TabScreenHeader.test.tsx`), so a further action moves
+  into one of the two, such as a ⋮ menu. The standard header keeps its overflow
+  into "more".
+- **A title that names a switchable thing switches it.** `header.switchable`
+  (`TitleSwitch`: `onPress`, `open`, `accessibilityHint`, `testID`) draws the
+  chevron (`ExpandChevron`) and makes the title open the picker, on either
+  variant: a meal plan, a shopping list, the receipt's store. No separate action
+  opens the same picker.
+- **One way in per action.** A menu or sheet does not repeat an action that a
+  visible control on the same screen already offers: Meal Plan's ⋮ sheet does
+  not offer the header's "Generate shopping list".
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset
@@ -132,30 +145,75 @@ Four shells compose one row — `BaseItemCard` (pantry), `ListItem` (shopping li
 meal plan), `ItemCard` and `RecipeCardView` — so the row lives in one place and
 they read it.
 
-- **Geometry** is `commonStyles.rowWrapper` (the row's place in the list),
-  `rowSurface` (its card) and `rowContent` (the slot layout inside it), in
-  `src/styles/commonStyles.ts`. Their steps are the named `theme.layout.row*`
-  tokens (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`), so
-  density scales them. Held in four separate copies, the steps drift into three
-  paddings, three row gaps and two radii; one definition cannot drift.
+- **Each row is its own card.** `RowCard` (`src/components/atoms/RowCard.tsx`)
+  draws it: the fill, every corner rounded, the shadow (`theme.shadows.card`)
+  and the `rowGap` below it. Its inner clip rounds whatever the row draws under
+  itself (a swipe tray, a ripple); a clip on the card itself would cut its own
+  shadow off. A grouped list puts each group's heading above its cards. The row
+  itself is `rowSurface` (its fill) and `rowContent` (the slot layout inside
+  it), in `src/styles/commonStyles.ts`, with no gap, radius, border or shadow of
+  its own (`rowsAreCards.test.ts`). Their steps are the named `theme.layout.row*`
+  tokens (`rowInset`, `rowInsetHorizontal`, `rowSlotGap`, `rowTextGap`), so
+  density scales them.
+- **A row shows its photo or nothing** (`RowThumbnail` returns `null` without a
+  `uri`). No placeholder tile and no stand-in picture (department, category or
+  dish icon): the goal is a real photo for every item, and a generic one
+  misrepresents it. Adding a photo belongs on the item's detail screen.
+- **A row's status is its status line alone** (`StatusLine`): one coloured line
+  under the title, with no border, tint or badge repeating it.
+- **The whole row opens its detail.** No row shows a chevron.
 - **Text** is `rowType` (`src/theme/foundations/type.ts`): `title` for the row's
   name and its trailing value, `subtitle` for everything supporting them. A shell
   names the role through `rowType`, never as a literal, so no screen can pick its
   own row title size.
 - **A thumbnail carries no margin.** `rowContent`'s `gap` spaces every slot; a
   margin on top of it double-spaces the one slot that has it.
-- **A skeleton row uses the same three primitives**, so its container adds no
-  gap: `rowWrapper` already carries the row gap, and a container that spaces
-  double-spaces it.
-- **The skeleton owns the gutter exactly when the real list does.** `rowWrapper`
-  has no horizontal inset by design, because the list rendering the row owns it,
-  so the answer depends on where the skeleton sits:
+- **A skeleton row is a `RowCard` over the same primitives**, so a run of
+  skeleton rows draws the same cards as the rows it stands in for, and its
+  container adds no gap.
+- **The skeleton owns the gutter exactly when the real list does.** A `RowCard`
+  has no horizontal inset by design, because the list rendering the row owns
+  it, so the answer depends on where the skeleton sits:
   - Nested inside the real list's padded `contentContainerStyle` (the pantry
     flap, absolute inside `ListHeaderComponent`), it inherits the inset and adds
     none.
   - A standalone sibling list overlaid on the real one (`SkeletonList` under the
     shopping tabs) is a second list and reproduces the gutter itself, or the
     whole skeleton sits flush against the screen edge.
+
+## Search, sort and modes
+
+- **A search field holds only the query** and its clear control. Every screen
+  draws `SearchBar`, which always shows the magnifier, so the fields share one
+  shape, height and icon. A screen
+  action does not go inside the field: Pantry's "Select pantry" is in its header.
+- **At most one control sits beside the field, and it sorts or filters the list
+  below.** That control is `SearchBar`'s `accessory` (a `SearchBarAction`): a plain
+  primary icon at its own width, ending on the gutter, with an optional count
+  `badge`; `hitSlop` gives it the 44pt target. Pantry's sorts (the `sort`
+  glyph), and its label names the active sort. Recipes' filters by diet in name mode, and
+  its badge counts the active filters. The shopping list and the add sheet have
+  none, because scanning is in the tab's `+` menu.
+- **Search runs on the keyboard's Search key.** No submit button sits beside
+  the field.
+- **A control that switches what a screen shows is `ModeTabs`**
+  (`src/components/molecules/ModeTabs.tsx`): text tabs at their own width from
+  the gutter, the chosen one underlined, each with its count when it has one.
+  Shopping / Purchased and Recipes' By name / By ingredients use it. Controls
+  for the view shown go in `trailing`, at the row's end, so they never take width
+  from the tabs. A chip narrows a list and never switches modes, so Pantry's
+  storage locations stay chips; a choice inside a form stays a
+  `SegmentedControl`. `tabTestID` names each tab for tests and flows, and
+  `onTabLayout` reports a tab's rect for a tutorial step.
+- **A count badge is the only sign a control is active.** The control itself
+  does not change when active; a fill in the badge's colour would swallow it.
+- **An icon `Ionicons` lacks is an app glyph.** `Icon` draws the SVGs in
+  `src/assets/icons/svg/glyphs/` by name, with the same `tone` and `size` as a
+  font glyph, so no second icon font is installed for one shape. Each is listed
+  with its source and licence in that folder's `NOTICE.md`.
+- **A screen shows each count once.** Pantry's total appears only on its "All"
+  chip. Its counts row shows the expired, expiring and running-low counts,
+  each hidden at zero, and nothing else.
 
 ## Unistyles
 
@@ -189,7 +247,7 @@ they read it.
   `useAnimatedStyle` of their own that reads only `useAnimatedTheme()`, which
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
   `FloatingTabBar`). Or they sit on a non-animated parent (the list rows'
-  `rowWrapper`).
+  `RowCard`).
 - **The animated theme is `useAnimatedTheme` from `#hooks/ui/useAnimatedTheme`**
   (`no-restricted-imports`). Unistyles' own hook stops listening while a paused
   screen is hidden and never reads the theme again, so the app's reads it when

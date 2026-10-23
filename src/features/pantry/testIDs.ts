@@ -12,6 +12,7 @@ export const pantryTestIDs = {
   listSkeletonOverlay: 'pantry-list-skeleton-overlay',
   refreshControl: 'pantry-refresh-control',
   searchInput: 'pantry-search-input',
+  selectPantryButton: 'pantry-select-pantry-button',
   emptyState: 'pantry-empty-state',
   sortButton: 'pantry-sort-button',
   sortModal: 'pantry-sort-modal',

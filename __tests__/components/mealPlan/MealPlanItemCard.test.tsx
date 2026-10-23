@@ -34,7 +34,10 @@ const makeItem = (
 /** A strict cell: the item is read from the cache, the prop is its key. */
 const renderCard = (
   item: MealPlanItemCard_ItemFragment,
-  props: Omit<React.ComponentProps<typeof MealPlanItemCard>, 'item'> = {},
+  props: Omit<
+    React.ComponentProps<typeof MealPlanItemCard>,
+    'item' | 'position'
+  > = {},
 ) =>
   renderWithApollo(
     <MealPlanItemCard

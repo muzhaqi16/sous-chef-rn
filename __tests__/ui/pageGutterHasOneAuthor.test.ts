@@ -46,8 +46,6 @@ const AUTHORS: Record<string, string> = {
   // A section whose rules bleed through the gutter it sits in.
   'src/components/organisms/SettingsSection.tsx':
     'deliberate negation, inset rules',
-  'src/features/recipes/screens/RecipeDetail/index.tsx':
-    'deliberate negation, edge-bleeding carousel',
   'src/features/catalog/ui/StorageLocationForm.tsx':
     'deliberate negation, chip rows bleed through the sheet gutter',
 
@@ -89,7 +87,7 @@ const GUTTERLESS = ['FilterTabs'];
 /**
  * A skeleton list that INHERITS its inset, and the padded container it sits in.
  * Every other file rendering a run of skeleton rows has to read the token —
- * `commonStyles.rowWrapper` carries no horizontal inset, so a skeleton list
+ * a `RowCard` row carries no horizontal inset, so a skeleton list
  * standing beside the real list rather than inside it lands flush to the edge.
  */
 const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
@@ -209,8 +207,8 @@ describe('the page gutter has one author per page', () => {
   });
 
   it('is not applied by the shared row shell', () => {
-    const src = readFileSync('src/styles/commonStyles.ts', 'utf8');
-    const start = src.search(/\browWrapper:\s*\{/);
+    const src = readFileSync('src/components/atoms/RowCard.tsx', 'utf8');
+    const start = src.search(/\bcard:\s*\{/);
     expect(start).toBeGreaterThan(-1);
     const body = src.slice(start, src.indexOf('},', start));
 

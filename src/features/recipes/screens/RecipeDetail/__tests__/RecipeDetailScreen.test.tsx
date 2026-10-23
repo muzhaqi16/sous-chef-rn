@@ -140,10 +140,6 @@ jest.mock('#features/profile/ui/ReportContentSheet', () => {
   return { ReportContentSheet: Probe };
 });
 
-jest.mock('#features/recipes/components/recipeDetail/IngredientCard', () => ({
-  IngredientCard: () => null,
-}));
-
 jest.mock('react-native-turbo-image', () => 'TurboImage');
 
 // The screen reads its params through `useRecipeDetail`, which is mocked here.
@@ -531,24 +527,49 @@ describe('RecipeDetail', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('renders with added ingredients highlighted', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Recipe With Ingredients',
-        image: null,
-        servings: 2,
-        ingredients: [
-          { id: 'i1', name: 'Flour', amount: 200, measures: {} },
-          { id: 'i2', name: 'Sugar', amount: 100, measures: {} },
-        ],
-        instructions: [],
-      },
-      shoppingLists: [{ id: 'sl-1', name: 'Weekly' }],
-      addedIngredients: new Set(['i1']),
+  describe('ingredients', () => {
+    const NAMES = ['Flour', 'Sugar', 'Eggs', 'Milk', 'Butter', 'Salt'];
+    const renderIngredients = (overrides: Record<string, unknown> = {}) =>
+      renderDetail({
+        displayData: {
+          dataAttributions: [],
+          details: 'complete',
+          title: 'Recipe With Ingredients',
+          image: null,
+          servings: 2,
+          ingredients: NAMES.map((name, index) => ({ id: `i${index}`, name })),
+          instructions: [],
+        },
+        shoppingLists: [{ id: 'sl-1', name: 'Weekly' }],
+        ...overrides,
+      });
+
+    it('lists every ingredient as a row with its own add action', () => {
+      renderIngredients();
+
+      for (const name of NAMES) {
+        expect(screen.getByText(name)).toBeTruthy();
+        expect(screen.getByLabelText(`Add ${name}`)).toBeTruthy();
+      }
     });
-    expect(tree.getAllByText('Recipe With Ingredients')[0]).toBeTruthy();
+
+    it('adds one ingredient from its row', () => {
+      const handleAddSingleIngredient = jest.fn();
+      renderIngredients({ handleAddSingleIngredient });
+
+      fireEvent.press(screen.getByLabelText('Add Eggs'));
+
+      expect(handleAddSingleIngredient).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'i2', name: 'Eggs' }),
+      );
+    });
+
+    it('marks an added ingredient and stops adding it again', () => {
+      renderIngredients({ addedIngredients: new Set(['i0']) });
+
+      expect(screen.queryByLabelText('Add Flour')).toBeNull();
+      expect(screen.getByLabelText('Added')).toBeDisabled();
+    });
   });
 
   it('renders marking as cooked state', () => {
@@ -694,16 +715,17 @@ describe('RecipeDetail', () => {
     });
   });
 
-  describe('when a saved recipe was last cooked', () => {
+  describe('cooking history', () => {
     const LAST_COOKED_AT = '2026-10-11T12:00:00.000Z';
+    const DATE = formatMonthDayYear(new Date(LAST_COOKED_AT));
 
-    const renderSaved = (cooked: {
+    const renderCooked = (cooked: {
+      isSaved: boolean;
       cookedCount: number;
       lastCookedAt: string | null;
     }) =>
       renderDetail({
         recipeId: 'r1',
-        isSaved: true,
         displayData: {
           dataAttributions: [],
           details: 'complete',
@@ -717,25 +739,45 @@ describe('RecipeDetail', () => {
         ...cooked,
       });
 
-    it('shows the date beside the cooked count', () => {
-      const tree = renderSaved({
+    it('shows the count and the last date on one line', () => {
+      const tree = renderCooked({
+        isSaved: true,
         cookedCount: 3,
         lastCookedAt: LAST_COOKED_AT,
       });
 
-      expect(tree.getByText('Cooked 3x')).toBeTruthy();
-      expect(
-        tree.getByText(
-          `Last cooked ${formatMonthDayYear(new Date(LAST_COOKED_AT))}`,
-        ),
-      ).toBeTruthy();
+      expect(tree.getByText(`Cooked 3 times, last on ${DATE}`)).toBeTruthy();
+      expect(tree.queryByText(/Last cooked/)).toBeNull();
     });
 
-    it('shows no date for a recipe never cooked', () => {
-      const tree = renderSaved({ cookedCount: 0, lastCookedAt: null });
+    it('says once for a single cook', () => {
+      const tree = renderCooked({
+        isSaved: true,
+        cookedCount: 1,
+        lastCookedAt: LAST_COOKED_AT,
+      });
+
+      expect(tree.getByText(`Cooked once, last on ${DATE}`)).toBeTruthy();
+    });
+
+    it('offers to mark a recipe never cooked', () => {
+      const tree = renderCooked({
+        isSaved: true,
+        cookedCount: 0,
+        lastCookedAt: null,
+      });
 
       expect(tree.getByText('Mark cooked')).toBeTruthy();
-      expect(tree.queryByText(/Last cooked/)).toBeNull();
+    });
+
+    it('shows nothing for a recipe not saved', () => {
+      const tree = renderCooked({
+        isSaved: false,
+        cookedCount: 0,
+        lastCookedAt: null,
+      });
+
+      expect(tree.queryByText('Mark cooked')).toBeNull();
     });
   });
 });

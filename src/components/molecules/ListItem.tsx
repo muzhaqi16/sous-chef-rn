@@ -22,8 +22,6 @@ interface ListItemProps {
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
-  // `null` suppresses the default trailing chevron.
-  rightIcon?: React.ComponentProps<typeof Icon>['name'] | null;
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
@@ -42,7 +40,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   subtitle,
   onPress,
   leftIcon,
-  rightIcon = 'chevron-forward',
   badge,
   rightElement,
   leftElement,
@@ -102,15 +99,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           <Badge variant={badge.variant}>{badge.text}</Badge>
         ))}
       {rightElement}
-      {!!rightIcon && !rightElement && (
-        <ThemedIcon
-          name={rightIcon}
-          size={24}
-          uniProps={theme => ({
-            color: overrideIconColor ?? theme.colors.textSecondary,
-          })}
-        />
-      )}
       {dragHandleElement}
     </>
   );
@@ -121,7 +109,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
     return (
       <View style={commonStyles.rowSurface}>
         <AppPressable
-          style={[commonStyles.rowClip, commonStyles.rowContent]}
+          style={commonStyles.rowContent}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={

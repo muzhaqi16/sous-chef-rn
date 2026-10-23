@@ -291,7 +291,6 @@ export const SavedRecipes: React.FC = () => {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={t('recipes.savedRecipesSearchPlaceholder')}
-          showSearchIcon
         />
       </View>
       <View style={styles.gutter}>{FilterHeader}</View>

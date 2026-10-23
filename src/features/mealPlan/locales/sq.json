@@ -36,7 +36,8 @@
     "dietDairyFree": "PB"
   },
   "emptyDay": {
-    "title": "Asnjë vakt i planifikuar"
+    "title": "Asnjë vakt i planifikuar",
+    "addHint": "Trokit + për të shtuar një vakt"
   },
   "mealPlanEmpty": {
     "title": "Planifiko vaktet e tua",
@@ -60,7 +61,7 @@
     "sharedWith": "Ndarë me {{name}}",
     "createdBy": "Krijuar nga {{name}}",
     "actionsLabel": "Veprimet",
-    "generateShoppingListDesc": "Krijo një listë nga recetat e këtij plani",
+    "saveAsTemplateDesc": "Përdor sërish vaktet e këtij plani për një javë tjetër",
     "duplicatePlanDesc": "Kopjo këtë plan në një interval të ri datash",
     "viewNutrition": "Shiko ushqyerjen",
     "hideNutrition": "Fshih ushqyerjen",
@@ -157,9 +158,7 @@
     "duplicateNameLabel": "Emri i modelit të ri"
   },
   "mealPlanMain": {
-    "label": "Planifiko vaktet e tua",
     "generateShoppingListLabel": "Gjenero listën e blerjeve",
-    "saveAsTemplateLabel": "Ruaj si model",
     "planSettingsLabel": "Cilësimet e planit",
     "deleteMealPlanFailed": "Fshirja e planit të vakteve dështoi",
     "mealPlanDeleted": "Plani i vakteve u fshi",

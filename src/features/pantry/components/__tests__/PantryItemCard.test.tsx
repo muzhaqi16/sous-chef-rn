@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryItemCard } from '../PantryItemCard';
+import { StatusLine } from '#components/atoms/StatusLine';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -37,7 +38,6 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       itemId,
       leftElement,
       rightElement,
-      variant,
     }: {
       children?: React.ReactNode;
       accessibilityLabel: string;
@@ -45,14 +45,12 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       itemId?: string;
       leftElement?: React.ReactNode;
       rightElement?: React.ReactNode;
-      variant?: string;
     }) =>
       R.createElement(
         RN.View,
         {
           testID: testID || `base-item-card-${itemId}`,
           accessibilityLabel,
-          variant,
         },
         leftElement || null,
         children,
@@ -158,6 +156,7 @@ function buildItem(
   return {
     __typename: 'PantryItem',
     id: overrides.id ?? 'pantry-1',
+    image: null,
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
     heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
@@ -427,8 +426,8 @@ describe('PantryItemCard', () => {
       date.setDate(date.getDate() + days);
       return toDateKey(date);
     };
-    const rowVariant = () =>
-      screen.getByTestId('pantry-item-pantry-1').props.variant;
+    // The status line is the row's only status signal.
+    const statusTone = () => screen.UNSAFE_queryByType(StatusLine)?.props.tone;
 
     // The header badge counts today through seven days on; a row it counts
     // must be marked, or the badge names items the list does not show.
@@ -436,28 +435,33 @@ describe('PantryItemCard', () => {
       [0, 'warning'],
       [5, 'warning'],
       [7, 'warning'],
-      [8, 'normal'],
-      [-1, 'expired'],
-    ])('an item expiring in %s days reads as %s', (days, variant) => {
+      [8, 'neutral'],
+      [-1, 'error'],
+    ])('an item expiring in %s days reads in the %s tone', (days, tone) => {
       renderCard({ expiresOn: inDays(days) });
-      expect(rowVariant()).toBe(variant);
+      expect(statusTone()).toBe(tone);
+    });
+
+    it('shows no status line when nothing is due and stock is fine', () => {
+      renderCard({ expiresOn: inDays(30) });
+      expect(statusTone()).toBeUndefined();
     });
 
     it('marks a low item and says so', () => {
       renderCard({ isLowStock: true });
-      expect(rowVariant()).toBe('lowStock');
+      expect(statusTone()).toBe('info');
       expect(screen.getByText('Running low')).toBeTruthy();
     });
 
     it('lets expiry outrank low stock', () => {
       renderCard({ isLowStock: true, expiresOn: inDays(2) });
-      expect(rowVariant()).toBe('warning');
+      expect(statusTone()).toBe('warning');
       expect(screen.queryByText('Running low')).toBeNull();
     });
 
     it('reads an empty stack as low stock whatever its date', () => {
       renderCard({ quantity: 0, isLowStock: true, expiresOn: inDays(-3) });
-      expect(rowVariant()).toBe('lowStock');
+      expect(statusTone()).toBe('info');
       expect(screen.getByText('Out of stock')).toBeTruthy();
     });
   });

@@ -69,7 +69,6 @@ export interface PantryContentProps {
   onHomePress?: () => void;
   onNotificationPress?: () => void;
   onSettingsPress?: () => void;
-  onAnalyticsPress?: () => void;
   onLowStockNavigate?: () => void;
   onExpiringNavigate?: () => void;
   onExpiredNavigate?: () => void;

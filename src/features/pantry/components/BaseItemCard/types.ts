@@ -5,14 +5,6 @@ import type {
   SwipeAction,
 } from '#components/organisms/SwipeableItem/types';
 
-export type CardVariant =
-  | 'normal'
-  | 'warning'
-  | 'expired'
-  | 'lowStock'
-  | 'success'
-  | 'dimmed';
-
 export interface BaseItemCardProps {
   /** What a screen reader says for the row; the slots carry no text of their own to it. */
   accessibilityLabel: string;
@@ -22,7 +14,6 @@ export interface BaseItemCardProps {
   /** Right element (meta info, counter, drag handle). */
   rightElement?: React.ReactNode;
 
-  variant?: CardVariant;
   containerStyle?: StyleProp<ViewStyle>;
 
   onPress?: () => void;

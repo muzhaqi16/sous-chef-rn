@@ -74,9 +74,11 @@ export interface AddItemSheetProps<
   onDismissSuggestion?: (item: T) => void;
   isMutating: boolean;
   onAddManually: (searchValue: string) => void;
-  onScanPress: () => void;
-  /** Scan a receipt; only the pantry's sheet offers it, in its own words. */
-  receiptAction?: { onPress: () => void; accessibilityLabel: string };
+  /**
+   * The step the sheet opens on. `details` is the + menu's "Add manually": the
+   * sheet opens on the form, after asking `onAddManually('')` to prep it.
+   */
+  startStep?: 'search' | 'details';
   exitingItems?: Set<string>;
   onExitComplete?: (itemId: string) => void;
   shouldFetch?: boolean;

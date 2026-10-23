@@ -5,7 +5,6 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
-import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 
@@ -212,6 +211,27 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   },
 }));
 
+// The screen owns WHICH items it lists, their order and the cart; how an item
+// reads is the pantry row's, which `PantryItemCard.test.tsx` covers.
+jest.mock('#features/pantry/components/PantryItemCard', () => ({
+  PantryItemCard: ({
+    pantryItemId,
+    accessory,
+  }: {
+    pantryItemId: string;
+    accessory?: React.ReactNode;
+  }) => {
+    const { View, Text } = require('react-native');
+    const item = mockAllItems.find(row => row.id === pantryItemId);
+    return (
+      <View testID={`pantry-row-${pantryItemId}`}>
+        <Text>{item?.itemName}</Text>
+        {accessory}
+      </View>
+    );
+  },
+}));
+
 jest.mock('#components/organisms/Header', () => ({
   Header: ({
     title,
@@ -367,32 +387,6 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('Butter')).toBeTruthy();
     });
 
-    it('shows remaining quantities', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByText('2 pcs remaining')).toBeTruthy();
-      expect(screen.getByText('1 stk remaining')).toBeTruthy();
-    });
-
-    it('renders a fractional remaining quantity as a cooking fraction', () => {
-      mockAllItems = [
-        {
-          ...mockLowStockItems[0]!,
-          quantity: 2,
-          heldQuantity: 1.25,
-          displayAmount: { quantity: 1.25, unit: { symbol: 'pcs' } },
-        },
-        {
-          ...mockLowStockItems[1]!,
-          quantity: 178,
-          heldQuantity: 177.4412,
-          displayAmount: { quantity: 177.4412, unit: { symbol: 'stk' } },
-        },
-      ];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByText('1 1/4 pcs remaining')).toBeTruthy();
-      expect(screen.getByText('177.441 stk remaining')).toBeTruthy();
-    });
-
     it('shows empty state when all items are stocked', () => {
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
@@ -407,23 +401,6 @@ describe('FilteredPantryItems', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
       expect(screen.getByTestId(pantryTestIDs.loading)).toBeTruthy();
-    });
-
-    // The skeleton stands in for the row, so a row without the cart leaves no
-    // placeholder for it, or the text column widens on reveal.
-    it('leaves the cart out of the skeleton when the cart is withheld', () => {
-      mockLoading = true;
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.UNSAFE_queryAllByType(SkeletonCircle)).not.toHaveLength(0);
-
-      mockListCanAddItems = false;
-      try {
-        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-        expect(screen.UNSAFE_queryAllByType(SkeletonCircle)).toHaveLength(0);
-      } finally {
-        mockListCanAddItems = true;
-      }
     });
 
     describe('a failed fetch is not good news', () => {
@@ -483,9 +460,13 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('Yogurt')).toBeTruthy();
     });
 
-    it('shows expiry subtitle', () => {
+    it('lists the soonest to expire first, each as the pantry row', () => {
+      mockAllItems = [...mockExpiringItems].reverse();
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.getByText('Expires tomorrow')).toBeTruthy();
+      const rows = screen
+        .getAllByTestId(/^pantry-row-/)
+        .map(row => row.props.testID);
+      expect(rows).toEqual(['pantry-row-ex1', 'pantry-row-ex2']);
     });
 
     it('shows empty state when no items are expiring', () => {
@@ -555,11 +536,6 @@ describe('FilteredPantryItems', () => {
     it('renders expired item names', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
       expect(screen.getByText('Salmon')).toBeTruthy();
-    });
-
-    it('shows expired subtitle', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.getByText(/^Expired \d+ days? ago$/)).toBeTruthy();
     });
 
     it('excludes items that are only expiring soon', () => {

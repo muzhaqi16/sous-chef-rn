@@ -46,7 +46,7 @@ export const RecommendedRecipeCard: React.FC<RecommendedRecipeCardProps> = ({
       title={title}
       subtitle={subtitle}
       badge={coverageBadge(matchPercentage, t)}
-      leftElement={imageUrl ? <RowThumbnail uri={imageUrl} /> : undefined}
+      leftElement={<RowThumbnail uri={imageUrl} />}
       onPress={() => toRecipeDetail({ recipeId })}
     />
   );

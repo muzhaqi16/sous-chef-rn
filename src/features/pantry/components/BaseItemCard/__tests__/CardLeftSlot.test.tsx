@@ -3,13 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { CardLeftSlot } from '../CardLeftSlot';
 
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: ({ name }: { name: string }) => {
-    const { Text: RNText } = require('react-native');
-    return require('react').createElement(RNText, null, `icon-${name}`);
-  },
-}));
-
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     listItemImageContainerCompact: {},
@@ -30,8 +23,8 @@ describe('CardLeftSlot', () => {
     expect(screen.getByText('image-https://example.com/img.jpg')).toBeTruthy();
   });
 
-  it('renders a placeholder icon when there is no URL', () => {
-    render(<CardLeftSlot imageUrl={null} />);
-    expect(screen.getByText('icon-image-outline')).toBeTruthy();
+  it('renders nothing when there is no photo: no placeholder, no stand-in', () => {
+    const { toJSON } = render(<CardLeftSlot imageUrl={null} />);
+    expect(toJSON()).toBeNull();
   });
 });

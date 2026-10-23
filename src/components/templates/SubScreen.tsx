@@ -8,7 +8,7 @@ type WithoutHeader<T> = T extends unknown ? Omit<T, 'header'> : never;
 export type SubScreenProps = WithoutHeader<ScreenProps> & {
   title?: string;
   actions?: BarAction[];
-} & Pick<ScreenHeaderConfig, 'onTitlePress' | 'titleAccessory'>;
+} & Pick<ScreenHeaderConfig, 'switchable'>;
 
 /**
  * A pushed screen: the standard header with a back control that returns to the
@@ -18,8 +18,7 @@ export type SubScreenProps = WithoutHeader<ScreenProps> & {
 export const SubScreen: React.FC<SubScreenProps> = ({
   title,
   actions,
-  onTitlePress,
-  titleAccessory,
+  switchable,
   ...screenProps
 }) => {
   const { goBack } = useAppNavigation();
@@ -31,8 +30,7 @@ export const SubScreen: React.FC<SubScreenProps> = ({
         title: title ?? '',
         back: goBack,
         actions,
-        onTitlePress,
-        titleAccessory,
+        switchable,
       }}
     />
   );

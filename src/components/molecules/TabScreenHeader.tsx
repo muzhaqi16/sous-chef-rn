@@ -5,22 +5,39 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { BarActions, type BarAction } from '#components/molecules/BarActions';
 import { Text } from '#components/atoms/Text';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
+
+/** A title that names one of several things the user can switch between. */
+export interface TitleSwitch {
+  onPress: () => void;
+  /** Turns the chevron while an inline picker shows. */
+  open?: boolean;
+  /** What pressing the title does, for a screen reader. */
+  accessibilityHint?: string;
+  testID?: string;
+}
+
+/** A tab's header holds its title and at most this many actions for the tab. */
+const MAX_TAB_ACTIONS = 2;
 
 interface TabScreenHeaderProps {
-  label: string;
   title: string;
-  actions?: BarAction[];
-  onTitlePress?: () => void;
-  titleAccessory?: React.ReactNode;
+  actions?: readonly BarAction[];
+  /** The title names one of several things: a chevron, and the picker it opens. */
+  switchable?: TitleSwitch;
 }
 
 export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
-  label,
   title,
   actions,
-  onTitlePress,
-  titleAccessory,
+  switchable,
 }) => {
+  if (__DEV__ && (actions?.length ?? 0) > MAX_TAB_ACTIONS) {
+    throw new Error(
+      `TabScreenHeader: ${actions?.length} actions on "${title}". A tab header holds at most ${MAX_TAB_ACTIONS}; move the rest into one of them, such as a ⋮ menu.`,
+    );
+  }
+
   const titleContent = (
     <View style={styles.titleRow}>
       <Text
@@ -31,18 +48,22 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
       >
         {title}
       </Text>
-      {!!titleAccessory && titleAccessory}
+      {!!switchable && (
+        <ExpandChevron expanded={switchable.open ?? false} tone="textPrimary" />
+      )}
     </View>
   );
 
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text role="caption" tone="secondary" style={styles.label}>
-          {label}
-        </Text>
-        {onTitlePress ? (
-          <Pressable onPress={onTitlePress} accessibilityRole="button">
+        {switchable ? (
+          <Pressable
+            onPress={switchable.onPress}
+            accessibilityRole="button"
+            accessibilityHint={switchable.accessibilityHint}
+            testID={switchable.testID}
+          >
             {titleContent}
           </Pressable>
         ) : (
@@ -73,9 +94,6 @@ const styles = StyleSheet.create(theme => ({
   leftContent: {
     flex: 1,
     marginRight: theme.spacing.md,
-  },
-  label: {
-    marginBottom: theme.spacing.xs,
   },
   titleRow: {
     flexDirection: 'row',

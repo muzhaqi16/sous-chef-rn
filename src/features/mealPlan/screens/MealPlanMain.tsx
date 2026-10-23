@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { Icon } from '#components/atoms/Icon';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
@@ -67,7 +66,6 @@ const MealPlanMainFallback: React.FC = () => {
       testID={mealPlanTestIDs.screen}
       header={{
         variant: 'tab',
-        label: t('mealPlanMain.label'),
         title: t('labels.mealPlan'),
       }}
       scroll="list"
@@ -427,7 +425,6 @@ const MealPlanMainInner: React.FC = () => {
 
   const tabHeader: ScreenHeaderConfig = {
     variant: 'tab',
-    label: t('mealPlanMain.label'),
     title: t('labels.mealPlan'),
   };
 
@@ -476,14 +473,6 @@ const MealPlanMainInner: React.FC = () => {
         accessibilityLabel: t('mealPlanMain.generateShoppingListLabel'),
       });
     }
-    if (permissions.canSaveAsTemplate) {
-      headerActions.push({
-        icon: 'bookmark-outline',
-        tone: 'primary',
-        onPress: handleSaveAsTemplate,
-        accessibilityLabel: t('mealPlanMain.saveAsTemplateLabel'),
-      });
-    }
     headerActions.push({
       icon: 'ellipsis-vertical',
       tone: 'textSecondary',
@@ -498,10 +487,7 @@ const MealPlanMainInner: React.FC = () => {
       header={{
         ...tabHeader,
         title: activeMealPlan?.name ?? tabHeader.title,
-        onTitlePress: handleOpenSelector,
-        titleAccessory: (
-          <Icon name="chevron-down" size={20} tone="textPrimary" />
-        ),
+        switchable: { onPress: handleOpenSelector },
         actions: headerActions,
       }}
       scroll="list"
@@ -622,7 +608,7 @@ const MealPlanMainInner: React.FC = () => {
         permissions={permissions}
         onClose={() => setSettingsVisible(false)}
         onDuplicate={() => setDuplicateVisible(true)}
-        onGenerateShoppingList={() => setShoppingListSheetVisible(true)}
+        onSaveAsTemplate={handleSaveAsTemplate}
         onDelete={handleDeletePlan}
         deleting={deletingPlan}
       />

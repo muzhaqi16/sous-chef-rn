@@ -1,8 +1,8 @@
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { View, ScrollView } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { View } from 'react-native';
+import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
 import {
   ModerationContentType,
   RecipeStatus,
@@ -39,7 +39,7 @@ import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/Rec
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
-import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
+import { IngredientRow } from '#features/recipes/components/recipeDetail/IngredientRow';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
@@ -63,7 +63,19 @@ import {
 } from '#features/profile/ui/ReportContentSheet';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 
-const IngredientSeparator = () => <View style={styles.ingredientGap} />;
+/** The cooking history in one line, or the offer to mark a first cook. */
+function cookedSummary(
+  count: number,
+  lastCookedAt: string | null,
+  t: TranslateFn,
+): string {
+  if (count === 0) return t('recipes.markCooked');
+  if (!lastCookedAt) return t('recipes.cookedCount', { count });
+  return t('recipes.cookedSummary', {
+    count,
+    date: formatMonthDayYear(new Date(lastCookedAt)),
+  });
+}
 
 /** Submit a draft, withdraw one in review, unpublish a published one. */
 const PUBLISH_ACTION_ICON: Readonly<Record<RecipeStatus, IconName>> = {
@@ -513,20 +525,11 @@ const RecipeDetailScreen: React.FC = () => {
                     role="caption"
                     tone={cookedCount > 0 ? 'success' : 'secondary'}
                   >
-                    {cookedCount > 0
-                      ? t('recipes.cookedCount', { count: cookedCount })
-                      : t('recipes.markCooked')}
+                    {cookedSummary(cookedCount, lastCookedAt, t)}
                   </Text>
                 </>
               )}
             </Pressable>
-          )}
-          {!!isSaved && !!lastCookedAt && (
-            <Text role="caption" tone="secondary">
-              {t('recipes.lastCooked', {
-                date: formatMonthDayYear(new Date(lastCookedAt)),
-              })}
-            </Text>
           )}
         </View>
 
@@ -633,22 +636,14 @@ const RecipeDetailScreen: React.FC = () => {
                 </Text>
               </Pressable>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.ingredientsList}
-            >
-              {displayData.ingredients.map((ingredient, index) => (
-                <React.Fragment key={`${ingredient.id}-${index}`}>
-                  {index > 0 && <IngredientSeparator />}
-                  <IngredientCard
-                    ingredient={ingredient}
-                    isAdded={addedIngredients.has(ingredient.id)}
-                    onPress={() => handleAddSingleIngredient(ingredient)}
-                  />
-                </React.Fragment>
-              ))}
-            </ScrollView>
+            {displayData.ingredients.map((ingredient, index) => (
+              <IngredientRow
+                key={`${ingredient.id}-${index}`}
+                ingredient={ingredient}
+                isAdded={addedIngredients.has(ingredient.id)}
+                onAdd={() => handleAddSingleIngredient(ingredient)}
+              />
+            ))}
           </View>
         )}
 
@@ -846,25 +841,18 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsSection: {
     marginBottom: theme.spacing.xl,
-    // Bleeds the carousel to the screen edge through the hero card's gutter.
-    marginHorizontal: -theme.layout.pageGutter,
   },
   ingredientsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.layout.pageGutter,
   },
   addAllButton: {
     color: theme.colors.primary,
   },
   description: {
     color: theme.colors.textSecondary,
-  },
-  ingredientsList: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.layout.pageGutter,
   },
   attribution: {
     paddingTop: theme.spacing.md,
@@ -889,9 +877,6 @@ const styles = StyleSheet.create(theme => ({
   },
   viewOriginalText: {
     color: theme.colors.primary,
-  },
-  ingredientGap: {
-    width: theme.spacing.base,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.sm,

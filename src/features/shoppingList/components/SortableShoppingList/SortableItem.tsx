@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
@@ -17,7 +18,6 @@ import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
 import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
-import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
@@ -149,7 +149,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // fragment data feeds it directly.
   const imageUrl = resolveImageUrl(data);
   const { showImages } = useShoppingListRowOptions();
-  const showImage = showImages && !!imageUrl;
 
   const isTutorialSwipeTarget =
     tutorial?.currentStep ===
@@ -278,7 +277,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   })();
 
   const leftElement = (() => {
-    if (!showImage || !imageUrl) return null;
+    if (!showImages) return null;
     return (
       <RowThumbnail
         uri={imageUrl}
@@ -323,12 +322,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // An empty cell rather than nothing, so the FlashList slot stays stable while
   // the fragment hydrates; `id` is absent only when none of the entity is cached.
   if (!complete && !data.id) {
-    return <View style={commonStyles.rowWrapper} />;
+    return <View />;
   }
 
-  // The gap sits on a plain wrapper: the animated node takes no themed style.
+  // The panel sits on a plain wrapper: the animated node takes no themed style.
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <Animated.View style={animatedSlideStyle}>
         {isTutorialItemCardTarget ? (
           <View
@@ -384,13 +383,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             leftElement={leftElement}
             checkboxElement={checkboxElement}
             dragHandleElement={null}
-            rightIcon={undefined}
             isPurchased={isPurchased}
             themeColors={themeColors}
           />
         </SwipeableItem>
       </Animated.View>
-    </View>
+    </RowCard>
   );
 };
 

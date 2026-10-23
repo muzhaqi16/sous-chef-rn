@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from '#/i18n';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
   PANTRY_SUGGESTIONS_LIMIT,
@@ -29,6 +28,8 @@ const heldStackOf = (row: PantryItemSuggestion) =>
 
 interface AddToPantrySheetProps {
   visible: boolean;
+  /** `details` opens on the form, for the + menu's "Add manually". */
+  startStep?: 'search' | 'details';
   pantryId: string | undefined;
   onClose: () => void;
   onItemAdded?: () => void;
@@ -37,13 +38,13 @@ interface AddToPantrySheetProps {
 
 export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   visible,
+  startStep,
   pantryId,
   onClose,
   onItemAdded,
   initialSearchQuery = '',
 }) => {
   const { t } = useTranslation();
-  const { toBarcode, toReceiptScan } = useAppNavigation();
 
   // Details step state. The shared AddItemSheet owns which step is visible
   // (search vs details); here we only prep the inputs the details form reads.
@@ -86,16 +87,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
-
-  // Stays "open" across the barcode / identify navigation: the sheet hook
-  // dismisses on blur but keeps `visible`, so its focus effect re-presents the
-  // sheet, typed state intact, on return.
-  const handleScanPress = () => {
-    toBarcode({
-      source: 'pantry',
-      pantryId,
-    });
-  };
 
   // Prep the details form's inputs when "Add manually" is pressed. The shared
   // AddItemSheet morphs to the in-place details step itself (see renderDetails);
@@ -249,15 +240,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onDismissSuggestion={handleDismissSuggestion}
       isMutating={false}
       onAddManually={handleAddManually}
-      onScanPress={handleScanPress}
-      receiptAction={{
-        // A receipt scan ends on the pantry, not back on this sheet.
-        onPress: () => {
-          onClose();
-          toReceiptScan();
-        },
-        accessibilityLabel: t('addToPantry.fromReceipt'),
-      }}
+      startStep={startStep}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

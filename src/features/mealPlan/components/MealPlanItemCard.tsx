@@ -1,4 +1,5 @@
 import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
+import { RowCard } from '#components/atoms/RowCard';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -11,7 +12,6 @@ import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
-import { commonStyles } from '#/styles/commonStyles';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import { hitSlop } from '#/theme/foundations/sizes';
@@ -87,7 +87,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     />
   );
 
-  const leftElement = imageUrl ? <RowThumbnail uri={imageUrl} /> : undefined;
+  const leftElement = <RowThumbnail uri={imageUrl} />;
 
   const metaText = [
     // A recipe with no known time stores 0, which is not "0 min".
@@ -121,7 +121,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     ) : undefined;
 
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <SwipeableItem
         itemId={item.id}
         accessibilityLabel={accessibilityLabelOf(
@@ -146,10 +146,9 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           titleNumberOfLines={1}
           subtitle={subtitle}
           isPurchased={item.isCompleted}
-          rightIcon={null}
         />
       </SwipeableItem>
-    </View>
+    </RowCard>
   );
 };
 
