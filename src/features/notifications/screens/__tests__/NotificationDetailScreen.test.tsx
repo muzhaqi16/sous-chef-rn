@@ -261,13 +261,13 @@ describe('NotificationDetailScreen', () => {
         recipeCount: 2,
         recipes: [
           {
-            __typename: 'RecommendedRecipe',
+            __typename: 'NotificationRecommendedRecipe',
             recipeId: 'r-1',
             name: 'Chili',
             matchPercentage: 80,
           },
           {
-            __typename: 'RecommendedRecipe',
+            __typename: 'NotificationRecommendedRecipe',
             recipeId: 'r-2',
             name: 'Tacos',
             matchPercentage: 60,

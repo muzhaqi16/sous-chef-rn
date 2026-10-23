@@ -10233,6 +10233,18 @@ type NotificationPreferences {
   weeklyDigest: Boolean!
 }
 
+"""A recipe a recommendation named, as it matched when sent."""
+type NotificationRecommendedRecipe {
+  """
+  The share of its ingredients the pantries held when sent, 0-100, rounded. Never recomputed.
+  """
+  matchPercentage: Int!
+  """Its name when the recommendation was sent."""
+  name: String!
+  """The recipe."""
+  recipeId: ID!
+}
+
 """
 Which model a notification's sourceId is an id of.
 
@@ -14808,7 +14820,7 @@ type RecipeRecommendationsNotificationData {
   """How many recipes were recommended."""
   recipeCount: Int!
   """Each recommended recipe, best match first."""
-  recipes: [RecommendedRecipe!]!
+  recipes: [NotificationRecommendedRecipe!]!
   """The ISO week the recommendations are for, as YYYY-Www."""
   week: String!
 }
@@ -15010,18 +15022,6 @@ type RecipeSuggestionEdge {
   """
   expiringStacks: [PantryItem!]!
   node: Recipe!
-}
-
-"""A recipe a recommendation named, as it matched when sent."""
-type RecommendedRecipe {
-  """
-  The share of its ingredients the pantries held when sent, 0-100, rounded. Never recomputed.
-  """
-  matchPercentage: Int!
-  """Its name when the recommendation was sent."""
-  name: String!
-  """The recipe."""
-  recipeId: ID!
 }
 
 input RecordPantryStockCheckInput {
