@@ -18,7 +18,7 @@ interface RecommendedRecipeCardProps {
   /** What the recommendation named it. */
   name: string;
   /** Its coverage when it was recommended, 0–100. */
-  matchPercentage: number | null;
+  matchPercentage: number;
 }
 
 /** A recipe a notification recommends, as the recipes tab lists it. */
@@ -45,11 +45,7 @@ export const RecommendedRecipeCard: React.FC<RecommendedRecipeCardProps> = ({
       id={recipeId}
       title={title}
       subtitle={subtitle}
-      badge={
-        matchPercentage === null
-          ? undefined
-          : coverageBadge(Math.round(matchPercentage), t)
-      }
+      badge={coverageBadge(matchPercentage, t)}
       leftElement={imageUrl ? <RowThumbnail uri={imageUrl} /> : undefined}
       onPress={() => toRecipeDetail({ recipeId })}
     />
