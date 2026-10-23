@@ -1439,6 +1439,14 @@ input ChangePasswordInput {
 
 type ChangePasswordPayload {
   message: String!
+  """
+  A new session for the device that made the change, on COMPLETED. Every
+  token issued before the change stops working on every device, this one's
+  included, so store this pair before sending another request. Null when the
+  change was refused, or when the change committed but the session could not
+  be issued: sign in with the new password.
+  """
+  session: SessionTokens
   status: PasswordActionStatus!
 }
 
@@ -15857,6 +15865,12 @@ What a semantic search can narrow by: the vector query applies nothing else.
 input SemanticItemFilters {
   """Items of any of these types"""
   types: [ItemType!]
+}
+
+"""An access token and the refresh token that renews it."""
+type SessionTokens {
+  accessToken: String!
+  refreshToken: String!
 }
 
 """
