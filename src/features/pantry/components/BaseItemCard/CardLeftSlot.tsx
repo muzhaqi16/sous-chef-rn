@@ -1,33 +1,8 @@
 import React from 'react';
-import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
-import { commonStyles } from '#/styles/commonStyles';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import type { CardLeftSlotProps } from './types';
 
-/**
- * The row's thumbnail. With no image URL it renders a placeholder tile of the
- * same size and shape, so rows never collapse to a bare gap and stay aligned.
- */
+/** The row's thumbnail, or a placeholder tile, so rows stay aligned. */
 export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({ imageUrl }) => (
-  <View
-    style={[commonStyles.listItemImageContainerCompact, styles.imageContainer]}
-  >
-    {imageUrl ? (
-      <CachedImage
-        uri={imageUrl}
-        style={commonStyles.listItemImageCompact}
-        displaySize={48}
-      />
-    ) : (
-      <Icon name="image-outline" size={20} tone="textTertiary" />
-    )}
-  </View>
+  <RowThumbnail uri={imageUrl} />
 );
-
-const styles = StyleSheet.create({
-  imageContainer: {
-    overflow: 'hidden',
-  },
-});

@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { Icon } from '#components/atoms/Icon';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
@@ -87,9 +87,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     />
   );
 
-  const leftElement = imageUrl ? (
-    <CachedImage uri={imageUrl} style={styles.image} displaySize={48} />
-  ) : undefined;
+  const leftElement = imageUrl ? <RowThumbnail uri={imageUrl} /> : undefined;
 
   const metaText = [
     // A recipe with no known time stores 0, which is not "0 min".
@@ -158,12 +156,6 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
 MealPlanItemCard.displayName = 'MealPlanItemCard';
 
 const styles = StyleSheet.create(theme => ({
-  image: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-  },
   pantryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
