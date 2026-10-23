@@ -131,7 +131,7 @@
     },
     "photoConsent": {
       "title": "Inviare le foto degli scontrini che il telefono non riesce a leggere?",
-      "body": "Le foto si leggono con più precisione del testo. I numeri di carta vengono coperti prima, e le foto vengono eliminate appena lette. Puoi cambiarlo nelle Impostazioni dell'app.",
+      "body": "Le foto si leggono con più precisione del testo. I numeri di carta che il telefono trova vengono coperti prima, e le foto vengono eliminate appena lette. Puoi cambiarlo nelle Impostazioni dell'app.",
       "bodyUnmasked": "Le foto si leggono con più precisione del testo. Viene inviato lo scontrino intero, che viene eliminato appena letto. Puoi cambiarlo nelle Impostazioni dell'app.",
       "send": "Invia le foto",
       "textOnly": "Solo testo"

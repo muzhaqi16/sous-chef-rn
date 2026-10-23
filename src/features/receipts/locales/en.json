@@ -131,7 +131,7 @@
     },
     "photoConsent": {
       "title": "Send photos of receipts your phone can't read?",
-      "body": "Photos are read more accurately than text. Card numbers are covered first, and photos are deleted once read. You can change this in App Settings.",
+      "body": "Photos are read more accurately than text. Card numbers your phone finds are covered first, and photos are deleted once read. You can change this in App Settings.",
       "bodyUnmasked": "Photos are read more accurately than text. The whole receipt is sent, and deleted once read. You can change this in App Settings.",
       "send": "Send photos",
       "textOnly": "Use text only"

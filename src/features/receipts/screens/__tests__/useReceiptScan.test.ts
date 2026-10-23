@@ -566,8 +566,13 @@ describe('useReceiptScan', () => {
       expect(dialog.title).toBe(
         "Send photos of receipts your phone can't read?",
       );
-      expect(dialog.message).toMatch(/Card numbers are covered first/);
+      // Only what the phone finds: an unread or unmasked photo goes as it is.
+      expect(dialog.message).toMatch(
+        /Card numbers your phone finds are covered first/,
+      );
       expect(dialog.message).toMatch(/You can change this in App Settings/);
+      // The scanner presents over the app, never over the dialog's modal.
+      expect(dialog.buttons.every(button => button.afterClose)).toBe(true);
       expect(scanDocument).not.toHaveBeenCalled();
 
       await act(async () => {
@@ -593,6 +598,51 @@ describe('useReceiptScan', () => {
         button => button.style === 'cancel',
       );
       expect(cancel?.text).toBe('Use text only');
+    });
+
+    it('keeps "Send photos" as granted, then scans', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+      await act(async () => {
+        consentAsked().press('Send photos');
+      });
+
+      expect(useReceiptPhotoConsentStore.getState().consent).toBe('granted');
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks once and scans once for a double tap', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(async () => {
+        await Promise.all([result.current.scan(), result.current.scan()]);
+      });
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        consentAsked().press('Use text only');
+      });
+      await waitFor(() => expect(result.current.status).toBe('saved'));
+      expect(scanDocument).toHaveBeenCalledTimes(1);
+    });
+
+    // A session that ends while the dialog is open closes the screen first.
+    it('keeps no answer and starts nothing once the screen has closed', async () => {
+      useReceiptPhotoConsentStore.setState({ consent: null });
+      const { result, unmount } = renderScan();
+
+      await act(() => result.current.scan());
+      const dialog = consentAsked();
+      unmount();
+      dialog.press('Use text only');
+
+      expect(useReceiptPhotoConsentStore.getState().consent).toBeNull();
+      expect(scanDocument).not.toHaveBeenCalled();
     });
 
     it('says the whole receipt is sent where the build cannot cover card numbers', async () => {

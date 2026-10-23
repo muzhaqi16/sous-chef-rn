@@ -42,6 +42,7 @@ import {
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
 import { uploadTogether } from '#/utils/uploadTogether';
+import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import type { PhotoMask, PreparedPhoto } from '#/types/textRecognition';
 
 const dropPhotos = (uris: readonly string[]) => {
@@ -101,9 +102,6 @@ const PHOTO_SEND_LIMIT_MS = 45_000;
 
 /** When a scan's pages came in, and how many, for `receipt_scan_ready_ms`. */
 const scanStart = (pages: number) => ({ at: Date.now(), pages });
-
-/** What the one-time consent question was asked for, run once it is answered. */
-type ScanStart = 'scan' | 'photo' | 'pick';
 
 type SavedRoute = 'photos' | 'text' | 'device';
 
@@ -436,17 +434,25 @@ export function useReceiptScan({
     await readPhoto(await choosePhoto(), true);
   };
 
-  const startOf: Record<ScanStart, () => Promise<void>> = {
-    scan: openScanner,
-    photo: capture,
-    pick: choose,
+  // One start at a time: a second tap while one asks or runs does nothing.
+  const starting = useRef(false);
+  const release = () => {
+    starting.current = false;
   };
+  const run = (start: () => Promise<void>) =>
+    executeAsyncWithCleanup(start, release, error => {
+      errorService.reportError(error, { operation: 'Start receipt scan' });
+    });
+
   // Asked once, online, before the first scan. The answer is kept for later
-  // scans (App Settings changes it), then what it was asked for runs.
-  const askConsent = (start: ScanStart) => {
+  // scans (App Settings changes it), then what it was asked for runs, once the
+  // dialog has gone: the scanner and pickers present over the app.
+  const askConsent = (start: () => Promise<void>) => {
     const answer = (consent: 'granted' | 'declined') => () => {
+      // The screen closed first (a sign-out): the answer is nobody's.
+      if (!open.current) return;
       useReceiptPhotoConsentStore.getState().setConsent(consent);
-      void startOf[start]();
+      void run(start);
     };
     alertService.alert(
       t('receipts.photoConsent.title'),
@@ -461,12 +467,19 @@ export function useReceiptScan({
           text: t('receipts.photoConsent.textOnly'),
           style: 'cancel',
           onPress: answer('declined'),
+          afterClose: true,
         },
-        { text: t('receipts.photoConsent.send'), onPress: answer('granted') },
+        {
+          text: t('receipts.photoConsent.send'),
+          onPress: answer('granted'),
+          afterClose: true,
+        },
       ],
     );
   };
-  const begin = async (start: ScanStart) => {
+  const begin = async (start: () => Promise<void>) => {
+    if (starting.current) return;
+    starting.current = true;
     if (
       serverParsing &&
       isOnline &&
@@ -475,7 +488,7 @@ export function useReceiptScan({
       askConsent(start);
       return;
     }
-    await startOf[start]();
+    await run(start);
   };
 
   /** Sends the pages the phone could not read for the server to read them. */
@@ -517,9 +530,9 @@ export function useReceiptScan({
     pickedFromLibrary: fromLibrary,
     /** Sending the photo needs a connection. */
     canSendPhotos: isOnline,
-    scan: () => begin('scan'),
-    takePhoto: () => begin('photo'),
-    pickPhoto: () => begin('pick'),
+    scan: () => begin(openScanner),
+    takePhoto: () => begin(capture),
+    pickPhoto: () => begin(choose),
     sendPhotos,
     declinePhotos,
     discard,

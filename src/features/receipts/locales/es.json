@@ -131,7 +131,7 @@
     },
     "photoConsent": {
       "title": "¿Enviar fotos de los recibos que tu teléfono no puede leer?",
-      "body": "Las fotos se leen con más precisión que el texto. Los números de tarjeta se tapan antes, y las fotos se eliminan en cuanto se leen. Puedes cambiarlo en Ajustes de la app.",
+      "body": "Las fotos se leen con más precisión que el texto. Los números de tarjeta que encuentra tu teléfono se tapan antes, y las fotos se eliminan en cuanto se leen. Puedes cambiarlo en Ajustes de la app.",
       "bodyUnmasked": "Las fotos se leen con más precisión que el texto. Se envía el recibo completo, y se elimina en cuanto se lee. Puedes cambiarlo en Ajustes de la app.",
       "send": "Enviar fotos",
       "textOnly": "Solo texto"

@@ -131,7 +131,7 @@
     },
     "photoConsent": {
       "title": "Të dërgohen fotot e faturave që telefoni yt nuk i lexon dot?",
-      "body": "Fotot lexohen më saktë se teksti. Numrat e kartës mbulohen më parë, dhe fotot fshihen sapo të lexohen. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
+      "body": "Fotot lexohen më saktë se teksti. Numrat e kartës që gjen telefoni yt mbulohen më parë, dhe fotot fshihen sapo të lexohen. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
       "bodyUnmasked": "Fotot lexohen më saktë se teksti. Dërgohet e gjithë fatura, dhe fshihet sapo të lexohet. Mund ta ndryshosh këtë te Cilësimet e aplikacionit.",
       "send": "Dërgo fotot",
       "textOnly": "Vetëm tekst"

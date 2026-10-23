@@ -1,7 +1,9 @@
 'use no memo';
 
 import React from 'react';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ReceiptDraft } from '../../store/receiptDraftStore';
 import type { ReceiptScanStatus } from '../useReceiptScan';
@@ -168,6 +170,21 @@ describe('ReceiptScanScreen', () => {
 
     expect(screen.getByText("Adding when you're back online")).toBeTruthy();
     expect(screen.queryByTestId(receiptsTestIDs.savedFailed)).toBeNull();
+  });
+
+  // The scanner presents over the app, never over the confirmation's modal.
+  it('opens the scanner for a replacement only once the confirmation has closed', () => {
+    mockScan = {
+      status: 'saved',
+      draft: { pages: ['MILK 3.48'], scannedAt: SCANNED_AT },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    fireEvent.press(screen.getByText('Scan another receipt'));
+
+    const [call] = jest.mocked(alertService.alert).mock.calls;
+    const replace = call?.[2]?.find(button => button.text === 'Replace');
+    expect(replace?.afterClose).toBe(true);
   });
 
   it.each(SAVED)(

@@ -152,6 +152,7 @@ export const ReceiptScanScreen: React.FC = () => {
         {
           text: t('receipts.replace.confirm'),
           onPress: startScan,
+          afterClose: true,
         },
       ],
     );
