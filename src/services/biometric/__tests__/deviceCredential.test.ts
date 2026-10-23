@@ -541,6 +541,50 @@ describe('logout and biometric credentials', () => {
   });
 });
 
+// Sign-out and Settings both remove the slot this way, so the login screen's
+// button follows the slot whichever of them ran.
+describe('removing a stored sign-in', () => {
+  beforeEach(() => {
+    mockClearCredentials.mockReset().mockResolvedValue(undefined);
+    setHasStoredCredentials().mockClear();
+    mockMutate.mockResolvedValue({ data: {} });
+    mockQuery.mockResolvedValue({ data: { deviceCredentials: [] } });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('takes the login button down once the slot is gone', async () => {
+    await expect(
+      biometricService.forgetStoredSignIn('chef@example.com'),
+    ).resolves.toBe(true);
+
+    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+    expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
+  });
+
+  it('answers false, and keeps the button, while the slot is still there', async () => {
+    mockClearCredentials.mockRejectedValueOnce(new Error('keychain busy'));
+
+    await expect(
+      biometricService.forgetStoredSignIn('chef@example.com'),
+    ).resolves.toBe(false);
+    expect(setHasStoredCredentials()).not.toHaveBeenCalled();
+  });
+
+  it('removes the slot within its budget when the server never answers', async () => {
+    jest.useFakeTimers();
+    mockQuery.mockReturnValue(new Promise(() => undefined));
+
+    const removal = biometricService.forgetStoredSignIn('chef@example.com');
+    await jest.advanceTimersByTimeAsync(3000);
+
+    await expect(removal).resolves.toBe(true);
+    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+  });
+});
+
 // A password change this session survived revoked every device credential, so
 // a slot left as it was would fail on the next fingerprint sign-in.
 describe('renewing a stored sign-in after a password change', () => {

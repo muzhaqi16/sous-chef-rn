@@ -20,7 +20,9 @@ export function registerMobileSessionHost(): void {
     },
     postSignInGate: (user, email, offerRememberMe, signInToken) =>
       resolvePostSignInGate(user, email, offerRememberMe, signInToken),
-    forgetStoredSignIn: email => forgetStoredSignIn(email),
+    forgetStoredSignIn: async email => {
+      await forgetStoredSignIn(email);
+    },
     renewStoredSignIn: email => renewStoredSignIn(email),
   });
 }

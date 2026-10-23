@@ -29,7 +29,6 @@ interface ConfigSection {
 // keys, and two sign-out paths clearing different subsets is what left the
 // previous person's data on a shared device.
 const mockLogout = jest.fn();
-const mockRevokeDeviceCredential = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/services/authService', () => ({
   authService: {
     logout: (...args: unknown[]) => mockLogout(...args),
@@ -37,14 +36,11 @@ jest.mock('#/services/authService', () => ({
 }));
 jest.mock('#/services/biometric/deviceCredential', () => ({
   biometricService: {
-    revokeDeviceCredentialForThisDevice: () => mockRevokeDeviceCredential(),
+    forgetStoredSignIn: (email: string) => mockForgetStoredSignIn(email),
     checkStoredCredentials: (email?: string | null) =>
       mockCheckStoredCredentials(email),
     getBiometricInfo: () => mockGetBiometricInfo(),
   },
-}));
-jest.mock('#/services/biometric/credentials', () => ({
-  removeCredentials: (email?: string) => mockRemoveCredentials(email),
 }));
 
 const mockGetUserNavigationState = jest.fn(
@@ -86,7 +82,7 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
   isAvailable: false,
   biometryType: null,
 });
-const mockRemoveCredentials = jest.fn();
+const mockForgetStoredSignIn = jest.fn();
 
 const mockResetBiometricDeclination = jest.fn();
 const mockMarkBiometricEnabled = jest.fn();
@@ -233,7 +229,7 @@ describe('useConfigurableSettings', () => {
     // The keychain delete succeeds unless a case says otherwise: it reports
     // failure by returning false, so an unset default would put every case on
     // the failure path.
-    mockRemoveCredentials.mockResolvedValue(true);
+    mockForgetStoredSignIn.mockResolvedValue(true);
   });
 
   it('gives a navigation row its own destination', () => {
@@ -695,7 +691,7 @@ describe('useConfigurableSettings', () => {
       );
     });
 
-    it('biometric disable alert calls removeCredentials on confirm', async () => {
+    it('removes the stored sign-in the way a sign-out does, on confirm', async () => {
       mockGetBiometricInfo.mockResolvedValue({
         isAvailable: true,
         biometryType: 'FaceID',
@@ -731,19 +727,19 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      expect(mockRemoveCredentials).toHaveBeenCalledWith('test@example.com');
+      expect(mockForgetStoredSignIn).toHaveBeenCalledWith('test@example.com');
     });
 
-    // The delete reports failure by returning false rather than throwing, so
+    // The removal reports failure by returning false rather than throwing, so
     // the catch never runs: the toggle would read off over a slot still there
     // to be offered on the next launch.
-    it('keeps biometrics on when the keychain delete does not succeed', async () => {
+    it('keeps biometrics on when the stored sign-in could not be removed', async () => {
       mockGetBiometricInfo.mockResolvedValue({
         isAvailable: true,
         biometryType: 'FaceID',
       });
       mockCheckStoredCredentials.mockResolvedValue(true);
-      mockRemoveCredentials.mockResolvedValue(false);
+      mockForgetStoredSignIn.mockResolvedValue(false);
 
       const { settings } = buildMocks();
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {

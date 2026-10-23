@@ -391,25 +391,30 @@ export async function renewStoredSignIn(
 }
 
 /**
- * Credentials are per account, so this never touches another user's. Server
- * first, while the session that authorises it is still live: the local delete
- * cannot be undone, so a revoke attempted after it would have nothing left to
- * authenticate with.
+ * The one way a stored sign-in is removed, by a sign-out or by Settings; false
+ * while the slot is still there. Credentials are per account, so this never
+ * touches another user's. Server first, while the session that authorises it
+ * is still live: the local delete cannot be undone, so a revoke attempted after
+ * it would have nothing left to authenticate with.
  */
-export async function forgetStoredSignIn(email: string): Promise<void> {
+export async function forgetStoredSignIn(email: string): Promise<boolean> {
   await revokeWithinBudget();
-  // READ, not discarded: a failed delete leaves the previous user's device
+  // READ, not discarded: a failed delete leaves this account's device
   // credential on the device — the exact state this call exists to prevent.
   const removed = await removeCredentials(email);
   if (!removed) {
     logger.error(
-      'Logout: biometric credentials could not be removed; the previous account may still be unlockable on this device',
+      'Biometric credentials could not be removed; this account may still be unlockable on this device',
     );
+    return false;
   }
+  forgetBiometricSlot();
+  return true;
 }
 
 export const biometricService = {
   enrolDeviceCredential,
+  forgetStoredSignIn,
   revokeDeviceCredentialForThisDevice,
   signInWithDeviceCredential,
   checkStoredCredentials,
