@@ -10,7 +10,12 @@
 # jest keeps the cap: it is the one that spawns a worker per core.
 export NODE_OPTIONS=--max-old-space-size=1536
 
-npx lint-staged || exit 1
+# --no-revert: parallel sessions share this checkout, and on a failed task
+# lint-staged's default resets the whole tree to the snapshot it took when the
+# commit began, erasing every other session's edits made during the run. The
+# backup stash stays, so nothing is unrecoverable; a failed commit leaves its
+# own fixes in place to look at.
+npx lint-staged --no-revert || exit 1
 
 # Whole-tree gates that cost ~0.2s together. They run here rather than on push
 # so a broken locale key or a version drift surfaces at the commit that caused
