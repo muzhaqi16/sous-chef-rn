@@ -30,7 +30,9 @@ export const styles = StyleSheet.create(theme => {
       overflow: 'visible',
     },
 
+    // `flex: 1` fills the reveal wrapper's height, which the row stretches.
     actionsContainer: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
@@ -43,6 +45,7 @@ export const styles = StyleSheet.create(theme => {
       borderBottomRightRadius: SWIPEABLE_RADIUS,
     },
     leftActionsContainer: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
