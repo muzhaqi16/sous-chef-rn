@@ -171,6 +171,7 @@ describe('refreshToken', () => {
           expect(mockSetTokens).toHaveBeenCalledWith({
             accessToken: 'new-access-token',
             refreshToken: 'new-refresh-token',
+            replaces: 'mock-refresh-token',
           });
           expect(mockOperation.setContext).toHaveBeenCalled();
           done();
@@ -781,6 +782,7 @@ describe('refreshToken', () => {
       expect(mockSetTokens).toHaveBeenCalledWith({
         accessToken: 'proactive-new-token',
         refreshToken: 'proactive-new-refresh',
+        replaces: 'mock-refresh-token',
       });
     });
 
@@ -966,20 +968,31 @@ describe('refreshToken', () => {
       resetSessionEndingGate();
     });
 
+    it('has the writer judge the pair against the token it presented', async () => {
+      const state = seedStore();
+      (mockedClient.mutate as jest.Mock).mockResolvedValue(rotated);
+
+      await proactiveTokenRefresh();
+
+      expect(state.setTokens).toHaveBeenCalledWith({
+        accessToken: 'rotated-token',
+        refreshToken: 'rotated-refresh',
+        replaces: 'mock-refresh-token',
+      });
+    });
+
     it('discards a pair whose session was cleared while it was in flight', async () => {
       const state = seedStore();
-      (mockedClient.mutate as jest.Mock).mockImplementation(async () => {
-        state.refreshToken = null;
-        return rotated;
-      });
+      state.setTokens.mockReturnValue('outlived');
+      (mockedClient.mutate as jest.Mock).mockResolvedValue(rotated);
 
       await expect(proactiveTokenRefresh()).resolves.toBeNull();
-      expect(state.setTokens).not.toHaveBeenCalled();
       expect(mockedReconnectWebSocket).not.toHaveBeenCalled();
     });
 
     it('hands a rotation begun before the sign-out to its caller, unstored and without re-dialling', async () => {
       const state = seedStore();
+      state.setTokens.mockReturnValue('session_ending');
       let answer: (value: typeof rotated) => void = () => undefined;
       (mockedClient.mutate as jest.Mock).mockImplementation(
         () =>
@@ -995,7 +1008,6 @@ describe('refreshToken', () => {
       });
 
       expect(token).toBe('rotated-token');
-      expect(state.setTokens).not.toHaveBeenCalled();
       expect(mockedReconnectWebSocket).not.toHaveBeenCalled();
     });
 

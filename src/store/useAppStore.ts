@@ -2,6 +2,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useShallow } from 'zustand/react/shallow';
 import type { RootState } from './index';
 import { storeApi } from './index';
+import { isSignedIn } from './slices/authSlice';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
@@ -119,6 +120,7 @@ const selectThemePreferences = (state: RootState) => ({
 
 export const useUser = () => useAppStore(selectUser);
 export const useUserId = () => useAppStore(selectUserId);
+export const useIsSignedIn = () => useAppStore(isSignedIn);
 export const useUpdateUser = () => useAppStore(selectUpdateUser);
 /** Null until a slot check has answered; false once one is proven unusable. */
 export const useHasStoredCredentials = () =>

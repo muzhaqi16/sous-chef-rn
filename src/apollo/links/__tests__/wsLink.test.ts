@@ -1039,12 +1039,15 @@ describe('wsLink', () => {
       const { useStore } = require('#store');
       useStore.getState.mockReturnValue({
         accessToken: 'mock-token',
+        refreshToken: 'dialled-refresh',
         isOnline: true,
         setTokens,
       });
+      // The dial presents the stored refresh token, which the rotation renews.
+      connectionParams();
     });
 
-    it('persists the pair when the server reports a rotation', () => {
+    it('persists the pair as a renewal of the token the dial presented', () => {
       onHandlers.connected(
         {},
         {
@@ -1057,7 +1060,30 @@ describe('wsLink', () => {
       expect(setTokens).toHaveBeenCalledWith({
         accessToken: 'rotated-access',
         refreshToken: 'rotated-refresh',
+        replaces: 'dialled-refresh',
       });
+    });
+
+    it('ignores a rotation on a dial that presented no refresh token', () => {
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        refreshToken: null,
+        isOnline: true,
+        setTokens,
+      });
+      connectionParams();
+
+      onHandlers.connected(
+        {},
+        {
+          accessToken: 'rotated-access',
+          refreshToken: 'rotated-refresh',
+          tokenRefreshed: true,
+        },
+      );
+
+      expect(setTokens).not.toHaveBeenCalled();
     });
 
     it('ignores an ordinary ack, which reports no rotation at all', () => {

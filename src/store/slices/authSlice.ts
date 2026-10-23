@@ -89,6 +89,12 @@ export type AuthUserInput = User & {
   } | null;
 };
 
+/**
+ * What became of a token pair. `outlived`: the refresh token it renews is no
+ * longer the stored one, so the pair belongs to a session that is gone.
+ */
+export type TokenPairWrite = 'stored' | 'session_ending' | 'outlived';
+
 export interface AuthState {
   // Core auth state
   user: User | null;
@@ -113,13 +119,19 @@ export interface AuthState {
   sessionTokensInKeychain: boolean;
 
   // Actions
+  /** False when a session end is in progress: the sign-in is discarded. */
   setAuth: (
     user: AuthUserInput,
     accessToken: string,
     refreshToken: string,
-  ) => void;
+  ) => boolean;
   updateUser: (updates: Partial<User>) => void;
-  setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
+  /** `replaces`: the refresh token the pair renews, when it renews one. */
+  setTokens: (tokens: {
+    accessToken?: string;
+    refreshToken?: string;
+    replaces?: string;
+  }) => TokenPairWrite;
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
@@ -134,6 +146,12 @@ export interface AuthState {
 export const holdsSessionTokens = (
   state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
 ): boolean => !!state.accessToken || !!state.refreshToken;
+
+/** Signed in with a token requests can carry now. */
+export const isSignedIn = <S extends Pick<AuthState, 'user' | 'accessToken'>>(
+  state: S,
+): state is S & { user: User; accessToken: string } =>
+  !!state.user && !!state.accessToken;
 
 const initialAuthState = {
   user: null,
@@ -175,6 +193,10 @@ export const createAuthSlice: StateCreator<
     ...initialAuthState,
 
     setAuth: (user, accessToken, refreshToken) => {
+      if (isSessionEnding()) {
+        logger.warn('Discarded a sign-in that arrived while the session ended');
+        return false;
+      }
       set(state => {
         // Clear stale navigation state if the user changed (or no previous user).
         // This prevents a new user from inheriting another user's selectedHomeId,
@@ -224,6 +246,7 @@ export const createAuthSlice: StateCreator<
       // This will automatically refresh the token 5 minutes before it expires
       // to prevent user-facing 401 errors and provide seamless UX
       scheduleProactiveRefresh(accessToken);
+      return true;
     },
 
     updateUser: updates => {
@@ -238,14 +261,18 @@ export const createAuthSlice: StateCreator<
       });
     },
 
-    setTokens: ({ accessToken, refreshToken }) => {
+    setTokens: ({ accessToken, refreshToken, replaces }) => {
+      if (replaces !== undefined && get().refreshToken !== replaces) {
+        logger.info('Discarded a token pair that outlived its session');
+        return 'outlived';
+      }
       // Landing mid sign-out, a credential outlives it and re-arms the refresh
       // the teardown cancelled.
       if (isSessionEnding()) {
         logger.warn(
           'Discarded a token pair that arrived while the session ended',
         );
-        return;
+        return 'session_ending';
       }
       set(state => {
         if (accessToken !== undefined) state.accessToken = accessToken;
@@ -262,6 +289,7 @@ export const createAuthSlice: StateCreator<
       if (accessToken) {
         scheduleProactiveRefresh(accessToken);
       }
+      return 'stored';
     },
 
     setEmailVerified: verified => {

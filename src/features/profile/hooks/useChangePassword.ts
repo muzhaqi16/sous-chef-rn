@@ -5,6 +5,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { authService } from '#/services/authService';
+import { useUserId } from '#store/useAppStore';
 
 /**
  * What the server did. `body` is localized copy, and `field` names the input a
@@ -27,6 +28,7 @@ export type ChangePasswordOutcome =
  */
 export function useChangePassword() {
   const { t } = useTranslation();
+  const userId = useUserId();
   const [changePassword] = useMutation(ChangePasswordDocument);
 
   const submit = async (input: {
@@ -57,7 +59,7 @@ export function useChangePassword() {
         body: t('changePassword.failed'),
       };
     }
-    if (!payload.session) {
+    if (!payload.session || !userId) {
       return {
         status: 'completed',
         staysSignedIn: false,
@@ -69,10 +71,11 @@ export function useChangePassword() {
     // the screen must not move on beneath it.
     const renewal = await authService.adoptPasswordChangeSession(
       payload.session,
+      userId,
     );
     return {
       status: 'completed',
-      staysSignedIn: true,
+      staysSignedIn: renewal !== 'discarded',
       storedSignInDropped: renewal === 'dropped',
     };
   };

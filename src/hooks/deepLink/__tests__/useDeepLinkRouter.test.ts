@@ -24,6 +24,7 @@ jest.mock('#store/useAppStore', () => ({
       clearPendingDeepLinkAction: mockClearPending,
     } as Partial<RootState> as RootState),
   useIsHydrated: () => mockIsHydrated,
+  useIsSignedIn: () => mockSignedIn,
 }));
 
 describe('useDeepLinkRouter', () => {

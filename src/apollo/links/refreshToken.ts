@@ -282,17 +282,15 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     const { accessToken: newToken, refreshToken: newRefreshToken } = payload;
 
-    // The session that presented `refreshToken` ended or was replaced while
-    // the rotation was in flight, so the pair belongs to no one.
-    if (useStore.getState().refreshToken !== refreshToken) {
-      logger.info('Discarded a token pair that outlived its session');
-      return null;
-    }
+    const write = state.setTokens({
+      accessToken: newToken,
+      refreshToken: newRefreshToken,
+      replaces: refreshToken,
+    });
+    if (write === 'outlived') return null;
     // Started before the sign-out: the pair serves only the request awaiting
     // it, and a re-dial would reopen the socket the teardown drops.
-    if (isSessionEnding()) return newToken;
-
-    state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
+    if (write === 'session_ending') return newToken;
 
     // Re-dial so the socket presents the token just stored.
     // `reconnectWebSocket` debounces on its own; no guard is needed here.

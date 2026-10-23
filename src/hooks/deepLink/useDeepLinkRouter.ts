@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppStore, useIsHydrated } from '#store/useAppStore';
+import { useAppStore, useIsHydrated, useIsSignedIn } from '#store/useAppStore';
 import { useNavigationIntents } from '#platform/screen';
 import { logger } from '#/utils/environment';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
@@ -21,9 +21,7 @@ const STALE_MESSAGE_KEY: Record<DeepLinkAction['type'], TranslationKey> = {
 export const useDeepLinkRouter = (): void => {
   const { toJoinHomeByCode, toJoinByShareCode } = useNavigationIntents();
   const isHydrated = useIsHydrated();
-  const isAuthenticated = useAppStore(
-    state => !!(state.user && state.accessToken),
-  );
+  const isAuthenticated = useIsSignedIn();
   const pendingDeepLinkAction = useAppStore(
     state => state.pendingDeepLinkAction,
   );

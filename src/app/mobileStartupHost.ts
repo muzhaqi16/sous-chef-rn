@@ -18,7 +18,7 @@ import {
   getLastBiometricEmail,
 } from '#native/storage/keychain';
 import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
-import type { AuthUserInput } from '#store/slices/authSlice';
+import { isSignedIn, type AuthUserInput } from '#store/slices/authSlice';
 import type { StartupHost } from '#bootstrap/startupHost';
 
 /** What an end-to-end run's launch arguments asked of this start. */
@@ -152,8 +152,10 @@ export function createMobileStartupHost(
         }
       });
 
-      const { user, accessToken } = useStore.getState();
-      if (user && accessToken && !flags.backgroundServicesDisabled) {
+      if (
+        isSignedIn(useStore.getState()) &&
+        !flags.backgroundServicesDisabled
+      ) {
         requestIdleCallback(() => registerDeviceInBackground());
       }
     },

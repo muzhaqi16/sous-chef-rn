@@ -13,6 +13,7 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { logger } from '#/utils/environment';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
@@ -221,6 +222,7 @@ function handleRejectedAuthPayload(
   useStore.getState().setAuthIsLoading(false);
 }
 
+/** False when the sign-in was discarded: a session end was still running. */
 async function handleLogin(
   loginResponse: ResolvedAuthPayload,
   loginCredentials?: { email: string },
@@ -243,8 +245,7 @@ async function handleLogin(
     );
   }
 
-  // Set auth state
-  store.setAuth(user, accessToken, refreshToken);
+  if (!store.setAuth(user, accessToken, refreshToken)) return false;
   queueManager.onUserChange(user.id, previousUserId);
   bootstrapUserStore(user);
   void applyRegionCurrencyDefault(user);
@@ -265,11 +266,11 @@ async function handleLogin(
     // clearing it also keeps resolveNavTarget from routing past this screen.
     store.setUserNavigationState(user.id, { verificationSkipped: false });
     store.setNavigationState('verification');
-    return false;
+    return true;
   }
   if (!user.onBoarded) {
     store.setNavigationState('onboarding');
-    return false;
+    return true;
   }
 
   // Eligible returning user → route to the dedicated biometric enrollment
@@ -291,7 +292,7 @@ async function handleLogin(
   }
 
   store.setNavigationState('main_app');
-  return false;
+  return true;
 }
 
 // --- Public API ---
@@ -350,10 +351,15 @@ async function login(
       // handleLogin owns all post-login routing — verification, onboarding,
       // the biometric gate, and the RememberMe gate (driven by
       // showRememberPrompt) — so navigation is decided in one place.
-      await handleLogin(unmaskedLogin, loginCredentials, showRememberPrompt);
-
+      const signedIn = await handleLogin(
+        unmaskedLogin,
+        loginCredentials,
+        showRememberPrompt,
+      );
+      if (!signedIn && !quiet)
+        toastService.error(t('errors.codes.genericRetry'));
       store.setAuthIsLoading(false);
-      return true;
+      return signedIn;
     }
 
     const refusal = result.data?.login;
@@ -444,17 +450,27 @@ async function register(input: RegisterInput): Promise<RegisterOutcome> {
  * A password change this session survived. The server refused every earlier
  * token, this device's included, so the new pair is stored before anything
  * else sends on the old one; the host then renews the sign-in it stores.
+ * `sentBy` is who sent the change: the pair is adopted only while that user is
+ * still signed in. Not by refresh token, which a rotation during the change
+ * replaces with one the change already revoked.
  */
-async function adoptPasswordChangeSession(session: {
-  accessToken: string;
-  refreshToken: string;
-}): Promise<StoredSignInRenewal> {
+async function adoptPasswordChangeSession(
+  session: { accessToken: string; refreshToken: string },
+  sentBy: string,
+): Promise<StoredSignInRenewal | 'discarded'> {
   const store = useStore.getState();
-  store.setTokens({
+  if (store.user?.id !== sentBy || !holdsSessionTokens(store)) {
+    logger.info(
+      'Discarded a password-change session its sender no longer holds',
+    );
+    return 'discarded';
+  }
+  const write = store.setTokens({
     accessToken: session.accessToken,
     refreshToken: session.refreshToken,
   });
-  const email = store.user?.email;
+  if (write !== 'stored') return 'discarded';
+  const { email } = store.user;
   if (!email) return 'none';
   return sessionHost().renewStoredSignIn(email);
 }

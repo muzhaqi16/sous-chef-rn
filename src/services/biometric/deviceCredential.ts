@@ -213,7 +213,10 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
         return false;
       }
 
-      await authService.handleLogin(unmaskedLogin);
+      if (!(await authService.handleLogin(unmaskedLogin))) {
+        toastService.error(t('errors.codes.genericRetry'));
+        return false;
+      }
       useStore.getState().clearBiometricBackoff();
       logger.info('Auto-login successful');
       return true;

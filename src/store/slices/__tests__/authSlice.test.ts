@@ -37,6 +37,20 @@ describe('authSlice', () => {
   });
 
   describe('setAuth', () => {
+    it('discards a sign-in that lands while a session ends', async () => {
+      const store = createTestStore();
+
+      const adopted = await whileSessionEnds(async () =>
+        store.getState().setAuth(testUser, 'late-access', 'late-refresh'),
+      );
+      resetSessionEndingGate();
+
+      expect(adopted).toBe(false);
+      expect(store.getState().user).toBeNull();
+      expect(store.getState().accessToken).toBeNull();
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
     it('sets user and tokens', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'access-tk', 'refresh-tk');
@@ -246,6 +260,37 @@ describe('authSlice', () => {
 
       expect(store.getState().accessToken).toBe('old-access');
       expect(store.getState().refreshToken).toBe('old-refresh');
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
+    it('stores a renewal of the refresh token still held', () => {
+      const store = createTestStore();
+      store.getState().setAuth(testUser, 'old-access', 'old-refresh');
+
+      const write = store.getState().setTokens({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        replaces: 'old-refresh',
+      });
+
+      expect(write).toBe('stored');
+      expect(store.getState().refreshToken).toBe('new-refresh');
+    });
+
+    it('refuses a renewal of a refresh token no longer held', () => {
+      const store = createTestStore();
+      store.getState().setAuth(testUser, 'current-access', 'current-refresh');
+      schedule.mockClear();
+
+      const write = store.getState().setTokens({
+        accessToken: 'late-access',
+        refreshToken: 'late-refresh',
+        replaces: 'superseded-refresh',
+      });
+
+      expect(write).toBe('outlived');
+      expect(store.getState().accessToken).toBe('current-access');
+      expect(store.getState().refreshToken).toBe('current-refresh');
       expect(schedule).not.toHaveBeenCalled();
     });
   });

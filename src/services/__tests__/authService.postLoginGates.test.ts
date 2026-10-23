@@ -19,7 +19,7 @@ jest.mock('#/apollo/client', () => ({
 const navStates = new Map<string, Record<string, unknown>>();
 const mockStore = {
   user: null as unknown,
-  setAuth: jest.fn(),
+  setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
   setAuthIsLoading: jest.fn(),
   setNavigationState: jest.fn(),

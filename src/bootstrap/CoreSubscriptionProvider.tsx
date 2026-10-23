@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useUser } from '#store/useAppStore';
-import { useAppStore } from '#store/useAppStore';
+import { useIsSignedIn, useUser } from '#store/useAppStore';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   enableAutoReconnect,
@@ -22,9 +21,7 @@ export const CoreSubscriptionProvider: React.FC<
   CoreSubscriptionProviderProps
 > = ({ children }) => {
   const user = useUser();
-  const isAuthenticated = useAppStore(
-    state => !!(state.user && state.accessToken),
-  );
+  const isAuthenticated = useIsSignedIn();
   // Gate subscriptions behind auth state — server handles token refresh during WS connection
   const [isTokenReady, setIsTokenReady] = useState(false);
   // Defer WebSocket subscriptions to avoid competing with startup queries on the JS thread

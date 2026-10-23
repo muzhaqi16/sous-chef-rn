@@ -38,7 +38,7 @@ const mockStore: MockStore = {
   preferredCurrency: 'USD',
   navState: {},
   setAuthIsLoading: jest.fn(),
-  setAuth: jest.fn(),
+  setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
   setPreferredCurrency: jest.fn((code: string) => {
     mockStore.preferredCurrency = code;
