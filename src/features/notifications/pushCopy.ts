@@ -197,7 +197,7 @@ const readCopyData = (
         __typename: 'RecipeRecommendationsNotificationData',
         recipeCount: readCount(data.recipeCount),
         recipes: readNames(data.recipeNames).map(name => ({
-          __typename: 'RecommendedRecipe',
+          __typename: 'NotificationRecommendedRecipe',
           name,
         })),
       };

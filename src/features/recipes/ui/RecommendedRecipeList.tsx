@@ -1,5 +1,5 @@
 import React from 'react';
-import type { RecommendedRecipe } from '#/graphql/generated/schemaTypes';
+import type { NotificationRecommendedRecipe } from '#/graphql/generated/schemaTypes';
 import { RecommendedRecipeCard } from './RecommendedRecipeCard';
 import {
   RECOMMENDED_RECIPES_SHOWN,
@@ -8,7 +8,7 @@ import {
 
 interface RecommendedRecipeListProps {
   recipes: readonly Pick<
-    RecommendedRecipe,
+    NotificationRecommendedRecipe,
     'recipeId' | 'name' | 'matchPercentage'
   >[];
   /** Shown instead when every recipe is gone. */
