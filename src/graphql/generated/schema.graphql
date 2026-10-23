@@ -2080,6 +2080,10 @@ Always include a __typename so the variant can be discriminated.
 union CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateImageUploadUrlInput {
+  """
+  The household a HOUSEHOLD_ITEM_PHOTO is for; refused on other purposes.
+  """
+  homeId: ID
   itemId: ID
   mime: String!
   purpose: ImageUploadPurpose!
@@ -3292,6 +3296,18 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteHomeInviteResult = ConflictError | DeleteHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError
+
+input DeleteHomeItemPhotoInput {
+  homeId: ID!
+  itemId: ID!
+}
+
+"""
+Result of DeleteHomeItemPhoto. Select on HomeItemPhotoPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeleteHomeItemPhotoResult = ConflictError | ForbiddenError | HomeItemPhotoPayload | NotFoundError | ValidationError
 
 type DeleteHomePayload {
   """
@@ -4507,6 +4523,34 @@ enum EntitlementSource {
 }
 
 """
+The photo a household's entry shows. In order: the household's own photo for
+the entry's catalog item, when it chose one and the viewer is the household's
+member; else the catalog photo the item shows everyone (Item.imageUrl); else
+none. A household upload's url is a signed link that expires: read it from the
+entry each time, never store it.
+"""
+type EntryImage {
+  """
+  The ItemPhoto shown when it is one of the item's photos; null for a household upload.
+  """
+  catalogImageId: ID
+  """The credit a catalog photo needs; null for a household upload."""
+  credit: ImageCredit
+  source: EntryImageSource!
+  url: String!
+}
+
+"""Whose choice an entry's photo is."""
+enum EntryImageSource {
+  """The photo the catalog item shows everyone."""
+  CATALOG
+  """
+  The household chose it: its own upload, or one of the item's photos it picked.
+  """
+  HOUSEHOLD
+}
+
+"""
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
 `... on Error { code message }` fallback alongside specific variants.
@@ -5441,6 +5485,17 @@ type HomeInviteStatsGroup {
   count: InviteActionCount!
 }
 
+type HomeItemPhotoPayload {
+  homeId: ID!
+  """The photo the household's entries for the item show now."""
+  image: EntryImage
+  item: Item!
+  """The household's live pantry stacks for the item."""
+  pantryItems: [PantryItem!]!
+  """The household's live shopping-list lines for the item."""
+  shoppingListItems: [ShoppingListItem!]!
+}
+
 """Order by options for homes"""
 input HomeOrderBy {
   createdAt: SortOrder
@@ -5664,6 +5719,12 @@ enum ImagePerspective {
 }
 
 enum ImageUploadPurpose {
+  """
+  A household's own photo for a catalog item, for updateHomeItemPhoto: send
+  homeId and itemId. At most 5 MB; stored privately, shown only to the home's
+  members, never added to the catalog.
+  """
+  HOUSEHOLD_ITEM_PHOTO
   ITEM_IMAGE
   PROFILE_AVATAR
   PROFILE_COVER
@@ -7586,11 +7647,21 @@ Always include a __typename so the variant can be discriminated.
 union MarkHomeAsDefaultResult = ConflictError | ForbiddenError | MarkHomeAsDefaultPayload | NotFoundError | ValidationError
 
 input MarkItemForReviewInput {
+  """
+  The photo the report is about: an approved original photo of this item
+  (an ItemPhoto id), not a size rendition. Omitted for the whole item.
+  """
+  imageId: ID
   itemId: ID!
   reason: String
 }
 
 type MarkItemForReviewPayload {
+  """
+  True when the caller already holds an open report on this item and photo:
+  nothing new was recorded. Show "already reported".
+  """
+  alreadyReported: Boolean!
   item: Item!
 }
 
@@ -9260,6 +9331,12 @@ type Mutation {
   answers ConflictError and stays as it is.
   """
   deleteHomeInvite(input: DeleteHomeInviteInput!): DeleteHomeInviteResult!
+  """
+  Clear the household's photo for a catalog item: its entries show the catalog
+  photo again. Clearing when there is none succeeds. Needs the right to edit
+  the household's entries.
+  """
+  deleteHomeItemPhoto(input: DeleteHomeItemPhotoInput!): DeleteHomeItemPhotoResult!
   """Delete a meal plan."""
   deleteMealPlan(input: DeleteMealPlanInput!): DeleteMealPlanResult!
   """Remove an item from a meal plan."""
@@ -9404,7 +9481,13 @@ type Mutation {
   markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
   """Mark a home as the default for the current user."""
   markHomeAsDefault(input: MarkHomeAsDefaultInput!): MarkHomeAsDefaultResult!
-  """Mark an item for review"""
+  """
+  Report an item, or one of its photos, as wrong. The report is recorded for
+  admins with the reason, the photo, the reporter and the time, and the item
+  is flagged for review. A repeat by the same person on the same item and
+  photo, while their earlier report is open, records nothing and answers
+  alreadyReported.
+  """
   markItemForReview(input: MarkItemForReviewInput!): MarkItemForReviewResult!
   """
   Mark a notification as read. The expiration notifications it announced
@@ -9630,6 +9713,13 @@ type Mutation {
   updateFavoriteRecipe(input: UpdateFavoriteRecipeInput!): UpdateFavoriteRecipeResult!
   """Update an existing home's details."""
   updateHome(input: UpdateHomeInput!): UpdateHomeResult!
+  """
+  Set the household's photo for a catalog item: its own upload, or one of the
+  item's approved photos. Its members' entries for the item show it at once;
+  nobody outside the household sees it, and the catalog item is unchanged.
+  Needs the right to edit the household's entries.
+  """
+  updateHomeItemPhoto(input: UpdateHomeItemPhotoInput!): UpdateHomeItemPhotoResult!
   """
   Rotate (update) a home's join code, invalidating any previously shared join link.
   
@@ -10971,6 +11061,10 @@ type PantryItem {
   heldQuantity: Float!
   """The stack's id: one item, in one unit, in one pantry"""
   id: ID!
+  """
+  The photo this entry shows (EntryImage gives the order). Null when there is none.
+  """
+  image: EntryImage
   """
   Whether the wasted stock was composted, as reported with the latest waste or set directly; false by default
   """
@@ -16434,6 +16528,12 @@ type ShoppingListItem {
   """The line's id. An add may supply it, so an offline client can mint it"""
   id: ID!
   """
+  The photo this line shows (EntryImage gives the order). A list with no
+  household, a viewer outside it, and a line with no catalog item see no
+  household photo. Null when there is none.
+  """
+  image: EntryImage
+  """
   The catalog item this line buys; null when the line names none or that item was deleted
   """
   item: Item
@@ -18593,6 +18693,26 @@ input UpdateHomeInput {
   """
   version: Int!
 }
+
+input UpdateHomeItemPhotoInput {
+  homeId: ID!
+  itemId: ID!
+  """
+  One of the item's approved photos (an ItemPhoto id). Send this or uploadKey.
+  """
+  itemImageId: ID
+  """
+  A staged upload from createImageUploadUrl with purpose HOUSEHOLD_ITEM_PHOTO. Send this or itemImageId.
+  """
+  uploadKey: String
+}
+
+"""
+Result of UpdateHomeItemPhoto. Select on HomeItemPhotoPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateHomeItemPhotoResult = ConflictError | ForbiddenError | HomeItemPhotoPayload | NotFoundError | ValidationError
 
 input UpdateHomeJoinCodeInput {
   """ID of the home whose join code to rotate."""
