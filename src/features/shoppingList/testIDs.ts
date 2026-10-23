@@ -81,6 +81,7 @@ export const shoppingListTestIDs = {
 
   itemDetail: 'shopping-item-detail',
   itemDetailEditButton: 'shopping-item-edit-button',
+  itemDetailReportPhotoButton: 'shopping-item-report-photo-button',
   itemDetailHeroImage: 'shopping-item-hero-image',
 
   /** `AddEditItem`, adding; `editItemForm` carries the same keys. */

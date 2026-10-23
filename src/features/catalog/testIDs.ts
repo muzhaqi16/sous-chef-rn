@@ -11,6 +11,8 @@ export const catalogTestIDs = {
   reportItemCancelButton: 'report-item-cancel-button',
   reportItemSubmitButton: 'report-item-submit-button',
   dropdownSpacer: 'dropdown-spacer',
+  /** `ItemPhotoViewer`'s "report wrong photo" on a public item's photo. */
+  photoViewerReportButton: 'photo-viewer-report-button',
   /** `PhotoCredit`: a licensed photo's credit and licence links. */
   photoCreditSource: 'photo-credit-source',
   photoCreditLicense: 'photo-credit-license',

@@ -34,6 +34,7 @@ import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { purchaseDay } from '#/utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { personName } from '#/utils/formatters/memberFormatters';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
@@ -111,6 +112,11 @@ export const ShoppingListItemDetail: React.FC<
   // for `detail`.
   const { item, detail, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
+
+  const reportPhotoActions = useReportPhotoHeaderAction(
+    detail?.item,
+    shoppingListTestIDs.itemDetailReportPhotoButton,
+  );
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });
@@ -241,6 +247,7 @@ export const ShoppingListItemDetail: React.FC<
             onPress: handleEdit,
             testID: shoppingListTestIDs.itemDetailEditButton,
           },
+          ...reportPhotoActions,
         ]}
         renderHero={
           hasHero

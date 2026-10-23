@@ -136,7 +136,12 @@
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedBody": "Something went wrong sending your report. Please try again.",
     "alreadyReportedTitle": "Already reported",
-    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate."
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
+    "wrongPhotoAction": "Report wrong photo",
+    "wrongPhotoConfirmTitle": "Report this photo?",
+    "wrongPhotoConfirmBody": "An admin will check whether it shows this item.",
+    "wrongPhotoConfirm": "Report",
+    "wrongPhotoReason": "The photo shows a different product."
   },
   "addItemForm": {
     "modes": {

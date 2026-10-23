@@ -1,0 +1,91 @@
+import { waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { MarkItemForReviewDocument } from '#operations/item/item.generated';
+import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
+import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#/platform/presenters';
+
+const sentReport = () =>
+  recordMock(MarkItemForReviewDocument, {
+    data: {
+      markItemForReview: {
+        __typename: 'MarkItemForReviewPayload',
+        item: { id: 'item-1' },
+      },
+    },
+  });
+
+const confirmButtons = (): AlertButton[] => {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
+  return buttons ?? [];
+};
+
+const press = (label: string) =>
+  confirmButtons()
+    .find(button => button.text === label)
+    ?.onPress?.();
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('useReportWrongPhoto', () => {
+  it('asks before sending anything', () => {
+    const { mock, fired } = sentReport();
+    const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
+      operationMocks: [mock],
+    });
+
+    result.current.reportWrongPhoto('item-1');
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Report this photo?',
+      'An admin will check whether it shows this item.',
+      expect.any(Array),
+    );
+    expect(fired).toHaveLength(0);
+  });
+
+  it('sends nothing when the user cancels', async () => {
+    const { mock, fired } = sentReport();
+    const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
+      operationMocks: [mock],
+    });
+
+    result.current.reportWrongPhoto('item-1');
+    press('Cancel');
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(fired).toHaveLength(0);
+  });
+
+  it('flags the item with the wrong-photo reason once confirmed', async () => {
+    const { mock, fired } = sentReport();
+    const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
+      operationMocks: [mock],
+    });
+
+    result.current.reportWrongPhoto('item-1');
+    press('Report');
+
+    await waitFor(() =>
+      expect(fired).toEqual([
+        {
+          input: {
+            itemId: 'item-1',
+            reason: 'The photo shows a different product.',
+          },
+        },
+      ]),
+    );
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Report sent',
+        expect.stringContaining('admin'),
+      ),
+    );
+  });
+});

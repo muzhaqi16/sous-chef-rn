@@ -48,6 +48,10 @@ export interface PantryItemFixture {
   costPerUnit?: number | null;
   totalCost?: number | null;
   nutritionFacts?: NutritionFactsData;
+  /** A public catalog item (`canSuggest`), which can be reported. */
+  canSuggest?: boolean;
+  /** The catalog item's approved main photo. */
+  imageUrl?: string | null;
 }
 
 function unit(
@@ -122,10 +126,10 @@ export function pantryItemData(
         // gated on this, and a fixture that grants it would exercise a path
         // most callers of these fixtures never reach.
         canEdit: false,
-        canSuggest: false,
+        canSuggest: fixture.canSuggest ?? false,
         dataAttributions: [],
         name: 'Milk',
-        imageUrl: null,
+        imageUrl: fixture.imageUrl ?? null,
         images: [],
         photos: [],
         shelfLifeDays: null,

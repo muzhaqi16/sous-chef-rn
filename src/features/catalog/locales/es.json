@@ -136,7 +136,12 @@
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
     "alreadyReportedTitle": "Ya lo informaste",
-    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado."
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
+    "wrongPhotoAction": "Informar de foto incorrecta",
+    "wrongPhotoConfirmTitle": "¿Informar de esta foto?",
+    "wrongPhotoConfirmBody": "Un administrador comprobará si muestra este artículo.",
+    "wrongPhotoConfirm": "Informar",
+    "wrongPhotoReason": "La foto muestra un producto distinto."
   },
   "addItemForm": {
     "modes": {

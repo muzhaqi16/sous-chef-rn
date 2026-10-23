@@ -136,7 +136,12 @@
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
     "alreadyReportedTitle": "Già segnalato",
-    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato."
+    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
+    "wrongPhotoAction": "Segnala foto errata",
+    "wrongPhotoConfirmTitle": "Segnalare questa foto?",
+    "wrongPhotoConfirmBody": "Un amministratore verificherà se mostra questo articolo.",
+    "wrongPhotoConfirm": "Segnala",
+    "wrongPhotoReason": "La foto mostra un prodotto diverso."
   },
   "addItemForm": {
     "modes": {

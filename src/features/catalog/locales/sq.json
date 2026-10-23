@@ -136,7 +136,12 @@
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
     "alreadyReportedTitle": "Tashmë e raportuar",
-    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë."
+    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
+    "wrongPhotoAction": "Raporto foto të gabuar",
+    "wrongPhotoConfirmTitle": "Të raportohet kjo foto?",
+    "wrongPhotoConfirmBody": "Një administrator do të kontrollojë nëse tregon këtë artikull.",
+    "wrongPhotoConfirm": "Raporto",
+    "wrongPhotoReason": "Fotoja tregon një produkt tjetër."
   },
   "addItemForm": {
     "modes": {

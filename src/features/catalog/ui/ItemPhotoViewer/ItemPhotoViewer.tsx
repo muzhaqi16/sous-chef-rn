@@ -36,8 +36,10 @@ import {
   type ItemPhotoRef,
 } from '#features/catalog/ui/ItemPhotoCarousel';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
+import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 const MIN_SCALE = 1;
@@ -71,9 +73,10 @@ interface ItemPhotoViewerProps {
   /**
    * The photos' item. Only the viewer's own private one (`writesItemDirectly`)
    * offers "set as main photo", which the app never takes on a public item, even
-   * for an admin. Omitted means read-only — no affordance.
+   * for an admin; a public one (`canSuggest`) offers "report wrong photo"
+   * instead. Omitted means read-only — no affordance.
    */
-  item?: Parameters<typeof writesItemDirectly>[0] | null;
+  item?: (Parameters<typeof writesItemDirectly>[0] & { id: string }) | null;
 }
 
 /**
@@ -113,6 +116,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
 
   const total = photos.length;
   const canEdit = !!item && writesItemDirectly(item);
+  const reportableItemId = item?.canSuggest === true ? item.id : null;
 
   return (
     <Modal
@@ -168,6 +172,12 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
         >
           {!!canEdit && !!photos[index] && (
             <SetPrimaryAction photoRef={photos[index]} />
+          )}
+          {!!reportableItemId && !!photos[index] && (
+            <ReportPhotoAction
+              photoRef={photos[index]}
+              itemId={reportableItemId}
+            />
           )}
           <View style={styles.captionStack} pointerEvents="none">
             {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
@@ -406,7 +416,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
 
   return (
     <Pressable
-      style={styles.primaryAction}
+      style={styles.captionAction}
       onPress={() => {
         void markPrimary(photo.id);
       }}
@@ -420,6 +430,36 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
       <Icon name="star-outline" size={14} tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('itemPhotos.setAsMain')}
+      </Text>
+    </Pressable>
+  );
+};
+
+/**
+ * "Report wrong photo" on a public item's APPROVED photo. A PENDING one is the
+ * viewer's own submission, the one photo they would never be reporting.
+ */
+const ReportPhotoAction: React.FC<{
+  photoRef: ItemPhotoRef;
+  itemId: string;
+}> = ({ photoRef, itemId }) => {
+  const { t } = useTranslation();
+  const { reportWrongPhoto, loading } = useReportWrongPhoto();
+  const photo = useItemPhoto(photoRef);
+  if (!photo || photo.status !== ItemImageStatus.Approved) return null;
+
+  return (
+    <Pressable
+      style={styles.captionAction}
+      onPress={() => reportWrongPhoto(itemId)}
+      accessibilityRole="button"
+      accessibilityState={{ busy: loading }}
+      accessibilityLabel={t('reportItem.wrongPhotoAction')}
+      testID={catalogTestIDs.photoViewerReportButton}
+    >
+      <Icon name="flag-outline" size={14} tone="onScrim" />
+      <Text role="label" style={styles.captionText}>
+        {t('reportItem.wrongPhotoAction')}
       </Text>
     </Pressable>
   );
@@ -496,7 +536,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  primaryAction: {
+  captionAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,

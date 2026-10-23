@@ -9,6 +9,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
+import { alertService } from '#/services/alertService';
 import { ItemPhotoViewer } from '../ItemPhotoViewer';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
@@ -37,7 +38,8 @@ const photo = (
   ...overrides,
 });
 
-const OWN_ITEM = { canEdit: true, canSuggest: false };
+const OWN_ITEM = { id: 'item-1', canEdit: true, canSuggest: false };
+const PUBLIC_ITEM = { id: 'item-1', canEdit: false, canSuggest: true };
 
 const renderViewer = (
   props: Partial<React.ComponentProps<typeof ItemPhotoViewer>> = {},
@@ -62,12 +64,12 @@ describe('ItemPhotoViewer set-as-main action', () => {
   // The server gates the mutation on the item's creator or an admin, so a
   // viewer without canEdit must not show an affordance that can only Forbidden.
   it('is hidden without canEdit', () => {
-    renderViewer({ item: { canEdit: false, canSuggest: false } });
+    renderViewer({ item: { id: 'item-1', canEdit: false, canSuggest: false } });
     expect(screen.queryByLabelText('Set as main photo')).toBeNull();
   });
 
   it('is hidden on a public item, even for an admin', () => {
-    renderViewer({ item: { canEdit: true, canSuggest: true } });
+    renderViewer({ item: { id: 'item-1', canEdit: true, canSuggest: true } });
     expect(screen.queryByLabelText('Set as main photo')).toBeNull();
   });
 
@@ -114,6 +116,42 @@ describe('ItemPhotoViewer set-as-main action', () => {
 
     await waitFor(() =>
       expect(fired).toContainEqual({ input: { imageId: 'photo-1' } }),
+    );
+  });
+});
+
+describe('ItemPhotoViewer report action', () => {
+  it("is offered on a public item's approved photo", () => {
+    renderViewer({ item: PUBLIC_ITEM });
+    expect(screen.getByLabelText('Report wrong photo')).toBeTruthy();
+  });
+
+  // A pending photo is the viewer's own submission.
+  it('is hidden for a pending photo', () => {
+    renderViewer({
+      item: PUBLIC_ITEM,
+      photos: [photo('photo-1', { status: ItemImageStatus.Pending })],
+    });
+    expect(screen.queryByLabelText('Report wrong photo')).toBeNull();
+  });
+
+  it("is hidden on the viewer's own private item", () => {
+    renderViewer({ item: OWN_ITEM });
+    expect(screen.queryByLabelText('Report wrong photo')).toBeNull();
+  });
+
+  it('is hidden when the viewer is read-only', () => {
+    renderViewer();
+    expect(screen.queryByLabelText('Report wrong photo')).toBeNull();
+  });
+
+  it('asks before reporting the item', () => {
+    renderViewer({ item: PUBLIC_ITEM });
+    fireEvent.press(screen.getByLabelText('Report wrong photo'));
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Report this photo?',
+      expect.any(String),
+      expect.any(Array),
     );
   });
 });

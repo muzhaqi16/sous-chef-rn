@@ -531,6 +531,38 @@ describe('ShoppingListItemDetail', () => {
     );
   });
 
+  it("offers to report a public catalog item's photo", async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            item: {
+              __typename: 'Item',
+              id: 'i1',
+              canSuggest: true,
+              imageUrl: 'https://cdn.test/bread.jpg',
+              photos: [],
+            },
+          }),
+        ),
+      ],
+    });
+    expect(
+      await screen.findByTestId('shopping-item-report-photo-button'),
+    ).toBeTruthy();
+  });
+
+  it('offers no photo report on a line with no catalog item', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    expect(
+      screen.queryByTestId('shopping-item-report-photo-button'),
+    ).toBeNull();
+  });
+
   it('says a line the server holds nothing for is not found', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', null)],

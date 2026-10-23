@@ -447,6 +447,28 @@ describe('PantryItemDetail (integration)', () => {
     expect(headerAction('pantry-item-delete-button')).toBeTruthy();
   });
 
+  it("offers to report a public catalog item's photo", async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          canSuggest: true,
+          imageUrl: 'https://cdn.test/milk.jpg',
+        }),
+      ],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-report-photo-button')).toBeTruthy();
+  });
+
+  it('offers no photo report on an item with no photo', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock({ ...fullItem, canSuggest: true })],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-report-photo-button')).toBeNull();
+  });
+
   it('shows the offline state, not a spinner, on an offline cache miss', async () => {
     // The screen read only `data` from useQuery and rendered a bare loader
     // whenever `item` was falsy, so offline it span forever with no error and

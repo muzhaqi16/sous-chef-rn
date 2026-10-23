@@ -44,6 +44,7 @@ import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
 import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -143,6 +144,11 @@ export const PantryItemDetail: React.FC<
         ],
       ),
   });
+
+  const reportPhotoActions = useReportPhotoHeaderAction(
+    item?.item,
+    pantryTestIDs.itemReportPhotoButton,
+  );
 
   const handleEdit = () => {
     toPantryItem({ itemId });
@@ -318,6 +324,8 @@ export const PantryItemDetail: React.FC<
           },
         ] satisfies HeaderAction[])
       : []),
+
+    ...reportPhotoActions,
   ];
 
   return (

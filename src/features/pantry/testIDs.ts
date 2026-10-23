@@ -26,6 +26,7 @@ export const pantryTestIDs = {
   itemAdjustButton: 'pantry-item-adjust-button',
   itemEditButton: 'pantry-item-edit-button',
   itemDeleteButton: 'pantry-item-delete-button',
+  itemReportPhotoButton: 'pantry-item-report-photo-button',
 
   /** `testIDPrefix` of the catalog's add-item sheet when the pantry hosts it. */
   addItemSheetPrefix: 'add-pantry-item',
