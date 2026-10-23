@@ -16,9 +16,12 @@ subscription NotificationEvents {
     mutation
     timestamp
     affectedCount
+    # The id and status alone: a subscription is refused past depth 4, which a
+    # row's typed `data` exceeds, so a new row is read back
+    # (`NotificationForEvent`).
     node {
       id
-      ...useNotifications_notification
+      status
     }
   }
 }
@@ -36,7 +39,9 @@ query NotificationSummary {
   }
 }
 
-query GetUnreadNotifications {
+# The page size is a variable: a literal multiplies the row's cost by it, and
+# the typed `data` puts that over the server's limit.
+query GetUnreadNotifications($first: Int = 50) {
   # Server-authoritative badge: it stays correct when more are unread than the
   # page below loads, and after a cache clear (a list recompute under-counts
   # both).
@@ -49,7 +54,7 @@ query GetUnreadNotifications {
     id
     notificationsConnection(
       filters: { unreadOnly: true }
-      first: 50
+      first: $first
       orderBy: SENT_AT_DESC
     ) {
       edges {

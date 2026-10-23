@@ -85,12 +85,14 @@ function buildNotification(
     isAuthoredContent: false,
     category: NotificationCategory.Pantry,
     priority: Priority.Normal,
-    payload: { itemName: 'Milk', daysUntilExpiry: 1, pantryItemId: 'item-1' },
+    data: null,
+    isTest: false,
+    details: null,
+    pantryItemId: 'item-1',
     sentAt: '2026-07-01T00:00:00Z',
     isRead: false,
     requiresAction: true,
     actionType: 'VIEW_EXPIRING_ITEMS',
-    actionData: {},
     ...overrides,
   };
 }
@@ -225,10 +227,10 @@ describe('NotificationActionHandler — showExpirationActionSheet', () => {
     expect(screen.queryByTestId('sheet-content')).toBeNull();
   });
 
-  it('does nothing when the payload has no pantryItemId (e.g. a synthetic test notification)', async () => {
+  it('does nothing when the server names no stack (e.g. a synthetic test notification)', async () => {
     const getActions = renderHandler([]);
     const notification = buildNotification({
-      payload: { itemName: 'Milk', daysUntilExpiry: 1 },
+      pantryItemId: null,
     });
 
     await act(async () => {

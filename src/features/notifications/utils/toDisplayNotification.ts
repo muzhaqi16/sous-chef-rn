@@ -4,11 +4,7 @@
  * Apollo cache.
  */
 
-import {
-  isNotificationPayload,
-  type ExpirationLinkData,
-  type NotificationPayload,
-} from '#features/notifications/types';
+import type { ExpirationLinkData } from '#features/notifications/types';
 import type {
   NotificationType,
   Priority,
@@ -17,7 +13,11 @@ import {
   NotificationCategory,
   NotificationStatus,
 } from '#/graphql/generated/schemaTypes';
-import { getNotificationAction } from '#features/notifications/utils/notificationHelpers';
+import {
+  authoredDetails,
+  getNotificationAction,
+  isTestNotification,
+} from '#features/notifications/utils/notificationHelpers';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /**
@@ -43,7 +43,11 @@ export interface DisplayNotification {
   message?: string | null;
   category: NotificationCategory;
   priority: Priority;
-  payload: NotificationPayload;
+  /** The payload typed; null for a test, an authored row and unwritten types. */
+  data: UseNotificationsOnLaunch_NotificationFragment['data'];
+  isTest: boolean;
+  /** What an authored row's author attached below the message. */
+  details: string | null;
   sentAt: string;
   expiresAt?: string | null;
   sourceId?: string | null;
@@ -59,7 +63,6 @@ export interface DisplayNotification {
   isRead: boolean;
   requiresAction: boolean;
   actionType?: string | null;
-  actionData: NotificationPayload;
 
   /**
    * Expiration enrichment from `PantryEvents`. It arrives on a different event
@@ -82,9 +85,6 @@ export function toDisplayNotification(
   expirationLink?: ExpirationLinkData,
 ): DisplayNotification {
   const type = n.type;
-  const payload: NotificationPayload = isNotificationPayload(n.payload)
-    ? n.payload
-    : {};
   const { requiresAction, actionType } = getNotificationAction(
     type,
     n.pantryItemId,
@@ -98,7 +98,9 @@ export function toDisplayNotification(
     message: n.message,
     category: n.category ?? NotificationCategory.System,
     priority: n.priority,
-    payload,
+    data: n.data,
+    isTest: isTestNotification(n.payload),
+    details: authoredDetails(n.payload),
     sentAt: n.sentAt,
     expiresAt: n.expiresAt,
     sourceId: n.sourceId,
@@ -109,7 +111,6 @@ export function toDisplayNotification(
     isRead: !UNREAD_STATUSES.includes(n.status),
     requiresAction,
     actionType,
-    actionData: payload,
     ...expirationLink,
   };
 }

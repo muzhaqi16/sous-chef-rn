@@ -121,13 +121,14 @@ const linkedReminder: DisplayNotification = {
   isAuthoredContent: false,
   category: NotificationCategory.Pantry,
   priority: Priority.Normal,
-  payload: { itemName: 'Milk', daysUntilExpiry: 1 },
+  data: null,
+  isTest: false,
+  details: null,
   pantryItemId: 'stack-1',
   sentAt: '2026-01-01T00:00:00.000Z',
   isRead: false,
   requiresAction: true,
   actionType: 'VIEW_EXPIRING_ITEMS',
-  actionData: {},
   expirationNotificationId: 'exp-1',
 };
 

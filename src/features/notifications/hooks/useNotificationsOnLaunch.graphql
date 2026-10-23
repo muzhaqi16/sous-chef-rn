@@ -4,12 +4,128 @@ fragment useNotificationsOnLaunch_notification on Notification {
   priority
   # `title`/`message` reach the screen ONLY for an authored row — an admin's
   # announcement, which is content a person wrote. Everything else renders
-  # `getNotificationCopy` from `type` + `payload`, because the server builds
+  # `getNotificationCopy` from `type` + `data`, because the server builds
   # these two from a template, in English, in every locale.
   isAuthoredContent
   title
   message
+  # Read only for a test row's flag and an authored row's details.
   payload
+  # The payload typed: the copy's fields, plus the ids an invite's answer and a
+  # recommendation's cards need. Null for an authored row, a test and a type
+  # the server does not write. `listName` is optional on three members and
+  # required on the rest, and one selection cannot merge the two, so those
+  # three alias it.
+  data {
+    __typename
+    ... on HomeInvitationNotificationData {
+      homeName
+      inviterName
+      inviteId
+      token
+    }
+    ... on CollaborationInviteNotificationData {
+      listName
+      inviterName
+      inviteId
+      token
+    }
+    ... on CollaborationAcceptedNotificationData {
+      listName
+      accepterName
+    }
+    ... on CollaborationDeclinedNotificationData {
+      listName
+      declinerName
+    }
+    ... on CollaboratorRemovedNotificationData {
+      listNameIfKnown: listName
+      removerName
+    }
+    ... on CollaboratorRoleChangedNotificationData {
+      listNameIfKnown: listName
+      changerName
+      previousRole
+      newRole
+    }
+    ... on CollaboratorPermissionsUpdatedNotificationData {
+      listNameIfKnown: listName
+      changerName
+    }
+    ... on ListUpdatedNotificationData {
+      listName
+      eventType
+    }
+    ... on ListReminderNotificationData {
+      listName
+      itemCount
+    }
+    ... on SharedListChangedNotificationData {
+      listName
+      actorNames
+    }
+    ... on LowStockNotificationData {
+      itemName
+      currentQuantity
+    }
+    ... on ExpiryReminderNotificationData {
+      itemName
+      daysUntilExpiry
+      expiresOn
+      isMultiBatch
+      batchOpenedAt
+      batchAddedAt
+    }
+    ... on ExpiryDigestNotificationData {
+      itemCount
+      items {
+        name
+      }
+    }
+    ... on PantryChangeNotificationData {
+      pantryName
+      actorNames
+      itemCount
+      items {
+        name
+      }
+    }
+    ... on RunningLowNotificationData {
+      itemCount
+      items {
+        name
+      }
+    }
+    ... on MealPlanReminderNotificationData {
+      mealCount
+      meals {
+        name
+      }
+    }
+    ... on CookingReminderNotificationData {
+      recipeName
+      mealTime
+    }
+    ... on RecipeRecommendationsNotificationData {
+      recipeCount
+      recipes {
+        recipeId
+        name
+        matchPercentage
+      }
+    }
+    ... on PantryWeeklyDigestNotificationData {
+      itemsAdded
+      itemsUsed
+      itemsWasted
+      itemsExpiringSoon
+    }
+    ... on MonthlyReportNotificationData {
+      purchaseCount
+      recipesCooked
+      wastedItemCount
+    }
+  }
   category
   sentAt
   expiresAt

@@ -4,7 +4,7 @@ import {
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
 import { isDateKey, safeParseDate } from '#utils/dateUtils';
-import type { NotificationPayload } from '#features/notifications/types';
+import type { NotificationCopyData } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
 import {
   daysUntilExpiry as daysUntilExpiryOn,
@@ -62,96 +62,63 @@ export const getNotificationAction = (
   }
 };
 
-/**
- * Structured fields the server attaches to EXPIRY_REMINDER notification
- * payloads. The payload arrives as an untyped JSON scalar, so each field is
- * read defensively — a legacy payload missing them yields `null`.
- */
-export interface ExpiryReminderFields {
+type CopyTypename = NotificationCopyData['__typename'];
+type CopyMember<Typename extends CopyTypename> = Extract<
+  NotificationCopyData,
+  { __typename: Typename }
+>;
+
+const isMember = <Typename extends CopyTypename>(
+  data: NotificationCopyData | null,
+  typename: Typename,
+): data is CopyMember<Typename> => data?.__typename === typename;
+
+/** The member of `data` that `typename` names; null for any other. */
+const memberOf = <Typename extends CopyTypename>(
+  data: NotificationCopyData | null,
+  typename: Typename,
+): CopyMember<Typename> | null => (isMember(data, typename) ? data : null);
+
+/** Text to show; null for none or a blank one. */
+const shownText = (value: string | null | undefined): string | null =>
+  value?.trim() ? value : null;
+
+const shownNames = (names: readonly string[] | undefined): string[] =>
+  (names ?? []).filter(name => name !== '');
+
+const namesOf = (named: readonly { name?: string }[] | undefined): string[] =>
+  shownNames(named?.flatMap(({ name }) => name ?? []));
+
+interface ExpiryReminderFields {
   itemName: string;
   daysUntilExpiry: number;
   isMultiBatch: boolean;
   batchOpenedAt: string | null;
   batchAddedAt: string | null;
-  // The stack as it was when the reminder was written, so a later merge
-  // leaves it stale: `Notification.pantryItemId` is the one to act on.
-  pantryItemId: string | null;
 }
 
-export const readExpiryReminderFields = (
-  payload: NotificationPayload,
+const readExpiryReminderFields = (
+  data: NotificationCopyData | null,
   today: string,
 ): ExpiryReminderFields | null => {
-  const { pantryItemId } = payload;
-  const itemName = readText(payload, 'itemName');
-  const expiresOn = readText(payload, 'expiresOn');
+  const reminder = memberOf(data, 'ExpiryReminderNotificationData');
+  const itemName = shownText(reminder?.itemName);
+  if (!reminder || itemName === null) return null;
+  const { expiresOn } = reminder;
   // The date is counted on this phone, so an old reminder in the feed does not
-  // keep the day count it was sent with. Older payloads carry only the count.
-  const daysUntilExpiry: unknown =
+  // keep the day count it was sent with. A push carries only the count.
+  const daysUntilExpiry =
     expiresOn && isDateKey(expiresOn)
       ? daysUntilExpiryOn(expiresOn, today)
-      : payload.daysUntilExpiry;
-  if (itemName === null || typeof daysUntilExpiry !== 'number') {
-    return null;
-  }
+      : reminder.daysUntilExpiry;
+  if (daysUntilExpiry === undefined) return null;
   return {
     itemName,
     daysUntilExpiry,
-    isMultiBatch: payload.isMultiBatch === true,
-    batchOpenedAt:
-      typeof payload.batchOpenedAt === 'string' ? payload.batchOpenedAt : null,
-    batchAddedAt:
-      typeof payload.batchAddedAt === 'string' ? payload.batchAddedAt : null,
-    pantryItemId: typeof pantryItemId === 'string' ? pantryItemId : null,
+    isMultiBatch: reminder.isMultiBatch === true,
+    batchOpenedAt: reminder.batchOpenedAt ?? null,
+    batchAddedAt: reminder.batchAddedAt ?? null,
   };
-};
-
-interface RecommendedRecipe {
-  id: string;
-  name: string;
-  /** Its coverage when it was recommended, 0–100. */
-  matchPercentage: number | null;
-}
-
-const isText = (value: unknown): value is string => typeof value === 'string';
-
-/**
- * The recipes a recommendations notification names, in its order. Its
- * `recipeIds`, `recipeNames` and `matchPercentages` run in parallel, so lists
- * that do not line up name no recipe: a misread would pair a name with another
- * recipe. A payload with no coverage list has no coverage to show.
- */
-export const readRecommendedRecipes = ({
-  type,
-  payload,
-}: {
-  type: NotificationType;
-  payload: NotificationPayload;
-}): RecommendedRecipe[] => {
-  if (type !== NotificationType.RecipeRecommendations) return [];
-  const { recipeIds: ids, recipeNames: names, matchPercentages } = payload;
-  if (!Array.isArray(ids) || !Array.isArray(names)) return [];
-  if (!ids.every(isText) || !names.every(isText)) return [];
-  if (names.length !== ids.length) return [];
-  const coverage: unknown[] = Array.isArray(matchPercentages)
-    ? matchPercentages
-    : [];
-  if (matchPercentages !== undefined && coverage.length !== ids.length) {
-    return [];
-  }
-  return ids.flatMap((id, at): RecommendedRecipe[] => {
-    const name = names[at];
-    const percentage = coverage[at];
-    return name === undefined
-      ? []
-      : [
-          {
-            id,
-            name,
-            matchPercentage: typeof percentage === 'number' ? percentage : null,
-          },
-        ];
-  });
 };
 
 // Qualified only when more than one batch is active, by the batch's opened
@@ -176,11 +143,11 @@ const buildExpiryName = (
 };
 
 const buildExpiryReminderMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
   today: string,
 ): string | null => {
-  const fields = readExpiryReminderFields(payload, today);
+  const fields = readExpiryReminderFields(data, today);
   if (!fields) {
     return null;
   }
@@ -191,8 +158,8 @@ const buildExpiryReminderMessage = (
 };
 
 /**
- * What a notification says on screen, built from its `type` and structured
- * `payload`. The server's `title` and `message` are English in every locale,
+ * What a notification says on screen, built from its `type` and typed
+ * `data`. The server's `title` and `message` are English in every locale,
  * so neither is read — unless `isAuthoredContent` says a person wrote them.
  */
 export interface NotificationCopy {
@@ -206,7 +173,10 @@ export interface NotificationCopy {
  */
 export interface NotificationCopySource {
   type: NotificationType;
-  payload: NotificationPayload;
+  /** Null for a row with no typed payload. */
+  data: NotificationCopyData | null;
+  /** A test the user sent themselves, which has no typed payload. */
+  isTest?: boolean;
   isAuthoredContent?: boolean | null;
   title?: string | null;
   message?: string | null;
@@ -215,30 +185,13 @@ export interface NotificationCopySource {
 /** The names a digest shows before summarising the rest as a count. */
 const DIGEST_NAME_CAP = 3;
 
-// Push data arrives stringified and is re-coerced, so an all-digit name comes
-// back a number; it is still the name.
-const readText = (payload: NotificationPayload, key: string): string | null => {
-  const value = payload[key];
-  const text = typeof value === 'number' ? String(value) : value;
-  return typeof text === 'string' && text.trim() !== '' ? text : null;
-};
-
-const readNames = (payload: NotificationPayload, key: string): string[] => {
-  const value = payload[key];
-  return Array.isArray(value)
-    ? value.filter(
-        (name): name is string => typeof name === 'string' && name !== '',
-      )
-    : [];
-};
-
 const buildDigestMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string | null => {
-  const names = readNames(payload, 'itemNames');
-  const itemCount = payload.itemCount;
-  const count = typeof itemCount === 'number' ? itemCount : names.length;
+  const digest = memberOf(data, 'ExpiryDigestNotificationData');
+  const names = namesOf(digest?.items);
+  const count = digest?.itemCount ?? names.length;
   if (count <= 0) return null;
   if (names.length === 0) {
     return t('notifications.copy.message.expiryDigestCount', { count });
@@ -253,11 +206,12 @@ const buildDigestMessage = (
 };
 
 const buildHomeInvitationMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const inviterName = readText(payload, 'inviterName');
-  const homeName = readText(payload, 'homeName');
+  const invitation = memberOf(data, 'HomeInvitationNotificationData');
+  const inviterName = shownText(invitation?.inviterName);
+  const homeName = shownText(invitation?.homeName);
   if (!homeName) return t('notifications.copy.message.homeInvitationGeneric');
   return inviterName
     ? t('notifications.copy.message.homeInvitation', { inviterName, homeName })
@@ -265,11 +219,12 @@ const buildHomeInvitationMessage = (
 };
 
 const buildCollaborationInviteMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const inviterName = readText(payload, 'inviterName');
-  const listName = readText(payload, 'listName');
+  const invitation = memberOf(data, 'CollaborationInviteNotificationData');
+  const inviterName = shownText(invitation?.inviterName);
+  const listName = shownText(invitation?.listName);
   if (!listName) {
     return t('notifications.copy.message.collaborationInviteGeneric');
   }
@@ -297,30 +252,28 @@ const ROLE_LABEL: Record<CollaboratorRole, TranslationKey> = {
   [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
 };
 
-/** A payload role, named in the reader's language; null for one we cannot name. */
-const readRole = (
-  payload: NotificationPayload,
-  key: string,
-  t: Translate,
-): string | null => {
-  const value = readText(payload, key);
-  // A wire string is not an enum member: a value this build predates has no
-  // name here, and rendering it raw would show the reader `CONTRIBUTOR`.
-  const label = Object.entries(ROLE_LABEL).find(([role]) => role === value);
+/**
+ * A role, named in the reader's language; null for one we cannot name. A role
+ * this build predates arrives all the same, so it is read as the string it is:
+ * rendering it raw would show the reader `CONTRIBUTOR`.
+ */
+const roleName = (role: string | undefined, t: Translate): string | null => {
+  const label = Object.entries(ROLE_LABEL).find(([known]) => known === role);
   return label ? t(label[1]) : null;
 };
 
 /**
- * The role change, named when the payload says what it was. Falls back through
+ * The role change, named when the data says what it was. Falls back through
  * the wordings that need less, down to the one that names nothing.
  */
 const buildRoleChangedMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const name = readText(payload, 'changerName');
-  const listName = readText(payload, 'listName');
-  const role = readRole(payload, 'newRole', t);
+  const change = memberOf(data, 'CollaboratorRoleChangedNotificationData');
+  const name = shownText(change?.changerName);
+  const listName = shownText(change?.listNameIfKnown);
+  const role = roleName(change?.newRole, t);
   if (!name || !listName)
     return t('notifications.copy.message.collaboratorRoleChangedGeneric');
   if (!role)
@@ -328,7 +281,7 @@ const buildRoleChangedMessage = (
       name,
       listName,
     });
-  const previousRole = readRole(payload, 'previousRole', t);
+  const previousRole = roleName(change?.previousRole, t);
   return previousRole
     ? t('notifications.copy.message.collaboratorRoleChangedFromTo', {
         name,
@@ -344,11 +297,12 @@ const buildRoleChangedMessage = (
 };
 
 const buildListUpdatedCopy = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): NotificationCopy => {
-  const listName = readText(payload, 'listName');
-  if (payload.eventType === 'complete') {
+  const update = memberOf(data, 'ListUpdatedNotificationData');
+  const listName = shownText(update?.listName);
+  if (update?.eventType === 'complete') {
     return {
       title: t('notifications.copy.title.listCompleted'),
       message: listName
@@ -365,42 +319,35 @@ const buildListUpdatedCopy = (
 };
 
 const buildLowStockMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const itemName = readText(payload, 'itemName');
+  const alert = memberOf(data, 'LowStockNotificationData');
+  const itemName = shownText(alert?.itemName);
   if (!itemName) return t('notifications.copy.message.lowStockGeneric');
-  const { currentQuantity } = payload;
-  return typeof currentQuantity === 'number'
-    ? t('notifications.copy.message.lowStock', {
+  const currentQuantity = alert?.currentQuantity;
+  return currentQuantity === undefined
+    ? t('notifications.copy.message.lowStockNoQuantity', { itemName })
+    : t('notifications.copy.message.lowStock', {
         itemName,
         quantity: formatQuantityForDisplay(currentQuantity),
-      })
-    : t('notifications.copy.message.lowStockNoQuantity', { itemName });
+      });
 };
 
 /**
  * A message naming an actor and a list, e.g. "Ana removed you from Groceries";
- * the generic sentence when the payload lacks either name.
+ * the generic sentence when the data lacks either name.
  */
 const buildActorListMessage = (
-  payload: NotificationPayload,
-  actorKey: string,
+  actorName: string | undefined,
+  listName: string | null | undefined,
   named: TranslationKey,
   generic: TranslationKey,
   t: Translate,
 ): string => {
-  const name = readText(payload, actorKey);
-  const listName = readText(payload, 'listName');
-  return name && listName ? t(named, { name, listName }) : t(generic);
-};
-
-const readCount = (
-  payload: NotificationPayload,
-  key: string,
-): number | null => {
-  const value = payload[key];
-  return typeof value === 'number' ? value : null;
+  const name = shownText(actorName);
+  const list = shownText(listName);
+  return name && list ? t(named, { name, listName: list }) : t(generic);
 };
 
 /**
@@ -458,14 +405,15 @@ const PANTRY_CHANGE_COPY: Readonly<
 
 const buildPantryChangeMessage = (
   type: PantryChangeType,
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const pantryName = readText(payload, 'pantryName');
-  const actorNames = readNames(payload, 'actorNames');
+  const change = memberOf(data, 'PantryChangeNotificationData');
+  const pantryName = shownText(change?.pantryName);
+  const actorNames = shownNames(change?.actorNames);
   const names = joinNames(actorNames, actorNames.length, t);
-  const itemNames = readNames(payload, 'itemNames');
-  const itemCount = readCount(payload, 'itemCount') ?? itemNames.length;
+  const itemNames = namesOf(change?.items);
+  const itemCount = change?.itemCount ?? itemNames.length;
   const [itemName] = itemNames;
   const generic = t(`notifications.copy.message.${type}`);
   if (!pantryName || !names) return generic;
@@ -484,11 +432,12 @@ const buildPantryChangeMessage = (
 };
 
 const buildRunningLowMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const itemNames = readNames(payload, 'itemNames');
-  const itemCount = readCount(payload, 'itemCount') ?? itemNames.length;
+  const prediction = memberOf(data, 'RunningLowNotificationData');
+  const itemNames = namesOf(prediction?.items);
+  const itemCount = prediction?.itemCount ?? itemNames.length;
   const names = joinNames(itemNames, itemCount, t);
   if (names) {
     return t('notifications.copy.message.runningLow', {
@@ -502,24 +451,26 @@ const buildRunningLowMessage = (
 };
 
 const buildListReminderMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const listName = readText(payload, 'listName');
+  const reminder = memberOf(data, 'ListReminderNotificationData');
+  const listName = shownText(reminder?.listName);
   if (!listName) return t('notifications.copy.message.listReminderGeneric');
-  const count = readCount(payload, 'itemCount') ?? 0;
+  const count = reminder?.itemCount ?? 0;
   return count > 0
     ? t('notifications.copy.message.listReminder', { listName, count })
     : t('notifications.copy.message.listReminderEmpty', { listName });
 };
 
 const buildSharedListChangedMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const listName = readText(payload, 'listName');
+  const change = memberOf(data, 'SharedListChangedNotificationData');
+  const listName = shownText(change?.listName);
   if (!listName) return t('notifications.copy.message.listUpdatedGeneric');
-  const actorNames = readNames(payload, 'actorNames');
+  const actorNames = shownNames(change?.actorNames);
   const names = joinNames(actorNames, actorNames.length, t);
   return names
     ? t('notifications.copy.message.sharedListChanged', {
@@ -531,11 +482,12 @@ const buildSharedListChangedMessage = (
 };
 
 const buildMealPlanReminderMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const mealNames = readNames(payload, 'mealNames');
-  const mealCount = readCount(payload, 'mealCount') ?? mealNames.length;
+  const reminder = memberOf(data, 'MealPlanReminderNotificationData');
+  const mealNames = namesOf(reminder?.meals);
+  const mealCount = reminder?.mealCount ?? mealNames.length;
   const names = joinNames(mealNames, mealCount, t);
   if (names) return t('notifications.copy.message.mealPlanReminder', { names });
   return mealCount > 0
@@ -546,8 +498,8 @@ const buildMealPlanReminderMessage = (
 };
 
 /** "18:30" as the reader's clock shows it; null for a time it cannot read. */
-const readMealTime = (payload: NotificationPayload): string | null => {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(readText(payload, 'mealTime') ?? '');
+const readMealTime = (mealTime: string | undefined): string | null => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(mealTime ?? '');
   if (!match) return null;
   const at = new Date();
   at.setHours(Number(match[1]), Number(match[2]), 0, 0);
@@ -555,24 +507,29 @@ const readMealTime = (payload: NotificationPayload): string | null => {
 };
 
 const buildCookingReminderMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const recipeName = readText(payload, 'recipeName');
+  const reminder = memberOf(data, 'CookingReminderNotificationData');
+  const recipeName = shownText(reminder?.recipeName);
   if (!recipeName)
     return t('notifications.copy.message.cookingReminderGeneric');
-  const time = readMealTime(payload);
+  const time = readMealTime(reminder?.mealTime);
   return time
     ? t('notifications.copy.message.cookingReminder', { recipeName, time })
     : t('notifications.copy.message.cookingReminderNoTime', { recipeName });
 };
 
 const buildRecipeRecommendationsMessage = (
-  payload: NotificationPayload,
+  data: NotificationCopyData | null,
   t: Translate,
 ): string => {
-  const recipeNames = readNames(payload, 'recipeNames');
-  const recipeCount = readCount(payload, 'recipeCount') ?? recipeNames.length;
+  const recommendation = memberOf(
+    data,
+    'RecipeRecommendationsNotificationData',
+  );
+  const recipeNames = namesOf(recommendation?.recipes);
+  const recipeCount = recommendation?.recipeCount ?? recipeNames.length;
   const names = joinNames(recipeNames, recipeCount, t);
   if (names) {
     return t('notifications.copy.message.recipeRecommendations', { names });
@@ -584,51 +541,81 @@ const buildRecipeRecommendationsMessage = (
     : t('notifications.copy.message.recipeRecommendationsGeneric');
 };
 
+type CountPart = readonly [count: number | undefined, copy: TranslationKey];
+
 /** A summary's non-zero figures, each worded with its own count, in order. */
 const buildCountsMessage = (
-  payload: NotificationPayload,
   parts: readonly CountPart[],
   generic: TranslationKey,
   t: Translate,
 ): string => {
-  const worded = parts.flatMap(([key, copy]) => {
-    const count = readCount(payload, key);
-    return count !== null && count > 0 ? [t(copy, { count })] : [];
-  });
+  const worded = parts.flatMap(([count, copy]) =>
+    count !== undefined && count > 0 ? [t(copy, { count })] : [],
+  );
   return worded.length > 0 ? worded.join(', ') : t(generic);
 };
 
-type CountPart = readonly [payloadKey: string, copy: TranslationKey];
+const buildWeeklyDigestMessage = (
+  data: NotificationCopyData | null,
+  t: Translate,
+): string => {
+  const digest = memberOf(data, 'PantryWeeklyDigestNotificationData');
+  return buildCountsMessage(
+    [
+      [digest?.itemsAdded, 'notifications.copy.message.weeklyDigestAdded'],
+      [digest?.itemsUsed, 'notifications.copy.message.weeklyDigestUsed'],
+      [digest?.itemsWasted, 'notifications.copy.message.weeklyDigestWasted'],
+      [
+        digest?.itemsExpiringSoon,
+        'notifications.copy.message.weeklyDigestExpiring',
+      ],
+    ],
+    'notifications.copy.message.weeklyDigestGeneric',
+    t,
+  );
+};
 
-const WEEKLY_DIGEST_PARTS: readonly CountPart[] = [
-  ['itemsAdded', 'notifications.copy.message.weeklyDigestAdded'],
-  ['itemsUsed', 'notifications.copy.message.weeklyDigestUsed'],
-  ['itemsWasted', 'notifications.copy.message.weeklyDigestWasted'],
-  ['itemsExpiringSoon', 'notifications.copy.message.weeklyDigestExpiring'],
-];
-
-const MONTHLY_REPORT_PARTS: readonly CountPart[] = [
-  ['purchaseCount', 'notifications.copy.message.monthlyReportPurchases'],
-  ['recipesCooked', 'notifications.copy.message.monthlyReportRecipesCooked'],
-  ['wastedItemCount', 'notifications.copy.message.monthlyReportWasted'],
-];
+const buildMonthlyReportMessage = (
+  data: NotificationCopyData | null,
+  t: Translate,
+): string => {
+  const report = memberOf(data, 'MonthlyReportNotificationData');
+  return buildCountsMessage(
+    [
+      [
+        report?.purchaseCount,
+        'notifications.copy.message.monthlyReportPurchases',
+      ],
+      [
+        report?.recipesCooked,
+        'notifications.copy.message.monthlyReportRecipesCooked',
+      ],
+      [
+        report?.wastedItemCount,
+        'notifications.copy.message.monthlyReportWasted',
+      ],
+    ],
+    'notifications.copy.message.monthlyReportGeneric',
+    t,
+  );
+};
 
 export const getNotificationCopy = (
   notification: NotificationCopySource,
   t: Translate,
   today: string,
 ): NotificationCopy => {
-  const { type, payload } = notification;
+  const { type, data } = notification;
   // An admin's announcement is content a person wrote, like a list's name —
   // not copy the server generated from a template. Shown as written, and only
-  // on the server's own say-so: an empty payload does not make a row authored.
+  // on the server's own say-so: a row with no data is not authored for that.
   if (notification.isAuthoredContent === true) {
     return {
       title: notification.title ?? t('notifications.copy.title.authored'),
       message: notification.message ?? '',
     };
   }
-  if (payload.test === true) {
+  if (notification.isTest === true) {
     return {
       title: t('notifications.copy.title.test'),
       message: t('notifications.copy.message.test'),
@@ -644,65 +631,76 @@ export const getNotificationCopy = (
   switch (type) {
     case NotificationType.HomeInvitation:
     case NotificationType.MembershipInvite:
-      return { title, message: buildHomeInvitationMessage(payload, t) };
+      return { title, message: buildHomeInvitationMessage(data, t) };
     case NotificationType.CollaborationInvite:
-      return { title, message: buildCollaborationInviteMessage(payload, t) };
-    case NotificationType.CollaborationAccepted:
+      return { title, message: buildCollaborationInviteMessage(data, t) };
+    case NotificationType.CollaborationAccepted: {
+      const accepted = memberOf(data, 'CollaborationAcceptedNotificationData');
       return {
         title,
         message: buildActorListMessage(
-          payload,
-          'accepterName',
+          accepted?.accepterName,
+          accepted?.listName,
           'notifications.copy.message.collaborationAccepted',
           'notifications.copy.message.collaborationAcceptedGeneric',
           t,
         ),
       };
-    case NotificationType.CollaborationDeclined:
+    }
+    case NotificationType.CollaborationDeclined: {
+      const declined = memberOf(data, 'CollaborationDeclinedNotificationData');
       return {
         title,
         message: buildActorListMessage(
-          payload,
-          'declinerName',
+          declined?.declinerName,
+          declined?.listName,
           'notifications.copy.message.collaborationDeclined',
           'notifications.copy.message.collaborationDeclinedGeneric',
           t,
         ),
       };
-    case NotificationType.CollaboratorRemoved:
+    }
+    case NotificationType.CollaboratorRemoved: {
+      const removal = memberOf(data, 'CollaboratorRemovedNotificationData');
       return {
         title,
         message: buildActorListMessage(
-          payload,
-          'removerName',
+          removal?.removerName,
+          removal?.listNameIfKnown,
           'notifications.copy.message.collaboratorRemoved',
           'notifications.copy.message.collaboratorRemovedGeneric',
           t,
         ),
       };
+    }
     case NotificationType.CollaboratorRoleChanged:
-      return { title, message: buildRoleChangedMessage(payload, t) };
-    case NotificationType.CollaboratorPermissionsUpdated:
+      return { title, message: buildRoleChangedMessage(data, t) };
+    case NotificationType.CollaboratorPermissionsUpdated: {
+      const change = memberOf(
+        data,
+        'CollaboratorPermissionsUpdatedNotificationData',
+      );
       return {
         title,
         message: buildActorListMessage(
-          payload,
-          'changerName',
+          change?.changerName,
+          change?.listNameIfKnown,
           'notifications.copy.message.collaboratorPermissionsUpdated',
           'notifications.copy.message.collaboratorPermissionsUpdatedGeneric',
           t,
         ),
       };
+    }
     case NotificationType.ListUpdated:
-      return buildListUpdatedCopy(payload, t);
+      return buildListUpdatedCopy(data, t);
     case NotificationType.LowStock:
-      return { title, message: buildLowStockMessage(payload, t) };
+      return { title, message: buildLowStockMessage(data, t) };
     case NotificationType.RunningLow:
-      return { title, message: buildRunningLowMessage(payload, t) };
+      return { title, message: buildRunningLowMessage(data, t) };
     case NotificationType.ExpiryReminder: {
-      const single = buildExpiryReminderMessage(payload, t, today);
+      const single = buildExpiryReminderMessage(data, t, today);
       if (single) return { title, message: single };
-      const digest = buildDigestMessage(payload, t);
+      const digest = buildDigestMessage(data, t);
       return digest
         ? { title: t('notifications.copy.title.expiryDigest'), message: digest }
         : { title, message: t('notifications.copy.message.expiryGeneric') };
@@ -710,37 +708,21 @@ export const getNotificationCopy = (
     case NotificationType.NewItemAdded:
     case NotificationType.ItemUpdated:
     case NotificationType.ItemDeleted:
-      return { title, message: buildPantryChangeMessage(type, payload, t) };
+      return { title, message: buildPantryChangeMessage(type, data, t) };
     case NotificationType.ListReminder:
-      return { title, message: buildListReminderMessage(payload, t) };
+      return { title, message: buildListReminderMessage(data, t) };
     case NotificationType.SharedListChanged:
-      return { title, message: buildSharedListChangedMessage(payload, t) };
+      return { title, message: buildSharedListChangedMessage(data, t) };
     case NotificationType.MealPlanReminder:
-      return { title, message: buildMealPlanReminderMessage(payload, t) };
+      return { title, message: buildMealPlanReminderMessage(data, t) };
     case NotificationType.CookingReminder:
-      return { title, message: buildCookingReminderMessage(payload, t) };
+      return { title, message: buildCookingReminderMessage(data, t) };
     case NotificationType.RecipeRecommendations:
-      return { title, message: buildRecipeRecommendationsMessage(payload, t) };
+      return { title, message: buildRecipeRecommendationsMessage(data, t) };
     case NotificationType.WeeklyDigest:
-      return {
-        title,
-        message: buildCountsMessage(
-          payload,
-          WEEKLY_DIGEST_PARTS,
-          'notifications.copy.message.weeklyDigestGeneric',
-          t,
-        ),
-      };
+      return { title, message: buildWeeklyDigestMessage(data, t) };
     case NotificationType.MonthlyReport:
-      return {
-        title,
-        message: buildCountsMessage(
-          payload,
-          MONTHLY_REPORT_PARTS,
-          'notifications.copy.message.monthlyReportGeneric',
-          t,
-        ),
-      };
+      return { title, message: buildMonthlyReportMessage(data, t) };
     case NotificationType.HomeJoined:
     case NotificationType.RecipeSaved:
     case NotificationType.RecipeCooked:
@@ -755,4 +737,20 @@ export const getNotificationCopy = (
       };
     }
   }
+};
+
+/** `payload` read where a row has no typed `data`: a test, an authored row. */
+const payloadValue = (payload: JsonValue, key: string): unknown =>
+  typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+    ? payload[key]
+    : undefined;
+
+/** A test the user sent themselves. */
+export const isTestNotification = (payload: JsonValue): boolean =>
+  payloadValue(payload, 'test') === true;
+
+/** The details an authored row's author attached; null for none. */
+export const authoredDetails = (payload: JsonValue): string | null => {
+  const details = payloadValue(payload, 'details');
+  return typeof details === 'string' && details !== '' ? details : null;
 };

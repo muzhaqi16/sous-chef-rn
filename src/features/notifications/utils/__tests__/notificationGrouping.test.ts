@@ -20,12 +20,13 @@ function makeNotification(
     isAuthoredContent: false,
     category: NotificationCategory.System,
     priority: Priority.Normal,
-    payload: {},
+    data: null,
+    isTest: false,
+    details: null,
     sentAt: new Date().toISOString(),
     readAt: null,
     isRead: false,
     requiresAction: false,
-    actionData: {},
     ...overrides,
   };
 }

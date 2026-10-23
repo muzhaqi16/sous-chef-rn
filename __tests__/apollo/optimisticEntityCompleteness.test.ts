@@ -26,7 +26,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { graphql, parse, print, Kind, type DocumentNode } from 'graphql';
+import { graphql, print, Kind, type DocumentNode } from 'graphql';
 import type { SelectionSetNode, FragmentDefinitionNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
@@ -95,6 +95,8 @@ import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDet
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { NotificationForEventDocument } from '#features/notifications/hooks/useNotifications.generated';
+import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   InviteToHomeDocument,
   GetHomesDocument,
@@ -465,34 +467,6 @@ function expectWritersAgree(
     [`only in ${a.label}`]: left.filter(field => !right.includes(field)),
     [`only in ${b.label}`]: right.filter(field => !left.includes(field)),
   }).toEqual({ [`only in ${a.label}`]: [], [`only in ${b.label}`]: [] });
-}
-
-/** Asserts one `Notification` fragment selects everything another does. */
-function expectWriterCovers(writerFragment: string, readerFragment: string) {
-  const sources = [
-    'src/features/notifications/hooks/useNotifications.graphql',
-    'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
-  ];
-  const fieldsOf = (fragmentName: string): string[] => {
-    for (const relative of sources) {
-      const document = parse(
-        fs.readFileSync(path.join(__dirname, '..', '..', relative), 'utf8'),
-      );
-      const fragment = fragmentsOf(document).get(fragmentName);
-      if (fragment) {
-        return [
-          ...flattenSelection(fragment.selectionSet, fragmentsOf(document)),
-        ].sort();
-      }
-    }
-    throw new Error(`fragment ${fragmentName} not found`);
-  };
-  const readerFields = fieldsOf(readerFragment);
-  const writerFields = fieldsOf(writerFragment);
-  expectSelected(readerFields.length, readerFragment);
-  expect(readerFields.filter(field => !writerFields.includes(field))).toEqual(
-    [],
-  );
 }
 
 describe('optimistic entity completeness', () => {
@@ -1600,19 +1574,19 @@ describe('optimistic entity completeness', () => {
   describe('notifications', () => {
     // Notifications are never created locally, so there is no optimistic
     // entity here. The same failure mode still reaches them by a different
-    // route: a live event writes the entity from the SUBSCRIPTION's fragment
-    // and then adds an edge for it to the feed connection. If that fragment
+    // route: a live event's row is read back by `NotificationForEvent`, and
+    // then an edge for it is added to the feed connection. If that read
     // selects less than the feed query reads off a node, the new edge points
     // at an incomplete entity — and one incomplete node makes the WHOLE
     // `GetNotifications` read incomplete, so the list goes blank on arrival
     // rather than gaining a row.
-    //
-    // The two fragments are identical today; nothing but this holds them that
-    // way.
-    it('the subscription writes every field the feed reads off a node', () => {
-      expectWriterCovers(
-        'useNotifications_notification',
-        'useNotificationsOnLaunch_notification',
+    it("an event's read-back writes every field the feed reads off a node", () => {
+      expectWriterCoversReader(
+        NotificationForEventDocument,
+        'notification',
+        GetNotificationsDocument,
+        'NotificationForEvent',
+        'notificationsConnection',
       );
     });
   });
@@ -1629,7 +1603,7 @@ describe('optimistic entity completeness', () => {
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
-        'covered: the notification feed fragment comparison above',
+        'covered: the notification event read-back case above',
       'src/features/catalog/hooks/useCreateStorageLocation.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/catalog/hooks/useStorageLocationManagement.ts':

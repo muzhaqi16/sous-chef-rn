@@ -1,4 +1,5 @@
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /** Data passed from the expirationNotificationChanged subscription to enrich a generic notification. */
 export interface ExpirationLinkData {
@@ -13,34 +14,24 @@ export interface ExpirationLinkData {
 
 export const NOTIFICATION_CATEGORIES = Object.values(NotificationCategory);
 
-/**
- * The server delivers a notification's payload as an untyped `JSON` scalar.
- * Declaring the well-known keys here gives consumers real types; the index
- * signature keeps room for the ones read dynamically per notification type.
- */
-export interface NotificationPayload {
-  inviteId?: string;
-  membershipId?: string;
-  inviterName?: string;
-  homeName?: string;
-  listName?: string;
-  token?: string;
-  message?: string;
-  details?: string;
-  [key: string]: unknown;
-}
+/** Every field optional, at every depth, except each member's `__typename`. */
+type Shown<Value> = Value extends readonly (infer Item)[]
+  ? Shown<Item>[]
+  : Value extends { __typename: string }
+  ? Pick<Value, '__typename'> & {
+      [Field in Exclude<keyof Value, '__typename'>]?: Shown<Value[Field]>;
+    }
+  : Value;
 
 /**
- * Runtime guard that narrows an untyped JSON scalar value to NotificationPayload
- * at the ingestion boundary — no cast required. Any non-null, non-array object
- * is a valid payload (all typed keys are optional); primitives/arrays/null
- * collapse to an empty payload at the call site.
+ * What the copy builder reads: `Notification.data` as the feed selects it. A
+ * push fills the same shape from its display parameters, which carry no ids
+ * and can be dropped to fit the provider's size limit, so any field may be
+ * missing.
  */
-export function isNotificationPayload(
-  value: unknown,
-): value is NotificationPayload {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+export type NotificationCopyData = Shown<
+  NonNullable<UseNotificationsOnLaunch_NotificationFragment['data']>
+>;
 
 /** A pending invite as the acceptance modal and its action handler see it. */
 export interface InvitationData {
@@ -49,8 +40,11 @@ export interface InvitationData {
   inviterName?: string;
   /** Home name or shopping list name. */
   entityName: string;
+  /** The invite the notification names. */
+  inviteId?: string;
   token?: string;
-  payload: NotificationPayload;
+  /** What the dialog's copy reads. */
+  data: NotificationCopyData | null;
   /** Set by the accept flow so the caller can select the home it just joined. */
   acceptedHomeId?: string;
 }

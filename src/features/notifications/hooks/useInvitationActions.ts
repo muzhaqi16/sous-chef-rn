@@ -76,16 +76,17 @@ const refusalOptions = (
 });
 
 /**
- * Each home `update` prefers the payload's `inviteId`, else `invitation.id` (the
- * server's `sourceId`), so a notification carrying only a sourceId still evicts
- * its pending record. A list invite is answered by `useAnswerListInvite`.
+ * Each home `update` prefers the notification's `inviteId`, else
+ * `invitation.id` (the server's `sourceId`), so a notification carrying only a
+ * sourceId still evicts its pending record. A list invite is answered by
+ * `useAnswerListInvite`.
  */
 export function useInvitationActions(
   invitation: InvitationData | null,
   userId: string | null,
 ) {
   const { t } = useTranslation();
-  const inviteId = firstNonBlank(invitation?.payload.inviteId, invitation?.id);
+  const inviteId = firstNonBlank(invitation?.inviteId, invitation?.id);
 
   /**
    * `update` runs for a refusal too. Only a CONFLICT means spent (accepted,

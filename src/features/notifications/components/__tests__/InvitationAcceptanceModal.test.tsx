@@ -39,7 +39,11 @@ const homeInvitation: InvitationData = {
   inviterName: 'Alice',
   entityName: "Alice's Home",
   token: 'abc123',
-  payload: { inviterName: 'Alice', homeName: "Alice's Home" },
+  data: {
+    __typename: 'HomeInvitationNotificationData',
+    inviterName: 'Alice',
+    homeName: "Alice's Home",
+  },
 };
 
 const shoppingListInvitation: InvitationData = {
@@ -47,7 +51,7 @@ const shoppingListInvitation: InvitationData = {
   id: 'inv-2',
   entityName: 'Weekly Groceries',
   token: 'def456',
-  payload: {},
+  data: null,
 };
 
 const defaultProps = {

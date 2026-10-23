@@ -105,7 +105,8 @@ events still arrive (they log, they are just not written to the cache).
 `fetchPolicy: 'no-cache'`. `HomeEvents` and `MealPlanEvents` have the same shape
 and `CacheStrategy.NONE`, and are the obvious next candidates if their domains show
 a refetch per write; `UserEvents` selects real fields on `User` and must be checked
-before changing. `NotificationEvents` selects the node's fields deliberately.
+before changing. `NotificationEvents` carries the node's id and status, runs
+`no-cache`, and reads a new row back through `NotificationForEvent`.
 
 ## Hidden Recipes tab re-ran discovery on every pantry write — root cause and fix
 

@@ -43,9 +43,9 @@ function nodeSelection(doc: string): string | null {
 /**
  * True when `node` carries only key fields — no data a screen could read.
  *
- * A NAMED spread (`...useNotifications_notification`) pulls in real fields, so
- * it disqualifies immediately. An INLINE fragment (`... on Membership`) is only
- * a type branch; what matters is the fields inside it.
+ * A NAMED spread (`...useNotificationsOnLaunch_notification`) pulls in real
+ * fields, so it disqualifies immediately. An INLINE fragment (`... on
+ * Membership`) is only a type branch; what matters is the fields inside it.
  */
 function isIdentityOnly(selection: string): boolean {
   const lines = selection

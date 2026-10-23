@@ -44,6 +44,7 @@ const node = (
   title: `T${id}`,
   message: `M${id}`,
   payload: {},
+  data: null,
   category: NotificationCategory.Pantry,
   sentAt: `2026-08-0${id}T00:00:00.000Z`,
   expiresAt: null,

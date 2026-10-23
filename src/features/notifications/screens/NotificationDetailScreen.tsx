@@ -9,10 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { useNotificationDetail } from '#features/notifications/hooks/useNotificationDetail';
-import {
-  getNotificationCopy,
-  readRecommendedRecipes,
-} from '#features/notifications/utils/notificationHelpers';
+import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { RecommendedRecipeList } from '#features/recipes/ui/RecommendedRecipeList';
 
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -43,11 +40,12 @@ export const NotificationDetailScreen: React.FC<
     );
   }
 
-  // payload is always a NotificationPayload object (narrowed at the ingestion
-  // boundary), so it can be read directly.
-  const payload = notification.payload;
+  const { data, details } = notification;
   const copy = getNotificationCopy(notification, t, today);
-  const recommended = readRecommendedRecipes(notification);
+  const recommended =
+    data?.__typename === 'RecipeRecommendationsNotificationData'
+      ? data.recipes
+      : [];
   const message = <Text role="body">{copy.message}</Text>;
 
   return (
@@ -78,13 +76,13 @@ export const NotificationDetailScreen: React.FC<
               )}
             </View>
 
-            {!!payload.details && (
+            {!!details && (
               <View style={styles.detailsContainer}>
                 <Text role="label" tone="secondary" style={styles.detailsTitle}>
                   {t('labels.details')}
                 </Text>
                 <Text role="caption" tone="primary">
-                  {payload.details}
+                  {details}
                 </Text>
               </View>
             )}

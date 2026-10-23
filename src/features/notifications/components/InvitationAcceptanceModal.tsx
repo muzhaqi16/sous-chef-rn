@@ -170,7 +170,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
         invitation.type === 'HOME_INVITE'
           ? NotificationType.HomeInvitation
           : NotificationType.CollaborationInvite,
-      payload: invitation.payload,
+      data: invitation.data,
     },
     t,
     today,

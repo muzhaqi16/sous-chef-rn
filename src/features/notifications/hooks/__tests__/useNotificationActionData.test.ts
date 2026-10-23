@@ -16,7 +16,7 @@ jest.mock('#features/notifications/hooks/useNotificationSync', () => ({
   useNotificationSync: () => ({ syncDelete: mockSyncDelete }),
 }));
 
-/** An expiry reminder whose payload recorded `stack-at-send`. */
+/** An expiry reminder. */
 function expiryReminder(
   overrides: Partial<DisplayNotification> = {},
 ): DisplayNotification {
@@ -26,16 +26,13 @@ function expiryReminder(
     isAuthoredContent: false,
     category: NotificationCategory.Pantry,
     priority: Priority.Normal,
-    payload: {
-      itemName: 'Milk',
-      daysUntilExpiry: 1,
-      pantryItemId: 'stack-at-send',
-    },
+    data: null,
+    isTest: false,
+    details: null,
     sentAt: '2026-07-01T00:00:00Z',
     isRead: false,
     requiresAction: true,
     actionType: 'VIEW_EXPIRING_ITEMS',
-    actionData: {},
     ...overrides,
   };
 }
@@ -95,9 +92,8 @@ describe('useNotificationActionData', () => {
       expect(link?.id).toBe('exp-1');
     });
 
-    // A merge re-parents the batch: the payload still names the stack that was
-    // merged away, the server names the survivor.
-    it('follows a merged stack rather than the one the payload recorded', async () => {
+    // A merge re-parents the batch: the server names the survivor.
+    it('follows a merged stack', async () => {
       const lookup = lookupMock();
       const { result } = renderHookWithApollo(
         () => useNotificationActionData(),
@@ -127,33 +123,14 @@ describe('useNotificationActionData', () => {
       expect(lookup.fired).toEqual([]);
     });
 
-    it("falls back to the payload's stack for a notification that predates the field", async () => {
-      const lookup = lookupMock();
-      const { result } = renderHookWithApollo(
-        () => useNotificationActionData(),
-        { operationMocks: [lookup.mock] },
-      );
-      const cachedByPreviousBuild = expiryReminder();
-      expect(cachedByPreviousBuild.pantryItemId).toBeUndefined();
-
-      const link = await result.current.resolveExpirationLink(
-        cachedByPreviousBuild,
-      );
-
-      expect(lookup.fired).toEqual([{ pantryItemId: 'stack-at-send' }]);
-      expect(link?.id).toBe('exp-1');
-    });
-
-    it('offers no link when neither the server nor the payload names a stack', async () => {
+    it('offers no link for a row that predates the stack field', async () => {
       const lookup = lookupMock();
       const { result } = renderHookWithApollo(
         () => useNotificationActionData(),
         { operationMocks: [lookup.mock] },
       );
 
-      const link = await result.current.resolveExpirationLink(
-        expiryReminder({ payload: { itemName: 'Milk', daysUntilExpiry: 1 } }),
-      );
+      const link = await result.current.resolveExpirationLink(expiryReminder());
 
       expect(link).toBeNull();
       expect(lookup.fired).toEqual([]);

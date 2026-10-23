@@ -79,6 +79,7 @@ const serverRow = (overrides: Partial<ServerRow>): ServerRow => ({
   title: null,
   message: null,
   payload: {},
+  data: null,
   category: NotificationCategory.Pantry,
   sentAt: '2026-01-01T00:00:00Z',
   expiresAt: null,
@@ -93,10 +94,20 @@ const serverRow = (overrides: Partial<ServerRow>): ServerRow => ({
 // The server's English rides along on the fragment, as it does on the wire.
 const makeNotification = (
   type: NotificationType,
-  payload: Record<string, unknown>,
+  data: ServerRow['data'],
   server: { title: string; message: string },
 ): DisplayNotification =>
-  toDisplayNotification(serverRow({ type, payload, ...server }));
+  toDisplayNotification(serverRow({ type, data, ...server }));
+
+const milkExpiring: ServerRow['data'] = {
+  __typename: 'ExpiryReminderNotificationData',
+  itemName: 'Milk',
+  daysUntilExpiry: 1,
+  expiresOn: null,
+  isMultiBatch: false,
+  batchOpenedAt: null,
+  batchAddedAt: null,
+};
 
 describe('NotificationDetailScreen', () => {
   it('shows error when notification is missing', () => {
@@ -104,14 +115,14 @@ describe('NotificationDetailScreen', () => {
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
-  it('renders an expiry reminder from its payload', () => {
+  it('renders an expiry reminder from its data', () => {
     const server = {
       title: 'Expiration Reminder',
       message: 'Milk expires in 2 days (Mar 3)',
     };
     const notification = makeNotification(
       NotificationType.ExpiryReminder,
-      { itemName: 'Milk', daysUntilExpiry: 1 },
+      milkExpiring,
       server,
     );
     renderWithApollo(
@@ -123,14 +134,18 @@ describe('NotificationDetailScreen', () => {
     expect(screen.queryByText(server.message)).toBeNull();
   });
 
-  it('renders a low-stock alert from its payload', () => {
+  it('renders a low-stock alert from its data', () => {
     const server = {
       title: 'Low Stock Alert',
       message: 'Rice is running low (2 remaining)',
     };
     const notification = makeNotification(
       NotificationType.LowStock,
-      { itemName: 'Rice', currentQuantity: 2, minQuantity: 5 },
+      {
+        __typename: 'LowStockNotificationData',
+        itemName: 'Rice',
+        currentQuantity: 2,
+      },
       server,
     );
     renderWithApollo(
@@ -142,14 +157,14 @@ describe('NotificationDetailScreen', () => {
     expect(screen.queryByText(server.message)).toBeNull();
   });
 
-  it('falls back to generic copy, not the server text, when the payload has no names', () => {
+  it('falls back to generic copy, not the server text, for a row with no data', () => {
     const server = {
       title: 'Announcement',
       message: 'A message an administrator typed',
     };
     const notification = makeNotification(
       NotificationType.ListUpdated,
-      {},
+      null,
       server,
     );
     renderWithApollo(
@@ -160,15 +175,32 @@ describe('NotificationDetailScreen', () => {
     expect(screen.queryByText(server.message)).toBeNull();
   });
 
+  it("shows the details an authored row's author attached", () => {
+    const notification = toDisplayNotification(
+      serverRow({
+        isAuthoredContent: true,
+        title: 'Scheduled maintenance',
+        message: 'The app is read-only on Sunday morning.',
+        payload: { details: 'From 6 to 8 AM.' },
+      }),
+    );
+    renderWithApollo(
+      <NotificationDetailScreen route={makeRoute({ notification })} />,
+    );
+    expect(
+      screen.getByText('The app is read-only on Sunday morning.'),
+    ).toBeTruthy();
+    expect(screen.getByText('From 6 to 8 AM.')).toBeTruthy();
+  });
+
   describe("an expiry reminder's stack action", () => {
     const takeAction = t('notifications.takeAction');
 
-    // The payload keeps the stack as it was when the reminder was written; only
-    // `pantryItemId` says what the server names now.
+    // Only `pantryItemId` says what stack the server names now.
     const reminder = (pantryItemId: string | null) =>
       serverRow({
         type: NotificationType.ExpiryReminder,
-        payload: { itemName: 'Milk', daysUntilExpiry: 1, pantryItemId: 's-1' },
+        data: milkExpiring,
         pantryItemId,
       });
 
@@ -225,11 +257,22 @@ describe('NotificationDetailScreen', () => {
     const recommendation = makeNotification(
       NotificationType.RecipeRecommendations,
       {
-        week: '2026-W43',
+        __typename: 'RecipeRecommendationsNotificationData',
         recipeCount: 2,
-        recipeIds: ['r-1', 'r-2'],
-        recipeNames: ['Chili', 'Tacos'],
-        matchPercentages: [80, 60],
+        recipes: [
+          {
+            __typename: 'RecommendedRecipe',
+            recipeId: 'r-1',
+            name: 'Chili',
+            matchPercentage: 80,
+          },
+          {
+            __typename: 'RecommendedRecipe',
+            recipeId: 'r-2',
+            name: 'Tacos',
+            matchPercentage: 60,
+          },
+        ],
       },
       server,
     );

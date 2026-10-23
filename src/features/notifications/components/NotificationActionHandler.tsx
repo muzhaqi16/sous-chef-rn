@@ -16,6 +16,17 @@ import { useExpirationNotificationSync } from '#features/notifications/hooks/use
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
+/** What answering an invite reads from its notification; null for any other. */
+const readInvite = (data: NotificationItem['data']) => {
+  if (data?.__typename === 'HomeInvitationNotificationData') {
+    return { ...data, entityName: data.homeName };
+  }
+  if (data?.__typename === 'CollaborationInviteNotificationData') {
+    return { ...data, entityName: data.listName };
+  }
+  return null;
+};
+
 interface NotificationActionHandlerProps {
   children: (props: {
     showInvitationModal: (notification: NotificationItem) => void;
@@ -60,25 +71,17 @@ export const NotificationActionHandler: React.FC<
           ? 'HOME_INVITE'
           : 'SHOPPING_LIST_INVITE';
 
+      const invite = readInvite(notification.data);
       const invitation: InvitationData = {
         type: invitationType,
-        // Prefer the server's source correlation (sourceId is the triggering
-        // HomeInvite / Membership id; sourceType labels which). Fall back to the
-        // JSON payload for notifications minted before the source fields existed.
-        id:
-          firstNonBlank(
-            notification.sourceId,
-            notification.payload.inviteId,
-            notification.payload.membershipId,
-          ) ?? '',
-        inviterName: notification.payload.inviterName,
-        entityName:
-          firstNonBlank(
-            notification.payload.homeName,
-            notification.payload.listName,
-          ) ?? '',
-        token: notification.payload.token,
-        payload: notification.payload,
+        // The server's source correlation names the invite; the notification's
+        // own data names it for one minted before the source fields existed.
+        id: firstNonBlank(notification.sourceId, invite?.inviteId) ?? '',
+        inviteId: invite?.inviteId,
+        inviterName: invite?.inviterName,
+        entityName: invite?.entityName ?? '',
+        token: invite?.token,
+        data: notification.data,
       };
 
       setCurrentInvitation(invitation);

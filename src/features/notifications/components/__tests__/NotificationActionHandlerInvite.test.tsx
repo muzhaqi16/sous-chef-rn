@@ -62,20 +62,29 @@ jest.mock('#features/notifications/components/ExpirationActionSheet', () => ({
   ExpirationActionSheet: () => null,
 }));
 
+const smithInvite = (token: string): NotificationItem['data'] => ({
+  __typename: 'HomeInvitationNotificationData',
+  homeName: 'Smith',
+  inviterName: 'Ada',
+  inviteId: 'invite-1',
+  token,
+});
+
 const inviteNotification = (
-  payload: Record<string, unknown>,
+  data: NotificationItem['data'],
 ): NotificationItem => ({
   id: 'n-invite',
   type: NotificationType.ExpiryReminder,
   isAuthoredContent: false,
   category: NotificationCategory.Pantry,
   priority: Priority.Normal,
-  payload,
+  data,
+  isTest: false,
+  details: null,
   sentAt: '2026-07-01T00:00:00Z',
   isRead: false,
   requiresAction: true,
   actionType: 'ACCEPT_HOME_INVITE',
-  actionData: {},
   sourceId: 'invite-1',
 });
 
@@ -110,7 +119,7 @@ describe('closing the invitation modal', () => {
 
     await act(async () => {
       getActions().handleNotificationAction(
-        inviteNotification({ homeName: 'Smith', inviterName: 'Ada' }),
+        inviteNotification(smithInvite('')),
       );
     });
     await act(async () => {
@@ -125,11 +134,7 @@ describe('closing the invitation modal', () => {
 
     await act(async () => {
       getActions().handleNotificationAction(
-        inviteNotification({
-          homeName: 'Smith',
-          inviterName: 'Ada',
-          token: 'invite-token',
-        }),
+        inviteNotification(smithInvite('invite-token')),
       );
     });
     await act(async () => {
@@ -143,7 +148,7 @@ describe('closing the invitation modal', () => {
     const getActions = renderHandler();
 
     await act(async () => {
-      getActions().handleNotificationAction(inviteNotification({}));
+      getActions().handleNotificationAction(inviteNotification(null));
     });
     await act(async () => {
       capturedClose?.();
@@ -154,10 +159,7 @@ describe('closing the invitation modal', () => {
 
   it('reopens the same invite after it was closed', async () => {
     const getActions = renderHandler();
-    const invite = inviteNotification({
-      homeName: 'Smith',
-      inviterName: 'Ada',
-    });
+    const invite = inviteNotification(smithInvite('invite-token'));
 
     await act(async () => {
       getActions().handleNotificationAction(invite);

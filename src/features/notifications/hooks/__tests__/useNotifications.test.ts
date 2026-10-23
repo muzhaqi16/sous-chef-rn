@@ -24,6 +24,8 @@ import {
   MutationType,
 } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
+import { NotificationForEventDocument } from '#features/notifications/hooks/useNotifications.generated';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
@@ -102,43 +104,58 @@ jest.mock('../useNotificationSettings', () => ({
   }),
 }));
 
-function buildNotificationSubscriptionMock(
-  notification: {
-    id: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    payload?: Record<string, unknown>;
-    sentAt?: string;
-  },
-  variant: 'created' | 'updated' = 'created',
-): MockFor<typeof NotificationEventsDocument> {
-  const isCreated = variant === 'created';
-  return {
-    request: {
-      query: NotificationEventsDocument,
+/** A CREATED event, which carries the id, and the read-back of its row. */
+function arrivedNotificationMocks(notification: {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isAuthoredContent?: boolean;
+  data?: UseNotificationsOnLaunch_NotificationFragment['data'];
+}): [
+  MockFor<typeof NotificationEventsDocument>,
+  MockFor<typeof NotificationForEventDocument>,
+] {
+  return [
+    {
+      request: { query: NotificationEventsDocument },
+      result: {
+        data: {
+          notificationEvents: {
+            __typename: 'NotificationEvent',
+            subtype: NotificationSubtype.Created,
+            mutation: MutationType.Created,
+            timestamp: '2024-01-01T00:00:00Z',
+            affectedCount: null,
+            node: {
+              __typename: 'Notification',
+              id: notification.id,
+              status: NotificationStatus.Pending,
+            },
+          },
+        },
+      },
     },
-    result: {
-      data: {
-        notificationEvents: {
-          __typename: 'NotificationEvent',
-          subtype: isCreated
-            ? NotificationSubtype.Created
-            : NotificationSubtype.Updated,
-          mutation: isCreated ? MutationType.Created : MutationType.Updated,
-          timestamp: '2024-01-01T00:00:00Z',
-          affectedCount: null,
-          node: {
+    {
+      request: {
+        query: NotificationForEventDocument,
+        variables: { id: notification.id },
+      },
+      result: {
+        data: {
+          notification: {
             __typename: 'Notification',
             id: notification.id,
             type: notification.type,
+            isAuthoredContent: notification.isAuthoredContent ?? false,
             status: NotificationStatus.Pending,
             priority: Priority.Normal,
             title: notification.title,
             message: notification.message,
-            payload: notification.payload ?? null,
+            payload: null,
+            data: notification.data ?? null,
             category: NotificationCategory.System,
-            sentAt: notification.sentAt ?? '2024-01-01T00:00:00Z',
+            sentAt: '2024-01-01T00:00:00Z',
             expiresAt: null,
             sourceId: null,
             sourceType: null,
@@ -149,12 +166,12 @@ function buildNotificationSubscriptionMock(
         },
       },
     },
-  };
+  ];
 }
 
-// Status-transition / aggregate event mock. READ and DISMISSED carry a node
-// (only the id is needed by the handler); BULK_* subtypes carry a null node
-// and an affectedCount, mirroring the server's aggregate publisher.
+// Status-transition / aggregate event mock. READ and DISMISSED carry the row's
+// id and status; BULK_* subtypes carry a null node and an affectedCount,
+// mirroring the server's aggregate publisher.
 function buildTransitionEventMock(
   subtype: NotificationSubtype,
   nodeId: string | null,
@@ -178,20 +195,7 @@ function buildTransitionEventMock(
               : {
                   __typename: 'Notification',
                   id: nodeId,
-                  type: NotificationType.LowStock,
                   status: NotificationStatus.Read,
-                  priority: Priority.Normal,
-                  title: 'Low Stock Alert',
-                  message: 'Milk is running low',
-                  payload: null,
-                  category: NotificationCategory.System,
-                  sentAt: '2024-01-01T00:00:00Z',
-                  expiresAt: null,
-                  sourceId: null,
-                  sourceType: null,
-                  pantryItemId: null,
-                  actionUrl: null,
-                  readAt: '2024-01-01T00:01:00Z',
                 },
         },
       },
@@ -274,6 +278,7 @@ const seededCache = (
             title: 'Low Stock Alert',
             message: 'Milk is running low',
             payload: null,
+            data: null,
             category: NotificationCategory.System,
             sentAt: '2024-01-01T00:00:00Z',
             expiresAt: null,
@@ -333,7 +338,7 @@ describe('useNotifications', () => {
     renderHookWithApollo(() => useNotifications(), {
       cache,
       operationMocks: [
-        buildNotificationSubscriptionMock({
+        ...arrivedNotificationMocks({
           id: 'notif-1',
           type: NotificationType.LowStock,
           title: 'Low Stock Alert',
@@ -355,7 +360,7 @@ describe('useNotificationListener', () => {
     renderHookWithApollo(() => useNotificationListener({ skip: true }), {
       cache,
       operationMocks: [
-        buildNotificationSubscriptionMock({
+        ...arrivedNotificationMocks({
           id: 'notif-1',
           type: NotificationType.LowStock,
           title: 'Low Stock Alert',
@@ -377,25 +382,20 @@ describe('useNotificationListener', () => {
     memoryLifecycle().moveTo('background');
     const onArrivedWhileAway = jest.fn();
 
-    const event = buildNotificationSubscriptionMock({
+    const arrival = arrivedNotificationMocks({
       id: 'notif-authored',
       type: NotificationType.HomeJoined,
+      isAuthoredContent: true,
       title: 'Scheduled maintenance',
       message: 'The app is offline tonight from 2 to 3.',
     });
-    const node = (
-      event.result as {
-        data: { notificationEvents: { node: Record<string, unknown> } };
-      }
-    ).data.notificationEvents.node;
-    node.isAuthoredContent = true;
 
     renderHookWithApollo(
       () => useNotificationListener({ onArrivedWhileAway }),
       {
         cache: seededCache(),
         operationMocks: [
-          event,
+          ...arrival,
           recordMock(NotificationSummaryDocument, { data: summaryData }).mock,
         ],
       },
@@ -423,7 +423,7 @@ describe('useNotificationListener', () => {
       {
         cache: seededCache(),
         operationMocks: [
-          buildNotificationSubscriptionMock({
+          ...arrivedNotificationMocks({
             id: 'notif-foreground',
             type: NotificationType.LowStock,
             title: 'Low Stock Alert',
@@ -452,12 +452,16 @@ describe('useNotificationListener', () => {
     renderHookWithApollo(() => useNotificationListener(), {
       cache,
       operationMocks: [
-        buildNotificationSubscriptionMock({
+        ...arrivedNotificationMocks({
           id: 'notif-1',
           type: NotificationType.LowStock,
           title: 'Low Stock Alert',
           message: 'Milk is running low',
-          payload: { itemName: 'Milk' },
+          data: {
+            __typename: 'LowStockNotificationData',
+            itemName: 'Milk',
+            currentQuantity: 1,
+          },
         }),
         mock,
       ],
@@ -476,9 +480,8 @@ describe('useNotificationListener', () => {
     });
   });
 
-  // The regression this design exists to prevent: Apollo normalizes the
-  // event's `node` into the cache before `onData` runs, so a handler that
-  // asked the cache "was this unread?" would always be told "no" and would
+  // The badge is re-read, never moved here: a handler that asked the cache
+  // "was this unread?" would answer from whatever wrote the row last, and
   // leave the badge stuck while the row moved.
   it('READ subtype marks the row read AND re-reads Query.notificationSummary', async () => {
     const cache = seededCache([

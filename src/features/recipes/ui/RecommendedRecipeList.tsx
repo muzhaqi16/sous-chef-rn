@@ -1,19 +1,16 @@
 import React from 'react';
+import type { RecommendedRecipe } from '#/graphql/generated/schemaTypes';
 import { RecommendedRecipeCard } from './RecommendedRecipeCard';
 import {
   RECOMMENDED_RECIPES_SHOWN,
   useRecommendedRecipes,
 } from './useRecommendedRecipes';
 
-interface RecommendedRecipe {
-  id: string;
-  name: string;
-  /** Its coverage when it was recommended, 0–100. */
-  matchPercentage: number | null;
-}
-
 interface RecommendedRecipeListProps {
-  recipes: readonly RecommendedRecipe[];
+  recipes: readonly Pick<
+    RecommendedRecipe,
+    'recipeId' | 'name' | 'matchPercentage'
+  >[];
   /** Shown instead when every recipe is gone. */
   fallback: React.ReactNode;
 }
@@ -28,7 +25,7 @@ export const RecommendedRecipeList: React.FC<RecommendedRecipeListProps> = ({
   fallback,
 }) => {
   const shown = recipes.slice(0, RECOMMENDED_RECIPES_SHOWN);
-  const readings = useRecommendedRecipes(shown.map(recipe => recipe.id));
+  const readings = useRecommendedRecipes(shown.map(recipe => recipe.recipeId));
   const cards = shown.flatMap((recommended, at) => {
     const reading = readings[at];
     return reading?.gone ? [] : [{ ...recommended, recipe: reading?.recipe }];
@@ -37,8 +34,8 @@ export const RecommendedRecipeList: React.FC<RecommendedRecipeListProps> = ({
 
   return cards.map(card => (
     <RecommendedRecipeCard
-      key={card.id}
-      recipeId={card.id}
+      key={card.recipeId}
+      recipeId={card.recipeId}
       recipe={card.recipe}
       name={card.name}
       matchPercentage={card.matchPercentage}
