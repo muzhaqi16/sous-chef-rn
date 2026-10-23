@@ -20,7 +20,6 @@ const mockStore = {
   setAuth: jest.fn(),
   clearAuth: jest.fn(),
   setAuthIsLoading: jest.fn(),
-  setRememberMe: jest.fn(),
   setNavigationState: jest.fn(),
   setPostLoginCredentials: jest.fn(),
   setHomeAndPantry: jest.fn(),

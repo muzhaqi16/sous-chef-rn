@@ -44,7 +44,6 @@ export const SignUpScreen = (): React.JSX.Element => {
     const { name, email, password } = data;
     const input: RegisterInput = { name, email, password };
 
-    // Uses default rememberMe=true
     let outcome;
     try {
       outcome = await authService.register(input);

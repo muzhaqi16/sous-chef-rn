@@ -16,7 +16,6 @@ const selectUserId = (state: RootState) => state.user?.id;
 const selectUpdateUser = (state: RootState) => state.updateUser;
 const selectHasStoredCredentials = (state: RootState) =>
   state.hasStoredCredentials;
-const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
 const selectCanAccessDevTools = (state: RootState) =>
   state.user?.canAccessDevTools === true;
@@ -71,10 +70,8 @@ const selectShowTutorials = (state: RootState) => state.showTutorials;
 
 const selectPostLoginState = (state: RootState) => ({
   navigationState: state.navigationState,
-  showBiometricSetup: state.showBiometricSetup,
   postLoginCredentials: state.postLoginCredentials,
   setNavigationState: state.setNavigationState,
-  setShowBiometricSetup: state.setShowBiometricSetup,
   setPostLoginCredentials: state.setPostLoginCredentials,
 });
 
@@ -132,7 +129,6 @@ export const useSetSelectedPantryId = () =>
   useAppStore(selectSetSelectedPantryId);
 export const useSelectedShoppingListId = () =>
   useAppStore(selectSelectedShoppingListId);
-export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
 /** The units held on the device for offline autocomplete and lookups. */

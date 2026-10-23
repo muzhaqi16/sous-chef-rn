@@ -78,14 +78,6 @@ describe('preferencesSlice', () => {
     });
   });
 
-  describe('rememberMe', () => {
-    it('sets rememberMe', () => {
-      const store = createTestStore();
-      store.getState().setRememberMe(true);
-      expect(store.getState().rememberMe).toBe(true);
-    });
-  });
-
   describe('haptic feedback', () => {
     it('disables haptic feedback', () => {
       const store = createTestStore();

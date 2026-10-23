@@ -30,7 +30,6 @@ const mockStoreState = {
   setSelectedPantryId: jest.fn(),
   isHomeSelectionReady: false,
   setIsHomeSelectionReady: jest.fn(),
-  isLoggingOut: false,
   hasInitializedHomeData: false,
   setHasInitializedHomeData: jest.fn(),
   accessToken: 'mock-token' as string | null,
@@ -50,7 +49,6 @@ jest.mock('#store/useAppStore', () => ({
   useSetIsHomeSelectionReady: jest.fn(
     () => mockStoreState.setIsHomeSelectionReady,
   ),
-  useIsLoggingOut: jest.fn(() => mockStoreState.isLoggingOut),
 }));
 
 jest.mock('#store', () => ({
@@ -200,7 +198,6 @@ beforeEach(() => {
   mockStoreState.selectedHomeId = null;
   mockStoreState.selectedPantryId = null;
   mockStoreState.isHomeSelectionReady = false;
-  mockStoreState.isLoggingOut = false;
   mockStoreState.hasInitializedHomeData = false;
 });
 

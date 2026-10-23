@@ -53,7 +53,6 @@ jest.mock('#/utils/finallyHelpers', () => ({
 }));
 
 const mockSetNavigationState = jest.fn();
-const mockSetShowBiometricSetup = jest.fn();
 const mockSetPostLoginCredentials = jest.fn();
 jest.mock('#store/useAppStore', () => ({
   usePostLoginState: jest.fn(() => ({
@@ -62,16 +61,8 @@ jest.mock('#store/useAppStore', () => ({
       password: 'password123',
     },
     setNavigationState: mockSetNavigationState,
-    setShowBiometricSetup: mockSetShowBiometricSetup,
     setPostLoginCredentials: mockSetPostLoginCredentials,
   })),
-}));
-
-const mockRecordResponse = jest.fn();
-jest.mock('#features/auth/hooks/useBiometricPrompting', () => ({
-  useBiometricPrompting: () => ({
-    recordBiometricPromptResponse: mockRecordResponse,
-  }),
 }));
 
 const mockMarkEnabled = jest.fn();
@@ -107,9 +98,7 @@ describe('PostLoginBiometricScreen', () => {
     render(<PostLoginBiometricScreen />);
     await user.press(await screen.findByText('Not now'));
 
-    expect(mockRecordResponse).toHaveBeenCalledWith(false, true);
     expect(mockMarkDeclined).toHaveBeenCalled();
-    expect(mockSetShowBiometricSetup).toHaveBeenCalledWith(false);
     expect(mockSetPostLoginCredentials).toHaveBeenCalledWith(null);
     expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
   });
@@ -125,7 +114,6 @@ describe('PostLoginBiometricScreen', () => {
       expect(mockBiometricService.enrolDeviceCredential).toHaveBeenCalledWith(
         'test@example.com',
       );
-      expect(mockRecordResponse).toHaveBeenCalledWith(true, undefined);
       expect(mockMarkEnabled).toHaveBeenCalled();
       expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
     });

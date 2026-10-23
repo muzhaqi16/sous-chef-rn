@@ -98,12 +98,9 @@ export async function loadStoredCredentials(
 ): Promise<StoredDeviceCredential | null> {
   if (!email) return null;
   const store = useStore.getState();
-  store.setAuthIsLoadingCredentials(true);
 
   try {
     const credentials = await loadCredentials(email);
-
-    store.setAuthIsLoadingCredentials(false);
 
     if (!credentials) {
       // `loadCredentials` discards a slot the device can never open again; the
@@ -117,7 +114,6 @@ export async function loadStoredCredentials(
     return { email: credentials.username, credential: credentials.password };
   } catch (error) {
     logger.error('Error loading credentials:', error);
-    store.setAuthIsLoadingCredentials(false);
     return null;
   }
 }

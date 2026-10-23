@@ -112,7 +112,6 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
           accessToken: ACCESS_TOKEN,
           refreshToken: 'refresh-token',
         },
-        undefined,
         { email: EMAIL },
       ),
     ).resolves.toBe(false);

@@ -32,33 +32,6 @@ export interface ResetOptions {
   clearApolloCache?: boolean;
 }
 
-export const RESET_SCENARIOS = {
-  LOGOUT: {
-    auth: true,
-    ui: true,
-    preferences: false,
-    clearApolloCache: true,
-  },
-  SESSION_EXPIRED: {
-    auth: true,
-    ui: false,
-    preferences: false,
-    clearApolloCache: false, // Preserve cache by default to support offline usage
-  },
-  FULL_RESET: {
-    auth: true,
-    ui: true,
-    preferences: true,
-    clearApolloCache: true,
-  },
-  ONBOARDING_RESET: {
-    auth: false,
-    ui: true,
-    preferences: true,
-    clearApolloCache: false,
-  },
-};
-
 /**
  * The signed-in person's store fields and their signed-out values. The ONE list:
  * `resetStore` applies it in memory and `clearAuthFromStorage` deletes the same
@@ -69,9 +42,7 @@ const SESSION_SCOPED_STATE = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  // Left set, `isAutoLoggingIn` strands the splash gate and
-  // `sessionTokensInKeychain` claims a pair `clearAuthFromStorage` just removed.
-  isAutoLoggingIn: false,
+  // Left set, it claims a pair `clearAuthFromStorage` just removed.
   sessionTokensInKeychain: false,
   // Navigation selections — the previous account's home/pantry/list ids.
   selectedHomeId: null,
@@ -125,10 +96,7 @@ const runSessionEnd = async (
 };
 
 export const createResetManager = (set: SetState, get: GetState) => ({
-  resetStore: async (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
-    const resetOptions =
-      typeof options === 'string' ? RESET_SCENARIOS[options] : options;
-
+  resetStore: async (resetOptions: ResetOptions) => {
     const newState: Partial<RootState> = {};
 
     if (resetOptions.auth) {
@@ -136,8 +104,9 @@ export const createResetManager = (set: SetState, get: GetState) => ({
       // and would fire against a cleared session.
       getApolloResetBridge()?.cancelTokenRefresh();
 
-      // Under `auth`, not `preferences`: `LOGOUT` sets `preferences: false`, so
-      // anything filed there survives a sign-out on a shared device.
+      // Under `auth`, not `preferences`: a sign-out resets with
+      // `preferences: false`, so anything filed there survives it on a shared
+      // device.
       Object.assign(newState, SESSION_SCOPED_STATE);
 
       // SESSION_SCOPED_STATE only reaches the ROOT store; feature-owned stores
@@ -186,31 +155,9 @@ export const createResetManager = (set: SetState, get: GetState) => ({
     set({ isHydrated: true });
   },
 
-  logout: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('LOGOUT');
-
-    set({ navigationState: 'auth' });
-  },
-
-  sessionExpired: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('SESSION_EXPIRED');
-  },
-
-  fullReset: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('FULL_RESET');
-  },
-
-  resetOnboarding: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('ONBOARDING_RESET');
-  },
-
   endSession: async (reason: SessionEndReason) => {
-    // Every transport reporting a dead session fires this unawaited, and a
-    // second pass clears `isLoggingOut` while the first still depends on it.
+    // Every transport reporting a dead session fires this unawaited; a second
+    // pass would re-run the teardown under the gate the first one holds.
     if (sessionEndInFlight) return sessionEndInFlight;
 
     sessionEndInFlight = runSessionEnd(set, get, reason);

@@ -34,11 +34,6 @@ describe('authSlice', () => {
       expect(store.getState().accessToken).toBeNull();
       expect(store.getState().refreshToken).toBeNull();
     });
-
-    it('getIsAuthenticated returns false initially', () => {
-      const store = createTestStore();
-      expect(store.getState().getIsAuthenticated()).toBe(false);
-    });
   });
 
   describe('setAuth', () => {
@@ -198,18 +193,6 @@ describe('authSlice', () => {
       store.getState().setAuth(testUser, 'access-tk', 'r');
       expect(schedule).toHaveBeenCalledWith('access-tk');
     });
-
-    it('clears isAutoLoggingIn', () => {
-      const store = createTestStore({ isAutoLoggingIn: true });
-      store.getState().setAuth(testUser, 'a', 'r');
-      expect(store.getState().isAutoLoggingIn).toBe(false);
-    });
-
-    it('getIsAuthenticated returns true after setAuth', () => {
-      const store = createTestStore();
-      store.getState().setAuth(testUser, 'a', 'r');
-      expect(store.getState().getIsAuthenticated()).toBe(true);
-    });
   });
 
   describe('updateUser', () => {
@@ -310,14 +293,6 @@ describe('authSlice', () => {
     });
   });
 
-  describe('setIsAutoLoggingIn', () => {
-    it('sets isAutoLoggingIn', () => {
-      const store = createTestStore();
-      store.getState().setIsAutoLoggingIn(true);
-      expect(store.getState().isAutoLoggingIn).toBe(true);
-    });
-  });
-
   describe('setAuth - edge cases', () => {
     it('does not clear navigation state when same user logs in again', () => {
       const store = createTestStore();
@@ -393,26 +368,6 @@ describe('authSlice', () => {
       const store = createTestStore();
       store.getState().setOnboarded(true);
       expect(store.getState().user).toBeNull();
-    });
-  });
-
-  describe('clearAuth - edge cases', () => {
-    it('clears isAutoLoggingIn', () => {
-      const store = createTestStore();
-      store.getState().setIsAutoLoggingIn(true);
-      store.getState().clearAuth();
-      expect(store.getState().isAutoLoggingIn).toBe(false);
-    });
-  });
-
-  describe('getIsAuthenticated', () => {
-    it('returns false when user exists but no token', () => {
-      const store = createTestStore();
-      store.getState().setAuth(testUser, 'a', 'r');
-      // Manually clear token
-      store.getState().setTokens({ accessToken: undefined });
-      // getIsAuthenticated should still work
-      expect(typeof store.getState().getIsAuthenticated).toBe('function');
     });
   });
 });

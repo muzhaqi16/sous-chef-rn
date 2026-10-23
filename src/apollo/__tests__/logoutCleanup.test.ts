@@ -30,12 +30,6 @@ jest.mock('../offline/OptimisticDataPersistence', () => ({
   },
 }));
 
-jest.mock('#store', () => ({
-  useStore: {
-    getState: jest.fn(() => ({ isLoggingOut: false })),
-  },
-}));
-
 // wsLink is a static import here. This stub keeps the assertion at the seam —
 // that cleanup asks the socket to go away — while what disposal DOES with the
 // client (drop it, so the next sign-in is not handed one that has latched
@@ -60,7 +54,6 @@ import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
 import { storage } from '#/store/deviceStorage';
-import { useStore } from '#store';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { UpdateDeviceDocument } from '#operations/auth/device.generated';
@@ -83,26 +76,10 @@ describe('LogoutCleanup', () => {
       expect(LogoutCleanup.isInLogoutProcess()).toBe(false);
     });
 
-    it('returns true when global store says logging out', () => {
-      (useStore.getState as jest.Mock).mockReturnValueOnce({
-        isLoggingOut: true,
+    it('returns true while a session end holds the gate', async () => {
+      await whileSessionEnds(async () => {
+        expect(LogoutCleanup.isInLogoutProcess()).toBe(true);
       });
-      expect(LogoutCleanup.isInLogoutProcess()).toBe(true);
-    });
-  });
-
-  describe('registerSubscription / unregisterSubscription', () => {
-    it('tracks subscriptions', () => {
-      const sub = { unsubscribe: jest.fn() };
-      LogoutCleanup.registerSubscription(sub);
-      LogoutCleanup.completeLogout();
-    });
-
-    it('unregister removes the subscription from tracking', () => {
-      const sub = { unsubscribe: jest.fn() };
-      LogoutCleanup.registerSubscription(sub);
-      LogoutCleanup.unregisterSubscription(sub);
-      LogoutCleanup.completeLogout();
     });
   });
 
@@ -169,56 +146,12 @@ describe('LogoutCleanup', () => {
       expect(storage.contains('apollo-queue-current-user')).toBe(true);
     });
 
-    it('skips cache clearing when clearCache is false', async () => {
-      await LogoutCleanup.performLogoutCleanup({ clearCache: false });
-      expect(mockClient.clearStore).not.toHaveBeenCalled();
-    });
-
-    it('suppresses errors by default', async () => {
+    it('suppresses errors', async () => {
       (cancelTokenRefresh as jest.Mock).mockImplementationOnce(() => {
         throw new Error('token cancel failed');
       });
       // Should not throw
       await LogoutCleanup.performLogoutCleanup();
-    });
-
-    it('re-throws errors when suppressErrors is false', async () => {
-      (cancelTokenRefresh as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('token cancel failed');
-      });
-
-      await expect(
-        LogoutCleanup.performLogoutCleanup({ suppressErrors: false }),
-      ).rejects.toThrow('token cancel failed');
-    });
-
-    it('cancels subscriptions with unsubscribe method', async () => {
-      const sub = { unsubscribe: jest.fn() };
-      LogoutCleanup.registerSubscription(sub);
-
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(sub.unsubscribe).toHaveBeenCalled();
-    });
-
-    it('cancels function-style subscriptions (navigation listeners)', async () => {
-      const listener = jest.fn();
-      LogoutCleanup.registerSubscription(listener);
-
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(listener).toHaveBeenCalled();
-    });
-
-    it('skips subscription cancellation when cancelSubscriptions is false', async () => {
-      const sub = { unsubscribe: jest.fn() };
-      LogoutCleanup.registerSubscription(sub);
-
-      await LogoutCleanup.performLogoutCleanup({
-        cancelSubscriptions: false,
-      });
-
-      expect(sub.unsubscribe).not.toHaveBeenCalled();
     });
   });
 

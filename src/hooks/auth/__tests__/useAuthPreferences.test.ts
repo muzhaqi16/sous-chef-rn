@@ -69,7 +69,7 @@ describe('useAuthPreferences', () => {
   });
 
   describe('markBiometricEnabled', () => {
-    it('sets biometric enabled flags for current user', () => {
+    it('clears the decline flags for the current user', () => {
       const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
@@ -77,7 +77,6 @@ describe('useAuthPreferences', () => {
       });
 
       expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        biometricEnabled: true,
         biometricPromptRemindLater: false,
         lastBiometricPromptDeclined: undefined,
         biometricDeclinedPermanently: false,

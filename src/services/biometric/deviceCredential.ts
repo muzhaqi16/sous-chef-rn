@@ -213,7 +213,7 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
         return false;
       }
 
-      await authService.handleLogin(unmaskedLogin, true);
+      await authService.handleLogin(unmaskedLogin);
       useStore.getState().clearBiometricBackoff();
       logger.info('Auto-login successful');
       return true;
@@ -300,8 +300,8 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       return false;
     }
 
-    // Both round trips belong to the sign-out, which sets `isLoggingOut`
-    // before they can finish on a slow link — without the opt-in `authLink`
+    // Both round trips belong to the sign-out, whose session-ending gate can
+    // close before they finish on a slow link — without the opt-in `authLink`
     // refuses the cleanup the sign-out is waiting for.
     const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,

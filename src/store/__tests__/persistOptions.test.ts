@@ -99,7 +99,6 @@ describe('store persist options', () => {
       expect(keys).toContain('userConsent');
       // v13 — hydration gate + auth lifecycle flags
       expect(keys).not.toContain('isHydrated');
-      expect(keys).not.toContain('isAutoLoggingIn');
       expect(keys).not.toContain('isPantryQueryComplete');
       // v14 — the scanner owns its state, and its own persisted key
       expect(keys).not.toContain('recentlyScanned');

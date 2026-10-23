@@ -45,7 +45,6 @@ jest.mock('#store/useAppStore', () => {
     useUserId: jest.fn(() => appStoreState.user?.id),
     useSelectedPantryId: jest.fn(() => 'pantry-1'),
     useSelectedHomeId: jest.fn(() => 'home-1'),
-    useIsLoggingOut: jest.fn(() => false),
   };
 });
 

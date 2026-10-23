@@ -78,11 +78,9 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
   pantrySortDirection: 'sort order, carries no content',
 
   // Sign-in affordances, scoped per account by design.
-  rememberMe: 'login preference; the credentials themselves are per-account',
   hasStoredCredentials:
     'whether ANY account has biometric credentials enrolled; the credentials ' +
     'are keyed by email and removed for the account signing out',
-  showBiometricSetup: 'transient prompt flag, no account data',
   // The budget these hold off is the SERVER's, and it is per device, not per
   // account — it does not reset because somebody signed out. Neither key names
   // an account: one is a deadline, the other a count.
@@ -154,7 +152,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
   it('clears every persisted key that is not deliberately kept', async () => {
     plantMarkers();
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     const survivors = keysStillHoldingMarker();
     const unexplained = survivors.filter(key => !(key in KEPT_ON_PURPOSE));
@@ -185,7 +185,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
       user: { id: 'u1', email: 'first@example.com' },
     } as never);
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     const state = useStore.getState();
     expect(state.cachedItemSuggestions).toEqual([]);
@@ -208,7 +210,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
       {},
     );
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     expect(useNotificationStore.getState().pendingExpirationLinks).toEqual({});
     expect(registeredSessionScopedStores()).toContain('notifications');
@@ -218,7 +222,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
     useBarcodeScannerStore.getState().setScanning(true);
     useBarcodeScannerStore.getState().showBottomSheet();
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     expect(useBarcodeScannerStore.getState()).toMatchObject({
       isScanning: false,
@@ -236,7 +242,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
     });
     useRecipeCaptureStore.getState().settle('capture-1', 'recipe-1');
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     expect(useRecipeCaptureStore.getState()).toMatchObject({
       entries: [],
@@ -249,7 +257,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
     const key = catalogFetchKey('randomCatalogRecipes', { first: 25 });
     recordCatalogFetch(key, Date.now());
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     expect(catalogFetchedAt(key)).toBeUndefined();
     expect(registeredSessionScopedStores()).toContain('catalogFetchTimes');
@@ -263,7 +273,9 @@ describe('a session end leaves no data belonging to the previous person', () => 
       cachedCategories: [{ id: 'c1', name: 'Dairy' }],
     } as never);
 
-    await useStore.getState().resetStore('LOGOUT');
+    await useStore
+      .getState()
+      .resetStore({ auth: true, ui: true, clearApolloCache: true });
 
     expect(useStore.getState().cachedUnits).toHaveLength(1);
     expect(useStore.getState().cachedCategories).toHaveLength(1);

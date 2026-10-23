@@ -41,7 +41,6 @@ const mockStoreState: Record<string, unknown> = {
   resetStore: (...a: unknown[]) => mockResetStore(...a),
   setNavigationState: (...a: unknown[]) => mockSetNavigationState(...a),
   setAuthIsLoading: jest.fn(),
-  setAuthIsLoadingCredentials: jest.fn(),
   getUserNavigationState: jest.fn().mockReturnValue({}),
   setUserNavigationState: jest.fn(),
 };
@@ -211,8 +210,8 @@ describe('logout and biometric credentials', () => {
   });
 
   // The sign-out's own cleanup has to reach the server: `authLink` refuses
-  // everything once `isLoggingOut` is set, and this revoke needs two sequential
-  // round trips, so without the opt-in a slow link cancels it.
+  // everything once the session-ending gate closes, and this revoke needs two
+  // sequential round trips, so without the opt-in a slow link cancels it.
   it('opts its round trips out of the logout refusal', async () => {
     await biometricService.revokeDeviceCredentialForThisDevice();
 

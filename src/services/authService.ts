@@ -138,11 +138,6 @@ function getUserPreferences(targetUserId: string) {
         lastCredentialPromptShown: Date.now(),
       });
     },
-    trackLogout: () => {
-      store.setUserNavigationState(targetUserId, {
-        biometricEnabled: false,
-      });
-    },
   };
 }
 
@@ -230,7 +225,6 @@ function handleRejectedAuthPayload(
 
 async function handleLogin(
   loginResponse: ResolvedAuthPayload,
-  shouldRemember?: boolean,
   loginCredentials?: { email: string },
   showRememberPrompt = false,
 ): Promise<boolean> {
@@ -257,14 +251,9 @@ async function handleLogin(
   bootstrapUserStore(user);
   void applyRegionCurrencyDefault(user);
 
-  if (shouldRemember !== undefined) {
-    store.setRememberMe(shouldRemember);
-  }
-
   if (user.id) {
     store.setUserNavigationState(user.id, {
       lastLoginTimestamp: Date.now(),
-      rememberMeChoice: shouldRemember,
     });
   }
 
@@ -290,7 +279,6 @@ async function handleLogin(
   // so it renders as its own step, not a modal over PantryMain.
   if (gate === 'biometricSetup' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    store.setShowBiometricSetup(true);
     store.setNavigationState('biometric_setup');
     return true;
   }
@@ -364,12 +352,7 @@ async function login(
       // handleLogin owns all post-login routing — verification, onboarding,
       // the biometric gate, and the RememberMe gate (driven by
       // showRememberPrompt) — so navigation is decided in one place.
-      await handleLogin(
-        unmaskedLogin,
-        true,
-        loginCredentials,
-        showRememberPrompt,
-      );
+      await handleLogin(unmaskedLogin, loginCredentials, showRememberPrompt);
 
       store.setAuthIsLoading(false);
       return true;
@@ -409,10 +392,7 @@ async function login(
  */
 type RegisterOutcome = 'signedIn' | 'verificationSent' | 'failed';
 
-async function register(
-  input: RegisterInput,
-  shouldRemember = true,
-): Promise<RegisterOutcome> {
+async function register(input: RegisterInput): Promise<RegisterOutcome> {
   const store = useStore.getState();
   store.setAuthIsLoading(true);
 
@@ -450,7 +430,6 @@ async function register(
     return 'failed';
   }
 
-  store.setRememberMe(shouldRemember);
   logger.info('Registration successful: verification email sent');
 
   // `register` issues no tokens, but `login` admits an unverified account.
@@ -523,10 +502,6 @@ async function logout(options?: LogoutOptions): Promise<void> {
       await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
       store.setNavigationState('auth');
     });
-
-    if (currentUserId) {
-      getUserPreferences(currentUserId).trackLogout();
-    }
   } catch (error) {
     logger.error('Logout error:', error);
   }

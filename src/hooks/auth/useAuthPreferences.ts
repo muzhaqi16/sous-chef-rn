@@ -20,7 +20,6 @@ export const useAuthPreferences = () => {
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
-      biometricEnabled: true,
       biometricPromptRemindLater: false,
       lastBiometricPromptDeclined: undefined,
       biometricDeclinedPermanently: false,

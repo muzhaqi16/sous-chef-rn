@@ -22,7 +22,6 @@ const mockRegisterBiometricRefusal = jest.fn();
 const mockStoreSpies = {
   registerBiometricRefusal: mockRegisterBiometricRefusal,
   setAuthIsLoading: jest.fn(),
-  setAuthIsLoadingCredentials: jest.fn(),
   setAuth: jest.fn(),
   clearAuth: jest.fn(),
 };

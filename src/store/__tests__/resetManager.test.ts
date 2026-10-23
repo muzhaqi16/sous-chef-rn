@@ -30,7 +30,7 @@ const apolloReset = {
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
-import { RESET_SCENARIOS, createResetManager } from '../resetManager';
+import { createResetManager } from '../resetManager';
 import {
   clearApolloResetBridge,
   registerApolloResetBridge,
@@ -75,44 +75,6 @@ const expectPersistedCacheCleared = () => {
 };
 
 describe('resetManager', () => {
-  describe('RESET_SCENARIOS', () => {
-    it('LOGOUT clears auth and UI, preserves preferences, clears Apollo cache', () => {
-      expect(RESET_SCENARIOS.LOGOUT).toEqual({
-        auth: true,
-        ui: true,
-        preferences: false,
-        clearApolloCache: true,
-      });
-    });
-
-    it('SESSION_EXPIRED clears auth only, preserves cache for offline', () => {
-      expect(RESET_SCENARIOS.SESSION_EXPIRED).toEqual({
-        auth: true,
-        ui: false,
-        preferences: false,
-        clearApolloCache: false,
-      });
-    });
-
-    it('FULL_RESET clears everything', () => {
-      expect(RESET_SCENARIOS.FULL_RESET).toEqual({
-        auth: true,
-        ui: true,
-        preferences: true,
-        clearApolloCache: true,
-      });
-    });
-
-    it('ONBOARDING_RESET preserves auth, clears UI and preferences', () => {
-      expect(RESET_SCENARIOS.ONBOARDING_RESET).toEqual({
-        auth: false,
-        ui: true,
-        preferences: true,
-        clearApolloCache: false,
-      });
-    });
-  });
-
   describe('createResetManager', () => {
     let mockSet: jest.Mock;
     let mockGet: jest.Mock;
@@ -131,12 +93,6 @@ describe('resetManager', () => {
     });
 
     describe('resetStore', () => {
-      it('accepts a string scenario name', async () => {
-        await resetManager.resetStore('LOGOUT');
-        expect(mockSet).toHaveBeenCalled();
-        expectPersistedCacheCleared();
-      });
-
       it('accepts a custom ResetOptions object', async () => {
         await resetManager.resetStore({
           auth: true,
@@ -175,10 +131,9 @@ describe('resetManager', () => {
         });
 
         // Left armed, the proactive timer fires against tokens this reset just
-        // cleared; left set, the two flags describe a session that is gone.
+        // cleared; left set, the flag describes a session that is gone.
         expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
         const firstCall = mockSet.mock.calls[0][0];
-        expect(firstCall.isAutoLoggingIn).toBe(false);
         expect(firstCall.sessionTokensInKeychain).toBe(false);
       });
 
@@ -192,7 +147,6 @@ describe('resetManager', () => {
 
         expect(cancelTokenRefresh).not.toHaveBeenCalled();
         const firstCall = mockSet.mock.calls[0][0];
-        expect(firstCall.isAutoLoggingIn).toBeUndefined();
         expect(firstCall.sessionTokensInKeychain).toBeUndefined();
       });
 
@@ -288,7 +242,7 @@ describe('resetManager', () => {
       });
 
       it('ensures isHydrated remains true after reset', async () => {
-        await resetManager.resetStore('SESSION_EXPIRED');
+        await resetManager.resetStore({ auth: true });
         // Last set call should be { isHydrated: true }
         const lastCall = mockSet.mock.calls[mockSet.mock.calls.length - 1][0];
         expect(lastCall.isHydrated).toBe(true);
@@ -352,30 +306,6 @@ describe('resetManager', () => {
     });
 
     describe('convenience methods', () => {
-      it('logout resets with LOGOUT scenario and sets auth navigation', async () => {
-        await resetManager.logout();
-        // Should have called set with auth reset and then navigationState: 'auth'
-        const lastCall = mockSet.mock.calls[mockSet.mock.calls.length - 1][0];
-        expect(lastCall.navigationState).toBe('auth');
-        expectPersistedCacheCleared();
-      });
-
-      it('sessionExpired resets with SESSION_EXPIRED scenario', async () => {
-        await resetManager.sessionExpired();
-        expect(mockSet).toHaveBeenCalled();
-      });
-
-      it('fullReset resets with FULL_RESET scenario', async () => {
-        await resetManager.fullReset();
-        expect(mockSet).toHaveBeenCalled();
-        expectPersistedCacheCleared();
-      });
-
-      it('resetOnboarding resets with ONBOARDING_RESET scenario', async () => {
-        await resetManager.resetOnboarding();
-        expect(mockSet).toHaveBeenCalled();
-      });
-
       it('tokenRefreshFailed with auth_rejected performs the full session-end cleanup', async () => {
         await resetManager.tokenRefreshFailed('auth_rejected');
 
@@ -383,7 +313,6 @@ describe('resetManager', () => {
         // link-layer verdicts rather than its own slightly different one.
         const authCall = findAuthResetCall(mockSet);
         expect(authCall).toBeDefined();
-        expect(authCall?.[0].isAutoLoggingIn).toBe(false);
         expect(authCall?.[0].sessionTokensInKeychain).toBe(false);
         expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
         expectPersistedCacheCleared();
@@ -463,7 +392,6 @@ describe('resetManager', () => {
           expect(authState?.user).toBeNull();
           expect(authState?.accessToken).toBeNull();
           expect(authState?.refreshToken).toBeNull();
-          expect(authState?.isAutoLoggingIn).toBe(false);
           expect(authState?.sessionTokensInKeychain).toBe(false);
           // Navigation selections belonging to the ended session
           expect(authState?.selectedHomeId).toBeNull();

@@ -43,8 +43,8 @@ const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 // `allowDuringLogout` is set by a call that belongs to the sign-out itself: it
-// dispatches before `isLoggingOut` is set and resolves after, so without the
-// opt-in the logout cancels its own cleanup.
+// dispatches before the session-ending gate closes and resolves after, so
+// without the opt-in the logout cancels its own cleanup.
 // `signInToken` is a sign-in's fresh access token, for a call that decides
 // what the sign-in shows before the pair is stored. It never outranks a stored
 // token, so it cannot point a live session's request elsewhere.

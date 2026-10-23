@@ -96,7 +96,6 @@ export interface AuthState {
   refreshToken: string | null;
 
   // Auth preferences
-  // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
 
   // Wall-clock deadline before another device-credential exchange may be sent,
@@ -105,20 +104,13 @@ export interface AuthState {
   biometricRetryAt: number;
   biometricAttempts: number;
 
-  // Auto-login state
-  isAutoLoggingIn: boolean;
-
   // Transient loading state for authService (not persisted)
   authIsLoading: boolean;
-  authIsLoadingCredentials: boolean;
 
   // True once the keychain is confirmed to hold the current token pair.
   // While false, partialize (store/index.ts) keeps the pair in the MMKV blob
   // as a fallback so a failed keychain write/read can't lose the session.
   sessionTokensInKeychain: boolean;
-
-  // Computed property
-  getIsAuthenticated: () => boolean;
 
   // Actions
   setAuth: (
@@ -134,9 +126,7 @@ export interface AuthState {
   setHasStoredCredentials: (has: boolean | null) => void;
   registerBiometricRefusal: (retryAfterMs?: number) => void;
   clearBiometricBackoff: () => void;
-  setIsAutoLoggingIn: (loading: boolean) => void;
   setAuthIsLoading: (v: boolean) => void;
-  setAuthIsLoadingCredentials: (v: boolean) => void;
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
@@ -152,9 +142,7 @@ const initialAuthState = {
   hasStoredCredentials: null,
   biometricRetryAt: 0,
   biometricAttempts: 0,
-  isAutoLoggingIn: false,
   authIsLoading: false,
-  authIsLoadingCredentials: false,
   sessionTokensInKeychain: false,
 };
 
@@ -185,11 +173,6 @@ export const createAuthSlice: StateCreator<
 
   return {
     ...initialAuthState,
-
-    getIsAuthenticated: () => {
-      const state = get();
-      return !!(state.user && state.accessToken);
-    },
 
     setAuth: (user, accessToken, refreshToken) => {
       set(state => {
@@ -223,7 +206,6 @@ export const createAuthSlice: StateCreator<
         };
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
-        state.isAutoLoggingIn = false; // Clear auto-login state on success
         // Mirrored out of the auth payload so every money surface can read it
         // without a query of its own; the reset manager clears it on sign-out.
         if (currency) {
@@ -307,9 +289,7 @@ export const createAuthSlice: StateCreator<
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
-        state.isAutoLoggingIn = false;
         state.sessionTokensInKeychain = false;
-        // Keep rememberMe preference
       });
 
       // clearSessionTokens reports failure via its own logging; a false result
@@ -339,21 +319,9 @@ export const createAuthSlice: StateCreator<
       });
     },
 
-    setIsAutoLoggingIn: loading => {
-      set(state => {
-        state.isAutoLoggingIn = loading;
-      });
-    },
-
     setAuthIsLoading: v => {
       set(state => {
         state.authIsLoading = v;
-      });
-    },
-
-    setAuthIsLoadingCredentials: v => {
-      set(state => {
-        state.authIsLoadingCredentials = v;
       });
     },
 

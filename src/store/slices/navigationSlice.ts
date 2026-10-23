@@ -24,7 +24,6 @@ interface UserNavigationState {
   lastRoute?: string;
   onboardingProgress?: string;
   lastLoginTimestamp?: number;
-  rememberMeChoice?: boolean;
   hasCompletedOnboarding?: boolean;
   /** The device-region currency default has been applied once for this account. */
   currencyDefaultApplied?: boolean;
@@ -33,7 +32,6 @@ interface UserNavigationState {
   skippedOnboardingSteps?: string[];
   isNewUser?: boolean;
   biometricSetupOffered?: boolean;
-  biometricEnabled?: boolean;
   // Post-login biometric prompt tracking
   postLoginBiometricPromptShown?: boolean;
   postLoginBiometricPromptCount?: number;
