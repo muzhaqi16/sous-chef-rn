@@ -1,5 +1,8 @@
 import { NotificationType } from '#/graphql/generated/schemaTypes';
-import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import {
+  getNotificationCopy,
+  readRecommendedRecipes,
+} from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
@@ -502,6 +505,63 @@ describe('notificationHelpers', () => {
         title: 'Recipes for your pantry',
         body: 'Your pantry is ready for Chili and Tacos',
       });
+    });
+  });
+
+  // The lists run in parallel: one out of step would pair a name with another
+  // recipe, so the screen shows the message instead.
+  describe('readRecommendedRecipes', () => {
+    const recommended = (payload: NotificationPayload) =>
+      readRecommendedRecipes({
+        type: NotificationType.RecipeRecommendations,
+        payload,
+      });
+
+    it('names each recipe with its coverage when it was recommended', () => {
+      expect(
+        recommended({
+          recipeIds: ['r1', 'r2'],
+          recipeNames: ['Chili', 'Tacos'],
+          matchPercentages: [80, 65],
+        }),
+      ).toEqual([
+        { id: 'r1', name: 'Chili', matchPercentage: 80 },
+        { id: 'r2', name: 'Tacos', matchPercentage: 65 },
+      ]);
+    });
+
+    it('shows no coverage for a payload with no coverage list', () => {
+      expect(
+        recommended({ recipeIds: ['r1'], recipeNames: ['Chili'] }),
+      ).toEqual([{ id: 'r1', name: 'Chili', matchPercentage: null }]);
+    });
+
+    it.each<[string, NotificationPayload]>([
+      [
+        'more ids than names',
+        { recipeIds: ['r1', 'r2', 'r3'], recipeNames: ['Chili', 'Tacos'] },
+      ],
+      [
+        'a coverage list of another length',
+        {
+          recipeIds: ['r1', 'r2'],
+          recipeNames: ['Chili', 'Tacos'],
+          matchPercentages: [80, 65, 50],
+        },
+      ],
+      ['an id that is not text', { recipeIds: [7], recipeNames: ['Chili'] }],
+      ['no list of ids', { recipeNames: ['Chili'] }],
+    ])('names no recipe for %s', (_case, payload) => {
+      expect(recommended(payload)).toEqual([]);
+    });
+
+    it('names no recipe for another type of notification', () => {
+      expect(
+        readRecommendedRecipes({
+          type: NotificationType.WeeklyDigest,
+          payload: { recipeIds: ['r1'], recipeNames: ['Chili'] },
+        }),
+      ).toEqual([]);
     });
   });
 });

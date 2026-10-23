@@ -17,6 +17,7 @@ import {
   recipeCardBasics,
   timeAndServings,
 } from '#features/recipes/utils/recipeCardText';
+import { coverageBadge } from '#features/recipes/ui/coverageBadge';
 
 export interface DisplayItem {
   id: string;
@@ -106,21 +107,6 @@ function pantryDisplayItem(
     target: { catalog: catalogHintOf(hit) },
   };
 }
-
-/** How much of a recipe the pantries hold, as a card's badge. */
-export const coverageBadge = (
-  percent: number,
-  translate: Translate,
-): BadgeContent => ({
-  text: translate('recipes.pantryCoverage', { percent }),
-  lines: [
-    {
-      icon: 'checkmark-circle',
-      text: translate('recipes.coveragePercent', { percent }),
-      variant: 'success',
-    },
-  ],
-});
 
 /** A suggestion as its card: the stock it uses up first, its coverage as the badge. */
 function suggestionDisplayItem(

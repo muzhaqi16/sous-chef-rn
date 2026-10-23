@@ -113,10 +113,14 @@ interface RecommendedRecipe {
   matchPercentage: number | null;
 }
 
-const listOf = (value: unknown): unknown[] =>
-  Array.isArray(value) ? value : [];
+const isText = (value: unknown): value is string => typeof value === 'string';
 
-/** The recipes a recommendations notification names, in its order. */
+/**
+ * The recipes a recommendations notification names, in its order. Its
+ * `recipeIds`, `recipeNames` and `matchPercentages` run in parallel, so lists
+ * that do not line up name no recipe: a misread would pair a name with another
+ * recipe. A payload with no coverage list has no coverage to show.
+ */
 export const readRecommendedRecipes = ({
   type,
   payload,
@@ -125,20 +129,28 @@ export const readRecommendedRecipes = ({
   payload: NotificationPayload;
 }): RecommendedRecipe[] => {
   if (type !== NotificationType.RecipeRecommendations) return [];
-  const names = listOf(payload.recipeNames);
-  const percentages = listOf(payload.matchPercentages);
-  return listOf(payload.recipeIds).flatMap((id, at): RecommendedRecipe[] => {
+  const { recipeIds: ids, recipeNames: names, matchPercentages } = payload;
+  if (!Array.isArray(ids) || !Array.isArray(names)) return [];
+  if (!ids.every(isText) || !names.every(isText)) return [];
+  if (names.length !== ids.length) return [];
+  const coverage: unknown[] = Array.isArray(matchPercentages)
+    ? matchPercentages
+    : [];
+  if (matchPercentages !== undefined && coverage.length !== ids.length) {
+    return [];
+  }
+  return ids.flatMap((id, at): RecommendedRecipe[] => {
     const name = names[at];
-    const percentage = percentages[at];
-    return typeof id === 'string' && typeof name === 'string'
-      ? [
+    const percentage = coverage[at];
+    return name === undefined
+      ? []
+      : [
           {
             id,
             name,
             matchPercentage: typeof percentage === 'number' ? percentage : null,
           },
-        ]
-      : [];
+        ];
   });
 };
 

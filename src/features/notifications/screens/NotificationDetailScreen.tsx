@@ -13,7 +13,7 @@ import {
   getNotificationCopy,
   readRecommendedRecipes,
 } from '#features/notifications/utils/notificationHelpers';
-import { RecommendedRecipeCard } from '#features/recipes/ui/RecommendedRecipeCard';
+import { RecommendedRecipeList } from '#features/recipes/ui/RecommendedRecipeList';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
@@ -48,6 +48,7 @@ export const NotificationDetailScreen: React.FC<
   const payload = notification.payload;
   const copy = getNotificationCopy(notification, t, today);
   const recommended = readRecommendedRecipes(notification);
+  const message = <Text role="body">{copy.message}</Text>;
 
   return (
     <NotificationActionHandler>
@@ -66,22 +67,16 @@ export const NotificationDetailScreen: React.FC<
           </View>
 
           <View style={styles.content}>
-            {recommended.length > 0 ? (
-              <View style={styles.recipes}>
-                {recommended.map(recipe => (
-                  <RecommendedRecipeCard
-                    key={recipe.id}
-                    recipeId={recipe.id}
-                    name={recipe.name}
-                    matchPercentage={recipe.matchPercentage}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text role="body" style={styles.message}>
-                {copy.message}
-              </Text>
-            )}
+            <View style={styles.body}>
+              {recommended.length > 0 ? (
+                <RecommendedRecipeList
+                  recipes={recommended}
+                  fallback={message}
+                />
+              ) : (
+                message
+              )}
+            </View>
 
             {!!payload.details && (
               <View style={styles.detailsContainer}>
@@ -143,10 +138,7 @@ const styles = StyleSheet.create(theme => ({
   content: {
     paddingTop: theme.spacing.lg,
   },
-  message: {
-    marginBottom: theme.spacing.lg,
-  },
-  recipes: {
+  body: {
     marginBottom: theme.spacing.lg,
   },
   detailsContainer: {

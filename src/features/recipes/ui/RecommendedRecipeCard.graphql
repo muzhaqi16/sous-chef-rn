@@ -1,0 +1,9 @@
+# A recommended recipe as its card shows it. Its coverage is not read: the
+# card shows the one the recommendation was sent with.
+fragment RecommendedRecipeCard_recipe on Recipe {
+  id
+  name
+  imageUrl
+  servings
+  totalTimeMinutes
+}

@@ -1,11 +1,13 @@
 'use no memo';
 import React from 'react';
+import { GraphQLError } from 'graphql';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
 import {
   renderWithApollo,
   type MockDataFor,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import {
   NotificationCategory,
@@ -21,7 +23,7 @@ import {
   toDisplayNotification,
   type DisplayNotification,
 } from '#features/notifications/utils/toDisplayNotification';
-import { RecommendedRecipeDocument } from '#features/recipes/ui/useRecommendedRecipe.generated';
+import { RecommendedRecipeDocument } from '#features/recipes/ui/useRecommendedRecipes.generated';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
 const mockToRecipeDetail = jest.fn();
@@ -237,7 +239,6 @@ describe('NotificationDetailScreen', () => {
         name: string;
         servings: number;
         totalTimeMinutes: number;
-        matchPercentage: number;
       } | null,
     ) => {
       const data: MockDataFor<typeof RecommendedRecipeDocument> = {
@@ -253,29 +254,31 @@ describe('NotificationDetailScreen', () => {
         result: { data },
       };
     };
-
-    it('lists each recipe as the recipes tab does, as it is now, and opens it', async () => {
+    const turkeyChili = {
+      name: 'Turkey Chili',
+      servings: 4,
+      totalTimeMinutes: 45,
+    };
+    const renderRecommendation = (
+      operationMocks: ReadonlyArray<MockedResponse>,
+    ) =>
       renderWithApollo(
         <NotificationDetailScreen
           route={makeRoute({ notification: recommendation })}
         />,
-        {
-          operationMocks: [
-            recipeAnswer('r-1', {
-              name: 'Turkey Chili',
-              servings: 4,
-              totalTimeMinutes: 45,
-              matchPercentage: 75,
-            }),
-            // Removed since it was recommended.
-            recipeAnswer('r-2', null),
-          ],
-        },
+        { operationMocks },
       );
+
+    it('lists each recipe as it is now, with the coverage it was recommended with, and opens it', async () => {
+      renderRecommendation([
+        recipeAnswer('r-1', turkeyChili),
+        // Removed since it was recommended.
+        recipeAnswer('r-2', null),
+      ]);
 
       expect(await screen.findByText('Turkey Chili')).toBeTruthy();
       expect(screen.getByText(/45 min • 4 servings/)).toBeTruthy();
-      expect(screen.getByText('75%')).toBeTruthy();
+      expect(screen.getByText('80%')).toBeTruthy();
       await waitFor(() => expect(screen.queryByText('Tacos')).toBeNull());
       expect(screen.queryByText(server.message)).toBeNull();
 
@@ -284,17 +287,55 @@ describe('NotificationDetailScreen', () => {
       expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'r-1' });
     });
 
-    it('shows what it recommended while the recipes cannot be read', () => {
-      renderWithApollo(
-        <NotificationDetailScreen
-          route={makeRoute({ notification: recommendation })}
-        />,
-        { operationMocks: [] },
-      );
+    it('keeps a recipe whose read failed, as it was recommended', async () => {
+      renderRecommendation([
+        {
+          request: {
+            query: RecommendedRecipeDocument,
+            variables: { id: 'r-1' },
+          },
+          error: new Error('Network request failed'),
+        },
+        recipeAnswer('r-2', { ...turkeyChili, name: 'Fish Tacos' }),
+      ]);
 
+      // The reads land in order: once the second shows, the first has failed.
+      expect(await screen.findByText('Fish Tacos')).toBeTruthy();
       expect(screen.getByText('Chili')).toBeTruthy();
       expect(screen.getByText('80%')).toBeTruthy();
-      expect(screen.getByText('Tacos')).toBeTruthy();
+    });
+
+    // `recipe` is nullable, so a resolver that throws answers null beside its
+    // error: that is a read that failed, not a recipe that is gone.
+    it('keeps a recipe the API answered null for with an error', async () => {
+      renderRecommendation([
+        {
+          request: {
+            query: RecommendedRecipeDocument,
+            variables: { id: 'r-1' },
+          },
+          result: {
+            data: { recipe: null },
+            errors: [new GraphQLError('Internal error', { path: ['recipe'] })],
+          },
+        },
+        recipeAnswer('r-2', { ...turkeyChili, name: 'Fish Tacos' }),
+      ]);
+
+      expect(await screen.findByText('Fish Tacos')).toBeTruthy();
+      expect(screen.getByText('Chili')).toBeTruthy();
+      expect(screen.getByText('80%')).toBeTruthy();
+    });
+
+    it('shows its message when every recipe is gone', async () => {
+      renderRecommendation([
+        recipeAnswer('r-1', null),
+        recipeAnswer('r-2', null),
+      ]);
+
+      expect(await screen.findByText(server.message)).toBeTruthy();
+      expect(screen.queryByText('Chili')).toBeNull();
+      expect(screen.queryByText('Tacos')).toBeNull();
     });
   });
 });
