@@ -1,4 +1,3 @@
-import { NetworkStatus } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -16,7 +15,6 @@ export function useShoppingListDetails(listId: string | undefined) {
     variables,
     loading,
     refetch,
-    networkStatus,
   } = useQuery(
     GetShoppingListDetailsDocument,
     listId ? { variables: { id: listId }, errorPolicy: 'ignore' } : skipToken,
@@ -35,7 +33,6 @@ export function useShoppingListDetails(listId: string | undefined) {
     null,
     listId ?? '',
   );
-  const isRefetching = networkStatus === NetworkStatus.refetch;
 
   // Read live, once, so downstream consumers (ownership helpers, ListSettings,
   // ShareList) read fragment fields directly and follow a role or status edit,
@@ -63,7 +60,6 @@ export function useShoppingListDetails(listId: string | undefined) {
     // `errorPolicy: 'ignore'` drops the error, so a missing list with nothing
     // preserved is the only sign a read failed.
     hasResult: shoppingList !== null,
-    isRefetching,
     refetch: () => (listId ? refetch() : Promise.resolve()),
     name: shoppingList?.name ?? '',
     collaborators,

@@ -1,8 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import type { TextInputProps } from 'react-native';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { RefreshControl, type TextInputProps } from 'react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
 import { kitTestIDs } from '#components/testIDs';
@@ -140,7 +140,6 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
         },
     loading: mockDetailsRead?.loading ?? false,
     hasResult: mockDetailsRead?.hasResult ?? true,
-    isRefetching: false,
     collaborators: mockDetailsRead ? [] : mockCollaborators,
     ownerships: mockDetailsRead ? [] : mockOwnerships,
     name: 'Test List',
@@ -234,6 +233,27 @@ describe('ShareList', () => {
   it('renders the title', () => {
     render(<ShareList route={route} />);
     expect(screen.getByText('Share List')).toBeTruthy();
+  });
+
+  // The flag is the screen's own: a pull answered at once (offline, from the
+  // cache) lets it go, and nothing the app refetches later sets it again.
+  it('spins only while its own pull runs, even one answered at once', async () => {
+    mockRefetch.mockResolvedValue(undefined);
+    render(<ShareList route={route} />);
+    const control = () =>
+      screen.UNSAFE_getByType(RefreshControl).props as {
+        refreshing: boolean;
+        onRefresh: () => void;
+      };
+    expect(control().refreshing).toBe(false);
+
+    act(() => {
+      control().onRefresh();
+    });
+    expect(control().refreshing).toBe(true);
+
+    await waitFor(() => expect(control().refreshing).toBe(false));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows the loading state, not an empty share screen, on a cold read', () => {

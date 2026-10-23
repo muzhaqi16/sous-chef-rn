@@ -202,6 +202,13 @@ const PRODUCTION_SYNTAX = [
     message:
       'Do not cast a string to a translation key — it compiles a key the copy may not declare, which renders as a raw dot-path. Type the field that stores the key `TranslationKey` where it is declared, or check a key built from runtime data with `isTranslationKey` from `#/i18n`.',
   },
+  {
+    id: 'refetchNetworkStatus',
+    selector:
+      "MemberExpression[object.name='NetworkStatus'][property.name='refetch']",
+    message:
+      'Do not read a refresh from `NetworkStatus.refetch`: every resync (foreground, API reachable, socket reconnect, queue drained) refetches too, so a spinner or busy state shows for a refresh nobody asked for. Let the refresh set its own flag: `executeRefreshWithFinally(refetch, setRefreshing)` from #/utils/finallyHelpers.',
+  },
 ];
 
 const HOOK_BODY =

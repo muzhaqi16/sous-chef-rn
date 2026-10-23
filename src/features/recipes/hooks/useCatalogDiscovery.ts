@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { NetworkStatus } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useScreenFocusEffect } from '#platform/screen';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
@@ -234,21 +234,22 @@ export function useCatalogDiscovery(
     found.length === 0 &&
     (page ? isDegraded(page) : active.error !== undefined);
 
+  // Set by `refresh` only: a resync refetches the same page unseen.
+  const [refreshing, setRefreshing] = useState(false);
   const refresh = async () => {
     if (mode === 'none') return;
     if (mode === 'random' && page && !isDegraded(page)) {
       setShuffle({ of: page, order: shuffledIndices(answered.length) });
       return;
     }
-    await active.refetch();
+    await executeRefreshWithFinally(active.refetch, setRefreshing);
   };
 
   return {
     mode,
     rows: found.slice(0, visible.count),
     loading,
-    refreshing:
-      mode !== 'none' && active.networkStatus === NetworkStatus.refetch,
+    refreshing: mode !== 'none' && refreshing,
     failed,
     refresh,
     pantryItems,

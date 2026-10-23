@@ -238,6 +238,11 @@ const PRODUCTION_FIXTURES: Fixture[] = [
     invalid: ['const key = `errors.field.${field}` as TranslationKey;'],
     valid: ['const key: TranslationKey = "errors.field.name";'],
   },
+  {
+    id: 'refetchNetworkStatus',
+    invalid: ['const refreshing = networkStatus === NetworkStatus.refetch;'],
+    valid: ['const fetching = networkStatus === NetworkStatus.loading;'],
+  },
 ];
 
 const TEST_FIXTURES: Fixture[] = [

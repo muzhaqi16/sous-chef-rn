@@ -1,5 +1,6 @@
-import { NetworkStatus } from '@apollo/client';
+import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { RecipeSuggestionsDocument } from './useServerRecipeSuggestions.generated';
@@ -13,23 +14,25 @@ const SUGGESTION_COUNT = 20;
  */
 export function useServerRecipeSuggestions(enabled: boolean) {
   const today = useToday();
-  const { data, loading, error, networkStatus, refetch } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     RecipeSuggestionsDocument,
     enabled ? { variables: { first: SUGGESTION_COUNT, today } } : skipToken,
   );
   const edges = data?.recipeSuggestions.edges;
+  // Set by `refresh` only: a resync refetches the same page unseen.
+  const [refreshing, setRefreshing] = useState(false);
 
   return {
     rows: (edges ?? []).map(
       (edge): RecipeRow => ({ source: 'suggestion', edge }),
     ),
     loading: enabled && loading && !data,
-    refreshing: enabled && networkStatus === NetworkStatus.refetch,
+    refreshing: enabled && refreshing,
     /** It answered with nothing, or could not answer: someone else may fill in. */
     unanswered: enabled && (edges?.length === 0 || (!!error && !data)),
     refresh: async () => {
       if (!enabled) return;
-      await refetch();
+      await executeRefreshWithFinally(refetch, setRefreshing);
     },
   };
 }

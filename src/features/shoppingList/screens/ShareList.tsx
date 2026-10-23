@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
@@ -24,6 +24,7 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SubScreen } from '#components/templates/SubScreen';
 import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -42,12 +43,13 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     shoppingList,
     loading,
     hasResult,
-    isRefetching,
     collaborators,
     ownerships,
     name: listName,
     refetch,
   } = useShoppingListDetails(listId);
+  // Set by this screen's refresh only: a resync refetches the list unseen.
+  const [refreshing, setRefreshing] = useState(false);
 
   const isHomeLinked = !!shoppingList?.homeId;
 
@@ -135,9 +137,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     <SubScreen
       title={t('shoppingListScreens.shareTitle')}
       refresh={{
-        refreshing: isRefetching,
+        refreshing,
         onRefresh: () => {
-          void refetch();
+          void executeRefreshWithFinally(refetch, setRefreshing);
         },
       }}
       state={{

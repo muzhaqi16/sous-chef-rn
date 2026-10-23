@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ActivityIndicator,
   Modal as RNModal,
@@ -165,65 +164,24 @@ export const SuccessActivityIndicator = withUnistyles(
  *  by the host's top edge; iOS shifts the control's frame and needs none. */
 const REFRESH_SPINNER_OFFSET = Platform.OS === 'android' ? 40 : 0;
 
-interface RefreshProps {
-  refreshing?: boolean;
-  onRefresh?: () => void;
-}
-
-/**
- * Spins only for a refresh the user pulled for: a refetch the app starts itself
- * (a resync) runs unseen. iOS strands a spinner whose refresh ends while its
- * screen is covered, and a resync often does.
- */
-function pullOnly<P extends RefreshProps>(Control: React.ComponentType<P>) {
-  const PullOnly = (props: P) => {
-    const { refreshing, onRefresh } = props;
-    const [pull, setPull] = useState<'none' | 'pulled' | 'running'>('none');
-    if (pull === 'pulled' && refreshing) setPull('running');
-    if (pull === 'running' && !refreshing) setPull('none');
-    const handleRefresh = () => {
-      setPull('pulled');
-      const done: unknown = onRefresh?.();
-      // A refresh that changed nothing never set `refreshing`.
-      if (done instanceof Promise) {
-        const settle = () => setPull(at => (at === 'pulled' ? 'none' : at));
-        done.then(settle, settle);
-      }
-    };
-    return (
-      <Control
-        {...props}
-        refreshing={pull === 'none' ? false : refreshing}
-        onRefresh={handleRefresh}
-      />
-    );
-  };
-  return PullOnly;
-}
+// Android draws the arc on a disc that defaults to white in every theme.
+const refreshTheme = (theme: Theme) => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+  progressBackgroundColor: theme.colors.surface,
+  progressViewOffset: REFRESH_SPINNER_OFFSET,
+});
 
 // RNGH's ScrollView clones `block` into its refreshControl, and only a
 // `createNativeWrapper` control routes it to `useNativeGesture`; RN's drops it.
-// Android draws the arc on a disc that defaults to white in every theme.
-const UniRefreshControl = withUnistyles(RefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-  progressBackgroundColor: theme.colors.surface,
-  progressViewOffset: REFRESH_SPINNER_OFFSET,
-}));
-export const ThemedRefreshControl =
-  pullOnly<React.ComponentProps<typeof UniRefreshControl>>(UniRefreshControl);
+export const ThemedRefreshControl = withUnistyles(RefreshControl, refreshTheme);
 
 /** The same theming on RN's own control, for plain RN `ScrollView` hosts. RNGH's
  *  throws at render without an RNGH scrollable above it, so pick by host. */
-const UniPlainRefreshControl = withUnistyles(RNRefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-  progressBackgroundColor: theme.colors.surface,
-  progressViewOffset: REFRESH_SPINNER_OFFSET,
-}));
-export const PlainScrollRefreshControl = pullOnly<
-  React.ComponentProps<typeof UniPlainRefreshControl>
->(UniPlainRefreshControl);
+export const PlainScrollRefreshControl = withUnistyles(
+  RNRefreshControl,
+  refreshTheme,
+);
 
 /** Theme-reactive Icon wrapper: re-renders so derived `tone`/`color` stay in sync. */
 export const ThemedIcon = withUnistyles(Icon);
