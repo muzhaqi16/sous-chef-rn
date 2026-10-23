@@ -1396,6 +1396,37 @@ enum CategoryType {
   SYSTEM
 }
 
+input ChangePantryItemItemInput {
+  idempotencyKey: ID
+  """
+  The catalog item the stack is; an item merged into another names that one
+  """
+  itemId: ID!
+  pantryItemId: ID!
+  """The stack's version, as last read"""
+  version: Int!
+}
+
+type ChangePantryItemItemPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+  """
+  True when the receipt lines the stock was checked in from now read as the
+  new item for the household. False for stock added by hand or checked in
+  before line text was kept, and for a member who may not add items to the
+  household.
+  """
+  receiptCorrectionRecorded: Boolean!
+  storageLocation: StorageLocation
+}
+
+"""
+Result of ChangePantryItemItem. Select on ChangePantryItemItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union ChangePantryItemItemResult = ChangePantryItemItemPayload | ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
+
 input ChangePantryItemUnitInput {
   idempotencyKey: ID
   """
@@ -9152,6 +9183,18 @@ type Mutation {
   bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BulkUpsertItemsByExternalSourceResult!
   """Stop a shopping list repeating: clears its recurrence."""
   cancelRecurring(input: CancelRecurringInput!): CancelRecurringResult!
+  """
+  Move a stack onto another catalog item, for an entry recorded as the wrong
+  item. Its batches, quantity, costs, unit, location, thresholds, package
+  size, portions, tags, the barcode it was scanned from, its brand and its
+  history stay; its name follows the new item while it is still the old
+  item's name. One transaction, recorded on the stack's history as
+  ITEM_CHANGED. A pantry already holding the new item in this stack's unit
+  refuses it with DuplicatePantryItemError naming that stack; the stack's own
+  item is refused on `itemId`. Stock checked in from a receipt teaches the
+  household's next receipt to read those lines as the new item.
+  """
+  changePantryItemItem(input: ChangePantryItemItemInput!): ChangePantryItemItemResult!
   """
   Move a stack onto another tracking unit. Every batch is re-denominated
   at the same value, with its package content, the stack's defaults and its
