@@ -28,25 +28,6 @@ Example (type):
 directive @auth on FIELD_DEFINITION | OBJECT
 
 """
-Mark a field whose value is derived on each read from rows beyond its own
-object's columns and relations: a per-viewer figure, an aggregate, a
-cross-entity match, an analytic.
-
-It is metadata for clients and changes no execution. A client cache refreshes
-such a field by re-querying it, not by selecting it in every mutation that
-returns the object: a write to the object does not store the value, and
-reading it costs a computation each time.
-
-A column or a relation of the object never carries it.
-
-Example:
-  type Recipe {
-    matchPercentage: Int! @computed
-  }
-"""
-directive @computed on FIELD_DEFINITION
-
-"""
 Mark a field as supporting OPTIONAL authentication.
 
 - If the caller provides a valid JWT, the resolver sees a populated
