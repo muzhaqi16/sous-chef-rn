@@ -40,7 +40,6 @@ export interface SessionEndOptions {
 export interface ResetOptions {
   auth?: boolean;
   ui?: boolean;
-  preferences?: boolean;
   clearApolloCache?: boolean;
 }
 
@@ -105,7 +104,6 @@ const runSessionEnd = async (
     await createResetManager(set, get).resetStore({
       auth: true,
       ui: true,
-      preferences: false,
       clearApolloCache: true,
     });
     if (options?.deliberate) get().setNavigationState('auth');
@@ -121,9 +119,6 @@ export const createResetManager = (set: SetState, get: GetState) => ({
       // and would fire against a cleared session.
       getApolloResetBridge()?.cancelTokenRefresh();
 
-      // Under `auth`, not `preferences`: a sign-out resets with
-      // `preferences: false`, so anything filed there survives it on a shared
-      // device.
       Object.assign(newState, SESSION_SCOPED_STATE);
 
       // SESSION_SCOPED_STATE only reaches the ROOT store; feature-owned stores
@@ -133,17 +128,6 @@ export const createResetManager = (set: SetState, get: GetState) => ({
 
     if (resetOptions.ui) {
       Object.assign(newState, TRANSIENT_UI_STATE);
-    }
-
-    // Keeps theme and language unless FULL_RESET.
-    if (resetOptions.preferences) {
-      Object.assign(newState, {
-        onBoardingStep: null,
-      });
-
-      // Idempotent, and deliberately in both branches: ONBOARDING_RESET
-      // (auth: false, preferences: true) must still empty feature stores.
-      resetSessionScopedStores();
     }
 
     if (resetOptions.clearApolloCache) {
@@ -199,8 +183,8 @@ export const createResetManager = (set: SetState, get: GetState) => ({
 
 const clearAuthFromStorage = async () => {
   try {
-    // Stored logins (biometrics) deliberately survive a logout; only a full
-    // reset or an explicit user action clears them.
+    // The session's tokens only: a stored sign-in (biometrics) outlives the
+    // session, and only the biometric service removes it.
     await secureStore().clearSessionTokens();
 
     storage.remove('accessToken');

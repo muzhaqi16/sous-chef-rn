@@ -132,20 +132,6 @@ async function applyRegionCurrencyDefault(
   );
 }
 
-// --- User preferences helpers (direct Zustand access) ---
-
-function getUserPreferences(targetUserId: string) {
-  const store = useStore.getState();
-
-  return {
-    trackCredentialPromptShown: () => {
-      store.setUserNavigationState(targetUserId, {
-        lastCredentialPromptShown: Date.now(),
-      });
-    },
-  };
-}
-
 // The masked AuthPayload resolved into a plain LoginUser via the Apollo cache.
 interface ResolvedAuthPayload {
   accessToken: string;
@@ -249,12 +235,6 @@ async function handleLogin(
   bootstrapUserStore(user);
   void applyRegionCurrencyDefault(user);
 
-  if (user.id) {
-    store.setUserNavigationState(user.id, {
-      lastLoginTimestamp: Date.now(),
-    });
-  }
-
   logger.info('Auth success: Login successful');
   sessionHost().afterSignIn();
   incrementLoginCount(user.id);
@@ -286,7 +266,6 @@ async function handleLogin(
   // the user-change effect from forcing it meanwhile.
   if (gate === 'rememberMe' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    getUserPreferences(user.id).trackCredentialPromptShown();
     return true;
   }
 

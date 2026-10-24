@@ -51,8 +51,7 @@ export const useConfigurableSettings = () => {
     selectCurrency,
   } = useCurrencyPreference();
   const { checkStoredCredentials, getBiometricInfo } = biometricService;
-  const { resetBiometricDeclination, markBiometricEnabled } =
-    useAuthPreferences();
+  const { markBiometricEnabled } = useAuthPreferences();
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -108,9 +107,6 @@ export const useConfigurableSettings = () => {
     setShowBiometricModal(false);
     if (enabled) {
       setBiometricEnabled(true);
-
-      // Reset biometric declination state since user manually enabled it
-      resetBiometricDeclination();
       markBiometricEnabled();
     } else {
       // Ensure the toggle reflects the current state if setup failed/cancelled

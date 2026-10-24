@@ -84,11 +84,9 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
 });
 const mockForgetStoredSignIn = jest.fn();
 
-const mockResetBiometricDeclination = jest.fn();
 const mockMarkBiometricEnabled = jest.fn();
 jest.mock('#hooks/auth/useAuthPreferences', () => ({
   useAuthPreferences: jest.fn(() => ({
-    resetBiometricDeclination: mockResetBiometricDeclination,
     markBiometricEnabled: mockMarkBiometricEnabled,
   })),
 }));
@@ -892,7 +890,6 @@ describe('useConfigurableSettings', () => {
         await modal.props.onComplete(true);
       });
 
-      expect(mockResetBiometricDeclination).toHaveBeenCalled();
       expect(mockMarkBiometricEnabled).toHaveBeenCalled();
     });
 

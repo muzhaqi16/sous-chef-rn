@@ -14,8 +14,8 @@ import { operationNameOf } from './utils/documentOperation';
 import { forgetAnswersSinceSwitch } from './answeredSinceSwitch';
 
 /**
- * Centralized Apollo cleanup utility for logout
- * Handles cache clearing, subscription cancellation, and error suppression
+ * The Apollo half of every session end: stops in-flight work and the socket,
+ * then clears the cache and its persisted copies.
  */
 export class LogoutCleanup {
   /**

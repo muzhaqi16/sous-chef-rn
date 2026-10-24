@@ -21,26 +21,12 @@ export enum OnBoardingSteps {
 }
 
 interface UserNavigationState {
-  lastRoute?: string;
-  onboardingProgress?: string;
-  lastLoginTimestamp?: number;
   hasCompletedOnboarding?: boolean;
   /** The device-region currency default has been applied once for this account. */
   currencyDefaultApplied?: boolean;
-  onboardingStartedAt?: number;
-  onboardingCompletedAt?: number;
-  skippedOnboardingSteps?: string[];
   isNewUser?: boolean;
-  biometricSetupOffered?: boolean;
-  // Post-login biometric prompt tracking
-  postLoginBiometricPromptShown?: boolean;
-  postLoginBiometricPromptCount?: number;
-  lastBiometricPromptDeclined?: number;
-  biometricPromptRemindLater?: boolean;
-  // Enhanced authentication flow tracking
   biometricDeclinedPermanently?: boolean;
   credentialPromptDeclined?: boolean;
-  lastCredentialPromptShown?: number;
   // User chose "skip for now" on the email verification screen. Lets an
   // unverified account reach the app instead of being parked on a screen it
   // can't leave when the verification email never arrives. Cleared on every

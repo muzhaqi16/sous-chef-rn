@@ -97,7 +97,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         expect(mockSet).toHaveBeenCalled();
@@ -107,7 +106,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         const firstCall = mockSet.mock.calls[0][0];
@@ -126,7 +124,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
 
@@ -141,7 +138,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: false,
           ui: true,
-          preferences: false,
           clearApolloCache: false,
         });
 
@@ -157,7 +153,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: false,
           ui: true,
-          preferences: false,
           clearApolloCache: false,
         });
         const firstCall = mockSet.mock.calls[0][0];
@@ -168,25 +163,21 @@ describe('resetManager', () => {
         expect(firstCall.tutorialResetGeneration).toBeUndefined();
       });
 
-      it('resets preferences when preferences option is true', async () => {
-        // Seeded, or the feature-store assertions below pass on an already-empty
-        // store and prove nothing.
+      it('empties the feature stores when auth option is true', async () => {
+        // Seeded, or the assertions below pass on an already-empty store and
+        // prove nothing.
         useNotificationStore
           .getState()
           .linkExpirationData('n1', { pantryItemName: 'Milk' });
         useBarcodeScannerStore.getState().showBottomSheet();
 
         await resetManager.resetStore({
-          auth: false,
+          auth: true,
           ui: false,
-          preferences: true,
           clearApolloCache: false,
         });
-        const firstCall = mockSet.mock.calls[0][0];
-        expect(firstCall.onBoardingStep).toBeNull();
-        // Feature stores are cleared through the session-scoped registry rather
-        // than by spreading their initial state into the root — and on this
-        // branch too, so ONBOARDING_RESET still empties them.
+        // Through the session-scoped registry, not by spreading their initial
+        // state into the root.
         expect(useNotificationStore.getState().pendingExpirationLinks).toEqual(
           {},
         );
@@ -199,7 +190,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: false,
           ui: false,
-          preferences: false,
           clearApolloCache: true,
         });
         expect(mockSet).toHaveBeenCalled();
@@ -210,7 +200,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: false,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         expect(mockSet).toHaveBeenCalled();
@@ -223,7 +212,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         expect(clearSessionTokens).toHaveBeenCalled();
@@ -236,7 +224,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         expect(clearSessionTokens).toHaveBeenCalled();
@@ -257,7 +244,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: true,
         });
 
@@ -281,7 +267,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: true,
           ui: false,
-          preferences: false,
           clearApolloCache: true,
         });
 
@@ -296,7 +281,6 @@ describe('resetManager', () => {
         await resetManager.resetStore({
           auth: false,
           ui: false,
-          preferences: false,
           clearApolloCache: false,
         });
         const firstCall = mockSet.mock.calls[0][0];

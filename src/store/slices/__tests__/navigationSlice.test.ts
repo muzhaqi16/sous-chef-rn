@@ -90,18 +90,22 @@ describe('navigationSlice', () => {
   describe('user navigation state', () => {
     it('sets user navigation state', () => {
       const store = createTestStore();
-      store.getState().setUserNavigationState('user-1', { lastRoute: '/home' });
+      store
+        .getState()
+        .setUserNavigationState('user-1', { verificationSkipped: true });
       expect(store.getState().getUserNavigationState('user-1')).toEqual({
-        lastRoute: '/home',
+        verificationSkipped: true,
       });
     });
 
     it('merges user navigation state', () => {
       const store = createTestStore();
-      store.getState().setUserNavigationState('user-1', { lastRoute: '/home' });
+      store
+        .getState()
+        .setUserNavigationState('user-1', { verificationSkipped: true });
       store.getState().setUserNavigationState('user-1', { isNewUser: true });
       expect(store.getState().getUserNavigationState('user-1')).toEqual({
-        lastRoute: '/home',
+        verificationSkipped: true,
         isNewUser: true,
       });
     });
@@ -113,7 +117,9 @@ describe('navigationSlice', () => {
 
     it('clears user navigation state', () => {
       const store = createTestStore();
-      store.getState().setUserNavigationState('user-1', { lastRoute: '/home' });
+      store
+        .getState()
+        .setUserNavigationState('user-1', { verificationSkipped: true });
       store.getState().clearUserNavigationState('user-1');
       expect(store.getState().getUserNavigationState('user-1')).toBeNull();
     });

@@ -20,8 +20,6 @@ export const useAuthPreferences = () => {
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
-      biometricPromptRemindLater: false,
-      lastBiometricPromptDeclined: undefined,
       biometricDeclinedPermanently: false,
     });
   };
@@ -32,16 +30,6 @@ export const useAuthPreferences = () => {
 
     setUserNavigationState(targetUserId, {
       credentialPromptDeclined: true,
-      lastCredentialPromptShown: Date.now(),
-    });
-  };
-
-  const resetBiometricDeclination = (userId?: string) => {
-    const targetUserId = userId ?? user?.id;
-    if (!targetUserId) return;
-
-    setUserNavigationState(targetUserId, {
-      biometricDeclinedPermanently: false,
     });
   };
 
@@ -49,6 +37,5 @@ export const useAuthPreferences = () => {
     markBiometricDeclined,
     markBiometricEnabled,
     markCredentialPromptDeclined,
-    resetBiometricDeclination,
   };
 };

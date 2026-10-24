@@ -38,8 +38,6 @@ export const BiometricSetupScreen = () => {
     if (user?.id) {
       setUserNavigationState(user.id, {
         hasCompletedOnboarding: true,
-        onboardingCompletedAt: Date.now(),
-        biometricSetupOffered: true,
         isNewUser: false,
       });
     }
