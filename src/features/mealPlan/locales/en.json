@@ -18,6 +18,8 @@
     "startDateRequiredMessage": "Please select a start date.",
     "failedToCreate": "Failed to create meal plan.",
     "needsThePlan": "Open the plan first so its meals are available.",
+    "addNeedsPlan": "Create a meal plan first, then add meals to it.",
+    "noAddPermission": "You can view this plan but not add meals to it.",
     "needsTheTemplate": "Open the template first so its meals are available.",
     "daily": "Daily",
     "custom": "Custom"

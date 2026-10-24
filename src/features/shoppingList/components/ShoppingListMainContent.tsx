@@ -394,6 +394,8 @@ export const ShoppingListMainContent: React.FC<
     : t('labels.loading');
   // Every way to add is one tap from here, as on Recipes.
   const addDisabledReason = permissions.canAddItems ? undefined : addRefusal;
+  // An add handed over from Today waits for this, not for the refusal.
+  const addPending = !permissions.resolved;
   useTabBarAddMenu([
     {
       key: 'search',
@@ -406,6 +408,7 @@ export const ShoppingListMainContent: React.FC<
         openAddItemSheet();
       },
       disabledReason: addDisabledReason,
+      pending: addPending,
     },
     {
       key: 'barcode',
@@ -414,6 +417,7 @@ export const ShoppingListMainContent: React.FC<
       onPress: () =>
         toBarcode({ source: 'shoppingList', shoppingListId: currentListId }),
       disabledReason: addDisabledReason,
+      pending: addPending,
     },
     {
       key: 'manual',
@@ -421,6 +425,7 @@ export const ShoppingListMainContent: React.FC<
       icon: 'create-outline',
       onPress: openAddItemManually,
       disabledReason: addDisabledReason,
+      pending: addPending,
     },
   ]);
 

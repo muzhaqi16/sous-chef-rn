@@ -20,23 +20,15 @@ describe('uiSlice', () => {
   });
 
   describe('cross-tab add hand-off', () => {
-    it('hands the add to the tab it names, once', () => {
+    it('holds the add for its tab until cleared', () => {
       const store = createTestStore();
       store.getState().setPendingTabAdd({ tab: 'Pantry', actionKey: 'search' });
 
-      expect(store.getState().takePendingTabAdd('Pantry')).toEqual({
+      expect(store.getState().pendingTabAdd).toEqual({
         tab: 'Pantry',
         actionKey: 'search',
       });
-      expect(store.getState().takePendingTabAdd('Pantry')).toBeNull();
-    });
-
-    // The user reached another tab first; the add must not fire later.
-    it('drops an add when another tab gains focus first', () => {
-      const store = createTestStore();
-      store.getState().setPendingTabAdd({ tab: 'Pantry' });
-
-      expect(store.getState().takePendingTabAdd('Recipe')).toBeNull();
+      store.getState().clearPendingTabAdd();
       expect(store.getState().pendingTabAdd).toBeNull();
     });
   });

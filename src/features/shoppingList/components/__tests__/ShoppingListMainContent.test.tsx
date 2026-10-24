@@ -614,6 +614,14 @@ describe('ShoppingListMainContent', () => {
       );
     });
 
+    // An add Today handed over waits for the answer instead of showing it.
+    it('marks the adds as waiting on the answer', () => {
+      render(<ShoppingListMainContent screenData={withoutDetails()} />);
+
+      const [entries] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entries.map(entry => entry.pending)).toEqual([true, true, true]);
+    });
+
     it('waits rather than offering a retry while the answer is still coming', () => {
       const { queryByTestId } = render(
         <ShoppingListMainContent
@@ -642,6 +650,7 @@ describe('ShoppingListMainContent', () => {
       expect(entry?.disabledReason).toBe(
         t('shoppingListScreen.noAddPermission'),
       );
+      expect(entry?.pending).toBe(false);
     });
   });
 });

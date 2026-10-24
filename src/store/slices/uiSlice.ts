@@ -35,11 +35,8 @@ export interface UIState {
   // Actions
   setPendingPantryScrollToTop: (pending: boolean) => void;
   setPendingTabAdd: (pending: PendingTabAdd) => void;
-  /**
-   * Reads and clears in one step for the tab gaining focus. Another tab's add
-   * is dropped too: it was asked for a tab the user did not reach.
-   */
-  takePendingTabAdd: (tab: string) => PendingTabAdd | null;
+  /** Drops the add once it ran, said why it cannot, or its tab was left. */
+  clearPendingTabAdd: () => void;
   setPendingCroppedImage: (image: ImageFile | null) => void;
   /** Reads and clears in one step, so two screens cannot both collect it. */
   takePendingCroppedImage: () => ImageFile | null;
@@ -77,13 +74,10 @@ export const createUISlice: StateCreator<
     });
   },
 
-  takePendingTabAdd: tab => {
-    const pending = get().pendingTabAdd;
-    if (!pending) return null;
+  clearPendingTabAdd: () => {
     set(state => {
       state.pendingTabAdd = null;
     });
-    return pending.tab === tab ? pending : null;
   },
 
   setPendingCroppedImage: image => {
