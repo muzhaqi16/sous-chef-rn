@@ -4366,6 +4366,60 @@ enum Diet {
 }
 
 """
+One member restriction that a product, concept or recipe ingredient may
+break, with the strongest evidence for it. Nothing is ever stated as safe:
+the absence of an alert means only that the catalog holds no evidence.
+"""
+type DietaryAlert {
+  """
+  The evidence's own name: an allergen, an item, an analysis tag or a department
+  """
+  matched: String!
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  """The restriction the subject may break, as the home sees it"""
+  restriction: SharedDietaryRestriction!
+  """What kind of evidence raised the alert"""
+  source: DietaryAlertSource!
+  """CONTAINS or MAY_CONTAIN"""
+  state: DietaryAlertState!
+}
+
+"""
+What kind of evidence raised a dietary alert; the client writes the copy per kind.
+"""
+enum DietaryAlertSource {
+  """
+  An allergen the product declares, or one found in an ingredient's name; matched is its name
+  """
+  ALLERGEN
+  """
+  The subject is at or below an avoided catalog item; matched is that item's name
+  """
+  AVOIDED_ITEM
+  """
+  The store department the subject sits in, such as MEAT_SEAFOOD; only ever MAY_CONTAIN
+  """
+  DEPARTMENT
+  """
+  An Open Food Facts ingredients analysis, such as non-vegan; matched is the tag without its language prefix
+  """
+  INGREDIENTS_ANALYSIS
+}
+
+"""
+How strongly the evidence says a subject holds what a restriction avoids.
+"""
+enum DietaryAlertState {
+  """The evidence says the subject contains it"""
+  CONTAINS
+  """The evidence says only that the subject may contain it"""
+  MAY_CONTAIN
+}
+
+"""
 What a user eats and plans for: restrictions, tastes, daily nutrition goals
 and cooking limits. One per account. A meal plan linked to it measures its
 nutrition against these goals.
@@ -6172,6 +6226,32 @@ type Item {
   density: Float
   """Free-text description of the item, or null when none is recorded."""
   description: String
+  """
+  The home's dietary alerts for this item: one per restriction it may break,
+  among every ACTIVE member sharing with the home and the caller's own
+  restrictions, shared or not. Ordered by severity (ALLERGY to GOAL), then
+  CONTAINS before MAY_CONTAIN, then member order. A product is judged by its
+  declared allergens, its ingredients analysis and labels, its store
+  department and avoided items; a concept by the allergens its name names,
+  its department and avoided items. Unknown evidence raises nothing, and a
+  health goal never alerts. The caller must be an ACTIVE member of the home.
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
+  """
+  Other live products under this item's concept that raise no dietary alert
+  for the home and hold allergen or ingredient data, most popular first. Empty
+  for an unplaced product. Not a claim of safety: it lists products the
+  catalog holds no evidence against.
+  """
+  dietaryAlternatives(
+    """At most this many: default 5, at most 20"""
+    first: Int = 5
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [Item!]!
   """
   Unit that netWeight is stated in, for example oz. On an item returned by a
   barcode lookup, the unit of that barcode's figure when it has one.
@@ -14764,6 +14844,16 @@ type RecipeIngredient {
   unit, or when no seeded unit of the system shares its dimension.
   """
   convertedQuantity: ConvertedValue
+  """
+  The home's dietary alerts for this ingredient, as on Item.dietaryAlerts.
+  An ingredient is judged by the allergens its name and its linked item's
+  name name, the linked item's department, and avoided items through the
+  linked item's root; an unlinked ingredient by its name alone.
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
   estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
