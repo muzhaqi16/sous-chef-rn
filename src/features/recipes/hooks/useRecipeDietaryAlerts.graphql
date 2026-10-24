@@ -1,0 +1,49 @@
+# What a recipe's ingredients mean for the household, row by row, as one
+# server batch. Its own query, so the recipe's own read takes no home, and an
+# ingredient checked before still shows its alerts offline.
+#
+# It shares the cached `ingredientsConnection` with GetRecipe, whose first page
+# a write replaces: the connection's own fields (`pageInfo`, `totalCount`) are
+# selected as GetRecipe selects them, or each write leaves the recipe's read
+# incomplete and the page falls to "not found".
+query RecipeDietaryAlerts(
+  $recipeId: ID!
+  $homeId: ID!
+  $ingredientsFirst: Int!
+) {
+  recipe(id: $recipeId) {
+    id
+    ingredientsConnection(first: $ingredientsFirst) {
+      edges {
+        node {
+          id
+          dietaryAlerts(homeId: $homeId) {
+            state
+            membership {
+              id
+              userId
+              role
+              displayName
+            }
+            restriction {
+              id
+              diet
+              intolerance
+              healthGoal
+              item {
+                id
+                name
+              }
+              severity
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+}

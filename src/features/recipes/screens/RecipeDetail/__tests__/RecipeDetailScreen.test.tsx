@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { t } from '#/i18n';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { ModerationContentType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
@@ -62,6 +63,19 @@ jest.mock('#features/recipes/screens/useRecipeTags', () => ({
 
 jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
   useRecipeReviews: () => ({ state: {}, actions: {} }),
+}));
+
+const mockHousehold: {
+  check: string;
+  summary: unknown[];
+  rows: Record<string, unknown[]>;
+} = { check: 'none', summary: [], rows: {} };
+jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
+  useRecipeDietaryAlerts: () => ({
+    check: mockHousehold.check,
+    summary: mockHousehold.summary,
+    alertsFor: (id: string) => mockHousehold.rows[id] ?? [],
+  }),
 }));
 
 jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
@@ -562,6 +576,63 @@ describe('RecipeDetail', () => {
       expect(handleAddSingleIngredient).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'i2', name: 'Eggs' }),
       );
+    });
+
+    describe('for the household', () => {
+      const SHRIMP = {
+        id: 'r-shellfish',
+        memberName: 'Tani',
+        what: 'Shellfish',
+        state: 'CONTAINS',
+        severity: 'ALLERGY',
+        isDiet: false,
+      };
+      const BUTTER = {
+        id: 'r-vegan',
+        memberName: 'You',
+        what: 'Vegan',
+        state: 'CONTAINS',
+        severity: 'PREFERENCE',
+        isDiet: true,
+      };
+      afterEach(() => {
+        mockHousehold.check = 'none';
+        mockHousehold.summary = [];
+        mockHousehold.rows = {};
+      });
+
+      it('leads with who the recipe affects and flags each row', () => {
+        mockHousehold.check = 'checked';
+        mockHousehold.summary = [SHRIMP, BUTTER];
+        mockHousehold.rows = { i4: [BUTTER] };
+        const handleAddSingleIngredient = jest.fn();
+        renderIngredients({ handleAddSingleIngredient });
+
+        expect(screen.getByTestId('recipe-household-summary')).toBeTruthy();
+        expect(
+          screen.getByText(
+            t('dietaryAlerts.contains', { name: 'Tani', what: 'Shellfish' }),
+          ),
+        ).toBeTruthy();
+        // The summary and the butter row both say it.
+        expect(
+          screen.getAllByText(
+            t('dietaryAlerts.notDiet', { name: 'You', what: 'Vegan' }),
+          ),
+        ).toHaveLength(2);
+
+        fireEvent.press(screen.getByLabelText('Add Butter'));
+        expect(handleAddSingleIngredient).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'i4', name: 'Butter' }),
+        );
+      });
+
+      it('shows no summary when nobody is affected', () => {
+        mockHousehold.check = 'checked';
+        renderIngredients();
+
+        expect(screen.queryByTestId('recipe-household-summary')).toBeNull();
+      });
     });
 
     it('marks an added ingredient and stops adding it again', () => {

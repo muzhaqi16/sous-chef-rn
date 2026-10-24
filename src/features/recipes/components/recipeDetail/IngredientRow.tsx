@@ -2,6 +2,14 @@ import React from 'react';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { ListItem } from '#components/molecules/ListItem';
+import { StatusLine } from '#components/atoms/StatusLine';
+import { Text } from '#components/atoms/Text';
+import { rowType } from '#/theme/foundations/type';
+import {
+  householdAlertKey,
+  isStrictSeverity,
+  type HouseholdAlert,
+} from '#domain/dietary';
 import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { IconButton } from '#components/atoms/IconButton';
@@ -13,6 +21,8 @@ interface IngredientRowProps {
   ingredient: DisplayIngredient;
   isAdded: boolean;
   onAdd: () => void;
+  /** The household's alerts on this ingredient, each a status line under its name. */
+  alerts?: HouseholdAlert[];
 }
 
 /** One ingredient on the recipe page: photo or nothing, name, amount, add. */
@@ -20,6 +30,7 @@ export const IngredientRow: React.FC<IngredientRowProps> = ({
   ingredient,
   isAdded,
   onAdd,
+  alerts,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -41,12 +52,36 @@ export const IngredientRow: React.FC<IngredientRowProps> = ({
   const subtitle = [amount, price].filter(Boolean).join(' · ') || undefined;
   // The API resolves `image` to an absolute address, a catalog item's first.
   const imageUrl = ingredient.image ?? ingredient.item?.imageUrl;
+  const flagged = !!alerts && alerts.length > 0;
 
   return (
     <RowCard>
       <ListItem
         title={name}
-        subtitle={subtitle}
+        subtitle={
+          flagged ? (
+            <>
+              {!!subtitle && (
+                <Text role={rowType.subtitle} tone="secondary">
+                  {subtitle}
+                </Text>
+              )}
+              {alerts.map(alert => (
+                <StatusLine
+                  key={alert.id}
+                  tone={isStrictSeverity(alert.severity) ? 'error' : 'neutral'}
+                >
+                  {t(householdAlertKey(alert), {
+                    name: alert.memberName,
+                    what: alert.what,
+                  })}
+                </StatusLine>
+              ))}
+            </>
+          ) : (
+            subtitle
+          )
+        }
         leftElement={<RowThumbnail uri={imageUrl} />}
         rightElement={
           <IconButton

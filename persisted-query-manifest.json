@@ -1095,6 +1095,12 @@
       "body": "query RecipeCapture($id: ID!) {\n  recipeCapture(id: $id) {\n    id\n    status\n    source\n    alreadySaved\n    failure\n    recipe {\n      id\n      name\n      __typename\n    }\n    measurementRegion {\n      region\n      basis\n      __typename\n    }\n    warnings {\n      code\n      __typename\n    }\n    draft {\n      name\n      description\n      servings\n      prepTimeMinutes\n      cookTimeMinutes\n      imageUrl\n      sourceName\n      author\n      lines {\n        originalText\n        name\n        quantity\n        unit {\n          id\n          name\n          symbol\n          __typename\n        }\n        preparation\n        note\n        isOptional\n        section\n        confidence\n        item {\n          id\n          __typename\n        }\n        candidates {\n          score\n          item {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      steps {\n        step\n        text\n        section\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "487d7dac37faf4a6f9126cd0c7e18f8d44c1f4a88f872a80d445bc57eab4801d",
+      "name": "RecipeDietaryAlerts",
+      "type": "query",
+      "body": "query RecipeDietaryAlerts($recipeId: ID!, $homeId: ID!, $ingredientsFirst: Int!) {\n  recipe(id: $recipeId) {\n    id\n    ingredientsConnection(first: $ingredientsFirst) {\n      edges {\n        node {\n          id\n          dietaryAlerts(homeId: $homeId) {\n            state\n            membership {\n              id\n              userId\n              role\n              displayName\n              __typename\n            }\n            restriction {\n              id\n              diet\n              intolerance\n              healthGoal\n              item {\n                id\n                name\n                __typename\n              }\n              severity\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "445a062e963ac834862ac27794eaa0e44dfdae5016a73deefd16787bafe97a5c",
       "name": "RecipeSuggestions",
       "type": "query",
