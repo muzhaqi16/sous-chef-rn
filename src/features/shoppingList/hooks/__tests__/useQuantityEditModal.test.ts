@@ -12,10 +12,12 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   DisplayFormat,
+  EntryImageSource,
   ErrorCode,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { useQuantityEditModal } from '../useQuantityEditModal';
+import { resolveImageUrl } from '#utils/imageUtils';
 
 function updateMock() {
   return recordMock(UpdateShoppingListItemDocument, {
@@ -153,6 +155,65 @@ describe('useQuantityEditModal', () => {
     expect(item.unitId).toBe('unit-1');
     expect(item.category).toBe('Dairy');
     expect(item.version).toBe(3);
+  });
+
+  // The household's own photo leads the entry's row, so the sheet shows it too.
+  describe('with the real image resolver', () => {
+    beforeEach(() => {
+      jest
+        .mocked(resolveImageUrl)
+        .mockImplementation(
+          jest.requireActual<typeof import('#utils/imageUtils')>(
+            '#utils/imageUtils',
+          ).resolveImageUrl,
+        );
+    });
+    afterEach(() => {
+      jest.mocked(resolveImageUrl).mockImplementation(() => null);
+    });
+
+    it("shows the household's photo rather than the catalog's", () => {
+      const cache = seedCache([
+        {
+          __typename: 'ShoppingListItem',
+          id: 'item-1',
+          itemName: 'Milk',
+          quantity: 2,
+          category: 'Dairy',
+          unitName: 'gallon',
+          version: 3,
+          unit: {
+            __typename: 'Unit',
+            id: 'unit-1',
+            name: 'gallon',
+            symbol: 'gal',
+          },
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://cdn.example.com/household/milk.jpg',
+            source: EntryImageSource.Household,
+          },
+          item: {
+            __typename: 'Item',
+            id: 'milk',
+            imageUrl: 'https://cdn.example.com/catalog/milk.jpg',
+            images: [],
+          },
+        },
+      ]);
+
+      const { result } = renderHookWithApollo(
+        () => useQuantityEditModal({ items: [createItem()] }),
+        { cache },
+      );
+      act(() => {
+        result.current.openForItem('item-1');
+      });
+
+      expect(result.current.selectedItem?.imageUrl).toBe(
+        'https://cdn.example.com/household/milk.jpg',
+      );
+    });
   });
 
   it('includes itemUnits when unit exists', () => {
