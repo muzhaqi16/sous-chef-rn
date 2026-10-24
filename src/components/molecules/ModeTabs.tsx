@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { ScrollView, View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
@@ -30,13 +30,15 @@ interface ModeTabsProps<T extends string> {
   tabTestID?: (value: T) => string;
   /** A tab's screen rect once laid out, for a tutorial to point at. */
   onTabLayout?: (value: T, rect: TabRect) => void;
-  /** Controls for the view shown, at the row's end. The tabs never give them room. */
+  /** Controls for the view shown, at the row's end. They never give up room. */
   trailing?: React.ReactNode;
 }
 
 /**
  * Switches what a screen shows: text tabs at their own width, the chosen one
- * underlined. A choice inside a form is a `SegmentedControl` instead.
+ * underlined. Tabs too wide for the row (a long language at a large text size)
+ * scroll; the trailing controls keep their room. A choice inside a form is a
+ * `SegmentedControl` instead.
  */
 export const ModeTabs = <T extends string>({
   options,
@@ -94,27 +96,34 @@ export const ModeTabs = <T extends string>({
 
   return (
     <View style={styles.row}>
-      <View style={styles.tabs} accessibilityRole="tablist">
-        {options.map((option, index) => (
-          <ModeTab
-            key={option}
-            label={formatLabel(option)}
-            count={countOf?.(option)}
-            selected={index === selectedIndex}
-            onPress={() => {
-              if (index === selectedIndex) return;
-              HapticService.selection();
-              onChange(option);
-            }}
-            onLayout={event => recordSpan(index, event)}
-            onMeasure={
-              onTabLayout ? rect => onTabLayout(option, rect) : undefined
-            }
-            testID={tabTestID?.(option)}
-          />
-        ))}
-        <Animated.View style={[styles.underline, underlineStyle]} />
-      </View>
+      <ScrollView
+        horizontal
+        style={styles.tabsScroller}
+        showsHorizontalScrollIndicator={false}
+        alwaysBounceHorizontal={false}
+      >
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {options.map((option, index) => (
+            <ModeTab
+              key={option}
+              label={formatLabel(option)}
+              count={countOf?.(option)}
+              selected={index === selectedIndex}
+              onPress={() => {
+                if (index === selectedIndex) return;
+                HapticService.selection();
+                onChange(option);
+              }}
+              onLayout={event => recordSpan(index, event)}
+              onMeasure={
+                onTabLayout ? rect => onTabLayout(option, rect) : undefined
+              }
+              testID={tabTestID?.(option)}
+            />
+          ))}
+          <Animated.View style={[styles.underline, underlineStyle]} />
+        </View>
+      </ScrollView>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
     </View>
   );
@@ -174,9 +183,13 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Yields to the trailing controls, scrolling its tabs once they overflow.
+  tabsScroller: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
   tabs: {
     flexDirection: 'row',
-    flexShrink: 0,
     gap: theme.spacing.lg,
   },
   tab: {
@@ -191,7 +204,8 @@ const styles = StyleSheet.create(theme => ({
     bottom: 0,
   },
   trailing: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
