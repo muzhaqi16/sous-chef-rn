@@ -532,7 +532,11 @@
     "addMeal": "Add meal",
     "addRecipe": "Add recipe",
     "packageSize": "Package size",
-    "unit": "Unit"
+    "unit": "Unit",
+    "sources": {
+      "openFoodFacts": "Open Food Facts",
+      "usdaFoodDataCentral": "USDA FoodData Central"
+    }
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

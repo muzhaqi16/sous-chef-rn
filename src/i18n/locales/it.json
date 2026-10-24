@@ -532,7 +532,11 @@
     "addMeal": "Aggiungi pasto",
     "addRecipe": "Aggiungi ricetta",
     "packageSize": "Dimensione della confezione",
-    "unit": "Unità"
+    "unit": "Unità",
+    "sources": {
+      "openFoodFacts": "Open Food Facts",
+      "usdaFoodDataCentral": "USDA FoodData Central"
+    }
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",

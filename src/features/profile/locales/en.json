@@ -224,12 +224,10 @@
       "visit": "Open website",
       "publicDomain": "Public domain (a U.S. government work).",
       "openFoodFacts": {
-        "name": "Open Food Facts",
         "provides": "Product names, brands, package sizes and photos for scanned barcodes.",
         "licence": "Database: Open Database License (ODbL). Photos: Creative Commons Attribution-ShareAlike (CC BY-SA)."
       },
       "usdaFoodDataCentral": {
-        "name": "USDA FoodData Central",
         "provides": "Nutrition facts and product records."
       },
       "usdaFoodKeeper": {

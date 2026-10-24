@@ -532,7 +532,11 @@
     "addMeal": "Shto vakt",
     "addRecipe": "Shto recetë",
     "packageSize": "Madhësia e paketimit",
-    "unit": "Njësia"
+    "unit": "Njësia",
+    "sources": {
+      "openFoodFacts": "Open Food Facts",
+      "usdaFoodDataCentral": "USDA FoodData Central"
+    }
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
