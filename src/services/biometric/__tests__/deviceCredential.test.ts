@@ -71,7 +71,8 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 jest.mock('#/services/auth/deviceId');
 import { registerApolloClient } from '#/apollo/clientRegistry';
-import type { ApolloClient } from '@apollo/client';
+import { CombinedGraphQLErrors, type ApolloClient } from '@apollo/client';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { ensureDeviceId } from '#/services/auth/deviceId';
@@ -82,6 +83,7 @@ jest.mock('#native/storage/keychain', () => ({
   // rather than a password. Without a loadable slot the exchange is never
   // reached and every case below passes without asserting anything.
   loadCredentials: jest.fn().mockResolvedValue({
+    status: 'read',
     username: 'chef@example.com',
     password: 'dc1:secret',
   }),
@@ -126,7 +128,11 @@ const keychainMock = () =>
     loadCredentials: jest.Mock;
     saveCredentials: jest.Mock;
   }>('#native/storage/keychain');
-const STORED_SLOT = { username: 'chef@example.com', password: 'dc1:secret' };
+const STORED_SLOT = {
+  status: 'read',
+  username: 'chef@example.com',
+  password: 'dc1:secret',
+};
 const setHasStoredCredentials = () =>
   mockStoreState.setHasStoredCredentials as jest.Mock;
 
@@ -139,6 +145,7 @@ describe('logout and biometric credentials', () => {
     // read "was this called at all", which a sibling's call would answer for.
     mockQuery.mockClear();
     mockMutate.mockClear();
+    mockToastError.mockClear();
     mockMutate.mockResolvedValue({ data: {} });
     // The lookup that finds THIS device's credential so it can be revoked.
     mockQuery.mockResolvedValue({
@@ -303,6 +310,32 @@ describe('logout and biometric credentials', () => {
     );
   });
 
+  // A rate limit names its own deadline, and the server knows what is left of
+  // its budget: the hold-off is that deadline, not the client's own cooldown.
+  it("holds the next attempt off until the server's own retry deadline", async () => {
+    mockMutate.mockResolvedValueOnce({
+      data: undefined,
+      error: new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Too many attempts',
+            extensions: {
+              code: TopLevelErrorCode.OperationRateLimited,
+              retryAfter: 90,
+            },
+          },
+        ],
+      }),
+    });
+
+    expect(
+      await biometricService.signInWithDeviceCredential('chef@example.com'),
+    ).toBe(false);
+    expect(mockStoreState.registerBiometricRefusal).toHaveBeenCalledWith(
+      90_000,
+    );
+  });
+
   // The login screen renders the biometric button from `hasStoredCredentials`,
   // which no clear path writes — so a slot that has just been dropped keeps
   // offering a sign-in that can never work, and every tap is a dead end.
@@ -333,7 +366,9 @@ describe('logout and biometric credentials', () => {
     // the attempt that found it dead must take the button down itself.
     it('takes the affordance down on the attempt that finds the slot unusable', async () => {
       setHasStoredCredentials().mockClear();
-      keychainMock().loadCredentials.mockResolvedValueOnce(null);
+      keychainMock().loadCredentials.mockResolvedValueOnce({
+        status: 'unavailable',
+      });
       mockHasCredentials
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false);
@@ -345,9 +380,27 @@ describe('logout and biometric credentials', () => {
       expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
     });
 
+    // "Use manual login" or the back gesture: the person chose the password.
+    it('ends quietly, button kept, when the person dismisses the prompt', async () => {
+      setHasStoredCredentials().mockClear();
+      keychainMock().loadCredentials.mockResolvedValueOnce({
+        status: 'cancelled',
+      });
+
+      expect(
+        await biometricService.signInWithDeviceCredential('chef@example.com'),
+      ).toBe(false);
+
+      expect(mockToastError).not.toHaveBeenCalled();
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(setHasStoredCredentials()).not.toHaveBeenCalledWith(false);
+    });
+
     it('keeps it up when the attempt failed but the slot survived', async () => {
       setHasStoredCredentials().mockClear();
-      keychainMock().loadCredentials.mockResolvedValueOnce(null);
+      keychainMock().loadCredentials.mockResolvedValueOnce({
+        status: 'unavailable',
+      });
 
       await biometricService.signInWithDeviceCredential('chef@example.com');
 
@@ -471,6 +524,11 @@ describe('logout and biometric credentials', () => {
     await biometricService.signInWithDeviceCredential('chef@example.com');
 
     expect(mockClearCredentials).not.toHaveBeenCalled();
+    // The person touched the sensor; a sign-in that ends silently reads as a
+    // dead button.
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Something went wrong. Please try again.',
+    );
   });
 
   it('keeps them when a biometric sign-in resolves with a transport error', async () => {

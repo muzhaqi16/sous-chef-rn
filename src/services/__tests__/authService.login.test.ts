@@ -80,6 +80,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockHasCredentials.mockResolvedValue(true);
   mockLoadCredentials.mockResolvedValue({
+    status: 'read',
     username: INPUT.email,
     password: STORED_CREDENTIAL,
   });
@@ -185,6 +186,7 @@ describe('biometric sign-in — stored-credential lifecycle', () => {
   // so the slot is dropped without the secret reaching the network at all.
   it('never presents a pre-migration password, and clears the slot', async () => {
     mockLoadCredentials.mockResolvedValue({
+      status: 'read',
       username: INPUT.email,
       password: INPUT.password, // unprefixed: the old shape
     });

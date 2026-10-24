@@ -29,6 +29,7 @@ jest.mock('#store', () => ({
 jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn().mockResolvedValue(undefined),
   loadCredentials: jest.fn().mockResolvedValue({
+    status: 'read',
     username: 'chef@example.com',
     password: 'dc1:secret',
   }),

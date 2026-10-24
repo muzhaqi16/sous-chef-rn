@@ -822,3 +822,15 @@ grep -c "UseBoundsForWidth" node_modules/react-native/ReactAndroid/src/main/java
 ```
 
 Guarded by `__tests__/androidTextLineBreaking.test.ts`.
+
+### react-native-keychain rejects a cancelled prompt by its code
+
+Verified 2026-10-23 on an SM-S908U1 (Android 16) with `react-native-keychain` 10.0.0.
+
+**Claim:** dismissing the biometric prompt that `getGenericPassword` raises is a rejection like any other, so only its text tells a person's choice from a failure. Android rejects every prompt outcome as `E_CRYPTO_FAILED` with the message `code: <n>, msg: <text>`. The prompt's "Use manual login" button gave `code: 13`, and the system back gesture gave `code: 10, msg: Authentication canceled`; androidx's `ERROR_CANCELED` is 5. iOS rejects `errSecUserCanceled` with code `-128` and "User canceled the operation." That half is read from `RNKeychainManager.m` and not probed on a device. `isKeychainPromptCancelled` reads these, `loadCredentials` answers `cancelled`, and a fingerprint sign-in then ends without an error toast.
+
+Re-check: in the dev app on the phone, wrap `nativeModuleProxy.RNKeychainManager.getGenericPasswordForOptions` to record its rejection, tap "Use Biometric Login" and dismiss the prompt both ways. On iOS:
+
+```
+grep -n "errSecUserCanceled" -A1 node_modules/react-native-keychain/ios/RNKeychainManager/RNKeychainManager.m
+```

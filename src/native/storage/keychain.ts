@@ -25,6 +25,7 @@ import { appConfig } from '#/config/appConfig';
 import {
   isDataStoreContention,
   isKeychainKeyInvalidated,
+  isKeychainPromptCancelled,
 } from '#/utils/errors/libraryErrorMessages';
 
 // From `appConfig.identity.keychainNamespace`, but byte-identical for THIS app:
@@ -202,14 +203,18 @@ export async function saveCredentials(
   });
 }
 
+/** A read of one account's stored credentials. `cancelled`: the person dismissed the prompt. */
+export type CredentialsRead =
+  | { status: 'read'; username: string; password: string }
+  | { status: 'cancelled' }
+  | { status: 'unavailable' };
+
 /**
  * Retrieve a specific account's stored credentials, prompting for biometrics.
  * A slot invalidated by a biometric enrolment change is cleared rather than
  * left behind, so the login screen stops offering a prompt that cannot succeed.
  */
-export async function loadCredentials(
-  email: string,
-): Promise<{ username: string; password: string } | null> {
+export async function loadCredentials(email: string): Promise<CredentialsRead> {
   try {
     const creds = await getGenericPassword({
       service: credentialsServiceFor(email),
@@ -222,15 +227,21 @@ export async function loadCredentials(
       // A resolved-but-empty read means the entry is gone while its
       // unprotected indicator may remain. Cancellation rejects instead.
       await discardInvalidatedCredentials(email);
-      return null;
+      return { status: 'unavailable' };
     }
-    return { username: creds.username, password: creds.password };
+    return {
+      status: 'read',
+      username: creds.username,
+      password: creds.password,
+    };
   } catch (error) {
     if (isKeychainKeyInvalidated(error)) {
       await discardInvalidatedCredentials(email);
     }
     // Cancellation and transient failures keep the slot: the person can retry.
-    return null;
+    return isKeychainPromptCancelled(error)
+      ? { status: 'cancelled' }
+      : { status: 'unavailable' };
   }
 }
 

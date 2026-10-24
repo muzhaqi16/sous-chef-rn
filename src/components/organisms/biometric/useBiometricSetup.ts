@@ -117,11 +117,11 @@ export const useBiometricSetup = ({
     void executeWithLoadingState(
       async () => {
         if (mode === 'settings' && hasExistingCredentials) {
-          const credentials = await biometricService.loadStoredCredentials(
-            userEmail,
-          );
-          if (credentials) {
+          const read = await biometricService.loadStoredCredentials(userEmail);
+          if (read.status === 'read') {
             onComplete(true);
+          } else if (read.status === 'cancelled') {
+            onComplete(false);
           } else {
             alertService.alert(
               t('biometricSetup.authRequiredTitle'),

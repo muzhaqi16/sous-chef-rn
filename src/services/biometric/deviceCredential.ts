@@ -159,7 +159,9 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     const stored = await loadStoredCredentials(email);
-    if (!stored) {
+    // Dismissing the prompt is choosing the password; nothing went wrong.
+    if (stored.status === 'cancelled') return false;
+    if (stored.status === 'unavailable') {
       logger.info('Failed to load stored credentials');
       toastService.error(t('auth.biometricUnavailableOnDevice'));
       return false;
@@ -224,6 +226,7 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     // never the server saying these credentials are dead — and the branches
     // above already handle the one case that is.
     logger.error('Auto-login error:', error);
+    toastService.error(t('errors.codes.genericRetry'));
     return false;
   }
 }

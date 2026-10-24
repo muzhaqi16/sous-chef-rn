@@ -34,6 +34,7 @@ const { biometricService: mockBiometricService } = jest.requireMock(
 const mockGetBiometricInfo = mockBiometricService.getBiometricInfo;
 const mockEnrol = mockBiometricService.enrolDeviceCredential;
 const mockCheckStoredCredentials = mockBiometricService.checkStoredCredentials;
+const mockLoadStoredCredentials = mockBiometricService.loadStoredCredentials;
 
 const defaultProps: {
   visible: boolean;
@@ -127,6 +128,53 @@ describe('BiometricSetupModal', () => {
       // input and no password is read on this path.
       expect(mockEnrol).toHaveBeenCalledWith('test@example.com');
       expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('in settings, with a sign-in already stored', () => {
+    const enableWithSlot = async () => {
+      mockCheckStoredCredentials.mockResolvedValue(true);
+      const user = userEvent.setup();
+      render(<BiometricSetupModal {...defaultProps} mode="settings" />);
+      await waitFor(() => {
+        expect(screen.getByText('Enable Now')).toBeTruthy();
+      });
+      await user.press(screen.getByText('Enable Now'));
+    };
+
+    it('turns it on once the prompt unlocks the slot', async () => {
+      mockLoadStoredCredentials.mockResolvedValue({
+        status: 'read',
+        email: 'test@example.com',
+        credential: 'dc1:secret',
+      });
+      await enableWithSlot();
+
+      await waitFor(() => {
+        expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
+      });
+      expect(mockEnrol).not.toHaveBeenCalled();
+    });
+
+    // Dismissing the prompt is the person's answer, not a failure to explain.
+    it('leaves it off without an alert when the prompt is dismissed', async () => {
+      mockLoadStoredCredentials.mockResolvedValue({ status: 'cancelled' });
+      await enableWithSlot();
+
+      await waitFor(() => {
+        expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('explains when the slot cannot be read', async () => {
+      mockLoadStoredCredentials.mockResolvedValue({ status: 'unavailable' });
+      await enableWithSlot();
+
+      await waitFor(() => {
+        expect(alertService.alert).toHaveBeenCalled();
+      });
+      expect(defaultProps.onComplete).not.toHaveBeenCalled();
     });
   });
 

@@ -93,27 +93,39 @@ export async function removeCredentials(email?: string): Promise<boolean> {
   }
 }
 
+/** A read of the slot: `cancelled` when the person dismissed the prompt. */
+export type StoredSignInRead =
+  | ({ status: 'read' } & StoredDeviceCredential)
+  | { status: 'cancelled' }
+  | { status: 'unavailable' };
+
 export async function loadStoredCredentials(
   email?: string,
-): Promise<StoredDeviceCredential | null> {
-  if (!email) return null;
+): Promise<StoredSignInRead> {
+  if (!email) return { status: 'unavailable' };
   const store = useStore.getState();
 
   try {
-    const credentials = await loadCredentials(email);
-
-    if (!credentials) {
-      // `loadCredentials` discards a slot the device can never open again; the
-      // button is rendered from the flag, so the attempt that found it dead
-      // takes it down. A cancelled prompt keeps the slot, and the button.
-      if (!(await checkStoredCredentials(email))) {
-        store.setHasStoredCredentials(false);
-      }
-      return null;
+    const read = await loadCredentials(email);
+    if (read.status === 'read') {
+      return {
+        status: 'read',
+        email: read.username,
+        credential: read.password,
+      };
     }
-    return { email: credentials.username, credential: credentials.password };
+    // `loadCredentials` discards a slot the device can never open again; the
+    // button is rendered from the flag, so the attempt that found it dead
+    // takes it down. A cancelled prompt keeps the slot, and the button.
+    if (
+      read.status === 'unavailable' &&
+      !(await checkStoredCredentials(email))
+    ) {
+      store.setHasStoredCredentials(false);
+    }
+    return read;
   } catch (error) {
     logger.error('Error loading credentials:', error);
-    return null;
+    return { status: 'unavailable' };
   }
 }
