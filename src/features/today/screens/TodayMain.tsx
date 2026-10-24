@@ -7,7 +7,7 @@ import { Screen } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
-import { StatCard } from '#components/molecules/StatCard';
+import { StatCard } from '#features/today/components/StatCard';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import {
