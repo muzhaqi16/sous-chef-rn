@@ -493,6 +493,45 @@ it('shows the plan covering today, not the one last opened on Meal Plan', async 
   useStore.setState({ selectedMealPlanId: null });
 });
 
+it('plans nothing for today when no plan covers it', async () => {
+  const plans = recordMock(GetMealPlansDocument, {
+    data: {
+      mealPlans: connectionOf([
+        { id: 'mp-old', startDate: '2026-03-01', endDate: '2026-03-07' },
+      ]),
+    },
+  });
+  const plan = recordMock(GetMealPlanDocument, {
+    data: {
+      mealPlan: {
+        id: 'mp-old',
+        startDate: '2026-03-01',
+        endDate: '2026-03-07',
+        mealPlanItemsConnection: connectionOf([
+          {
+            id: 'mi-old',
+            date: '2026-03-05',
+            mealType: MealType.Dinner,
+            customMealName: null,
+            recipe: { id: 'r1', name: 'Shakshuka' },
+          },
+        ]),
+      },
+    },
+  });
+  const { result } = renderOverview([
+    countsMock(),
+    plans,
+    plan,
+    suggestionsMock(),
+    listsMock(),
+  ]);
+
+  await waitFor(() => expect(plan.fired).toHaveLength(1));
+  await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+  expect(result.current.overview.meals).toEqual([]);
+});
+
 describe("a new day's counts", () => {
   /** Yesterday's counts, as a cold start restores them: `stats` has no day in its key. */
   function cacheWithYesterdaysCounts() {
