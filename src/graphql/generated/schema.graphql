@@ -221,6 +221,28 @@ enum AcquisitionMethod {
   SHOPPING_LIST
 }
 
+input AddBrandToListInput {
+  """A catalog brand, such as a scanned product's Item.variationBrand"""
+  brandId: ID!
+  brandListId: ID!
+  """The owner's own note, at most 500 characters"""
+  reason: String
+}
+
+type AddBrandToListPayload {
+  """The list as it stands after the add"""
+  brandList: BrandList!
+  """The entry: the one already there when the brand was listed before"""
+  brandListEntry: BrandListEntry!
+}
+
+"""
+Result of AddBrandToList. Select on AddBrandToListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union AddBrandToListResult = AddBrandToListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 input AddItemsToShoppingListInput {
   items: [BatchAddShoppingListItemInput!]!
   shoppingListId: ID!
@@ -787,6 +809,50 @@ input BrandFilters {
   Case-insensitive name match: anywhere in the name from 3 characters, the start of the name below that
   """
   search: String
+}
+
+"""
+A list of brands a user keeps for themselves, to be told when a product they
+look at carries one. Private to its owner; at most 20 per user.
+"""
+type BrandList {
+  createdAt: DateTime!
+  """
+  The owner's switch: only an enabled list is matched by Item.listMatches.
+  """
+  enabled: Boolean!
+  """Its brands, oldest first; at most 100."""
+  entries: [BrandListEntry!]!
+  id: ID!
+  name: String!
+  updatedAt: DateTime!
+  version: Int!
+}
+
+"""One brand on a user's list."""
+type BrandListEntry {
+  brand: Brand!
+  createdAt: DateTime!
+  id: ID!
+  """The owner's own note on why the brand is listed"""
+  reason: String
+  version: Int!
+}
+
+"""
+One of the caller's enabled lists naming a product's brand, or a brand above
+it through Brand.parent.
+"""
+type BrandListMatch {
+  """
+  The product's brand the entry reached: the scanned barcode's brand, or one
+  of the product's own brands.
+  """
+  brand: Brand!
+  brandList: BrandList!
+  entry: BrandListEntry!
+  """True when the entry names a brand above this one, through Brand.parent"""
+  viaParent: Boolean!
 }
 
 input BrandOpsInput {
@@ -2029,6 +2095,30 @@ input CreateBrandInput {
   parentId: ID
 }
 
+input CreateBrandListInput {
+  """Whether the list is matched from the start; true when omitted"""
+  enabled: Boolean
+  """
+  Optional client-generated permanent ID (CUID2). Offline-first clients mint
+  it so a replayed create answers IDEMPOTENT_REPLAY instead of duplicating.
+  When omitted, the server generates one.
+  """
+  id: ID
+  """1 to 100 characters"""
+  name: String!
+}
+
+type CreateBrandListPayload {
+  brandList: BrandList!
+}
+
+"""
+Result of CreateBrandList. Select on CreateBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateBrandListResult = ConflictError | CreateBrandListPayload | ForbiddenError | NotFoundError | ValidationError
+
 type CreateBrandPayload {
   brand: Brand!
 }
@@ -3223,6 +3313,31 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError
+
+input DeleteBrandListInput {
+  id: ID!
+}
+
+type DeleteBrandListPayload {
+  """
+  The removed brand list, or null when it was already gone: a replay that
+  converged as success. See converged.
+  """
+  brandList: BrandList
+  """
+  True when this call CONVERGED on a brand list that was already gone: a
+  no-op success that changed nothing and published nothing. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
+}
+
+"""
+Result of DeleteBrandList. Select on DeleteBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeleteBrandListResult = ConflictError | DeleteBrandListPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCookingLogInput {
   id: ID!
@@ -6467,6 +6582,14 @@ type Item {
   """
   level: ItemLevel!
   """
+  The caller's enabled brand lists naming this product's brand, or a brand
+  above it through Brand.parent: one match per list, the nearest. A product
+  reached through a scanned barcode is checked by that barcode's brand; any
+  other product by its own brands; a concept by none. Empty for an
+  anonymous caller.
+  """
+  listMatches: [BrandListMatch!]!
+  """
   The product record (package size, brand, images) of the barcode a lookup
   returned this item for, whether that barcode is the item's primary, an
   alternate, or known only through the record. An add names it as
@@ -9382,6 +9505,11 @@ type Mutation {
   """
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
   """
+  Put a catalog brand on one of the caller's lists. A brand already there
+  converges: the entry is answered as it stands, its reason unchanged.
+  """
+  addBrandToList(input: AddBrandToListInput!): AddBrandToListResult!
+  """
   Batch add multiple items to a shopping list; a single add is a batch of
   one. Max 50 items per batch.
   
@@ -9504,6 +9632,8 @@ type Mutation {
   correctPantryItemPackageSize(input: CorrectPantryItemPackageSizeInput!): CorrectPantryItemPackageSizeResult!
   """Create a new brand."""
   createBrand(input: CreateBrandInput!): CreateBrandResult!
+  """Create a brand list of the caller's own."""
+  createBrandList(input: CreateBrandListInput!): CreateBrandListResult!
   """Create a new category."""
   createCategory(input: CreateCategoryInput!): CreateCategoryResult!
   """Create a new home."""
@@ -9625,6 +9755,8 @@ type Mutation {
   declineShoppingListInvite(input: DeclineShoppingListInviteInput!): DeclineShoppingListInviteResult!
   """Delete the current user's account."""
   deleteAccount: DeleteAccountResult!
+  """Delete a list and its entries. Converges on a list already gone."""
+  deleteBrandList(input: DeleteBrandListInput!): DeleteBrandListResult!
   """
   Delete one of the caller's cooking logs; Recipe.totalCookingLogs drops by
   one. Stock the cook deducted from the pantry stays deducted: deleting the
@@ -9930,6 +10062,8 @@ type Mutation {
   This is the primary way to add a device from mobile apps.
   """
   registerDevice(input: RegisterDeviceInput!): RegisterDeviceResult!
+  """Take a brand off a list. Converges on a brand no longer listed."""
+  removeBrandFromList(input: RemoveBrandFromListInput!): RemoveBrandFromListResult!
   """
   Remove an item from a shopping list. Removing a line that is already removed
   converges: success with shoppingListItem null and converged true.
@@ -10009,6 +10143,13 @@ type Mutation {
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
+  """
+  Rename a list or switch it on or off. Another user's list is a
+  NotFoundError, as if it did not exist.
+  """
+  updateBrandList(input: UpdateBrandListInput!): UpdateBrandListResult!
+  """Change an entry's reason."""
+  updateBrandListEntry(input: UpdateBrandListEntryInput!): UpdateBrandListEntryResult!
   """Update a collaborator's granular permissions on a shopping list."""
   updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsInput!): UpdateCollaboratorPermissionsResult!
   """Update a collaborator's role on a shopping list."""
@@ -13124,6 +13265,8 @@ type Query {
     """The id of the Brand to read"""
     id: ID!
   ): Brand
+  """The caller's own brand lists, oldest first."""
+  brandLists: [BrandList!]!
   """
   Get brands with filtering and cursor-based pagination. The root brands are
   `filters: { isRoot: true }`.
@@ -15763,6 +15906,32 @@ enum ReligiousDiet {
   HALAL
   KOSHER
 }
+
+input RemoveBrandFromListInput {
+  brandId: ID!
+  brandListId: ID!
+}
+
+type RemoveBrandFromListPayload {
+  """
+  The removed brand list entry, or null when it was already gone: a replay that
+  converged as success. See converged.
+  """
+  brandListEntry: BrandListEntry
+  """
+  True when this call CONVERGED on a brand list entry that was already gone: a
+  no-op success that changed nothing and published nothing. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
+}
+
+"""
+Result of RemoveBrandFromList. Select on RemoveBrandFromListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RemoveBrandFromListResult = ConflictError | ForbiddenError | NotFoundError | RemoveBrandFromListPayload | ValidationError
 
 input RemoveItemFromShoppingListInput {
   id: ID!
@@ -18927,6 +19096,47 @@ input UpcLookupInput {
   """Format hint for validation and normalisation; AUTO when omitted"""
   format: UpcFormat
 }
+
+input UpdateBrandListEntryInput {
+  id: ID!
+  """The owner's own note, at most 500 characters; null clears it"""
+  reason: String
+  """As on UpdateBrandListInput.version"""
+  version: Int
+}
+
+type UpdateBrandListEntryPayload {
+  brandListEntry: BrandListEntry!
+}
+
+"""
+Result of UpdateBrandListEntry. Select on UpdateBrandListEntryPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateBrandListEntryResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandListEntryPayload | ValidationError
+
+input UpdateBrandListInput {
+  enabled: Boolean
+  id: ID!
+  name: String
+  """
+  The version the client holds: the write applies only at it, and a stale one
+  is refused with VERSION_CONFLICT. Omitted, the last write wins.
+  """
+  version: Int
+}
+
+type UpdateBrandListPayload {
+  brandList: BrandList!
+}
+
+"""
+Result of UpdateBrandList. Select on UpdateBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateBrandListResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandListPayload | ValidationError
 
 input UpdateCollaboratorPermissionsFieldsInput {
   canAddItems: Boolean
