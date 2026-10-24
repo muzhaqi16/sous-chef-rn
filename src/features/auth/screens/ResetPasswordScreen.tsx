@@ -144,9 +144,15 @@ export const ResetPasswordScreen: React.FC = () => {
       }
 
       // Only now: the link is genuine, and completing the reset requires the
-      // old session to be gone, through the one sign-out. A reset revokes the
-      // device credential anyway, so the stored sign-in goes with it.
-      if (holdsSessionTokens(useStore.getState())) await authService.logout();
+      // old session to be gone, through the one sign-out. Opening a link is not
+      // the signed-in account choosing to leave, and it may be for another
+      // account, so its stored sign-in and queued writes stay.
+      if (holdsSessionTokens(useStore.getState())) {
+        await authService.logout({
+          keepBiometricCredentials: true,
+          keepQueuedWrites: true,
+        });
+      }
       setTokenCheck('valid');
     };
 

@@ -6,6 +6,7 @@ import { STORAGE_KEY } from '#/store/persistedKeys';
 import { requirePlatform } from '#platform/install';
 import { runSessionTeardown } from './sessionTeardown';
 import { whileSessionEnds } from './sessionEnding';
+import { holdsSessionTokens } from './slices/authSlice';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
@@ -79,6 +80,21 @@ type SetState = (state: Partial<RootState>) => void;
 type GetState = () => RootState;
 
 let sessionEndInFlight: Promise<void> | null = null;
+
+/**
+ * What a sign-out adds to the end it joined. A sign-in after that end is a new
+ * session, with nothing of the old one left to drop.
+ */
+const finishDeliberateEnd = async (
+  get: GetState,
+  deliberate: NonNullable<SessionEndOptions['deliberate']>,
+): Promise<void> => {
+  if (holdsSessionTokens(get())) return;
+  await whileSessionEnds(async () => {
+    deliberate.handOffQueue?.();
+    get().setNavigationState('auth');
+  });
+};
 
 const runSessionEnd = async (
   set: SetState,
@@ -159,8 +175,14 @@ export const createResetManager = (set: SetState, get: GetState) => ({
   endSession: async (reason: SessionEndReason, options?: SessionEndOptions) => {
     // Every transport reporting a dead session fires this unawaited; a second
     // pass would re-run the teardown under the gate the first one holds. A
-    // sign-out joining a server end finds the session already gone.
-    if (sessionEndInFlight) return sessionEndInFlight;
+    // sign-out joining a server end finds the session already gone, but still
+    // does what only the person's choice may.
+    if (sessionEndInFlight) {
+      await sessionEndInFlight;
+      if (options?.deliberate)
+        await finishDeliberateEnd(get, options.deliberate);
+      return;
+    }
 
     sessionEndInFlight = runSessionEnd(set, get, reason, options);
     return sessionEndInFlight.finally(() => {

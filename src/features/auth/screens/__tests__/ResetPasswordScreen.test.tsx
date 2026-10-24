@@ -244,10 +244,16 @@ describe('ResetPasswordScreen', () => {
   });
 
   // Through the one sign-out, never a bare `clearAuth`: that left the refresh
-  // token live, the socket open and the account's cache on disk.
-  it('signs the session out only once the server accepts the token', async () => {
+  // token live, the socket open and the account's cache on disk. Without the
+  // sign-out's discards: the link may be another account's, and opening it is
+  // not this account choosing to drop its stored sign-in or unsynced writes.
+  it('signs the session out only once the server accepts the token, keeping its work', async () => {
     await renderOnForm();
     expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledWith({
+      keepBiometricCredentials: true,
+      keepQueuedWrites: true,
+    });
   });
 
   it('signs nobody out when no session is held', async () => {

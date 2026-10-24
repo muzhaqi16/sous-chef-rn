@@ -562,6 +562,11 @@ interface LogoutOptions {
    * FALSE has the host drop it and revoke it server-side.
    */
   keepBiometricCredentials?: boolean;
+  /**
+   * KEEP the account's queued offline writes for its next sign-in: the session
+   * ends, but the account did not choose to sign out (a password-reset link).
+   */
+  keepQueuedWrites?: boolean;
 }
 
 async function logout(options?: LogoutOptions): Promise<void> {
@@ -582,9 +587,10 @@ async function logout(options?: LogoutOptions): Promise<void> {
 
     // The one session-end body every end runs. Deliberate: only a sign-out
     // the person chose may discard the offline queue's unsynced work.
+    const discardsQueue = !!currentUserId && !options?.keepQueuedWrites;
     await store.endSession('signed_out', {
       deliberate: {
-        handOffQueue: currentUserId
+        handOffQueue: discardsQueue
           ? () => queueManager.onLogout(currentUserId)
           : undefined,
       },
