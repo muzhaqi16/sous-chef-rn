@@ -70,8 +70,14 @@ export function useTodayOverview() {
         }
       : skipToken,
   );
+  // `skipToken` keeps the last run's data: a pantry since switched or deleted
+  // has no counts to show here.
+  const countsData =
+    pantry && countsResult.variables.id === pantry.id
+      ? countsResult.data
+      : undefined;
   const answeredKey =
-    countsResult.data && !countsResult.loading && !countsResult.error
+    countsData && !countsResult.loading && !countsResult.error
       ? `${countsResult.variables.id}:${countsResult.variables.today}`
       : null;
   if (countsKey && !isConfirmed && answeredKey === countsKey) {
@@ -79,7 +85,7 @@ export function useTodayOverview() {
   }
   // A failed read answers `undefined`; the pantry's last counts for the day stand.
   const stats = usePreservedQueryData(
-    countsResult.data ? countsResult.data.pantry?.stats ?? null : undefined,
+    countsData ? countsData.pantry?.stats ?? null : undefined,
     null,
     `${pantry?.id ?? ''}:${today}`,
   );
@@ -128,7 +134,7 @@ export function useTodayOverview() {
   const countsState = useDataState({
     loading: countsResult.loading || (!pantry && !noPantry),
     error: countsResult.error,
-    hasResult: noPantry || stats !== null || countsResult.data !== undefined,
+    hasResult: noPantry || stats !== null || countsData !== undefined,
     isEmpty: false,
   });
   const state: DataState = isFirstRun ? 'empty' : countsState;

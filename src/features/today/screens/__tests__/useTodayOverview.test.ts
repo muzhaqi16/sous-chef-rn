@@ -434,6 +434,18 @@ describe('a home with no pantry', () => {
     expect(result.current.overview.counts).toBeNull();
   });
 
+  // `skipToken` keeps the deleted pantry's last answer; it is not this home's.
+  it('shows no counts once the pantry that had them is deleted', async () => {
+    const { result, rerender } = renderOverview();
+    await waitFor(() => expect(result.current.overview.counts).not.toBeNull());
+
+    inHouseholdWithoutPantry({ homeLoaded: true });
+    rerender({});
+
+    await waitFor(() => expect(result.current.overview.counts).toBeNull());
+    expect(result.current.overview.state).toBe('ready');
+  });
+
   it('is a first run with no plans or lists either', async () => {
     inHouseholdWithoutPantry({ homeLoaded: true });
     const { result } = renderOverview([
