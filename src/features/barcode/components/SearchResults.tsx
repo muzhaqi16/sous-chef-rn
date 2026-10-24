@@ -20,6 +20,8 @@ import {
 import { PackSizeSheet, type PackSizeOutcome } from './PackSizeSheet';
 import { useStoreModeCart } from '#features/shoppingList/hooks/useStoreModeCart';
 import { PurchaseAmountSheet } from '#features/shoppingList/ui/PurchaseAmountSheet';
+import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDietaryAlerts';
+import { HouseholdAlertsSection } from './HouseholdAlertsSection';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -31,6 +33,8 @@ export interface SearchResultsProps {
   source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
+  /** Opens another barcode's result, for a household alternative. */
+  onOpenBarcode?: (barcode: string) => void;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -43,6 +47,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   source,
   pantryId,
   shoppingListId,
+  onOpenBarcode,
 }) => {
   const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
@@ -58,6 +63,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     source === 'storeMode' ? shoppingListId : undefined,
     item,
   );
+  const household = useProductDietaryAlerts(item.id);
 
   const onPantryAdded = () => {
     setIsAdded(true);
@@ -245,6 +251,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       <DataAttributionNotices
         attributions={item.dataAttributions ?? []}
         centered
+      />
+
+      <HouseholdAlertsSection
+        {...household}
+        onOpenAlternative={
+          onOpenBarcode
+            ? alternative => {
+                if (alternative.primaryUpc) {
+                  onOpenBarcode(alternative.primaryUpc);
+                }
+              }
+            : undefined
+        }
       />
 
       <ActionButtons

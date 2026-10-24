@@ -30,6 +30,18 @@
     },
     "addToCart": "Añadir al carrito",
     "addToCartWithPrice": "Añadir con precio",
-    "alreadyInCart": "Ya está en el carrito"
+    "alreadyInCart": "Ya está en el carrito",
+    "household": {
+      "title": "Para tu hogar",
+      "contains": "{{name}}: contiene {{what}}",
+      "mayContain": "{{name}}: puede contener {{what}}",
+      "notDiet": "{{name}}: no es {{what}}",
+      "mayNotDiet": "{{name}}: puede no ser {{what}}",
+      "checkLabel": "Revisa siempre la etiqueta: los datos del producto pueden estar incompletos.",
+      "stale": "Comprobado antes; puede no estar al día.",
+      "needsConnection": "Conéctate a internet para comprobarlo para tu hogar.",
+      "alternatives": "Otros parecidos sin avisos",
+      "openAlternative": "Abrir {{name}}"
+    }
   }
 }

@@ -9,4 +9,9 @@ export const barcodeTestIDs = {
   /** The pack-size prompt a product without a package size asks before adding. */
   packSizeInput: 'pack-size-input',
   packSizeConfirm: 'pack-size-confirm',
+  /** The household's dietary alerts on a scan, and its offline note. */
+  householdAlerts: 'household-alerts',
+  householdUnchecked: 'household-unchecked',
+  /** A product of the same kind that raises no alert. */
+  householdAlternative: (itemId: string) => `household-alternative-${itemId}`,
 };

@@ -1071,6 +1071,12 @@
       "body": "query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {\n  previewPantryItemUnitChange(input: $input) {\n    version\n    method\n    exact\n    quantityIgnored\n    fromUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    toUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    quantityBefore\n    heldQuantityBefore\n    quantityAfter\n    heldQuantityAfter\n    batches {\n      batchId\n      quantityBefore\n      quantityAfter\n      __typename\n    }\n    minQuantityAfter\n    restockQuantityAfter\n    dropsNetWeight\n    dropsPortions\n    dropsThresholds\n    conflictingPantryItemId\n    displayAmountAfter {\n      quantity\n      text\n      __typename\n    }\n    refusal {\n      code\n      field\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "09fbb32a798668d412b266ad46038af78b1c3e490f4f46765b3615a2fe94338f",
+      "name": "ProductDietaryAlerts",
+      "type": "query",
+      "body": "query ProductDietaryAlerts($itemId: ID!, $homeId: ID!) {\n  item(id: $itemId) {\n    id\n    dietaryAlerts(homeId: $homeId) {\n      state\n      membership {\n        id\n        userId\n        role\n        displayName\n        __typename\n      }\n      restriction {\n        id\n        diet\n        intolerance\n        healthGoal\n        item {\n          id\n          name\n          __typename\n        }\n        severity\n        __typename\n      }\n      __typename\n    }\n    dietaryAlternatives(homeId: $homeId, first: 5) {\n      id\n      name\n      imageUrl\n      primaryUpc\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "84bf641e4fdfad3e4e189a2b96fbb4e2cd85a9bb648b3387654c3e90cda22300",
       "name": "RandomCatalogRecipes",
       "type": "query",

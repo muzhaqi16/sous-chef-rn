@@ -76,6 +76,15 @@ jest.mock('../ProductResultCard', () =>
 );
 jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 
+// Alerts have their own tests; here the household has nothing to check.
+jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
+  useProductDietaryAlerts: () => ({
+    check: 'none',
+    alerts: [],
+    alternatives: [],
+  }),
+}));
+
 const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
   item: {
