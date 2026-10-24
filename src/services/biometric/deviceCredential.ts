@@ -298,8 +298,9 @@ async function revokeWithinBudget(): Promise<void> {
 }
 
 /**
- * `refused` was already reported by the auth handlers; `unsaved` (no device id,
- * keychain failure) was not, so the caller says so in its own words.
+ * `refused` was already reported by the auth handlers unless `quiet`; `unsaved`
+ * (no device id, keychain failure) was not, so the caller says so in its own
+ * words.
  */
 export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
 
@@ -308,7 +309,10 @@ export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
  * session alone, so no password is retained. Issuing supersedes any credential
  * this device already held.
  */
-async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
+async function enrolDeviceCredential(
+  email: string,
+  options?: { quiet?: boolean },
+): Promise<EnrolOutcome> {
   try {
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
@@ -316,7 +320,7 @@ async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
       return 'unsaved';
     }
 
-    const issued = await authService.issueDeviceCredential(deviceId);
+    const issued = await authService.issueDeviceCredential(deviceId, options);
     if (issued.status === 'refused') return 'refused';
 
     const stored = await storeCredentials(
@@ -386,7 +390,10 @@ export async function renewStoredSignIn(
   email: string,
 ): Promise<StoredSignInRenewal> {
   if (!(await hasCredentials(email))) return 'none';
-  if ((await enrolDeviceCredential(email)) === 'enrolled') return 'renewed';
+  // Quiet: the password change's own message says the sign-in is now off.
+  if ((await enrolDeviceCredential(email, { quiet: true })) === 'enrolled') {
+    return 'renewed';
+  }
   logger.warn('Could not renew the device credential; dropping the slot');
   await removeCredentials(email);
   forgetBiometricSlot();

@@ -651,6 +651,7 @@ describe('renewing a stored sign-in after a password change', () => {
   beforeEach(() => {
     mockMutate.mockReset();
     mockClearCredentials.mockClear();
+    mockToastError.mockClear();
     mockHasCredentials.mockResolvedValue(true);
     keychainMock().saveCredentials.mockClear();
     setHasStoredCredentials().mockClear();
@@ -693,5 +694,8 @@ describe('renewing a stored sign-in after a password change', () => {
     expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
     expect(mockClearCredentials).toHaveBeenCalledWith(EMAIL);
     expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
+    // The password change's own message says the sign-in is off; a second
+    // toast for the same refusal would stack under it.
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });

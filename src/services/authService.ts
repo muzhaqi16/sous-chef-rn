@@ -9,6 +9,7 @@
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { reconnectWebSocket } from '#/apollo/links/wsLink';
 import { errorService, isTransportFailure } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
@@ -500,6 +501,7 @@ async function exchangeDeviceCredential(
  */
 async function issueDeviceCredential(
   deviceId: string,
+  { quiet = false }: { quiet?: boolean } = {},
 ): Promise<{ status: 'issued'; credential: string } | { status: 'refused' }> {
   const operation = 'Enrol device credential';
   const result = await requireApolloClient().mutate({
@@ -511,9 +513,14 @@ async function issueDeviceCredential(
   if (payload) return { status: 'issued', credential: payload.credential };
 
   const refusal = result.data?.issueDeviceCredential;
-  if (refusal && 'code' in refusal)
+  // `quiet`: the caller's own message says what the refusal costs.
+  if (quiet) {
+    logger.warn(`${operation} refused`, refusal ?? result.error);
+  } else if (refusal && 'code' in refusal) {
     handleRejectedAuthPayload(refusal, operation);
-  else if (result.error) handleAuthError(result.error, operation);
+  } else if (result.error) {
+    handleAuthError(result.error, operation);
+  }
   return { status: 'refused' };
 }
 
@@ -541,6 +548,8 @@ async function adoptPasswordChangeSession(
     refreshToken: session.refreshToken,
   });
   if (write !== 'stored') return 'discarded';
+  // As a refresh does: the socket was opened on a token the change revoked.
+  reconnectWebSocket();
   const { email } = store.user;
   if (!email) return 'none';
   return sessionHost().renewStoredSignIn(email);
