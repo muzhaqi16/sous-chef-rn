@@ -765,6 +765,28 @@ describe('a device credential the device could not store', () => {
     await waitFor(() => expect(revokes()).toHaveLength(1));
   });
 
+  it('is logged as possibly live when the revoke cannot reach the server', async () => {
+    const warn = jest.spyOn(logger, 'warn');
+    mockQuery.mockResolvedValue({
+      data: undefined,
+      error: new Error('Network request failed'),
+    });
+    keychainMock().saveCredentials.mockRejectedValueOnce(
+      new Error('keystore unavailable'),
+    );
+    issueSucceeds();
+
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+
+    await waitFor(() =>
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('could not store may still be live'),
+      ),
+    );
+    expect(revokes()).toHaveLength(0);
+    warn.mockRestore();
+  });
+
   it('is kept when it was stored', async () => {
     issueSucceeds();
 
