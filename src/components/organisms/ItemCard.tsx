@@ -9,6 +9,7 @@ import type {
 import { ListItem } from '../molecules/ListItem';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { RowCard } from '#components/atoms/RowCard';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
@@ -73,9 +74,12 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
         : action,
     );
 
+  // The slide moves the whole card. The animated node takes no themed style,
+  // and the sentinel keeps the card's theme through a later React commit.
   return (
-    <RowCard testID={testID}>
-      <Animated.View style={animatedSlideStyle}>
+    <Animated.View style={animatedSlideStyle}>
+      <ThemeEpochSentinel />
+      <RowCard testID={testID}>
         <SwipeableItem
           accessibilityLabel={
             accessibilityLabel ??
@@ -95,8 +99,8 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
             leftElement={leftElement}
           />
         </SwipeableItem>
-      </Animated.View>
-    </RowCard>
+      </RowCard>
+    </Animated.View>
   );
 };
 

@@ -18,6 +18,7 @@ import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftS
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
 import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
 import { StatusLine, type StatusTone } from '#components/atoms/StatusLine';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -118,8 +119,10 @@ const SlideAnimatedWrapper: React.FC<{
     );
   };
 
+  // The card under it is themed; the sentinel keeps it so through a commit.
   return (
     <Animated.View style={animatedStyle}>
+      <ThemeEpochSentinel />
       {children(handleDelete)}
     </Animated.View>
   );

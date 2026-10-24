@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { RowCard } from '#components/atoms/RowCard';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
@@ -325,10 +326,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return <View />;
   }
 
-  // The panel sits on a plain wrapper: the animated node takes no themed style.
+  // The slide moves the whole card. The animated node takes no themed style,
+  // and the sentinel keeps the card's theme through a later React commit.
   return (
-    <RowCard>
-      <Animated.View style={animatedSlideStyle}>
+    <Animated.View style={animatedSlideStyle}>
+      <ThemeEpochSentinel />
+      <RowCard>
         {isTutorialItemCardTarget ? (
           <View
             ref={itemCardRef}
@@ -387,8 +390,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             themeColors={themeColors}
           />
         </SwipeableItem>
-      </Animated.View>
-    </RowCard>
+      </RowCard>
+    </Animated.View>
   );
 };
 
