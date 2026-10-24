@@ -85,10 +85,11 @@ export const isEntity = type =>
  * (`connection-field-integrity`) since returning a page would replace the list
  * a screen holds; a computed view (analytics, suggestions, a store's learned
  * route, a household's dietary alerts or paid prices) its own screen re-reads;
- * or a field one writer owns, which a mutation's snapshot would race.
+ * a product's source-record facts (origin, brand owner), which no write
+ * changes; or a field one writer owns, which a mutation's snapshot would race.
  */
 const VIEWS =
-  /Analytics$|^suggestions$|^storeRoute$|^dietaryAlerts$|^dietaryAlternatives$|^householdPriceSummary$/;
+  /Analytics$|^suggestions$|^storeRoute$|^dietaryAlerts$|^dietaryAlternatives$|^householdPriceSummary$|^origin$|^brandOwner$/;
 const OWNED_BY_WRITER = new Set([
   // Follows the given pantry's stacks, which pantry writes change; read only by
   // the barcode lookup, under its own route's pantry.

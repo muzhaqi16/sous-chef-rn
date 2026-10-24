@@ -89,6 +89,12 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
         variationBrand {
           id
           name
+          # The company the brand is part of, as the catalog names it: the
+          # card's owner line.
+          parent {
+            id
+            name
+          }
         }
         matchedVariation {
           id

@@ -122,6 +122,9 @@ const convertToScannedItem = (
   // barcode's own.
   brandName: brandNameOverride ?? item.variationBrand?.name,
   brandId: brandNameOverride ? undefined : item.variationBrand?.id,
+  brandParentName: brandNameOverride
+    ? undefined
+    : item.variationBrand?.parent?.name,
   type: item.type,
   storageState: item.storageState,
   shelfLifeDays: item.shelfLifeDays ?? undefined,

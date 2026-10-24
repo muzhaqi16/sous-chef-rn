@@ -47,6 +47,19 @@
       "perL": "{{price}}/L",
       "each": "{{price}} each",
       "perUnit": "{{price}}/{{unit}}"
+    },
+    "origin": {
+      "title": "Where it comes from",
+      "madeIn": "Made in {{countries}}",
+      "ingredientsFrom": "Ingredients from {{countries}}",
+      "countryOfOrigin": "Country of origin: {{countries}}",
+      "ownedBy": "Owned by {{owner}}",
+      "ownedByPartOf": "Owned by {{owner}}, part of {{parent}}",
+      "partOf": "Part of {{parent}}",
+      "sourceLabel": "Source: {{source}}",
+      "source": {
+        "kroger": "Kroger"
+      }
     }
   }
 }

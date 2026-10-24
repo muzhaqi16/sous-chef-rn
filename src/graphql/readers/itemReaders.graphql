@@ -115,6 +115,10 @@ fragment ItemReaders on Item {
   variationBrand {
     id
     name
+    parent {
+      id
+      name
+    }
   }
   version
 }

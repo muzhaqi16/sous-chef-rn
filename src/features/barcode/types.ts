@@ -61,6 +61,8 @@ export interface ScannedItem
   /** The scanned barcode's own brand; never one picked from the item's list. */
   brandName?: string;
   brandId?: string;
+  /** The company that brand is part of, as the catalog names it. */
+  brandParentName?: string;
   type?: ItemType;
   storageState?: StorageState;
   shelfLifeDays?: number;

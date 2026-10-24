@@ -47,6 +47,19 @@
       "perL": "{{price}}/L",
       "each": "{{price}} për copë",
       "perUnit": "{{price}}/{{unit}}"
+    },
+    "origin": {
+      "title": "Nga vjen",
+      "madeIn": "Prodhuar në {{countries}}",
+      "ingredientsFrom": "Përbërësit nga {{countries}}",
+      "countryOfOrigin": "Vendi i origjinës: {{countries}}",
+      "ownedBy": "Në pronësi të {{owner}}",
+      "ownedByPartOf": "Në pronësi të {{owner}}, pjesë e {{parent}}",
+      "partOf": "Pjesë e {{parent}}",
+      "sourceLabel": "Burimi: {{source}}",
+      "source": {
+        "kroger": "Kroger"
+      }
     }
   }
 }

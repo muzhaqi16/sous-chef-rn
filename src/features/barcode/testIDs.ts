@@ -16,4 +16,6 @@ export const barcodeTestIDs = {
   householdAlternative: (itemId: string) => `household-alternative-${itemId}`,
   /** Store mode's price lines on a scan. */
   storePrices: 'store-prices',
+  /** Where a scanned product comes from and who owns its brand. */
+  productOrigin: 'product-origin',
 };

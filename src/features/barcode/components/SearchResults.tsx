@@ -24,6 +24,8 @@ import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDieta
 import { HouseholdAlertsSection } from './HouseholdAlertsSection';
 import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory';
 import { StorePriceSection } from './StorePriceSection';
+import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
+import { ProductOriginSection } from './ProductOriginSection';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -66,6 +68,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     item,
   );
   const household = useProductDietaryAlerts(item.id);
+  const origin = useProductOrigin(item.id, item.brandParentName);
   const prices = useStorePriceMemory(
     item.id,
     source === 'storeMode' ? shoppingListId : undefined,
@@ -258,6 +261,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         attributions={item.dataAttributions ?? []}
         centered
       />
+
+      <ProductOriginSection {...origin} />
 
       <HouseholdAlertsSection
         {...household}
