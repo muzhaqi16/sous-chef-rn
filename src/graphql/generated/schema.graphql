@@ -4385,7 +4385,9 @@ type DietaryProfile {
   cookingSkillLevel: CookingSkillLevel
   """When the profile was created"""
   createdAt: DateTime!
-  """Ingredients the user dislikes, as free text; empty when none"""
+  """
+  Ingredients the user dislikes, as free text; empty when none. Nothing screens against it: avoided items are restrictions
+  """
   dislikedIngredients: [String!]!
   """
   Daily fat goal in grams, measured as calorieTarget is; null or 0 when no goal is set
@@ -4412,6 +4414,10 @@ type DietaryProfile {
   """
   proteinTarget: Int
   """
+  The religious diet the user follows; null when none is set. Private to the user, never shared with a home
+  """
+  religiousDiet: ReligiousDiet
+  """
   The diets, intolerances and health goals the user follows, at most 100; empty when none
   """
   restrictions: [DietaryRestriction!]!
@@ -4434,6 +4440,10 @@ type DietaryRestriction {
   healthGoal: HealthGoal
   id: ID!
   intolerance: Intolerance
+  """
+  The catalog item avoided, stored as the root of the item picked; null for the other kinds
+  """
+  item: Item
   notes: String
   severity: RestrictionSeverity!
   updatedAt: DateTime!
@@ -9791,8 +9801,10 @@ type Mutation {
   restrictions appear in that home's dietaryNeeds. Any member sets their own,
   guests included, and nobody sets another member's. A caller with no ACTIVE
   membership in the home is refused (ForbiddenError). Setting the value the
-  switch already holds writes nothing, so a replay converges; a change is
-  announced on homeEvents as MEMBERSHIP_UPDATED naming sharesDietaryNeeds.
+  switch already holds writes nothing, and a toggle resent under an
+  idempotencyKey already applied writes nothing and answers the membership as
+  it stands, so a replay converges; a change is announced on homeEvents as
+  MEMBERSHIP_UPDATED naming sharesDietaryNeeds.
   """
   updateDietarySharing(input: UpdateDietarySharingInput!): UpdateDietarySharingResult!
   """Update an external source mapping."""
@@ -15910,7 +15922,7 @@ Always include a __typename so the variant can be discriminated.
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 """
-What one restriction restricts: exactly one of a diet, an intolerance or a health goal.
+What one restriction restricts: exactly one of a diet, an intolerance, a health goal or a catalog item.
 """
 input RestrictionKindInput @oneOf {
   """A diet the user follows, such as VEGAN"""
@@ -15919,6 +15931,13 @@ input RestrictionKindInput @oneOf {
   healthGoal: HealthGoal
   """A food the user cannot tolerate, such as GLUTEN"""
   intolerance: Intolerance
+  """
+  A catalog item the user avoids: an active item they can see, else
+  NotFoundError. It is stored as its root (a placed product's concept, else
+  the item itself), which must be PUBLIC (ValidationError on kind.item), and
+  covers everything at or below that root and below its same-name twins.
+  """
+  item: ID
 }
 
 enum RestrictionSeverity {
@@ -16104,6 +16123,10 @@ type SharedDietaryRestriction {
   id: ID!
   """The food not tolerated, when the restriction is an intolerance"""
   intolerance: Intolerance
+  """
+  The catalog item avoided, when the restriction avoids one: the root of the item picked
+  """
+  item: Item
   """
   How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
   """
@@ -18683,7 +18706,7 @@ input UpdateDietaryProfileInput {
   """How much cooking experience the user claims; null clears it"""
   cookingSkillLevel: CookingSkillLevel
   """
-  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused
+  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
   """
   dislikedIngredients: [String!]
   """
@@ -18737,6 +18760,12 @@ union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundErro
 input UpdateDietarySharingInput {
   """A home the caller is an ACTIVE member of"""
   homeId: ID!
+  """
+  A CUID2 the client mints per toggle, for an offline queue. A toggle sent
+  again under a key already applied writes nothing and answers the membership
+  as it stands, so a late resend never undoes a later toggle. Omit online.
+  """
+  idempotencyKey: ID
   """Whether the caller's dietary restrictions are shown to this home"""
   shared: Boolean!
 }
