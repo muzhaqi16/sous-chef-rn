@@ -35,5 +35,8 @@ mutation UpdateDietarySharing($input: UpdateDietarySharingInput!) {
       code
       message
     }
+    ... on ValidationError {
+      field
+    }
   }
 }
