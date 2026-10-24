@@ -31,6 +31,34 @@ export type PantryListItemNode = NonNullable<
 
 export type PantryQueryOptions = StandDownOptions;
 
+/**
+ * `GetPantry`'s variables. Left at their defaults they are the Pantry screen's
+ * client-mode read, which the launch warm-up repeats: a difference in any of
+ * them caches a different entry (`useOfflineTabPreloading`).
+ */
+export function pantryQueryVariables(
+  id: string,
+  today: string,
+  {
+    itemsFirst = PAGE_SIZE.MAX,
+    itemsFilter,
+    itemsOrderBy,
+  }: {
+    itemsFirst?: number;
+    itemsFilter?: PantryItemFilters | null;
+    itemsOrderBy?: PantryItemOrderBy | null;
+  } = {},
+) {
+  return {
+    id,
+    itemsFirst,
+    itemsFilter: itemsFilter ?? undefined,
+    itemsOrderBy: itemsOrderBy ?? undefined,
+    storageLocationsFirst: PAGE_SIZE.COMPACT,
+    today,
+  };
+}
+
 export function usePantryQuery(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
@@ -84,14 +112,11 @@ export function usePantryQuery(
     shouldSkip || !pantryId
       ? skipToken
       : {
-          variables: {
-            id: pantryId,
+          variables: pantryQueryVariables(pantryId, today, {
             itemsFirst,
-            itemsFilter: itemsFilter ?? undefined,
-            itemsOrderBy: itemsOrderBy ?? undefined,
-            storageLocationsFirst: PAGE_SIZE.COMPACT,
-            today,
-          },
+            itemsFilter,
+            itemsOrderBy,
+          }),
           ...heldFetchPolicy(options?.fetchPolicy),
           errorPolicy: 'ignore', // Return cached data on network errors
         },

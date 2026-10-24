@@ -4,6 +4,10 @@ import type { ApolloClient } from '@apollo/client';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { SHOPPING_LISTS_PAGE_SIZE } from '#features/shoppingList/hooks/useShoppingListsQuery';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { pantryQueryVariables } from '#features/pantry/hooks/usePantryQuery';
+import { todayKey } from '#/utils/dateUtils';
+import { useStore } from '#store';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 import {
@@ -18,7 +22,8 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
  * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an
  * unvisited tab has nothing cached and is unusable offline — and the persisted
  * cache is purged on every version change. The tab stays unmounted; only data is
- * warmed, online-only and `cache-first`. Recipes is excluded: its discovery's
+ * warmed, online-only and `cache-first`. Pantry is warmed too: Today, not
+ * Pantry, is the tab a launch mounts. Recipes is excluded: its discovery's
  * variables come from the pantry and the dietary profile as they load.
  */
 
@@ -43,6 +48,20 @@ const WARM_TARGETS: Array<{
   name: string;
   warm: (client: ApolloClient) => Promise<unknown>;
 }> = [
+  {
+    name: operationNameOf(GetPantryDocument),
+    // The Pantry screen's client-mode read; a pantry over `PAGE_SIZE.MAX`
+    // reads filtered pages the warm cannot know.
+    warm: client => {
+      const pantryId = useStore.getState().selectedPantryId;
+      if (!pantryId) return Promise.resolve();
+      return client.query({
+        query: GetPantryDocument,
+        variables: pantryQueryVariables(pantryId, todayKey()),
+        ...WARM_OPTIONS,
+      });
+    },
+  },
   {
     name: operationNameOf(GetShoppingListsLiteDocument),
     warm: client =>
