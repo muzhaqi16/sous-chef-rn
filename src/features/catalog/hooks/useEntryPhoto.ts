@@ -7,6 +7,7 @@ import {
 } from '#features/catalog/hooks/useEntryPhoto.generated';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { todayKey } from '#/utils/dateUtils';
 import { imageErrorMessage, useImageUpload } from '#hooks/data/useImageUpload';
 import { alertService } from '#/services/alertService';
 import type { ImageFile } from '#/types/media';
@@ -50,7 +51,10 @@ export function useEntryPhoto(
     const settled = await settleMutation(
       () =>
         updatePhoto({
-          variables: { input: { homeId: home, itemId: item, ...choice } },
+          variables: {
+            input: { homeId: home, itemId: item, ...choice },
+            today: todayKey(),
+          },
         }),
       { document: UpdateHomeItemPhotoDocument, ...failure },
     );
@@ -91,7 +95,12 @@ export function useEntryPhoto(
     run(async (home, item) => {
       const settled = await settleMutation(
         () =>
-          clearPhoto({ variables: { input: { homeId: home, itemId: item } } }),
+          clearPhoto({
+            variables: {
+              input: { homeId: home, itemId: item },
+              today: todayKey(),
+            },
+          }),
         { document: DeleteHomeItemPhotoDocument, ...failure },
       );
       return settled.status === 'applied';

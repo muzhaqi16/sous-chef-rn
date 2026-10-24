@@ -20,6 +20,7 @@ import {
 } from '#features/catalog/hooks/useEntryPhoto.generated';
 import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
 import { alertService } from '#/services/alertService';
+import { todayKey } from '#/utils/dateUtils';
 import {
   EntryImageSource,
   ErrorCode,
@@ -118,6 +119,7 @@ describe('useEntryPhoto', () => {
           itemId: 'item-1',
           uploadKey: 'uploads/key-1',
         },
+        today: todayKey(),
       },
     ]);
     expect(readEntryImage(cache)).toEqual({ __typename: 'EntryImage', ...OWN });
@@ -135,7 +137,10 @@ describe('useEntryPhoto', () => {
 
     expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
     expect(write.fired).toEqual([
-      { input: { homeId: 'home-1', itemId: 'item-1', itemImageId: 'photo-2' } },
+      {
+        input: { homeId: 'home-1', itemId: 'item-1', itemImageId: 'photo-2' },
+        today: todayKey(),
+      },
     ]);
   });
 
@@ -154,7 +159,7 @@ describe('useEntryPhoto', () => {
     });
 
     expect(clear.fired).toEqual([
-      { input: { homeId: 'home-1', itemId: 'item-1' } },
+      { input: { homeId: 'home-1', itemId: 'item-1' }, today: todayKey() },
     ]);
     expect(readEntryImage(cache)).toEqual({
       __typename: 'EntryImage',
