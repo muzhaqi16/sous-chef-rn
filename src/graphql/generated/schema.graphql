@@ -800,6 +800,12 @@ input BrandOrderBy {
   name: SortOrder
 }
 
+"""The owner a source record names for a product's brand."""
+type BrandOwnerFact {
+  name: String!
+  source: ExternalSource!
+}
+
 """
 A brand, by id or by name: exactly one. On an update, `brand: null` clears a
 single-brand field.
@@ -5731,6 +5737,40 @@ type HouseholdMoneyReport {
   wasteValue: [CurrencyAmount!]
 }
 
+"""A price the household paid, as recorded."""
+type HouseholdPaidPrice {
+  basis: PriceBasis
+  """The price per kg, L or each, when the pack's facts allowed it"""
+  normalizedPrice: Float
+  """Whether it was a recorded sale price"""
+  onSale: Boolean!
+  paidAt: DateTime!
+  """How many units were bought; null when not known"""
+  quantity: Float
+  """The regular price per unit, when the source recorded one beside a sale"""
+  regularPrice: Float
+  """Where it was bought; null when no store was recorded"""
+  store: Store
+  unit: Unit!
+  """The price per one unit"""
+  unitPrice: Float!
+}
+
+"""
+What a household itself paid for an item: its own purchases and receipts
+only, under the comparison's trust rules. Another household's price, a
+catalog price and a manual price never count.
+"""
+type HouseholdPriceSummary {
+  currency: Currency!
+  """The household's newest paid price, however old; null when it has none"""
+  lastPaid: HouseholdPaidPrice
+  """The fewest days usual rests on"""
+  minimumObservations: Int!
+  """Null below minimumObservations days; a sale price never counts"""
+  usual: HouseholdUsualPrice
+}
+
 """A household's spend on one top-level category."""
 type HouseholdSpendCategory {
   """
@@ -5755,6 +5795,20 @@ type HouseholdSpendStore {
   spend: [CurrencyAmount!]!
   """The store; null for purchases that name none"""
   store: Store
+}
+
+"""
+A household's usual price: the median of its regular paid prices at one basis.
+"""
+type HouseholdUsualPrice {
+  """The basis the household bought by on the most days"""
+  basis: PriceBasis!
+  """The median price per basis; each day counts once, as that day's median"""
+  medianPrice: Float!
+  """The days counted"""
+  observations: Int!
+  """The window the days were counted over"""
+  windowDays: Int!
 }
 
 type IPStat {
@@ -6138,6 +6192,12 @@ type Item {
   solids measured by weight, COUNT for discrete items. Null when not declared.
   """
   baseDimension: BaseDimension
+  """
+  Who owns the product's brand: the owner a USDA record names, else an Open
+  Food Facts brand owner. Null when none is named, or the owner is the
+  brand itself. What the brand is part of is Brand.parent.
+  """
+  brandOwner: BrandOwnerFact
   """Brands linked to this item, at most 100; empty when none."""
   brands: [ItemBrand!]!
   """
@@ -6280,6 +6340,20 @@ type Item {
   recorded.
   """
   healthBenefits: [HealthBenefit!]!
+  """
+  What the household paid for this item. The caller must be an ACTIVE member
+  of the home.
+  """
+  householdPriceSummary(
+    """The currency read; the caller's own when omitted"""
+    currency: CurrencyCode
+    """One barcode of the item; all of them when omitted"""
+    gtin: String
+    """The household"""
+    homeId: ID!
+    """How far back usual counts: default 180 days, at most 365"""
+    windowDays: Int
+  ): HouseholdPriceSummary!
   """Unique identifier of the catalog item."""
   id: ID!
   """
@@ -6374,6 +6448,8 @@ type Item {
   has no field for.
   """
   nutritions: JSON
+  """Where the product comes from; null when no record states a country"""
+  origin: ProductOrigin
   """
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
@@ -6840,7 +6916,7 @@ type ItemPhoto {
 Where an item is cheaper. Catalog prices and the viewer's own household's paid
 prices count; other households' paid prices count, anonymously, only once at
 least two households and two people supplied them. Estimates do not. Rows are
-cheapest first within each basis.
+cheapest first within each basis. Sale and regular prices both count.
 """
 type ItemPriceComparison {
   currency: Currency!
@@ -10890,6 +10966,16 @@ type OperatingSystemStat {
   osName: String!
 }
 
+"""One place a source stated that names a country."""
+type OriginFact {
+  """The country, ISO 3166-1 alpha-2"""
+  countryCode: CountryCode!
+  """The source that stated it"""
+  source: ExternalSource!
+  """The place as the source stated it"""
+  value: String!
+}
+
 type PackageBreakdown {
   contentUnit: Unit!
   count: Float!
@@ -12423,6 +12509,11 @@ type PriceComparisonRow {
   latestPrice: Float!
   """The median price per basis over the window"""
   medianPrice: Float!
+  """
+  Whether the row rests on enough observations (the same minimum as a
+  household's usual price) to show as a range rather than one price
+  """
+  meetsMinimumSample: Boolean!
   observations: Int!
   scope: PriceComparisonScope!
   """Set when scope is STORE"""
@@ -12542,6 +12633,20 @@ input ProductDetailsInput {
   primaryUpc: String
   shelfLifeDays: Int
   shelfLifeOpenedDays: Int
+}
+
+"""
+Where a product comes from, as its source records state it. A stated place
+counts only when it names a country; nothing is inferred from a barcode
+prefix or from where the product is sold.
+"""
+type ProductOrigin {
+  """Its country of origin as the retailer states it: Kroger"""
+  countryOfOrigin: [OriginFact!]!
+  """Where its ingredients come from: Open Food Facts origins"""
+  ingredientsFrom: [OriginFact!]!
+  """Where it was made: Open Food Facts manufacturing places"""
+  madeIn: [OriginFact!]!
 }
 
 """
