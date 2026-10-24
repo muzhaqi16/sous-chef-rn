@@ -1,7 +1,10 @@
 # What the household itself paid for a scanned product: store mode's "Last
-# paid" and "Your usual". Its own query, keyed by the item and the home, so a
-# product read before still shows them offline at the shelf.
-query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {
+# paid" and "Your usual", and the usual per one of the unit the price sheet
+# counts in, which a typed shelf price is held against. Its own query, keyed by
+# the item and the home, so a product read before still shows them offline at
+# the shelf. The summary has no id: a second query selecting part of it would
+# replace the rest, so everything it shows is read here.
+query HouseholdPricePaid($itemId: ID!, $homeId: ID!, $unitId: ID!) {
   item(id: $itemId) {
     id
     householdPriceSummary(homeId: $homeId) {
@@ -29,6 +32,7 @@ query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {
       usual {
         basis
         medianPrice
+        unitPrice(unitId: $unitId)
       }
     }
   }

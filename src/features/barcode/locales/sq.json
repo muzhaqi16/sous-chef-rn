@@ -46,7 +46,10 @@
       "perKg": "{{price}}/kg",
       "perL": "{{price}}/L",
       "each": "{{price}} për copë",
-      "perUnit": "{{price}}/{{unit}}"
+      "perUnit": "{{price}}/{{unit}}",
+      "aboveUsual": "{{difference}} më shumë se çmimi yt i zakonshëm {{usual}}",
+      "belowUsual": "{{difference}} më pak se çmimi yt i zakonshëm {{usual}}",
+      "sameAsUsual": "Njësoj si çmimi yt i zakonshëm {{usual}}"
     },
     "origin": {
       "title": "Nga vjen",

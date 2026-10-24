@@ -69,9 +69,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
   const household = useProductDietaryAlerts(item.id);
   const origin = useProductOrigin(item.id, item.brandParentName);
+  // The unit the price sheet counts in: the matched line's, else the
+  // product's own. A line with no unit of its own gets no comparison.
+  const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
   const prices = useStorePriceMemory(
     item.id,
     source === 'storeMode' ? shoppingListId : undefined,
+    sheetUnit ?? item.trackingUnit,
   );
 
   const onPantryAdded = () => {
@@ -335,6 +339,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           onClose={() => setIsAskingPrice(false)}
           onConfirm={handlePrice}
           loading={isLoading}
+          describePrice={sheetUnit ? prices.compareToUsual : undefined}
         />
       )}
     </ScrollView>

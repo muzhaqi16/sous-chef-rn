@@ -79,6 +79,8 @@ export const shoppingListTestIDs = {
   purchaseQuantityError: 'purchase-quantity-error',
   purchasePriceInput: 'purchase-price-input',
   purchasePriceError: 'purchase-price-error',
+  /** What a typed price means, such as how it compares with the usual. */
+  purchasePriceNote: 'purchase-price-note',
 
   itemDetail: 'shopping-item-detail',
   itemDetailEditButton: 'shopping-item-edit-button',

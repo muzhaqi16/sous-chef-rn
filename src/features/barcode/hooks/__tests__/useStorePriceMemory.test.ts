@@ -33,7 +33,11 @@ const paidMock = (summary: {
     store: { id: string; name: string } | null;
     onSale?: boolean;
   } | null;
-  usual?: { basis: PriceBasis; medianPrice: number } | null;
+  usual?: {
+    basis: PriceBasis;
+    medianPrice: number;
+    unitPrice?: number | null;
+  } | null;
 }) =>
   recordMock(HouseholdPricePaidDocument, {
     data: {
@@ -44,7 +48,7 @@ const paidMock = (summary: {
           lastPaid: summary.lastPaid
             ? { paidAt: PAID_AT, onSale: false, ...summary.lastPaid }
             : null,
-          usual: summary.usual ?? null,
+          usual: summary.usual ? { unitPrice: null, ...summary.usual } : null,
         },
       },
     },
@@ -80,8 +84,10 @@ const comparisonMock = (rows: ReturnType<typeof row>[]) =>
 
 const JAR = { id: 'u-jar', name: 'jar', symbol: 'jar' };
 
+const JAR_UNIT = { id: 'u-jar', symbol: 'jar' };
+
 const render = (mocks: ReturnType<typeof recordMock>[]) =>
-  renderHookWithApollo(() => useStorePriceMemory('pb', 'list-1'), {
+  renderHookWithApollo(() => useStorePriceMemory('pb', 'list-1', JAR_UNIT), {
     operationMocks: mocks.map(mock => mock.mock),
   });
 
@@ -95,7 +101,7 @@ describe('useStorePriceMemory', () => {
 
     await waitFor(() => expect(here.fired).toHaveLength(1));
     await waitFor(() => expect(paid.fired).toHaveLength(1));
-    expect(result.current).toEqual({
+    expect(result.current).toMatchObject({
       lastPaid: null,
       usual: null,
       typical: null,
@@ -187,12 +193,46 @@ describe('useStorePriceMemory', () => {
     const paid = paidMock({});
     const here = comparisonMock([]);
     const { result } = renderHookWithApollo(
-      () => useStorePriceMemory('pb', undefined),
+      () => useStorePriceMemory('pb', undefined, JAR_UNIT),
       { operationMocks: [paid.mock, here.mock] },
     );
 
     expect(paid.fired).toHaveLength(0);
     expect(here.fired).toHaveLength(0);
     expect(result.current.typical).toBeNull();
+  });
+
+  it('says how a shelf price per jar compares with the usual per jar, to the cent', async () => {
+    const paid = paidMock({
+      usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: 3.49 },
+    });
+    const { result } = render([paid, comparisonMock([])]);
+    await waitFor(() => expect(result.current.usual).not.toBeNull());
+    expect(paid.fired[0]).toMatchObject({ unitId: 'u-jar' });
+
+    const usual = t('barcode.price.perUnit', { price: usd(3.49), unit: 'jar' });
+    expect(result.current.compareToUsual(4.29)).toBe(
+      t('barcode.price.aboveUsual', { difference: usd(0.8), usual }),
+    );
+    expect(result.current.compareToUsual(3.491)).toBe(
+      t('barcode.price.sameAsUsual', { usual }),
+    );
+    expect(result.current.compareToUsual(2.99)).toBe(
+      t('barcode.price.belowUsual', { difference: usd(0.5), usual }),
+    );
+  });
+
+  it('compares nothing when the usual cannot be put on the unit, or there is none', async () => {
+    const offBasis = render([
+      paidMock({
+        usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: null },
+      }),
+      comparisonMock([]),
+    ]);
+    await waitFor(() => expect(offBasis.result.current.usual).not.toBeNull());
+    expect(offBasis.result.current.compareToUsual(4.29)).toBeNull();
+
+    const none = render([paidMock({}), comparisonMock([])]);
+    expect(none.result.current.compareToUsual(4.29)).toBeNull();
   });
 });

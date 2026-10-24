@@ -20,6 +20,7 @@ import {
 import {
   shownUnitPrice,
   totalFromUnitPrice,
+  unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -45,6 +46,8 @@ interface PurchaseAmountSheetProps {
    */
   onConfirm: (quantity: number, totalPrice: number | null) => void;
   loading?: boolean;
+  /** A line under the price on what a typed price per unit means, if any. */
+  describePrice?: (unitPrice: number) => string | null;
 }
 
 /** null for empty, invalid or negative input. */
@@ -73,6 +76,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   onClose,
   onConfirm,
   loading = false,
+  describePrice,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -127,6 +131,10 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     : t('purchaseAmountSheet.quantityRequired');
   const priceError =
     parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
+  const priceNote =
+    describePrice && quantityIsUsable && parsedTotal != null
+      ? describePrice(unitPriceFromTotal(parsedTotal, parsedQty) ?? parsedTotal)
+      : null;
 
   const handleConfirm = () => {
     if (!quantityIsUsable || parsedTotal === undefined) return;
@@ -230,6 +238,16 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 unit={item?.unitName}
                 style={styles.perUnitHint}
               />
+            ) : null}
+            {priceNote ? (
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.perUnitHint}
+                testID={shoppingListTestIDs.purchasePriceNote}
+              >
+                {priceNote}
+              </Text>
             ) : null}
           </View>
         </View>

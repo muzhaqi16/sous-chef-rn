@@ -46,7 +46,10 @@
       "perKg": "{{price}}/kg",
       "perL": "{{price}}/L",
       "each": "{{price}} c/u",
-      "perUnit": "{{price}}/{{unit}}"
+      "perUnit": "{{price}}/{{unit}}",
+      "aboveUsual": "{{difference}} más que tu precio habitual de {{usual}}",
+      "belowUsual": "{{difference}} menos que tu precio habitual de {{usual}}",
+      "sameAsUsual": "Igual que tu precio habitual de {{usual}}"
     },
     "origin": {
       "title": "De dónde viene",

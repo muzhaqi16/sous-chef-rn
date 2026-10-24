@@ -29,6 +29,7 @@ interface LineSeed {
   itemName: string;
   estimated?: number | null;
   suggested?: number | null;
+  unitId?: string;
 }
 
 const node = ({
@@ -37,13 +38,16 @@ const node = ({
   itemName,
   estimated = null,
   suggested = null,
+  unitId,
 }: LineSeed) => ({
   __typename: 'ShoppingListItem',
   id,
   itemName,
   quantity: 2,
   unitName: 'jar',
-  unit: null,
+  unit: unitId
+    ? { __typename: 'Unit', id: unitId, name: 'jar', symbol: 'jar' }
+    : null,
   priceEstimate: { __typename: 'ShoppingListItemPriceEstimate', estimated },
   suggestedPrice:
     suggested === null
@@ -91,12 +95,16 @@ function seedTab(
   });
 }
 
-function renderCart(toBuy: LineSeed[], inCart: LineSeed[] = []) {
+function renderCart(
+  toBuy: LineSeed[],
+  inCart: LineSeed[] = [],
+  scanned: Parameters<typeof useStoreModeCart>[1] = JIF,
+) {
   const cache = seedCache([]);
   seedTab(cache, false, toBuy);
   seedTab(cache, true, inCart);
   // No operation mocks: the hook must answer from the cache alone.
-  return renderHookWithApollo(() => useStoreModeCart(LIST, JIF), {
+  return renderHookWithApollo(() => useStoreModeCart(LIST, scanned), {
     cache,
     operationMocks: [],
   });
@@ -115,9 +123,11 @@ describe('useStoreModeCart', () => {
         itemId: 'peanut-butter',
         itemName: 'Peanut butter',
         suggested: 3.49,
+        unitId: 'unit-jar',
       },
     ]);
 
+    expect(result.current.unit).toEqual({ id: 'unit-jar', symbol: 'jar' });
     expect(result.current.line).toEqual({
       id: 'pb',
       itemName: 'Peanut butter',
@@ -157,8 +167,17 @@ describe('useStoreModeCart', () => {
     const { result } = renderCart([]);
 
     await expect(result.current.tick('pb', null)).resolves.toBe(true);
-    expect(mockToggleItem).toHaveBeenCalledWith('pb');
+    expect(mockToggleItem).toHaveBeenCalledWith('pb', { itemId: 'jif-creamy' });
     expect(mockRecordPurchase).not.toHaveBeenCalled();
+  });
+
+  it("names the scanned barcode's record as what was bought, so the price lands on the product", async () => {
+    mockToggleItem.mockResolvedValue(true);
+    const { result } = renderCart([], [], { ...JIF, variationId: 'var-jif' });
+
+    await result.current.tick('pb', null);
+
+    expect(mockToggleItem).toHaveBeenCalledWith('pb', { variation: 'var-jif' });
   });
 
   it('records the total the sheet took as a price per unit', async () => {
@@ -167,10 +186,11 @@ describe('useStoreModeCart', () => {
 
     await result.current.tick('pb', { quantity: 2, totalPrice: 7 });
 
-    expect(mockRecordPurchase).toHaveBeenCalledWith('pb', {
-      purchasedQuantity: 2,
-      purchasedPrice: 3.5,
-    });
+    expect(mockRecordPurchase).toHaveBeenCalledWith(
+      'pb',
+      { purchasedQuantity: 2, purchasedPrice: 3.5 },
+      { itemId: 'jif-creamy' },
+    );
     expect(mockToggleItem).not.toHaveBeenCalled();
   });
 });

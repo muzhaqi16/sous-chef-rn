@@ -777,10 +777,10 @@
       "body": "query HomeInvitesForEvent($id: ID!) {\n  home(id: $id) {\n    id\n    invitesConnection(first: 20) {\n      edges {\n        node {\n          id\n          ...HomeInviteReaders\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment HomeInviteReaders on HomeInvite {\n  id\n  email\n  expiresAt\n  home {\n    id\n    name\n    __typename\n  }\n  inviter {\n    id\n    displayName\n    email\n    profile {\n      id\n      avatar\n      displayName\n      __typename\n    }\n    __typename\n  }\n  inviterName\n  message\n  recipientName\n  role\n  status\n  __typename\n}"
     },
     {
-      "id": "3340815a4fd5e347d95090a054dd272ba8a6eb41539e1cb03675df631d6be84d",
+      "id": "6190a5bb996aaf6875386df6b0d61d46eac5e2079d57e90161dfb3bbf23a9996",
       "name": "HouseholdPricePaid",
       "type": "query",
-      "body": "query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {\n  item(id: $itemId) {\n    id\n    householdPriceSummary(homeId: $homeId) {\n      currency {\n        id\n        code\n        decimalPlaces\n        __typename\n      }\n      lastPaid {\n        unitPrice\n        unit {\n          id\n          name\n          symbol\n          __typename\n        }\n        normalizedPrice\n        basis\n        store {\n          id\n          name\n          __typename\n        }\n        paidAt\n        onSale\n        __typename\n      }\n      usual {\n        basis\n        medianPrice\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query HouseholdPricePaid($itemId: ID!, $homeId: ID!, $unitId: ID!) {\n  item(id: $itemId) {\n    id\n    householdPriceSummary(homeId: $homeId) {\n      currency {\n        id\n        code\n        decimalPlaces\n        __typename\n      }\n      lastPaid {\n        unitPrice\n        unit {\n          id\n          name\n          symbol\n          __typename\n        }\n        normalizedPrice\n        basis\n        store {\n          id\n          name\n          __typename\n        }\n        paidAt\n        onSale\n        __typename\n      }\n      usual {\n        basis\n        medianPrice\n        unitPrice(unitId: $unitId)\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "42165746a51e3025cf838dd54d20985aff82a77226b0578e984fe38d4c4b4610",

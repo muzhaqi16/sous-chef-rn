@@ -147,6 +147,23 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByText(/1\.50 per cups/)).toBeTruthy();
   });
 
+  it('says what the caller makes of the typed price per unit, once one is typed', () => {
+    const describePrice = jest.fn((unitPrice: number) =>
+      unitPrice > 4 ? 'More than your usual' : null,
+    );
+    renderWithInit(buildProps({ describePrice }));
+    expect(screen.queryByTestId('purchase-price-note')).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');
+    expect(describePrice).toHaveBeenLastCalledWith(4.99);
+    expect(screen.getByTestId('purchase-price-note')).toHaveTextContent(
+      'More than your usual',
+    );
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3');
+    expect(screen.queryByTestId('purchase-price-note')).toBeNull();
+  });
+
   it('falls back to a generic unit when the line carries none', () => {
     renderWithInit(buildProps({ item: makeItem({ unitName: null }) }));
     fireEvent.changeText(screen.getByTestId('purchase-price-input'), '9.98');

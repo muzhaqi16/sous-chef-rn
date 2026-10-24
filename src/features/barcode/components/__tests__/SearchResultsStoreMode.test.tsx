@@ -29,6 +29,7 @@ const mockCart = {
     unitName: string | null;
     estimatedPrice: number | null;
   },
+  unit: null as null | { id: string; symbol: string },
   inCart: false,
 };
 const mockCartListIds: (string | undefined)[] = [];
@@ -51,16 +52,19 @@ jest.mock('#features/shoppingList/ui/PurchaseAmountSheet', () => {
       visible,
       item,
       onConfirm,
+      describePrice,
     }: {
       visible: boolean;
       item: { itemName: string; estimatedPrice: number | null } | null;
       onConfirm: (quantity: number, totalPrice: number | null) => void;
+      describePrice?: (unitPrice: number) => string | null;
     }) =>
       visible && item ? (
         <Pressable testID="price-sheet" onPress={() => onConfirm(2, 7)}>
           <Text>{`${item.itemName} hint ${
             item.estimatedPrice ?? 'none'
           }`}</Text>
+          <Text>{describePrice?.(3.5) ?? 'no comparison'}</Text>
         </Pressable>
       ) : null,
   };
@@ -90,13 +94,20 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
 
 // The price lines have their own tests; here, which list they are read for.
 const mockPriceListIds: (string | undefined)[] = [];
+const mockPriceUnits: ({ id: string } | undefined)[] = [];
 jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
-  useStorePriceMemory: (_itemId: string, listId: string | undefined) => {
+  useStorePriceMemory: (
+    _itemId: string,
+    listId: string | undefined,
+    unit: { id: string } | undefined,
+  ) => {
     mockPriceListIds.push(listId);
+    mockPriceUnits.push(unit);
     return {
       lastPaid: null,
       usual: listId ? '$7.69/kg' : null,
       typical: null,
+      compareToUsual: (unitPrice: number) => `compared ${unitPrice}`,
     };
   },
 }));
@@ -129,6 +140,7 @@ describe('SearchResults from store mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCart.line = null;
+    mockCart.unit = null;
     mockCart.inCart = false;
     mockCartListIds.length = 0;
     mockTick.mockResolvedValue(true);
@@ -234,6 +246,32 @@ describe('SearchResults from store mode', () => {
         totalPrice: 7,
       }),
     );
+  });
+
+  it("compares a shelf price in the unit the sheet counts: the line's, else the product's", async () => {
+    const user = userEvent.setup();
+    mockCart.line = LINE;
+    mockCart.unit = { id: 'unit-jar', symbol: 'jar' };
+    const { unmount } = renderWithApollo(<SearchResults {...props} />);
+    expect(mockPriceUnits.at(-1)).toEqual({ id: 'unit-jar', symbol: 'jar' });
+    await user.press(screen.getByTestId('alternate-btn'));
+    expect(screen.getByText('compared 3.5')).toBeTruthy();
+    unmount();
+
+    // An unlisted product counts in its own unit.
+    mockCart.line = null;
+    mockCart.unit = null;
+    const unlisted = renderWithApollo(<SearchResults {...props} />);
+    expect(mockPriceUnits.at(-1)).toEqual(props.item.trackingUnit);
+    await user.press(screen.getByTestId('alternate-btn'));
+    expect(screen.getByText('compared 3.5')).toBeTruthy();
+    unlisted.unmount();
+
+    // A line with no unit of its own counts in something the usual is not on.
+    mockCart.line = LINE;
+    renderWithApollo(<SearchResults {...props} />);
+    await user.press(screen.getByTestId('alternate-btn'));
+    expect(screen.getByText('no comparison')).toBeTruthy();
   });
 
   it('offers nothing to add for a product already in the cart', () => {
