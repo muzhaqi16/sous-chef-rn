@@ -5807,6 +5807,16 @@ type HouseholdUsualPrice {
   medianPrice: Float!
   """The days counted"""
   observations: Int!
+  """
+  The usual price per one of a unit, for this item and barcode: the rules a
+  recorded price is normalized by, run in reverse over its pack. Null when
+  the unit normalizes to another basis, or only by an assumed density or
+  package size.
+  """
+  unitPrice(
+    """The unit the price is per"""
+    unitId: ID!
+  ): Float
   """The window the days were counted over"""
   windowDays: Int!
 }
@@ -12936,10 +12946,31 @@ type PurchaseStats {
 input PurchaseTrackingInput {
   """Whether the line is purchased; null is refused"""
   isPurchased: Boolean
+  """
+  The product actually bought, when it is not the line's own item, such as a
+  product scanned for a concept line in store mode. Read when this update
+  turns the line purchased: the purchase and its price observation are
+  recorded on it, with its barcode and pack, while the line keeps its item.
+  It must be the line's item or an item under it. Refused beside isPurchased
+  false.
+  """
+  purchasedItem: PurchasedItemInput
   """The price paid per unit bought. Refused beside isPurchased false."""
   purchasedPrice: Float
   """How much was bought. Refused beside isPurchased false."""
   purchasedQuantity: Float
+}
+
+"""
+The product a purchase was of: exactly one of a catalog item or a scanned product record.
+"""
+input PurchasedItemInput @oneOf {
+  """A catalog item: recorded with its primary barcode and its own pack"""
+  itemId: ID
+  """
+  A barcode's product record, as Item.matchedVariation returned it: recorded with that barcode and its pack
+  """
+  variation: ID
 }
 
 type QuantityBreakdown {
