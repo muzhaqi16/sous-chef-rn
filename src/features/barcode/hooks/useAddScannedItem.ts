@@ -28,8 +28,10 @@ const scannedListItemRef = (item: ScannedItem) =>
 const scannedUnitId = (item: ScannedItem) =>
   item.trackingUnit?.id ?? item.unitId;
 
-/** Whether the shopping-list row survived the create. */
-export type ScannedListOutcome = 'kept' | 'reverted';
+/** Whether the shopping-list row survived the create, and its id if it did. */
+export type ScannedListOutcome =
+  | { outcome: 'kept'; rowId: string }
+  | { outcome: 'reverted'; rowId: null };
 
 interface UseAddScannedItemArgs {
   pantryId: string | undefined;
@@ -107,8 +109,8 @@ export function useAddScannedItem({
   const addToShoppingList = async (
     item: ScannedItem,
   ): Promise<ScannedListOutcome> => {
-    if (!shoppingListId) return 'reverted';
-    const { outcome } = await createShoppingListRow(client.cache, {
+    if (!shoppingListId) return { outcome: 'reverted', rowId: null };
+    const { id, outcome } = await createShoppingListRow(client.cache, {
       listId: shoppingListId,
       row: {
         itemName: item.name,
@@ -129,7 +131,9 @@ export function useAddScannedItem({
       document: BarcodeAddItemToShoppingListDocument,
       fallback: t('errors.addItemFailed'),
     });
-    return outcome;
+    return outcome === 'kept'
+      ? { outcome, rowId: id }
+      : { outcome, rowId: null };
   };
 
   return {

@@ -101,6 +101,7 @@ jest.mock('../PackSizeSheet', () => ({
 describe('SearchResults', () => {
   const mockItem = {
     id: 'item-1',
+    conceptIds: [],
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,

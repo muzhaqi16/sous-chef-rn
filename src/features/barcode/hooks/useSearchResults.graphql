@@ -10,6 +10,11 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
       cursor
       node {
         id
+        # The concepts above the product, nearest first: store mode ticks the
+        # list line that names the product or one of them.
+        ancestors {
+          id
+        }
         # The notices the catalog data's licences ask a reader to see.
         dataAttributions {
           source

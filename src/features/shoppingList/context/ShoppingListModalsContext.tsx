@@ -4,7 +4,7 @@ import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
-import { PurchaseAmountSheet } from '#features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet';
+import { PurchaseAmountSheet } from '#features/shoppingList/ui/PurchaseAmountSheet';
 import { AislePickerSheet } from '#features/shoppingList/components/AislePickerSheet';
 import { useAddItemSheet } from '#features/shoppingList/hooks/useAddItemSheet';
 import { useQuantityEditModal } from '#features/shoppingList/hooks/useQuantityEditModal';

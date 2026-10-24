@@ -53,6 +53,7 @@ const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
   item: {
     id: 'item-1',
+    conceptIds: [],
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,

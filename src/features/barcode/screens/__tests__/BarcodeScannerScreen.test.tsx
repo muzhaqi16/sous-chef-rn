@@ -300,4 +300,62 @@ describe('BarcodeScannerScreen', () => {
     const tree = render(<BarcodeScannerScreen route={{ params: undefined }} />);
     expect(tree.toJSON()).toBeTruthy();
   });
+
+  it.each([
+    { source: 'pantry', pantryId: 'p-1' },
+    { source: 'shoppingList', shoppingListId: 'l-1' },
+    { source: 'storeMode', shoppingListId: 'l-1' },
+  ] as const)(
+    'hands a $source scan its destination with the barcode',
+    async params => {
+      const { usePermission } = jest.requireMock(
+        '#hooks/permissions/usePermission',
+      );
+      usePermission.mockReturnValue({
+        isGranted: true,
+        isBlocked: false,
+        request: mockRequestPermission,
+        openSettings: mockOpenSettings,
+      });
+      const { useCameraDevices } = jest.requireMock(
+        'react-native-vision-camera',
+      );
+      useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
+      const navigation = jest.requireMock('#hooks/navigation/useAppNavigation');
+      const toSearchResults = jest.fn();
+      navigation.useAppNavigation.mockReturnValue({
+        ...navigation.useAppNavigation(),
+        toSearchResults,
+      });
+      const { useFocusEffect } = jest.requireMock('@react-navigation/native');
+      const focusCallbacks: React.EffectCallback[] = [];
+      useFocusEffect.mockImplementation((cb: React.EffectCallback) => {
+        focusCallbacks.push(cb);
+      });
+      let output: {
+        onBarcodeScanned: (code: { value: string; format: string }) => void;
+      } | null = null;
+      const { useBarcodeOutput } = jest.requireMock('../useBarcodeOutput');
+      useBarcodeOutput.mockImplementation((options: typeof output) => {
+        output = options;
+        return {};
+      });
+
+      render(<BarcodeScannerScreen route={{ params }} />);
+      await act(async () => {
+        focusCallbacks.splice(0).forEach(cb => cb());
+      });
+      act(() => {
+        output?.onBarcodeScanned({ value: '012345678905', format: 'upc-a' });
+      });
+
+      expect(toSearchResults).toHaveBeenCalledWith({
+        barcode: '012345678905',
+        format: 'upc-a',
+        pantryId: undefined,
+        shoppingListId: undefined,
+        ...params,
+      });
+    },
+  );
 });

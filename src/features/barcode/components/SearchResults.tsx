@@ -18,6 +18,8 @@ import {
   type PackageSizeInput,
 } from '#/graphql/generated/schemaTypes';
 import { PackSizeSheet, type PackSizeOutcome } from './PackSizeSheet';
+import { useStoreModeCart } from '#features/shoppingList/hooks/useStoreModeCart';
+import { PurchaseAmountSheet } from '#features/shoppingList/ui/PurchaseAmountSheet';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -46,11 +48,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAskingPackSize, setIsAskingPackSize] = useState(false);
+  const [isAskingPrice, setIsAskingPrice] = useState(false);
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
   const { addToPantry, restockDuplicate, addToShoppingList } =
     useAddScannedItem({ pantryId, shoppingListId });
+  const cart = useStoreModeCart(
+    source === 'storeMode' ? shoppingListId : undefined,
+    item,
+  );
 
   const onPantryAdded = () => {
     setIsAdded(true);
@@ -101,6 +108,21 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     });
   };
 
+  /** Ticks the line the scan fulfils, else adds the product and ticks it. */
+  const addToCart = async (
+    paid: { quantity: number; totalPrice: number | null } | null,
+  ) => {
+    const lineId = cart.line?.id ?? (await addToShoppingList(item)).rowId;
+    if (!lineId) {
+      alertService.alert(t('labels.error'), t('errors.addItemFailedRetry'));
+      return;
+    }
+    // A refused tick has already told the user and re-read the list.
+    if (!(await cart.tick(lineId, paid))) return;
+    setIsAdded(true);
+    onScanAnother();
+  };
+
   const addItem = () => {
     void executeWithLoadingState(
       async () => {
@@ -117,7 +139,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           if (outcome.status === 'rejected') return;
           onPantryAdded();
         } else if (source === 'shoppingList' && shoppingListId) {
-          if ((await addToShoppingList(item)) === 'reverted') {
+          if ((await addToShoppingList(item)).outcome === 'reverted') {
             alertService.alert(
               t('labels.error'),
               t('errors.addItemFailedRetry'),
@@ -126,6 +148,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           }
           setIsAdded(true);
           onScanAnother();
+        } else if (source === 'storeMode' && shoppingListId) {
+          await addToCart(null);
         } else {
           alertService.alert(
             t('labels.error'),
@@ -177,16 +201,33 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     return { status: 'done' };
   };
 
+  const handlePrice = (quantity: number, totalPrice: number | null) => {
+    void executeWithLoadingState(
+      async () => {
+        await addToCart({ quantity, totalPrice });
+        setIsAskingPrice(false);
+      },
+      setIsLoading,
+      reportAddFailure,
+    );
+  };
+
   // Determine button label based on source and state
   const getButtonLabel = () => {
     if (isAdded) {
       return t('labels.added');
+    }
+    if (source === 'storeMode') {
+      return cart.inCart ? t('barcode.alreadyInCart') : t('barcode.addToCart');
     }
 
     return source === 'pantry'
       ? t('addItemSheet.addToPantry')
       : t('labels.addToShoppingList');
   };
+
+  // Only a product not yet in the cart can be added with what it cost.
+  const canAddWithPrice = source === 'storeMode' && !cart.inCart && !isAdded;
 
   return (
     <ScrollView
@@ -217,8 +258,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             ? {
                 label: getButtonLabel(),
                 onPress: handleAddItem,
-                disabled: isAdded,
+                disabled: isAdded || cart.inCart,
                 loading: isLoading,
+              }
+            : undefined
+        }
+        alternateAction={
+          canAddWithPrice
+            ? {
+                label: t('barcode.addToCartWithPrice'),
+                onPress: () => setIsAskingPrice(true),
               }
             : undefined
         }
@@ -236,6 +285,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           itemName={item.name}
           onDismiss={() => setIsAskingPackSize(false)}
           onConfirm={handlePackSize}
+        />
+      )}
+
+      {source === 'storeMode' && (
+        <PurchaseAmountSheet
+          visible={isAskingPrice}
+          item={
+            cart.line ?? {
+              id: item.id,
+              itemName: item.name,
+              requestedQuantity: 1,
+              unitName: item.trackingUnit?.symbol ?? null,
+              estimatedPrice: null,
+            }
+          }
+          onClose={() => setIsAskingPrice(false)}
+          onConfirm={handlePrice}
+          loading={isLoading}
         />
       )}
     </ScrollView>

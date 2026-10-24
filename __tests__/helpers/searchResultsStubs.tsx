@@ -6,6 +6,7 @@ import { Text } from '#components/atoms/Text';
 interface Action {
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }
 
 interface PackSize {
@@ -18,18 +19,33 @@ export const ProductResultCard = ({ item }: { item: { name: string } }) => (
   <Text>{item.name}</Text>
 );
 
-/** Each action as a button, `primary-btn` and `secondary-btn`. */
+/**
+ * Each action as a button: `primary-btn` (its `disabled` as accessibility
+ * state only, so a press still reaches the screen), `alternate-btn` and
+ * `secondary-btn`.
+ */
 export const ActionButtons = ({
   primaryAction,
+  alternateAction,
   secondaryAction,
 }: {
   primaryAction?: Action;
+  alternateAction?: Action;
   secondaryAction?: Action;
 }) => (
   <View>
     {primaryAction ? (
-      <Pressable testID="primary-btn" onPress={primaryAction.onPress}>
+      <Pressable
+        testID="primary-btn"
+        accessibilityState={{ disabled: !!primaryAction.disabled }}
+        onPress={primaryAction.onPress}
+      >
         <Text>{primaryAction.label}</Text>
+      </Pressable>
+    ) : null}
+    {alternateAction ? (
+      <Pressable testID="alternate-btn" onPress={alternateAction.onPress}>
+        <Text>{alternateAction.label}</Text>
       </Pressable>
     ) : null}
     {secondaryAction ? (

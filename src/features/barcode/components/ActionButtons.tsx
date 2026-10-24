@@ -15,6 +15,11 @@ interface ActionButtonsProps {
     disabled?: boolean;
     loading?: boolean;
   };
+  /** Another way to do the primary action, shown under it, quieter. */
+  alternateAction?: {
+    label: string;
+    onPress: () => void;
+  };
   secondaryAction: {
     label: string;
     onPress: () => void;
@@ -23,6 +28,7 @@ interface ActionButtonsProps {
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   primaryAction,
+  alternateAction,
   secondaryAction,
 }) => {
   return (
@@ -37,6 +43,17 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           loading={primaryAction.loading}
         >
           {primaryAction.label}
+        </Button>
+      )}
+
+      {!!alternateAction && (
+        <Button
+          onPress={alternateAction.onPress}
+          variant="ghost"
+          size="large"
+          fullWidth
+        >
+          {alternateAction.label}
         </Button>
       )}
 

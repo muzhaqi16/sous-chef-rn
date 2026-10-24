@@ -20,6 +20,7 @@ const ROW_ID = 'pi-oats';
 
 const SCANNED: ScannedItem = {
   id: 'item-oats',
+  conceptIds: [],
   name: 'Oats',
   upc: '0001',
   canEdit: false,
