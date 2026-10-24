@@ -85,6 +85,19 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
   }),
 }));
 
+// The price lines have their own tests; here, which list they are read for.
+const mockPriceListIds: (string | undefined)[] = [];
+jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
+  useStorePriceMemory: (_itemId: string, listId: string | undefined) => {
+    mockPriceListIds.push(listId);
+    return {
+      lastPaid: null,
+      usual: listId ? '$7.69/kg' : null,
+      typical: null,
+    };
+  },
+}));
+
 const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
   item: {
@@ -123,6 +136,19 @@ describe('SearchResults from store mode', () => {
 
     expect(mockCartListIds.at(-1)).toBe('list-1');
     expect(screen.getByText(t('barcode.addToCart'))).toBeTruthy();
+  });
+
+  it('shows the price lines for the list being shopped, and none outside store mode', () => {
+    const { unmount } = renderWithApollo(<SearchResults {...props} />);
+
+    expect(mockPriceListIds.at(-1)).toBe('list-1');
+    expect(screen.getByText(t('barcode.price.usual'))).toBeTruthy();
+    unmount();
+
+    renderWithApollo(<SearchResults {...props} source="shoppingList" />);
+
+    expect(mockPriceListIds.at(-1)).toBeUndefined();
+    expect(screen.queryByText(t('barcode.price.usual'))).toBeNull();
   });
 
   it('ticks the matched line with no price', async () => {

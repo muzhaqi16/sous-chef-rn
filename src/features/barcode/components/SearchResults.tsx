@@ -22,6 +22,8 @@ import { useStoreModeCart } from '#features/shoppingList/hooks/useStoreModeCart'
 import { PurchaseAmountSheet } from '#features/shoppingList/ui/PurchaseAmountSheet';
 import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDietaryAlerts';
 import { HouseholdAlertsSection } from './HouseholdAlertsSection';
+import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory';
+import { StorePriceSection } from './StorePriceSection';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -64,6 +66,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     item,
   );
   const household = useProductDietaryAlerts(item.id);
+  const prices = useStorePriceMemory(
+    item.id,
+    source === 'storeMode' ? shoppingListId : undefined,
+  );
 
   const onPantryAdded = () => {
     setIsAdded(true);
@@ -265,6 +271,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             : undefined
         }
       />
+
+      <StorePriceSection {...prices} />
 
       <ActionButtons
         /*

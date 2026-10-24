@@ -34,6 +34,19 @@
     "household": {
       "alternatives": "Të ngjashëm pa paralajmërime",
       "openAlternative": "Hap {{name}}"
+    },
+    "price": {
+      "title": "Çmimet",
+      "lastPaid": "Paguar së fundmi",
+      "paidAt": "Te {{store}}, {{date}}",
+      "onSale": "Në ofertë",
+      "usual": "Çmimi yt i zakonshëm",
+      "typicalHere": "Çmimi tipik këtu",
+      "typicalAtChain": "Çmimi tipik te {{chain}}",
+      "perKg": "{{price}}/kg",
+      "perL": "{{price}}/L",
+      "each": "{{price}} për copë",
+      "perUnit": "{{price}}/{{unit}}"
     }
   }
 }

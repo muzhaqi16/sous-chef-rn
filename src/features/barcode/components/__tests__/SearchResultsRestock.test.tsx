@@ -48,6 +48,9 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
     alternatives: [],
   }),
 }));
+jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
+  useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
+}));
 
 const PACK_SIZE = { netWeight: 500, netWeightUnitId: 'unit-ml' };
 jest.mock('../PackSizeSheet', () => ({

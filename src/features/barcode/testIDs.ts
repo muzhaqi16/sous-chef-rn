@@ -14,4 +14,6 @@ export const barcodeTestIDs = {
   householdUnchecked: 'household-unchecked',
   /** A product of the same kind that raises no alert. */
   householdAlternative: (itemId: string) => `household-alternative-${itemId}`,
+  /** Store mode's price lines on a scan. */
+  storePrices: 'store-prices',
 };

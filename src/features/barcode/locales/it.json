@@ -34,6 +34,19 @@
     "household": {
       "alternatives": "Altri simili senza avvisi",
       "openAlternative": "Apri {{name}}"
+    },
+    "price": {
+      "title": "Prezzi",
+      "lastPaid": "Ultimo prezzo pagato",
+      "paidAt": "Da {{store}}, {{date}}",
+      "onSale": "In offerta",
+      "usual": "Il tuo prezzo abituale",
+      "typicalHere": "Prezzo tipico qui",
+      "typicalAtChain": "Prezzo tipico da {{chain}}",
+      "perKg": "{{price}}/kg",
+      "perL": "{{price}}/L",
+      "each": "{{price}} cad.",
+      "perUnit": "{{price}}/{{unit}}"
     }
   }
 }

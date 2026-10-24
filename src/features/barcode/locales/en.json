@@ -34,6 +34,19 @@
     "household": {
       "alternatives": "Others like it that raise no alert",
       "openAlternative": "Open {{name}}"
+    },
+    "price": {
+      "title": "Prices",
+      "lastPaid": "Last paid",
+      "paidAt": "At {{store}}, {{date}}",
+      "onSale": "On sale",
+      "usual": "Your usual",
+      "typicalHere": "Typical here",
+      "typicalAtChain": "Typical at {{chain}}",
+      "perKg": "{{price}}/kg",
+      "perL": "{{price}}/L",
+      "each": "{{price}} each",
+      "perUnit": "{{price}}/{{unit}}"
     }
   }
 }

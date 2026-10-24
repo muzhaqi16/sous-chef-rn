@@ -57,6 +57,10 @@ fragment ShoppingListReaders on ShoppingList {
   tags
   targetStore {
     id
+    chain {
+      id
+      name
+    }
     name
   }
   templateName

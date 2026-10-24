@@ -1,0 +1,69 @@
+# What the household itself paid for a scanned product: store mode's "Last
+# paid" and "Your usual". Its own query, keyed by the item and the home, so a
+# product read before still shows them offline at the shelf.
+query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {
+  item(id: $itemId) {
+    id
+    householdPriceSummary(homeId: $homeId) {
+      currency {
+        id
+        code
+        decimalPlaces
+      }
+      lastPaid {
+        unitPrice
+        unit {
+          id
+          name
+          symbol
+        }
+        normalizedPrice
+        basis
+        store {
+          id
+          name
+        }
+        paidAt
+        onSale
+      }
+      usual {
+        basis
+        medianPrice
+      }
+    }
+  }
+}
+
+# What the product typically costs where the list is being shopped: the list's
+# store and its chain, beside the item's comparison rows.
+query StorePriceComparison($itemId: ID!, $listId: ID!) {
+  shoppingList(id: $listId) {
+    id
+    targetStore {
+      id
+      chain {
+        id
+        name
+      }
+    }
+  }
+  itemPriceComparison(input: { itemId: $itemId }) {
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    rows {
+      basis
+      scope
+      medianPrice
+      meetsMinimumSample
+      store {
+        id
+      }
+      chain {
+        id
+      }
+    }
+  }
+}

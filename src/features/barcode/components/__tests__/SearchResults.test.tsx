@@ -96,6 +96,9 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
     alternatives: [],
   }),
 }));
+jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
+  useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
+}));
 
 // The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
 const mockPackSizeOutcomes: PackSizeOutcome[] = [];

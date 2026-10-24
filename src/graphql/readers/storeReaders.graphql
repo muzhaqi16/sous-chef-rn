@@ -2,6 +2,10 @@
 fragment StoreReaders on Store {
   id
   address
+  chain {
+    id
+    name
+  }
   name
   storeNumber
 }
