@@ -1,4 +1,5 @@
 import { useTranslation } from '#/i18n';
+import { formatCountryName } from '#/utils/formatters/region';
 import { MeasurementRegionBasis } from '#/graphql/generated/schemaTypes';
 import { useHeldCaptureId } from '#features/recipes/store/recipeCaptureStore';
 import {
@@ -11,17 +12,6 @@ import { useFinishedCapture } from './useFinishedCapture';
 export interface CaptureCandidate {
   itemId: string;
   name: string;
-}
-
-/** A country code as its name in the reader's language, else the code. */
-function regionName(code: string, language: string): string {
-  try {
-    return (
-      new Intl.DisplayNames([language], { type: 'region' }).of(code) ?? code
-    );
-  } catch {
-    return code;
-  }
 }
 
 /**
@@ -40,7 +30,7 @@ export function useCaptureReview(recipeId: string | undefined) {
         region:
           region.basis === MeasurementRegionBasis.Default
             ? region.region
-            : regionName(region.region, i18n.language),
+            : formatCountryName(region.region, i18n.language),
       })
     : null;
   const warnings = [
