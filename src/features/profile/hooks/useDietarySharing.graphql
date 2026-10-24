@@ -1,0 +1,39 @@
+# The caller's homes and their own dietary sharing switch in each: the dietary
+# profile's "Shared with" section.
+query DietarySharingHomes {
+  homes(first: 50) {
+    edges {
+      node {
+        id
+        name
+        myMembership {
+          id
+          sharesDietaryNeeds
+        }
+      }
+    }
+  }
+}
+
+# The switch the hook flips in the cache before the write is sent.
+fragment useDietarySharing_membership on Membership {
+  id
+  sharesDietaryNeeds
+}
+
+mutation UpdateDietarySharing($input: UpdateDietarySharingInput!) {
+  updateDietarySharing(input: $input) {
+    __typename
+    ... on UpdateDietarySharingPayload {
+      membership {
+        id
+        ...MembershipReaders
+        ...useDietarySharing_membership
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}

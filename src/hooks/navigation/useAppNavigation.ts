@@ -91,6 +91,8 @@ export function useAppNavigation() {
       navigation.navigate('HomeManagement', params ?? {}),
     toHomeDetail: (params: RootStackParamList['HomeDetail']) =>
       navigation.navigate('HomeDetail', params),
+    toHomeDietaryNeeds: (params: RootStackParamList['HomeDietaryNeeds']) =>
+      navigation.navigate('HomeDietaryNeeds', params),
     toStorageLocations: (params: RootStackParamList['StorageLocations']) =>
       navigation.navigate('StorageLocations', params),
     toImageCrop: (params: RootStackParamList['ImageCrop']) =>

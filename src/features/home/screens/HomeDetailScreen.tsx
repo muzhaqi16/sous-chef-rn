@@ -38,6 +38,7 @@ import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { homeTestIDs } from '#features/home/testIDs';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type RouteParams = {
@@ -49,7 +50,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   useScreenTransition('HomeDetailScreen');
   const { t } = useTranslation();
-  const { goBack, toStorageLocations } = useAppNavigation();
+  const { goBack, toStorageLocations, toHomeDietaryNeeds } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
@@ -329,6 +330,23 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       ),
     },
+    // Only a home with someone besides the user has dietary needs to share.
+    ...((home.membersConnection.totalCount ?? memberNodes.length) > 1
+      ? [
+          {
+            title: t('homeDietaryNeeds.title'),
+            content: (
+              <ThemedNavigationRow
+                icon="nutrition-outline"
+                title={t('homeDetail.dietaryNeedsRowTitle')}
+                subtitle={t('homeDetail.dietaryNeedsRowSubtitle')}
+                onPress={() => toHomeDietaryNeeds({ homeId })}
+                testID={homeTestIDs.dietaryNeedsRow}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: t('labels.storage'),
       content: (

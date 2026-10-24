@@ -14,6 +14,7 @@ interface NavigationRowProps {
   title: string;
   subtitle?: string;
   onPress: () => void;
+  testID?: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
   title,
   subtitle,
   onPress,
+  testID,
 }) => {
   const { t } = useTranslation();
   const accessibilityLabel = subtitle ? `${title}, ${subtitle}` : title;
@@ -38,6 +40,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={t('a11y.navigateTo', { title })}
+      testID={testID}
     >
       <View style={styles.navigationContent}>
         <Icon name={icon} size={24} color={iconColor} />

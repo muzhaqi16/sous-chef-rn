@@ -90,7 +90,11 @@
     "fat": "Grasa",
     "loadingProfile": "Cargando perfil alimentario...",
     "loadFailedTitle": "No se pudo cargar tu perfil alimentario",
-    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo."
+    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo.",
+    "sharedWith": "Compartido con",
+    "sharedWithShown": "Los miembros de estos hogares ven tus restricciones con tu nombre al escanear o cocinar. Tus notas siguen siendo privadas.",
+    "sharedWithNone": "Activa un hogar para que sus miembros vean lo que no puedes comer al escanear o cocinar.",
+    "sharingFailed": "No se pudo cambiar quién ve tus restricciones. Inténtalo de nuevo."
   },
   "biometricSetup": {
     "authRequiredTitle": "Autenticación requerida",

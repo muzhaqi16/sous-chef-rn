@@ -104,7 +104,9 @@
     "youLabel": "Tu",
     "storageLocationsSubtitle": "Gestisci dove vengono conservati gli articoli",
     "leaveHomeDescription": "Lasciare questa casa rimuoverà il tuo accesso a tutte le dispense, liste della spesa, piani pasti e modelli condivisi.",
-    "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa."
+    "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa.",
+    "dietaryNeedsRowTitle": "Cosa non possono mangiare i membri",
+    "dietaryNeedsRowSubtitle": "Allergie e restrizioni che i membri condividono con questa casa"
   },
   "joinHome": {
     "homeFallback": "Casa",
@@ -185,5 +187,15 @@
     "EXPIRED": "Scaduto",
     "REVOKED": "Revocato",
     "USED": "Usato"
+  },
+  "homeDietaryNeeds": {
+    "title": "Esigenze alimentari",
+    "emptyTitle": "Nessuno condivide ancora le proprie esigenze alimentari",
+    "emptyBody": "Ogni membro sceglie di condividerle nel proprio Profilo alimentare.",
+    "severity": {
+      "allergy": "Allergie",
+      "preference": "Preferenze",
+      "goal": "Obiettivi"
+    }
   }
 }

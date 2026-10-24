@@ -90,7 +90,11 @@
     "fat": "Fat",
     "loadingProfile": "Loading dietary profile...",
     "loadFailedTitle": "Couldn't load your dietary profile",
-    "loadFailedSubtitle": "Check your connection and try again."
+    "loadFailedSubtitle": "Check your connection and try again.",
+    "sharedWith": "Shared with",
+    "sharedWithShown": "Members of these homes see your restrictions by name when they scan or cook. Your notes stay private.",
+    "sharedWithNone": "Turn on a home to let its members see what you can't eat when they scan or cook.",
+    "sharingFailed": "Couldn't change who sees your restrictions. Try again."
   },
   "biometricSetup": {
     "authRequiredTitle": "Authentication Required",

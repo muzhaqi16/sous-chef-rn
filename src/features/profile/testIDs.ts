@@ -23,6 +23,8 @@ export const profileTestIDs = {
   settingsShowShoppingListImagesSwitch:
     'settings-show-shopping-list-images-switch',
   settingsStoreModeSwitch: 'settings-store-mode-switch',
+  /** One home's switch in the dietary profile's "Shared with" section. */
+  dietarySharingSwitch: (homeId: string) => `dietary-sharing-switch-${homeId}`,
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
 
   cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',

@@ -104,7 +104,9 @@
     "youLabel": "Tú",
     "storageLocationsSubtitle": "Gestiona dónde se guardan los artículos",
     "leaveHomeDescription": "Salir de este hogar eliminará tu acceso a todas las despensas, listas de compras, planes de comida y plantillas compartidas.",
-    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar."
+    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar.",
+    "dietaryNeedsRowTitle": "Lo que los miembros no pueden comer",
+    "dietaryNeedsRowSubtitle": "Alergias y restricciones que los miembros comparten con este hogar"
   },
   "joinHome": {
     "homeFallback": "Hogar",
@@ -185,5 +187,15 @@
     "EXPIRED": "Caducada",
     "REVOKED": "Revocada",
     "USED": "Usada"
+  },
+  "homeDietaryNeeds": {
+    "title": "Necesidades alimentarias",
+    "emptyTitle": "Nadie comparte aún sus necesidades alimentarias",
+    "emptyBody": "Cada miembro decide compartirlas en su Perfil alimentario.",
+    "severity": {
+      "allergy": "Alergias",
+      "preference": "Preferencias",
+      "goal": "Objetivos"
+    }
   }
 }
