@@ -15204,6 +15204,11 @@ type RecipeIngredientMatch {
   without is matched only by NAME.
   """
   matchKind: RecipeIngredientMatchKind!
+  """
+  The stack a cook draws first: the first, in draw order, whose stock the
+  ingredient's unit can express without an assumption; when none can, the
+  first, and availableQuantity is null.
+  """
   matchedPantryItem: PantryItem
   """
   How much more the ingredient needs, in its unit. Null when it is available,
@@ -18307,14 +18312,20 @@ type Subscription {
 One part of an offered substitute, in the amount this ingredient needs.
 """
 type SubstitutePartAmount {
+  """
+  The part's other stacks in draw order, at most 3: a cook may name one instead.
+  """
+  alternativeStacks: [PantryItem!]!
   """Whether the pantry holds a stack of it, or of an item under it"""
   inPantry: Boolean!
   """The concept to use"""
   item: Item!
   """
   The stack a cook would draw the part from, chosen as a cook draws an
-  ingredient (its own item, then opened, then soonest expiry): the stack an
-  ingredientsUsed entry for this part names. Null when inPantry is false.
+  ingredient: the first, in draw order (its own item, then opened, then
+  soonest expiry), whose stock converts to the part's unit without an
+  assumption; when none does, the first. The stack an ingredientsUsed entry
+  for this part names. Null when inPantry is false.
   """
   pantryItem: PantryItem
   """
