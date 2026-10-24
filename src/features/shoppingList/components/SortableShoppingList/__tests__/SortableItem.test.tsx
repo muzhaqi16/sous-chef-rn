@@ -311,6 +311,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           __typename: 'EntryImage',
           url: 'https://cdn.example.com/our-milk.jpg',
           source: EntryImageSource.Household,
+          catalogImageId: null,
         },
         item: {
           __typename: 'Item',

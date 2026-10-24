@@ -29,6 +29,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
   image {
     url
     source
+    catalogImageId
   }
   item {
     id

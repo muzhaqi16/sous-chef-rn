@@ -55,6 +55,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   image {
     url
     source
+    catalogImageId
   }
   item {
     id

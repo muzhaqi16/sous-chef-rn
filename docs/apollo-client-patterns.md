@@ -120,6 +120,19 @@ writer of such a field — the offline restoration pass — routes through
 Library mechanism:
 [`verified-library-behaviour.md` § cache.modify cannot add a field](verified-library-behaviour.md#cachemodify-cannot-add-a-field).
 
+### A nested value is selected whole, or its policy says how it merges
+
+A value with no id (`PantryItem.image`, `MealPlan.nutritionSummary`) is
+replaced on write. When one document selects part of it, that write strips
+the rest, and a strict reader of the whole value goes incomplete: the pantry
+item detail blanked this way under every list refresh. Each such field is
+selected in one shape everywhere, or its type policy states the merge
+(`purchaseInfo`, `Pantry.stats`). A merge suits fields that stay true
+separately. It does not suit fields that describe one thing together: merging
+a new photo's `url` into the old `catalogImageId` would name two photos.
+`__tests__/graphql/nestedValueSelections.test.ts` fails on any entity field
+selected in two shapes with no merge.
+
 ### Pattern 1: cache.modify() - For Array Operations ⭐ PREFERRED
 
 **Use When**: Adding or removing items from a list/array field in the cache

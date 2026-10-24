@@ -361,7 +361,7 @@ describe('HTTP document limits', () => {
     expect({
       depth: countDepth(plan!.def),
       cost: Math.round(computeCost(plan!.def)),
-    }).toEqual({ depth: 10, cost: 232 });
+    }).toEqual({ depth: 10, cost: 234 });
   });
 
   // GetMealPlan pages each recipe's ingredients inside the page of meals: two

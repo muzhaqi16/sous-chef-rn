@@ -37,8 +37,12 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
     }
     totalCount
   }
+  # The whole summary every writer stores (`nestedValueSelections.test.ts`).
   nutritionSummary {
     totalCalories
+    totalProtein
+    totalCarbs
+    totalFat
     avgDailyCalories
     avgDailyProtein
     avgDailyCarbs
@@ -46,6 +50,14 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
     totalMeals
     mealsWithNutrition
     coveragePercentage
+    mealTypeBreakdown {
+      mealCount
+      mealType
+      totalCalories
+      totalCarbs
+      totalFat
+      totalProtein
+    }
   }
   nutritionGoalProgress {
     overallScore

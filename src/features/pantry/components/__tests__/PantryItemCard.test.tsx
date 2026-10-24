@@ -416,6 +416,7 @@ describe('PantryItemCard', () => {
         __typename: 'EntryImage',
         url: 'https://example.com/our-milk.jpg',
         source: EntryImageSource.Household,
+        catalogImageId: null,
       },
     });
     expect(screen.getByTestId('card-left-image').props.accessibilityLabel).toBe(
