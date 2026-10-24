@@ -1,6 +1,8 @@
 # What can stand in for a recipe's ingredients, for the household: curated
 # swaps, those whose parts the pantry holds first, none a member is allergic or
-# intolerant to. Its own query, read only while a row is flagged.
+# intolerant to, each part with the stack a cook draws it from. The recipe page
+# reads it while a row is flagged; the cook review reads it fresh, in the same
+# shape, so the two share one cached answer.
 #
 # It shares the cached `ingredientsConnection` with GetRecipe, whose first page
 # a write replaces: the connection's own fields (`pageInfo`, `totalCount`) are
@@ -39,6 +41,22 @@ query RecipeSubstitutes(
               item {
                 id
                 name
+              }
+              pantryItem {
+                id
+                itemName
+                unit {
+                  id
+                  name
+                  symbol
+                }
+                displayAmount {
+                  quantity
+                  unit {
+                    id
+                    symbol
+                  }
+                }
               }
             }
             alerts {

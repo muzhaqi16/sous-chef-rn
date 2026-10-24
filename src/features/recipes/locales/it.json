@@ -550,6 +550,8 @@
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
     "qtyLabel": "Q.tà:",
-    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto."
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto.",
+    "useInstead": "Usa invece",
+    "substitutePart": "{{part}}: da {{name}} ({{amount}} disponibili)"
   }
 }

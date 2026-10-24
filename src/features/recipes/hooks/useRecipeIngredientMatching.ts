@@ -18,7 +18,13 @@ import {
   RecipeIngredientMatchKind,
   type IngredientUsageInput,
 } from '#/graphql/generated/schemaTypes';
-import { useSelectedPantryId } from '#store/useAppStore';
+import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  RecipeSubstitutesDocument,
+  type RecipeSubstitutesQuery,
+} from './useRecipeSubstitutes.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -40,6 +46,27 @@ export type PantryStackOption = NonNullable<
   IngredientMatch['matchedPantryItem']
 >;
 
+type SubstituteOptionData = NonNullable<
+  RecipeSubstitutesQuery['recipe']
+>['ingredientsConnection']['edges'][number]['node']['substitutes'][number];
+
+/** A swap the cook can use instead of a missing ingredient. */
+export interface CookSubstitute {
+  id: string;
+  /** Its parts, worded for the chip. */
+  label: string;
+  /** The parts the pantry holds, each drawn from the stack named. */
+  parts: {
+    key: string;
+    text: string;
+    stack: PantryStackOption;
+    quantity: number;
+    unitId: string;
+  }[];
+  /** Whether the parts are for the recipe's amount, so they scale with it. */
+  scaled: boolean;
+}
+
 export interface EditableMatch {
   match: IngredientMatch;
   /** Materialized RecipeIngredient fragment (id, isOptional, unit, …). The
@@ -54,10 +81,17 @@ export interface EditableMatch {
   adjustedQuantity: number | null;
   adjustedUnitId: string | null;
   isIncluded: boolean;
+  /** Swaps for an ingredient the pantry does not cover, parts held first. */
+  substitutes: CookSubstitute[];
+  /** The swap the cook picked; its parts are drawn and the ingredient is not. */
+  selectedSubstitute: CookSubstitute | null;
 }
 
 export type MatchUpdate = Partial<
-  Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded' | 'selectedStack'>
+  Pick<
+    EditableMatch,
+    'adjustedQuantity' | 'isIncluded' | 'selectedStack' | 'selectedSubstitute'
+  >
 >;
 
 export interface MatchSummary {
@@ -88,9 +122,29 @@ export function getAvailabilityStatus(
   return 'missing';
 }
 
+/**
+ * How much of the recipe's amount the cook is making: the suggested amount over
+ * the recipe's, where both are in the ingredient's own unit; else as written.
+ */
+function servingsRatio(
+  match: IngredientMatch,
+  ingredient: RecipeIngredientFragment,
+) {
+  const recipeQuantity = ingredient.quantity;
+  if (
+    !recipeQuantity ||
+    match.suggestedQuantity === null ||
+    match.suggestedUnit?.id !== ingredient.unit?.id
+  ) {
+    return 1;
+  }
+  return match.suggestedQuantity / recipeQuantity;
+}
+
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
+  const homeId = useSelectedHomeId();
   const client = useApolloClient();
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
@@ -104,6 +158,85 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       nextFetchPolicy: 'network-only',
     },
   );
+
+  // Substitutes read the same pantry stock, so a reopened review asks again.
+  const [loadSubstitutesQuery] = useLazyQuery(RecipeSubstitutesDocument, {
+    fetchPolicy: 'network-only',
+    nextFetchPolicy: 'network-only',
+  });
+
+  const toCookSubstitute = (
+    option: SubstituteOptionData,
+  ): CookSubstitute | null => {
+    const texts = option.parts.map(part =>
+      t('recipes.substitutes.part', {
+        amount: [formatQuantityForDisplay(part.quantity), part.unit.symbol]
+          .filter(Boolean)
+          .join(' '),
+        name: part.item.name,
+      }),
+    );
+    const held = option.parts.flatMap((part, index) =>
+      part.pantryItem
+        ? [
+            {
+              key: part.item.id,
+              text: texts[index] ?? part.item.name,
+              stack: part.pantryItem,
+              quantity: part.quantity,
+              unitId: part.unit.id,
+            },
+          ]
+        : [],
+    );
+    // A swap the pantry holds none of has nothing to draw.
+    if (held.length === 0) return null;
+    return {
+      id: option.substitute.id,
+      label: texts.join(', '),
+      parts: held,
+      scaled: option.scaled,
+    };
+  };
+
+  /**
+   * Offers swaps on the rows the pantry does not cover, once the review is
+   * open: a failed read leaves the rows as they are.
+   */
+  const loadSubstitutes = async (uncovered: Set<string>) => {
+    if (!recipeId || !homeId || !pantryId || uncovered.size === 0) return;
+    let result;
+    try {
+      result = await loadSubstitutesQuery({
+        variables: {
+          recipeId,
+          homeId,
+          pantryId,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Load recipe substitutes error:',
+      });
+    }
+    const swaps = new Map<string, CookSubstitute[]>();
+    for (const { node } of result?.data?.recipe?.ingredientsConnection.edges ??
+      []) {
+      if (!uncovered.has(node.id)) continue;
+      const options = node.substitutes.flatMap(
+        option => toCookSubstitute(option) ?? [],
+      );
+      if (options.length > 0) swaps.set(node.id, options);
+    }
+    if (swaps.size === 0) return;
+    setEditableMatches(prev =>
+      prev.map(em => {
+        const options = swaps.get(em.ingredient.id);
+        return options ? { ...em, substitutes: options } : em;
+      }),
+    );
+  };
 
   // The reviewed cook is the quick cook's own write with `exactStacks`: one
   // transaction, so it deducts every stack stated or none.
@@ -174,12 +307,24 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
             match.suggestedQuantity !== null &&
             !ingredient.isOptional &&
             (status === 'available' || status === 'partial'),
+          substitutes: [],
+          selectedSubstitute: null,
         };
       })
       .filter((m): m is EditableMatch => m !== null);
 
     setEditableMatches(editable);
     setIsSheetVisible(true);
+    void loadSubstitutes(
+      new Set(
+        editable
+          .filter(em => {
+            const status = getAvailabilityStatus(em.match);
+            return status === 'missing' || status === 'partial';
+          })
+          .map(em => em.ingredient.id),
+      ),
+    );
     return true;
   };
 
@@ -222,6 +367,21 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
       em => {
+        const swap = em.selectedSubstitute;
+        if (swap) {
+          if (!em.isIncluded) return [];
+          // Its parts are drawn instead; the ingredient's own stacks are not.
+          const ratio = swap.scaled
+            ? servingsRatio(em.match, em.ingredient)
+            : 1;
+          return swap.parts.map(part => ({
+            recipeIngredientId: em.ingredient.id,
+            pantryItemId: part.stack.id,
+            actualQuantity: part.quantity * ratio,
+            actualUnitId: part.unitId,
+            substituteId: swap.id,
+          }));
+        }
         const pantryItem = em.selectedStack;
         const quantity = em.adjustedQuantity;
         if (

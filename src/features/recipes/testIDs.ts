@@ -53,4 +53,6 @@ export const recipesTestIDs = {
   substitutesSheet: 'recipe-substitutes-sheet',
   substituteOption: (substituteId: string) =>
     `recipe-substitute-${substituteId}`,
+  /** A swap offered for a missing ingredient in the cook review. */
+  cookSubstitute: (substituteId: string) => `cook-substitute-${substituteId}`,
 };

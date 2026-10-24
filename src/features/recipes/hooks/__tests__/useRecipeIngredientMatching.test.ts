@@ -22,6 +22,7 @@ import {
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
 import { RecipeIngredientFragmentDoc } from '#features/recipes/graphql/recipeFragments.generated';
+import { RecipeSubstitutesDocument } from '../useRecipeSubstitutes.generated';
 
 type IngredientMatch = Parameters<typeof getAvailabilityStatus>[0];
 
@@ -62,6 +63,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
     selector({ selectedPantryId: 'pantry-1' } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -732,6 +734,123 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
 
   // "Olive oil" is served by the plain bottle and by the extra virgin stack
   // under its concept; the one the user picks is the one deducted.
+  // Buttermilk is out; milk and lemon juice stand in, and only they are drawn.
+  it('cooks with a swap: draws its parts at the amount cooked, never the ingredient', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const missing: Match = {
+      ingredient: {
+        id: 'ing-2',
+        isOptional: false,
+        unit: { id: 'u-ing-2' },
+      },
+      isAvailable: false,
+      matchKind: RecipeIngredientMatchKind.None,
+      matchedPantryItem: null,
+      alternativeMatches: [],
+      availableQuantity: null,
+      // Twice the recipe's one cup: the cook is making a double batch.
+      suggestedQuantity: 2,
+      suggestedUnit: { id: 'u-ing-2' },
+    };
+    const part = (
+      id: string,
+      name: string,
+      quantity: number,
+      unitId: string,
+    ) => ({
+      quantity,
+      unit: { id: unitId, symbol: unitId },
+      inPantry: true,
+      item: { id, name },
+      pantryItem: { id: `stack-${id}`, itemName: name },
+    });
+    const substitutes = recordMock(RecipeSubstitutesDocument, {
+      data: {
+        recipe: {
+          id: 'recipe-1',
+          ingredientsConnection: {
+            edges: [
+              {
+                node: {
+                  id: 'ing-2',
+                  substitutes: [
+                    {
+                      substitute: { id: 's-milk-lemon' },
+                      scaled: true,
+                      parts: [
+                        part('milk', 'Whole Milk', 1, 'u-cup'),
+                        part('lemon', 'Lemon Juice', 1, 'u-tbsp'),
+                      ],
+                      alerts: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    const rendered = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      {
+        operationMocks: [
+          matchesMock([includedMatch, missing]).mock,
+          substitutes.mock,
+          cook.mock,
+        ],
+        cache: seedIngredientCache(['ing-1', 'ing-2']),
+      },
+    );
+    const { result } = rendered;
+    await act(async () => {
+      await result.current.loadMatches(4);
+    });
+    // Asked fresh for the review's own pantry, once the sheet is open.
+    await waitFor(() =>
+      expect(result.current.editableMatches[1]?.substitutes).toHaveLength(1),
+    );
+    expect(substitutes.fired[0]).toMatchObject({
+      homeId: 'home-1',
+      pantryId: 'pantry-1',
+    });
+    expect(result.current.editableMatches[0]?.substitutes).toEqual([]);
+
+    const swap = result.current.editableMatches[1]?.substitutes[0];
+    act(() => {
+      result.current.updateMatch(1, {
+        selectedSubstitute: swap,
+        isIncluded: true,
+      });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-1',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'stack-milk',
+        actualQuantity: 2,
+        actualUnitId: 'u-cup',
+        substituteId: 's-milk-lemon',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'stack-lemon',
+        actualQuantity: 2,
+        actualUnitId: 'u-tbsp',
+        substituteId: 's-milk-lemon',
+      },
+    ]);
+  });
+
   it('deducts from the stack the user picked instead of the server pick', async () => {
     const cook = cookMock({ kind: 'success' });
     const evoo = { id: 'pi-evoo', unit: { id: 'u-ml' } };

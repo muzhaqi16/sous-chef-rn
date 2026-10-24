@@ -107,6 +107,8 @@ describe('IngredientMatchingSheet', () => {
     adjustedQuantity: 1,
     adjustedUnitId: null,
     isIncluded: true,
+    substitutes: [],
+    selectedSubstitute: null,
   });
 
   const matchSummary: MatchSummary = {
