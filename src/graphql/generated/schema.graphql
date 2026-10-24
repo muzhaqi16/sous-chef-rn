@@ -1396,6 +1396,37 @@ enum CategoryType {
   SYSTEM
 }
 
+input ChangePantryItemItemInput {
+  idempotencyKey: ID
+  """
+  The catalog item the stack is; an item merged into another names that one
+  """
+  itemId: ID!
+  pantryItemId: ID!
+  """The stack's version, as last read"""
+  version: Int!
+}
+
+type ChangePantryItemItemPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+  """
+  True when the receipt lines the stock was checked in from now read as the
+  new item for the household. False for stock added by hand or checked in
+  before line text was kept, and for a member who may not add items to the
+  household.
+  """
+  receiptCorrectionRecorded: Boolean!
+  storageLocation: StorageLocation
+}
+
+"""
+Result of ChangePantryItemItem. Select on ChangePantryItemItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union ChangePantryItemItemResult = ChangePantryItemItemPayload | ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
+
 input ChangePantryItemUnitInput {
   idempotencyKey: ID
   """
@@ -1439,6 +1470,14 @@ input ChangePasswordInput {
 
 type ChangePasswordPayload {
   message: String!
+  """
+  A new session for the device that made the change, on COMPLETED. Every
+  token issued before the change stops working on every device, this one's
+  included, so store this pair before sending another request. Null when the
+  change was refused, or when the change committed but the session could not
+  be issued: sign in with the new password.
+  """
+  session: SessionTokens
   status: PasswordActionStatus!
 }
 
@@ -1468,6 +1507,8 @@ enum ChangeType {
   CREATED
   DELETED
   EXPIRATION_UPDATED
+  """The stack moved to another catalog item"""
+  ITEM_CHANGED
   LOCATION_UPDATED
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
@@ -2072,6 +2113,10 @@ Always include a __typename so the variant can be discriminated.
 union CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateImageUploadUrlInput {
+  """
+  The household a HOUSEHOLD_ITEM_PHOTO is for; refused on other purposes.
+  """
+  homeId: ID
   itemId: ID
   mime: String!
   purpose: ImageUploadPurpose!
@@ -3284,6 +3329,18 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteHomeInviteResult = ConflictError | DeleteHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError
+
+input DeleteHomeItemPhotoInput {
+  homeId: ID!
+  itemId: ID!
+}
+
+"""
+Result of DeleteHomeItemPhoto. Select on HomeItemPhotoPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeleteHomeItemPhotoResult = ConflictError | ForbiddenError | HomeItemPhotoPayload | NotFoundError | ValidationError
 
 type DeleteHomePayload {
   """
@@ -4499,6 +4556,41 @@ enum EntitlementSource {
 }
 
 """
+The photo a household's entry shows. In order: the household's own photo for
+the entry's catalog item, when it chose one and the viewer is the household's
+member; else the catalog photo the item shows everyone (Item.imageUrl); else
+none. A household upload's url is a signed link that expires: read it from the
+entry each time, never store it.
+"""
+type EntryImage {
+  """
+  The ItemPhoto shown when it is one of the item's photos; null for a household upload.
+  """
+  catalogImageId: ID
+  """The credit a catalog photo needs; null for a household upload."""
+  credit: ImageCredit
+  source: EntryImageSource!
+  """
+  The image sized for a row. A catalog photo, or one the household picked, is
+  that photo's thumbnail rendition (the photo itself when it has none); its
+  original is in Item.photos under catalogImageId. A household upload is
+  served as stored, at most 1600 px on its long side: it has no rendition and
+  is not among Item.photos.
+  """
+  url: String!
+}
+
+"""Whose choice an entry's photo is."""
+enum EntryImageSource {
+  """The photo the catalog item shows everyone."""
+  CATALOG
+  """
+  The household chose it: its own upload, or one of the item's photos it picked.
+  """
+  HOUSEHOLD
+}
+
+"""
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
 `... on Error { code message }` fallback alongside specific variants.
@@ -5433,6 +5525,21 @@ type HomeInviteStatsGroup {
   count: InviteActionCount!
 }
 
+type HomeItemPhotoPayload {
+  homeId: ID!
+  """The photo the household's entries for the item show now."""
+  image: EntryImage
+  item: Item!
+  """
+  The household's live pantry stacks for the item; empty for a caller who may not view its pantries.
+  """
+  pantryItems: [PantryItem!]!
+  """
+  The household's live shopping-list lines for the item, on lists not deleted.
+  """
+  shoppingListItems: [ShoppingListItem!]!
+}
+
 """Order by options for homes"""
 input HomeOrderBy {
   createdAt: SortOrder
@@ -5656,6 +5763,12 @@ enum ImagePerspective {
 }
 
 enum ImageUploadPurpose {
+  """
+  A household's own photo for a catalog item, for updateHomeItemPhoto: send
+  homeId and itemId. At most 5 MB; stored privately, shown only to the home's
+  members, never added to the catalog.
+  """
+  HOUSEHOLD_ITEM_PHOTO
   ITEM_IMAGE
   PROFILE_AVATAR
   PROFILE_COVER
@@ -7578,11 +7691,21 @@ Always include a __typename so the variant can be discriminated.
 union MarkHomeAsDefaultResult = ConflictError | ForbiddenError | MarkHomeAsDefaultPayload | NotFoundError | ValidationError
 
 input MarkItemForReviewInput {
+  """
+  The photo the report is about: an approved original photo of this item
+  (an ItemPhoto id), not a size rendition. Omitted for the whole item.
+  """
+  imageId: ID
   itemId: ID!
   reason: String
 }
 
 type MarkItemForReviewPayload {
+  """
+  True when the caller already holds an open report on this item and photo:
+  nothing new was recorded. Show "already reported".
+  """
+  alreadyReported: Boolean!
   item: Item!
 }
 
@@ -9072,6 +9195,18 @@ type Mutation {
   """Stop a shopping list repeating: clears its recurrence."""
   cancelRecurring(input: CancelRecurringInput!): CancelRecurringResult!
   """
+  Move a stack onto another catalog item, for an entry recorded as the wrong
+  item. Its batches, quantity, costs, unit, location, thresholds, package
+  size, portions, tags, the barcode it was scanned from, its brand and its
+  history stay; its name follows the new item while it is still the old
+  item's name. One transaction, recorded on the stack's history as
+  ITEM_CHANGED. A pantry already holding the new item in this stack's unit
+  refuses it with DuplicatePantryItemError naming that stack; the stack's own
+  item is refused on `itemId`. Stock checked in from a receipt teaches the
+  household's next receipt to read those lines as the new item.
+  """
+  changePantryItemItem(input: ChangePantryItemItemInput!): ChangePantryItemItemResult!
+  """
   Move a stack onto another tracking unit. Every batch is re-denominated
   at the same value, with its package content, the stack's defaults and its
   thresholds, in one transaction recorded on the stack's history. An exact
@@ -9252,6 +9387,12 @@ type Mutation {
   answers ConflictError and stays as it is.
   """
   deleteHomeInvite(input: DeleteHomeInviteInput!): DeleteHomeInviteResult!
+  """
+  Clear the household's photo for a catalog item: its entries show the catalog
+  photo again. Clearing when there is none succeeds. Needs the right to edit
+  the household's entries.
+  """
+  deleteHomeItemPhoto(input: DeleteHomeItemPhotoInput!): DeleteHomeItemPhotoResult!
   """Delete a meal plan."""
   deleteMealPlan(input: DeleteMealPlanInput!): DeleteMealPlanResult!
   """Remove an item from a meal plan."""
@@ -9396,7 +9537,13 @@ type Mutation {
   markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
   """Mark a home as the default for the current user."""
   markHomeAsDefault(input: MarkHomeAsDefaultInput!): MarkHomeAsDefaultResult!
-  """Mark an item for review"""
+  """
+  Report an item, or one of its photos, as wrong. The report is recorded for
+  admins with the reason, the photo, the reporter and the time, and the item
+  is flagged for review. A repeat by the same person on the same item and
+  photo, while their earlier report is open, records nothing and answers
+  alreadyReported.
+  """
   markItemForReview(input: MarkItemForReviewInput!): MarkItemForReviewResult!
   """
   Mark a notification as read. The expiration notifications it announced
@@ -9622,6 +9769,13 @@ type Mutation {
   updateFavoriteRecipe(input: UpdateFavoriteRecipeInput!): UpdateFavoriteRecipeResult!
   """Update an existing home's details."""
   updateHome(input: UpdateHomeInput!): UpdateHomeResult!
+  """
+  Set the household's photo for a catalog item: its own upload, or one of the
+  item's approved photos. Its members' entries for the item show it at once;
+  nobody outside the household sees it, and the catalog item is unchanged.
+  Needs the right to edit the household's entries.
+  """
+  updateHomeItemPhoto(input: UpdateHomeItemPhotoInput!): UpdateHomeItemPhotoResult!
   """
   Rotate (update) a home's join code, invalidating any previously shared join link.
   
@@ -10963,6 +11117,10 @@ type PantryItem {
   heldQuantity: Float!
   """The stack's id: one item, in one unit, in one pantry"""
   id: ID!
+  """
+  The photo this entry shows (EntryImage gives the order). Null when there is none.
+  """
+  image: EntryImage
   """
   Whether the wasted stock was composted, as reported with the latest waste or set directly; false by default
   """
@@ -15859,6 +16017,12 @@ input SemanticItemFilters {
   types: [ItemType!]
 }
 
+"""An access token and the refresh token that renews it."""
+type SessionTokens {
+  accessToken: String!
+  refreshToken: String!
+}
+
 """
 A shareable deep link expressed in both forms so clients can choose:
 - universal: an https:// Universal Link / App Link (opens the installed app,
@@ -16419,6 +16583,12 @@ type ShoppingListItem {
   displayFormat: DisplayFormat!
   """The line's id. An add may supply it, so an offline client can mint it"""
   id: ID!
+  """
+  The photo this line shows (EntryImage gives the order). A list with no
+  household, a viewer outside it, and a line with no catalog item see no
+  household photo. Null when there is none.
+  """
+  image: EntryImage
   """
   The catalog item this line buys; null when the line names none or that item was deleted
   """
@@ -18579,6 +18749,26 @@ input UpdateHomeInput {
   """
   version: Int!
 }
+
+input UpdateHomeItemPhotoInput {
+  homeId: ID!
+  itemId: ID!
+  """
+  One of the item's approved photos (an ItemPhoto id). Send this or uploadKey.
+  """
+  itemImageId: ID
+  """
+  A staged upload from createImageUploadUrl with purpose HOUSEHOLD_ITEM_PHOTO. Send this or itemImageId.
+  """
+  uploadKey: String
+}
+
+"""
+Result of UpdateHomeItemPhoto. Select on HomeItemPhotoPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateHomeItemPhotoResult = ConflictError | ForbiddenError | HomeItemPhotoPayload | NotFoundError | ValidationError
 
 input UpdateHomeJoinCodeInput {
   """ID of the home whose join code to rotate."""

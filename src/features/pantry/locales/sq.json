@@ -145,13 +145,11 @@
     "sortRecentlyAdded": "Të shtuara së fundi"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Shto në listën e blerjeve",
     "tutorialAddSubtitle": "Trokit për të shtuar këtë artikull në listën e blerjeve",
     "tutorialAddAllTitle": "Shto të gjitha menjëherë",
     "tutorialAddAllSubtitle": "Shto të gjithë artikujt me stok të ulët në listën e blerjeve menjëherë",
     "lowStockTitle": "Artikuj me stok të ulët",
     "lowStockEmpty": "Të gjithë artikujt janë mbi nivelin minimal të stokut",
-    "remaining": "{{quantity}} {{unit}} të mbetur",
     "expiringTitle": "Artikuj që po skadojnë",
     "expiringEmpty": "Asnjë artikull nuk po skadon së shpejti",
     "expiredTitle": "Artikuj të skaduar",
@@ -162,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "Asnjë qilar i disponueshëm",
     "viewAnalytics": "Analitika"
-  },
-  "pantryHeader": {
-    "greeting": "Përshëndetje, {{name}}!",
-    "homePromptSelect": "Prek për të zgjedhur një shtëpi",
-    "homeNoneYet": "Ende asnjë shtëpi",
-    "homeFallback": "Shtëpia jote",
-    "greetingNoName": "Përshëndetje!"
   },
   "adjustQuantity": {
     "description": "Korrigjo sasinë në stok dhe shëno arsyen.",
@@ -274,7 +265,6 @@
   },
   "addToPantry": {
     "restocked": "U rimbush {{name}}",
-    "fromReceipt": "Shto nga një faturë",
     "amountLeft_one": "Mbetet {{amount}}",
     "amountLeft_other": "Mbeten {{amount}}",
     "lowStockSettings": "Cilësimet e stokut të ulët",
@@ -319,14 +309,13 @@
   "pantryScreen": {
     "greetingFallback": "Mirëmëngjes",
     "searchPlaceholder": "Kërko në qilarin tënd...",
-    "sort": "Rendit",
+    "sortedBy": "Rendit, tani sipas {{field}}",
     "tabAll": "Të gjitha",
     "tabPantry": "Qilar",
     "tabUnassigned": "Pa caktuar",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",
-    "analyticsAccessibility": "Shiko analitikën",
     "emptySubtitle": "Fillo të ndjekësh ushqimin për të reduktuar mbeturinat",
     "noHomeTitle": "Asnjë shtëpi ende",
     "noHomeDescription": "Krijo ose bashkohu me një shtëpi për të ndjekur ushqimin",
@@ -339,8 +328,6 @@
     "tabEmptyTitle": "Asnjë artikull në {{tabName}}",
     "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë skedë",
     "tabEmptyFallbackName": "këtë vendndodhje",
-    "tutorialManageHomesTitle": "Trokit për të menaxhuar shtëpitë",
-    "tutorialManageHomesSubtitle": "Kalo mes shtëpive ose menaxho cilësimet e shtëpisë",
     "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
     "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd",
@@ -378,6 +365,20 @@
     "title": "Artikulli është tashmë në qilar",
     "body": "Ky artikull është tashmë në qilarin tënd në këtë njësi. Dëshiron ta riplotësosh?",
     "restock": "Riplotëso"
+  },
+  "relinkItem": {
+    "action": "Nuk është ky artikull?",
+    "title": "Cili artikull është?",
+    "hint": "Zgjidh artikullin që është në të vërtetë. Sasia, kostot dhe historiku mbeten.",
+    "searchPlaceholder": "Kërko artikuj",
+    "moveTo": "Kalo te {{name}}",
+    "moving": "Po kalohet…",
+    "moved": "U krye: tani është {{name}}.",
+    "movedLearned": "U krye: tani është {{name}}, dhe edhe faturat e ardhshme do ta njohin.",
+    "duplicateBody": "Qilari yt ka tashmë {{name}} në këtë njësi, prandaj kjo hyrje mbetet siç ishte. Hap atë hyrje për të shtuar aty.",
+    "openExisting": "Hap",
+    "failedTitle": "Kjo hyrje nuk u kalua",
+    "failedBody": "Mbeti siç ishte. Kontrollo lidhjen dhe provo përsëri."
   },
   "expirationAction": {
     "cooked": "Gatuar",

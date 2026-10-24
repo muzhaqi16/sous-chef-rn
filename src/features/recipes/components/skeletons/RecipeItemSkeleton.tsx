@@ -1,10 +1,10 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 import { ListItem } from '#components/molecules/ListItem';
-import { commonStyles } from '#/styles/commonStyles';
 import { type, rowType } from '#/theme/foundations/type';
 
 // The bars stand in for the row's own text, so they take their heights from the
@@ -27,7 +27,7 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
   animated = true,
 }) => {
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <ListItem>
         <SkeletonRectangle
           width={48}
@@ -44,7 +44,7 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
           />
         </View>
       </ListItem>
-    </View>
+    </RowCard>
   );
 };
 

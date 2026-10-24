@@ -33,7 +33,6 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
 }));
 interface MockSessionState {
   user: { id: string } | null;
-  isLoggingOut: boolean;
   isOnline: boolean;
   apiReachable: boolean | null;
 }
@@ -43,7 +42,6 @@ jest.mock('#store', () => {
   return {
     useStore: create<MockSessionState>()(() => ({
       user: { id: 'user-1' },
-      isLoggingOut: false,
       isOnline: true,
       apiReachable: true,
     })),
@@ -56,13 +54,9 @@ jest.mock('#/apollo/logoutCleanup', () => {
   const { isSessionEnding } = jest.requireActual<
     typeof import('#store/sessionEnding')
   >('#store/sessionEnding');
-  const { useStore: store } = jest.requireMock<{
-    useStore: StoreApi<MockSessionState>;
-  }>('#store');
   return {
     LogoutCleanup: {
-      isInLogoutProcess: () =>
-        isSessionEnding() || store.getState().isLoggingOut,
+      isInLogoutProcess: () => isSessionEnding(),
     },
   };
 });
@@ -157,7 +151,6 @@ beforeEach(async () => {
   resetSessionEndingGate();
   useStore.setState({
     user: { id: 'user-1' },
-    isLoggingOut: false,
     apiReachable: true,
   });
   requests = [];

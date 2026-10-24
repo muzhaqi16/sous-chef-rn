@@ -89,6 +89,12 @@ export type AuthUserInput = User & {
   } | null;
 };
 
+/**
+ * What became of a token pair. `outlived`: the refresh token it renews is no
+ * longer the stored one, so the pair belongs to a session that is gone.
+ */
+export type TokenPairWrite = 'stored' | 'session_ending' | 'outlived';
+
 export interface AuthState {
   // Core auth state
   user: User | null;
@@ -96,7 +102,6 @@ export interface AuthState {
   refreshToken: string | null;
 
   // Auth preferences
-  // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
 
   // Wall-clock deadline before another device-credential exchange may be sent,
@@ -105,38 +110,35 @@ export interface AuthState {
   biometricRetryAt: number;
   biometricAttempts: number;
 
-  // Auto-login state
-  isAutoLoggingIn: boolean;
-
   // Transient loading state for authService (not persisted)
   authIsLoading: boolean;
-  authIsLoadingCredentials: boolean;
 
   // True once the keychain is confirmed to hold the current token pair.
   // While false, partialize (store/index.ts) keeps the pair in the MMKV blob
   // as a fallback so a failed keychain write/read can't lose the session.
   sessionTokensInKeychain: boolean;
 
-  // Computed property
-  getIsAuthenticated: () => boolean;
-
   // Actions
+  /** False when a session end is in progress: the sign-in is discarded. */
   setAuth: (
     user: AuthUserInput,
     accessToken: string,
     refreshToken: string,
-  ) => void;
+  ) => boolean;
   updateUser: (updates: Partial<User>) => void;
-  setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
+  /** `replaces`: the refresh token the pair renews, when it renews one. */
+  setTokens: (tokens: {
+    accessToken?: string;
+    refreshToken?: string;
+    replaces?: string;
+  }) => TokenPairWrite;
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
   setHasStoredCredentials: (has: boolean | null) => void;
   registerBiometricRefusal: (retryAfterMs?: number) => void;
   clearBiometricBackoff: () => void;
-  setIsAutoLoggingIn: (loading: boolean) => void;
   setAuthIsLoading: (v: boolean) => void;
-  setAuthIsLoadingCredentials: (v: boolean) => void;
   setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
@@ -145,6 +147,12 @@ export const holdsSessionTokens = (
   state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
 ): boolean => !!state.accessToken || !!state.refreshToken;
 
+/** Signed in with a token requests can carry now. */
+export const isSignedIn = <S extends Pick<AuthState, 'user' | 'accessToken'>>(
+  state: S,
+): state is S & { user: User; accessToken: string } =>
+  !!state.user && !!state.accessToken;
+
 const initialAuthState = {
   user: null,
   accessToken: null,
@@ -152,9 +160,7 @@ const initialAuthState = {
   hasStoredCredentials: null,
   biometricRetryAt: 0,
   biometricAttempts: 0,
-  isAutoLoggingIn: false,
   authIsLoading: false,
-  authIsLoadingCredentials: false,
   sessionTokensInKeychain: false,
 };
 
@@ -186,12 +192,11 @@ export const createAuthSlice: StateCreator<
   return {
     ...initialAuthState,
 
-    getIsAuthenticated: () => {
-      const state = get();
-      return !!(state.user && state.accessToken);
-    },
-
     setAuth: (user, accessToken, refreshToken) => {
+      if (isSessionEnding()) {
+        logger.warn('Discarded a sign-in that arrived while the session ended');
+        return false;
+      }
       set(state => {
         // Clear stale navigation state if the user changed (or no previous user).
         // This prevents a new user from inheriting another user's selectedHomeId,
@@ -223,7 +228,6 @@ export const createAuthSlice: StateCreator<
         };
         state.accessToken = accessToken;
         state.refreshToken = refreshToken;
-        state.isAutoLoggingIn = false; // Clear auto-login state on success
         // Mirrored out of the auth payload so every money surface can read it
         // without a query of its own; the reset manager clears it on sign-out.
         if (currency) {
@@ -242,6 +246,7 @@ export const createAuthSlice: StateCreator<
       // This will automatically refresh the token 5 minutes before it expires
       // to prevent user-facing 401 errors and provide seamless UX
       scheduleProactiveRefresh(accessToken);
+      return true;
     },
 
     updateUser: updates => {
@@ -256,14 +261,18 @@ export const createAuthSlice: StateCreator<
       });
     },
 
-    setTokens: ({ accessToken, refreshToken }) => {
+    setTokens: ({ accessToken, refreshToken, replaces }) => {
+      if (replaces !== undefined && get().refreshToken !== replaces) {
+        logger.info('Discarded a token pair that outlived its session');
+        return 'outlived';
+      }
       // Landing mid sign-out, a credential outlives it and re-arms the refresh
       // the teardown cancelled.
       if (isSessionEnding()) {
         logger.warn(
           'Discarded a token pair that arrived while the session ended',
         );
-        return;
+        return 'session_ending';
       }
       set(state => {
         if (accessToken !== undefined) state.accessToken = accessToken;
@@ -280,6 +289,7 @@ export const createAuthSlice: StateCreator<
       if (accessToken) {
         scheduleProactiveRefresh(accessToken);
       }
+      return 'stored';
     },
 
     setEmailVerified: verified => {
@@ -307,9 +317,7 @@ export const createAuthSlice: StateCreator<
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
-        state.isAutoLoggingIn = false;
         state.sessionTokensInKeychain = false;
-        // Keep rememberMe preference
       });
 
       // clearSessionTokens reports failure via its own logging; a false result
@@ -339,21 +347,9 @@ export const createAuthSlice: StateCreator<
       });
     },
 
-    setIsAutoLoggingIn: loading => {
-      set(state => {
-        state.isAutoLoggingIn = loading;
-      });
-    },
-
     setAuthIsLoading: v => {
       set(state => {
         state.authIsLoading = v;
-      });
-    },
-
-    setAuthIsLoadingCredentials: v => {
-      set(state => {
-        state.authIsLoadingCredentials = v;
       });
     },
 

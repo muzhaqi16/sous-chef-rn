@@ -1,6 +1,7 @@
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
+import { whileSessionEnds } from '#store/sessionEnding';
 import { proactiveTokenRefresh } from '../../links/refreshToken';
 import { SessionError } from '#/utils/errors/sessionError';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
@@ -65,13 +66,12 @@ const entry = (id: string, itemId: string) =>
     variables: { input: { id: itemId, itemName: 'Milk', version: 1 } },
   });
 
-const signedInAs = (userId: string | null, isLoggingOut = false) => {
+const signedInAs = (userId: string | null) => {
   (useStore.getState as jest.Mock).mockReturnValue({
     user: userId ? { id: userId } : null,
     isOnline: true,
     apiReachable: true,
     accessToken: 'token',
-    isLoggingOut,
     setNeedsTokenRefresh: jest.fn(),
   });
 };
@@ -86,14 +86,16 @@ describe('a drain meeting a session that is ending', () => {
   });
 
   it('does not spend a token refresh while signing out', async () => {
-    signedInAs('user-1', true);
     const handleMutationError = manager['handleMutationError'].bind(manager);
 
-    await handleMutationError(
-      entry('m1', 'item-1'),
-      new SessionError(
-        TopLevelErrorCode.Unauthenticated,
-        'Operation cancelled due to logout process',
+    // Inside the session-ending gate: what a sign-out holds while it tears down.
+    await whileSessionEnds(() =>
+      handleMutationError(
+        entry('m1', 'item-1'),
+        new SessionError(
+          TopLevelErrorCode.Unauthenticated,
+          'Operation cancelled due to logout process',
+        ),
       ),
     );
 
@@ -103,16 +105,17 @@ describe('a drain meeting a session that is ending', () => {
   });
 
   it('parks the write rather than withdrawing it', async () => {
-    signedInAs('user-1', true);
     const failureHandler = jest.fn();
     manager.setFailureHandler(failureHandler);
     const handleMutationError = manager['handleMutationError'].bind(manager);
 
-    await handleMutationError(
-      entry('m2', 'item-2'),
-      new SessionError(
-        TopLevelErrorCode.Unauthenticated,
-        'Operation cancelled due to logout process',
+    await whileSessionEnds(() =>
+      handleMutationError(
+        entry('m2', 'item-2'),
+        new SessionError(
+          TopLevelErrorCode.Unauthenticated,
+          'Operation cancelled due to logout process',
+        ),
       ),
     );
 

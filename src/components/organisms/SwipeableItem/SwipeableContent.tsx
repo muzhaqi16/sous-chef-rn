@@ -49,7 +49,6 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         onPress={onPress}
         onLongPress={onLongPress}
         delayLongPress={150}
-        style={styles.touchable}
         android_ripple={RIPPLE.SUBTLE}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
@@ -61,16 +60,10 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
+  // No radius of its own: the row's `RowCard` clips the ripple to the card's
+  // corners.
   itemContainer: {
     flex: 1,
   },
-  touchable: {
-    // Matches `BaseItemCard.container`'s radius so the Android ripple is masked to
-    // the row's rounded shape — `android_ripple` clips to the pressed view's
-    // background shape, and without one the press paints a square grey rectangle.
-    // Radius only: `overflow: 'hidden'` would cut the card's soft drop shadow to a
-    // hard rectangle, the same reason `childrenContainer` stays visible.
-    borderRadius: theme.radii.xl,
-  },
-}));
+});

@@ -5,8 +5,7 @@ import {
   type AwayNotification,
 } from '#features/notifications/hooks/useNotifications';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
-import { useUser } from '#store/useAppStore';
-import { useAppStore } from '#store/useAppStore';
+import { useIsSignedIn, useUser } from '#store/useAppStore';
 import { usePushTapHandlers } from './usePushTapHandlers';
 
 interface NotificationProviderProps {
@@ -37,9 +36,7 @@ const drawWhileAway = (notification: AwayNotification): void => {
  */
 const NotificationListener: React.FC = () => {
   const user = useUser();
-  const isAuthenticated = useAppStore(
-    state => !!(state.user && state.accessToken),
-  );
+  const isAuthenticated = useIsSignedIn();
 
   // The ONLY mount point for the notification subscriptions — the server caps
   // concurrent subscriptions per client, so screens must use useNotifications

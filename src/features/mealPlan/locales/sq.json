@@ -18,6 +18,8 @@
     "startDateRequiredMessage": "Zgjidh një datë fillimi.",
     "failedToCreate": "Nuk u krijua dot plani i vakteve.",
     "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
+    "addNeedsPlan": "Krijo fillimisht një plan vaktesh, pastaj shto vaktet.",
+    "noAddPermission": "Mund ta shohësh këtë plan, por jo t'i shtosh vakte.",
     "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme.",
     "daily": "Ditor",
     "custom": "I personalizuar"
@@ -36,7 +38,8 @@
     "dietDairyFree": "PB"
   },
   "emptyDay": {
-    "title": "Asnjë vakt i planifikuar"
+    "title": "Asnjë vakt i planifikuar",
+    "addHint": "Trokit + për të shtuar një vakt"
   },
   "mealPlanEmpty": {
     "title": "Planifiko vaktet e tua",
@@ -60,7 +63,7 @@
     "sharedWith": "Ndarë me {{name}}",
     "createdBy": "Krijuar nga {{name}}",
     "actionsLabel": "Veprimet",
-    "generateShoppingListDesc": "Krijo një listë nga recetat e këtij plani",
+    "saveAsTemplateDesc": "Përdor sërish vaktet e këtij plani për një javë tjetër",
     "duplicatePlanDesc": "Kopjo këtë plan në një interval të ri datash",
     "viewNutrition": "Shiko ushqyerjen",
     "hideNutrition": "Fshih ushqyerjen",
@@ -157,9 +160,7 @@
     "duplicateNameLabel": "Emri i modelit të ri"
   },
   "mealPlanMain": {
-    "label": "Planifiko vaktet e tua",
     "generateShoppingListLabel": "Gjenero listën e blerjeve",
-    "saveAsTemplateLabel": "Ruaj si model",
     "planSettingsLabel": "Cilësimet e planit",
     "deleteMealPlanFailed": "Fshirja e planit të vakteve dështoi",
     "mealPlanDeleted": "Plani i vakteve u fshi",

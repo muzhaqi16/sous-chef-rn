@@ -39,6 +39,9 @@ export const authTestIDs = {
   resetPasswordNewInput: 'reset-password-new-input',
   resetPasswordConfirmInput: 'reset-password-confirm-input',
   resetPasswordSubmitButton: 'reset-password-submit-button',
+  resetPasswordSignsOutNote: 'reset-password-signs-out-note',
+  resetPasswordDoneView: 'reset-password-done',
+  resetPasswordSignInButton: 'reset-password-sign-in-button',
 
   codeVerificationScreen: 'code-verification-screen',
   codeVerificationResendLink: 'resend-code',

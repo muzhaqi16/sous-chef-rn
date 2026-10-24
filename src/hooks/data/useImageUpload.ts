@@ -123,6 +123,8 @@ export interface ImageUploadOptions {
   suppressAlert?: boolean;
   /** Stops the upload where it is: before the presign, or mid-transfer. */
   signal?: AbortSignal;
+  /** The household a `HOUSEHOLD_ITEM_PHOTO` is for; the server refuses it elsewhere. */
+  homeId?: string;
 }
 
 export interface ItemImageUploadOptions extends ImageUploadOptions {
@@ -240,7 +242,8 @@ export const useImageUpload = () => {
     confirmUploadFn: (key: string) => Promise<string | null>,
     options: ImageUploadOptions = {},
   ): Promise<string | null> => {
-    const { onProgress, onSuccess, onError, suppressAlert, signal } = options;
+    const { onProgress, onSuccess, onError, suppressAlert, signal, homeId } =
+      options;
 
     // Check if online before attempting upload
     const state = useStore.getState();
@@ -304,6 +307,7 @@ export const useImageUpload = () => {
               mime: mimeType,
               purpose: purpose,
               itemId: itemId,
+              homeId,
             },
           },
         },
@@ -494,18 +498,24 @@ export const useImageUpload = () => {
   };
 
   /**
-   * A photo a mutation takes by key (a receipt for `createReceiptParse`):
-   * presigned and posted like any photo but never confirmed, since its
-   * consumer owns it from there. Null offline; a failure throws, unreported.
+   * A photo a mutation takes by key (a receipt for `createReceiptParse`, a
+   * household photo for `updateHomeItemPhoto`): presigned and posted like any
+   * photo but never confirmed, since its consumer owns it from there. Null
+   * offline; a failure throws, unreported.
    */
   const uploadUnconfirmed = (
     file: ImageFile,
     purpose: ImageUploadPurpose,
-    { signal }: Pick<ImageUploadOptions, 'signal'> = {},
+    {
+      signal,
+      homeId,
+      itemId,
+    }: Pick<ImageUploadOptions, 'signal' | 'homeId'> & { itemId?: string } = {},
   ): Promise<string | null> =>
-    uploadImage(file, purpose, false, undefined, key => Promise.resolve(key), {
+    uploadImage(file, purpose, false, itemId, key => Promise.resolve(key), {
       suppressAlert: true,
       signal,
+      homeId,
     });
 
   const updateProfileAvatarUrl = async (avatarUrl: string) => {

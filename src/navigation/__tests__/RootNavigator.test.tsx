@@ -143,7 +143,6 @@ jest.mock('#services/performance/NativePerformanceService', () => ({
 let mockIsHydrated = false;
 let mockUser: User | null = null;
 let mockNavigationState: NavigationState = 'loading';
-let mockShowBiometricSetup = false;
 let mockPostLoginCredentials: { email: string; password: string } | null = null;
 let mockVerificationSkipped = false;
 const mockSetNavigationState = jest.fn((state: NavigationState) => {
@@ -157,10 +156,8 @@ jest.mock('#store/useAppStore', () => ({
       isHydrated: mockIsHydrated,
       user: mockUser,
       navigationState: mockNavigationState,
-      showBiometricSetup: mockShowBiometricSetup,
       postLoginCredentials: mockPostLoginCredentials,
       setNavigationState: mockSetNavigationState,
-      setShowBiometricSetup: jest.fn(),
       setPostLoginCredentials: jest.fn(),
     };
     return selector(state as RootState);
@@ -170,10 +167,8 @@ jest.mock('#store/useAppStore', () => ({
   useVerificationSkipped: jest.fn(() => mockVerificationSkipped),
   usePostLoginState: jest.fn(() => ({
     navigationState: mockNavigationState,
-    showBiometricSetup: mockShowBiometricSetup,
     postLoginCredentials: mockPostLoginCredentials,
     setNavigationState: mockSetNavigationState,
-    setShowBiometricSetup: jest.fn(),
     setPostLoginCredentials: jest.fn(),
   })),
 }));
@@ -250,7 +245,6 @@ describe('Navigation (RootNavigator)', () => {
     mockIsHydrated = false;
     mockUser = null;
     mockNavigationState = 'loading';
-    mockShowBiometricSetup = false;
     mockPostLoginCredentials = null;
     mockVerificationSkipped = false;
     mockSetNavigationState.mockClear();
@@ -431,7 +425,6 @@ describe('Navigation (RootNavigator)', () => {
   it('does not show biometric prompt when conditions are not met', () => {
     mockIsHydrated = true;
     mockNavigationState = 'main_app';
-    mockShowBiometricSetup = false;
     mockUser = {
       id: '1',
       email: 'test@example.com',

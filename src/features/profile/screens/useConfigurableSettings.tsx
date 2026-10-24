@@ -6,7 +6,6 @@ import { logger } from '#/utils/environment';
 import { useUser, useNavigationUtils } from '#store/useAppStore';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
-import { removeCredentials } from '#/services/biometric/credentials';
 import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
@@ -52,8 +51,7 @@ export const useConfigurableSettings = () => {
     selectCurrency,
   } = useCurrencyPreference();
   const { checkStoredCredentials, getBiometricInfo } = biometricService;
-  const { resetBiometricDeclination, markBiometricEnabled } =
-    useAuthPreferences();
+  const { markBiometricEnabled } = useAuthPreferences();
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -109,9 +107,6 @@ export const useConfigurableSettings = () => {
     setShowBiometricModal(false);
     if (enabled) {
       setBiometricEnabled(true);
-
-      // Reset biometric declination state since user manually enabled it
-      resetBiometricDeclination();
       markBiometricEnabled();
     } else {
       // Ensure the toggle reflects the current state if setup failed/cancelled
@@ -124,13 +119,9 @@ export const useConfigurableSettings = () => {
     const email = user?.email;
     try {
       if (email) {
-        // Server first, while the session that authorises it is live; then the
-        // local slot.
-        await biometricService.revokeDeviceCredentialForThisDevice();
-        // `removeCredentials` reports a failed keychain delete by returning
-        // false rather than throwing, so an unread result flips the toggle over
-        // a slot that is still there to be offered next launch.
-        const removed = await removeCredentials(email);
+        // An unread false flips the toggle over a slot still there to be
+        // offered next launch.
+        const removed = await biometricService.forgetStoredSignIn(email);
         if (!removed) {
           alertService.alert(t('labels.error'), t('biometrics.disableFailed'));
           return;

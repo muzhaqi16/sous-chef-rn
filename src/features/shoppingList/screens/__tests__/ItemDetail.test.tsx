@@ -25,6 +25,7 @@ import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
+import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -54,7 +55,11 @@ jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
-  ItemPhotoCarousel: () => null,
+  ItemPhotoCarousel: ({ leadImageUrl }: { leadImageUrl?: string | null }) => {
+    if (!leadImageUrl) return null;
+    const { View } = require('react-native');
+    return <View testID="carousel-lead" accessibilityLabel={leadImageUrl} />;
+  },
 }));
 jest.mock('#components/molecules/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => {
@@ -499,6 +504,30 @@ describe('ShoppingListItemDetail', () => {
     );
   });
 
+  // The household overrides the item photo on its own entries.
+  it("leads the hero with the household's own photo", async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            image: {
+              __typename: 'EntryImage',
+              url: 'https://signed.example.com/our-bread.jpg',
+              source: EntryImageSource.Household,
+              catalogImageId: null,
+            },
+          }),
+        ),
+      ],
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('carousel-lead').props.accessibilityLabel).toBe(
+        'https://signed.example.com/our-bread.jpg',
+      ),
+    );
+  });
+
   it('omits the hero when the user has disabled images', async () => {
     mockUseShowShoppingListImages.mockReturnValue(false);
     mockResolveImageUrl.mockReturnValue('https://cdn.example.com/bread.jpg');
@@ -529,6 +558,38 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() =>
       expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull(),
     );
+  });
+
+  it("offers to report a public catalog item's photo", async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            item: {
+              __typename: 'Item',
+              id: 'i1',
+              canSuggest: true,
+              imageUrl: 'https://cdn.test/bread.jpg',
+              photos: [],
+            },
+          }),
+        ),
+      ],
+    });
+    expect(
+      await screen.findByTestId('shopping-item-report-photo-button'),
+    ).toBeTruthy();
+  });
+
+  it('offers no photo report on a line with no catalog item', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    expect(
+      screen.queryByTestId('shopping-item-report-photo-button'),
+    ).toBeNull();
   });
 
   it('says a line the server holds nothing for is not found', async () => {

@@ -1,4 +1,5 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
@@ -168,6 +169,32 @@ describe('useShoppingListsLite', () => {
 
     expect(overview.result.current.lists.length).toBe(ALL_LISTS);
     overview.unmount();
+  });
+
+  it('keeps the lists it had when a later read fails', async () => {
+    const answered = overviewMock();
+    const failed = recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => ({ lite: useShoppingListsLite(), client: useApolloClient() }),
+      {
+        operationMocks: [{ ...answered.mock, maxUsageCount: 1 }, failed.mock],
+      },
+    );
+    await waitFor(() => expect(result.current.lite.lists).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.client
+        .refetchQueries({ include: 'active' })
+        .catch(() => undefined);
+    });
+
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.lite.lists.map(list => list.name)).toEqual([
+      'Weekly',
+      'Party',
+    ]);
   });
 
   it('returns nothing when skipped', () => {

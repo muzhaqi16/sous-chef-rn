@@ -49,6 +49,11 @@ const SORT_OPTIONS: Array<{
   },
 ];
 
+/** The label of a sort option, for a control that names the active sort. */
+export const sortOptionLabelKey = (option: SortOption): TranslationKey =>
+  SORT_OPTIONS.find(entry => entry.key === option)?.labelKey ??
+  'pantrySort.sortName';
+
 export const PantrySortModal: React.FC<PantrySortModalProps> = ({
   visible,
   sortOption,

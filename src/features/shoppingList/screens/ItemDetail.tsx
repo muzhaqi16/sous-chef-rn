@@ -14,7 +14,8 @@ import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
-import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
+import { entryGallery } from '#features/catalog/ui/entryGallery';
 import { hasNutritionData } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -34,6 +35,7 @@ import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { purchaseDay } from '#/utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { personName } from '#/utils/formatters/memberFormatters';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
@@ -112,6 +114,12 @@ export const ShoppingListItemDetail: React.FC<
   const { item, detail, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
 
+  const reportPhotoActions = useReportPhotoHeaderAction(
+    detail?.item,
+    detail?.image,
+    shoppingListTestIDs.itemDetailReportPhotoButton,
+  );
+
   const handleEdit = () => {
     toEditItem({ listId, itemId });
   };
@@ -129,9 +137,10 @@ export const ShoppingListItemDetail: React.FC<
     item?.netWeightUnit,
   );
 
-  const itemPhotos = galleryPhotos(detail?.item?.photos);
+  const gallery = entryGallery(detail?.image, detail?.item?.photos);
+  const itemPhotos = gallery.photos;
   const nutritionFacts = detail?.item?.nutritionFacts ?? null;
-  const showImages = itemPhotos.length > 0;
+  const showImages = itemPhotos.length > 0 || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
 
   if (notFound || !item) {
@@ -241,6 +250,7 @@ export const ShoppingListItemDetail: React.FC<
             onPress: handleEdit,
             testID: shoppingListTestIDs.itemDetailEditButton,
           },
+          ...reportPhotoActions,
         ]}
         renderHero={
           hasHero
@@ -249,6 +259,7 @@ export const ShoppingListItemDetail: React.FC<
                   <GalleryHero
                     photos={itemPhotos}
                     fallbackImageUrl={imageUrl}
+                    leadImageUrl={gallery.leadImageUrl}
                     height={heroHeight}
                     onPhotoPress={setViewerIndex}
                     // The collapse guard for the gallery branch: a dead CDN url

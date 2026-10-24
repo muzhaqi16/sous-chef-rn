@@ -17,6 +17,7 @@ import type profileCopy from '#features/profile/locales/en.json';
 import type receiptsCopy from '#features/receipts/locales/en.json';
 import type recipesCopy from '#features/recipes/locales/en.json';
 import type shoppingListCopy from '#features/shoppingList/locales/en.json';
+import type todayCopy from '#features/today/locales/en.json';
 
 export type TranslationResources = typeof core &
   typeof authCopy &
@@ -31,4 +32,5 @@ export type TranslationResources = typeof core &
   typeof profileCopy &
   typeof receiptsCopy &
   typeof recipesCopy &
-  typeof shoppingListCopy;
+  typeof shoppingListCopy &
+  typeof todayCopy;

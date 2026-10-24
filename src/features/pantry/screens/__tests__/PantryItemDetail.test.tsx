@@ -3,17 +3,25 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
-import { BatchStatus, ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  EntryImageSource,
+  ExternalSource,
+  ItemImageStatus,
+} from '#/graphql/generated/schemaTypes';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import {
   pantryItemData,
   type PantryItemFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryItemFixtures';
+
+type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
 import { PantryItemDetail } from '../PantryItemDetail';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 
@@ -79,6 +87,8 @@ jest.mock('#hooks/performance/useScreenTransition', () => ({
 jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
+  useIsOnline: jest.fn(() => true),
   // The screen classifies its own data state via useDataState ->
   // useOfflineAwareError -> useIsApiUnavailable, which calls
   // useAppStore(selector). Online by default; individual tests override.
@@ -429,7 +439,7 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
     await screen.findAllByText('Milk');
-    expect(screen.getByTestId('pantry-item-edit-button')).toBeTruthy();
+    expect(headerAction('pantry-item-edit-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
     expect(screen.queryByTestId('pantry-item-delete-button')).toBeNull();
     expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
@@ -445,6 +455,135 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
     expect(headerAction('pantry-item-edit-button')).toBeTruthy();
     expect(headerAction('pantry-item-delete-button')).toBeTruthy();
+  });
+
+  it("offers to report a public catalog item's photo", async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          canSuggest: true,
+          imageUrl: 'https://cdn.test/milk.jpg',
+        }),
+      ],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-report-photo-button')).toBeTruthy();
+  });
+
+  // The household's own upload is nobody else's to review.
+  it("offers no photo report over the household's own upload", async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          canSuggest: true,
+          imageUrl: 'https://cdn.test/milk.jpg',
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://signed.test/own.jpg',
+            source: EntryImageSource.Household,
+            catalogImageId: null,
+          },
+        }),
+      ],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-report-photo-button')).toBeNull();
+  });
+
+  it('offers the household a photo of its own to a member who can edit', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('entry-photo-change-button')).toBeTruthy();
+  });
+
+  it('offers no photo change to a member who cannot edit', async () => {
+    Object.assign(mockPermissions, { canEditItems: false });
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('entry-photo-change-button')).toBeNull();
+  });
+
+  describe('picking one of the item photos', () => {
+    const photo = (id: string): ItemPhotoFixture => ({
+      __typename: 'ItemPhoto',
+      id,
+      url: `https://cdn.test/${id}.jpg`,
+      perspective: null,
+      isPrimary: false,
+      status: ItemImageStatus.Approved,
+      credit: null,
+      variants: [],
+    });
+    const pickOffered = async (fixture: Partial<typeof fullItem>) => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [itemMock({ ...fullItem, ...fixture })],
+      });
+      await screen.findAllByText('Milk');
+      const change = headerAction(catalogTestIDs.entryPhotoChangeButton);
+      if (change) fireEvent.press(change);
+      await screen.findByTestId(catalogTestIDs.entryPhotoSheet);
+      return screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto);
+    };
+
+    it('is offered while there is a photo other than the one in use', async () => {
+      expect(
+        await pickOffered({
+          photos: [photo('front'), photo('back')],
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://cdn.test/front.jpg',
+            source: EntryImageSource.Household,
+            catalogImageId: 'front',
+          },
+        }),
+      ).toBeTruthy();
+    });
+
+    // The viewer offers "Use this photo" on every photo but the one in use.
+    it('is not offered when the only photo is already in use', async () => {
+      expect(
+        await pickOffered({
+          photos: [photo('front')],
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://cdn.test/front.jpg',
+            source: EntryImageSource.Household,
+            catalogImageId: 'front',
+          },
+        }),
+      ).toBeNull();
+    });
+  });
+
+  it('offers "Not this item?" to a member who can edit', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-relink-button')).toBeTruthy();
+  });
+
+  it('offers no "Not this item?" to a member who cannot edit', async () => {
+    Object.assign(mockPermissions, { canEditItems: false });
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-relink-button')).toBeNull();
+  });
+
+  it('offers no photo report on an item with no photo', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock({ ...fullItem, canSuggest: true })],
+    });
+    await screen.findAllByText('Milk');
+    expect(headerAction('pantry-item-report-photo-button')).toBeNull();
   });
 
   it('shows the offline state, not a spinner, on an offline cache miss', async () => {

@@ -145,13 +145,11 @@
     "sortRecentlyAdded": "Recently Added"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Add to shopping list",
     "tutorialAddSubtitle": "Tap to add this item to your shopping list",
     "tutorialAddAllTitle": "Add all at once",
     "tutorialAddAllSubtitle": "Add all low stock items to your shopping list at once",
     "lowStockTitle": "Low Stock Items",
     "lowStockEmpty": "All items are above minimum stock levels",
-    "remaining": "{{quantity}} {{unit}} remaining",
     "expiringTitle": "Expiring Items",
     "expiringEmpty": "No items are expiring soon",
     "expiredTitle": "Expired Items",
@@ -162,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "No pantries available",
     "viewAnalytics": "Analytics"
-  },
-  "pantryHeader": {
-    "greeting": "Hello, {{name}}!",
-    "homePromptSelect": "Tap to select a home",
-    "homeNoneYet": "No homes yet",
-    "homeFallback": "Your Home",
-    "greetingNoName": "Hello!"
   },
   "adjustQuantity": {
     "description": "Correct your stock count and record why.",
@@ -274,7 +265,6 @@
   },
   "addToPantry": {
     "restocked": "Restocked {{name}}",
-    "fromReceipt": "Add from a receipt",
     "amountLeft_one": "{{amount}} left",
     "amountLeft_other": "{{amount}} left",
     "lowStockSettings": "Low Stock Settings",
@@ -319,14 +309,13 @@
   "pantryScreen": {
     "greetingFallback": "Good morning",
     "searchPlaceholder": "Search your pantry...",
-    "sort": "Sort",
+    "sortedBy": "Sort, now by {{field}}",
     "tabAll": "All",
     "tabPantry": "Pantry",
     "tabUnassigned": "Unassigned",
     "expiringCount": "{{count}} expiring",
     "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",
-    "analyticsAccessibility": "View analytics",
     "emptySubtitle": "Start tracking your food to reduce waste",
     "noHomeTitle": "No home yet",
     "noHomeDescription": "Create or join a home to start tracking food",
@@ -339,8 +328,6 @@
     "tabEmptyTitle": "No items in {{tabName}}",
     "tabEmptyDescription": "Items stored here will appear in this tab",
     "tabEmptyFallbackName": "this location",
-    "tutorialManageHomesTitle": "Tap to manage homes",
-    "tutorialManageHomesSubtitle": "Switch between homes or manage home settings",
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",
     "tutorialAddItemsSubtitle": "Tap + to add items to your pantry",
@@ -378,6 +365,20 @@
     "title": "Item Already in Pantry",
     "body": "This item is already in your pantry in this unit. Would you like to restock it?",
     "restock": "Restock"
+  },
+  "relinkItem": {
+    "action": "Not this item?",
+    "title": "Which item is this?",
+    "hint": "Pick the item this really is. Its quantity, costs and history stay.",
+    "searchPlaceholder": "Search items",
+    "moveTo": "Move to {{name}}",
+    "moving": "Moving…",
+    "moved": "Done. It's now {{name}}.",
+    "movedLearned": "Done. It's now {{name}}, and your next receipts will match it too.",
+    "duplicateBody": "Your pantry already has {{name}} in this unit, so this entry stays as it was. Open that entry to add to it instead.",
+    "openExisting": "Open it",
+    "failedTitle": "Couldn't move this entry",
+    "failedBody": "It's as it was. Check your connection and try again."
   },
   "expirationAction": {
     "cooked": "Cooked",

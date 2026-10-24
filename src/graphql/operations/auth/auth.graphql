@@ -158,6 +158,11 @@ mutation ChangePassword($input: ChangePasswordInput!) {
     __typename
     ... on ChangePasswordPayload {
       status
+      # This device's new pair: the change revokes every earlier token.
+      session {
+        accessToken
+        refreshToken
+      }
     }
     ... on Error {
       code

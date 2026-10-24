@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
-import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
+import { MealPlanItemCard } from '#features/mealPlan/ui/MealPlanItemCard';
 import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,
-} from '#features/mealPlan/components/MealPlanItemCard.generated';
+} from '#features/mealPlan/ui/MealPlanItemCard.generated';
 import {
   renderWithApollo,
   seedCache,
@@ -34,7 +34,10 @@ const makeItem = (
 /** A strict cell: the item is read from the cache, the prop is its key. */
 const renderCard = (
   item: MealPlanItemCard_ItemFragment,
-  props: Omit<React.ComponentProps<typeof MealPlanItemCard>, 'item'> = {},
+  props: Omit<
+    React.ComponentProps<typeof MealPlanItemCard>,
+    'item' | 'position'
+  > = {},
 ) =>
   renderWithApollo(
     <MealPlanItemCard

@@ -37,7 +37,6 @@ export function mockAppStore(state: Partial<RootState>) {
     useSelectedHomeId: jest.fn(() => state.selectedHomeId),
     useSelectedPantryId: jest.fn(() => state.selectedPantryId),
     useSelectedShoppingListId: jest.fn(() => state.selectedShoppingListId),
-    useIsLoggingOut: jest.fn(() => state.isLoggingOut),
     useIsHydrated: jest.fn(() => state.isHydrated),
     useIsOnline: jest.fn(() => state.isOnline),
     useCanAccessDevTools: jest.fn(() => state.user?.canAccessDevTools === true),
@@ -49,10 +48,8 @@ export function mockAppStore(state: Partial<RootState>) {
     // ── Grouped hooks ────────────────────────────────────────────────────
     usePostLoginState: jest.fn(() => ({
       navigationState: state.navigationState,
-      showBiometricSetup: state.showBiometricSetup,
       postLoginCredentials: state.postLoginCredentials,
       setNavigationState: state.setNavigationState,
-      setShowBiometricSetup: state.setShowBiometricSetup,
       setPostLoginCredentials: state.setPostLoginCredentials,
     })),
     usePantryState: jest.fn(() => ({

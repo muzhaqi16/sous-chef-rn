@@ -4,12 +4,16 @@ import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryItemCard } from '../PantryItemCard';
+import { StatusLine } from '#components/atoms/StatusLine';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
 import { PantryActionsProvider } from '../PantryActionsContext';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { changeLanguage } from '#/i18n';
 
@@ -26,6 +30,15 @@ jest.mock('#/constants/animations', () => ({
   },
 }));
 
+jest.mock('#components/atoms/ThemeEpochSentinel', () => {
+  const RN = require('react-native');
+  const R = require('react');
+  return {
+    ThemeEpochSentinel: () =>
+      R.createElement(RN.View, { testID: 'theme-epoch-sentinel' }),
+  };
+});
+
 jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
   const RN = require('react-native');
   const R = require('react');
@@ -37,7 +50,6 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       itemId,
       leftElement,
       rightElement,
-      variant,
     }: {
       children?: React.ReactNode;
       accessibilityLabel: string;
@@ -45,14 +57,12 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       itemId?: string;
       leftElement?: React.ReactNode;
       rightElement?: React.ReactNode;
-      variant?: string;
     }) =>
       R.createElement(
         RN.View,
         {
           testID: testID || `base-item-card-${itemId}`,
           accessibilityLabel,
-          variant,
         },
         leftElement || null,
         children,
@@ -132,6 +142,7 @@ interface BuildItemOverrides {
   storageLocationName?: string | null;
   expiresOn?: string | null;
   imageUrl?: string | null;
+  image?: PantryItemCard_PantryItemFragment['image'];
   packageBreakdown?: {
     count: number;
     contentUnit: { id: string; name: string; symbol: string };
@@ -158,6 +169,7 @@ function buildItem(
   return {
     __typename: 'PantryItem',
     id: overrides.id ?? 'pantry-1',
+    image: overrides.image ?? null,
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
     heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
@@ -405,6 +417,22 @@ describe('PantryItemCard', () => {
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
   });
 
+  // The household overrides the item photo on its own entries.
+  it("shows the household's photo over the catalog's", () => {
+    renderCard({
+      imageUrl: 'https://example.com/catalog-milk.jpg',
+      image: {
+        __typename: 'EntryImage',
+        url: 'https://example.com/our-milk.jpg',
+        source: EntryImageSource.Household,
+        catalogImageId: null,
+      },
+    });
+    expect(screen.getByTestId('card-left-image').props.accessibilityLabel).toBe(
+      'https://example.com/our-milk.jpg',
+    );
+  });
+
   it('renders placeholder image slot when no imageUrl', () => {
     renderCard();
     // The image slot is always rendered; it shows a consistent placeholder
@@ -419,6 +447,8 @@ describe('PantryItemCard', () => {
     };
     renderCard({}, actionsWithDelete);
     expect(screen.getByText('Milk')).toBeTruthy();
+    // The themed card sits under the animated slide.
+    expect(screen.getByTestId('theme-epoch-sentinel')).toBeTruthy();
   });
 
   describe('row status', () => {
@@ -427,8 +457,8 @@ describe('PantryItemCard', () => {
       date.setDate(date.getDate() + days);
       return toDateKey(date);
     };
-    const rowVariant = () =>
-      screen.getByTestId('pantry-item-pantry-1').props.variant;
+    // The status line is the row's only status signal.
+    const statusTone = () => screen.UNSAFE_queryByType(StatusLine)?.props.tone;
 
     // The header badge counts today through seven days on; a row it counts
     // must be marked, or the badge names items the list does not show.
@@ -436,28 +466,33 @@ describe('PantryItemCard', () => {
       [0, 'warning'],
       [5, 'warning'],
       [7, 'warning'],
-      [8, 'normal'],
-      [-1, 'expired'],
-    ])('an item expiring in %s days reads as %s', (days, variant) => {
+      [8, 'neutral'],
+      [-1, 'error'],
+    ])('an item expiring in %s days reads in the %s tone', (days, tone) => {
       renderCard({ expiresOn: inDays(days) });
-      expect(rowVariant()).toBe(variant);
+      expect(statusTone()).toBe(tone);
+    });
+
+    it('shows no status line when nothing is due and stock is fine', () => {
+      renderCard({ expiresOn: inDays(30) });
+      expect(statusTone()).toBeUndefined();
     });
 
     it('marks a low item and says so', () => {
       renderCard({ isLowStock: true });
-      expect(rowVariant()).toBe('lowStock');
+      expect(statusTone()).toBe('info');
       expect(screen.getByText('Running low')).toBeTruthy();
     });
 
     it('lets expiry outrank low stock', () => {
       renderCard({ isLowStock: true, expiresOn: inDays(2) });
-      expect(rowVariant()).toBe('warning');
+      expect(statusTone()).toBe('warning');
       expect(screen.queryByText('Running low')).toBeNull();
     });
 
     it('reads an empty stack as low stock whatever its date', () => {
       renderCard({ quantity: 0, isLowStock: true, expiresOn: inDays(-3) });
-      expect(rowVariant()).toBe('lowStock');
+      expect(statusTone()).toBe('info');
       expect(screen.getByText('Out of stock')).toBeTruthy();
     });
   });

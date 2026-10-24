@@ -2,6 +2,7 @@ import { requireApolloClient } from '#/apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { isSignedIn } from '#store/slices/authSlice';
 import { queueStore } from './queueStore';
 import type {
   QueuedMutation,
@@ -220,7 +221,7 @@ export class QueueManager {
 
     const state = useStore.getState();
 
-    if (!state.user || !state.accessToken) {
+    if (!isSignedIn(state)) {
       logger.info('⚠️ Queue: No authenticated user, skipping processing');
       // Counted, not just logged: `logger` is console-only and console is
       // stripped from release builds, so this skip is invisible on a device

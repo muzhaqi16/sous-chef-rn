@@ -1,6 +1,5 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
-import { useUnreadNotificationCount } from '#features/notifications/hooks/useUnreadNotificationCount';
 import {
   View,
   type NativeSyntheticEvent,
@@ -47,16 +46,11 @@ import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#/i18n/types';
 import { Screen } from '#components/templates/Screen';
-import { PantryHeader } from '#features/pantry/components/PantryHeader';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 
 function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
-    {
-      featureId: 'pantry_tutorial_home',
-      title: t('pantryScreen.tutorialManageHomesTitle'),
-      subtitle: t('pantryScreen.tutorialManageHomesSubtitle'),
-      rectKey: 'homeBadge',
-    },
     {
       featureId: 'pantry_tutorial_settings',
       title: t('labels.pantrySettings'),
@@ -78,11 +72,8 @@ function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
  */
 const PantryMainInner: React.FC = () => {
   const {
-    toProfile,
-    toNotifications,
     toHomeManagement,
     toPantryAnalytics,
-    toFilteredPantryItems,
     toPantrySettings,
     toPantryItem,
     toPantryItemDetail,
@@ -177,21 +168,6 @@ const PantryMainInner: React.FC = () => {
   const canStartTutorial = !!screen.selectedHomeId;
 
   const handleItemPress = (id: string) => toPantryItemDetail({ itemId: id });
-  const handleAvatarPress = toProfile;
-  const handleNotificationPress = toNotifications;
-  const handleHomePress = () =>
-    toHomeManagement({ selectedHomeId: screen.selectedHomeId ?? undefined });
-  const handleAnalyticsPress = () => {
-    if (screen.pantry?.id) {
-      toPantryAnalytics({ pantryId: screen.pantry.id });
-    }
-  };
-  const handleLowStockNavigate = () =>
-    toFilteredPantryItems({ mode: 'lowStock' });
-  const handleExpiringNavigate = () =>
-    toFilteredPantryItems({ mode: 'expiring' });
-  const handleExpiredNavigate = () =>
-    toFilteredPantryItems({ mode: 'expired' });
   const handleSelectHome = () => toHomeManagement();
   const handleCreatePantry = () => toPantrySettings();
   const stableNavigateTo = {
@@ -215,14 +191,7 @@ const PantryMainInner: React.FC = () => {
         selectorRef={selectorRef}
         pantryConfig={pantryConfig}
         onItemPress={handleItemPress}
-        onAvatarPress={handleAvatarPress}
-        onNotificationPress={handleNotificationPress}
-        onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
-        onAnalyticsPress={handleAnalyticsPress}
-        onLowStockNavigate={handleLowStockNavigate}
-        onExpiringNavigate={handleExpiringNavigate}
-        onExpiredNavigate={handleExpiredNavigate}
         onSelectHome={handleSelectHome}
         onCreatePantry={handleCreatePantry}
         onOverlayOpen={handleOverlayOpen}
@@ -248,14 +217,7 @@ interface PantryMainContentProps {
   selectorRef: React.RefObject<ItemSelectorRef | null>;
   pantryConfig: ReturnType<typeof usePantrySelectorConfig>;
   onItemPress: (id: string) => void;
-  onAvatarPress: () => void;
-  onNotificationPress: () => void;
-  onHomePress: () => void;
   onSettingsPress: () => void;
-  onAnalyticsPress: () => void;
-  onLowStockNavigate: () => void;
-  onExpiringNavigate: () => void;
-  onExpiredNavigate: () => void;
   onSelectHome: () => void;
   onCreatePantry: () => void;
   onOverlayOpen: () => void;
@@ -276,14 +238,7 @@ function PantryMainContent({
   selectorRef,
   pantryConfig,
   onItemPress,
-  onAvatarPress,
-  onNotificationPress,
-  onHomePress,
   onSettingsPress,
-  onAnalyticsPress,
-  onLowStockNavigate,
-  onExpiringNavigate,
-  onExpiredNavigate,
   onSelectHome,
   onCreatePantry,
   onOverlayOpen,
@@ -295,27 +250,22 @@ function PantryMainContent({
   scrollEndDragHandler,
   momentumEndHandler,
 }: PantryMainContentProps) {
-  const unreadNotificationCount = useUnreadNotificationCount();
   const { t } = useTranslation();
+  const { toBarcode, toReceiptScan } = useAppNavigation();
   const {
     handleConsumeItem,
     handleWasteItem,
     handleRestockItem,
     handleEditItem,
     handleDeleteItem,
-    setAddSheetVisible,
+    openAddSheet,
+    openAddManually,
     setAddLocationSheetVisible,
   } = usePantryModals();
 
   const permissions = usePantryPermissions();
 
   // Element positions for the tutorial spotlight coach-marks.
-  const [homeBadgeRect, setHomeBadgeRect] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
   const [settingsIconRect, setSettingsIconRect] = useState<{
     x: number;
     y: number;
@@ -327,7 +277,6 @@ function PantryMainContent({
   const tutorial = useTutorialSequence({
     steps: buildPantryTutorialSteps(t),
     targetRects: {
-      homeBadge: homeBadgeRect,
       settingsIcon: settingsIconRect,
       addButton: addButtonRect,
     },
@@ -336,11 +285,10 @@ function PantryMainContent({
   });
 
   const tutorialTargetActions: Record<number, () => void> = {
-    0: onHomePress,
-    1: onSettingsPress,
-    2: () => {
+    0: onSettingsPress,
+    1: () => {
       Telemetry.trackEvent('add_pantry_item_clicked');
-      setAddSheetVisible(true);
+      openAddSheet();
     },
   };
 
@@ -350,21 +298,45 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Always registered, so the `+` says why it cannot add rather than doing nothing.
+  // Always registered, so the `+` says why it cannot add rather than doing
+  // nothing. Every way to add is one tap from here, as on Recipes.
+  const addRefusal = canAdd ? undefined : t('errors.codes.forbidden');
   useTabBarAddMenu([
     {
-      key: 'item',
-      label: t('labels.addItem'),
-      icon: 'add',
+      key: 'search',
+      label: t('labels.searchToAdd'),
+      icon: 'search',
       onPress: () => {
         Telemetry.trackEvent('add_pantry_item_clicked');
-        setAddSheetVisible(true);
+        openAddSheet();
       },
-      disabledReason: canAdd ? undefined : t('errors.codes.forbidden'),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'barcode',
+      label: t('labels.scanBarcode'),
+      icon: 'barcode-outline',
+      onPress: () =>
+        toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'receipt',
+      label: t('labels.scanReceipt'),
+      icon: 'receipt-outline',
+      onPress: () => toReceiptScan(),
+      disabledReason: addRefusal,
+    },
+    {
+      key: 'manual',
+      label: t('labels.addManually'),
+      icon: 'create-outline',
+      onPress: openAddManually,
+      disabledReason: addRefusal,
     },
   ]);
 
-  const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
+  const handleAddItem = canAdd ? openAddSheet : undefined;
 
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -376,11 +348,7 @@ function PantryMainContent({
     <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
       <PantryContent
         ref={pantryContentRef}
-        userName={screen.userName}
-        householdName={screen.householdName}
-        avatarUrl={screen.authUser?.profilePicture}
-        notificationCount={unreadNotificationCount}
-        stats={screen.stats}
+        pantryName={screen.pantry?.name ?? t('labels.pantry')}
         items={screen.pantryItems}
         locationFilter={screen.locationFilter}
         onLocationFilterChange={screen.handleLocationFilterChange}
@@ -399,14 +367,7 @@ function PantryMainContent({
         onItemConsume={permissions.canEditItems ? handleConsumeItem : undefined}
         onItemWaste={permissions.canEditItems ? handleWasteItem : undefined}
         onItemRestock={permissions.canEditItems ? handleRestockItem : undefined}
-        onAvatarPress={onAvatarPress}
-        onNotificationPress={onNotificationPress}
-        onHomePress={onHomePress}
         onSettingsPress={onSettingsPress}
-        onAnalyticsPress={onAnalyticsPress}
-        onLowStockNavigate={onLowStockNavigate}
-        onExpiringNavigate={onExpiringNavigate}
-        onExpiredNavigate={onExpiredNavigate}
         totalCount={screen.totalCount}
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
@@ -428,7 +389,6 @@ function PantryMainContent({
         fetching={screen.itemsFetching}
         searching={screen.isSearching}
         serverMode={screen.serverMode}
-        onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
         scrollHandler={scrollHandler}
         onScrollBeginDrag={scrollBeginDragHandler}
@@ -466,6 +426,7 @@ const noop = () => {};
 
 const PantryMainFallback: React.FC = () => {
   const { t } = useTranslation();
+  const { pantry } = useCurrentPantry();
   const skeletonTabs: FilterTabConfig<LocationFilter>[] = [
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
@@ -485,19 +446,20 @@ const PantryMainFallback: React.FC = () => {
     },
   ];
   return (
-    // No `header`: the loaded screen has none either — it draws the greeting
-    // inside its list — so the chrome here is the same shape, not a title that
-    // swaps for a greeting a moment later.
+    // No `header`: the loaded screen draws its own above its list, so the
+    // chrome here is the same shape, with the same title, before it mounts.
     <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
       <View style={styles.fallbackHeader}>
-        <PantryHeader householdName={t('pantryHeader.homeFallback')} />
+        <TabScreenHeader
+          title={pantry?.name ?? t('labels.pantry')}
+          switchable={{ onPress: noop }}
+        />
       </View>
       <View style={styles.gutter}>
         <SearchBar
           value=""
           onChangeText={noop}
           placeholder={t('pantryScreen.searchPlaceholder')}
-          showSearchIcon
           editable={false}
         />
       </View>

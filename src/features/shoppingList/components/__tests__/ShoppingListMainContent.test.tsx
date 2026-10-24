@@ -114,9 +114,12 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));
 
+const mockOpenAddItemSheet = jest.fn();
+const mockOpenAddItemManually = jest.fn();
 jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
   useShoppingListModalActions: jest.fn(() => ({
-    openAddItemSheet: jest.fn(),
+    openAddItemSheet: mockOpenAddItemSheet,
+    openAddItemManually: mockOpenAddItemManually,
     openQuantityEdit: jest.fn(),
     openPurchaseAmount: jest.fn(),
     openMoveToPantry: jest.fn(),
@@ -202,14 +205,23 @@ jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({
     title,
     actions,
+    switchable,
   }: {
     title: string;
     actions?: BarAction[];
+    switchable?: { onPress: () => void; testID?: string };
   }) => {
+    const { Pressable, Text } = require('react-native');
     const { BarActions } = require('#components/molecules/BarActions');
     return (
       <>
-        {title}
+        {switchable ? (
+          <Pressable onPress={switchable.onPress} testID={switchable.testID}>
+            <Text>{title}</Text>
+          </Pressable>
+        ) : (
+          title
+        )}
         <BarActions actions={actions} placement="gutter" />
       </>
     );
@@ -602,6 +614,14 @@ describe('ShoppingListMainContent', () => {
       );
     });
 
+    // An add Today handed over waits for the answer instead of showing it.
+    it('marks the adds as waiting on the answer', () => {
+      render(<ShoppingListMainContent screenData={withoutDetails()} />);
+
+      const [entries] = jest.mocked(useTabBarAddMenu).mock.calls[0] ?? [[]];
+      expect(entries.map(entry => entry.pending)).toEqual([true, true, true]);
+    });
+
     it('waits rather than offering a retry while the answer is still coming', () => {
       const { queryByTestId } = render(
         <ShoppingListMainContent
@@ -630,6 +650,37 @@ describe('ShoppingListMainContent', () => {
       expect(entry?.disabledReason).toBe(
         t('shoppingListScreen.noAddPermission'),
       );
+      expect(entry?.pending).toBe(false);
     });
+  });
+});
+
+describe('ShoppingListMainContent + menu', () => {
+  const menu = () => jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
+  const entry = (key: string) => menu().find(action => action.key === key);
+
+  it('offers search, barcode and manual adds, and no receipt', () => {
+    render(<ShoppingListMainContent screenData={makeScreenData()} />);
+    expect(menu().map(action => action.key)).toEqual([
+      'search',
+      'barcode',
+      'manual',
+    ]);
+  });
+
+  it('opens each flow directly for the active list', () => {
+    render(<ShoppingListMainContent screenData={makeScreenData()} />);
+
+    entry('search')?.onPress();
+    expect(mockOpenAddItemSheet).toHaveBeenCalled();
+
+    entry('barcode')?.onPress();
+    expect(jest.mocked(useAppNavigation)().toBarcode).toHaveBeenCalledWith({
+      source: 'shoppingList',
+      shoppingListId: 'list-1',
+    });
+
+    entry('manual')?.onPress();
+    expect(mockOpenAddItemManually).toHaveBeenCalled();
   });
 });

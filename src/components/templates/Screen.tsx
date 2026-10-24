@@ -14,7 +14,11 @@ import {
   ThemedKeyboardAwareScrollView,
 } from '#components/atoms/themedComponents';
 import { Header } from '#components/organisms/Header';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import {
+  TabScreenHeader,
+  type TitleSwitch,
+} from '#components/molecules/TabScreenHeader';
+import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type { BarAction } from '#components/molecules/BarActions';
@@ -23,6 +27,7 @@ import {
   KEYBOARD_DISMISS_MODE,
   KEYBOARD_PERSIST_TAPS,
 } from '#components/templates/keyboardTaps';
+import { getScrollClearancePadding } from '#constants/layout';
 
 const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
   'never';
@@ -35,11 +40,12 @@ export interface ScreenHeaderConfig {
    */
   variant?: 'standard' | 'tab' | 'none';
   title?: string;
-  /** `tab` only: the small label above the title. */
-  label?: string;
-  /** The title's own affordances: what pressing it opens, and its sign. */
-  onTitlePress?: () => void;
-  titleAccessory?: React.ReactNode;
+  /**
+   * The title names one of several things the user can switch between: it
+   * shows a chevron, and pressing it opens the picker. No other control opens
+   * the same picker.
+   */
+  switchable?: TitleSwitch;
   /** The trailing actions on either variant, icon or text — never a bare node. */
   actions?: BarAction[];
   /** A handler shows the back control; omit it for a root screen. */
@@ -113,10 +119,15 @@ export const Screen: React.FC<ScreenProps> = props => {
       ? props.scrollTestID
       : undefined;
   const insets = useSafeAreaInsets();
-  // With a footer the footer clears the home indicator, so the content only
-  // needs its own trailing space.
-  const contentBottom = footer ? 0 : insets.bottom;
   const variant = header?.variant ?? (header ? 'standard' : 'none');
+  // With a footer the footer clears the home indicator, so the content only
+  // needs its own trailing space. A tab root's content scrolls out from under
+  // the floating tab bar and its +, which overlay it.
+  const contentBottom = footer
+    ? 0
+    : variant === 'tab'
+    ? getScrollClearancePadding(insets.bottom)
+    : insets.bottom;
   styles.useVariants({ gutter, chrome: variant === 'tab' ? 'tab' : 'other' });
 
   const chrome =
@@ -126,17 +137,22 @@ export const Screen: React.FC<ScreenProps> = props => {
         onBack={header?.back}
         onClose={header?.close}
         rightActions={header?.actions}
-        onTitlePress={header?.onTitlePress}
-        titleAccessory={header?.titleAccessory}
+        onTitlePress={header?.switchable?.onPress}
+        titleAccessory={
+          header?.switchable ? (
+            <ExpandChevron
+              expanded={header.switchable.open ?? false}
+              tone="textPrimary"
+            />
+          ) : undefined
+        }
         centerTitle
       />
     ) : variant === 'tab' ? (
       <TabScreenHeader
-        label={header?.label ?? ''}
         title={header?.title ?? ''}
         actions={header?.actions}
-        onTitlePress={header?.onTitlePress}
-        titleAccessory={header?.titleAccessory}
+        switchable={header?.switchable}
       />
     ) : null;
 

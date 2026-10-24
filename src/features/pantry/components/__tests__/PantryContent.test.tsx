@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { makeCache } from '#/apollo/cache';
 import { screen, act, fireEvent, within } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -60,6 +61,7 @@ function createMockPantryItem(
   return {
     __typename: 'PantryItem',
     id: 'mock-id',
+    image: null,
     itemName: 'Mock Item',
     quantity: 1,
     heldQuantity: held,
@@ -224,25 +226,8 @@ jest.mock('#components/atoms/PaginationFooter', () => ({
   PaginationFooter: () => null,
 }));
 
-jest.mock('../PantryHeader', () => ({
-  PantryHeader: ({
-    userName,
-    householdName,
-  }: {
-    userName: string;
-    householdName: string;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="pantry-header">
-        <Text>{userName}</Text>
-        <Text>{householdName}</Text>
-      </View>
-    );
-  },
-}));
-
 jest.mock('../PantrySortModal', () => ({
+  ...jest.requireActual('../PantrySortModal'),
   PantrySortModal: ({ visible }: { visible: boolean }) => {
     const { View } = require('react-native');
     return visible ? <View testID="sort-modal" /> : null;
@@ -278,12 +263,29 @@ jest.mock('#components/molecules/SearchBar', () => ({
   SearchBar: ({
     placeholder,
     testID,
+    accessory,
   }: {
     placeholder?: string;
     testID?: string;
+    accessory?: {
+      accessibilityLabel: string;
+      onPress: () => void;
+      testID?: string;
+    };
   }) => {
-    const { TextInput } = require('react-native');
-    return <TextInput testID={testID} placeholder={placeholder} />;
+    const { Pressable, TextInput, View } = require('react-native');
+    return (
+      <View>
+        <TextInput testID={testID} placeholder={placeholder} />
+        {accessory ? (
+          <Pressable
+            testID={accessory.testID}
+            accessibilityLabel={accessory.accessibilityLabel}
+            onPress={accessory.onPress}
+          />
+        ) : null}
+      </View>
+    );
   },
 }));
 
@@ -305,24 +307,6 @@ jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
             <Text>{tab.label}</Text>
           </Pressable>
         ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('../PantryAlertBar', () => ({
-  PantryAlertBar: ({
-    stats,
-    sortLabel,
-  }: {
-    stats: { expiringCount: number };
-    sortLabel?: string;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="pantry-alert-bar">
-        <Text>Alert: {stats.expiringCount} expiring</Text>
-        {sortLabel ? <Text>{sortLabel}</Text> : null}
       </View>
     );
   },
@@ -361,8 +345,7 @@ jest.mock('#features/pantry/utils/pantryFilters', () => ({
 }));
 
 const defaultProps = {
-  userName: 'John',
-  householdName: 'My Kitchen',
+  pantryName: 'My Kitchen',
   items: [] as PantryItem[],
   locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
@@ -387,10 +370,21 @@ describe('PantryContent', () => {
     expect(screen.getByTestId('pantry-list')).toBeTruthy();
   });
 
-  it('renders the pantry header with user and household name', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByText('John')).toBeTruthy();
+  it("titles the header with the pantry's name, which opens Select pantry", () => {
+    const onSettingsPress = jest.fn();
+    render(
+      <PantryContent {...defaultProps} onSettingsPress={onSettingsPress} />,
+    );
+
+    fireEvent.press(screen.getByTestId(pantryTestIDs.selectPantryButton));
+
     expect(screen.getByText('My Kitchen')).toBeTruthy();
+    expect(onSettingsPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no status counts: they are on Today', () => {
+    render(<PantryContent {...defaultProps} />);
+    expect(screen.queryByText(/expired|expiring|low stock/i)).toBeNull();
   });
 
   it('renders the search bar with correct placeholder', () => {
@@ -404,8 +398,8 @@ describe('PantryContent', () => {
     render(<PantryContent {...defaultProps} onRefresh={jest.fn()} />);
     const list = within(screen.getByTestId('pantry-list'));
 
-    expect(screen.getByText('John')).toBeTruthy();
-    expect(list.queryByText('John')).toBeNull();
+    expect(screen.getByText('My Kitchen')).toBeTruthy();
+    expect(list.queryByText('My Kitchen')).toBeNull();
     expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
     expect(list.queryByTestId('pantry-search-input')).toBeNull();
     expect(screen.getByTestId('filter-tabs')).toBeTruthy();
@@ -740,23 +734,6 @@ describe('PantryContent', () => {
     });
   });
 
-  it('renders alert bar when stats are provided', () => {
-    const stats = {
-      totalItems: 10,
-      expiringCount: 3,
-      expiredCount: 0,
-      lowStockCount: 2,
-    };
-    render(<PantryContent {...defaultProps} stats={stats} />);
-    expect(screen.getByTestId('pantry-alert-bar')).toBeTruthy();
-    expect(screen.getByText('Alert: 3 expiring')).toBeTruthy();
-  });
-
-  it('does not render alert bar when stats are not provided', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.queryByTestId('pantry-alert-bar')).toBeNull();
-  });
-
   it('includes add location tab when onAddLocation is provided', () => {
     const onAddLocation = jest.fn();
     render(<PantryContent {...defaultProps} onAddLocation={onAddLocation} />);
@@ -776,19 +753,16 @@ describe('PantryContent', () => {
 
   // --- Additional branch coverage tests ---
 
-  it('renders sort direction indicator as descending arrow', () => {
+  // Sort is the one control beside search, and says which sort is active.
+  it('offers sort beside the search field, naming the active sort', () => {
     const items = [createMockPantryItem({ id: '1' })];
-    const stats = {
-      totalItems: 1,
-      expiringCount: 0,
-      expiredCount: 0,
-      lowStockCount: 0,
-    };
-    render(<PantryContent {...defaultProps} items={items} stats={stats} />);
-    expect(screen.getByText(/Sort/)).toBeTruthy();
+    render(<PantryContent {...defaultProps} items={items} />);
+    expect(
+      screen.getByTestId(pantryTestIDs.sortButton).props.accessibilityLabel,
+    ).toBe('Sort, now by Recently Added');
   });
 
-  it('renders sort direction indicator as ascending arrow', () => {
+  it('names a changed sort on the sort button', () => {
     const { usePantrySorting } = require('../hooks/usePantrySorting');
     usePantrySorting.mockReturnValue({
       sortOption: 'name',
@@ -801,14 +775,10 @@ describe('PantryContent', () => {
     });
 
     const sortItems = [createMockPantryItem({ id: '1' })];
-    const stats = {
-      totalItems: 1,
-      expiringCount: 0,
-      expiredCount: 0,
-      lowStockCount: 0,
-    };
-    render(<PantryContent {...defaultProps} items={sortItems} stats={stats} />);
-    expect(screen.getByText(/Sort/)).toBeTruthy();
+    render(<PantryContent {...defaultProps} items={sortItems} />);
+    expect(
+      screen.getByTestId(pantryTestIDs.sortButton).props.accessibilityLabel,
+    ).toBe('Sort, now by Name');
 
     // Restore
     usePantrySorting.mockReturnValue({
@@ -958,11 +928,6 @@ describe('PantryContent', () => {
   it('renders empty state without action when onAddItem is not provided', () => {
     render(<PantryContent {...defaultProps} items={[]} />);
     expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-  });
-
-  it('renders with notification count', () => {
-    render(<PantryContent {...defaultProps} notificationCount={5} />);
-    expect(screen.getByText('John')).toBeTruthy();
   });
 
   describe('loading skeleton (chrome stays, skeleton rows below)', () => {

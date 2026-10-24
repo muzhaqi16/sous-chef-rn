@@ -6,7 +6,6 @@ import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { Text } from '#components/atoms/Text';
-import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { Reveal } from '#components/atoms/Reveal';
 import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconTone } from '#components/atoms/Icon';
@@ -324,12 +323,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     <SubScreen
       title={storeTitle ?? t('receipts.review.title')}
       {...(storeTitle && !storeUnrecognized
-        ? {
-            onTitlePress: toggleStore,
-            titleAccessory: (
-              <ExpandChevron expanded={changingStore} tone="textPrimary" />
-            ),
-          }
+        ? { switchable: { onPress: toggleStore, open: changingStore } }
         : {})}
       scroll="list"
       footer={footer}

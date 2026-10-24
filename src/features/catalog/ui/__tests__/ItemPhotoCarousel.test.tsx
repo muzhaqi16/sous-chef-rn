@@ -54,6 +54,25 @@ describe('ItemPhotoCarousel', () => {
     expect(heroUris()).toContain('https://cdn.example.com/front.jpg');
   });
 
+  // A household's own photo leads the item's. It is no item photo, so it opens
+  // no viewer: the viewer's pages are the item's photos alone.
+  it("leads with the household's photo, which opens no viewer", () => {
+    const onPhotoPress = jest.fn();
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[photo()]}
+        leadImageUrl="https://signed.example.com/own.jpg"
+        imageHeight={280}
+        resizeMode="cover"
+        onPhotoPress={onPhotoPress}
+      />,
+    );
+
+    expect(heroUris()[0]).toBe('https://signed.example.com/own.jpg');
+    expect(screen.getByLabelText("Your home's photo")).toBeTruthy();
+    expect(screen.queryByRole('imagebutton')).toBeNull();
+  });
+
   // The bug this whole change exists to fix: the hero must be the photo the
   // server ordered first (the primary/front one), not the newest upload.
   it('leads with the first photo the server returned', () => {

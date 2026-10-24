@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
   seedCache,
@@ -133,6 +133,9 @@ const makeMealPlan = (
   nutritionSummary: {
     __typename: 'MealPlanNutritionSummary',
     totalCalories: 0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFat: 0,
     avgDailyCalories: 0,
     avgDailyProtein: 0,
     avgDailyCarbs: 0,
@@ -140,6 +143,7 @@ const makeMealPlan = (
     totalMeals: 0,
     mealsWithNutrition: 0,
     coveragePercentage: 0,
+    mealTypeBreakdown: [],
   },
   nutritionGoalProgress: null,
   generatedShoppingListsConnection: generatedLists([]),
@@ -160,7 +164,7 @@ const defaultProps: MealPlanSettingsSheetProps = {
   permissions: defaultPermissions,
   onClose: jest.fn(),
   onDuplicate: jest.fn(),
-  onGenerateShoppingList: jest.fn(),
+  onSaveAsTemplate: jest.fn(),
   onDelete: jest.fn(),
   deleting: false,
 };
@@ -283,9 +287,37 @@ describe('MealPlanSettingsSheet', () => {
 
   it('renders action items', () => {
     render(<MealPlanSettingsSheet {...defaultProps} />);
-    expect(screen.getByText('Generate Shopping List')).toBeTruthy();
+    expect(screen.getByText('Save as Template')).toBeTruthy();
     expect(screen.getByText('Duplicate Plan')).toBeTruthy();
     expect(screen.getByText('View Nutrition')).toBeTruthy();
+  });
+
+  // The header already offers it; one way in per action.
+  it("does not repeat the header's Generate Shopping List", () => {
+    render(<MealPlanSettingsSheet {...defaultProps} />);
+    expect(screen.queryByText('Generate Shopping List')).toBeNull();
+  });
+
+  it('saves the plan as a template from the menu', () => {
+    const onSaveAsTemplate = jest.fn();
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        onSaveAsTemplate={onSaveAsTemplate}
+      />,
+    );
+    fireEvent.press(screen.getByText('Save as Template'));
+    expect(onSaveAsTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no template save without the permission', () => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        permissions={{ ...defaultPermissions, canSaveAsTemplate: false }}
+      />,
+    );
+    expect(screen.queryByText('Save as Template')).toBeNull();
   });
 
   it('renders Delete Plan when user has delete permission', () => {

@@ -15,6 +15,21 @@ describe('uiSlice', () => {
       expect(state.tutorialResetGeneration).toBe(0);
       expect(state.pendingCroppedImage).toBeNull();
       expect(state.pendingItemImages).toBeNull();
+      expect(state.pendingTabAdd).toBeNull();
+    });
+  });
+
+  describe('cross-tab add hand-off', () => {
+    it('holds the add for its tab until cleared', () => {
+      const store = createTestStore();
+      store.getState().setPendingTabAdd({ tab: 'Pantry', actionKey: 'search' });
+
+      expect(store.getState().pendingTabAdd).toEqual({
+        tab: 'Pantry',
+        actionKey: 'search',
+      });
+      store.getState().clearPendingTabAdd();
+      expect(store.getState().pendingTabAdd).toBeNull();
     });
   });
 

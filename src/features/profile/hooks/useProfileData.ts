@@ -1,11 +1,9 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
-import { useIsLoggingOut } from '#store/useAppStore';
 import { useUser } from '#store/useAppStore';
 
 export const useProfileData = () => {
   const user = useUser();
-  const isLoggingOut = useIsLoggingOut();
 
   // `nextFetchPolicy` lives on the ObservableQuery, which `useQuery` rebuilds
   // per mount, so EVERY mount runs a network leg and reports `loading: true`
@@ -15,7 +13,7 @@ export const useProfileData = () => {
   // (`__tests__/apollo/userProfileCompleteness.test.ts`).
   const { data, loading, error, refetch } = useQuery(
     GetUserProfileDocument,
-    !user || isLoggingOut ? skipToken : { notifyOnNetworkStatusChange: false },
+    !user ? skipToken : { notifyOnNetworkStatusChange: false },
   );
 
   const profile = data?.me?.profile ?? null;

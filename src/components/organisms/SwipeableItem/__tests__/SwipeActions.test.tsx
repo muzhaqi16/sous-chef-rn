@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { makeMutable, useAnimatedStyle } from 'react-native-reanimated';
 import { SwipeActions } from '#components/organisms/SwipeableItem/SwipeActions';
 import { HapticService } from '#/services/haptic/HapticService';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
@@ -55,5 +56,30 @@ describe('SwipeActions haptics', () => {
     );
     fireEvent.press(screen.getByTestId('action'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SwipeActions reveal', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  // Both trays mount once a swipe starts; the closed one sits under the card,
+  // whose anti-aliased edges let anything it paints through as a hairline.
+  const trayOpacity = (progress: number) => {
+    render(
+      <SwipeActions
+        actions={[action()]}
+        side="left"
+        progress={makeMutable(progress)}
+      />,
+    );
+    return jest.mocked(useAnimatedStyle).mock.lastCall?.[0]().opacity;
+  };
+
+  it('paints nothing while its side is closed', () => {
+    expect(trayOpacity(0)).toBe(0);
+  });
+
+  it('paints as soon as its side starts to open', () => {
+    expect(trayOpacity(0.05)).toBe(1);
   });
 });

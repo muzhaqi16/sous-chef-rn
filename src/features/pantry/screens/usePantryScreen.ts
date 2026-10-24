@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 
-import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
@@ -21,7 +20,6 @@ import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { StorageType } from '#/graphql/generated/schemaTypes';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import type {
   PantrySortOption,
   PantrySortDirection,
@@ -31,7 +29,6 @@ import type {
 export function usePantryScreen() {
   const { t } = useTranslation();
   // 1. User info
-  const authUser = useUser();
 
   // 2. Home/pantry resolution
   const {
@@ -241,23 +238,6 @@ export function usePantryScreen() {
   // filters locally and never refetches, so this stays false.
   const itemsFetching = serverMode && loading;
 
-  // `undefined` rather than a fallback word: the header picks a whole no-name
-  // greeting instead of interpolating one into "Hello, {{name}}!", which no
-  // locale can express (Spanish would read "¡Hola, hola!").
-  const userName = firstNonBlank(
-    authUser?.name,
-    authUser?.firstName,
-    authUser?.lastName,
-  );
-
-  // These were hardcoded English reaching JSX through a variable — invisible to
-  // `i18next/no-literal-string`, which only sees literals in JSX.
-  const householdName = noHomeSelected
-    ? t('pantryHeader.homePromptSelect')
-    : noHomes
-    ? t('pantryHeader.homeNoneYet')
-    : firstNonBlank(currentHome?.name) ?? t('pantryHeader.homeFallback');
-
   // 7. Sort change handler
   const handleSortChange = (
     option: PantrySortOption,
@@ -305,11 +285,6 @@ export function usePantryScreen() {
 
   // Return flat interface
   return {
-    // User
-    authUser,
-    userName,
-    householdName,
-
     // Home / Pantry resolution
     pantry,
     pantries,
@@ -325,7 +300,6 @@ export function usePantryScreen() {
 
     // Pantry data
     pantryItems,
-    stats,
     totalCount,
     itemsFailure,
 

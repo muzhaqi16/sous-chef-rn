@@ -18,6 +18,8 @@
     "startDateRequiredMessage": "Selecciona una fecha de inicio.",
     "failedToCreate": "No se pudo crear el plan de comidas.",
     "needsThePlan": "Abre primero el plan para tener sus comidas.",
+    "addNeedsPlan": "Crea primero un plan de comidas y luego añade comidas.",
+    "noAddPermission": "Puedes ver este plan, pero no añadirle comidas.",
     "needsTheTemplate": "Abre primero la plantilla para tener sus comidas.",
     "daily": "Diario",
     "custom": "Personalizado"
@@ -36,7 +38,8 @@
     "dietDairyFree": "SL"
   },
   "emptyDay": {
-    "title": "Sin comidas planificadas"
+    "title": "Sin comidas planificadas",
+    "addHint": "Toca + para añadir una comida"
   },
   "mealPlanEmpty": {
     "title": "Planifica tus comidas",
@@ -60,7 +63,7 @@
     "sharedWith": "Compartido con {{name}}",
     "createdBy": "Creado por {{name}}",
     "actionsLabel": "Acciones",
-    "generateShoppingListDesc": "Crea una lista a partir de las recetas de este plan",
+    "saveAsTemplateDesc": "Reutiliza las comidas de este plan en otra semana",
     "duplicatePlanDesc": "Copia este plan a un nuevo rango de fechas",
     "viewNutrition": "Ver nutrición",
     "hideNutrition": "Ocultar nutrición",
@@ -157,9 +160,7 @@
     "duplicateNameLabel": "Nombre de la nueva plantilla"
   },
   "mealPlanMain": {
-    "label": "Planifica tus comidas",
     "generateShoppingListLabel": "Generar lista de la compra",
-    "saveAsTemplateLabel": "Guardar como plantilla",
     "planSettingsLabel": "Ajustes del plan",
     "deleteMealPlanFailed": "No se pudo eliminar el plan de comidas",
     "mealPlanDeleted": "Plan de comidas eliminado",

@@ -119,10 +119,12 @@
     "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
     "photosOnlyTitle": "Foto añadida",
     "photosOnlyBody": "Tu foto ya está en el artículo. Cambia también un campo si hay algo más que corregir.",
+    "photosForReviewTitle": "Foto enviada a revisión",
+    "photosForReviewBody": "Un administrador la revisa antes de que todos la vean. Hasta entonces solo la ves tú. Cambia también un campo si hay algo más que corregir.",
     "updatedTitle": "Artículo actualizado",
     "updatedBody": "Tus cambios están publicados.",
     "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
-    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador."
+    "photoNotice": "Un administrador revisa las fotos y los demás cambios antes de que todos los vean."
   },
   "reportItem": {
     "footer": "¿Algún dato incorrecto en estos?",
@@ -136,7 +138,11 @@
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
     "alreadyReportedTitle": "Ya lo informaste",
-    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado."
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
+    "wrongPhotoAction": "Informar de foto incorrecta",
+    "wrongPhotoConfirmTitle": "¿Informar de esta foto?",
+    "wrongPhotoConfirmBody": "Un administrador comprobará si muestra este artículo.",
+    "wrongPhotoConfirm": "Informar"
   },
   "addItemForm": {
     "modes": {
@@ -295,7 +301,18 @@
       "top": "Arriba",
       "nutrition_label": "Nutrición",
       "ingredient_list": "Ingredientes"
-    }
+    },
+    "householdPhoto": "La foto de tu hogar"
+  },
+  "entryPhoto": {
+    "title": "Foto para tu hogar",
+    "privacyNote": "Solo las personas de tu hogar ven esta foto. El catálogo conserva la suya.",
+    "pickItemPhoto": "Usar una de las fotos de este artículo",
+    "useCatalogPhoto": "Usar la foto del catálogo",
+    "useThisPhoto": "Usar esta foto",
+    "saving": "Guardando la foto…",
+    "failedTitle": "No se pudo cambiar la foto",
+    "failedBody": "La foto sigue como estaba. Comprueba tu conexión e inténtalo de nuevo."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" no es una unidad que reconozcamos. Elige una de la lista.",

@@ -12,7 +12,6 @@ const mockRegister = jest.fn();
 jest.mock('#/services/authService', () => ({
   authService: {
     register: (...args: unknown[]) => mockRegister(...args),
-    handleAuthError: jest.fn(),
   },
 }));
 

@@ -11,6 +11,17 @@ export const catalogTestIDs = {
   reportItemCancelButton: 'report-item-cancel-button',
   reportItemSubmitButton: 'report-item-submit-button',
   dropdownSpacer: 'dropdown-spacer',
+  /** `ItemPhotoViewer`'s "report wrong photo" on a public item's photo. */
+  photoViewerReportButton: 'photo-viewer-report-button',
+  /** `ItemPhotoViewer`'s "use this photo" for a household's entries. */
+  photoViewerUseButton: 'photo-viewer-use-button',
+  /** A detail screen's "change photo", and `EntryPhotoSheet`'s choices. */
+  entryPhotoChangeButton: 'entry-photo-change-button',
+  entryPhotoSheet: 'entry-photo-sheet',
+  entryPhotoTake: 'entry-photo-take',
+  entryPhotoChoose: 'entry-photo-choose',
+  entryPhotoPickItemPhoto: 'entry-photo-pick-item-photo',
+  entryPhotoUseCatalog: 'entry-photo-use-catalog',
   /** `PhotoCredit`: a licensed photo's credit and licence links. */
   photoCreditSource: 'photo-credit-source',
   photoCreditLicense: 'photo-credit-license',
@@ -18,7 +29,6 @@ export const catalogTestIDs = {
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,
   addItemSheetSearchInput: (prefix: string) => `${prefix}-search-input`,
-  addItemSheetReceiptAction: (prefix: string) => `${prefix}-receipt-action`,
   addManuallyButton: (prefix: string) => `${prefix}-add-manually-button`,
 
   /** `SuggestionListItem` / `BottomSheetAutocompleteInput`, under the field's id. */

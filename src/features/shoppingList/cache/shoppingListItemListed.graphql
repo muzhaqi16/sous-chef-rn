@@ -26,6 +26,12 @@ fragment shoppingListItem_listed on ShoppingListItem {
       decimalPlaces
     }
   }
+  # The photo this entry shows: the household's choice, else the catalog's.
+  image {
+    url
+    source
+    catalogImageId
+  }
   item {
     id
     imageUrl

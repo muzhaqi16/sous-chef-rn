@@ -52,14 +52,7 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           ...createTelemetrySlice(set, get, api),
           // Reset manager stubs
           resetStore: jest.fn(),
-          logout: jest.fn(),
-          fullReset: jest.fn(),
-          sessionExpired: jest.fn(),
-          resetOnboarding: jest.fn(),
           tokenRefreshFailed: jest.fn(),
-          // Navigation state manager stubs
-          initiateLogout: jest.fn(() => true),
-          completeLogout: jest.fn(() => true),
         } as unknown as RootState;
 
         return base;

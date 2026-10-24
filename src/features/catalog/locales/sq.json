@@ -119,10 +119,12 @@
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
     "photosOnlyTitle": "Fotoja u shtua",
     "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
+    "photosForReviewTitle": "Fotoja u dërgua për shqyrtim",
+    "photosForReviewBody": "Një administrator e kontrollon para se ta shohin të gjithë. Deri atëherë e sheh vetëm ti. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
     "updatedTitle": "Artikulli u përditësua",
     "updatedBody": "Ndryshimet e tua janë publikuar.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
-    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator."
+    "photoNotice": "Një administrator shqyrton fotot dhe ndryshimet e tjera para se t'i shohin të gjithë."
   },
   "reportItem": {
     "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
@@ -136,7 +138,11 @@
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
     "alreadyReportedTitle": "Tashmë e raportuar",
-    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë."
+    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
+    "wrongPhotoAction": "Raporto foto të gabuar",
+    "wrongPhotoConfirmTitle": "Të raportohet kjo foto?",
+    "wrongPhotoConfirmBody": "Një administrator do të kontrollojë nëse tregon këtë artikull.",
+    "wrongPhotoConfirm": "Raporto"
   },
   "addItemForm": {
     "modes": {
@@ -295,7 +301,18 @@
       "top": "Lart",
       "nutrition_label": "Ushqyesit",
       "ingredient_list": "Përbërësit"
-    }
+    },
+    "householdPhoto": "Fotoja e shtëpisë sate"
+  },
+  "entryPhoto": {
+    "title": "Foto për shtëpinë tënde",
+    "privacyNote": "Vetëm njerëzit e shtëpisë sate e shohin këtë foto. Katalogu mban të vetën.",
+    "pickItemPhoto": "Përdor një nga fotot e këtij artikulli",
+    "useCatalogPhoto": "Përdor foton e katalogut",
+    "useThisPhoto": "Përdor këtë foto",
+    "saving": "Po ruhet fotoja…",
+    "failedTitle": "Fotoja nuk u ndryshua",
+    "failedBody": "Fotoja mbeti siç ishte. Kontrollo lidhjen dhe provo përsëri."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" nuk është njësi që e njohim. Zgjidhni një nga lista.",

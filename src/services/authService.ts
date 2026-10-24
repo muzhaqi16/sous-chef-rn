@@ -7,19 +7,25 @@
  */
 
 import { requireApolloClient } from '#/apollo/clientRegistry';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { errorService } from '#/services/errorService';
+import { reconnectWebSocket } from '#/apollo/links/wsLink';
+import { errorService, isTransportFailure } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
-import { runSessionTeardown } from '#store/sessionTeardown';
-import { whileSessionEnds } from '#store/sessionEnding';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { logger } from '#/utils/environment';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import {
+  isDeadCredentialCode,
+  isStaleSignInTokenCode,
+} from '#/utils/authErrorCodes';
 import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
+  ExchangeDeviceCredentialDocument,
+  IssueDeviceCredentialDocument,
   LoginDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
@@ -39,7 +45,11 @@ import type {
 import { t } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { type PostSignInGate, sessionHost } from '#/services/auth/sessionHost';
+import {
+  type PostSignInGate,
+  type StoredSignInRenewal,
+  sessionHost,
+} from '#/services/auth/sessionHost';
 
 // --- Store bootstrap (pre-populate Zustand from auth response) ---
 
@@ -123,25 +133,6 @@ async function applyRegionCurrencyDefault(
   );
 }
 
-// --- User preferences helpers (direct Zustand access) ---
-
-function getUserPreferences(targetUserId: string) {
-  const store = useStore.getState();
-
-  return {
-    trackCredentialPromptShown: () => {
-      store.setUserNavigationState(targetUserId, {
-        lastCredentialPromptShown: Date.now(),
-      });
-    },
-    trackLogout: () => {
-      store.setUserNavigationState(targetUserId, {
-        biometricEnabled: false,
-      });
-    },
-  };
-}
-
 // The masked AuthPayload resolved into a plain LoginUser via the Apollo cache.
 interface ResolvedAuthPayload {
   accessToken: string;
@@ -174,13 +165,6 @@ function unmaskAuthPayload<
 
 // --- Core auth operations ---
 
-// `handleApolloError` reports the code as a plain string, so membership is
-// tested against the enum members read as strings.
-const AUTH_CLEARING_CODES: ReadonlySet<string> = new Set([
-  ErrorCode.AuthTokenExpired,
-  ErrorCode.AuthRefreshTokenInvalid,
-]);
-
 function handleAuthError(error: unknown, operation = 'Authentication'): void {
   try {
     const { message, code, isAuthError } = errorService.handleApolloError(
@@ -196,7 +180,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
     // `clearAuth`, deliberately NOT `endSession` as the link layer does for the
     // same codes: this is a refused attempt to START a session, so a full reset
     // would drop selected-entity ids (breaking verification resume) for nothing.
-    if (isAuthError && AUTH_CLEARING_CODES.has(code)) {
+    if (isAuthError && isStaleSignInTokenCode(code)) {
       useStore.getState().clearAuth();
     }
   } catch {
@@ -224,9 +208,9 @@ function handleRejectedAuthPayload(
   useStore.getState().setAuthIsLoading(false);
 }
 
+/** False when the sign-in was discarded: a session end was still running. */
 async function handleLogin(
   loginResponse: ResolvedAuthPayload,
-  shouldRemember?: boolean,
   loginCredentials?: { email: string },
   showRememberPrompt = false,
 ): Promise<boolean> {
@@ -243,25 +227,14 @@ async function handleLogin(
       user,
       loginCredentials.email,
       showRememberPrompt,
+      accessToken,
     );
   }
 
-  // Set auth state
-  store.setAuth(user, accessToken, refreshToken);
+  if (!store.setAuth(user, accessToken, refreshToken)) return false;
   queueManager.onUserChange(user.id, previousUserId);
   bootstrapUserStore(user);
   void applyRegionCurrencyDefault(user);
-
-  if (shouldRemember !== undefined) {
-    store.setRememberMe(shouldRemember);
-  }
-
-  if (user.id) {
-    store.setUserNavigationState(user.id, {
-      lastLoginTimestamp: Date.now(),
-      rememberMeChoice: shouldRemember,
-    });
-  }
 
   logger.info('Auth success: Login successful');
   sessionHost().afterSignIn();
@@ -273,11 +246,11 @@ async function handleLogin(
     // clearing it also keeps resolveNavTarget from routing past this screen.
     store.setUserNavigationState(user.id, { verificationSkipped: false });
     store.setNavigationState('verification');
-    return false;
+    return true;
   }
   if (!user.onBoarded) {
     store.setNavigationState('onboarding');
-    return false;
+    return true;
   }
 
   // Eligible returning user → route to the dedicated biometric enrollment
@@ -285,7 +258,6 @@ async function handleLogin(
   // so it renders as its own step, not a modal over PantryMain.
   if (gate === 'biometricSetup' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    store.setShowBiometricSetup(true);
     store.setNavigationState('biometric_setup');
     return true;
   }
@@ -295,12 +267,11 @@ async function handleLogin(
   // the user-change effect from forcing it meanwhile.
   if (gate === 'rememberMe' && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    getUserPreferences(user.id).trackCredentialPromptShown();
     return true;
   }
 
   store.setNavigationState('main_app');
-  return false;
+  return true;
 }
 
 // --- Public API ---
@@ -359,15 +330,15 @@ async function login(
       // handleLogin owns all post-login routing — verification, onboarding,
       // the biometric gate, and the RememberMe gate (driven by
       // showRememberPrompt) — so navigation is decided in one place.
-      await handleLogin(
+      const signedIn = await handleLogin(
         unmaskedLogin,
-        true,
         loginCredentials,
         showRememberPrompt,
       );
-
+      if (!signedIn && !quiet)
+        toastService.error(t('errors.codes.genericRetry'));
       store.setAuthIsLoading(false);
-      return true;
+      return signedIn;
     }
 
     const refusal = result.data?.login;
@@ -404,39 +375,32 @@ async function login(
  */
 type RegisterOutcome = 'signedIn' | 'verificationSent' | 'failed';
 
-async function register(
-  input: RegisterInput,
-  shouldRemember = true,
-): Promise<RegisterOutcome> {
+async function register(input: RegisterInput): Promise<RegisterOutcome> {
   const store = useStore.getState();
   store.setAuthIsLoading(true);
 
   // A refusal, a resolved error and a throw all toast the app's own copy and
   // keep the user on the sign-up screen. A refused attempt to START a session
   // clears a dead token rather than ending a session, as `handleAuthError` does.
-  const clearAuth = () => {
-    store.clearAuth();
-  };
-  // Bound to the device, as `login` explains.
-  await ensureDeviceId();
   const settled = await settleMutation(
-    () =>
-      requireApolloClient().mutate({
+    async () => {
+      // Bound to the device, as `login` explains.
+      await ensureDeviceId();
+      return requireApolloClient().mutate({
         mutation: RegisterDocument,
         variables: { input },
-      }),
+      });
+    },
     {
       document: RegisterDocument,
       fallback: t('errors.codes.genericRetry'),
       present: 'toast',
-      on: {
-        [ErrorCode.AuthTokenExpired]: clearAuth,
-        [ErrorCode.AuthRefreshTokenInvalid]: clearAuth,
-      },
     },
   );
 
   if (settled.failure) {
+    const { code } = settled.failure;
+    if (code && isStaleSignInTokenCode(code)) store.clearAuth();
     store.setAuthIsLoading(false);
     return 'failed';
   }
@@ -445,7 +409,6 @@ async function register(
     return 'failed';
   }
 
-  store.setRememberMe(shouldRemember);
   logger.info('Registration successful: verification email sent');
 
   // `register` issues no tokens, but `login` admits an unverified account.
@@ -458,6 +421,140 @@ async function register(
   return signedIn ? 'signedIn' : 'verificationSent';
 }
 
+/**
+ * What exchanging a device credential did; every failure is already reported.
+ * `dead`: the credential will never authenticate again. `unreachable`: the
+ * request never arrived, so the server refused nothing. `retryAfterMs` is the
+ * server's own deadline.
+ */
+export type DeviceCredentialExchange =
+  | { status: 'signedIn' }
+  | { status: 'incomplete' }
+  | { status: 'discarded' }
+  | { status: 'dead' }
+  | { status: 'refused' }
+  | { status: 'unreachable' }
+  | { status: 'failed'; retryAfterMs?: number };
+
+/** Sign in with a device credential, bound to `deviceId`. */
+async function exchangeDeviceCredential(
+  credential: string,
+  deviceId: string,
+): Promise<DeviceCredentialExchange> {
+  const operation = 'Auto-login';
+  const result = await requireApolloClient().mutate({
+    mutation: ExchangeDeviceCredentialDocument,
+    variables: { input: { credential, deviceId } },
+  });
+
+  const payload = appliedPayload(result.data);
+  if (payload) {
+    const signIn = unmaskAuthPayload(payload);
+    if (!signIn) {
+      // The exchange spent one of the server's attempts and opened no session.
+      logger.error(
+        'Auto-login succeeded but the LoginUser read was incomplete',
+      );
+      toastService.error(t('errors.codes.genericRetry'));
+      return { status: 'incomplete' };
+    }
+    if (!(await handleLogin(signIn))) {
+      toastService.error(t('errors.codes.genericRetry'));
+      return { status: 'discarded' };
+    }
+    return { status: 'signedIn' };
+  }
+
+  const refusal = result.data?.exchangeDeviceCredential;
+  if (refusal && 'code' in refusal) {
+    handleRejectedAuthPayload(refusal, operation);
+    // A token-side refusal leaves THESE credentials good (isDeadCredentialCode).
+    return isDeadCredentialCode(refusal.code)
+      ? { status: 'dead' }
+      : { status: 'refused' };
+  }
+
+  if (result.error) {
+    handleAuthError(result.error, operation);
+    const code = errorService.parseApolloError(result.error, {
+      logError: false,
+    }).error?.code;
+    if (code && isDeadCredentialCode(code)) return { status: 'dead' };
+    if (isTransportFailure(result.error)) return { status: 'unreachable' };
+    const rateLimit = getRateLimitDetails(result.error);
+    return {
+      status: 'failed',
+      retryAfterMs: rateLimit?.retryAfter
+        ? rateLimit.retryAfter * 1000
+        : undefined,
+    };
+  }
+
+  // An answer this client cannot read still spent one of the server's attempts.
+  toastService.error(t('errors.codes.genericRetry'));
+  return { status: 'failed' };
+}
+
+/**
+ * A device credential for `deviceId`, issued from the live session alone.
+ * `refused` is already reported.
+ */
+async function issueDeviceCredential(
+  deviceId: string,
+  { quiet = false }: { quiet?: boolean } = {},
+): Promise<{ status: 'issued'; credential: string } | { status: 'refused' }> {
+  const operation = 'Enrol device credential';
+  const result = await requireApolloClient().mutate({
+    mutation: IssueDeviceCredentialDocument,
+    variables: { input: { deviceId } },
+  });
+
+  const payload = appliedPayload(result.data);
+  if (payload) return { status: 'issued', credential: payload.credential };
+
+  const refusal = result.data?.issueDeviceCredential;
+  // `quiet`: the caller's own message says what the refusal costs.
+  if (quiet) {
+    logger.warn(`${operation} refused`, refusal ?? result.error);
+  } else if (refusal && 'code' in refusal) {
+    handleRejectedAuthPayload(refusal, operation);
+  } else if (result.error) {
+    handleAuthError(result.error, operation);
+  }
+  return { status: 'refused' };
+}
+
+/**
+ * A password change this session survived. The server refused every earlier
+ * token, this device's included, so the new pair is stored before anything
+ * else sends on the old one; the host then renews the sign-in it stores.
+ * `sentBy` is who sent the change: the pair is adopted only while that user is
+ * still signed in. Not by refresh token, which a rotation during the change
+ * replaces with one the change already revoked.
+ */
+async function adoptPasswordChangeSession(
+  session: { accessToken: string; refreshToken: string },
+  sentBy: string,
+): Promise<StoredSignInRenewal | 'discarded'> {
+  const store = useStore.getState();
+  if (store.user?.id !== sentBy || !holdsSessionTokens(store)) {
+    logger.info(
+      'Discarded a password-change session its sender no longer holds',
+    );
+    return 'discarded';
+  }
+  const write = store.setTokens({
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+  });
+  if (write !== 'stored') return 'discarded';
+  // As a refresh does: the socket was opened on a token the change revoked.
+  reconnectWebSocket();
+  const { email } = store.user;
+  if (!email) return 'none';
+  return sessionHost().renewStoredSignIn(email);
+}
+
 interface LogoutOptions {
   /**
    * KEEP the sign-in the host stores across the sign-out — on mobile a
@@ -465,6 +562,11 @@ interface LogoutOptions {
    * FALSE has the host drop it and revoke it server-side.
    */
   keepBiometricCredentials?: boolean;
+  /**
+   * KEEP the account's queued offline writes for its next sign-in: the session
+   * ends, but the account did not choose to sign out (a password-reset link).
+   */
+  keepQueuedWrites?: boolean;
 }
 
 async function logout(options?: LogoutOptions): Promise<void> {
@@ -483,39 +585,29 @@ async function logout(options?: LogoutOptions): Promise<void> {
       await sessionHost().forgetStoredSignIn(currentUserEmail);
     }
 
-    // The teardown `endSession` runs too, so both exits rest the same. One scope
-    // over the whole descent, released however it exits: a latched gate refuses
-    // the next sign-in until the app restarts.
-    await whileSessionEnds(async () => {
-      await runSessionTeardown();
-
-      if (currentUserId) {
-        queueManager.onLogout(currentUserId);
-      }
-
-      // `resetStore`, not `clearAuth`, which leaves the selections, inbox and
-      // LRUs persisted for whoever signs in next. Apollo is already cleared by
-      // the teardown's `apollo` step.
-      await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
-      store.setNavigationState('auth');
+    // The one session-end body every end runs. Deliberate: only a sign-out
+    // the person chose may discard the offline queue's unsynced work.
+    const discardsQueue = !!currentUserId && !options?.keepQueuedWrites;
+    await store.endSession('signed_out', {
+      deliberate: {
+        handOffQueue: discardsQueue
+          ? () => queueManager.onLogout(currentUserId)
+          : undefined,
+      },
     });
-
-    if (currentUserId) {
-      getUserPreferences(currentUserId).trackLogout();
-    }
   } catch (error) {
     logger.error('Logout error:', error);
   }
 }
 
+/** @internal The sign-in commit, for `failingHostSteps.test.ts`. */
+export { handleLogin };
+
 export const authService = {
   login,
   register,
   logout,
-
-  // Post-auth flow handlers, also run by a host's own sign-in paths
-  handleLogin,
-  handleAuthError,
-  handleRejectedAuthPayload,
-  resolveAuthPayload: unmaskAuthPayload,
+  adoptPasswordChangeSession,
+  exchangeDeviceCredential,
+  issueDeviceCredential,
 };

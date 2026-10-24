@@ -1,4 +1,5 @@
 import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
+import { RowCard } from '#components/atoms/RowCard';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -11,7 +12,6 @@ import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
-import { commonStyles } from '#/styles/commonStyles';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import { hitSlop } from '#/theme/foundations/sizes';
@@ -20,6 +20,8 @@ import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 
 interface MealPlanItemCardProps {
   item: FragmentType<typeof MealPlanItemCard_ItemFragmentDoc>;
+  /** The meal it is, such as "Dinner", where no section heading says so. */
+  mealTypeLabel?: string;
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,
@@ -33,6 +35,7 @@ interface MealPlanItemCardProps {
 
 export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   item: itemSource,
+  mealTypeLabel,
   onToggleCompleted,
   onPress,
   onDelete,
@@ -79,17 +82,15 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         tone={item.isCompleted ? 'success' : 'border'}
       />
     </Pressable>
-  ) : (
-    <Icon
-      name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-      size={24}
-      tone={item.isCompleted ? 'success' : 'border'}
-    />
-  );
+  ) : item.isCompleted ? (
+    // Read-only: a done meal says so; an empty circle would read as a control.
+    <Icon name="checkmark-circle" size={24} tone="success" />
+  ) : undefined;
 
-  const leftElement = imageUrl ? <RowThumbnail uri={imageUrl} /> : undefined;
+  const leftElement = <RowThumbnail uri={imageUrl} />;
 
   const metaText = [
+    mealTypeLabel,
     // A recipe with no known time stores 0, which is not "0 min".
     totalTime != null && totalTime > 0 && t('labels.min', { count: totalTime }),
     item.servings != null &&
@@ -120,17 +121,38 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       </>
     ) : undefined;
 
+  const accessibilityLabel = accessibilityLabelOf(
+    recipeName,
+    item.isCompleted && t('labels.done'),
+    metaText,
+    hasPantryDeductions && t('mealPlanItem.pantryUpdated'),
+  );
+  const handlePress = onPress ? () => onPress(item.id) : undefined;
+
+  // A read-only row mounts no swipe gesture, so it sits in any scroll host.
+  if (!onToggleCompleted && !onDelete) {
+    return (
+      <RowCard>
+        <ListItem
+          checkboxElement={checkboxElement}
+          leftElement={leftElement}
+          title={recipeName}
+          titleNumberOfLines={1}
+          subtitle={subtitle}
+          isPurchased={item.isCompleted}
+          onPress={handlePress}
+          accessibilityLabel={accessibilityLabel}
+        />
+      </RowCard>
+    );
+  }
+
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <SwipeableItem
         itemId={item.id}
-        accessibilityLabel={accessibilityLabelOf(
-          recipeName,
-          item.isCompleted && t('labels.done'),
-          metaText,
-          hasPantryDeductions && t('mealPlanItem.pantryUpdated'),
-        )}
-        onPress={onPress ? () => onPress(item.id) : undefined}
+        accessibilityLabel={accessibilityLabel}
+        onPress={handlePress}
         rightActions={
           onDelete
             ? [{ ...deleteAction(() => onDelete(item.id)), removesRow: true }]
@@ -146,10 +168,9 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           titleNumberOfLines={1}
           subtitle={subtitle}
           isPurchased={item.isCompleted}
-          rightIcon={null}
         />
       </SwipeableItem>
-    </View>
+    </RowCard>
   );
 };
 

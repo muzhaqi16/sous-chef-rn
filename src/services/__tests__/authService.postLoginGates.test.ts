@@ -9,6 +9,7 @@
 // login payload comes back incomplete.
 
 const mockMutate = jest.fn();
+const mockQuery = jest.fn();
 const mockReadFragment = jest.fn();
 jest.mock('#/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
@@ -18,14 +19,13 @@ jest.mock('#/apollo/client', () => ({
 const navStates = new Map<string, Record<string, unknown>>();
 const mockStore = {
   user: null as unknown,
-  setAuth: jest.fn(),
+  isOnline: true,
+  apiReachable: null as boolean | null,
+  setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
   setAuthIsLoading: jest.fn(),
-  setAuthIsLoadingCredentials: jest.fn(),
-  setRememberMe: jest.fn(),
   setNavigationState: jest.fn(),
   setPostLoginCredentials: jest.fn(),
-  setShowBiometricSetup: jest.fn(),
   setHomeAndPantry: jest.fn(),
   setIsHomeSelectionReady: jest.fn(),
   setSelectedShoppingListId: jest.fn(),
@@ -53,6 +53,7 @@ jest.mock('#native/storage/keychain', () => ({
 }));
 
 const mockCheckStoredCredentials = jest.fn();
+const mockRemoveCredentials = jest.fn();
 jest.mock('#/services/biometric/credentials', () => ({
   checkStoredCredentials: (...args: unknown[]) =>
     mockCheckStoredCredentials(...args),
@@ -60,7 +61,7 @@ jest.mock('#/services/biometric/credentials', () => ({
   loadStoredCredentials: jest.fn(),
   markDeviceCredential: jest.fn(),
   readDeviceCredential: jest.fn(),
-  removeCredentials: jest.fn(),
+  removeCredentials: (...args: unknown[]) => mockRemoveCredentials(...args),
   storeCredentials: jest.fn(),
 }));
 
@@ -89,12 +90,14 @@ import type { ApolloClient } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 
 registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
 registerApolloClient({
   mutate: (...args: unknown[]) => mockMutate(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
   cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
 } as unknown as ApolloClient);
 
@@ -130,6 +133,7 @@ beforeEach(() => {
   mockGetBiometricCapability.mockResolvedValue({ isAvailable: false });
   mockHasCredentials.mockResolvedValue(false);
   mockCheckStoredCredentials.mockResolvedValue(false);
+  mockRemoveCredentials.mockResolvedValue(true);
 });
 
 describe('the RememberMe fallback', () => {
@@ -184,5 +188,89 @@ describe('a login whose masked read comes back incomplete', () => {
     expect(mockStore.setNavigationState).not.toHaveBeenCalled();
     expect(mockToastError).toHaveBeenCalled();
     expect(mockStore.setAuthIsLoading).toHaveBeenLastCalledWith(false);
+  });
+});
+
+// A password change or reset revokes this device's credential server-side and
+// tells no device, so the slot still reads as set up until something asks.
+describe('a stored fingerprint sign-in, after a password sign-in', () => {
+  const listed = (...deviceIds: string[]) => ({
+    data: {
+      deviceCredentials: deviceIds.map((deviceId, index) => ({
+        __typename: 'DeviceCredential',
+        id: `dc-${index}`,
+        deviceId,
+      })),
+    },
+  });
+
+  beforeEach(() => {
+    mockGetBiometricCapability.mockResolvedValue({ isAvailable: true });
+    mockHasCredentials.mockResolvedValue(true);
+  });
+
+  it('is kept while the server lists it for this device', async () => {
+    mockQuery.mockResolvedValue(listed('other-device', MOCK_DEVICE_ID));
+
+    await authService.login(INPUT);
+
+    // Asked with the sign-in's own token: the pair is not stored yet. Once:
+    // the sign-in waits on it, so a failing link must not hold it through
+    // retryLink's attempts.
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fetchPolicy: 'no-cache',
+        context: { signInToken: 'at', skipRetryLink: true },
+      }),
+    );
+    expect(mockRemoveCredentials).not.toHaveBeenCalled();
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('is removed and set up again once the server no longer lists it', async () => {
+    mockQuery.mockResolvedValue(listed('other-device'));
+
+    await authService.login(INPUT);
+
+    expect(mockRemoveCredentials).toHaveBeenCalledWith(INPUT.email);
+    expect(mockStore.setHasStoredCredentials).toHaveBeenCalledWith(false);
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith(
+      'biometric_setup',
+    );
+  });
+
+  it('is removed without a prompt for someone who declined biometrics', async () => {
+    navStates.set(USER_ID, { biometricDeclinedPermanently: true });
+    mockQuery.mockResolvedValue(listed());
+
+    await authService.login(INPUT);
+
+    expect(mockRemoveCredentials).toHaveBeenCalledWith(INPUT.email);
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('is kept, and not asked about, while the API is unreachable', async () => {
+    mockStore.apiReachable = false;
+
+    await authService.login(INPUT);
+    mockStore.apiReachable = null;
+
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockRemoveCredentials).not.toHaveBeenCalled();
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('is kept when the server cannot be asked', async () => {
+    // errorPolicy 'all': a failed read resolves with no data and the error.
+    mockQuery.mockResolvedValue({
+      data: undefined,
+      error: new Error('Network request failed'),
+    });
+
+    await authService.login(INPUT);
+
+    expect(mockRemoveCredentials).not.toHaveBeenCalled();
+    expect(mockStore.setHasStoredCredentials).not.toHaveBeenCalledWith(false);
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
   });
 });

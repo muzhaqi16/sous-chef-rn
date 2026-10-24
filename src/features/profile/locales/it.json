@@ -5,6 +5,8 @@
     "currentPasswordPlaceholder": "Inserisci la password attuale",
     "confirmPassword": "Conferma nuova password",
     "success": "Password cambiata!",
+    "successOtherDevicesSignedOut": "Password cambiata. È stata chiusa la sessione sugli altri tuoi dispositivi.",
+    "successBiometricOff": "Password cambiata. È stata chiusa la sessione sugli altri tuoi dispositivi e l'accesso biometrico ora è disattivato. Riattivalo in Impostazioni.",
     "failed": "Impossibile cambiare la password",
     "failedFallback": "Impossibile cambiare la password. Riprova."
   },
@@ -274,6 +276,7 @@
     "description": "Autenticati per accedere alle informazioni di accesso salvate",
     "checkCredentials": "Verifica credenziali",
     "keychainTitle": "Sblocca le credenziali salvate",
+    "saveTitle": "Salva l'accesso su questo dispositivo",
     "useManualLogin": "Usa l'accesso manuale"
   },
   "profileValidation": {

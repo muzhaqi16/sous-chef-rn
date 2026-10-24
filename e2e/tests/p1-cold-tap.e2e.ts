@@ -1,14 +1,14 @@
 /**
  * P1: cold-launch notification tap routing. Detox's `userNotification`
  * simulates launching by tapping a push; `category: SHOPPING` must land on
- * Shopping List, not Pantry — exercising PushNotificationForwarder's tap cache
+ * Shopping List, not Today — exercising PushNotificationForwarder's tap cache
  * and NavigationService's pending-nav flush. Relaunch pins one-shot semantics.
  */
 import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
-import { pantryTestIDs } from '../../src/features/pantry/testIDs';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
 
 const SHOPPING_TAP_NOTIFICATION = {
   trigger: { type: 'push' },
@@ -44,12 +44,12 @@ describe('P1: cold-launch notification tap', () => {
       permissions: { notifications: 'YES' },
     });
 
-    // Default post-login screen is the Pantry tab — a stale replayed tap
-    // would put us on the shopping list instead.
-    await waitFor(element(by.id(pantryTestIDs.screen)))
+    // A plain launch lands on Today — a stale replayed tap would put us on
+    // the shopping list instead.
+    await waitFor(element(by.id(todayTestIDs.screen)))
       .toBeVisible()
       .withTimeout(20000);
 
-    await device.takeScreenshot('plain-launch-landed-on-pantry');
+    await device.takeScreenshot('plain-launch-landed-on-today');
   });
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { radii } from '#/theme/foundations/radii';
@@ -26,7 +27,7 @@ export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
   animated = true,
 }) => {
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <View style={[commonStyles.rowSurface, commonStyles.rowContent]}>
         <SkeletonRectangle
           width={IMAGE_SIZE}
@@ -57,7 +58,7 @@ export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
           />
         </View>
       </View>
-    </View>
+    </RowCard>
   );
 };
 

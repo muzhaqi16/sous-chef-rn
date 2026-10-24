@@ -1,5 +1,6 @@
 'use no memo';
 import { toastService } from '#/services/toastService';
+import { authService } from '#/services/authService';
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import {
@@ -7,8 +8,12 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  PasswordActionStatus,
+} from '#/graphql/generated/schemaTypes';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { useStore } from '#store';
 import type { Header } from '#components/organisms/Header';
 import type { PasswordInputProps } from '#components/molecules/PasswordInput';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
@@ -16,6 +21,8 @@ import { ChangePasswordScreen } from '../ChangePasswordScreen';
 type HeaderProps = React.ComponentProps<typeof Header>;
 
 const mockToastError = jest.mocked(toastService.error);
+const mockToastSuccess = jest.mocked(toastService.success);
+const mockToastWarning = jest.mocked(toastService.warning);
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = jest
@@ -81,9 +88,69 @@ jest.mock('#components/molecules/PasswordInput', () => {
   };
 });
 
+const signedIn = {
+  user: {
+    id: 'user-1',
+    email: 'test@example.com',
+    emailVerified: true,
+    onBoarded: true,
+  },
+  accessToken: 'old-access',
+  refreshToken: 'old-refresh',
+};
+
+// The change answers with a fresh pair; `during` runs while it is in flight.
+const changeAnswering = (during: () => void = () => undefined) => [
+  {
+    request: { query: ChangePasswordDocument, variables: () => true },
+    result: () => {
+      during();
+      return {
+        data: {
+          changePassword: {
+            __typename: 'ChangePasswordPayload',
+            status: PasswordActionStatus.Completed,
+            session: {
+              __typename: 'SessionTokens',
+              accessToken: 'new-access',
+              refreshToken: 'new-refresh',
+            },
+          },
+        },
+      };
+    },
+  },
+];
+
+const submitChange = async (operationMocks: MockedResponse[]) => {
+  (executeWithLoadingState as jest.Mock).mockImplementation(
+    async (fn: () => Promise<void>, setLoading: (v: boolean) => void) => {
+      setLoading(true);
+      await fn();
+      setLoading(false);
+    },
+  );
+  const user = userEvent.setup();
+  renderWithApollo(<ChangePasswordScreen />, { operationMocks });
+  await user.type(
+    screen.getByTestId('password-input-Enter your current password'),
+    'OldPass1',
+  );
+  await user.type(
+    screen.getByTestId('password-input-Enter your new password'),
+    'NewPass1',
+  );
+  await user.type(
+    screen.getByTestId('password-input-Confirm your new password'),
+    'NewPass1',
+  );
+  await user.press(screen.getByRole('button', { name: 'Change Password' }));
+};
+
 describe('ChangePasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useStore.setState(signedIn);
   });
 
   it('renders the header with title', () => {
@@ -203,6 +270,148 @@ describe('ChangePasswordScreen', () => {
     );
 
     expect(mockToastError).not.toHaveBeenCalledWith(SERVER_PROSE);
+  });
+
+  // The change keeps this device signed in; every other one is signed out.
+  it('says other devices were signed out when this one stays signed in', async () => {
+    (executeWithLoadingState as jest.Mock).mockImplementation(
+      async (fn: () => Promise<void>, setLoading: (v: boolean) => void) => {
+        setLoading(true);
+        await fn();
+        setLoading(false);
+      },
+    );
+    const operationMocks: MockedResponse[] = [
+      {
+        request: { query: ChangePasswordDocument, variables: () => true },
+        result: {
+          data: {
+            changePassword: {
+              __typename: 'ChangePasswordPayload',
+              status: PasswordActionStatus.Completed,
+              session: {
+                __typename: 'SessionTokens',
+                accessToken: 'new-access',
+                refreshToken: 'new-refresh',
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithApollo(<ChangePasswordScreen />, { operationMocks });
+
+    await user.type(
+      screen.getByTestId('password-input-Enter your current password'),
+      'OldPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Enter your new password'),
+      'NewPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Confirm your new password'),
+      'NewPass1',
+    );
+    await user.press(screen.getByRole('button', { name: 'Change Password' }));
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Password changed. Your other devices have been signed out.',
+      ),
+    );
+  });
+
+  // The biometric sign-in the change revoked could not be renewed.
+  it('says biometric sign-in is off when it could not be kept', async () => {
+    jest
+      .spyOn(authService, 'adoptPasswordChangeSession')
+      .mockResolvedValueOnce('dropped');
+    (executeWithLoadingState as jest.Mock).mockImplementation(
+      async (fn: () => Promise<void>, setLoading: (v: boolean) => void) => {
+        setLoading(true);
+        await fn();
+        setLoading(false);
+      },
+    );
+    const operationMocks: MockedResponse[] = [
+      {
+        request: { query: ChangePasswordDocument, variables: () => true },
+        result: {
+          data: {
+            changePassword: {
+              __typename: 'ChangePasswordPayload',
+              status: PasswordActionStatus.Completed,
+              session: {
+                __typename: 'SessionTokens',
+                accessToken: 'new-access',
+                refreshToken: 'new-refresh',
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithApollo(<ChangePasswordScreen />, { operationMocks });
+
+    await user.type(
+      screen.getByTestId('password-input-Enter your current password'),
+      'OldPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Enter your new password'),
+      'NewPass1',
+    );
+    await user.type(
+      screen.getByTestId('password-input-Confirm your new password'),
+      'NewPass1',
+    );
+    await user.press(screen.getByRole('button', { name: 'Change Password' }));
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Password changed. Your other devices have been signed out, and biometric sign-in is now off. Turn it back on in Settings.',
+      ),
+    );
+  });
+
+  // The change revoked every earlier token, the rotated one included.
+  it('keeps this device signed in when a refresh rotated the pair during the change', async () => {
+    await submitChange(
+      changeAnswering(() => useStore.setState({ refreshToken: 'rotated' })),
+    );
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Password changed. Your other devices have been signed out.',
+      ),
+    );
+    expect(useStore.getState().accessToken).toBe('new-access');
+    expect(useStore.getState().refreshToken).toBe('new-refresh');
+  });
+
+  it('adopts nothing for a session that ended during the change', async () => {
+    await submitChange(
+      changeAnswering(() =>
+        useStore.setState({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+        }),
+      ),
+    );
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Password changed successfully!',
+      ),
+    );
+    expect(useStore.getState().accessToken).toBeNull();
+    expect(useStore.getState().refreshToken).toBeNull();
   });
 
   it('renders password input placeholders', () => {

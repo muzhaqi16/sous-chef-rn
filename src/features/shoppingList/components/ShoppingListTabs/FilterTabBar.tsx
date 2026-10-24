@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import type { NavigationState, Route } from 'react-native-tab-view';
 import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
-import { FilterTabItem } from './FilterTabItem';
+import { ModeTabs } from '#components/molecules/ModeTabs';
+import { IconButton } from '#components/atoms/IconButton';
 import { Text } from '#components/atoms/Text';
 import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
@@ -37,111 +37,78 @@ export function FilterTabBar<TKey extends string>({
   onTabMeasure,
   measureTabKeys,
 }: FilterTabBarProps<TKey>) {
-  const handleTabPress = (key: TKey) => {
-    jumpTo(key);
-  };
+  const { routes, index } = navigationState;
+  const titleOf = (key: TKey) =>
+    routes.find(route => route.key === key)?.title ?? key;
+  const current = routes[index]?.key;
+  if (current === undefined) return null;
 
+  // A mode switch, so tabs, not filter chips: the two are the list's two views,
+  // not narrowings of one.
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-      >
-        {navigationState.routes.map((route, index) => (
-          <FilterTabItem
-            key={route.key}
-            routeKey={route.key}
-            title={route.title}
-            isActive={navigationState.index === index}
-            count={counts?.[route.key]}
-            onPress={() => handleTabPress(route.key)}
-            testID={kitTestIDs.filterTab(
-              shoppingListTestIDs.tabBarPrefix,
-              route.key,
-            )}
-            onMeasure={
-              onTabMeasure && measureTabKeys?.includes(route.key)
-                ? rect => onTabMeasure(route.key, rect)
-                : undefined
-            }
-          />
-        ))}
-      </ScrollView>
-      {!!actionButtons?.length && (
-        <View style={styles.actionsRow}>
-          {actionButtons.map((btn, idx) => (
+      <ModeTabs<TKey>
+        options={routes.map(route => route.key)}
+        value={current}
+        onChange={jumpTo}
+        formatLabel={titleOf}
+        countOf={counts ? key => counts[key] : undefined}
+        tabTestID={key =>
+          kitTestIDs.filterTab(shoppingListTestIDs.tabBarPrefix, key)
+        }
+        onTabLayout={
+          onTabMeasure
+            ? (key, rect) => {
+                if (measureTabKeys?.includes(key)) onTabMeasure(key, rect);
+              }
+            : undefined
+        }
+        trailing={actionButtons?.map((btn, idx) => {
+          const testID = btn.testID ?? shoppingListTestIDs.tabBarAction(idx);
+          return btn.label === undefined ? (
+            <IconButton
+              key={testID}
+              name={btn.icon}
+              library={btn.iconLibrary}
+              tone="primary"
+              onPress={btn.onPress}
+              disabled={btn.disabled}
+              accessibilityLabel={btn.accessibilityLabel}
+              testID={testID}
+            />
+          ) : (
             <Pressable
-              key={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
-              onPress={btn.disabled ? undefined : btn.onPress}
-              testID={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
+              key={testID}
+              onPress={btn.onPress}
+              disabled={btn.disabled}
+              testID={testID}
               accessibilityRole="button"
               accessibilityLabel={btn.accessibilityLabel}
               accessibilityState={{ disabled: !!btn.disabled }}
-              style={[
-                btn.label ? styles.actionLabelButton : styles.actionButton,
-                !btn.label && styles.actionButtonWithBg,
-                btn.disabled && styles.actionDisabled,
-              ]}
+              style={[styles.textAction, btn.disabled && styles.disabled]}
             >
-              {btn.label ? (
-                <Text role="label" tone="accent">
-                  {btn.label}
-                </Text>
-              ) : btn.icon ? (
-                <Icon
-                  name={btn.icon}
-                  size={20}
-                  tone="primary"
-                  library={btn.iconLibrary}
-                />
-              ) : null}
+              <Text role="label" tone="accent">
+                {btn.label}
+              </Text>
             </Pressable>
-          ))}
-        </View>
-      )}
+          );
+        })}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.layout.pageGutter,
+    marginBottom: theme.spacing.sm,
   },
-  scrollView: {
-    flexShrink: 1,
-  },
-  scrollContent: {
-    gap: theme.spacing.sm,
-  },
-  actionButton: {
-    alignItems: 'center',
+  textAction: {
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.smPlus,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-  },
-  actionButtonWithBg: {
-    backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
-  actionLabelButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: theme.sizes.touchTarget.md,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  actionDisabled: {
-    opacity: 0.4,
+  disabled: {
+    opacity: theme.opacity.disabled,
   },
 }));

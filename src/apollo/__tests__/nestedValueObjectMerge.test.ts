@@ -6,7 +6,11 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 import type { Unmasked } from '@apollo/client/masking';
-import { AddedContext, DisplayFormat } from '#/graphql/generated/schemaTypes';
+import {
+  AddedContext,
+  DisplayFormat,
+  EntryImageSource,
+} from '#/graphql/generated/schemaTypes';
 import { makeCache } from '../cache';
 import {
   ItemDetail_ShoppingListItemFragmentDoc,
@@ -16,6 +20,10 @@ import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
 } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem.generated';
+import {
+  UseQuantityEditModal_ItemFragmentDoc,
+  type UseQuantityEditModal_ItemFragment,
+} from '#features/shoppingList/hooks/useQuantityEditModal.generated';
 
 /**
  * A nested object with no type policy is REPLACED on write, not merged
@@ -39,6 +47,7 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   netWeight: null,
   netWeightUnit: null,
   id: 'si1',
+  image: null,
   itemName: 'Lemon juice',
   quantity: 1,
   quantityInput: '1',
@@ -265,5 +274,73 @@ describe('nested value objects on ShoppingListItem', () => {
         purchasedPrice: 3.5,
       });
     });
+  });
+});
+
+/**
+ * `EntryImage` has no id and no policy, so a write replaces it whole. That is
+ * right — its fields describe one photo — only while every writer carries all
+ * of them (`nestedValueSelections.test.ts`). A row writer short of
+ * `catalogImageId` would strip it and blank the detail.
+ */
+describe('the entry photo on ShoppingListItem', () => {
+  type EntryImage = Unmasked<UseQuantityEditModal_ItemFragment>['image'];
+
+  const householdPhoto = (catalogImageId: string, url: string): EntryImage => ({
+    __typename: 'EntryImage',
+    url,
+    source: EntryImageSource.Household,
+    catalogImageId,
+  });
+
+  const seedWithPhoto = (image: EntryImage) => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: ITEM_CACHE_ID,
+      fragment: ItemDetail_ShoppingListItemFragmentDoc,
+      fragmentName: 'ItemDetail_shoppingListItem',
+      data: { ...fullItem, image },
+    });
+    return cache;
+  };
+
+  const writeRow = (cache: ReturnType<typeof makeCache>, image: EntryImage) =>
+    cache.writeFragment({
+      id: ITEM_CACHE_ID,
+      fragment: UseQuantityEditModal_ItemFragmentDoc,
+      fragmentName: 'useQuantityEditModal_item',
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'si1',
+        itemName: 'Lemon juice',
+        quantity: 1,
+        category: 'Produce',
+        unitName: 'lemon',
+        version: 3,
+        unit: null,
+        image,
+        item: null,
+      },
+    });
+
+  it('keeps the detail complete through a row write', () => {
+    const photo = householdPhoto('photo-1', 'https://cdn.test/1.jpg');
+    const cache = seedWithPhoto(photo);
+
+    writeRow(cache, photo);
+
+    expect(readDetail(cache)?.image).toEqual(photo);
+  });
+
+  it('takes a different photo whole, its catalog reference included', () => {
+    const cache = seedWithPhoto(
+      householdPhoto('photo-1', 'https://cdn.test/1.jpg'),
+    );
+
+    writeRow(cache, householdPhoto('photo-2', 'https://cdn.test/2.jpg'));
+
+    expect(readDetail(cache)?.image).toEqual(
+      householdPhoto('photo-2', 'https://cdn.test/2.jpg'),
+    );
   });
 });

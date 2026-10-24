@@ -36,12 +36,18 @@ export const layout = {
   /** Below a screen's last content, on top of the bottom safe-area inset. */
   pageBottom: 24,
   sectionGap: 24,
-  /** A row's own edge to its content. */
+  /** A row's top and bottom edge to its content. */
   rowInset: 8,
+  /**
+   * A row's side edge to its content, and the inset of the rule between rows:
+   * on a shared panel the text needs more room from the panel's edge than a
+   * card's padding gave it.
+   */
+  rowInsetHorizontal: 12,
   /** Between a row's slots — thumbnail, text, trailing. */
   rowSlotGap: 8,
   /** Between a row's title and its subtitle. */
   rowTextGap: 4,
-  /** Between one row and the next. */
+  /** Between one panel and the next, such as a list and its loading footer. */
   rowGap: 8,
 };

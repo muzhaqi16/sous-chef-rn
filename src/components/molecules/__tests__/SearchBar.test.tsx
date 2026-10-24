@@ -104,40 +104,25 @@ describe('SearchBar', () => {
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('eggs');
   });
 
-  it('renders right action buttons', () => {
+  it('renders its one accessory beside the field', () => {
     const onFilter = jest.fn();
     render(
       <SearchBar
         {...defaultProps}
-        rightActions={[
-          {
-            icon: 'filter',
-            onPress: onFilter,
-            accessibilityLabel: 'Filter',
-            testID: 'filter-btn',
-          },
-        ]}
+        accessory={{
+          icon: 'filter',
+          onPress: onFilter,
+          accessibilityLabel: 'Filter',
+          testID: 'filter-btn',
+        }}
       />,
     );
     expect(screen.getByTestId('filter-btn')).toBeTruthy();
   });
 
-  it('renders left action buttons', () => {
-    const onMenu = jest.fn();
-    render(
-      <SearchBar
-        {...defaultProps}
-        leftActions={[
-          {
-            icon: 'menu',
-            onPress: onMenu,
-            accessibilityLabel: 'Menu',
-            testID: 'menu-btn',
-          },
-        ]}
-      />,
-    );
-    expect(screen.getByTestId('menu-btn')).toBeTruthy();
+  it('renders nothing beside the field without an accessory', () => {
+    render(<SearchBar {...defaultProps} />);
+    expect(screen.queryByTestId('filter-btn')).toBeNull();
   });
 
   it('shows clear button when value is non-empty', () => {

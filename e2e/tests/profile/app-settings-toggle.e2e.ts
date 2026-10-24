@@ -32,6 +32,8 @@ describe('App settings — single tap', () => {
     await bootstrapAuthenticatedSession();
     await dismissSavePasswordPrompt();
     await relaunchToHomeTab();
+    // Profile sits in Today's header.
+    await tapByID(kitTestIDs.tab('Today'));
     await tapByID(kitTestIDs.tab('Profile'));
     await tapByID(profileTestIDs.menuItem('appSettings'));
     // The screen renders a loading branch (no testID) until GetUserSettings

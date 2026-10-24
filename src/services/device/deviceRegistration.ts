@@ -25,7 +25,6 @@ import {
   recordRegisteredLocale,
 } from '#/services/auth/deviceId';
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
-import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
 import { backoffDelay, sleep } from '#/utils/backoff';
@@ -207,14 +206,17 @@ export async function pushRotatedTokenToServer(
  */
 let sessionGeneration = 0;
 
-// A rotation after the session ended has no credential to send it with; the
-// next sign-in registers the current token.
-registerSessionTeardown('devicePushToken', () => {
+/**
+ * The device's part of a session end, run through the session host. A rotation
+ * after the session ended has no credential to send it with; the next sign-in
+ * registers the current token.
+ */
+export function endDeviceSession(): void {
   sessionGeneration += 1;
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
   clearRegisteredLocale();
-});
+}
 
 /**
  * `unretryable` is a precondition no later attempt can change, so

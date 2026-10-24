@@ -2,9 +2,14 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeSearchInput } from '../RecipeSearchInput';
 
-const mockSearchBar = jest.fn<null, [{ maxLength?: number }]>(() => null);
+type SearchBarProps = {
+  maxLength?: number;
+  accessory?: unknown;
+  onSubmitEditing?: () => void;
+};
+const mockSearchBar = jest.fn<null, [SearchBarProps]>(() => null);
 jest.mock('#components/molecules/SearchBar', () => ({
-  SearchBar: (props: { maxLength?: number }) => mockSearchBar(props),
+  SearchBar: (props: SearchBarProps) => mockSearchBar(props),
 }));
 
 describe('RecipeSearchInput', () => {
@@ -12,7 +17,6 @@ describe('RecipeSearchInput', () => {
     render(
       <RecipeSearchInput
         onSearch={jest.fn()}
-        extraActions={[]}
         initialQuery=""
         onClear={jest.fn()}
       />,
@@ -21,5 +25,22 @@ describe('RecipeSearchInput', () => {
     expect(mockSearchBar).toHaveBeenLastCalledWith(
       expect.objectContaining({ maxLength: 200 }),
     );
+  });
+
+  // The keyboard's Search key runs it; nothing beside the field repeats that.
+  it('searches from the keyboard with no submit button beside the field', () => {
+    const onSearch = jest.fn();
+    render(
+      <RecipeSearchInput
+        onSearch={onSearch}
+        initialQuery="eggs"
+        onClear={jest.fn()}
+      />,
+    );
+
+    const props = mockSearchBar.mock.lastCall?.[0];
+    expect(props?.accessory).toBeUndefined();
+    props?.onSubmitEditing?.();
+    expect(onSearch).toHaveBeenCalledWith('eggs');
   });
 });

@@ -5,6 +5,8 @@ import {
   seedCache,
   toFragmentRef,
 } from '#/test-utils/apolloMockProvider';
+import { Icon } from '#components/atoms/Icon';
+import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { MealPlanItemCard } from '../MealPlanItemCard';
 import {
   MealPlanItemCard_ItemFragmentDoc,
@@ -71,6 +73,44 @@ describe('MealPlanItemCard', () => {
     renderCard({ ...meal(25), isCompleted: true });
 
     expect(screen.getByLabelText('Pizza, Done, 25 min')).toBeTruthy();
+  });
+
+  // Today lists meals with no section heading and no actions.
+  it('reads as one meal, named by its meal type, with nothing to press', () => {
+    renderWithApollo(<MealPlanItemCard item={ref} mealTypeLabel="Dinner" />, {
+      cache: seedCache([
+        {
+          data: meal(25),
+          fragment: MealPlanItemCard_ItemFragmentDoc,
+          fragmentName: 'MealPlanItemCard_item',
+        },
+      ]),
+    });
+
+    expect(screen.getByText('Dinner · 25 min')).toBeTruthy();
+    expect(screen.queryByLabelText('Mark as complete')).toBeNull();
+    expect(screen.queryByLabelText(/Mark/)).toBeNull();
+    // No swipe gesture to sit in Today's plain scroll host, and no empty
+    // circle that reads as a control.
+    expect(screen.UNSAFE_queryByType(SwipeableItem)).toBeNull();
+    expect(screen.UNSAFE_queryAllByType(Icon)).toEqual([]);
+  });
+
+  it('marks a done meal in a read-only row', () => {
+    renderWithApollo(<MealPlanItemCard item={ref} mealTypeLabel="Dinner" />, {
+      cache: seedCache([
+        {
+          data: { ...meal(25), isCompleted: true },
+          fragment: MealPlanItemCard_ItemFragmentDoc,
+          fragmentName: 'MealPlanItemCard_item',
+        },
+      ]),
+    });
+
+    expect(screen.getByLabelText('Pizza, Done, Dinner · 25 min')).toBeTruthy();
+    expect(
+      screen.UNSAFE_getAllByType(Icon).map(icon => icon.props.name),
+    ).toEqual(['checkmark-circle']);
   });
 
   it('renders nothing while the item is not completely cached', () => {

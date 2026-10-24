@@ -12,6 +12,11 @@ fragment useQuantityEditModal_item on ShoppingListItem {
     name
     symbol
   }
+  image {
+    url
+    source
+    catalogImageId
+  }
   item {
     id
     imageUrl

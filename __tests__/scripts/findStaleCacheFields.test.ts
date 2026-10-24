@@ -132,4 +132,27 @@ describe('find-stale-cache-fields', () => {
     expect(leavesListOut.code).toBe(1);
     expect(leavesListOut.output).toContain('FixtureRemove → ShoppingList');
   });
+
+  // `deleteHomeItemPhoto` clears a value and answers with the payload
+  // `updateHomeItemPhoto` does: its lines are written, so it owes them in full.
+  it('checks a removal-named mutation that answers with a write’s payload as a write', () => {
+    const clearPhoto = (line: string) => `
+      mutation FixtureClearPhoto($input: DeleteHomeItemPhotoInput!) {
+        deleteHomeItemPhoto(input: $input) {
+          __typename
+          ... on HomeItemPhotoPayload {
+            shoppingListItems { ${line} ${LIST} }
+          }
+        }
+      }
+    `;
+
+    expect(check(clearPhoto('id itemName quantity')).code).toBe(0);
+
+    const leavesQuantityOut = check(clearPhoto('id itemName'));
+    expect(leavesQuantityOut.code).toBe(1);
+    expect(leavesQuantityOut.output).toMatch(
+      /FixtureClearPhoto → ShoppingListItem\n\s+quantity/,
+    );
+  });
 });

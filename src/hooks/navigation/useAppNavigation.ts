@@ -1,4 +1,8 @@
-import { StackActions, useNavigation } from '@react-navigation/native';
+import {
+  CommonActions,
+  StackActions,
+  useNavigation,
+} from '@react-navigation/native';
 import type { RootStackParamList } from '#navigation/RootNavigator';
 import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
@@ -20,6 +24,37 @@ const replaceAction = <Name extends ReplaceableRoute>(
   params: RootStackParamList[Name],
 ) => StackActions.replace(name, params);
 
+/** The root stack holding only `name`, checked the way `replaceAction` is. */
+const resetRootAction = <Name extends ReplaceableRoute>(
+  name: Name,
+  params: RootStackParamList[Name],
+) => CommonActions.reset({ index: 0, routes: [{ name, params }] });
+
+interface Navigable {
+  getState():
+    | { routeNames: readonly string[]; routes: readonly { name: string }[] }
+    | undefined;
+  getParent(): Navigable | undefined;
+  dispatch(action: ReturnType<typeof CommonActions.reset>): void;
+}
+
+/**
+ * A deep-link screen alone on the root stack (a link opened the app, or a
+ * session end removed what was under it) gives way to the screen the app starts
+ * on: the active group's first route.
+ */
+function leaveLoneDeepLink(navigation: Navigable) {
+  let root = navigation;
+  for (let parent = root.getParent(); parent; parent = parent.getParent()) {
+    root = parent;
+  }
+  const state = root.getState();
+  const [start] = state?.routeNames ?? [];
+  const [only] = state?.routes ?? [];
+  if (!start || only?.name === start) return;
+  root.dispatch(CommonActions.reset({ index: 0, routes: [{ name: start }] }));
+}
+
 /**
  * The one place that knows screen names, so a rename surfaces here as a type
  * error. Names stay string LITERALS: the overloads discriminate on them, and a
@@ -32,21 +67,23 @@ export function useAppNavigation() {
     /** Raw navigation prop for one-off needs (e.g., `addListener`). */
     navigation,
 
-    /** Pop the current screen if there is something to go back to. */
+    /** Pop the current screen; a lone deep-link screen leaves for the start screen. */
     goBack: () => {
       if (navigation.canGoBack()) navigation.goBack();
+      else leaveLoneDeepLink(navigation);
     },
 
     // ─── Auth flow ─────────────────────────────────────────────────────────
     toAuth: () => navigation.navigate('Auth'),
     toLogin: () => navigation.navigate('Auth', { screen: 'Login' }),
     /**
-     * Sign-in from a deep-link screen, DROPPING that screen. `toLogin` leaves it
-     * behind: deep-link screens have no `if` on their group, so they outlive the
-     * `Auth` group and resurface as the top route after sign-in.
+     * Sign-in from a deep-link screen, as the root's only route. `toLogin` leaves
+     * the link behind: deep-link screens have no `if` on their group, so they
+     * outlive the `Auth` group and resurface after sign-in. A replace keeps what
+     * was under the link, so a signed-out flow there became a second `Auth`.
      */
     replaceWithLogin: () =>
-      navigation.dispatch(replaceAction('Auth', { screen: 'Login' })),
+      navigation.dispatch(resetRootAction('Auth', { screen: 'Login' })),
     toSignUp: () => navigation.navigate('Auth', { screen: 'SignUp' }),
     toForgotPassword: () =>
       navigation.navigate('Auth', { screen: 'ForgotPassword' }),
@@ -75,6 +112,10 @@ export function useAppNavigation() {
       navigation.navigate('Home', { screen: 'Pantry' }, { pop: true }),
     toShoppingListMain: () =>
       navigation.navigate('Home', { screen: 'ShoppingList' }, { pop: true }),
+    toRecipeMain: () =>
+      navigation.navigate('Home', { screen: 'Recipe' }, { pop: true }),
+    toMealPlanMain: () =>
+      navigation.navigate('Home', { screen: 'MealPlan' }, { pop: true }),
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),

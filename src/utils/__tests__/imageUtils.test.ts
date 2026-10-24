@@ -10,7 +10,11 @@ import {
   toImagePerspective,
   MAX_GALLERY_PHOTOS,
 } from '../imageUtils';
-import { ImageKind, ImagePerspective } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  ImageKind,
+  ImagePerspective,
+} from '#/graphql/generated/schemaTypes';
 
 describe('imageUtils', () => {
   // ==========================================================================
@@ -327,6 +331,42 @@ describe('imageUtils', () => {
 
     it('resolves from nested item.images variants first', () => {
       const source = {
+        item: {
+          images: [
+            { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+          ],
+        },
+      };
+      expect(resolveImageUrl(source, 'small')).toBe(
+        'https://cdn.example.com/thumb.jpg',
+      );
+    });
+
+    // The household's choice is the entry's photo, wherever the entry shows.
+    it("leads with the household's own photo over the item's", () => {
+      const source = {
+        image: {
+          url: 'https://signed.example.com/own.jpg',
+          source: EntryImageSource.Household,
+        },
+        item: {
+          images: [
+            { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+          ],
+        },
+      };
+      expect(resolveImageUrl(source)).toBe(
+        'https://signed.example.com/own.jpg',
+      );
+    });
+
+    // A catalog-sourced `image` is the item's photo, served better sized.
+    it('keeps the sized variant when the entry shows the catalog photo', () => {
+      const source = {
+        image: {
+          url: 'https://cdn.example.com/original.jpg',
+          source: EntryImageSource.Catalog,
+        },
         item: {
           images: [
             { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },

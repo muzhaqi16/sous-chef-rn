@@ -5,6 +5,8 @@
     "currentPasswordPlaceholder": "Introduce tu contraseña actual",
     "confirmPassword": "Confirmar nueva contraseña",
     "success": "¡Contraseña cambiada!",
+    "successOtherDevicesSignedOut": "Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.",
+    "successBiometricOff": "Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos y el inicio de sesión biométrico está desactivado. Vuelve a activarlo en Ajustes.",
     "failed": "No se pudo cambiar la contraseña",
     "failedFallback": "No se pudo cambiar la contraseña. Inténtalo de nuevo."
   },
@@ -274,6 +276,7 @@
     "description": "Autentícate para acceder a tu información de inicio de sesión guardada",
     "checkCredentials": "Comprobar credenciales",
     "keychainTitle": "Desbloquear credenciales guardadas",
+    "saveTitle": "Guarda tu inicio de sesión en este dispositivo",
     "useManualLogin": "Iniciar sesión manualmente"
   },
   "profileValidation": {

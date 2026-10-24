@@ -20,6 +20,7 @@ import { authTestIDs } from '../../src/features/auth/testIDs';
 import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
 import { pantryTestIDs } from '../../src/features/pantry/testIDs';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
 import { kitTestIDs } from '../../src/components/testIDs';
 
 export async function loginAsTestUser() {
@@ -56,22 +57,17 @@ export async function loginWithCredentials(email: string, password: string) {
     }
   }
 
-  // Which tab lands is not fixed, so either counts — but neither appearing means
-  // the login did not complete, and this MUST throw rather than warn: returning
-  // successfully would let every spec assert against whatever screen is up.
+  // A login lands on Today. Not reaching it means the login did not complete,
+  // and this MUST throw rather than warn: returning successfully would let
+  // every spec assert against whatever screen is up.
   try {
-    await waitForScreen(shoppingListTestIDs.screen, TIMEOUTS.NETWORK);
-    console.log('✅ Reached home screen');
+    await waitForScreen(todayTestIDs.screen, TIMEOUTS.NETWORK);
+    console.log('✅ Reached Today');
   } catch {
-    try {
-      await waitForScreen(pantryTestIDs.screen, TIMEOUTS.NETWORK);
-      console.log('✅ Reached pantry screen');
-    } catch {
-      throw new Error(
-        'Login did not reach a home screen: neither shopping-list-screen nor ' +
-          'pantry-screen became visible after authentication.',
-      );
-    }
+    throw new Error(
+      'Login did not reach Today: today-screen never became visible after ' +
+        'authentication.',
+    );
   }
 
   await dismissBiometricPromptIfPresent();
@@ -303,15 +299,20 @@ export async function bootstrapAuthenticatedSession(
     await dismissBiometricPromptIfPresent();
   }
 
-  // Settle on a known screen before handing back.
+  // Settle on a known screen before handing back: a kept session may be on
+  // any tab, a new one is on Today.
   try {
-    await waitForScreen(shoppingListTestIDs.screen, 3000);
+    await waitForScreen(todayTestIDs.screen, 3000);
   } catch {
     try {
-      await waitForScreen(pantryTestIDs.screen, 3000);
+      await waitForScreen(shoppingListTestIDs.screen, 3000);
     } catch {
-      await tapByID(kitTestIDs.tab('ShoppingList'));
-      await waitForScreen(shoppingListTestIDs.screen, TIMEOUTS.DEFAULT);
+      try {
+        await waitForScreen(pantryTestIDs.screen, 3000);
+      } catch {
+        await tapByID(kitTestIDs.tab('ShoppingList'));
+        await waitForScreen(shoppingListTestIDs.screen, TIMEOUTS.DEFAULT);
+      }
     }
   }
 

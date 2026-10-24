@@ -35,7 +35,7 @@ interface MealPlanSettingsSheetProps {
   permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
-  onGenerateShoppingList: () => void;
+  onSaveAsTemplate: () => void;
   onDelete: (id: string) => void;
   deleting: boolean;
 }
@@ -91,7 +91,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   permissions,
   onClose,
   onDuplicate,
-  onGenerateShoppingList,
+  onSaveAsTemplate,
   onDelete,
   deleting,
 }) => {
@@ -228,18 +228,22 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           {t('mealPlanSettings.actionsLabel')}
         </SectionHeader>
         <View style={styles.actionsCard}>
-          <ActionItem
-            icon="cart-outline"
-            label={t('labels.generateShoppingList')}
-            description={t('mealPlanSettings.generateShoppingListDesc')}
-            onPress={() => {
-              onClose();
-              onGenerateShoppingList();
-            }}
-          />
+          {permissions.canSaveAsTemplate ? (
+            <>
+              <ActionItem
+                icon="bookmark-outline"
+                label={t('labels.saveAsTemplate')}
+                description={t('mealPlanSettings.saveAsTemplateDesc')}
+                onPress={() => {
+                  onClose();
+                  onSaveAsTemplate();
+                }}
+              />
+              <Divider style={styles.dividerGap} />
+            </>
+          ) : null}
           {permissions.canDuplicate ? (
             <>
-              <Divider style={styles.dividerGap} />
               <ActionItem
                 icon="copy-outline"
                 label={t('labels.duplicatePlan')}
@@ -249,9 +253,9 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   onDuplicate();
                 }}
               />
+              <Divider style={styles.dividerGap} />
             </>
           ) : null}
-          <Divider style={styles.dividerGap} />
           <ActionItem
             icon="nutrition-outline"
             label={

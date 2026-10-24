@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { render, screen, within } from '@testing-library/react-native';
 import type { SwipeableItemProps } from '#components/organisms/SwipeableItem/types';
 import { ItemCard } from '../ItemCard';
 
@@ -38,6 +39,11 @@ jest.mock('../../molecules/ListItem', () => {
       </View>
     ),
   };
+});
+
+jest.mock('#components/atoms/ThemeEpochSentinel', () => {
+  const { View } = require('react-native');
+  return { ThemeEpochSentinel: () => <View testID="theme-epoch-sentinel" /> };
 });
 
 const mockUseSlideAnimation = jest.fn(() => ({
@@ -115,6 +121,39 @@ describe('ItemCard', () => {
       />,
     );
     expect(screen.getByTestId('item-swipeable')).toBeTruthy();
+  });
+
+  // A card left outside the slide stays on screen, empty, as its row leaves.
+  it('slides the whole card, its theme kept by a sentinel', () => {
+    const slide = { transform: [{ translateX: 7 }] };
+    mockUseSlideAnimation.mockReturnValueOnce({
+      animatedSlideStyle: slide,
+      triggerSlide: jest.fn(),
+    });
+    render(
+      <ItemCard
+        {...defaultProps}
+        rightActions={[
+          {
+            key: 'delete',
+            icon: 'trash-outline',
+            labelKey: 'labels.delete',
+            onPress: jest.fn(),
+          },
+        ]}
+        testID="item"
+      />,
+    );
+
+    let node = screen.getByTestId('item').parent;
+    while (
+      node &&
+      StyleSheet.flatten(node.props.style)?.transform !== slide.transform
+    ) {
+      node = node.parent;
+    }
+    expect(node).not.toBeNull();
+    expect(within(node!).getByTestId('theme-epoch-sentinel')).toBeTruthy();
   });
 
   it('renders without SwipeableItem when no swipe actions provided', () => {

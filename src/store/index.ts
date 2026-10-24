@@ -26,7 +26,7 @@ import type { TutorialState } from './slices/tutorialSlice';
 import { createTutorialSlice } from './slices/tutorialSlice';
 import type {
   ResetOptions,
-  RESET_SCENARIOS,
+  SessionEndOptions,
   SessionEndReason,
 } from './resetManager';
 import { createResetManager } from './resetManager';
@@ -171,22 +171,14 @@ export const handleStoreRehydration = (
 };
 
 interface ResetManagerState {
-  resetStore: (
-    options: ResetOptions | keyof typeof RESET_SCENARIOS,
+  resetStore: (options: ResetOptions) => Promise<void>;
+  endSession: (
+    reason: SessionEndReason,
+    options?: SessionEndOptions,
   ) => Promise<void>;
-  logout: () => Promise<void>;
-  fullReset: () => Promise<void>;
-  sessionExpired: () => Promise<void>;
-  resetOnboarding: () => Promise<void>;
-  endSession: (reason: SessionEndReason) => Promise<void>;
   tokenRefreshFailed: (
     reason: 'auth_rejected' | 'network' | 'unknown',
   ) => Promise<void>;
-}
-
-interface NavigationStateManagerState {
-  initiateLogout: () => boolean;
-  completeLogout: () => boolean;
 }
 
 export type RootState = AuthState &
@@ -197,8 +189,7 @@ export type RootState = AuthState &
   TutorialState &
   TelemetryState &
   NetworkState &
-  ResetManagerState &
-  NavigationStateManagerState;
+  ResetManagerState;
 
 /** Non-function fields of the store — the keys persistence has to classify. */
 type StateDataKey = {
@@ -221,9 +212,7 @@ const PERSISTED_KEYS = classifyKeys(
   // Auth. The token pair lives in the keychain; partialize re-adds it below
   // while that copy is unconfirmed.
   'user',
-  'rememberMe',
   'hasStoredCredentials',
-  'showBiometricSetup',
   // Device-scoped, and deliberately NOT session-scoped: the server's per-device
   // attempt budget does not reset because somebody signed out.
   'biometricRetryAt',
@@ -307,21 +296,6 @@ export const useStore = create<RootState>()(
         (set, get, store) => {
           const resetManager = createResetManager(set, get);
 
-          const navigationStateManager: NavigationStateManagerState = {
-            initiateLogout: () => {
-              set(state => {
-                state.isLoggingOut = true;
-              });
-              return true;
-            },
-            completeLogout: () => {
-              set(state => {
-                state.isLoggingOut = false;
-              });
-              return true;
-            },
-          };
-
           return {
             ...createAuthSlice(set, get, store),
             ...createPreferencesSlice(set, get, store),
@@ -332,7 +306,6 @@ export const useStore = create<RootState>()(
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
             ...resetManager,
-            ...navigationStateManager,
           };
         },
       ),

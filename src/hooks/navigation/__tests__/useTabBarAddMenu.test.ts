@@ -1,16 +1,20 @@
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
+import { toastService } from '#/services/toastService';
 import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import { useStore } from '#store';
 import { useTabBarAddMenu } from '../useTabBarAddMenu';
 
 const mockSetAddMenu = jest.fn();
 const mockSetAddMenuOpen = jest.fn();
 
 let focusEffect: (() => (() => void) | void) | null = null;
+let mockIsFocused = false;
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => (() => void) | void) => {
     focusEffect = cb;
   },
+  useIsFocused: () => mockIsFocused,
 }));
 
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -60,26 +64,46 @@ const registeredFor = (tab: string): readonly TabBarAddAction[] => {
   return (call?.[1] ?? []) as readonly TabBarAddAction[];
 };
 
+/** The screen gains focus; returns what runs when it loses it. */
+function focus(): () => void {
+  mockIsFocused = true;
+  let cleanup: (() => void) | void;
+  act(() => {
+    cleanup = focusEffect?.();
+  });
+  return () => {
+    mockIsFocused = false;
+    act(() => {
+      if (typeof cleanup === 'function') cleanup();
+    });
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   focusEffect = null;
+  mockIsFocused = false;
+});
+
+afterEach(() => {
+  useStore.setState({ pendingTabAdd: null });
 });
 
 describe('useTabBarAddMenu', () => {
   it('registers the menu under the tab holding the focused screen', () => {
     renderHook(() => useTabBarAddMenu([action('link'), action('manual')]));
 
-    focusEffect?.();
+    focus();
 
     expect(registeredFor('Recipe').map(a => a.key)).toEqual(['link', 'manual']);
   });
 
   it('closes the menu on blur and keeps it registered', () => {
     renderHook(() => useTabBarAddMenu([action('link'), action('manual')]));
-    const cleanup = focusEffect?.();
+    const blur = focus();
     mockSetAddMenu.mockClear();
 
-    if (typeof cleanup === 'function') cleanup();
+    blur();
 
     expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
     expect(mockSetAddMenu).not.toHaveBeenCalled();
@@ -89,14 +113,14 @@ describe('useTabBarAddMenu', () => {
     const { unmount } = renderHook(() =>
       useTabBarAddMenu([action('link'), action('manual')]),
     );
-    focusEffect?.();
+    focus();
 
     unmount();
 
     expect(mockSetAddMenu).toHaveBeenLastCalledWith('Recipe', undefined);
   });
 
-  it('runs the latest handler without registering again for it', () => {
+  it('hands the bar the latest handler', () => {
     const first = jest.fn();
     const latest = jest.fn();
     const { rerender } = renderHook(
@@ -104,13 +128,11 @@ describe('useTabBarAddMenu', () => {
         useTabBarAddMenu([action('link', { onPress }), action('manual')]),
       { initialProps: { onPress: first } },
     );
-    focusEffect?.();
-    const registrations = mockSetAddMenu.mock.calls.length;
+    focus();
 
     rerender({ onPress: latest });
     registeredFor('Recipe')[0]?.onPress();
 
-    expect(mockSetAddMenu.mock.calls.length).toBe(registrations);
     expect(latest).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
   });
@@ -124,12 +146,184 @@ describe('useTabBarAddMenu', () => {
         ]),
       { initialProps: { reason: undefined as string | undefined } },
     );
-    focusEffect?.();
+    focus();
 
     rerender({ reason: 'Needs a connection' });
 
     expect(registeredFor('Recipe')[0]?.disabledReason).toBe(
       'Needs a connection',
     );
+  });
+
+  describe('an add another tab asked for', () => {
+    const handOver = (actionKey?: string) =>
+      useStore
+        .getState()
+        .setPendingTabAdd({ tab: 'Recipe', ...(actionKey && { actionKey }) });
+
+    it('runs the action it names when the tab gains focus', () => {
+      const link = action('link');
+      const manual = action('manual');
+      handOver('manual');
+      renderHook(() => useTabBarAddMenu([link, manual]));
+
+      focus();
+
+      expect(manual.onPress).toHaveBeenCalledTimes(1);
+      expect(link.onPress).not.toHaveBeenCalled();
+      expect(useStore.getState().pendingTabAdd).toBeNull();
+    });
+
+    it('runs the only action when it names none', () => {
+      const only = action('add');
+      handOver();
+      renderHook(() => useTabBarAddMenu([only]));
+
+      focus();
+
+      expect(only.onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens the menu when it names none and there are several', () => {
+      const link = action('link');
+      handOver();
+      renderHook(() => useTabBarAddMenu([link, action('manual')]));
+
+      focus();
+
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+      expect(link.onPress).not.toHaveBeenCalled();
+    });
+
+    // The menu shows the reason the add cannot run.
+    it('opens the menu instead of running a disabled action', () => {
+      const manual = action('manual', { disabledReason: 'Read-only list' });
+      handOver('manual');
+      renderHook(() => useTabBarAddMenu([action('link'), manual]));
+
+      focus();
+
+      expect(manual.onPress).not.toHaveBeenCalled();
+      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+    });
+
+    // The bar draws no menu for one action, so an open one would show nothing.
+    it("says a lone disabled action's reason rather than opening a menu", () => {
+      const meal = action('meal', {
+        disabledReason: 'Create a meal plan first',
+      });
+      handOver('meal');
+      renderHook(() => useTabBarAddMenu([meal]));
+
+      focus();
+
+      expect(meal.onPress).not.toHaveBeenCalled();
+      expect(toastService.info).toHaveBeenCalledWith(
+        'Create a meal plan first',
+      );
+      expect(mockSetAddMenuOpen).not.toHaveBeenCalledWith(true);
+    });
+
+    it('opens no menu for a tab with no actions', () => {
+      handOver('meal');
+      renderHook(() => useTabBarAddMenu([]));
+
+      focus();
+
+      expect(mockSetAddMenuOpen).not.toHaveBeenCalledWith(true);
+      expect(useStore.getState().pendingTabAdd).toBeNull();
+    });
+
+    it("drops another tab's add without running anything", () => {
+      const link = action('link');
+      useStore.getState().setPendingTabAdd({ tab: 'Pantry' });
+      renderHook(() => useTabBarAddMenu([link]));
+
+      focus();
+
+      expect(link.onPress).not.toHaveBeenCalled();
+      expect(mockSetAddMenuOpen).not.toHaveBeenCalledWith(true);
+      expect(useStore.getState().pendingTabAdd).toBeNull();
+    });
+
+    it('starts it once, however often the actions change after', () => {
+      const onPress = jest.fn();
+      handOver('add');
+      const { rerender } = renderHook(
+        ({ label }: { label: string }) =>
+          useTabBarAddMenu([action('add', { label, onPress })]),
+        { initialProps: { label: 'Add' } },
+      );
+      focus();
+
+      rerender({ label: 'Add item' });
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    describe('naming an action still loading', () => {
+      const loading = { disabledReason: 'Loading', pending: true };
+
+      it('runs it once it can, with no menu in between', () => {
+        const onPress = jest.fn();
+        handOver('search');
+        const { rerender } = renderHook(
+          ({ ready }: { ready: boolean }) =>
+            useTabBarAddMenu([
+              action('search', { onPress, ...(!ready && loading) }),
+              action('manual', ready ? {} : loading),
+            ]),
+          { initialProps: { ready: false } },
+        );
+        focus();
+        expect(onPress).not.toHaveBeenCalled();
+        expect(mockSetAddMenuOpen).not.toHaveBeenCalledWith(true);
+        expect(toastService.info).not.toHaveBeenCalled();
+
+        rerender({ ready: true });
+
+        expect(onPress).toHaveBeenCalledTimes(1);
+        expect(mockSetAddMenuOpen).not.toHaveBeenCalledWith(true);
+        expect(useStore.getState().pendingTabAdd).toBeNull();
+      });
+
+      it('says why once loading ends in a refusal', () => {
+        handOver('search');
+        const { rerender } = renderHook(
+          ({ ready }: { ready: boolean }) =>
+            useTabBarAddMenu([
+              action(
+                'search',
+                ready ? { disabledReason: 'No permission' } : loading,
+              ),
+            ]),
+          { initialProps: { ready: false } },
+        );
+        focus();
+
+        rerender({ ready: true });
+
+        expect(toastService.info).toHaveBeenCalledWith('No permission');
+      });
+
+      it('drops it when the tab loses focus first', () => {
+        const onPress = jest.fn();
+        handOver('search');
+        const { rerender } = renderHook(
+          ({ ready }: { ready: boolean }) =>
+            useTabBarAddMenu([
+              action('search', { onPress, ...(!ready && loading) }),
+            ]),
+          { initialProps: { ready: false } },
+        );
+        const blur = focus();
+        blur();
+
+        rerender({ ready: true });
+
+        expect(onPress).not.toHaveBeenCalled();
+        expect(useStore.getState().pendingTabAdd).toBeNull();
+      });
+    });
   });
 });

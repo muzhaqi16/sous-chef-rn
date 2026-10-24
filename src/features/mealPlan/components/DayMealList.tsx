@@ -54,7 +54,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
     >
       {!!listHeader && listHeader}
       {isEmpty ? (
-        <EmptyDayState selectedDate={selectedDate} onAddMeal={onAddMeal} />
+        <EmptyDayState selectedDate={selectedDate} canAdd={!!onAddMeal} />
       ) : (
         <>
           {/* Meal sections grouped by type */}

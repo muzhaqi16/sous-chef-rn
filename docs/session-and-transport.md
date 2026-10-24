@@ -97,7 +97,14 @@ app calls from `App.tsx` before the first sign-in
   sign-in goes on to biometric enrolment or the remember-me offer;
 - `forgetStoredSignIn` is a sign-out's first step: it revokes the device
   credential while the session can still authorise that, then deletes the
-  biometric slot (`src/services/biometric/`).
+  biometric slot (`src/services/biometric/`);
+- `renewStoredSignIn` runs after a password change this session survived: the
+  change revoked every device credential, so the slot gets a new one or is
+  dropped;
+- `onSessionEnd` is the `session-host` teardown step, second after
+  `refresh-token-revoke` and on every session end: it stops the device's
+  push-token watch, so an earlier session's registration never writes for the
+  next one.
 
 A host that registers nothing signs out through the same teardown. `__tests__/core-portability/signOutWithoutHostSteps.test.ts` holds
 that it still leaves no tokens, cache, queued writes or session-scoped state.

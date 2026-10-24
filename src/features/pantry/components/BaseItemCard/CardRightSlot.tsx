@@ -26,10 +26,9 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
 
 const styles = StyleSheet.create({
   metaContainer: {
-    // Stretches to the row's height and stacks from its top, so `primary` lands
-    // on the title's line and `secondary` on the subtitle's. Only this slot
-    // leaves the row's centre; every non-text slot keeps it.
-    alignSelf: 'stretch',
+    // Centred in the row like every other slot: beside a title and a status
+    // line, the quantity sits level with the pair, as a list's trailing
+    // detail does.
     alignItems: 'flex-end',
     // Bounded so a long secondary cannot squeeze the title, and single-line so
     // a wrapped one is ellipsized rather than clipped by the row's height.

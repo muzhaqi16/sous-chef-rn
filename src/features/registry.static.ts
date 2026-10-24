@@ -12,6 +12,7 @@ import { authStaticFeature } from './auth/manifest.static';
 import { onboardingStaticFeature } from './onboarding/manifest.static';
 import { devtoolsStaticFeature } from './devtools/manifest.static';
 import { receiptsStaticFeature } from './receipts/manifest.static';
+import { todayStaticFeature } from './today/manifest.static';
 
 /**
  * Every feature, as the APP SHELL sees it — i18n init, the cache, the offline
@@ -32,4 +33,5 @@ export const STATIC_FEATURE_REGISTRY: StaticFeatureManifest[] = [
   onboardingStaticFeature,
   devtoolsStaticFeature,
   receiptsStaticFeature,
+  todayStaticFeature,
 ];

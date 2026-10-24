@@ -6,7 +6,6 @@ describe('appSlice', () => {
     const store = createTestStore();
     const state = store.getState();
     expect(state.navigationState).toBe('loading');
-    expect(state.showBiometricSetup).toBe(false);
     expect(state.postLoginCredentials).toBeNull();
     expect(state.cachedUnits).toEqual([]);
     expect(state.lastUnitsFetchedAt).toBeNull();
@@ -26,14 +25,6 @@ describe('appSlice', () => {
     });
   });
 
-  describe('setLoggingOut', () => {
-    it('sets isLoggingOut flag', () => {
-      const store = createTestStore();
-      store.getState().setLoggingOut(true);
-      expect(store.getState().isLoggingOut).toBe(true);
-    });
-  });
-
   describe('setNavigationState', () => {
     it.each<NavigationState>([
       'loading',
@@ -46,16 +37,6 @@ describe('appSlice', () => {
       const store = createTestStore();
       store.getState().setNavigationState(navState);
       expect(store.getState().navigationState).toBe(navState);
-    });
-  });
-
-  describe('setShowBiometricSetup', () => {
-    it('toggles biometric setup flag', () => {
-      const store = createTestStore();
-      store.getState().setShowBiometricSetup(true);
-      expect(store.getState().showBiometricSetup).toBe(true);
-      store.getState().setShowBiometricSetup(false);
-      expect(store.getState().showBiometricSetup).toBe(false);
     });
   });
 

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 // The report step renders ReportItemForm, whose useReportItem calls useMutation,
 // so the tree needs an Apollo context even though this suite mocks the data hooks.
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
@@ -215,7 +215,6 @@ describe('AddItemSheet', () => {
     onQuickAddSuggestion: jest.fn(),
     isMutating: false,
     onAddManually: jest.fn(),
-    onScanPress: jest.fn(),
   };
 
   beforeEach(() => {
@@ -233,9 +232,11 @@ describe('AddItemSheet', () => {
     expect(screen.getByTestId('search-bar')).toBeTruthy();
   });
 
-  it('offers scanning from the search bar, not a separate card', () => {
+  // Scanning a barcode or a receipt is in the tab's + menu.
+  it('keeps nothing beside its search', () => {
     render(<AddItemSheet {...defaultProps} />);
-    expect(screen.getByTestId('search-bar-barcode-outline')).toBeTruthy();
+    expect(screen.queryByTestId('search-bar-barcode-outline')).toBeNull();
+    expect(screen.queryByTestId('search-bar-receipt-outline')).toBeNull();
     expect(
       screen.queryByTestId(
         `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
@@ -346,36 +347,6 @@ describe('AddItemSheet', () => {
     expect(defaultProps.onAddManually).toHaveBeenCalledWith('search value');
   });
 
-  it('calls onScanPress when the search bar barcode action is pressed', async () => {
-    const user = userEvent.setup();
-    render(<AddItemSheet {...defaultProps} />);
-
-    await user.press(screen.getByTestId('search-bar-barcode-outline'));
-
-    expect(defaultProps.onScanPress).toHaveBeenCalled();
-  });
-
-  it('offers a receipt scan only on a sheet that takes one', async () => {
-    const user = userEvent.setup();
-    const onReceiptPress = jest.fn();
-    const { rerender } = render(<AddItemSheet {...defaultProps} />);
-    expect(screen.queryByTestId('search-bar-receipt-outline')).toBeNull();
-
-    rerender(
-      <AddItemSheet
-        {...defaultProps}
-        receiptAction={{
-          onPress: onReceiptPress,
-          accessibilityLabel: 'Add from a receipt',
-        }}
-      />,
-    );
-    await user.press(screen.getByTestId('search-bar-receipt-outline'));
-
-    expect(onReceiptPress).toHaveBeenCalled();
-    expect(defaultProps.onScanPress).not.toHaveBeenCalled();
-  });
-
   it('calls onQuickAddSuggestion when suggestion is pressed', async () => {
     const user = userEvent.setup();
     const item: BaseSuggestionItem = {
@@ -423,6 +394,46 @@ describe('AddItemSheet', () => {
     );
 
     expect(defaultProps.onAddManually).toHaveBeenCalled();
+    expect(screen.getByTestId('details-step')).toBeTruthy();
+  });
+
+  it("opens on its details form for the + menu's Add manually", () => {
+    const onAddManually = jest.fn();
+    render(
+      <AddItemSheet
+        {...defaultProps}
+        onAddManually={onAddManually}
+        startStep="details"
+        renderDetails={() =>
+          React.createElement('View', { testID: 'details-step' })
+        }
+      />,
+    );
+
+    expect(screen.getByTestId('details-step')).toBeTruthy();
+    // The owner preps the form as "Add manually" does, with no name typed.
+    expect(onAddManually).toHaveBeenCalledWith('');
+  });
+
+  // Back from a form the sheet opened on would land on a search never shown.
+  it('closes, rather than going back to search, when it opened on the form', () => {
+    const onClose = jest.fn();
+    let goBack: () => void = () => {};
+    render(
+      <AddItemSheet
+        {...defaultProps}
+        onClose={onClose}
+        startStep="details"
+        renderDetails={step => {
+          goBack = step.goBack;
+          return React.createElement('View', { testID: 'details-step' });
+        }}
+      />,
+    );
+
+    act(() => goBack());
+
+    expect(onClose).toHaveBeenCalled();
     expect(screen.getByTestId('details-step')).toBeTruthy();
   });
 

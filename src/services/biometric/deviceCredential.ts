@@ -6,24 +6,21 @@
 
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import {
-  ExchangeDeviceCredentialDocument,
-  IssueDeviceCredentialDocument,
   MyDeviceCredentialsDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { authService } from '#/services/authService';
 import { ensureDeviceId } from '#/services/auth/deviceId';
-import type { PostSignInGate } from '#/services/auth/sessionHost';
-import { isTransportFailure, errorService } from '#/services/errorService';
+import type {
+  PostSignInGate,
+  StoredSignInRenewal,
+} from '#/services/auth/sessionHost';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import { isDeadCredentialCode } from '#/utils/authErrorCodes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { withinMs } from '#/utils/withinMs';
 import {
   getBiometricCapability,
@@ -43,10 +40,44 @@ import {
 /** Longest a best-effort revoke may hold the sign-out. */
 const REVOKE_BUDGET_MS = 3000;
 
-async function shouldShowPostLoginBiometricPrompt(targetUser: {
-  id: string;
-  email?: string | null;
-}): Promise<{ shouldShow: boolean; reason?: string }> {
+/**
+ * Whether the server still honours this device's credential, asked with the
+ * sign-in's own token. `null` when it can't be asked: dropping a working
+ * sign-in over a flaky network is worse than offering setup late.
+ */
+async function deviceCredentialIsLive(
+  signInToken: string,
+): Promise<boolean | null> {
+  // Asked once: the sign-in waits on it, and retryLink's attempts would hold it
+  // through the whole budget on a link that is failing anyway.
+  if (isApiUnavailable(useStore.getState())) return null;
+  try {
+    const deviceId = await ensureDeviceId();
+    if (!deviceId) return null;
+    // `no-cache`: this runs before the session commits, so nothing it reads
+    // belongs in the cache yet.
+    const listed = await requireApolloClient().query({
+      query: MyDeviceCredentialsDocument,
+      fetchPolicy: 'no-cache',
+      context: { signInToken, skipRetryLink: true },
+    });
+    if (!listed.data) return null;
+    return listed.data.deviceCredentials.some(
+      credential => credential.deviceId === deviceId,
+    );
+  } catch (error) {
+    logger.warn('Could not check the device credential', error);
+    return null;
+  }
+}
+
+async function shouldShowPostLoginBiometricPrompt(
+  targetUser: {
+    id: string;
+    email?: string | null;
+  },
+  signInToken: string,
+): Promise<{ shouldShow: boolean; reason?: string }> {
   // Keychain entries are namespaced by email, so an account with no readable
   // email can't be matched against stored credentials.
   const accountEmail = targetUser.email;
@@ -70,9 +101,15 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
       return { shouldShow: false, reason: 'Biometric not available' };
     }
 
-    const hasCreds = await hasCredentials(accountEmail);
-    if (hasCreds) {
-      return { shouldShow: false, reason: 'Already has biometric setup' };
+    // A password change or reset revokes the credential server-side and tells
+    // no device, so a slot is only trusted once the server lists it.
+    if (await hasCredentials(accountEmail)) {
+      if ((await deviceCredentialIsLive(signInToken)) !== false) {
+        return { shouldShow: false, reason: 'Already has biometric setup' };
+      }
+      logger.warn('Stored device credential was revoked; offering setup again');
+      await removeCredentials(accountEmail);
+      forgetBiometricSlot();
     }
 
     if (navState?.biometricDeclinedPermanently) {
@@ -125,7 +162,9 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     const stored = await loadStoredCredentials(email);
-    if (!stored) {
+    // Dismissing the prompt is choosing the password; nothing went wrong.
+    if (stored.status === 'cancelled') return false;
+    if (stored.status === 'unavailable') {
       logger.info('Failed to load stored credentials');
       toastService.error(t('auth.biometricUnavailableOnDevice'));
       return false;
@@ -153,90 +192,44 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
     }
 
     logger.info('Exchanging the stored device credential');
-    const result = await requireApolloClient().mutate({
-      mutation: ExchangeDeviceCredentialDocument,
-      variables: { input: { credential, deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-
-    if (payload) {
-      const unmaskedLogin = authService.resolveAuthPayload(payload);
-      if (!unmaskedLogin) {
-        // The exchange spent one of the server's attempts and opened no
-        // session, so the backoff protecting that budget has to stay on.
-        logger.error(
-          'Auto-login succeeded but the LoginUser read was incomplete',
-        );
-        useStore.getState().registerBiometricRefusal();
-        toastService.error(t('errors.codes.genericRetry'));
-        return false;
-      }
-
-      await authService.handleLogin(unmaskedLogin, true);
-      useStore.getState().clearBiometricBackoff();
-      logger.info('Auto-login successful');
-      return true;
-    }
-
-    const refusal = result.data?.exchangeDeviceCredential;
-    if (refusal && 'code' in refusal) {
-      // Dropped only when THESE credentials will never authenticate; a
-      // token-side refusal ends the session but leaves them good
-      // (isDeadCredentialCode).
-      if (isDeadCredentialCode(refusal.code)) {
-        logger.warn(
-          `Auto-login rejected (${refusal.code}), clearing stored credentials`,
-        );
+    const exchange = await authService.exchangeDeviceCredential(
+      credential,
+      deviceId,
+    );
+    switch (exchange.status) {
+      case 'signedIn':
+        useStore.getState().clearBiometricBackoff();
+        logger.info('Auto-login successful');
+        return true;
+      case 'dead':
+        logger.warn('Auto-login refused the credential; clearing the slot');
         await removeCredentials(email);
         forgetBiometricSlot();
-      } else {
+        return false;
+      case 'incomplete':
+      case 'refused':
         // The slot survives, so the button is offered again — hold it off, or
         // every tap spends another of the server's attempts for nothing.
         useStore.getState().registerBiometricRefusal();
-      }
-      authService.handleRejectedAuthPayload(refusal, 'Auto-login');
-      return false;
-    }
-
-    if (result.error) {
-      // Same rule: a transport failure says the request did not ARRIVE, so
-      // clearing on one un-enrols the device after a single blip.
-      const parsed = errorService.parseApolloError(result.error, {
-        logError: false,
-      });
-      const code = parsed.error?.code;
-      if (code && isDeadCredentialCode(code)) {
-        logger.warn(
-          `Auto-login rejected (${code}), clearing stored credentials`,
-        );
-        await removeCredentials(email);
-        forgetBiometricSlot();
-      } else if (isTransportFailure(result.error)) {
-        // The request never arrived, so the server refused nothing. A lockout
-        // recorded here is PERSISTED and not session-scoped, so one launch
-        // without connectivity would outlast the outage that caused it.
-        logger.warn('Auto-login could not reach the server; nothing recorded');
-      } else {
+        return false;
+      case 'failed':
         logger.warn('Auto-login failed; stored credentials kept');
-        // A throttle carries the server's own deadline, and it knows what
-        // budget is left better than the local schedule does.
-        const rateLimit = getRateLimitDetails(result.error);
-        useStore
-          .getState()
-          .registerBiometricRefusal(
-            rateLimit?.retryAfter ? rateLimit.retryAfter * 1000 : undefined,
-          );
-      }
-      authService.handleAuthError(result.error, 'Auto-login');
+        useStore.getState().registerBiometricRefusal(exchange.retryAfterMs);
+        return false;
+      case 'unreachable':
+        // A lockout recorded here is PERSISTED and not session-scoped, so one
+        // launch without connectivity would outlast the outage that caused it.
+        logger.warn('Auto-login could not reach the server; nothing recorded');
+        return false;
+      case 'discarded':
+        return false;
     }
-
-    return false;
   } catch (error) {
     // Deliberately does NOT clear. A throw here is a transport or client fault,
     // never the server saying these credentials are dead — and the branches
     // above already handle the one case that is.
     logger.error('Auto-login error:', error);
+    toastService.error(t('errors.codes.genericRetry'));
     return false;
   }
 }
@@ -260,8 +253,8 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       return false;
     }
 
-    // Both round trips belong to the sign-out, which sets `isLoggingOut`
-    // before they can finish on a slow link — without the opt-in `authLink`
+    // Both round trips belong to the sign-out, whose session-ending gate can
+    // close before they finish on a slow link — without the opt-in `authLink`
     // refuses the cleanup the sign-out is waiting for.
     const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,
@@ -308,8 +301,9 @@ async function revokeWithinBudget(): Promise<void> {
 }
 
 /**
- * `refused` was already reported by the auth handlers; `unsaved` (no device id,
- * keychain failure) was not, so the caller says so in its own words.
+ * `refused` was already reported by the auth handlers unless `quiet`; `unsaved`
+ * (no device id, keychain failure) was not, so the caller says so in its own
+ * words.
  */
 export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
 
@@ -318,7 +312,11 @@ export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
  * session alone, so no password is retained. Issuing supersedes any credential
  * this device already held.
  */
-async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
+async function enrolDeviceCredential(
+  email: string,
+  options?: { quiet?: boolean },
+): Promise<EnrolOutcome> {
+  let issued = false;
   try {
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
@@ -326,33 +324,30 @@ async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
       return 'unsaved';
     }
 
-    const result = await requireApolloClient().mutate({
-      mutation: IssueDeviceCredentialDocument,
-      variables: { input: { deviceId } },
-    });
-
-    const payload = appliedPayload(result.data);
-    if (!payload) {
-      const refusal = result.data?.issueDeviceCredential;
-      if (refusal && 'code' in refusal)
-        authService.handleRejectedAuthPayload(
-          refusal,
-          'Enrol device credential',
-        );
-      else if (result.error)
-        authService.handleAuthError(result.error, 'Enrol device credential');
-      return 'refused';
-    }
+    const result = await authService.issueDeviceCredential(deviceId, options);
+    if (result.status === 'refused') return 'refused';
+    issued = true;
 
     const stored = await storeCredentials(
       email,
-      markDeviceCredential(payload.credential),
+      markDeviceCredential(result.credential),
     );
-    return stored ? 'enrolled' : 'unsaved';
+    if (stored) return 'enrolled';
   } catch (error) {
     logger.error('Enrol device credential error:', error);
-    return 'unsaved';
   }
+  // Issued but not stored, it is live with no holder. Not awaited: the flow
+  // that asked does not wait on cleanup, and a failure costs a stale row.
+  if (issued) {
+    void revokeDeviceCredentialForThisDevice().then(revoked => {
+      if (!revoked) {
+        logger.warn(
+          'A device credential this device could not store may still be live',
+        );
+      }
+    });
+  }
+  return 'unsaved';
 }
 
 /**
@@ -384,10 +379,14 @@ export async function resolvePostSignInGate(
   user: LoginUserFragment,
   email: string,
   offerRememberMe: boolean,
+  signInToken: string,
 ): Promise<PostSignInGate> {
   let offerBiometrics = false;
   try {
-    const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
+    const biometricResult = await shouldShowPostLoginBiometricPrompt(
+      user,
+      signInToken,
+    );
     offerBiometrics = biometricResult.shouldShow;
   } catch {
     logger.error('Error checking biometric eligibility');
@@ -400,25 +399,48 @@ export async function resolvePostSignInGate(
 }
 
 /**
- * Credentials are per account, so this never touches another user's. Server
- * first, while the session that authorises it is still live: the local delete
- * cannot be undone, so a revoke attempted after it would have nothing left to
- * authenticate with.
+ * A password change revokes every device credential, so a slot kept through
+ * one is issued again; one that can't be is dropped rather than left to fail.
  */
-export async function forgetStoredSignIn(email: string): Promise<void> {
+export async function renewStoredSignIn(
+  email: string,
+): Promise<StoredSignInRenewal> {
+  if (!(await hasCredentials(email))) return 'none';
+  // Quiet: the password change's own message says the sign-in is now off.
+  if ((await enrolDeviceCredential(email, { quiet: true })) === 'enrolled') {
+    return 'renewed';
+  }
+  logger.warn('Could not renew the device credential; dropping the slot');
+  await removeCredentials(email);
+  forgetBiometricSlot();
+  return 'dropped';
+}
+
+/**
+ * The one way a stored sign-in is removed, by a sign-out or by Settings; false
+ * while the slot is still there. Credentials are per account, so this never
+ * touches another user's. Server first, while the session that authorises it
+ * is still live: the local delete cannot be undone, so a revoke attempted after
+ * it would have nothing left to authenticate with.
+ */
+export async function forgetStoredSignIn(email: string): Promise<boolean> {
   await revokeWithinBudget();
-  // READ, not discarded: a failed delete leaves the previous user's device
+  // READ, not discarded: a failed delete leaves this account's device
   // credential on the device — the exact state this call exists to prevent.
   const removed = await removeCredentials(email);
   if (!removed) {
     logger.error(
-      'Logout: biometric credentials could not be removed; the previous account may still be unlockable on this device',
+      'Biometric credentials could not be removed; this account may still be unlockable on this device',
     );
+    return false;
   }
+  forgetBiometricSlot();
+  return true;
 }
 
 export const biometricService = {
   enrolDeviceCredential,
+  forgetStoredSignIn,
   revokeDeviceCredentialForThisDevice,
   signInWithDeviceCredential,
   checkStoredCredentials,

@@ -127,7 +127,7 @@ export const ReceiptScanScreen: React.FC = () => {
   });
 
   const header: ScreenHeaderConfig = {
-    title: t('receipts.title'),
+    title: t('labels.scanReceipt'),
     close: goBack,
   };
   const startScan = () => {
@@ -339,7 +339,7 @@ export const ReceiptScanScreen: React.FC = () => {
             title={t('receipts.intro.title')}
             description={t('receipts.intro.body')}
             action={{
-              label: t('receipts.title'),
+              label: t('labels.scanReceipt'),
               onPress: startScan,
               icon: 'scan-outline',
             }}

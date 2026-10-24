@@ -18,6 +18,8 @@
     "startDateRequiredMessage": "Please select a start date.",
     "failedToCreate": "Failed to create meal plan.",
     "needsThePlan": "Open the plan first so its meals are available.",
+    "addNeedsPlan": "Create a meal plan first, then add meals to it.",
+    "noAddPermission": "You can view this plan but not add meals to it.",
     "needsTheTemplate": "Open the template first so its meals are available.",
     "daily": "Daily",
     "custom": "Custom"
@@ -36,7 +38,8 @@
     "dietDairyFree": "DF"
   },
   "emptyDay": {
-    "title": "No meals planned"
+    "title": "No meals planned",
+    "addHint": "Tap + to add a meal"
   },
   "mealPlanEmpty": {
     "title": "Plan Your Meals",
@@ -60,7 +63,7 @@
     "sharedWith": "Shared with {{name}}",
     "createdBy": "Created by {{name}}",
     "actionsLabel": "Actions",
-    "generateShoppingListDesc": "Create a list from this plan's recipes",
+    "saveAsTemplateDesc": "Reuse this plan's meals for another week",
     "duplicatePlanDesc": "Copy this plan to a new date range",
     "viewNutrition": "View Nutrition",
     "hideNutrition": "Hide Nutrition",
@@ -157,9 +160,7 @@
     "duplicateNameLabel": "New Template Name"
   },
   "mealPlanMain": {
-    "label": "Plan your meals",
     "generateShoppingListLabel": "Generate shopping list",
-    "saveAsTemplateLabel": "Save as template",
     "planSettingsLabel": "Plan settings",
     "deleteMealPlanFailed": "Failed to delete meal plan",
     "mealPlanDeleted": "Meal plan deleted",

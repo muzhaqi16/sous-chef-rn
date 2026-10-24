@@ -25,6 +25,8 @@ describe('Notification settings — single tap', () => {
     await bootstrapAuthenticatedSession();
     await dismissSavePasswordPrompt();
     await relaunchToHomeTab();
+    // Profile sits in Today's header.
+    await tapByID(kitTestIDs.tab('Today'));
     await tapByID(kitTestIDs.tab('Profile'));
     await tapByID(profileTestIDs.menuItem('notifications'));
     await waitFor(element(by.id(TARGET)))

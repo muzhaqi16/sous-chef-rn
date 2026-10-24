@@ -193,6 +193,22 @@ describe('AddItemForm', () => {
     });
   });
 
+  // A suggester's photo waits for an admin; an owner's direct edit is live.
+  describe('photo review notice', () => {
+    const NOTICE =
+      'An admin reviews photos and other changes before everyone sees them.';
+
+    it('says photos are reviewed on the suggestion path', () => {
+      render(<AddItemForm {...defaultProps} mode="edit" />);
+      expect(screen.getByText(NOTICE)).toBeTruthy();
+    });
+
+    it('says nothing about review on the direct-edit path', () => {
+      render(<AddItemForm {...defaultProps} mode="directEdit" />);
+      expect(screen.queryByText(NOTICE)).toBeNull();
+    });
+  });
+
   it('renders subtitle for non-barcode mode', () => {
     render(<AddItemForm {...defaultProps} />);
     expect(

@@ -1,6 +1,5 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
 import type { InMemoryCache } from '@apollo/client';
-import { useStore } from '#store';
 import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
@@ -14,59 +13,23 @@ import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { operationNameOf } from './utils/documentOperation';
 import { forgetAnswersSinceSwitch } from './answeredSinceSwitch';
 
-interface LogoutCleanupOptions {
-  clearCache?: boolean;
-  cancelSubscriptions?: boolean;
-  suppressErrors?: boolean;
-}
-
 /**
- * A cleanup-registerable subscription: either an RxJS-style observer with an
- * `unsubscribe` method, or a plain teardown function (e.g. a React Navigation
- * listener cleanup).
- */
-type CleanupSubscription = { unsubscribe: () => void } | (() => void);
-
-/**
- * Centralized Apollo cleanup utility for logout
- * Handles cache clearing, subscription cancellation, and error suppression
+ * The Apollo half of every session end: stops in-flight work and the socket,
+ * then clears the cache and its persisted copies.
  */
 export class LogoutCleanup {
-  private static activeSubscriptions = new Set<CleanupSubscription>();
-
   /**
    * Check if the app is currently in logout process
    */
   static isInLogoutProcess(): boolean {
-    return isSessionEnding() || useStore.getState().isLoggingOut;
+    return isSessionEnding();
   }
 
   /**
-   * Register an active subscription for cleanup
+   * Perform comprehensive logout cleanup. A failure is logged, never thrown:
+   * the store reset that follows must not be stopped by it.
    */
-  static registerSubscription(subscription: CleanupSubscription): void {
-    LogoutCleanup.activeSubscriptions.add(subscription);
-  }
-
-  /**
-   * Unregister a subscription (when it naturally completes)
-   */
-  static unregisterSubscription(subscription: CleanupSubscription): void {
-    LogoutCleanup.activeSubscriptions.delete(subscription);
-  }
-
-  /**
-   * Perform comprehensive logout cleanup
-   */
-  static async performLogoutCleanup(
-    options: LogoutCleanupOptions = {},
-  ): Promise<void> {
-    const {
-      clearCache = true,
-      cancelSubscriptions = true,
-      suppressErrors = true,
-    } = options;
-
+  static async performLogoutCleanup(): Promise<void> {
     logger.info('🧹 Starting Apollo logout cleanup...');
 
     try {
@@ -76,62 +39,26 @@ export class LogoutCleanup {
       // 2. Cancel pending cache persistence
       apolloCachePersistence.cancel();
 
-      // 3. Cancel all active subscriptions
-      if (cancelSubscriptions) {
-        LogoutCleanup.cancelAllSubscriptions();
-      }
-
-      // 4. Stop all in-flight queries
+      // 3. Stop all in-flight queries
       LogoutCleanup.stopInFlightQueries();
 
-      // 5. Clear Apollo cache (only cache we need now)
-      if (clearCache) {
-        await LogoutCleanup.clearApolloCache();
-      }
+      // 4. Clear Apollo cache (only cache we need now)
+      await LogoutCleanup.clearApolloCache();
 
-      // 6. Forget which queries were answered since a language switch: the
+      // 5. Forget which queries were answered since a language switch: the
       // keys carry the account's search terms and ids.
       forgetAnswersSinceSwitch();
 
       logger.info('✅ Apollo logout cleanup completed');
     } catch (error) {
-      if (!suppressErrors) {
-        logger.error('❌ Error during Apollo logout cleanup:', error);
-        throw error;
-      } else {
-        logger.warn('⚠️ Suppressed error during logout cleanup:', error);
-      }
+      logger.warn('⚠️ Suppressed error during logout cleanup:', error);
     }
   }
 
   /** Test seam: the gate is released by the scope that opened it. */
   static completeLogout(): void {
     resetSessionEndingGate();
-    LogoutCleanup.activeSubscriptions.clear();
     logger.info('🏁 Apollo logout process completed');
-  }
-
-  /**
-   * Cancel all active subscriptions
-   */
-  private static cancelAllSubscriptions(): void {
-    logger.info(
-      `🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`,
-    );
-
-    LogoutCleanup.activeSubscriptions.forEach(subscription => {
-      try {
-        if (typeof subscription === 'function') {
-          subscription(); // For React Navigation listeners
-        } else if (typeof subscription.unsubscribe === 'function') {
-          subscription.unsubscribe();
-        }
-      } catch (error) {
-        logger.warn('Failed to unsubscribe:', error);
-      }
-    });
-
-    LogoutCleanup.activeSubscriptions.clear();
   }
 
   /**

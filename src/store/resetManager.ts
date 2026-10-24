@@ -6,6 +6,7 @@ import { STORAGE_KEY } from '#/store/persistedKeys';
 import { requirePlatform } from '#platform/install';
 import { runSessionTeardown } from './sessionTeardown';
 import { whileSessionEnds } from './sessionEnding';
+import { holdsSessionTokens } from './slices/authSlice';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
@@ -15,49 +16,33 @@ import { isRecord } from '#/utils/isRecord';
 const secureStore = () => requirePlatform('secureStore');
 
 /**
- * Which server verdict ended the session — log line only; `endSession` performs
- * identical cleanup for every value. `session_revoked` is the subscription
- * socket refused as unrecoverable (close 4412).
+ * What ended the session — log line only; `endSession` performs identical
+ * cleanup for every value. `signed_out` is the person's own sign-out;
+ * `session_revoked` is the subscription socket refused as unrecoverable
+ * (close 4412).
  */
 export type SessionEndReason =
+  | 'signed_out'
   | 'refresh_rejected'
   | 'refresh_token_dead'
   | 'account_inactive'
   | 'session_revoked';
 
+/**
+ * A sign-out the person chose. It also hands the offline queue off — only a
+ * deliberate sign-out may discard unsynced work — and routes to sign-in. The
+ * hand-off is a callback because the queue cannot be imported here: it reads
+ * the store this module builds.
+ */
+export interface SessionEndOptions {
+  deliberate?: { handOffQueue?: () => void };
+}
+
 export interface ResetOptions {
   auth?: boolean;
   ui?: boolean;
-  preferences?: boolean;
   clearApolloCache?: boolean;
 }
-
-export const RESET_SCENARIOS = {
-  LOGOUT: {
-    auth: true,
-    ui: true,
-    preferences: false,
-    clearApolloCache: true,
-  },
-  SESSION_EXPIRED: {
-    auth: true,
-    ui: false,
-    preferences: false,
-    clearApolloCache: false, // Preserve cache by default to support offline usage
-  },
-  FULL_RESET: {
-    auth: true,
-    ui: true,
-    preferences: true,
-    clearApolloCache: true,
-  },
-  ONBOARDING_RESET: {
-    auth: false,
-    ui: true,
-    preferences: true,
-    clearApolloCache: false,
-  },
-};
 
 /**
  * The signed-in person's store fields and their signed-out values. The ONE list:
@@ -69,9 +54,7 @@ const SESSION_SCOPED_STATE = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  // Left set, `isAutoLoggingIn` strands the splash gate and
-  // `sessionTokensInKeychain` claims a pair `clearAuthFromStorage` just removed.
-  isAutoLoggingIn: false,
+  // Left set, it claims a pair `clearAuthFromStorage` just removed.
   sessionTokensInKeychain: false,
   // Navigation selections — the previous account's home/pantry/list ids.
   selectedHomeId: null,
@@ -98,37 +81,53 @@ type GetState = () => RootState;
 
 let sessionEndInFlight: Promise<void> | null = null;
 
+/**
+ * What a sign-out adds to the end it joined. A sign-in after that end is a new
+ * session, with nothing of the old one left to drop.
+ */
+const finishDeliberateEnd = async (
+  get: GetState,
+  deliberate: NonNullable<SessionEndOptions['deliberate']>,
+): Promise<void> => {
+  if (holdsSessionTokens(get())) return;
+  await whileSessionEnds(async () => {
+    deliberate.handOffQueue?.();
+    get().setNavigationState('auth');
+  });
+};
+
 const runSessionEnd = async (
   set: SetState,
   get: GetState,
   reason: SessionEndReason,
+  options: SessionEndOptions | undefined,
 ): Promise<void> => {
-  logger.info(`Session ended by the server (${reason}) — clearing session`);
+  logger.info(`Session ended (${reason}) — clearing session`);
 
-  // Every reason gets identical cleanup deliberately — `reason` is for the log
-  // line, not to branch on. Clearing the Apollo cache is the part that must not
-  // vary: the persisted blob holds the signed-out account's entities and
-  // `cache-and-network` restores them on the next sign-in.
+  // Every end gets identical cleanup — `reason` is for the log line, not to
+  // branch on. The cache is cleared here as well as by the teardown's `apollo`
+  // step, which swallows its own failures: the persisted blob holds the
+  // signed-out account's entities and `cache-and-network` restores them on the
+  // next sign-in.
 
   // Transports stop FIRST, so in-flight work is cancelled rather than re-fired
-  // against cleared tokens (the endless-loading symptom).
+  // against cleared tokens (the endless-loading symptom). One scope over the
+  // whole descent: a latched gate refuses the next sign-in until a restart.
   await whileSessionEnds(async () => {
     await runSessionTeardown();
+    options?.deliberate?.handOffQueue?.();
 
     await createResetManager(set, get).resetStore({
       auth: true,
-      ui: false,
-      preferences: false,
+      ui: true,
       clearApolloCache: true,
     });
+    if (options?.deliberate) get().setNavigationState('auth');
   });
 };
 
 export const createResetManager = (set: SetState, get: GetState) => ({
-  resetStore: async (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
-    const resetOptions =
-      typeof options === 'string' ? RESET_SCENARIOS[options] : options;
-
+  resetStore: async (resetOptions: ResetOptions) => {
     const newState: Partial<RootState> = {};
 
     if (resetOptions.auth) {
@@ -136,8 +135,6 @@ export const createResetManager = (set: SetState, get: GetState) => ({
       // and would fire against a cleared session.
       getApolloResetBridge()?.cancelTokenRefresh();
 
-      // Under `auth`, not `preferences`: `LOGOUT` sets `preferences: false`, so
-      // anything filed there survives a sign-out on a shared device.
       Object.assign(newState, SESSION_SCOPED_STATE);
 
       // SESSION_SCOPED_STATE only reaches the ROOT store; feature-owned stores
@@ -147,17 +144,6 @@ export const createResetManager = (set: SetState, get: GetState) => ({
 
     if (resetOptions.ui) {
       Object.assign(newState, TRANSIENT_UI_STATE);
-    }
-
-    // Keeps theme and language unless FULL_RESET.
-    if (resetOptions.preferences) {
-      Object.assign(newState, {
-        onBoardingStep: null,
-      });
-
-      // Idempotent, and deliberately in both branches: ONBOARDING_RESET
-      // (auth: false, preferences: true) must still empty feature stores.
-      resetSessionScopedStores();
     }
 
     if (resetOptions.clearApolloCache) {
@@ -186,34 +172,19 @@ export const createResetManager = (set: SetState, get: GetState) => ({
     set({ isHydrated: true });
   },
 
-  logout: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('LOGOUT');
+  endSession: async (reason: SessionEndReason, options?: SessionEndOptions) => {
+    // Every transport reporting a dead session fires this unawaited; a second
+    // pass would re-run the teardown under the gate the first one holds. A
+    // sign-out joining a server end finds the session already gone, but still
+    // does what only the person's choice may.
+    if (sessionEndInFlight) {
+      await sessionEndInFlight;
+      if (options?.deliberate)
+        await finishDeliberateEnd(get, options.deliberate);
+      return;
+    }
 
-    set({ navigationState: 'auth' });
-  },
-
-  sessionExpired: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('SESSION_EXPIRED');
-  },
-
-  fullReset: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('FULL_RESET');
-  },
-
-  resetOnboarding: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('ONBOARDING_RESET');
-  },
-
-  endSession: async (reason: SessionEndReason) => {
-    // Every transport reporting a dead session fires this unawaited, and a
-    // second pass clears `isLoggingOut` while the first still depends on it.
-    if (sessionEndInFlight) return sessionEndInFlight;
-
-    sessionEndInFlight = runSessionEnd(set, get, reason);
+    sessionEndInFlight = runSessionEnd(set, get, reason, options);
     return sessionEndInFlight.finally(() => {
       sessionEndInFlight = null;
     });
@@ -234,8 +205,8 @@ export const createResetManager = (set: SetState, get: GetState) => ({
 
 const clearAuthFromStorage = async () => {
   try {
-    // Stored logins (biometrics) deliberately survive a logout; only a full
-    // reset or an explicit user action clears them.
+    // The session's tokens only: a stored sign-in (biometrics) outlives the
+    // session, and only the biometric service removes it.
     await secureStore().clearSessionTokens();
 
     storage.remove('accessToken');

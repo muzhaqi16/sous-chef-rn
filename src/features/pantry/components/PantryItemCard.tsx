@@ -11,17 +11,16 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
-import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
 import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
-import type { CardVariant } from '#features/pantry/components/BaseItemCard/types';
+import { StatusLine, type StatusTone } from '#components/atoms/StatusLine';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
-import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
@@ -47,8 +46,8 @@ type ExpiryStatus = 'expired' | 'warning' | 'normal';
 
 /**
  * The one place `getExpirationStatus`'s scale becomes a visual state. `critical`
- * is "expires today" — not expired — so it reads as a warning, and the border
- * and the text cannot disagree about where that boundary sits.
+ * is "expires today" — not expired — so it reads as a warning, and the
+ * status and its tone cannot disagree about where that boundary sits.
  */
 const toItemVariant = (type: ExpirationVariant): ItemVariant => {
   if (type === 'expired') return 'expired';
@@ -56,23 +55,10 @@ const toItemVariant = (type: ExpirationVariant): ItemVariant => {
   return 'normal';
 };
 
-// Extracted so `styles.useVariants` fires once per row and theme colors reach
-// it through the ShadowTree instead of a React re-render.
-const ExpirationText: React.FC<{
-  text: string;
-  status: ExpiryStatus;
-  bold: boolean;
-}> = ({ text, status, bold }) => {
-  styles.useVariants({ expiryStatus: status });
-  return (
-    <Text
-      role={bold ? 'footnoteStrong' : 'footnote'}
-      style={styles.expiration}
-      numberOfLines={1}
-    >
-      {text}
-    </Text>
-  );
+const EXPIRY_TONE: Record<ExpiryStatus, StatusTone> = {
+  expired: 'error',
+  warning: 'warning',
+  normal: 'neutral',
 };
 
 // Delete slide-out. Always renders <Animated.View> so the tree shape never
@@ -133,8 +119,10 @@ const SlideAnimatedWrapper: React.FC<{
     );
   };
 
+  // The card under it is themed; the sentinel keeps it so through a commit.
   return (
     <Animated.View style={animatedStyle}>
+      <ThemeEpochSentinel />
       {children(handleDelete)}
     </Animated.View>
   );
@@ -142,6 +130,8 @@ const SlideAnimatedWrapper: React.FC<{
 
 interface PantryItemCardProps {
   pantryItemId: string;
+  /** A screen's own action for the row, after its quantity. */
+  accessory?: React.ReactNode;
 }
 
 /**
@@ -151,6 +141,7 @@ interface PantryItemCardProps {
  */
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   pantryItemId,
+  accessory,
 }) => {
   const { t } = useTranslation();
   const {
@@ -184,14 +175,11 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
 
-  // ONE ladder for border and text, so they cannot split
+  // ONE ladder for the status and its tone, so they cannot split
   // `getExpirationStatus`'s four levels at different boundaries. An item
-  // expiring TODAY is `critical`, not expired, and reads as a warning on both.
+  // expiring TODAY is `critical`, not expired, and reads as a warning.
   const variant: ItemVariant = toItemVariant(expStatus.type);
   const expirationText = showExpiration ? expStatus.text : null;
-  const expirationVariant: ExpirationVariant | undefined = showExpiration
-    ? expStatus.type
-    : undefined;
   const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
   // What is left, as the stack is shown: "1 doz" for 12 pc.
@@ -215,58 +203,24 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     onRestock: onItemRestock ? () => onItemRestock(id) : undefined,
   };
 
-  // ONE status per row, read by its border and its status line alike. An
-  // empty stack has nothing left to expire, so it reads as low stock whatever
-  // its date; otherwise expiry outranks stock.
-  const cardVariant: CardVariant = isOutOfStock
-    ? 'lowStock'
-    : variant !== 'normal'
-    ? variant
-    : pantryItem.isLowStock
-    ? 'lowStock'
-    : 'normal';
+  // ONE status per row, shown by its status line alone. An empty stack has
+  // nothing left to expire, so it reads as low stock whatever its date;
+  // otherwise expiry outranks stock.
+  const isStockStatus =
+    isOutOfStock || (variant === 'normal' && pantryItem.isLowStock);
 
-  // Always rendered: the placeholder tile keeps rows aligned when there is no
-  // image.
   const leftElement = <CardLeftSlot imageUrl={imageUrl} />;
-
-  const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 
   const stockText = isOutOfStock
     ? t('pantryScreen.outOfStock')
     : t('pantryScreen.runningLow');
-  const statusText = isPendingSync
-    ? t('status.syncing')
-    : cardVariant === 'lowStock'
-    ? stockText
-    : expirationText;
-
-  const getSubtitle = () => {
-    if (isPendingSync) {
-      return (
-        <Text role="footnote" tone="secondary" style={styles.pendingSync}>
-          {statusText}
-        </Text>
-      );
-    }
-    if (cardVariant === 'lowStock') {
-      return (
-        <Text role="footnoteStrong" tone="info">
-          {stockText}
-        </Text>
-      );
-    }
-    if (expirationText) {
-      return (
-        <ExpirationText
-          text={expirationText}
-          status={expiryStatusKey}
-          bold={expirationBold}
-        />
-      );
-    }
-    return undefined;
-  };
+  const status: { tone: StatusTone; text: string } | null = isPendingSync
+    ? { tone: 'pending', text: t('status.syncing') }
+    : isStockStatus
+    ? { tone: 'info', text: stockText }
+    : expirationText
+    ? { tone: EXPIRY_TONE[expiryStatusKey], text: expirationText }
+    : null;
 
   // Shared card content — used with or without slide animation wrapper
   const renderCard = (onDelete?: () => void) => {
@@ -283,11 +237,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         itemId={id}
         accessibilityLabel={accessibilityLabelOf(
           name,
-          statusText,
+          status?.text,
           quantity,
           rightSecondary,
         )}
-        variant={cardVariant}
         onPress={itemActions.onPress}
         leftActions={swipe.left}
         rightActions={swipe.right}
@@ -297,16 +250,26 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         testID={pantryTestIDs.item(id)}
         leftElement={leftElement}
         rightElement={
-          <CardRightSlot
-            // Keyed by item id, matching the row's own `pantry-item-${id}` and
-            // shopping list's `shopping-list-item-${itemId}-quantity`.
-            testID={pantryTestIDs.itemQuantity(id)}
-            primary={quantity}
-            secondary={rightSecondary}
-          />
+          <>
+            <CardRightSlot
+              // Keyed by item id, matching the row's own `pantry-item-${id}` and
+              // shopping list's `shopping-list-item-${itemId}-quantity`.
+              testID={pantryTestIDs.itemQuantity(id)}
+              primary={quantity}
+              secondary={rightSecondary}
+            />
+            {accessory}
+          </>
         }
       >
-        <CardContent title={name} subtitle={getSubtitle()} />
+        <CardContent
+          title={name}
+          subtitle={
+            status ? (
+              <StatusLine tone={status.tone}>{status.text}</StatusLine>
+            ) : undefined
+          }
+        />
       </BaseItemCard>
     );
   };
@@ -321,21 +284,3 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   return renderCard();
 };
-
-const styles = StyleSheet.create(theme => ({
-  expiration: {
-    variants: {
-      expiryStatus: {
-        expired: { color: theme.colors.expiration.expiredText },
-        warning: { color: theme.colors.expiration.warningText },
-        normal: { color: theme.colors.textSecondary },
-      },
-    },
-  },
-  pendingSync: {
-    fontStyle: 'italic',
-  },
-}));
-
-// PantryItemVariant alias for backwards compatibility
-export type PantryItemVariant = ItemVariant;

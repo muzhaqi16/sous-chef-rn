@@ -159,7 +159,6 @@ export const MyRecipes: React.FC = () => {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder={t('recipes.myRecipesSearchPlaceholder')}
-          showSearchIcon
         />
       </View>
       {dataState === 'ready' &&

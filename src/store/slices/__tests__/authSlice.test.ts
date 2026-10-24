@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import { retryCooldownMs } from '#/utils/backoff';
 import type { AuthUserInput } from '#store/slices/authSlice';
 import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
@@ -34,14 +35,23 @@ describe('authSlice', () => {
       expect(store.getState().accessToken).toBeNull();
       expect(store.getState().refreshToken).toBeNull();
     });
-
-    it('getIsAuthenticated returns false initially', () => {
-      const store = createTestStore();
-      expect(store.getState().getIsAuthenticated()).toBe(false);
-    });
   });
 
   describe('setAuth', () => {
+    it('discards a sign-in that lands while a session ends', async () => {
+      const store = createTestStore();
+
+      const adopted = await whileSessionEnds(async () =>
+        store.getState().setAuth(testUser, 'late-access', 'late-refresh'),
+      );
+      resetSessionEndingGate();
+
+      expect(adopted).toBe(false);
+      expect(store.getState().user).toBeNull();
+      expect(store.getState().accessToken).toBeNull();
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
     it('sets user and tokens', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'access-tk', 'refresh-tk');
@@ -198,18 +208,6 @@ describe('authSlice', () => {
       store.getState().setAuth(testUser, 'access-tk', 'r');
       expect(schedule).toHaveBeenCalledWith('access-tk');
     });
-
-    it('clears isAutoLoggingIn', () => {
-      const store = createTestStore({ isAutoLoggingIn: true });
-      store.getState().setAuth(testUser, 'a', 'r');
-      expect(store.getState().isAutoLoggingIn).toBe(false);
-    });
-
-    it('getIsAuthenticated returns true after setAuth', () => {
-      const store = createTestStore();
-      store.getState().setAuth(testUser, 'a', 'r');
-      expect(store.getState().getIsAuthenticated()).toBe(true);
-    });
   });
 
   describe('updateUser', () => {
@@ -265,6 +263,37 @@ describe('authSlice', () => {
       expect(store.getState().refreshToken).toBe('old-refresh');
       expect(schedule).not.toHaveBeenCalled();
     });
+
+    it('stores a renewal of the refresh token still held', () => {
+      const store = createTestStore();
+      store.getState().setAuth(testUser, 'old-access', 'old-refresh');
+
+      const write = store.getState().setTokens({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        replaces: 'old-refresh',
+      });
+
+      expect(write).toBe('stored');
+      expect(store.getState().refreshToken).toBe('new-refresh');
+    });
+
+    it('refuses a renewal of a refresh token no longer held', () => {
+      const store = createTestStore();
+      store.getState().setAuth(testUser, 'current-access', 'current-refresh');
+      schedule.mockClear();
+
+      const write = store.getState().setTokens({
+        accessToken: 'late-access',
+        refreshToken: 'late-refresh',
+        replaces: 'superseded-refresh',
+      });
+
+      expect(write).toBe('outlived');
+      expect(store.getState().accessToken).toBe('current-access');
+      expect(store.getState().refreshToken).toBe('current-refresh');
+      expect(schedule).not.toHaveBeenCalled();
+    });
   });
 
   describe('setEmailVerified', () => {
@@ -307,14 +336,6 @@ describe('authSlice', () => {
       const store = createTestStore();
       store.getState().setHasStoredCredentials(true);
       expect(store.getState().hasStoredCredentials).toBe(true);
-    });
-  });
-
-  describe('setIsAutoLoggingIn', () => {
-    it('sets isAutoLoggingIn', () => {
-      const store = createTestStore();
-      store.getState().setIsAutoLoggingIn(true);
-      expect(store.getState().isAutoLoggingIn).toBe(true);
     });
   });
 
@@ -396,23 +417,35 @@ describe('authSlice', () => {
     });
   });
 
-  describe('clearAuth - edge cases', () => {
-    it('clears isAutoLoggingIn', () => {
-      const store = createTestStore();
-      store.getState().setIsAutoLoggingIn(true);
-      store.getState().clearAuth();
-      expect(store.getState().isAutoLoggingIn).toBe(false);
+  describe('the biometric hold-off', () => {
+    const NOW = 1_800_000_000_000;
+    beforeEach(() => {
+      jest.spyOn(Date, 'now').mockReturnValue(NOW);
     });
-  });
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
 
-  describe('getIsAuthenticated', () => {
-    it('returns false when user exists but no token', () => {
+    it("waits out the server's own deadline when it names one", () => {
       const store = createTestStore();
-      store.getState().setAuth(testUser, 'a', 'r');
-      // Manually clear token
-      store.getState().setTokens({ accessToken: undefined });
-      // getIsAuthenticated should still work
-      expect(typeof store.getState().getIsAuthenticated).toBe('function');
+      store.getState().registerBiometricRefusal(90_000);
+      expect(store.getState().biometricRetryAt).toBe(NOW + 90_000);
+      expect(store.getState().biometricAttempts).toBe(1);
+    });
+
+    it('falls back to its own cooldown, growing with each refusal', () => {
+      const store = createTestStore();
+      store.getState().registerBiometricRefusal();
+      store.getState().registerBiometricRefusal();
+      expect(store.getState().biometricRetryAt).toBe(NOW + retryCooldownMs(2));
+    });
+
+    it('lifts the hold-off once a sign-in succeeds', () => {
+      const store = createTestStore();
+      store.getState().registerBiometricRefusal(90_000);
+      store.getState().clearBiometricBackoff();
+      expect(store.getState().biometricRetryAt).toBe(0);
+      expect(store.getState().biometricAttempts).toBe(0);
     });
   });
 });

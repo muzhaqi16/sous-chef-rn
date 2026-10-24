@@ -145,13 +145,11 @@
     "sortRecentlyAdded": "Añadidos recientemente"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Añadir a la lista de la compra",
     "tutorialAddSubtitle": "Toca para añadir este artículo a tu lista de la compra",
     "tutorialAddAllTitle": "Añadir todo de una vez",
     "tutorialAddAllSubtitle": "Añade todos los artículos con poco stock a tu lista de la compra de una vez",
     "lowStockTitle": "Artículos con poco stock",
     "lowStockEmpty": "Todos los artículos están por encima del nivel mínimo",
-    "remaining": "{{quantity}} {{unit}} restantes",
     "expiringTitle": "Artículos por caducar",
     "expiringEmpty": "No hay artículos por caducar pronto",
     "expiredTitle": "Artículos caducados",
@@ -162,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "No hay despensas disponibles",
     "viewAnalytics": "Análisis"
-  },
-  "pantryHeader": {
-    "greeting": "¡Hola, {{name}}!",
-    "homePromptSelect": "Toca para elegir un hogar",
-    "homeNoneYet": "Aún no hay hogares",
-    "homeFallback": "Tu hogar",
-    "greetingNoName": "¡Hola!"
   },
   "adjustQuantity": {
     "description": "Corrige tus existencias e indica el motivo.",
@@ -274,7 +265,6 @@
   },
   "addToPantry": {
     "restocked": "Se reabasteció {{name}}",
-    "fromReceipt": "Añadir desde un recibo",
     "amountLeft_one": "Queda {{amount}}",
     "amountLeft_other": "Quedan {{amount}}",
     "lowStockSettings": "Ajustes de stock bajo",
@@ -319,14 +309,13 @@
   "pantryScreen": {
     "greetingFallback": "Buenos días",
     "searchPlaceholder": "Busca en tu despensa...",
-    "sort": "Ordenar",
+    "sortedBy": "Ordenar, ahora por {{field}}",
     "tabAll": "Todos",
     "tabPantry": "Despensa",
     "tabUnassigned": "Sin asignar",
     "expiringCount": "{{count}} por vencer",
     "expiredCount": "{{count}} caducados",
     "lowStockCount": "{{count}} poca existencia",
-    "analyticsAccessibility": "Ver analíticas",
     "emptySubtitle": "Empieza a hacer seguimiento de tu comida para reducir el desperdicio",
     "noHomeTitle": "Aún no hay hogar",
     "noHomeDescription": "Crea o únete a un hogar para empezar a seguir tu comida",
@@ -339,8 +328,6 @@
     "tabEmptyTitle": "Sin artículos en {{tabName}}",
     "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta pestaña",
     "tabEmptyFallbackName": "esta ubicación",
-    "tutorialManageHomesTitle": "Toca para gestionar hogares",
-    "tutorialManageHomesSubtitle": "Cambia entre hogares o gestiona la configuración del hogar",
     "tutorialPantrySettingsSubtitle": "Cambia entre listas de despensa y crea nuevas despensas",
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
     "tutorialAddItemsSubtitle": "Toca + para añadir artículos a tu despensa",
@@ -378,6 +365,20 @@
     "title": "El artículo ya está en la despensa",
     "body": "Este artículo ya está en tu despensa en esta unidad. ¿Quieres reponerlo?",
     "restock": "Reponer"
+  },
+  "relinkItem": {
+    "action": "¿No es este artículo?",
+    "title": "¿Qué artículo es?",
+    "hint": "Elige el artículo que realmente es. Se conservan su cantidad, costes e historial.",
+    "searchPlaceholder": "Buscar artículos",
+    "moveTo": "Mover a {{name}}",
+    "moving": "Moviendo…",
+    "moved": "Hecho: ahora es {{name}}.",
+    "movedLearned": "Hecho: ahora es {{name}}, y tus próximos recibos también lo reconocerán.",
+    "duplicateBody": "Tu despensa ya tiene {{name}} en esta unidad, así que esta entrada sigue como estaba. Abre esa entrada para añadirlo ahí.",
+    "openExisting": "Abrir",
+    "failedTitle": "No se pudo mover esta entrada",
+    "failedBody": "Sigue como estaba. Comprueba tu conexión e inténtalo de nuevo."
   },
   "expirationAction": {
     "cooked": "Cocinado",

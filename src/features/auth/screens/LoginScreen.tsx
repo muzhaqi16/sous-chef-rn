@@ -159,7 +159,6 @@ export function LoginScreen(): React.JSX.Element {
     );
   }, []);
 
-  // Simple form submission - directly use login with default rememberMe=true
   const onSubmit = async (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
@@ -214,7 +213,7 @@ export function LoginScreen(): React.JSX.Element {
             biometric_type: biometricInfo.biometryType,
           },
         );
-        authService.handleAuthError(error, 'Biometric login');
+        toastService.error(t('errors.codes.genericRetry'));
       },
     );
   };

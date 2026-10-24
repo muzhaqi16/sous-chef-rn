@@ -122,7 +122,7 @@ describe('bar actions put their outermost glyph on the page gutter', () => {
   });
 
   it('a gutter bar: the glyph takes the edge, hit slop makes the target', () => {
-    render(<TabScreenHeader label="Label" title="Title" actions={ACTIONS} />);
+    render(<TabScreenHeader title="Title" actions={ACTIONS} />);
 
     for (const id of ['icon-action', 'text-action']) {
       const target = screen.getByTestId(id);
@@ -142,7 +142,7 @@ describe('bar actions put their outermost glyph on the page gutter', () => {
     const header = render(<Header title="Title" rightActions={ACTIONS} />);
     const barGap = gapOf();
     header.unmount();
-    render(<TabScreenHeader label="Label" title="Title" actions={ACTIONS} />);
+    render(<TabScreenHeader title="Title" actions={ACTIONS} />);
 
     expect(barGap + 2 * GLYPH_SLACK).toBe(gapOf());
   });

@@ -119,10 +119,12 @@
     "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
     "photosOnlyTitle": "Photo added",
     "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
+    "photosForReviewTitle": "Photo sent for review",
+    "photosForReviewBody": "An admin checks it before everyone sees it. Until then only you can see it. Change a field too if something else needs fixing.",
     "updatedTitle": "Item updated",
     "updatedBody": "Your changes are live.",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
-    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first."
+    "photoNotice": "An admin reviews photos and other changes before everyone sees them."
   },
   "reportItem": {
     "footer": "Wrong details on one of these?",
@@ -136,7 +138,11 @@
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedBody": "Something went wrong sending your report. Please try again.",
     "alreadyReportedTitle": "Already reported",
-    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate."
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
+    "wrongPhotoAction": "Report wrong photo",
+    "wrongPhotoConfirmTitle": "Report this photo?",
+    "wrongPhotoConfirmBody": "An admin will check whether it shows this item.",
+    "wrongPhotoConfirm": "Report"
   },
   "addItemForm": {
     "modes": {
@@ -295,7 +301,18 @@
       "top": "Top",
       "nutrition_label": "Nutrition",
       "ingredient_list": "Ingredients"
-    }
+    },
+    "householdPhoto": "Your home's photo"
+  },
+  "entryPhoto": {
+    "title": "Photo for your home",
+    "privacyNote": "Only people in your home see this photo. The catalog keeps its own.",
+    "pickItemPhoto": "Use one of this item's photos",
+    "useCatalogPhoto": "Use the catalog photo",
+    "useThisPhoto": "Use this photo",
+    "saving": "Saving the photo…",
+    "failedTitle": "Couldn't change the photo",
+    "failedBody": "The photo is as it was. Check your connection and try again."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" isn't a unit we recognise. Pick one from the list.",

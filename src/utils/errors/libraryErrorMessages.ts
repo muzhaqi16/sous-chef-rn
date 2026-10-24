@@ -5,6 +5,8 @@
  * message-branching` exempts this file alone.
  */
 
+import { isRecord } from '#/utils/isRecord';
+
 interface MessageBearer {
   message?: string;
 }
@@ -88,4 +90,19 @@ export function isKeychainKeyInvalidated(error: unknown): boolean {
   const text = rejectionText(error);
   if (PROMPT_OUTCOME.test(text)) return false;
   return INVALIDATED.test(text);
+}
+
+// androidx BiometricPrompt's ERROR_CANCELED (5), ERROR_USER_CANCELED (10, the
+// back gesture) and ERROR_NEGATIVE_BUTTON (13); iOS's errSecUserCanceled
+// rejects with code `-128` and this message.
+const PROMPT_CANCELLED =
+  /(?:^|\s)code:\s*(?:5|10|13),|User canceled the operation/;
+
+/**
+ * The person dismissed the keychain's biometric prompt: a choice, not a
+ * failure. Verified: #react-native-keychain-rejects-a-cancelled-prompt-by-its-code
+ */
+export function isKeychainPromptCancelled(error: unknown): boolean {
+  if (isRecord(error) && error.code === '-128') return true;
+  return PROMPT_CANCELLED.test(rejectionText(error));
 }

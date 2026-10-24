@@ -521,9 +521,9 @@ two-method agreement that backs `app_fully_drawn_ms` on Android does not carry
 over; `scripts/ios-frame-sample.mjs` is the only cross-check.
 
 **A startup metric is bounded, and the drop is counted.** `app_fully_drawn_ms`
-latches on the first instrumented list showing real content, and `HomeTabs` is
-lazy — only the Pantry tab mounts at cold start, so the other two lists can only
-latch after a navigation. Past `STARTUP_WINDOW_MS` (10 s,
+latches once, and `HomeTabs` is lazy — only the Today tab mounts at cold start,
+and it marks the launch drawn when its overview shows (`useMarkFullyDrawn`), so
+an instrumented list can only latch after a navigation. Past `STARTUP_WINDOW_MS` (10 s,
 `src/services/performance/startupProfiling.ts`, shared with the profiler's own
 fallback) nothing is emitted and `startup_window_exceeded_total` increments, so an
 EXCLUDED launch stays distinguishable from an unmeasured one. The bound is not

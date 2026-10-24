@@ -11,13 +11,14 @@ import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { RecipeCaptureHost } from '#features/recipes/components/capture/RecipeCaptureHost';
 import { useRecipeCaptureMenu } from '#features/recipes/components/capture/useRecipeCaptureMenu';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
 import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
 import { Icon } from '#components/atoms/Icon';
+import { ModeTabs } from '#components/molecules/ModeTabs';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
@@ -26,7 +27,7 @@ import { RecipeItemSkeleton } from '#features/recipes/components/skeletons/Recip
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
@@ -42,6 +43,13 @@ import {
 } from '#features/recipes/components/RecipeSearchInput';
 import { hitSlop } from '#/theme/foundations/sizes';
 
+type RecipeSearchMode = 'name' | 'ingredients';
+const SEARCH_MODES: readonly RecipeSearchMode[] = ['name', 'ingredients'];
+const SEARCH_MODE_LABEL: Record<RecipeSearchMode, TranslationKey> = {
+  name: 'recipes.searchByName',
+  ingredients: 'recipes.searchByIngredients',
+};
+
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
 const RecipeMainInner: React.FC = () => {
@@ -49,10 +57,6 @@ const RecipeMainInner: React.FC = () => {
   useCommitTracking('RecipeMain');
   const { toRecipeCreate, toRecipeDetail, toSavedRecipes, toMyRecipes } =
     useAppNavigation();
-  // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
-  // pattern as `RecipeSearchInput` — theme strings flow into a runtime
-  // prop array that can't move into a stylesheet.
-  const { theme } = useUnistyles();
 
   // Single facade hook for all data + state
   const screen = useRecipeScreen();
@@ -184,27 +188,31 @@ const RecipeMainInner: React.FC = () => {
     if (row) toRecipeDetail(row.target);
   };
 
-  const hasIngredientSelection = screen.selectedIngredients.size > 0;
-  const searchBarExtraActions: SearchBarAction[] = screen.hasPantryItems
-    ? [
-        {
-          icon: 'restaurant',
-          onPress: openIngredientSelector,
-          accessibilityLabel: t('recipes.cookWithPantry'),
-          color: hasIngredientSelection
-            ? theme.colors.onPrimary
-            : theme.colors.primary,
-          backgroundColor: hasIngredientSelection
-            ? theme.colors.primary
-            : theme.colors.surface,
-          badge: hasIngredientSelection
-            ? screen.selectedIngredients.size
-            : undefined,
-          onButtonLayout: (rect: LayoutRect) =>
-            setButtonRect('pantryButton', rect),
-        },
-      ]
-    : [];
+  // Two ways to search: by name with the diet filters, or by what the pantry
+  // holds. The API cannot combine them, so they are modes, not filters.
+  const [chosenSearchMode, setSearchMode] = useState<RecipeSearchMode>(
+    screen.selectedIngredients.size > 0 ? 'ingredients' : 'name',
+  );
+  const searchMode: RecipeSearchMode = screen.hasPantryItems
+    ? chosenSearchMode
+    : 'name';
+  // A search belongs to the mode that ran it, so switching modes drops it and
+  // the list returns to suggestions. The picked ingredients stay picked.
+  const switchSearchMode = (mode: RecipeSearchMode) => {
+    if (mode === searchMode) return;
+    screen.clearSearch();
+    setSearchMode(mode);
+  };
+
+  const filterAccessory: SearchBarAction = {
+    icon: 'options-outline',
+    onPress: openFilterSheet,
+    accessibilityLabel: t('recipes.dietaryRestrictions'),
+    badge: screen.activeFilterCount,
+    onButtonLayout: (rect: LayoutRect) => setButtonRect('dietaryButton', rect),
+  };
+
+  const ingredientNames = [...screen.selectedIngredients].join(', ');
 
   const headerActions: BarAction[] = [
     {
@@ -220,14 +228,6 @@ const RecipeMainInner: React.FC = () => {
       onPress: toMyRecipes,
       accessibilityLabel: t('recipes.myRecipes'),
       onMeasure: rect => setButtonRect('myRecipesButton', rect),
-    },
-    {
-      icon: 'options-outline',
-      tone: screen.activeFilterCount > 0 ? 'primary' : 'textSecondary',
-      badge: screen.activeFilterCount,
-      onPress: openFilterSheet,
-      accessibilityLabel: t('recipes.dietaryRestrictions'),
-      onMeasure: rect => setButtonRect('dietaryButton', rect),
     },
   ];
 
@@ -324,7 +324,6 @@ const RecipeMainInner: React.FC = () => {
       testID={recipesTestIDs.recipesScreen}
       header={{
         variant: 'tab',
-        label: t('recipes.mainSubtitle'),
         title: t('labels.recipes'),
         actions: headerActions,
       }}
@@ -333,13 +332,47 @@ const RecipeMainInner: React.FC = () => {
     >
       {/* Above the list, not inside it: the spinner drops from the list's top. */}
       <View style={styles.gutter}>
-        <RecipeSearchInput
-          ref={searchInputRef}
-          onSearch={screen.handleTextSearch}
-          initialQuery={screen.searchQuery}
-          onClear={screen.clearSearch}
-          extraActions={searchBarExtraActions}
-        />
+        {screen.hasPantryItems ? (
+          <View style={styles.modes}>
+            <ModeTabs<RecipeSearchMode>
+              options={SEARCH_MODES}
+              value={searchMode}
+              onChange={switchSearchMode}
+              formatLabel={mode => t(SEARCH_MODE_LABEL[mode])}
+              tabTestID={recipesTestIDs.searchModeTab}
+              onTabLayout={(mode, rect) => {
+                if (mode === 'ingredients') setButtonRect('pantryButton', rect);
+              }}
+            />
+          </View>
+        ) : null}
+        {searchMode === 'name' ? (
+          <RecipeSearchInput
+            ref={searchInputRef}
+            onSearch={screen.handleTextSearch}
+            initialQuery={screen.searchQuery}
+            onClear={screen.clearSearch}
+            accessory={filterAccessory}
+          />
+        ) : (
+          // The same field, read-only: it shows the picked ingredients and
+          // opens the pantry picker, whose Search button runs the search.
+          <Pressable
+            onPress={openIngredientSelector}
+            accessibilityRole="button"
+            accessibilityLabel={ingredientNames || t('recipes.cookWithPantry')}
+            testID={recipesTestIDs.ingredientPicker}
+          >
+            <View pointerEvents="none">
+              <SearchBar
+                value={ingredientNames}
+                onChangeText={noop}
+                placeholder={t('recipes.cookWithPantry')}
+                editable={false}
+              />
+            </View>
+          </Pressable>
+        )}
       </View>
       {/* A search in flight always shows the skeleton so the tap gets instant
           feedback (and any stale prior results are replaced); discovery's
@@ -426,7 +459,10 @@ const RecipeMainInner: React.FC = () => {
               0: toSavedRecipes,
               1: toMyRecipes,
               2: openFilterSheet,
-              3: openIngredientSelector,
+              3: () => {
+                switchSearchMode('ingredients');
+                openIngredientSelector();
+              },
             };
             const step = tutorial.currentStep;
             if (step) actions[step.stepIndex]?.();
@@ -447,7 +483,6 @@ const RecipeMainFallback: React.FC = () => {
       testID={recipesTestIDs.recipesScreen}
       header={{
         variant: 'tab',
-        label: t('recipes.mainSubtitle'),
         title: t('labels.recipes'),
       }}
       scroll="list"
@@ -458,7 +493,6 @@ const RecipeMainFallback: React.FC = () => {
           value=""
           onChangeText={noop}
           placeholder={t('recipes.searchPlaceholder')}
-          showSearchIcon
           editable={false}
         />
       </View>
@@ -479,6 +513,9 @@ const styles = StyleSheet.create(theme => ({
   // to inset it, so this screen supplies the gutter.
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
+  },
+  modes: {
+    marginBottom: theme.spacing.sm,
   },
   suggestedHeader: {
     flexDirection: 'row',

@@ -96,10 +96,19 @@ export function useSuggestItemEdit() {
       // failed submission — telling the user it was received would close the
       // form over a batch that never left the device.
       if (uploaded === 0) return FAILED;
-      alertService.alert(
-        t('suggestItemEdit.photosOnlyTitle'),
-        t('suggestItemEdit.photosOnlyBody'),
-      );
+      // Only the owner's photo lands APPROVED; a suggester's waits PENDING,
+      // seen by them alone until an admin approves it.
+      if (writesItemDirectly(original)) {
+        alertService.alert(
+          t('suggestItemEdit.photosOnlyTitle'),
+          t('suggestItemEdit.photosOnlyBody'),
+        );
+      } else {
+        alertService.alert(
+          t('suggestItemEdit.photosForReviewTitle'),
+          t('suggestItemEdit.photosForReviewBody'),
+        );
+      }
       return { status: 'imagesOnly' };
     }
 

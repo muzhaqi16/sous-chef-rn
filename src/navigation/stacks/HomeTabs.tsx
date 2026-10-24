@@ -8,6 +8,7 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { TAB_APPEARANCE } from '#features/registry';
 import { PantryStack } from '#navigation/stacks/PantryStack';
+import { TodayStack } from '#navigation/stacks/TodayStack';
 import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
 import { RecipeStack } from '#navigation/stacks/RecipeStack';
 import { MealPlanStack } from '#navigation/stacks/MealPlanStack';
@@ -49,6 +50,7 @@ export const HomeTabs = createBottomTabNavigator({
     inactiveBehavior: 'none',
   },
   screens: {
+    Today: createBottomTabScreen({ screen: TodayStack }),
     Pantry: createBottomTabScreen({ screen: PantryStack }),
     ShoppingList: createBottomTabScreen({ screen: ShoppingListStack }),
     Recipe: createBottomTabScreen({ screen: RecipeStack }),

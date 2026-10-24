@@ -2,6 +2,10 @@ import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlanDocument } from './useMealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#hooks/apollo/standDownOptions';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
@@ -13,7 +17,10 @@ import {
   type MealPlanMain_ItemFragment,
 } from './MealPlanMain.generated';
 
-export function useMealPlan(id: string | null) {
+export function useMealPlan(
+  id: string | null,
+  { skip = false, fetchPolicy }: StandDownOptions = {},
+) {
   // `createMealPlan` writes the plan under a minted id, so before the ack a
   // server read returns null, which `planNotFound` would take for "deleted".
   // Skipping makes the ack the fetch trigger.
@@ -21,7 +28,7 @@ export function useMealPlan(id: string | null) {
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     GetMealPlanDocument,
-    !id || isUnconfirmed
+    !id || isUnconfirmed || skip
       ? skipToken
       : {
           variables: {
@@ -29,6 +36,7 @@ export function useMealPlan(id: string | null) {
             mealsFirst: MEALS_PAGE_SIZE,
             ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
           },
+          ...heldFetchPolicy(fetchPolicy),
         },
   );
 

@@ -19,7 +19,10 @@ interface PantryModalsActions {
   handleRestockItem: (itemId: string) => void;
   handleEditItem: (itemId: string) => void;
   handleDeleteItem: (itemId: string) => Promise<void>;
-  setAddSheetVisible: (visible: boolean) => void;
+  /** Opens the add sheet on its search. */
+  openAddSheet: () => void;
+  /** Opens the add sheet on its details form, for "Add manually". */
+  openAddManually: () => void;
   setAddLocationSheetVisible: (visible: boolean) => void;
 }
 
@@ -56,6 +59,13 @@ export function PantryModalsProvider({
   onSearchQueryClear,
 }: PantryModalsProviderProps) {
   const [addSheetVisible, setAddSheetVisible] = useState(false);
+  const [addSheetStart, setAddSheetStart] = useState<'search' | 'details'>(
+    'search',
+  );
+  const openAddSheetOn = (startStep: 'search' | 'details') => {
+    setAddSheetStart(startStep);
+    setAddSheetVisible(true);
+  };
   const [addLocationSheetVisible, setAddLocationSheetVisible] = useState(false);
 
   const [itemsAdded, setItemsAdded] = useState(false);
@@ -96,7 +106,8 @@ export function PantryModalsProvider({
     handleRestockItem,
     handleEditItem,
     handleDeleteItem,
-    setAddSheetVisible,
+    openAddSheet: () => openAddSheetOn('search'),
+    openAddManually: () => openAddSheetOn('details'),
     setAddLocationSheetVisible,
   };
 
@@ -148,6 +159,7 @@ export function PantryModalsProvider({
       {!!addSheetVisible && (
         <AddToPantrySheet
           visible={addSheetVisible}
+          startStep={addSheetStart}
           pantryId={pantryId}
           onClose={handleAddSheetClose}
           onItemAdded={handleItemAdded}

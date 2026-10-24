@@ -20,7 +20,6 @@ import { _setToastDispatch } from '#/services/toastService';
 import { HapticService } from '#services/haptic/HapticService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
-import type { IconName } from '#components/atoms/Icon';
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import type {
@@ -37,7 +36,11 @@ const TOAST_HAPTICS: Partial<Record<ToastType, () => void>> = {
   warning: () => HapticService.warning(),
 };
 
-const TOAST_ICONS: Partial<Record<ToastType, IconName>> = {
+// Ionicons' own names: the toast draws the font directly, so the app glyphs
+// `Icon` adds are not available here.
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const TOAST_ICONS: Partial<Record<ToastType, IoniconName>> = {
   success: 'checkmark-circle',
   error: 'close-circle',
   warning: 'alert-circle-outline',

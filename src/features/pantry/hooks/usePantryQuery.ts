@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { WatchQueryFetchPolicy } from '@apollo/client';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#hooks/apollo/standDownOptions';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 import {
@@ -26,15 +29,34 @@ export type PantryListItemNode = NonNullable<
   NonNullable<GetPantryQuery['pantry']>['itemsConnection']['edges'][number]
 >['node'];
 
+export type PantryQueryOptions = StandDownOptions;
+
 /**
- * A secondary consumer on another tab stands its watcher down while blurred via
- * `skip`, and must pair that with `fetchPolicy: 'cache-first'`: Apollo resets a
- * re-enabled query to its INITIAL policy, so toggling `skip` alone pays a
- * `cache-and-network` round-trip on every focus.
+ * `GetPantry`'s variables. Left at their defaults they are the Pantry screen's
+ * client-mode read, which the launch warm-up repeats: a difference in any of
+ * them caches a different entry (`useOfflineTabPreloading`).
  */
-export interface PantryQueryOptions {
-  skip?: boolean;
-  fetchPolicy?: WatchQueryFetchPolicy;
+export function pantryQueryVariables(
+  id: string,
+  today: string,
+  {
+    itemsFirst = PAGE_SIZE.MAX,
+    itemsFilter,
+    itemsOrderBy,
+  }: {
+    itemsFirst?: number;
+    itemsFilter?: PantryItemFilters | null;
+    itemsOrderBy?: PantryItemOrderBy | null;
+  } = {},
+) {
+  return {
+    id,
+    itemsFirst,
+    itemsFilter: itemsFilter ?? undefined,
+    itemsOrderBy: itemsOrderBy ?? undefined,
+    storageLocationsFirst: PAGE_SIZE.COMPACT,
+    today,
+  };
 }
 
 export function usePantryQuery(
@@ -90,22 +112,12 @@ export function usePantryQuery(
     shouldSkip || !pantryId
       ? skipToken
       : {
-          variables: {
-            id: pantryId,
+          variables: pantryQueryVariables(pantryId, today, {
             itemsFirst,
-            itemsFilter: itemsFilter ?? undefined,
-            itemsOrderBy: itemsOrderBy ?? undefined,
-            storageLocationsFirst: PAGE_SIZE.COMPACT,
-            today,
-          },
-          // A caller's policy holds for the query's life: the client default
-          // `nextFetchPolicy: 'cache-first'` would let a `cache-only` read fetch.
-          ...(options?.fetchPolicy
-            ? {
-                fetchPolicy: options.fetchPolicy,
-                nextFetchPolicy: options.fetchPolicy,
-              }
-            : {}),
+            itemsFilter,
+            itemsOrderBy,
+          }),
+          ...heldFetchPolicy(options?.fetchPolicy),
           errorPolicy: 'ignore', // Return cached data on network errors
         },
   );

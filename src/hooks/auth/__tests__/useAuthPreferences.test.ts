@@ -69,7 +69,7 @@ describe('useAuthPreferences', () => {
   });
 
   describe('markBiometricEnabled', () => {
-    it('sets biometric enabled flags for current user', () => {
+    it('clears the decline flags for the current user', () => {
       const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
@@ -77,19 +77,13 @@ describe('useAuthPreferences', () => {
       });
 
       expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        biometricEnabled: true,
-        biometricPromptRemindLater: false,
-        lastBiometricPromptDeclined: undefined,
         biometricDeclinedPermanently: false,
       });
     });
   });
 
   describe('markCredentialPromptDeclined', () => {
-    it('sets credentialPromptDeclined and timestamp', () => {
-      const now = 1700000000000;
-      jest.spyOn(Date, 'now').mockReturnValue(now);
-
+    it('records that the credential prompt was declined', () => {
       const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
@@ -98,23 +92,6 @@ describe('useAuthPreferences', () => {
 
       expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
         credentialPromptDeclined: true,
-        lastCredentialPromptShown: now,
-      });
-
-      jest.restoreAllMocks();
-    });
-  });
-
-  describe('resetBiometricDeclination', () => {
-    it('resets biometricDeclinedPermanently to false', () => {
-      const { result } = renderHook(() => useAuthPreferences());
-
-      act(() => {
-        result.current.resetBiometricDeclination();
-      });
-
-      expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        biometricDeclinedPermanently: false,
       });
     });
   });

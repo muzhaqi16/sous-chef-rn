@@ -3,57 +3,45 @@ import { StyleSheet } from 'react-native-unistyles';
 // Inline the common style properties; spreading from another Unistyles stylesheet
 // raises "2 unistyles styles" warnings.
 
-// BORDER RADIUS: the card child (BaseItemCard, ListItem) is the single source of
-// visible borderRadius + borderWidth. A backgroundColor on swipeableContainer or
-// a borderRadius on childrenContainer produces a "double border".
+// CORNERS: the row's `RowCard` rounds the tray's outer corners. The sliding
+// content rounds its own, so its leading edge meets the tray as a rounded end.
+// Its clip cannot cut a shadow: the shadow is the card's, outside it.
 
-// Action containers overhang HORIZONTALLY only — nothing covers a vertical
-// overhang, so it paints a dark line above and below the row on any swipe.
+// Action containers overhang HORIZONTALLY only, tucked under the opaque row —
+// nothing covers a vertical overhang, so it paints a dark line above and below
+// the row on any swipe.
 export const styles = StyleSheet.create(theme => {
-  // MUST match the card's own radius (`BaseItemCard.container`, `radii.xl`): a
-  // tighter one makes the dark action container's corners poke out around the
-  // card's instead of tucking under.
-  const SWIPEABLE_RADIUS = theme.radii.xl;
-
   return {
     swipeableContainer: {
       overflow: 'visible',
-      borderRadius: SWIPEABLE_RADIUS,
-      borderCurve: 'continuous',
-      // No backgroundColor — it bleeds through as a thin dark ring behind the
-      // card's rounded border.
+      // No backgroundColor — it would show through the row's anti-aliased edges.
     },
 
-    // No borderRadius — the card handles its own rounding. `overflow` must stay
-    // `visible` so the card's soft drop shadow isn't clipped to a hard rectangle.
     childrenContainer: {
-      overflow: 'visible',
+      overflow: 'hidden',
+      borderRadius: theme.radii.xl,
+      borderCurve: 'continuous',
     },
 
+    // `flex: 1` fills the reveal wrapper's height, which the row stretches.
     actionsContainer: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
-      marginLeft: -theme.spacing.base, // Extend under card edge to cover rounded corners
+      marginLeft: -theme.spacing.base, // Tucked under the row's edge
       paddingLeft: theme.spacing.base, // Compensate for margin to maintain button positioning
-      borderTopLeftRadius: 0, // Square edge where it meets the card
-      borderBottomLeftRadius: 0,
-      borderTopRightRadius: SWIPEABLE_RADIUS, // Rounded outer edge
-      borderBottomRightRadius: SWIPEABLE_RADIUS,
     },
     leftActionsContainer: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
       gap: theme.spacing.xs,
-      marginRight: -theme.spacing.base, // Extend under card edge to cover rounded corners
+      marginRight: -theme.spacing.base, // Tucked under the row's edge
       paddingRight: theme.spacing.base, // Compensate for margin to maintain button positioning
-      borderTopRightRadius: 0, // Square edge where it meets the card
-      borderBottomRightRadius: 0,
-      borderTopLeftRadius: SWIPEABLE_RADIUS, // Rounded outer edge
-      borderBottomLeftRadius: SWIPEABLE_RADIUS,
     },
 
     actionButton: {

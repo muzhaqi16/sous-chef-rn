@@ -69,9 +69,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   const swipe = resolveRowActions(itemSwipeActions, item.id, onRemoveRow);
 
   // Render the image from imageUrl data — avoids creating JSX in parent transforms
-  const leftElement =
-    item.leftElement ??
-    (item.imageUrl ? <RowThumbnail uri={item.imageUrl} /> : undefined);
+  const leftElement = item.leftElement ?? <RowThumbnail uri={item.imageUrl} />;
 
   const card = (
     <ItemCard

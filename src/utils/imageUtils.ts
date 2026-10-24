@@ -1,4 +1,5 @@
 import {
+  EntryImageSource,
   ImageKind,
   ImagePerspective,
   type ItemImage,
@@ -44,7 +45,8 @@ export function pickImageUrl(
 }
 
 /**
- * The LIST/CARD path: reads `Item.images`, which returns at most one row (the
+ * The LIST/CARD path: an entry's household photo first (`image`, the
+ * household's choice), else `Item.images`, which returns at most one row (the
  * primary photo's best asset), from any of the common source shapes. A gallery
  * screen reads `Item.photos` via `photoDisplayUrl` instead. `preferredSize`
  * defaults to 'small'; pass 'large' for a detail screen.
@@ -52,6 +54,7 @@ export function pickImageUrl(
 export function resolveImageUrl(
   source:
     | {
+        image?: { url?: string; source?: EntryImageSource } | null;
         imageUrl?: string | null;
         images?: unknown;
         item?: { imageUrl?: string | null; images?: unknown } | null;
@@ -61,6 +64,12 @@ export function resolveImageUrl(
   preferredSize: PreferredSize = 'small',
 ): string | null {
   if (!source) return null;
+
+  // A catalog-sourced `image` is the item's own photo, which the sized
+  // variants below serve better; only the household's choice wins outright.
+  if (source.image?.source === EntryImageSource.Household && source.image.url) {
+    return source.image.url;
+  }
 
   const kind = PREFERRED_SIZE_TO_KIND[preferredSize];
 

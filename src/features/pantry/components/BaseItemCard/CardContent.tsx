@@ -38,12 +38,11 @@ export const CardContent: React.FC<CardContentProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Centred in the row, as `CardRightSlot` is: a one-line row would otherwise
+  // sit at the top of its height with an empty band below it.
   container: {
     flex: 1,
     minWidth: 0,
-    // Stacks from the row's top like `CardRightSlot`: a centred column puts a
-    // title with no subtitle half a line below the meta beside it.
-    alignSelf: 'stretch',
   },
   title: {
     marginBottom: theme.layout.rowTextGap,

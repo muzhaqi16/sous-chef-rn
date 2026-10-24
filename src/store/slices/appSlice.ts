@@ -48,11 +48,9 @@ export type NavigationState =
 export interface AppState {
   isHydrated: boolean;
   // NOTE: isLoading, isError, isFetching are owned by uiSlice — do NOT duplicate here
-  isLoggingOut: boolean; // Global logout state
 
   // Navigation state machine
   navigationState: NavigationState;
-  showBiometricSetup: boolean; // Controls biometric setup modal
 
   // Who the post-login biometric offer is for. The password is deliberately
   // absent: enrolment authorises off the live session, so nothing downstream
@@ -74,11 +72,9 @@ export interface AppState {
   cachedItemSuggestions: ItemSuggestion[];
 
   setHydrated: (flag: boolean) => void;
-  setLoggingOut: (flag: boolean) => void;
 
   // Navigation state actions
   setNavigationState: (state: NavigationState) => void;
-  setShowBiometricSetup: (flag: boolean) => void;
   setPostLoginCredentials: (credentials: { email: string } | null) => void;
 
   setCachedUnits: (units: Unit[]) => void;
@@ -96,11 +92,9 @@ export interface AppState {
 
 export const initialAppState = {
   isHydrated: false,
-  isLoggingOut: false,
 
   // Navigation state machine
   navigationState: 'loading' as NavigationState,
-  showBiometricSetup: false,
   postLoginCredentials: null,
 
   cachedUnits: [],
@@ -124,14 +118,10 @@ export const createAppSlice: StateCreator<
   ...initialAppState,
 
   setHydrated: flag => set({ isHydrated: flag }),
-  setLoggingOut: flag => set({ isLoggingOut: flag }),
 
   // Navigation state actions
   setNavigationState: (state: NavigationState) => {
     set({ navigationState: state });
-  },
-  setShowBiometricSetup: flag => {
-    set({ showBiometricSetup: flag });
   },
   setPostLoginCredentials: credentials => {
     set({ postLoginCredentials: credentials });

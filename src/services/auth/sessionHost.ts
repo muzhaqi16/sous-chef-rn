@@ -1,8 +1,12 @@
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { errorService } from '#/services/errorService';
+import { registerSessionTeardown } from '#store/sessionTeardown';
 
 /** What follows a password sign-in before the app opens, if anything. */
 export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
+
+/** What became of a stored sign-in a password change revoked. */
+export type StoredSignInRenewal = 'renewed' | 'dropped' | 'none';
 
 /**
  * What a host adds to a session. The core signs in and out; a host with a
@@ -12,17 +16,30 @@ export type PostSignInGate = 'biometricSetup' | 'rememberMe' | null;
 export interface SessionHost {
   /** After a sign-in commits, off its critical path. */
   afterSignIn(): void;
-  /** Decided before auth state changes, so the gate and the session commit together. */
+  /**
+   * Decided before auth state changes, so the gate and the session commit
+   * together; `signInToken` authorises any call it makes, the pair not yet
+   * being stored.
+   */
   postSignInGate(
     user: LoginUserFragment,
     email: string,
     offerRememberMe: boolean,
+    signInToken: string,
   ): Promise<PostSignInGate>;
   /**
    * Drops the sign-in stored for `email`. The first step of a sign-out, while
    * the session can still authorise a server-side revoke.
    */
   forgetStoredSignIn(email: string): Promise<void>;
+  /**
+   * After a password change this session survived. The change revoked every
+   * stored sign-in, so the one held for `email` is issued again or dropped;
+   * `none` when there was none.
+   */
+  renewStoredSignIn(email: string): Promise<StoredSignInRenewal>;
+  /** As any session ends, before the transports stop: the host's own state. */
+  onSessionEnd(): void;
 }
 
 /** What each step settles to when it fails: the session goes on without it. */
@@ -30,6 +47,8 @@ const NO_HOST_STEPS: SessionHost = {
   afterSignIn: () => {},
   postSignInGate: () => Promise.resolve(null),
   forgetStoredSignIn: () => Promise.resolve(),
+  renewStoredSignIn: () => Promise.resolve('none'),
+  onSessionEnd: () => {},
 };
 
 const reportStep = (step: keyof SessionHost, error: unknown): void => {
@@ -56,11 +75,12 @@ const guarded = (steps: SessionHost): SessionHost => ({
       reportStep('afterSignIn', error);
     }
   },
-  postSignInGate: (user, email, offerRememberMe) =>
+  postSignInGate: (user, email, offerRememberMe, signInToken) =>
     settleStep(
       'postSignInGate',
-      () => steps.postSignInGate(user, email, offerRememberMe),
-      () => NO_HOST_STEPS.postSignInGate(user, email, offerRememberMe),
+      () => steps.postSignInGate(user, email, offerRememberMe, signInToken),
+      () =>
+        NO_HOST_STEPS.postSignInGate(user, email, offerRememberMe, signInToken),
     ),
   forgetStoredSignIn: email =>
     settleStep(
@@ -68,6 +88,19 @@ const guarded = (steps: SessionHost): SessionHost => ({
       () => steps.forgetStoredSignIn(email),
       () => NO_HOST_STEPS.forgetStoredSignIn(email),
     ),
+  renewStoredSignIn: email =>
+    settleStep(
+      'renewStoredSignIn',
+      () => steps.renewStoredSignIn(email),
+      () => NO_HOST_STEPS.renewStoredSignIn(email),
+    ),
+  onSessionEnd: () => {
+    try {
+      steps.onSessionEnd();
+    } catch (error) {
+      reportStep('onSessionEnd', error);
+    }
+  },
 });
 
 let host: SessionHost = NO_HOST_STEPS;
@@ -79,6 +112,9 @@ let host: SessionHost = NO_HOST_STEPS;
  */
 export const registerSessionHost = (steps: SessionHost): void => {
   host = guarded(steps);
+  registerSessionTeardown('session-host', () => {
+    host.onSessionEnd();
+  });
 };
 
 export const sessionHost = (): SessionHost => host;

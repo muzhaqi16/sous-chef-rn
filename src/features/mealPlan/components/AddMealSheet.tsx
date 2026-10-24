@@ -228,7 +228,6 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         {/* Search input */}
         <View style={styles.searchBarWrapper}>
           <SearchBar
-            showSearchIcon
             ref={searchBarRef}
             placeholder={t('addMealSheet.searchPlaceholder')}
             onChangeText={handleDebouncedSearch}

@@ -24,6 +24,7 @@ describe('useReportItem', () => {
       data: {
         markItemForReview: {
           __typename: 'MarkItemForReviewPayload',
+          alreadyReported: false,
           item: { id: 'item-1' },
         },
       },
@@ -42,9 +43,54 @@ describe('useReportItem', () => {
     );
   });
 
-  // The item is already flagged and waiting on an admin. Nothing went wrong and
-  // a retry can't improve on it, so this counts as sent — reporting a failure
-  // would invite the user to keep re-sending something that already landed.
+  it('names the photo the report is about', async () => {
+    const { mock, fired } = recordMock(MarkItemForReviewDocument, {
+      data: {
+        markItemForReview: {
+          __typename: 'MarkItemForReviewPayload',
+          alreadyReported: false,
+          item: { id: 'item-1' },
+        },
+      },
+    });
+    const { result } = renderHook([mock]);
+
+    await result.current.reportItem('item-1', REASON, 'photo-9');
+
+    expect(fired).toContainEqual({
+      input: { itemId: 'item-1', reason: REASON, imageId: 'photo-9' },
+    });
+  });
+
+  // The caller's own report is still open, so the server recorded nothing new.
+  // Nothing went wrong and a retry can't improve on it, so this counts as sent;
+  // reporting a failure would invite re-sending something that already landed.
+  it('says a repeat was already reported, and counts it as sent', async () => {
+    const { mock } = recordMock(MarkItemForReviewDocument, {
+      data: {
+        markItemForReview: {
+          __typename: 'MarkItemForReviewPayload',
+          alreadyReported: true,
+          item: { id: 'item-1' },
+        },
+      },
+    });
+    const { result } = renderHook([mock]);
+
+    const succeeded = await result.current.reportItem('item-1', REASON);
+
+    expect(succeeded).toBe(true);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Already reported',
+      expect.stringContaining('waiting'),
+    );
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      'Report sent',
+      expect.anything(),
+    );
+  });
+
+  // A server without `alreadyReported` answers a repeat with a Conflict.
   it('treats an already-flagged item as sent rather than failed', async () => {
     const { mock } = recordMock(MarkItemForReviewDocument, {
       data: {

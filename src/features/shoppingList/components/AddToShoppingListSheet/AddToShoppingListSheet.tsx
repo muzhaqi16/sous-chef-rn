@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
   useShoppingListSuggestions,
@@ -24,6 +23,8 @@ import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
+  /** `details` opens on the form, for the + menu's "Add manually". */
+  startStep?: 'search' | 'details';
   shoppingListId: string | undefined;
   onClose: () => void;
   /** Initial search query to pre-populate when sheet opens */
@@ -34,13 +35,13 @@ interface AddToShoppingListSheetProps {
 
 export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   visible,
+  startStep,
   shoppingListId,
   onClose,
   initialSearchQuery = '',
   onItemAdded,
 }) => {
   const { t } = useTranslation();
-  const { toBarcode } = useAppNavigation();
   const { addItem, removeSuggestion, adding } = useAddToShoppingList({
     shoppingListId,
     suggestionsLimit: SHOPPING_SUGGESTIONS_LIMIT,
@@ -74,13 +75,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // focus effect re-presents the sheet on return. Calling onClose() here would
   // flip `visible` to false before the blur, so the sheet would stay closed on
   // return instead of restoring.
-  const handleScanPress = () => {
-    toBarcode({
-      source: 'shoppingList',
-      shoppingListId,
-    });
-  };
-
   // Prefilled name for the in-place details step. The shared AddItemSheet morphs
   // to the details form itself (see renderDetails); here we just seed the name.
   const [prefilledItemName, setPrefilledItemName] = useState('');
@@ -208,7 +202,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onDismissSuggestion={handleDismissSuggestion}
       isMutating={adding}
       onAddManually={handleAddManually}
-      onScanPress={handleScanPress}
+      startStep={startStep}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

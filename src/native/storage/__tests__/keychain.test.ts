@@ -64,6 +64,11 @@ describe('keychain storage', () => {
         'password123',
         expect.objectContaining({
           service: 'dev.souschef.app.credentials.user@test.com',
+          // Android asks for the finger to save too; the library's own title
+          // reads "Authenticate to retrieve secret".
+          authenticationPrompt: expect.objectContaining({
+            title: 'Save your sign-in on this device',
+          }),
         }),
       );
     });
@@ -150,23 +155,24 @@ describe('keychain storage', () => {
 
       const result = await loadCredentials('user@test.com');
       expect(result).toEqual({
+        status: 'read',
         username: 'user@test.com',
         password: 'password123',
       });
     });
 
-    it('returns null when no credentials exist', async () => {
+    it('reports no credentials as unavailable', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
 
       const result = await loadCredentials('user@test.com');
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
     });
 
-    it('returns null on error', async () => {
+    it('reports an error as unavailable', async () => {
       mockGetGenericPassword.mockRejectedValue(new Error('Keychain error'));
 
       const result = await loadCredentials('user@test.com');
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
     });
 
     it('reads the per-account service for the given email', async () => {
@@ -482,7 +488,7 @@ describe('keychain storage', () => {
 
       const result = await loadCredentials('user@test.com');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
       expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 
@@ -515,7 +521,7 @@ describe('keychain storage', () => {
 
       const result = await loadCredentials('user@test.com');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
       expect(mockResetGenericPassword).not.toHaveBeenCalled();
     });
 
@@ -525,18 +531,21 @@ describe('keychain storage', () => {
 
       const result = await loadCredentials('user@test.com');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
       expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 
-    it('keeps the slot when the person cancels the prompt', async () => {
+    it('keeps the slot, and says so, when the person cancels the iOS prompt', async () => {
+      // errSecUserCanceled, as RNKeychainManager.m rejects it.
       mockGetGenericPassword.mockRejectedValue(
-        new Error('User canceled the operation.'),
+        Object.assign(new Error('User canceled the operation.'), {
+          code: '-128',
+        }),
       );
 
       const result = await loadCredentials('user@test.com');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'cancelled' });
       expect(mockResetGenericPassword).not.toHaveBeenCalled();
     });
 
@@ -555,23 +564,29 @@ describe('keychain storage', () => {
         name: 'com.oblador.keychain.exceptions.CryptoFailedException',
       });
 
+    // 13 and 10 as the same phone gave them: "Use manual login" and the system
+    // back gesture ("Authentication canceled").
     it.each([
-      [10, 'Authentication canceled by user'],
-      [13, 'Use manual login'],
-      [5, 'Authentication canceled'],
-      [3, 'Authentication timed out'],
-      [7, 'Too many attempts. Try again later.'],
-      [9, 'Too many attempts. Biometric authentication disabled.'],
+      [10, 'Authentication canceled', 'cancelled'],
+      [13, 'Use manual login', 'cancelled'],
+      [5, 'Authentication canceled', 'cancelled'],
+      [3, 'Authentication timed out', 'unavailable'],
+      [7, 'Too many attempts. Try again later.', 'unavailable'],
+      [
+        9,
+        'Too many attempts. Biometric authentication disabled.',
+        'unavailable',
+      ],
     ])(
-      'keeps the slot when the Android prompt ends with code %i',
-      async (errorCode, msg) => {
+      'keeps the slot when the Android prompt ends with code %i, as %s',
+      async (errorCode, msg, status) => {
         mockGetGenericPassword.mockRejectedValue(
           androidPromptOutcome(errorCode, msg),
         );
 
         const result = await loadCredentials('user@test.com');
 
-        expect(result).toBeNull();
+        expect(result).toEqual({ status });
         expect(mockResetGenericPassword).not.toHaveBeenCalled();
       },
     );
@@ -594,7 +609,7 @@ describe('keychain storage', () => {
 
       const result = await loadCredentials('user@test.com');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'unavailable' });
       expect(mockResetGenericPassword).toHaveBeenCalled();
     });
 

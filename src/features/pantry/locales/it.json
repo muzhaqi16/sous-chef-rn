@@ -145,13 +145,11 @@
     "sortRecentlyAdded": "Aggiunti di recente"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Aggiungi alla lista della spesa",
     "tutorialAddSubtitle": "Tocca per aggiungere questo articolo alla tua lista della spesa",
     "tutorialAddAllTitle": "Aggiungi tutto in una volta",
     "tutorialAddAllSubtitle": "Aggiungi tutti gli articoli con poche scorte alla lista della spesa in una volta",
     "lowStockTitle": "Articoli con poche scorte",
     "lowStockEmpty": "Tutti gli articoli sono sopra il livello minimo di scorta",
-    "remaining": "{{quantity}} {{unit}} rimanenti",
     "expiringTitle": "Articoli in scadenza",
     "expiringEmpty": "Nessun articolo in scadenza a breve",
     "expiredTitle": "Articoli scaduti",
@@ -162,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "Nessuna dispensa disponibile",
     "viewAnalytics": "Statistiche"
-  },
-  "pantryHeader": {
-    "greeting": "Ciao, {{name}}!",
-    "homePromptSelect": "Tocca per scegliere una casa",
-    "homeNoneYet": "Nessuna casa ancora",
-    "homeFallback": "La tua casa",
-    "greetingNoName": "Ciao!"
   },
   "adjustQuantity": {
     "description": "Correggi le scorte e indica il motivo.",
@@ -274,7 +265,6 @@
   },
   "addToPantry": {
     "restocked": "Scorta di {{name}} aggiornata",
-    "fromReceipt": "Aggiungi da uno scontrino",
     "amountLeft_one": "Rimane {{amount}}",
     "amountLeft_other": "Rimangono {{amount}}",
     "lowStockSettings": "Impostazioni scorte basse",
@@ -319,14 +309,13 @@
   "pantryScreen": {
     "greetingFallback": "Buongiorno",
     "searchPlaceholder": "Cerca nella tua dispensa...",
-    "sort": "Ordina",
+    "sortedBy": "Ordina, ora per {{field}}",
     "tabAll": "Tutti",
     "tabPantry": "Dispensa",
     "tabUnassigned": "Non assegnati",
     "expiringCount": "{{count}} in scadenza",
     "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",
-    "analyticsAccessibility": "Visualizza analisi",
     "emptySubtitle": "Inizia a tenere traccia del cibo per ridurre gli sprechi",
     "noHomeTitle": "Nessuna casa ancora",
     "noHomeDescription": "Crea o unisciti a una casa per iniziare a tracciare il cibo",
@@ -339,8 +328,6 @@
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
     "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
     "tabEmptyFallbackName": "questa posizione",
-    "tutorialManageHomesTitle": "Tocca per gestire le case",
-    "tutorialManageHomesSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
     "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa",
@@ -378,6 +365,20 @@
     "title": "Articolo già in dispensa",
     "body": "Questo articolo è già nella tua dispensa in questa unità. Vuoi rifornirlo?",
     "restock": "Rifornisci"
+  },
+  "relinkItem": {
+    "action": "Non è questo articolo?",
+    "title": "Quale articolo è?",
+    "hint": "Scegli l'articolo giusto. Quantità, costi e cronologia restano.",
+    "searchPlaceholder": "Cerca articoli",
+    "moveTo": "Sposta su {{name}}",
+    "moving": "Spostamento…",
+    "moved": "Fatto: ora è {{name}}.",
+    "movedLearned": "Fatto: ora è {{name}}, e anche i prossimi scontrini lo riconosceranno.",
+    "duplicateBody": "La tua dispensa ha già {{name}} in questa unità, quindi questa voce resta com'era. Apri quella voce per aggiungere lì.",
+    "openExisting": "Apri",
+    "failedTitle": "Impossibile spostare questa voce",
+    "failedBody": "È rimasta com'era. Controlla la connessione e riprova."
   },
   "expirationAction": {
     "cooked": "Cucinato",

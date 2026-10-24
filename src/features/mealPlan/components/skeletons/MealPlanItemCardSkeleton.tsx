@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
@@ -7,7 +8,7 @@ import { rowType } from '#/theme/foundations/type';
 
 /** Uses the same row surface and slots as MealPlanItemCard. */
 export const MealPlanItemCardSkeleton: React.FC = () => (
-  <View style={commonStyles.rowWrapper}>
+  <RowCard>
     <View style={commonStyles.rowSurface}>
       <View style={commonStyles.rowContent}>
         <SkeletonBase width={24} height={24} borderRadius={12} />
@@ -26,7 +27,7 @@ export const MealPlanItemCardSkeleton: React.FC = () => (
         </View>
       </View>
     </View>
-  </View>
+  </RowCard>
 );
 
 const styles = StyleSheet.create(theme => ({

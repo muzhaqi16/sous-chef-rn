@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import { EmptyDayState } from '../EmptyDayState';
 
 jest.mock('#components/atoms/Icon', () => ({
@@ -19,37 +19,20 @@ jest.mock('#constants/layout', () => ({
 }));
 
 describe('EmptyDayState', () => {
-  it('renders no meals planned message', () => {
-    render(<EmptyDayState selectedDate={new Date('2026-03-02')} />);
+  it('says nothing is planned and points to the + to add a meal', () => {
+    render(<EmptyDayState selectedDate={new Date('2026-03-02')} canAdd />);
+
     expect(screen.getByText('No meals planned')).toBeTruthy();
+    expect(screen.getByText('Tap + to add a meal')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('renders add meal button when onAddMeal provided', () => {
-    const onAddMeal = jest.fn();
+  it('gives no hint to add when the plan is read-only', () => {
     render(
-      <EmptyDayState
-        selectedDate={new Date('2026-03-02')}
-        onAddMeal={onAddMeal}
-      />,
+      <EmptyDayState selectedDate={new Date('2026-03-02')} canAdd={false} />,
     );
-    expect(screen.getByText('Add a meal')).toBeTruthy();
-  });
 
-  it('calls onAddMeal when button pressed', async () => {
-    const user = userEvent.setup();
-    const onAddMeal = jest.fn();
-    render(
-      <EmptyDayState
-        selectedDate={new Date('2026-03-02')}
-        onAddMeal={onAddMeal}
-      />,
-    );
-    await user.press(screen.getByText('Add a meal'));
-    expect(onAddMeal).toHaveBeenCalled();
-  });
-
-  it('does not show add button when onAddMeal is not provided', () => {
-    render(<EmptyDayState selectedDate={new Date('2026-03-02')} />);
-    expect(screen.queryByText('Add a meal')).toBeNull();
+    expect(screen.getByText('No meals planned')).toBeTruthy();
+    expect(screen.queryByText('Tap + to add a meal')).toBeNull();
   });
 });

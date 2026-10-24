@@ -46,8 +46,7 @@ export function AddItemSheet<
   onDismissSuggestion,
   isMutating,
   onAddManually,
-  onScanPress,
-  receiptAction,
+  startStep = 'search',
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
@@ -69,7 +68,11 @@ export function AddItemSheet<
   // ONE sheet morphs between search, details and report: a second
   // BottomSheetModal races the global backdrop, and gorhom's default
   // `stackBehavior: 'switch'` minimizes this sheet rather than stacking on it.
-  const [step, setStep] = useState<'search' | 'details' | 'report'>('search');
+  const openingStep =
+    startStep === 'details' && renderDetails ? 'details' : 'search';
+  const [step, setStep] = useState<'search' | 'details' | 'report'>(
+    openingStep,
+  );
   const goBackToSearch = () => {
     setStep('search');
   };
@@ -137,18 +140,20 @@ export function AddItemSheet<
   if (prevIsOpen !== isOpen) {
     setPrevIsOpen(isOpen);
     setActiveSourceKey(null);
-    // Always reopen on the search step so a stale details or report step can
-    // never persist from a previous visit.
-    setStep('search');
+    // Always reopen on the step asked for, so a stale details or report step
+    // can never persist from a previous visit.
+    setStep(openingStep);
   }
 
   useEffect(() => {
     if (isOpen) {
       searchBarRef.current?.clear();
+      // Opened on the form: the owner preps its inputs, as "Add manually" does.
+      if (startStep === 'details') onAddManually('');
     } else {
       resetAutocomplete();
     }
-  }, [isOpen, resetAutocomplete]);
+  }, [isOpen, resetAutocomplete, startStep, onAddManually]);
 
   // With `renderDetails` this same sheet morphs to the details step, keeping
   // its search snap height; the user can drag it up to the 95% max.
@@ -258,7 +263,10 @@ export function AddItemSheet<
             onClose={goBackToSearch}
           />
         ) : step === 'details' && renderDetails ? (
-          renderDetails({ goBack: goBackToSearch })
+          // Opened on the form, there is no search to go back to: back closes.
+          renderDetails({
+            goBack: openingStep === 'details' ? onClose : goBackToSearch,
+          })
         ) : inDrilldown ? (
           <SuggestionDrilldown
             title={t(activeGroup.titleKey)}
@@ -287,7 +295,6 @@ export function AddItemSheet<
 
             {/* Search Input */}
             <SearchBar
-              showSearchIcon
               ref={searchBarRef}
               containerStyle={styles.searchBar}
               testID={catalogTestIDs.addItemSheetSearchInput(
@@ -302,24 +309,6 @@ export function AddItemSheet<
               autoCorrect={false}
               returnKeyType="search"
               isLoading={!!autocomplete.isLoading && hasSearchQuery}
-              rightActions={[
-                {
-                  icon: 'barcode-outline',
-                  onPress: onScanPress,
-                  accessibilityLabel: t('labels.scanBarcode'),
-                },
-                ...(receiptAction
-                  ? [
-                      {
-                        icon: 'receipt-outline',
-                        ...receiptAction,
-                        testID: catalogTestIDs.addItemSheetReceiptAction(
-                          config.testIDPrefix,
-                        ),
-                      },
-                    ]
-                  : []),
-              ]}
             />
 
             {/* Search Results */}

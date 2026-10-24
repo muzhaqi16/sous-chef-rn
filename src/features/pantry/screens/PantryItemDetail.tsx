@@ -1,4 +1,5 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
@@ -15,13 +16,14 @@ import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
 import { usePantryItemDetailData } from './usePantryItemDetailData';
 import {
+  useSelectedHomeId,
   useSelectedShoppingListId,
   useSelectedPantryId,
 } from '#store/useAppStore';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import {
   formatPackageBreakdownFull,
   formatQuantityBreakdown,
@@ -35,7 +37,11 @@ import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
-import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  EntryImageSource,
+  ItemCondition,
+} from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { hasNutritionData } from '#domain/nutrition';
@@ -44,6 +50,11 @@ import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
+import { entryGallery } from '#features/catalog/ui/entryGallery';
+import { EntryPhotoSheet } from '#features/catalog/ui/EntryPhotoSheet';
+import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
+import { RelinkItemSheet } from '#features/pantry/components/RelinkItemSheet';
 import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -98,9 +109,12 @@ export const PantryItemDetail: React.FC<
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
+  const selectedHomeId = useSelectedHomeId();
   const today = useToday();
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
+  const [relinkVisible, setRelinkVisible] = useState(false);
 
   const {
     item,
@@ -144,6 +158,13 @@ export const PantryItemDetail: React.FC<
       ),
   });
 
+  const reportPhotoActions = useReportPhotoHeaderAction(
+    item?.item,
+    item?.image,
+    pantryTestIDs.itemReportPhotoButton,
+  );
+  const entryPhoto = useEntryPhoto(selectedHomeId, item?.itemId);
+
   const handleEdit = () => {
     toPantryItem({ itemId });
   };
@@ -158,9 +179,15 @@ export const PantryItemDetail: React.FC<
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
   const categoryName = item?.item.categories[0]?.category.name ?? null;
-  const itemPhotos = galleryPhotos(item?.item.photos);
+  const gallery = entryGallery(item?.image, item?.item.photos);
+  const itemPhotos = gallery.photos;
+  // The viewer offers "Use this photo" on every photo but the one in use.
+  const pickableIndex = itemPhotos.findIndex(
+    photo => photo.id !== item?.image?.catalogImageId,
+  );
   const nutritionFacts = item?.item.nutritionFacts ?? null;
-  const showImages = itemPhotos.length > 0 || !!imageUrl;
+  const showImages =
+    itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
@@ -304,6 +331,18 @@ export const PantryItemDetail: React.FC<
             onPress: handleEdit,
             testID: pantryTestIDs.itemEditButton,
           },
+          {
+            icon: 'camera-outline',
+            accessibilityLabel: t('a11y.changePhoto'),
+            onPress: () => setPhotoSheetVisible(true),
+            testID: catalogTestIDs.entryPhotoChangeButton,
+          },
+          {
+            icon: 'swap-horizontal-outline',
+            accessibilityLabel: t('relinkItem.action'),
+            onPress: () => setRelinkVisible(true),
+            testID: pantryTestIDs.itemRelinkButton,
+          },
         ] satisfies HeaderAction[])
       : []),
     ...discardActions,
@@ -318,6 +357,8 @@ export const PantryItemDetail: React.FC<
           },
         ] satisfies HeaderAction[])
       : []),
+
+    ...reportPhotoActions,
   ];
 
   return (
@@ -336,6 +377,7 @@ export const PantryItemDetail: React.FC<
                 <GalleryHero
                   photos={itemPhotos}
                   fallbackImageUrl={imageUrl}
+                  leadImageUrl={gallery.leadImageUrl}
                   height={heroHeight}
                   onPhotoPress={setViewerIndex}
                 />
@@ -544,6 +586,47 @@ export const PantryItemDetail: React.FC<
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
           item={item.item}
+          entryPhoto={
+            permissions.canEditItems
+              ? {
+                  currentPhotoId: item.image?.catalogImageId ?? null,
+                  onUse: photoId => {
+                    void entryPhoto.pickItemPhoto(photoId).then(landed => {
+                      if (landed) setViewerIndex(null);
+                    });
+                  },
+                }
+              : null
+          }
+        />
+      )}
+      {!!permissions.canEditItems && (
+        <RelinkItemSheet
+          visible={relinkVisible}
+          onDismiss={() => setRelinkVisible(false)}
+          stack={{
+            id: item.id,
+            version: item.version,
+            itemId: item.itemId,
+            itemName: item.itemName,
+          }}
+          onConflictRefresh={handleRefresh}
+        />
+      )}
+      {!!permissions.canEditItems && (
+        <EntryPhotoSheet
+          visible={photoSheetVisible}
+          onDismiss={() => setPhotoSheetVisible(false)}
+          entryPhoto={entryPhoto}
+          hasHouseholdPhoto={item.image?.source === EntryImageSource.Household}
+          onPickItemPhoto={
+            pickableIndex >= 0
+              ? () => {
+                  setPhotoSheetVisible(false);
+                  setViewerIndex(pickableIndex);
+                }
+              : undefined
+          }
         />
       )}
     </>

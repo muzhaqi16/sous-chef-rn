@@ -1,4 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
+import { PantryItemCard } from '#features/pantry/components/PantryItemCard';
+import { PantryActionsProvider } from '#features/pantry/components/PantryActionsContext';
+import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -14,10 +17,7 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#components/atoms/Icon';
-import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
-import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
@@ -38,7 +38,6 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
-import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
@@ -47,15 +46,8 @@ import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
 } from '#features/pantry/context/FilteredItemsActionsContext';
-import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
-import {
-  daysUntilExpiry,
-  EXPIRING_SOON_DAYS,
-  expiryLabel,
-} from '#domain/expiry';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { daysUntilExpiry, EXPIRING_SOON_DAYS } from '#domain/expiry';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
@@ -95,17 +87,7 @@ interface ModeConfig {
   serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
   sort?: (a: FilteredItem, b: FilteredItem) => number;
-  subtitle: (item: FilteredItem) => string;
   tutorialSteps: TutorialStep[];
-}
-
-function formatExpirySubtitle(
-  expiresOn: string | null | undefined,
-  today: string,
-  t: Translate,
-): string {
-  if (!expiresOn) return '';
-  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
 }
 
 /** Soonest first; YYYY-MM-DD orders as text, and an undated item goes last. */
@@ -129,15 +111,10 @@ function buildModeConfig(
       // the `lowStockAlert` opt-in, which is only a notification preference.
       serverFilters: { lowStock: true },
       filter: item => item.isLowStock,
-      subtitle: item =>
-        t('filteredPantry.remaining', {
-          quantity: formatQuantityForDisplay(item.displayAmount.quantity),
-          unit: item.displayAmount.unit.symbol,
-        }).trim(),
       tutorialSteps: [
         {
           featureId: 'low_stock_tutorial_item_cart',
-          title: t('filteredPantry.tutorialAddTitle'),
+          title: t('labels.addToShoppingList'),
           subtitle: t('filteredPantry.tutorialAddSubtitle'),
           rectKey: 'itemCart',
         },
@@ -166,7 +143,6 @@ function buildModeConfig(
         return days >= 0 && days <= EXPIRING_SOON_DAYS;
       },
       sort: byExpiry,
-      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
     expired: {
@@ -182,7 +158,6 @@ function buildModeConfig(
         daysUntilExpiry(item.expiresOn, today) < 0,
       // Longest-expired first.
       sort: byExpiry,
-      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
   };
@@ -196,19 +171,18 @@ type LayoutRect = { x: number; y: number; width: number; height: number };
 
 interface FilteredRenderItemProps {
   item: FilteredItem;
-  subtitleFn: (item: FilteredItem) => string;
   showCart: boolean;
   onCartMeasure?: (rect: LayoutRect) => void;
 }
 
+/** The pantry row itself, with this screen's cart after the quantity. */
 const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   item,
-  subtitleFn,
   showCart,
   onCartMeasure,
 }) => {
   const { t } = useTranslation();
-  const { navigateTo, handleAddToList } = useFilteredItemsActions();
+  const { handleAddToList } = useFilteredItemsActions();
   const { ref: cartRef, measure: measureCart } = useMeasuredRect(onCartMeasure);
 
   const cartButton =
@@ -228,90 +202,38 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
     ) : null;
 
   return (
-    <SwipeableItem
-      accessibilityLabel={accessibilityLabelOf(item.itemName, subtitleFn(item))}
-      onPress={() => navigateTo({ itemId: item.id })}
-    >
-      <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
-        <View style={styles.itemInfo}>
-          <Text role="bodyStrong">{item.itemName}</Text>
-          <Text role="caption" tone="secondary" style={styles.itemDetails}>
-            {subtitleFn(item)}
-          </Text>
-        </View>
-        {cartButton && onCartMeasure ? (
+    <PantryItemCard
+      pantryItemId={item.id}
+      accessory={
+        cartButton && onCartMeasure ? (
           <View ref={cartRef} collapsable={false} onLayout={measureCart}>
             {cartButton}
           </View>
         ) : (
           cartButton
-        )}
-      </View>
-    </SwipeableItem>
+        )
+      }
+    />
   );
 };
 
 const FilteredRenderItem = FilteredRenderItemComponent;
 
-interface FilteredRowSkeletonProps {
-  showCart: boolean;
-  titleHeight: number;
-  subtitleHeight: number;
-}
-
-/** The row above with bars for its text, so nothing shifts on reveal. */
-const FilteredRowSkeleton: React.FC<FilteredRowSkeletonProps> = ({
-  showCart,
-  titleHeight,
-  subtitleHeight,
-}) => (
-  <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
-    <View style={styles.itemInfo}>
-      <View style={styles.titleLine}>
-        <SkeletonLine width="60%" height={titleHeight} />
-      </View>
-      <View style={styles.subtitleLine}>
-        <SkeletonLine width="40%" height={subtitleHeight} />
-      </View>
-    </View>
-    {showCart ? (
-      <View style={styles.actionButton}>
-        <SkeletonCircle size={CART_ICON_SIZE} />
-      </View>
-    ) : null}
-  </View>
-);
-
 /**
- * A screenful of skeleton rows. The count is arithmetic over the theme, which
- * the density and text-size preferences scale, so it reads `theme` in JS.
+ * A screenful of the pantry row's skeleton. The count is arithmetic over the
+ * theme, which the density and text-size preferences scale, so it reads `theme`
+ * in JS.
  */
-const FilteredSkeleton: React.FC<{ showCart: boolean }> = ({ showCart }) => {
+const FilteredSkeleton: React.FC = () => {
   const { theme } = useUnistyles();
   const { height: windowHeight } = useWindowDimensions();
-  const { spacing, type } = theme;
-  // Card padding, both text lines and the card's bottom margin; the window's
-  // header height is slack.
-  const rowPitch =
-    spacing.md * 2 +
-    type.bodyStrong.lineHeight +
-    spacing.xs +
-    type.caption.lineHeight +
-    spacing.sm;
+  const count = Math.ceil(windowHeight / theme.sizes.itemCard.compact.height);
 
   return (
     <View testID={pantryTestIDs.loading}>
-      {Array.from(
-        { length: Math.ceil(windowHeight / rowPitch) },
-        (_, index) => (
-          <FilteredRowSkeleton
-            key={index}
-            showCart={showCart}
-            titleHeight={type.bodyStrong.fontSize}
-            subtitleHeight={type.caption.fontSize}
-          />
-        ),
-      )}
+      {Array.from({ length: count }, (_, index) => (
+        <PantryItemSkeleton key={index} />
+      ))}
     </View>
   );
 };
@@ -321,7 +243,6 @@ interface FilteredEmptyProps {
   onRetry: () => void;
   icon: string;
   message: string;
-  showCart: boolean;
 }
 
 /**
@@ -334,10 +255,9 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   onRetry,
   icon,
   message,
-  showCart,
 }) => {
   if (state === 'loading') {
-    return <FilteredSkeleton showCart={showCart} />;
+    return <FilteredSkeleton />;
   }
 
   if (state === 'error' || state === 'offline') {
@@ -495,8 +415,10 @@ export const FilteredPantryItems: React.FC<
   const showCart = !listRefusesAdds;
 
   const actions = {
-    navigateTo: (params: { itemId: string }) => toPantryItemDetail(params),
     ...(showCart && { handleAddToList }),
+  };
+  const rowActions = {
+    onItemPress: (id: string) => toPantryItemDetail({ itemId: id }),
   };
 
   const headerRightActions: HeaderAction[] | undefined = showCart
@@ -520,49 +442,49 @@ export const FilteredPantryItems: React.FC<
       gutter="none"
     >
       <FilteredItemsActionsProvider actions={actions}>
-        <FlashList
-          ref={flashListRef}
-          CellRendererComponent={perfCallbacks.CellRendererComponent}
-          onLoad={perfCallbacks.onLoad}
-          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-          renderScrollComponent={SwipeAwareScrollComponent}
-          style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, listInset]}
-          data={filteredItems}
-          keyExtractor={keyExtractor}
-          {...FLASHLIST_DEFAULTS.fullScreen}
-          getItemType={getItemType}
-          refreshControl={
-            <ThemedRefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          }
-          ListEmptyComponent={
-            <FilteredEmpty
-              state={dataState}
-              onRetry={handleRefresh}
-              icon={config.emptyIcon}
-              message={config.emptyMessage}
-              showCart={showCart}
-            />
-          }
-          renderItem={({
-            item,
-            index,
-          }: {
-            item: FilteredItem;
-            index: number;
-          }) => (
-            <FilteredRenderItem
-              item={item}
-              subtitleFn={config.subtitle}
-              showCart={showCart}
-              onCartMeasure={index === 0 ? setItemCartRect : undefined}
-            />
-          )}
-        />
+        <PantryActionsProvider actions={rowActions}>
+          <FlashList
+            ref={flashListRef}
+            CellRendererComponent={perfCallbacks.CellRendererComponent}
+            onLoad={perfCallbacks.onLoad}
+            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+            onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
+            renderScrollComponent={SwipeAwareScrollComponent}
+            style={styles.scrollView}
+            contentContainerStyle={[styles.scrollContent, listInset]}
+            data={filteredItems}
+            keyExtractor={keyExtractor}
+            {...FLASHLIST_DEFAULTS.fullScreen}
+            getItemType={getItemType}
+            refreshControl={
+              <ThemedRefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
+            }
+            ListEmptyComponent={
+              <FilteredEmpty
+                state={dataState}
+                onRetry={handleRefresh}
+                icon={config.emptyIcon}
+                message={config.emptyMessage}
+              />
+            }
+            renderItem={({
+              item,
+              index,
+            }: {
+              item: FilteredItem;
+              index: number;
+            }) => (
+              <FilteredRenderItem
+                item={item}
+                showCart={showCart}
+                onCartMeasure={index === 0 ? setItemCartRect : undefined}
+              />
+            )}
+          />
+        </PantryActionsProvider>
       </FilteredItemsActionsProvider>
 
       {tutorial.currentStep ? (
@@ -597,23 +519,6 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.md,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemDetails: {
-    marginTop: theme.spacing.xs,
-  },
-  // A skeleton bar is its text's font size; its line box is the text's leading,
-  // so the skeleton row stands as tall as the row it replaces.
-  titleLine: {
-    height: theme.type.bodyStrong.lineHeight,
-    justifyContent: 'center',
-  },
-  subtitleLine: {
-    marginTop: theme.spacing.xs,
-    height: theme.type.caption.lineHeight,
-    justifyContent: 'center',
   },
   actionButton: {
     padding: theme.spacing.xs,

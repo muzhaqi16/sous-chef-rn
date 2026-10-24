@@ -26,10 +26,8 @@ interface MockStore {
   preferredCurrency: string;
   navState: Record<string, unknown>;
   setAuthIsLoading: jest.Mock;
-  setAuthIsLoadingCredentials: jest.Mock;
   setAuth: jest.Mock;
   clearAuth: jest.Mock;
-  setRememberMe: jest.Mock;
   setPreferredCurrency: jest.Mock;
   updateUser: jest.Mock;
   getUserNavigationState: jest.Mock;
@@ -40,10 +38,8 @@ const mockStore: MockStore = {
   preferredCurrency: 'USD',
   navState: {},
   setAuthIsLoading: jest.fn(),
-  setAuthIsLoadingCredentials: jest.fn(),
-  setAuth: jest.fn(),
+  setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
-  setRememberMe: jest.fn(),
   setPreferredCurrency: jest.fn((code: string) => {
     mockStore.preferredCurrency = code;
   }),

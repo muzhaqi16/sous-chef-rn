@@ -17,10 +17,9 @@ jest.mock('#/apollo/client', () => ({
 
 const mockStore = {
   user: null as unknown,
-  setAuth: jest.fn(),
+  setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
   setAuthIsLoading: jest.fn(),
-  setRememberMe: jest.fn(),
   setNavigationState: jest.fn(),
   setPostLoginCredentials: jest.fn(),
   setHomeAndPantry: jest.fn(),

@@ -1,6 +1,10 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#hooks/apollo/standDownOptions';
 import { SHOPPING_LISTS_PAGE_SIZE } from './useShoppingListsQuery';
 
 /**
@@ -12,11 +16,20 @@ import { SHOPPING_LISTS_PAGE_SIZE } from './useShoppingListsQuery';
  */
 export function useShoppingListsLite({
   skip = false,
-}: { skip?: boolean } = {}) {
+  fetchPolicy,
+}: StandDownOptions = {}) {
   const { data, loading } = useQuery(
     GetShoppingListsLiteDocument,
-    skip ? skipToken : { variables: { first: SHOPPING_LISTS_PAGE_SIZE } },
+    skip
+      ? skipToken
+      : {
+          variables: { first: SHOPPING_LISTS_PAGE_SIZE },
+          ...heldFetchPolicy(fetchPolicy),
+        },
   );
 
-  return { lists: extractNodes(data?.shoppingLists), loading };
+  // A failed read answers `undefined`, not "no lists": keep the last answer.
+  const lists = usePreservedNodes(data?.shoppingLists, 'GetShoppingListsLite');
+
+  return { lists, loading };
 }

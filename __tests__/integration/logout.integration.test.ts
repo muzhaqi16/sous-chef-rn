@@ -19,6 +19,7 @@
 
 'use no memo';
 
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
@@ -84,7 +85,7 @@ describe('integration: logout clears Apollo cache and Zustand auth state', () =>
     const { client, cache, store } = makeAuthenticatedSetup();
 
     // Sanity: the seam starts in the "authenticated + populated cache" state.
-    expect(store.getState().getIsAuthenticated()).toBe(true);
+    expect(holdsSessionTokens(store.getState())).toBe(true);
     expect(store.getState().user?.id).toBe(seededUser.id);
     const populated = cache.extract();
     expect(populated.ROOT_QUERY).toBeDefined();
@@ -109,7 +110,7 @@ describe('integration: logout clears Apollo cache and Zustand auth state', () =>
     expect(finalState.user).toBeNull();
     expect(finalState.accessToken).toBeNull();
     expect(finalState.refreshToken).toBeNull();
-    expect(finalState.getIsAuthenticated()).toBe(false);
+    expect(holdsSessionTokens(finalState)).toBe(false);
   });
 
   it('does not leak previous-session entities into a fresh login', async () => {

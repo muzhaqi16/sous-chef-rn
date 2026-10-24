@@ -84,6 +84,10 @@ let dialAttempts = 0;
 type DialStage = 'dialing' | 'opened' | 'acked';
 let dialStage: DialStage = 'dialing';
 
+// The refresh token the current dial presented: a pair its ack rotates renews
+// THAT token, so it is stored only while that token still is.
+let dialRefreshToken: string | undefined;
+
 // One record per streak, then one per interval; the counter still counts every
 // dial. The backoff is capped, so an unattended failure would otherwise write
 // two records a minute for as long as the app stays open.
@@ -294,9 +298,13 @@ const persistRotatedTokensFromAck = (payload: unknown): void => {
   if (tokenRefreshed !== true) return;
   if (typeof accessToken !== 'string' || !accessToken) return;
   if (typeof refreshToken !== 'string' || !refreshToken) return;
+  // Nothing presented, nothing a rotation could have renewed.
+  if (!dialRefreshToken) return;
 
   logger.info('🔌 WebSocket handshake rotated the token pair — persisting');
-  useStore.getState().setTokens({ accessToken, refreshToken });
+  useStore
+    .getState()
+    .setTokens({ accessToken, refreshToken, replaces: dialRefreshToken });
 };
 
 const createWsClient = () => {
@@ -350,6 +358,7 @@ const createWsClient = () => {
       if (refreshToken && !isHttpRefreshInFlight?.()) {
         params.refreshToken = refreshToken;
       }
+      dialRefreshToken = params.refreshToken;
 
       // Double duty: echoed back as originatorClientId so we skip our own
       // mutations' pushes, and it keys supersession — a new socket with the

@@ -1,0 +1,15 @@
+{
+  "today": {
+    "firstRunTitle": "Inizia dalla dispensa",
+    "firstRunDescription": "Aggiungi quello che hai in cucina e qui vedrai cosa sta scadendo, cosa cucinare e cosa comprare.",
+    "mealsTitle": "Pasti di oggi",
+    "nothingPlanned": "Niente in programma per oggi",
+    "planMeal": "Pianifica un pasto",
+    "itemsLeft_one": "Resta {{count}} articolo da comprare",
+    "itemsLeft_other": "Restano {{count}} articoli da comprare",
+    "householdHint": "Cambia o gestisci le tue case",
+    "tutorialHouseholdTitle": "Tocca per gestire le case",
+    "tutorialHouseholdSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
+    "householdFallback": "La tua casa"
+  }
+}

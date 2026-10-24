@@ -6,9 +6,19 @@ import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import type { ImageFile } from '#/types/media';
 
+/** An add another tab asked a tab to start when it next gains focus. */
+export interface PendingTabAdd {
+  /** The tab's route name, such as `Pantry`. */
+  tab: string;
+  /** The `+` action to run; absent, one action runs and several open the menu. */
+  actionKey?: string;
+}
+
 export interface UIState {
   // Cross-navigation scroll flags
   pendingPantryScrollToTop: boolean;
+
+  pendingTabAdd: PendingTabAdd | null;
 
   // Tutorial reset signal (session-only counter; bumped by resetAllFeatureHints)
   tutorialResetGeneration: number;
@@ -24,6 +34,9 @@ export interface UIState {
 
   // Actions
   setPendingPantryScrollToTop: (pending: boolean) => void;
+  setPendingTabAdd: (pending: PendingTabAdd) => void;
+  /** Drops the add once it ran, said why it cannot, or its tab was left. */
+  clearPendingTabAdd: () => void;
   setPendingCroppedImage: (image: ImageFile | null) => void;
   /** Reads and clears in one step, so two screens cannot both collect it. */
   takePendingCroppedImage: () => ImageFile | null;
@@ -35,6 +48,7 @@ export interface UIState {
 
 const initialUIState = {
   pendingPantryScrollToTop: false,
+  pendingTabAdd: null,
   tutorialResetGeneration: 0,
   pendingCroppedImage: null,
   pendingItemImages: null,
@@ -51,6 +65,18 @@ export const createUISlice: StateCreator<
   setPendingPantryScrollToTop: pending => {
     set(state => {
       state.pendingPantryScrollToTop = pending;
+    });
+  },
+
+  setPendingTabAdd: pending => {
+    set(state => {
+      state.pendingTabAdd = pending;
+    });
+  },
+
+  clearPendingTabAdd: () => {
+    set(state => {
+      state.pendingTabAdd = null;
     });
   },
 
@@ -91,6 +117,7 @@ export const createUISlice: StateCreator<
  */
 export const TRANSIENT_UI_STATE = {
   pendingPantryScrollToTop: false,
+  pendingTabAdd: null,
   pendingCroppedImage: null,
   pendingItemImages: null,
 } satisfies Partial<UIState>;

@@ -4,6 +4,8 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { View as HeaderHost } from 'react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { t } from '#/i18n';
+import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { MealPlanMain } from '../MealPlanMain';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealType } from '#/graphql/generated/schemaTypes';
@@ -722,5 +724,83 @@ describe('MealPlanMain', () => {
 
       expect(header.queryByTestId(mealPlanTestIDs.mealsIncomplete)).toBeNull();
     });
+  });
+});
+
+// Always registered, so the `+` explains itself instead of doing nothing.
+describe('MealPlanMain + action', () => {
+  const mealAction = () =>
+    jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0][0];
+  const { useMealPlans } = jest.requireMock(
+    '#features/mealPlan/hooks/useMealPlans',
+  );
+  const { useMealPlan } = jest.requireMock(
+    '#features/mealPlan/screens/useMealPlan',
+  );
+  const { useMealPlanPermissions } = jest.requireMock(
+    '#features/mealPlan/hooks/useMealPlanPermissions',
+  );
+  const permissions = (canEdit: boolean) => ({
+    canEdit,
+    canDelete: canEdit,
+    canGenerateShoppingList: canEdit,
+    canSaveAsTemplate: canEdit,
+  });
+  const withPlan = (loaded: boolean) => {
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
+    useMealPlan.mockReturnValue({
+      mealPlan: loaded ? { id: 'plan-1', name: 'My Plan' } : null,
+      items: [],
+      nutritionSummary: null,
+      refetch: jest.fn().mockResolvedValue({}),
+    });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('runs for someone who can edit the plan', () => {
+    withPlan(true);
+    useMealPlanPermissions.mockReturnValue(permissions(true));
+    renderWithApollo(<MealPlanMain />);
+
+    expect(mealAction()).toMatchObject({ key: 'meal', pending: false });
+    expect(mealAction()?.disabledReason).toBeUndefined();
+  });
+
+  it('says a household with no plan creates one first', () => {
+    useMealPlans.mockReturnValue(mockMealPlansState());
+    useMealPlanPermissions.mockReturnValue(permissions(false));
+    renderWithApollo(<MealPlanMain />);
+
+    expect(mealAction()).toMatchObject({
+      disabledReason: t('mealPlan.addNeedsPlan'),
+      pending: false,
+    });
+  });
+
+  it('tells a viewer they cannot add to the plan', () => {
+    withPlan(true);
+    useMealPlanPermissions.mockReturnValue(permissions(false));
+    renderWithApollo(<MealPlanMain />);
+
+    expect(mealAction()).toMatchObject({
+      disabledReason: t('mealPlan.noAddPermission'),
+      pending: false,
+    });
+  });
+
+  it('waits while the plan it would add to is loading', () => {
+    withPlan(false);
+    useMealPlanPermissions.mockReturnValue(permissions(false));
+    renderWithApollo(<MealPlanMain />);
+
+    expect(mealAction()).toMatchObject({ pending: true });
   });
 });

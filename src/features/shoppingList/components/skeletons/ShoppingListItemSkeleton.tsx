@@ -1,4 +1,5 @@
 import React from 'react';
+import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
@@ -22,7 +23,7 @@ export const ShoppingListItemSkeleton: React.FC<
   ShoppingListItemSkeletonProps
 > = ({ animated = true }) => {
   return (
-    <View style={commonStyles.rowWrapper}>
+    <RowCard>
       <ListItem>
         <SkeletonCircle size={24} animated={animated} />
         <SkeletonRectangle
@@ -42,7 +43,7 @@ export const ShoppingListItemSkeleton: React.FC<
         </View>
         <SkeletonLine width={40} height={30} animated={animated} />
       </ListItem>
-    </View>
+    </RowCard>
   );
 };
 

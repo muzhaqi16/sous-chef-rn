@@ -66,6 +66,20 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+// A tab that reads the plans from beside Meal Plan stands down while hidden.
+it('asks for neither page while the caller skips it', () => {
+  const list = recordMock(GetMealPlansDocument, {
+    error: new Error('should not fire while skipped'),
+  });
+
+  const { result } = renderHookWithApollo(() => useMealPlans({ skip: true }), {
+    operationMocks: [list.mock],
+  });
+
+  expect(list.fired).toHaveLength(0);
+  expect(result.current.state.mealPlans).toEqual([]);
+});
+
 function planConnection(
   plans: Array<{ id: string; startDate: string; endDate: string }>,
 ): MockDataFor<typeof GetMealPlansDocument> {

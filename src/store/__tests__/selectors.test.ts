@@ -4,7 +4,6 @@ import {
   useSelectedHomeId,
   useSelectedPantryId,
   useSelectedShoppingListId,
-  useIsLoggingOut,
   useIsHydrated,
   useIsOnline,
   useIsHomeSelectionReady,
@@ -34,9 +33,7 @@ const mockState: Record<string, unknown> = {
   selectedHomeId: 'home-1',
   selectedPantryId: 'pantry-1',
   selectedShoppingListId: 'list-1',
-  isLoggingOut: false,
   isHydrated: true,
-  isAutoLoggingIn: false,
   isOnline: true,
   isHomeSelectionReady: true,
   setHomeAndPantry: jest.fn(),
@@ -49,14 +46,10 @@ const mockState: Record<string, unknown> = {
   updateUser: jest.fn(),
   setEmailVerified: jest.fn(),
   setOnboarded: jest.fn(),
-  setRememberMe: jest.fn(),
-  setIsAutoLoggingIn: jest.fn(),
   setUserNavigationState: jest.fn(),
   navigationState: 'main_app',
-  showBiometricSetup: false,
   postLoginCredentials: null,
   setNavigationState: jest.fn(),
-  setShowBiometricSetup: jest.fn(),
   setPostLoginCredentials: jest.fn(),
   scannerSheetVisible: false,
   hideBottomSheet: jest.fn(),
@@ -94,7 +87,6 @@ afterEach(() => {
       emailVerified: true,
       onBoarded: true,
     },
-    isLoggingOut: false,
     isOnline: true,
     isHomeSelectionReady: true,
   });
@@ -129,11 +121,6 @@ describe('atomic hooks', () => {
   it('useIsHydrated returns isHydrated', () => {
     const { result } = renderHook(() => useIsHydrated());
     expect(result.current).toBe(true);
-  });
-
-  it('useIsLoggingOut returns isLoggingOut', () => {
-    const { result } = renderHook(() => useIsLoggingOut());
-    expect(result.current).toBe(false);
   });
 
   it('useIsHomeSelectionReady returns flag', () => {
@@ -209,7 +196,6 @@ describe('grouped hooks', () => {
   it('usePostLoginState returns grouped post-login state', () => {
     const { result } = renderHook(() => usePostLoginState());
     expect(result.current.navigationState).toBe('main_app');
-    expect(result.current.showBiometricSetup).toBe(false);
     expect(result.current.setNavigationState).toBe(
       mockState.setNavigationState,
     );

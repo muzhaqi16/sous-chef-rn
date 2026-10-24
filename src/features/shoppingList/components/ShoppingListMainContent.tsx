@@ -114,6 +114,7 @@ export const ShoppingListMainContent: React.FC<
 
   const {
     openAddItemSheet,
+    openAddItemManually,
     openQuantityEdit,
     openPurchaseAmount,
     openMoveToPantry,
@@ -279,19 +280,10 @@ export const ShoppingListMainContent: React.FC<
   const permissions = useShoppingListPermissions(currentListDetails, user?.id);
   const networkWithheld = useIsApiUnavailable();
 
-  const switchListAction: BarAction = {
-    icon: 'list',
-    tone: 'textSecondary',
-    onPress: handleOpenSelector,
-    testID: shoppingListTestIDs.listSelectorButton,
-    accessibilityLabel: t('shoppingListScreen.switchListAccessibility'),
-  };
-
   // One declaration of this screen's tab header. The no-lists branch has no list
   // to name, so it shows the generic one.
   const tabHeader: ScreenHeaderConfig = {
     variant: 'tab',
-    label: t('shoppingListScreen.label'),
     title: t('labels.shoppingList'),
   };
   // Opt-in from Settings: the list walked aisle by aisle on its own screen.
@@ -308,9 +300,12 @@ export const ShoppingListMainContent: React.FC<
   const selectedListHeader: ScreenHeaderConfig = {
     ...tabHeader,
     title: currentList?.name ?? tabHeader.title,
-    actions: storeModeAction
-      ? [storeModeAction, switchListAction]
-      : [switchListAction],
+    switchable: {
+      onPress: handleOpenSelector,
+      accessibilityHint: t('shoppingListScreen.switchListAccessibility'),
+      testID: shoppingListTestIDs.listSelectorButton,
+    },
+    actions: storeModeAction ? [storeModeAction] : undefined,
   };
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
@@ -321,7 +316,6 @@ export const ShoppingListMainContent: React.FC<
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={t('shoppingListScreen.searchPlaceholder')}
-        showSearchIcon
       />
     </View>
   );
@@ -398,18 +392,40 @@ export const ShoppingListMainContent: React.FC<
   const addRefusal = permissions.resolved
     ? t('shoppingListScreen.noAddPermission')
     : t('labels.loading');
+  // Every way to add is one tap from here, as on Recipes.
+  const addDisabledReason = permissions.canAddItems ? undefined : addRefusal;
+  // An add handed over from Today waits for this, not for the refusal.
+  const addPending = !permissions.resolved;
   useTabBarAddMenu([
     {
-      key: 'item',
-      label: t('labels.addItem'),
-      icon: 'add',
+      key: 'search',
+      label: t('labels.searchToAdd'),
+      icon: 'search',
       onPress: () => {
         Telemetry.trackEvent('add_item_from_tab_bar', {
           list_id: currentListId,
         });
         openAddItemSheet();
       },
-      disabledReason: permissions.canAddItems ? undefined : addRefusal,
+      disabledReason: addDisabledReason,
+      pending: addPending,
+    },
+    {
+      key: 'barcode',
+      label: t('labels.scanBarcode'),
+      icon: 'barcode-outline',
+      onPress: () =>
+        toBarcode({ source: 'shoppingList', shoppingListId: currentListId }),
+      disabledReason: addDisabledReason,
+      pending: addPending,
+    },
+    {
+      key: 'manual',
+      label: t('labels.addManually'),
+      icon: 'create-outline',
+      onPress: openAddItemManually,
+      disabledReason: addDisabledReason,
+      pending: addPending,
     },
   ]);
 

@@ -119,10 +119,12 @@
     "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
     "photosOnlyTitle": "Foto aggiunta",
     "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
+    "photosForReviewTitle": "Foto inviata per la revisione",
+    "photosForReviewBody": "Un amministratore la controlla prima che tutti la vedano. Fino ad allora la vedi solo tu. Modifica anche un campo se c'è altro da correggere.",
     "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
-    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore."
+    "photoNotice": "Un amministratore esamina le foto e le altre modifiche prima che tutti le vedano."
   },
   "reportItem": {
     "footer": "Dettagli sbagliati in uno di questi?",
@@ -136,7 +138,11 @@
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
     "alreadyReportedTitle": "Già segnalato",
-    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato."
+    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
+    "wrongPhotoAction": "Segnala foto errata",
+    "wrongPhotoConfirmTitle": "Segnalare questa foto?",
+    "wrongPhotoConfirmBody": "Un amministratore verificherà se mostra questo articolo.",
+    "wrongPhotoConfirm": "Segnala"
   },
   "addItemForm": {
     "modes": {
@@ -295,7 +301,18 @@
       "top": "Alto",
       "nutrition_label": "Valori nutrizionali",
       "ingredient_list": "Ingredienti"
-    }
+    },
+    "householdPhoto": "La foto della tua casa"
+  },
+  "entryPhoto": {
+    "title": "Foto per la tua casa",
+    "privacyNote": "Solo le persone della tua casa vedono questa foto. Il catalogo mantiene la sua.",
+    "pickItemPhoto": "Usa una delle foto di questo articolo",
+    "useCatalogPhoto": "Usa la foto del catalogo",
+    "useThisPhoto": "Usa questa foto",
+    "saving": "Salvataggio della foto…",
+    "failedTitle": "Impossibile cambiare la foto",
+    "failedBody": "La foto è rimasta com'era. Controlla la connessione e riprova."
   },
   "itemForm": {
     "unknownUnit": "\"{{unit}}\" non è un'unità che riconosciamo. Scegline una dall'elenco.",

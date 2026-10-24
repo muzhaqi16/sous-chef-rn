@@ -7,7 +7,6 @@ import {
   usePantryState,
   useIsHomeSelectionReady,
   useSetIsHomeSelectionReady,
-  useIsLoggingOut,
   useAppStore,
 } from '#store/useAppStore';
 import { useStore } from '#store';
@@ -66,29 +65,12 @@ export const useDefaultHome = () => {
     selectedPantryId,
     setSelectedPantryId,
   } = usePantryState();
-  const canAttemptQueries = useAppStore(
-    state => holdsSessionTokens(state) && !state.isLoggingOut,
-  );
+  const canAttemptQueries = useAppStore(holdsSessionTokens);
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
   // Track if we've already triggered auto-select for first home
   const hasAutoSelectedRef = useRef(false);
-
-  // Track logout state to reset refs when user logs out
-  const isLoggingOut = useIsLoggingOut();
-  const wasLoggingOutRef = useRef(false);
-
-  // Reset refs when logout starts
-  useEffect(() => {
-    if (isLoggingOut && !wasLoggingOutRef.current) {
-      // Logout just started - reset refs so next login gets fresh data
-      hasInitializedRef.current = false;
-      hasAutoSelectedRef.current = false;
-      logger.debug('🔄 Reset useDefaultHome refs on logout');
-    }
-    wasLoggingOutRef.current = isLoggingOut;
-  }, [isLoggingOut]);
 
   // Home selection ready state - gates pantry queries
   const isHomeSelectionReady = useIsHomeSelectionReady();

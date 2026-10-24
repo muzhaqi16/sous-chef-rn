@@ -7,6 +7,10 @@ import {
   type MealPlanFilters,
 } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#hooks/apollo/standDownOptions';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import {
@@ -24,8 +28,7 @@ const PAGE_SIZE = 20;
 /** Plans overlapping today, nearest first: a handful covers every real case. */
 const CURRENT_PLAN_PAGE_SIZE = 3;
 
-interface MealPlanListOptions {
-  skip?: boolean;
+interface MealPlanListOptions extends StandDownOptions {
   orderBy?: SortOrder;
   first?: number;
 }
@@ -35,6 +38,7 @@ export function useMealPlanList(
   filters: MealPlanFilters | undefined,
   {
     skip = false,
+    fetchPolicy,
     orderBy = SortOrder.Desc,
     first = PAGE_SIZE,
   }: MealPlanListOptions = {},
@@ -52,7 +56,10 @@ export function useMealPlanList(
     GetMealPlansDocument,
     skipped
       ? skipToken
-      : { variables: { first, filters, orderBy: { startDate: orderBy } } },
+      : {
+          variables: { first, filters, orderBy: { startDate: orderBy } },
+          ...heldFetchPolicy(fetchPolicy),
+        },
   );
   // `skipToken` keeps the last run's data even when the filters have moved on
   // (a new day's `startDate`); a skipped variant answers nothing.
@@ -106,8 +113,8 @@ export function useMealPlanDisplay(
   return planId && complete ? data : null;
 }
 
-export function useMealPlans() {
-  const list = useMealPlanList(undefined);
+export function useMealPlans({ skip, fetchPolicy }: StandDownOptions = {}) {
+  const list = useMealPlanList(undefined, { skip, fetchPolicy });
 
   // `filters.startDate` keeps plans ending today or later, ascending, so the
   // current plan is on page one unless a full page overlaps today. Skipped once
@@ -119,7 +126,8 @@ export function useMealPlans() {
     {
       orderBy: SortOrder.Asc,
       first: CURRENT_PLAN_PAGE_SIZE,
-      skip: listActive,
+      skip: listActive || skip,
+      fetchPolicy,
     },
   );
 

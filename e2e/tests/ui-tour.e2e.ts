@@ -15,6 +15,7 @@ import { pantryTestIDs } from '../../src/features/pantry/testIDs';
 import { profileTestIDs } from '../../src/features/profile/testIDs';
 import { recipesTestIDs } from '../../src/features/recipes/testIDs';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
 
 const settle = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -83,6 +84,9 @@ describe('UI Tour', () => {
     await expect(element(by.id(kitTestIDs.tabBar))).toBeVisible();
     await shoot('00-launch');
 
+    await goTab(kitTestIDs.tab('Today'), todayTestIDs.screen);
+    await shoot('01-today');
+
     await goTab(kitTestIDs.tab('Pantry'), pantryTestIDs.screen);
     await shoot('01-pantry');
 
@@ -106,8 +110,8 @@ describe('UI Tour', () => {
 
     // Secondary surfaces — best-effort, so a hiccup never fails the assertions
     // above.
-    await safe('Profile (header avatar)', async () => {
-      await goTab(kitTestIDs.tab('Pantry'), pantryTestIDs.screen);
+    await safe("Profile (Today's header)", async () => {
+      await goTab(kitTestIDs.tab('Today'), todayTestIDs.screen);
       await element(by.id(kitTestIDs.tab('Profile'))).tap();
       try {
         await waitFor(element(by.id(profileTestIDs.profileScreen)))

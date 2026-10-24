@@ -52,6 +52,11 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   remainingPortions
   activeBatchCount
   earliestBatchExpiresOn
+  image {
+    url
+    source
+    catalogImageId
+  }
   item {
     id
     imageUrl

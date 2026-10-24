@@ -2,6 +2,7 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useShallow } from 'zustand/react/shallow';
 import type { RootState } from './index';
 import { storeApi } from './index';
+import { isSignedIn } from './slices/authSlice';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
@@ -16,7 +17,6 @@ const selectUserId = (state: RootState) => state.user?.id;
 const selectUpdateUser = (state: RootState) => state.updateUser;
 const selectHasStoredCredentials = (state: RootState) =>
   state.hasStoredCredentials;
-const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
 const selectCanAccessDevTools = (state: RootState) =>
   state.user?.canAccessDevTools === true;
@@ -27,6 +27,8 @@ const selectSelectedShoppingListId = (state: RootState) =>
   state.selectedShoppingListId;
 const selectSetSelectedPantryId = (state: RootState) =>
   state.setSelectedPantryId;
+const selectSetPendingTabAdd = (state: RootState) => state.setPendingTabAdd;
+const selectPendingTabAdd = (state: RootState) => state.pendingTabAdd;
 
 const selectIsHomeSelectionReady = (state: RootState) =>
   state.isHomeSelectionReady;
@@ -71,10 +73,8 @@ const selectShowTutorials = (state: RootState) => state.showTutorials;
 
 const selectPostLoginState = (state: RootState) => ({
   navigationState: state.navigationState,
-  showBiometricSetup: state.showBiometricSetup,
   postLoginCredentials: state.postLoginCredentials,
   setNavigationState: state.setNavigationState,
-  setShowBiometricSetup: state.setShowBiometricSetup,
   setPostLoginCredentials: state.setPostLoginCredentials,
 });
 
@@ -122,6 +122,7 @@ const selectThemePreferences = (state: RootState) => ({
 
 export const useUser = () => useAppStore(selectUser);
 export const useUserId = () => useAppStore(selectUserId);
+export const useIsSignedIn = () => useAppStore(isSignedIn);
 export const useUpdateUser = () => useAppStore(selectUpdateUser);
 /** Null until a slot check has answered; false once one is proven unusable. */
 export const useHasStoredCredentials = () =>
@@ -130,9 +131,12 @@ export const useSelectedHomeId = () => useAppStore(selectSelectedHomeId);
 export const useSelectedPantryId = () => useAppStore(selectSelectedPantryId);
 export const useSetSelectedPantryId = () =>
   useAppStore(selectSetSelectedPantryId);
+/** Leaves an add for another tab to start once it has focus. */
+export const useSetPendingTabAdd = () => useAppStore(selectSetPendingTabAdd);
+/** The add another tab left for its tab to start. */
+export const usePendingTabAdd = () => useAppStore(selectPendingTabAdd);
 export const useSelectedShoppingListId = () =>
   useAppStore(selectSelectedShoppingListId);
-export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
 /** The units held on the device for offline autocomplete and lookups. */

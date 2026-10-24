@@ -7,9 +7,10 @@
 import { createApolloClient } from '#/apollo/client';
 import {
   registerSessionHost,
+  sessionHost,
   type SessionHost,
 } from '#/services/auth/sessionHost';
-import { authService } from '#/services/authService';
+import { authService, handleLogin } from '#/services/authService';
 import { errorService } from '#/services/errorService';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { useStore } from '#store';
@@ -46,6 +47,10 @@ const HOSTS: [string, SessionHost][] = [
       },
       postSignInGate: () => Promise.reject(fail('postSignInGate')),
       forgetStoredSignIn: () => Promise.reject(fail('forgetStoredSignIn')),
+      renewStoredSignIn: () => Promise.reject(fail('renewStoredSignIn')),
+      onSessionEnd: () => {
+        throw fail('onSessionEnd');
+      },
     },
   ],
   [
@@ -59,6 +64,12 @@ const HOSTS: [string, SessionHost][] = [
       },
       forgetStoredSignIn: () => {
         throw fail('forgetStoredSignIn');
+      },
+      renewStoredSignIn: () => {
+        throw fail('renewStoredSignIn');
+      },
+      onSessionEnd: () => {
+        throw fail('onSessionEnd');
       },
     },
   ],
@@ -78,14 +89,18 @@ afterAll(() => {
 });
 
 const reportedSteps = (report: jest.SpyInstance): unknown[] =>
-  report.mock.calls.map(([, context]) => (context as { operation: string }).operation);
+  report.mock.calls.map(
+    ([, context]) => (context as { operation: string }).operation,
+  );
 
 describe.each(HOSTS)('a host whose steps %s', (_, host) => {
   let report: jest.SpyInstance;
 
   beforeEach(() => {
     registerSessionHost(host);
-    report = jest.spyOn(errorService, 'reportError').mockImplementation(() => {});
+    report = jest
+      .spyOn(errorService, 'reportError')
+      .mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -95,18 +110,17 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
   it('opens the session the server issued and routes into the app', async () => {
     const signInsBefore = useStore.getState().loginCounts[USER.id] ?? 0;
 
-    // `login()` reports success exactly when this resolves.
+    // `login()` reports success exactly when this resolves true.
     await expect(
-      authService.handleLogin(
+      handleLogin(
         {
           user: USER,
           accessToken: ACCESS_TOKEN,
           refreshToken: 'refresh-token',
         },
-        undefined,
         { email: EMAIL },
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
 
     const state = useStore.getState();
     expect(state.user?.id).toBe(USER.id);
@@ -128,6 +142,22 @@ describe.each(HOSTS)('a host whose steps %s', (_, host) => {
     expect(state.user).toBeNull();
     expect(state.accessToken).toBeNull();
     expect(state.navigationState).toBe('auth');
-    expect(reportedSteps(report)).toEqual(['sessionHost.forgetStoredSignIn']);
+    expect(reportedSteps(report)).toEqual([
+      'sessionHost.forgetStoredSignIn',
+      'sessionHost.onSessionEnd',
+    ]);
+  });
+
+  // A password change this session survived: a failed renewal is the host's
+  // to report, and nothing it does may end or alter the session.
+  it('keeps the session when renewing a stored sign-in fails', async () => {
+    useStore.getState().setAuth(USER, ACCESS_TOKEN, 'refresh-token');
+
+    await expect(sessionHost().renewStoredSignIn(EMAIL)).resolves.toBe('none');
+
+    const state = useStore.getState();
+    expect(state.user?.id).toBe(USER.id);
+    expect(state.accessToken).toBe(ACCESS_TOKEN);
+    expect(reportedSteps(report)).toEqual(['sessionHost.renewStoredSignIn']);
   });
 });

@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 /**
@@ -118,9 +119,9 @@ jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
 }));
 
 jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: () => {
+  CachedImage: ({ uri }: { uri?: string | null }) => {
     const { View } = require('react-native');
-    return <View testID="cached-image" />;
+    return <View testID="cached-image" accessibilityLabel={uri ?? undefined} />;
   },
 }));
 
@@ -134,6 +135,20 @@ jest.mock('#/styles/commonStyles', () => ({
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
+}));
+
+jest.mock('#components/atoms/RowCard', () => ({
+  RowCard: ({ children }: { children?: React.ReactNode }) => {
+    const { View } = require('react-native');
+    return <View testID="row-card">{children}</View>;
+  },
+}));
+
+jest.mock('#components/atoms/ThemeEpochSentinel', () => ({
+  ThemeEpochSentinel: () => {
+    const { View } = require('react-native');
+    return <View testID="theme-epoch-sentinel" />;
+  },
 }));
 
 jest.mock('#hooks/animations/useSlideAnimation', () => ({
@@ -217,6 +232,7 @@ import { QueueStatus } from '#/apollo/offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -228,6 +244,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
   > = {
     __typename: 'ShoppingListItem',
     id: 'item-1',
+    image: null,
     itemName: 'Milk',
     quantity: 1,
     quantityInput: null,
@@ -301,6 +318,29 @@ describe('SwipeableListItem (SortableItem)', () => {
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
+  // The household overrides the item photo on its own entries.
+  it("shows the household's photo over the catalog's", () => {
+    renderRow(
+      seedItem({
+        image: {
+          __typename: 'EntryImage',
+          url: 'https://cdn.example.com/our-milk.jpg',
+          source: EntryImageSource.Household,
+          catalogImageId: null,
+        },
+        item: {
+          __typename: 'Item',
+          id: 'milk',
+          imageUrl: 'https://cdn.example.com/catalog-milk.jpg',
+          images: [],
+        },
+      }),
+    );
+    expect(screen.getByTestId('cached-image').props.accessibilityLabel).toBe(
+      'https://cdn.example.com/our-milk.jpg',
+    );
+  });
+
   it('renders the item subtitle derived from category', () => {
     const entry = seedItem();
     renderRow(entry);
@@ -356,6 +396,29 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderRow(entry);
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
+  });
+
+  // A card left outside the slide stays on screen, empty, as its row leaves.
+  it('slides the whole card, its theme kept by a sentinel', () => {
+    const slide = { transform: [{ translateX: 7 }] };
+    const { useSlideAnimation } = jest.requireMock(
+      '#hooks/animations/useSlideAnimation',
+    );
+    useSlideAnimation.mockReturnValueOnce({
+      animatedSlideStyle: slide,
+      triggerSlide: jest.fn(),
+    });
+    renderRow(seedItem());
+
+    let node = screen.getByTestId('row-card').parent;
+    while (
+      node &&
+      StyleSheet.flatten(node.props.style)?.transform !== slide.transform
+    ) {
+      node = node.parent;
+    }
+    expect(node).not.toBeNull();
+    expect(within(node!).getByTestId('theme-epoch-sentinel')).toBeTruthy();
   });
 
   it('renders a list item', () => {

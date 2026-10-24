@@ -130,7 +130,7 @@ describe('SearchResults', () => {
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
   });
 
-  it('renders Add to Shopping List button for shopping list source', () => {
+  it('renders Add to shopping list button for shopping list source', () => {
     renderWithApollo(
       <SearchResults
         {...defaultProps}
@@ -138,7 +138,7 @@ describe('SearchResults', () => {
         shoppingListId="list-1"
       />,
     );
-    expect(screen.getByText('Add to Shopping List')).toBeTruthy();
+    expect(screen.getByText('Add to shopping list')).toBeTruthy();
   });
 
   it('renders Scan Another button', () => {

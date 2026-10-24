@@ -50,7 +50,7 @@ const motionStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
 ```
 
 Or move the themed style to a non-animated parent, as the list rows do with
-`commonStyles.rowWrapper`. A non-animated child is not safe on its own: it
+`RowCard`. A non-animated child is not safe on its own: it
 reverts with the view above it unless the container renders a
 `ThemeEpochSentinel`.
 

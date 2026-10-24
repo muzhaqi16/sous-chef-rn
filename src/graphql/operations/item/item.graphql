@@ -269,6 +269,8 @@ mutation MarkItemForReview($input: MarkItemForReviewInput!) {
   markItemForReview(input: $input) {
     __typename
     ... on MarkItemForReviewPayload {
+      # A repeat of the caller's own open report: nothing new was recorded.
+      alreadyReported
       item {
         id
         ...ItemReaders

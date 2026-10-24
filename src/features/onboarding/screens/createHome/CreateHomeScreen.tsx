@@ -210,10 +210,7 @@ const CreateHomeScreenComponent = () => {
   const hasTrackedStartRef = useRef(false);
   useEffect(() => {
     if (user?.id && !hasTrackedStartRef.current) {
-      setUserNavigationState(user.id, {
-        onboardingStartedAt: Date.now(),
-        isNewUser: true,
-      });
+      setUserNavigationState(user.id, { isNewUser: true });
       hasTrackedStartRef.current = true;
     }
   }, [user?.id, setUserNavigationState]);

@@ -7,11 +7,11 @@ const ITEM = 'pantry-item';
 export const pantryTestIDs = {
   screen: 'pantry-screen',
   loading: 'pantry-loading',
-  greetingRow: 'pantry-greeting-row',
   list: 'pantry-list',
   listSkeletonOverlay: 'pantry-list-skeleton-overlay',
   refreshControl: 'pantry-refresh-control',
   searchInput: 'pantry-search-input',
+  selectPantryButton: 'pantry-select-pantry-button',
   emptyState: 'pantry-empty-state',
   sortButton: 'pantry-sort-button',
   sortModal: 'pantry-sort-modal',
@@ -26,6 +26,12 @@ export const pantryTestIDs = {
   itemAdjustButton: 'pantry-item-adjust-button',
   itemEditButton: 'pantry-item-edit-button',
   itemDeleteButton: 'pantry-item-delete-button',
+  itemReportPhotoButton: 'pantry-item-report-photo-button',
+  /** "Not this item?" on the detail, and the sheet it opens. */
+  itemRelinkButton: 'pantry-item-relink-button',
+  relinkSheet: 'pantry-relink-sheet',
+  relinkSearchInput: 'pantry-relink-search-input',
+  relinkCandidate: (itemId: string) => `pantry-relink-candidate-${itemId}`,
 
   /** `testIDPrefix` of the catalog's add-item sheet when the pantry hosts it. */
   addItemSheetPrefix: 'add-pantry-item',

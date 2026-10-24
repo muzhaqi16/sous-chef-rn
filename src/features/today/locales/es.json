@@ -1,0 +1,15 @@
+{
+  "today": {
+    "firstRunTitle": "Empieza por tu despensa",
+    "firstRunDescription": "Añade lo que hay en tu cocina y aquí verás lo que caduca, qué cocinar y qué comprar.",
+    "mealsTitle": "Comidas de hoy",
+    "nothingPlanned": "Nada planificado para hoy",
+    "planMeal": "Planifica una comida",
+    "itemsLeft_one": "Queda {{count}} artículo por comprar",
+    "itemsLeft_other": "Quedan {{count}} artículos por comprar",
+    "householdHint": "Cambia o gestiona tus hogares",
+    "tutorialHouseholdTitle": "Toca para gestionar hogares",
+    "tutorialHouseholdSubtitle": "Cambia entre hogares o gestiona la configuración del hogar",
+    "householdFallback": "Tu hogar"
+  }
+}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
@@ -186,8 +187,32 @@ jest.mock('#components/molecules/TabScreenHeader', () => ({
     );
   },
 }));
+// Renders the field's one accessory (the diet filter), so its label and count
+// can be read; the field itself is not under test here.
 jest.mock('#components/molecules/SearchBar', () => ({
-  SearchBar: () => 'SearchBar',
+  SearchBar: ({
+    accessory,
+  }: {
+    accessory?: {
+      accessibilityLabel: string;
+      onPress: () => void;
+      badge?: number;
+    };
+  }) => {
+    const R = require('react');
+    const { Pressable, Text } = require('react-native');
+    if (!accessory) return 'SearchBar';
+    return R.createElement(
+      Pressable,
+      {
+        accessibilityLabel: accessory.accessibilityLabel,
+        onPress: accessory.onPress,
+      },
+      accessory.badge
+        ? R.createElement(Text, null, String(accessory.badge))
+        : null,
+    );
+  },
 }));
 jest.mock('#/styles/commonStyles', () => ({ commonStyles: {} }));
 jest.mock('#components/atoms/CachedImage', () => ({
@@ -269,7 +294,7 @@ describe('RecipeMain', () => {
     expect(getByTestId('recipes-screen')).toBeTruthy();
   });
 
-  it('shows header with saved, my recipes, and advanced search navigation', () => {
+  it('shows saved and my recipes in the header, and the diet filter beside search', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -279,6 +304,55 @@ describe('RecipeMain', () => {
     expect(tree.getByLabelText('Saved recipes')).toBeTruthy();
     expect(tree.getByLabelText('My recipes')).toBeTruthy();
     expect(tree.getByLabelText('Dietary restrictions')).toBeTruthy();
+  });
+
+  describe('search modes', () => {
+    beforeEach(() => {
+      mockDeferredScreen.mockImplementation(
+        ({ component: Component }: { component: React.ComponentType }) => (
+          <Component />
+        ),
+      );
+    });
+
+    it('offers name and ingredient search when the pantry has items', () => {
+      mockScreenWith({ hasPantryItems: true });
+      const tree = render(<RecipeMain />);
+      expect(tree.getByText('By name')).toBeTruthy();
+      expect(tree.getByText('By ingredients')).toBeTruthy();
+    });
+
+    it('searches by name only with an empty pantry', () => {
+      mockScreenWith({ hasPantryItems: false });
+      const tree = render(<RecipeMain />);
+      expect(tree.queryByText('By ingredients')).toBeNull();
+      expect(tree.getByLabelText('Dietary restrictions')).toBeTruthy();
+    });
+
+    it('swaps the filter for the pantry picker in ingredient mode', async () => {
+      const user = userEvent.setup();
+      mockScreenWith({ hasPantryItems: true });
+      const tree = render(<RecipeMain />);
+
+      await user.press(tree.getByText('By ingredients'));
+
+      expect(tree.getByTestId(recipesTestIDs.ingredientPicker)).toBeTruthy();
+      expect(tree.queryByLabelText('Dietary restrictions')).toBeNull();
+    });
+
+    // An empty ingredient search otherwise stays on screen in name mode.
+    it("drops the other mode's search when switching", async () => {
+      const user = userEvent.setup();
+      const clearSearch = jest.fn();
+      mockScreenWith({ hasPantryItems: true, clearSearch });
+      const tree = render(<RecipeMain />);
+
+      await user.press(tree.getByText('By ingredients'));
+      expect(clearSearch).toHaveBeenCalledTimes(1);
+
+      await user.press(tree.getByText('By name'));
+      expect(clearSearch).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('navigates to SavedRecipes when bookmark icon pressed', async () => {

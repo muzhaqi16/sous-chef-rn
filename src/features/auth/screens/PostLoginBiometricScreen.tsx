@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { Screen } from '#components/templates/Screen';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePostLoginState } from '#store/useAppStore';
-import { useBiometricPrompting } from '#features/auth/hooks/useBiometricPrompting';
 import { useAuthPreferences } from '#hooks/auth/useAuthPreferences';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
@@ -17,23 +16,16 @@ import { authTestIDs } from '#features/auth/testIDs';
  */
 export const PostLoginBiometricScreen = () => {
   useScreenTransition('PostLoginBiometricScreen');
-  const {
-    postLoginCredentials,
-    setNavigationState,
-    setShowBiometricSetup,
-    setPostLoginCredentials,
-  } = usePostLoginState();
-  const { recordBiometricPromptResponse } = useBiometricPrompting();
+  const { postLoginCredentials, setNavigationState, setPostLoginCredentials } =
+    usePostLoginState();
   const { markBiometricEnabled, markBiometricDeclined } = useAuthPreferences();
 
   const handleComplete = (enabled: boolean, declined?: boolean) => {
-    recordBiometricPromptResponse(enabled, declined);
     if (enabled) {
       markBiometricEnabled();
     } else if (declined) {
       markBiometricDeclined();
     }
-    setShowBiometricSetup(false);
     setPostLoginCredentials(null);
     setNavigationState('main_app');
   };

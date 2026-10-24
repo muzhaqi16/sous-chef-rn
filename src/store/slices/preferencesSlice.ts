@@ -33,8 +33,6 @@ export interface PreferencesState {
   setLanguage: (language: string) => void;
 
   // Remember Me (keep here as it's a preference)
-  rememberMe?: boolean;
-  setRememberMe: (remember: boolean) => void;
 
   // Haptic Feedback
   hapticFeedbackEnabled: boolean;
@@ -83,7 +81,6 @@ export interface PreferencesState {
 const initialPreferencesState = {
   theme: PREFERENCE_DEFAULTS.theme,
   language: undefined,
-  rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
   showTutorials: true,
@@ -115,7 +112,6 @@ export const createPreferencesSlice: StateCreator<
     void changeLanguage(language);
     set({ language });
   },
-  setRememberMe: remember => set({ rememberMe: remember }),
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
 

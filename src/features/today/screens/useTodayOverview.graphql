@@ -1,0 +1,13 @@
+# The pantry's status counts under the same `today` as GetPantry, so Today and
+# Pantry read one `Pantry.stats` field. It loads no items.
+query TodayCounts($id: ID!, $today: LocalDate!) {
+  pantry(id: $id) {
+    id
+    stats(today: $today) {
+      totalItems
+      expiredCount
+      expiringCount
+      lowStockCount
+    }
+  }
+}

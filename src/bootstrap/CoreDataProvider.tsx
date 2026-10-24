@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/data/useDataPreloading';
 import { useOfflineTabPreloading } from './useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
-import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';
+import { useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
 
@@ -20,7 +20,6 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   children,
 }) => {
   const user = useUser();
-  const isLoggingOut = useIsLoggingOut();
   const updateUser = useUpdateUser();
 
   // Preload units and other reference data when authenticated
@@ -41,7 +40,7 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   // First mount fires the network once; subsequent re-renders read cache only.
   const { data: profileData } = useQuery(
     GetUserProfileDocument,
-    !user || isLoggingOut ? skipToken : { notifyOnNetworkStatusChange: false },
+    !user ? skipToken : { notifyOnNetworkStatusChange: false },
   );
 
   useEffect(() => {

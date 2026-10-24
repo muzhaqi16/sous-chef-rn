@@ -94,7 +94,6 @@ export const IngredientSelectorSheet: React.FC<
         {/* Search bar — shown when > 8 items */}
         {screen.pantryItems.length > 8 && (
           <SearchBar
-            showSearchIcon
             ref={ingredientSearchBarRef}
             placeholder={t('recipes.searchIngredientsPlaceholder')}
             onChangeText={screen.setIngredientSearchQuery}

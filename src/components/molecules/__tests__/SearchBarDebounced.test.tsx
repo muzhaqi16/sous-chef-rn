@@ -15,7 +15,6 @@ describe('SearchBar, debounced mode', () => {
   const defaultProps = {
     onChangeText: jest.fn(),
     debounceMs: 250,
-    showSearchIcon: true,
   };
 
   beforeEach(() => {
@@ -92,51 +91,23 @@ describe('SearchBar, debounced mode', () => {
     expect(onClear).toHaveBeenCalled();
   });
 
-  it('renders right actions', async () => {
+  it('renders its accessory and runs it', async () => {
     const user = userEvent.setup();
     const onAction = jest.fn();
     render(
       <SearchBar
         {...defaultProps}
-        rightActions={[
-          {
-            icon: 'barcode-outline',
-            onPress: onAction,
-            testID: 'scan-btn',
-            accessibilityLabel: 'Scan barcode',
-          },
-        ]}
+        accessory={{
+          icon: 'options-outline',
+          onPress: onAction,
+          testID: 'filter-btn',
+          accessibilityLabel: 'Filters',
+        }}
       />,
     );
 
-    expect(screen.getByTestId('scan-btn')).toBeTruthy();
-    await user.press(screen.getByTestId('scan-btn'));
+    await user.press(screen.getByTestId('filter-btn'));
     expect(onAction).toHaveBeenCalled();
-  });
-
-  it('renders multiple right actions', () => {
-    render(
-      <SearchBar
-        {...defaultProps}
-        rightActions={[
-          {
-            icon: 'barcode-outline',
-            onPress: jest.fn(),
-            testID: 'action-1',
-            accessibilityLabel: 'Scan barcode',
-          },
-          {
-            icon: 'camera-outline',
-            onPress: jest.fn(),
-            testID: 'action-2',
-            accessibilityLabel: 'Take a photo',
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.getByTestId('action-1')).toBeTruthy();
-    expect(screen.getByTestId('action-2')).toBeTruthy();
   });
 
   it('shows loading indicator when isLoading is true', () => {

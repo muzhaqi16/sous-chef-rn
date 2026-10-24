@@ -10,7 +10,9 @@ import { Icon } from '#components/atoms/Icon';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
-import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
+import { authService } from '#/services/authService';
 import {
   useResetPassword,
   type ResetPasswordFn,
@@ -23,6 +25,7 @@ import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { Screen } from '#components/templates/Screen';
 import { toastService } from '#services/toastService';
 import { authTestIDs } from '#features/auth/testIDs';
@@ -32,8 +35,7 @@ async function performPasswordReset(
   token: string,
   newPassword: string,
   resetPassword: ResetPasswordFn,
-  navigateToLogin: () => void,
-  successMessage: string,
+  onCompleted: () => void,
   rejectedMessage: string,
   onTokenRejected: () => void,
   setNewPasswordError: (message: string) => void,
@@ -45,11 +47,17 @@ async function performPasswordReset(
   if (outcome.status === 'completed') {
     logger.info('Password reset successful');
 
-    toastService.success(successMessage);
-
-    setTimeout(() => {
-      navigateToLogin();
-    }, 1500);
+    // The server ended every session of the account the link was for, which
+    // may be this one, and nothing says whose it was. So a session held here
+    // ends through the one sign-out, keeping this account's stored sign-in and
+    // unsynced writes: resetting a password is not discarding them.
+    if (holdsSessionTokens(useStore.getState())) {
+      await authService.logout({
+        keepBiometricCredentials: true,
+        keepQueuedWrites: true,
+      });
+    }
+    onCompleted();
     return;
   }
 
@@ -84,8 +92,8 @@ export const ResetPasswordScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute();
   const { goBack } = useAppNavigation();
-  const clearAuth = useAppStore(state => state.clearAuth);
-  const { navigateToLogin } = useAuthNavigation();
+  const { replaceWithLogin } = useAuthNavigation();
+  const isLoggedOut = useIsLoggedOut();
 
   const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
 
@@ -93,11 +101,9 @@ export const ResetPasswordScreen: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasValidTokenFormat = !!token && token.length >= 10;
   const [isTokenRejected, setIsTokenRejected] = useState(false);
-  // 'checking' until the server has ruled on the token. Nothing
-  // session-affecting happens before it leaves that state.
-  const [tokenCheck, setTokenCheck] = useState<'checking' | 'valid'>(
-    'checking',
-  );
+  // 'checking' until the server has ruled on the token; 'done' once the reset
+  // has gone through.
+  const [stage, setStage] = useState<'checking' | 'form' | 'done'>('checking');
 
   const form = useForm<ResetPasswordForm>({
     resolver: yupResolver(resetPasswordSchema),
@@ -120,32 +126,23 @@ export const ResetPasswordScreen: React.FC = () => {
     }
   };
 
-  // Any web page can present a link, so opening one must not end a session:
-  // only a token the server accepts FIRST clears it (the reset needs that). Any
-  // other token leaves the session and shows the invalid-link view.
+  // Any web page can present a link, and this one may be another account's, so
+  // opening it leaves the session alone: only a completed reset ends it.
   useEffect(() => {
     // A missing or too-short token needs no server round trip — the render
-    // below already shows the invalid-link view for it, so this effect simply
-    // never runs and the session is never touched.
+    // below already shows the invalid-link view for it.
     if (!hasValidTokenFormat || !token) return;
 
     let cancelled = false;
 
     const check = async () => {
-      // An unreachable server is NOT proof the link is good. Fail closed: keep
-      // the session, show the invalid-link view, let them try again.
+      // An unreachable server is NOT proof the link is good. Fail closed: show
+      // the invalid-link view, let them try again.
       const accepted = await validateToken(token);
       if (cancelled) return;
 
-      if (!accepted) {
-        setIsTokenRejected(true);
-        return;
-      }
-
-      // Only now: the link is genuine, and completing the reset requires the
-      // old session to be gone.
-      clearAuth();
-      setTokenCheck('valid');
+      if (accepted) setStage('form');
+      else setIsTokenRejected(true);
     };
 
     // `validateToken` settles a failure as `false`, so the check never rejects.
@@ -154,7 +151,7 @@ export const ResetPasswordScreen: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, hasValidTokenFormat, validateToken, clearAuth]);
+  }, [token, hasValidTokenFormat, validateToken]);
 
   const handleTokenRejected = () => {
     setIsTokenRejected(true);
@@ -172,8 +169,7 @@ export const ResetPasswordScreen: React.FC = () => {
           token,
           data.newPassword,
           resetPassword,
-          navigateToLogin,
-          t('auth.resetPasswordSuccess'),
+          () => setStage('done'),
           t('auth.resetPasswordFailedFallback'),
           handleTokenRejected,
           message => form.setError('newPassword', { message }),
@@ -196,21 +192,47 @@ export const ResetPasswordScreen: React.FC = () => {
     confirmPasswordRef.current?.focus();
   };
 
-  const handleGoBack = () => {
-    goBack();
-  };
+  if (stage === 'done') {
+    return (
+      <Screen
+        testID={authTestIDs.resetPasswordDoneView}
+        header={{ close: goBack }}
+        scroll="none"
+      >
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Icon name="checkmark-circle-outline" size={64} tone="success" />
+          </View>
+          <Text role="subheading" align="center" style={styles.title}>
+            {t('auth.resetPasswordDoneTitle')}
+          </Text>
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+          >
+            {t('auth.resetPasswordDoneBody')}
+          </Text>
 
-  const handleReturnToLogin = () => {
-    navigateToLogin();
-  };
+          <Button
+            variant="primary"
+            onPress={replaceWithLogin}
+            style={styles.buttonSpacing}
+            testID={authTestIDs.resetPasswordSignInButton}
+          >
+            {t('auth.signIn')}
+          </Button>
+        </View>
+      </Screen>
+    );
+  }
 
   if (!hasValidTokenFormat || isTokenRejected) {
     return (
       <Screen
         testID={authTestIDs.resetPasswordInvalidLinkView}
-        header={{
-          close: handleGoBack,
-        }}
+        header={{ close: goBack }}
         scroll="none"
       >
         <View style={styles.content}>
@@ -229,25 +251,24 @@ export const ResetPasswordScreen: React.FC = () => {
             {t('auth.invalidResetLinkSubtitle')}
           </Text>
 
+          {/* Signed in, there is no sign-in screen to return to. */}
           <Button
             variant="primary"
-            onPress={handleReturnToLogin}
+            onPress={isLoggedOut ? replaceWithLogin : goBack}
             style={styles.buttonSpacing}
           >
-            {t('auth.returnToLogin')}
+            {isLoggedOut ? t('auth.returnToLogin') : t('labels.goBack')}
           </Button>
         </View>
       </Screen>
     );
   }
 
-  if (tokenCheck === 'checking') {
+  if (stage === 'checking') {
     return (
       <Screen
         testID={authTestIDs.resetPasswordCheckingView}
-        header={{
-          close: handleGoBack,
-        }}
+        header={{ close: goBack }}
         scroll="none"
       >
         <View style={styles.content}>
@@ -260,9 +281,7 @@ export const ResetPasswordScreen: React.FC = () => {
   return (
     <Screen
       testID={authTestIDs.resetPasswordScreen}
-      header={{
-        close: handleGoBack,
-      }}
+      header={{ close: goBack }}
       scroll="form"
     >
       <View style={styles.formContent}>
@@ -281,6 +300,17 @@ export const ResetPasswordScreen: React.FC = () => {
         >
           {t('auth.resetPasswordSubtitle')}
         </Text>
+        {isLoggedOut ? null : (
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+            testID={authTestIDs.resetPasswordSignsOutNote}
+          >
+            {t('auth.resetPasswordSignsOutNote')}
+          </Text>
+        )}
 
         {/* The inputs write through setValue rather than register/Controller,
             so `shouldValidate` is what keeps formState.isValid — and with it

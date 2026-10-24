@@ -60,7 +60,7 @@ Every other whole-tree gate and which hook or workflow runs it:
 
 Map and reasoning: `docs/architecture.md`.
 
-- `src/features/<name>/` holds all twelve features, auth and onboarding included;
+- `src/features/<name>/` holds all fourteen features, auth and onboarding included;
   `src/screens/` holds only `SplashScreen` and `NotFoundScreen`. Feature shape:
   `manifest.ts` (`id` = dir name), `screens/` (+ `registration.ts`), `hooks/`,
   `components/`, colocated `.graphql`.
@@ -272,8 +272,12 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 
 - **A sheet is `Sheet`; a centred dialog is `Dialog`; a full-screen form is
   `FormScreen`.**
-- **A list row is `commonStyles.rowWrapper` + `rowSurface` + `rowContent`**, the
-  `theme.layout.row*` steps, and `rowType` for its text.
+- **A list row is a `RowCard` + `rowSurface` + `rowContent`**: its own card
+  (the primitives carry no gap, radius or shadow), the `theme.layout.row*`
+  steps, `rowType` for its text, `StatusLine` for its status, and its photo or
+  nothing (no placeholder or stand-in icon).
+- **A control that switches what a screen shows is `ModeTabs`**, with the
+  view's actions in `trailing`; a choice inside a form is a `SegmentedControl`.
 - **Radius and z-index are `theme.*` tokens; a duration, spring or curve is
   `theme.motion`.**
 - **A shared actions bag is `createActionsContext`**; a value read while

@@ -31,6 +31,11 @@ export interface TabBarAddAction {
   onPress: () => void;
   /** Set while the action cannot run: the entry is disabled and shows it. */
   disabledReason?: string;
+  /**
+   * The action waits on data still loading rather than on a refusal, so an add
+   * handed over from another tab waits for it instead of showing the reason.
+   */
+  pending?: boolean;
   testID?: string;
 }
 
@@ -98,7 +103,13 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
 
   const allowedScannerTabs = ['Pantry', 'ShoppingList'];
   // Shown on every main tab so switching tabs causes no layout shift.
-  const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
+  const allowedAddTabs = [
+    'Today',
+    'Pantry',
+    'ShoppingList',
+    'Recipe',
+    'MealPlan',
+  ];
 
   const [tabMenus, setTabMenus] = useState<
     Partial<Record<string, readonly TabBarAddAction[]>>
