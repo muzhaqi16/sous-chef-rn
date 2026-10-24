@@ -5606,9 +5606,13 @@ type HomeItemPhotoPayload {
   """The photo the household's entries for the item show now."""
   image: EntryImage
   item: Item!
-  """The household's live pantry stacks for the item."""
+  """
+  The household's live pantry stacks for the item; empty for a caller who may not view its pantries.
+  """
   pantryItems: [PantryItem!]!
-  """The household's live shopping-list lines for the item."""
+  """
+  The household's live shopping-list lines for the item, on lists not deleted.
+  """
   shoppingListItems: [ShoppingListItem!]!
 }
 
@@ -18307,6 +18311,12 @@ type SubstitutePartAmount {
   inPantry: Boolean!
   """The concept to use"""
   item: Item!
+  """
+  The stack a cook would draw the part from, chosen as a cook draws an
+  ingredient (its own item, then opened, then soonest expiry): the stack an
+  ingredientsUsed entry for this part names. Null when inPantry is false.
+  """
+  pantryItem: PantryItem
   """
   Scaled to the ingredient's amount when the option is scaled; else as curated
   """
