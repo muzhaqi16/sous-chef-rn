@@ -53,7 +53,7 @@ describe('HomeDietaryNeedsScreen', () => {
     mockNeeds.state = 'empty';
   });
 
-  it('names each sharing member, the user as You, grouped strictest first', () => {
+  it('names each sharing member, the user as You, under what each need asks', () => {
     mockNeeds.state = 'ready';
     mockNeeds.members = [
       {
@@ -65,11 +65,19 @@ describe('HomeDietaryNeedsScreen', () => {
           {
             id: 'r-1',
             label: t('recipes.intolerance.PEANUT'),
+            kind: 'avoid',
             severity: RestrictionSeverity.Allergy,
           },
           {
             id: 'r-2',
             label: 'Bacon',
+            kind: 'avoid',
+            severity: RestrictionSeverity.Preference,
+          },
+          {
+            id: 'r-4',
+            label: t('recipes.diet.VEGAN'),
+            kind: 'diet',
             severity: RestrictionSeverity.Preference,
           },
         ],
@@ -83,6 +91,7 @@ describe('HomeDietaryNeedsScreen', () => {
           {
             id: 'r-3',
             label: t('recipes.healthGoal.LOW_CARB'),
+            kind: 'goal',
             severity: RestrictionSeverity.Goal,
           },
         ],
@@ -97,14 +106,16 @@ describe('HomeDietaryNeedsScreen', () => {
     expect(screen.getByText(t('homeDetail.youLabel'))).toBeTruthy();
     expect(screen.queryByText('Tani')).toBeNull();
     expect(
-      screen.getByText(t('homeDietaryNeeds.severity.allergy')),
+      screen.getByText(t('homeDietaryNeeds.group.allergicTo')),
     ).toBeTruthy();
     expect(screen.getByText(t('recipes.intolerance.PEANUT'))).toBeTruthy();
+    // A food picked at preference is avoided; a diet beside it is followed.
+    expect(screen.getByText(t('homeDietaryNeeds.group.avoids'))).toBeTruthy();
+    expect(screen.getByText(t('homeDietaryNeeds.group.follows'))).toBeTruthy();
+    expect(screen.getByText(t('homeDietaryNeeds.group.goals'))).toBeTruthy();
     expect(
-      screen.getByText(t('homeDietaryNeeds.severity.preference')),
-    ).toBeTruthy();
-    expect(screen.getByText(t('homeDietaryNeeds.severity.goal'))).toBeTruthy();
-    expect(screen.queryByText(t('recipes.intolerances'))).toBeNull();
+      screen.queryByText(t('homeDietaryNeeds.group.intolerantTo')),
+    ).toBeNull();
   });
 
   it('says how sharing is turned on when nobody shares', () => {

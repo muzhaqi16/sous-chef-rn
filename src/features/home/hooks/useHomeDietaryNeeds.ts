@@ -8,6 +8,9 @@ import { restrictionLabel } from '#domain/dietary';
 import { useDataState } from '#hooks/data/useDataState';
 import { HomeDietaryNeedsDocument } from './useHomeDietaryNeeds.generated';
 
+/** What a restriction asks of the cook: a diet followed, a goal, or a food avoided. */
+export type RestrictionKind = 'diet' | 'goal' | 'avoid';
+
 /** One member who shares with the home, and what the home sees of them. */
 export interface MemberDietaryNeeds {
   membershipId: string;
@@ -18,8 +21,17 @@ export interface MemberDietaryNeeds {
   restrictions: {
     id: string;
     label: string;
+    kind: RestrictionKind;
     severity: RestrictionSeverity;
   }[];
+}
+
+function kindOf(restriction: {
+  diet: unknown;
+  healthGoal: unknown;
+}): RestrictionKind {
+  if (restriction.diet) return 'diet';
+  return restriction.healthGoal ? 'goal' : 'avoid';
 }
 
 /**
@@ -42,6 +54,7 @@ export function useHomeDietaryNeeds(homeId: string) {
       restrictions: restrictions.map(restriction => ({
         id: restriction.id,
         label: restrictionLabel(restriction, t),
+        kind: kindOf(restriction),
         severity: restriction.severity,
       })),
     }),

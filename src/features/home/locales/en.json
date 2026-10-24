@@ -192,10 +192,12 @@
     "title": "Dietary needs",
     "emptyTitle": "No one shares their dietary needs yet",
     "emptyBody": "Each member chooses to share in their Dietary Profile.",
-    "severity": {
-      "allergy": "Allergies",
-      "preference": "Preferences",
-      "goal": "Goals"
+    "group": {
+      "allergicTo": "Allergic to",
+      "intolerantTo": "Intolerant to",
+      "avoids": "Avoids",
+      "follows": "Follows",
+      "goals": "Goals"
     }
   }
 }

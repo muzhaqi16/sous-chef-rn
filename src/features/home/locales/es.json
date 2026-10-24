@@ -192,10 +192,12 @@
     "title": "Necesidades alimentarias",
     "emptyTitle": "Nadie comparte aún sus necesidades alimentarias",
     "emptyBody": "Cada miembro decide compartirlas en su Perfil alimentario.",
-    "severity": {
-      "allergy": "Alergias",
-      "preference": "Preferencias",
-      "goal": "Objetivos"
+    "group": {
+      "allergicTo": "Alergia a",
+      "intolerantTo": "Intolerancia a",
+      "avoids": "Evita",
+      "follows": "Sigue",
+      "goals": "Objetivos"
     }
   }
 }

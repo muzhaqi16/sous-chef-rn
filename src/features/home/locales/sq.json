@@ -192,10 +192,12 @@
     "title": "Nevojat dietike",
     "emptyTitle": "Askush nuk ka ndarë ende nevoja dietike",
     "emptyBody": "Çdo anëtar zgjedh t’i ndajë në Profilin dietik.",
-    "severity": {
-      "allergy": "Alergjitë",
-      "preference": "Preferencat",
-      "goal": "Qëllimet"
+    "group": {
+      "allergicTo": "Alergji ndaj",
+      "intolerantTo": "Intolerancë ndaj",
+      "avoids": "Shmang",
+      "follows": "Ndjek",
+      "goals": "Qëllimet"
     }
   }
 }

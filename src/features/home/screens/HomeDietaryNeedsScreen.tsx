@@ -19,20 +19,44 @@ import {
 } from '#features/home/hooks/useHomeDietaryNeeds';
 import { homeTestIDs } from '#features/home/testIDs';
 
-/** Strictest first: the order a cook reads them in. */
-const SEVERITY_ORDER: readonly RestrictionSeverity[] = [
-  RestrictionSeverity.Allergy,
-  RestrictionSeverity.Intolerance,
-  RestrictionSeverity.Preference,
-  RestrictionSeverity.Goal,
+/**
+ * Each heading says what its badges ask: a food is avoided at its severity, a
+ * diet followed, a goal aimed at. Strictest first: the order a cook reads them.
+ */
+type NeedGroup = 'allergicTo' | 'intolerantTo' | 'avoids' | 'follows' | 'goals';
+
+const GROUP_ORDER: readonly NeedGroup[] = [
+  'allergicTo',
+  'intolerantTo',
+  'avoids',
+  'follows',
+  'goals',
 ];
 
-const SEVERITY_LABEL_KEYS: Record<RestrictionSeverity, TranslationKey> = {
-  [RestrictionSeverity.Allergy]: 'homeDietaryNeeds.severity.allergy',
-  [RestrictionSeverity.Intolerance]: 'recipes.intolerances',
-  [RestrictionSeverity.Preference]: 'homeDietaryNeeds.severity.preference',
-  [RestrictionSeverity.Goal]: 'homeDietaryNeeds.severity.goal',
+const GROUP_LABEL_KEYS: Record<NeedGroup, TranslationKey> = {
+  allergicTo: 'homeDietaryNeeds.group.allergicTo',
+  intolerantTo: 'homeDietaryNeeds.group.intolerantTo',
+  avoids: 'homeDietaryNeeds.group.avoids',
+  follows: 'homeDietaryNeeds.group.follows',
+  goals: 'homeDietaryNeeds.group.goals',
 };
+
+function groupOf({
+  kind,
+  severity,
+}: MemberDietaryNeeds['restrictions'][number]): NeedGroup {
+  if (kind === 'diet') return 'follows';
+  if (kind === 'goal') return 'goals';
+  switch (severity) {
+    case RestrictionSeverity.Allergy:
+      return 'allergicTo';
+    case RestrictionSeverity.Intolerance:
+      return 'intolerantTo';
+    case RestrictionSeverity.Preference:
+    case RestrictionSeverity.Goal:
+      return 'avoids';
+  }
+}
 
 const SEVERITY_BADGE: Record<RestrictionSeverity, BadgeVariant> = {
   [RestrictionSeverity.Allergy]: 'danger',
@@ -89,21 +113,21 @@ export const HomeDietaryNeedsScreen: React.FC<HomeDietaryNeedsScreenProps> = ({
               <View style={[commonStyles.rowSurface, commonStyles.rowContent]}>
                 <View style={styles.column}>
                   <Text role={rowType.title}>{nameOf(member)}</Text>
-                  {SEVERITY_ORDER.map(severity => {
+                  {GROUP_ORDER.map(group => {
                     const held = member.restrictions.filter(
-                      restriction => restriction.severity === severity,
+                      restriction => groupOf(restriction) === group,
                     );
                     if (held.length === 0) return null;
                     return (
-                      <View key={severity} style={commonStyles.rowTextGap}>
+                      <View key={group} style={commonStyles.rowTextGap}>
                         <Text role={rowType.subtitle} tone="secondary">
-                          {t(SEVERITY_LABEL_KEYS[severity])}
+                          {t(GROUP_LABEL_KEYS[group])}
                         </Text>
                         <View style={styles.badges}>
                           {held.map(restriction => (
                             <Badge
                               key={restriction.id}
-                              variant={SEVERITY_BADGE[severity]}
+                              variant={SEVERITY_BADGE[restriction.severity]}
                             >
                               {restriction.label}
                             </Badge>

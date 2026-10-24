@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import {
+  Diet,
   Intolerance,
   MembershipRole,
   RestrictionSeverity,
@@ -22,7 +23,7 @@ const needsMock = (
     };
     restrictions: {
       id: string;
-      diet: null;
+      diet: Diet | null;
       intolerance: Intolerance | null;
       healthGoal: null;
       item: { id: string; name: string } | null;
@@ -65,6 +66,14 @@ describe('useHomeDietaryNeeds', () => {
                   item: { id: 'bacon', name: 'Bacon' },
                   severity: RestrictionSeverity.Preference,
                 },
+                {
+                  id: 'r-3',
+                  diet: Diet.Vegan,
+                  intolerance: null,
+                  healthGoal: null,
+                  item: null,
+                  severity: RestrictionSeverity.Preference,
+                },
               ],
             },
           ]).mock,
@@ -83,11 +92,19 @@ describe('useHomeDietaryNeeds', () => {
           {
             id: 'r-1',
             label: t('recipes.intolerance.PEANUT'),
+            kind: 'avoid',
             severity: RestrictionSeverity.Allergy,
           },
           {
             id: 'r-2',
             label: 'Bacon',
+            kind: 'avoid',
+            severity: RestrictionSeverity.Preference,
+          },
+          {
+            id: 'r-3',
+            label: t('recipes.diet.VEGAN'),
+            kind: 'diet',
             severity: RestrictionSeverity.Preference,
           },
         ],
