@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import { retryCooldownMs } from '#/utils/backoff';
 import type { AuthUserInput } from '#store/slices/authSlice';
 import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
@@ -413,6 +414,38 @@ describe('authSlice', () => {
       const store = createTestStore();
       store.getState().setOnboarded(true);
       expect(store.getState().user).toBeNull();
+    });
+  });
+
+  describe('the biometric hold-off', () => {
+    const NOW = 1_800_000_000_000;
+    beforeEach(() => {
+      jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    });
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("waits out the server's own deadline when it names one", () => {
+      const store = createTestStore();
+      store.getState().registerBiometricRefusal(90_000);
+      expect(store.getState().biometricRetryAt).toBe(NOW + 90_000);
+      expect(store.getState().biometricAttempts).toBe(1);
+    });
+
+    it('falls back to its own cooldown, growing with each refusal', () => {
+      const store = createTestStore();
+      store.getState().registerBiometricRefusal();
+      store.getState().registerBiometricRefusal();
+      expect(store.getState().biometricRetryAt).toBe(NOW + retryCooldownMs(2));
+    });
+
+    it('lifts the hold-off once a sign-in succeeds', () => {
+      const store = createTestStore();
+      store.getState().registerBiometricRefusal(90_000);
+      store.getState().clearBiometricBackoff();
+      expect(store.getState().biometricRetryAt).toBe(0);
+      expect(store.getState().biometricAttempts).toBe(0);
     });
   });
 });
