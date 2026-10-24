@@ -382,7 +382,15 @@
     "tagsTooMany": "Një recetë mund të ketë maksimumi {{count}} etiketa",
     "tagTooLong": "Çdo etiketë mund të ketë maksimumi {{count}} karaktere",
     "tipsTooLong": "Këshillat mund të kenë maksimumi {{count}} karaktere",
-    "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish."
+    "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish.",
+    "substitutes": {
+      "title": "Në vend të {{name}}",
+      "open": "Zëvendësues për {{name}}",
+      "part": "{{amount}} {{name}}",
+      "per": "Për {{amount}} {{name}}",
+      "inPantry": "Në qilarin tënd",
+      "partlyInPantry": "Pjesërisht në qilarin tënd"
+    }
   },
   "recipeFilters": {
     "title": "Filtrat",

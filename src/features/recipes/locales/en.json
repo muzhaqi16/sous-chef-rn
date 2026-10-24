@@ -382,7 +382,15 @@
     "tagsTooMany": "A recipe can have at most {{count}} tags",
     "tagTooLong": "Each tag can be at most {{count}} characters",
     "tipsTooLong": "Tips can be at most {{count}} characters",
-    "stepsTooLarge": "These steps are too long to save. Shorten them and try again."
+    "stepsTooLarge": "These steps are too long to save. Shorten them and try again.",
+    "substitutes": {
+      "title": "Instead of {{name}}",
+      "open": "Substitutes for {{name}}",
+      "part": "{{amount}} {{name}}",
+      "per": "For {{amount}} of {{name}}",
+      "inPantry": "In your pantry",
+      "partlyInPantry": "Partly in your pantry"
+    }
   },
   "recipeFilters": {
     "title": "Filters",

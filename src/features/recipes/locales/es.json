@@ -382,7 +382,15 @@
     "tagsTooMany": "Una receta puede tener como máximo {{count}} etiquetas",
     "tagTooLong": "Cada etiqueta puede tener como máximo {{count}} caracteres",
     "tipsTooLong": "Los consejos pueden tener como máximo {{count}} caracteres",
-    "stepsTooLarge": "Estos pasos son demasiado largos para guardarlos. Acórtalos e inténtalo de nuevo."
+    "stepsTooLarge": "Estos pasos son demasiado largos para guardarlos. Acórtalos e inténtalo de nuevo.",
+    "substitutes": {
+      "title": "En lugar de {{name}}",
+      "open": "Sustitutos de {{name}}",
+      "part": "{{amount}} {{name}}",
+      "per": "Para {{amount}} de {{name}}",
+      "inPantry": "En tu despensa",
+      "partlyInPantry": "En parte en tu despensa"
+    }
   },
   "recipeFilters": {
     "title": "Filtros",

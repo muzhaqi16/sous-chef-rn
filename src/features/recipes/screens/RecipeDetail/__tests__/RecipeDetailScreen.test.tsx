@@ -78,6 +78,34 @@ jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
   }),
 }));
 
+// The swaps' own wording is pinned in their hook and sheet tests; here, which
+// rows offer them.
+const mockSubstitutes: Record<string, { id: string }[]> = {};
+const mockSubstitutesWanted: boolean[] = [];
+jest.mock('#features/recipes/hooks/useRecipeSubstitutes', () => ({
+  useRecipeSubstitutes: (_recipeId: string, wanted: boolean) => {
+    mockSubstitutesWanted.push(wanted);
+    return { substitutesFor: (id: string) => mockSubstitutes[id] ?? [] };
+  },
+}));
+jest.mock('#features/recipes/components/recipeDetail/SubstitutesSheet', () => {
+  const { Text } = require('react-native');
+  return {
+    SubstitutesSheet: ({
+      visible,
+      ingredientName,
+      options,
+    }: {
+      visible: boolean;
+      ingredientName: string;
+      options: unknown[];
+    }) =>
+      visible ? (
+        <Text>{`swaps for ${ingredientName}: ${options.length}`}</Text>
+      ) : null,
+  };
+});
+
 jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
   useForkRecipe: jest.fn(() => ({ forkRecipe: jest.fn(), forking: false })),
 }));
@@ -599,6 +627,39 @@ describe('RecipeDetail', () => {
         mockHousehold.check = 'none';
         mockHousehold.summary = [];
         mockHousehold.rows = {};
+        for (const id of Object.keys(mockSubstitutes)) {
+          delete mockSubstitutes[id];
+        }
+        mockSubstitutesWanted.length = 0;
+      });
+
+      it('offers swaps on a flagged row that has some, and on no other', () => {
+        mockHousehold.check = 'checked';
+        mockHousehold.summary = [BUTTER];
+        mockHousehold.rows = { i4: [BUTTER], i1: [BUTTER] };
+        // Flour has swaps but no flag; the second row a flag but no swaps.
+        mockSubstitutes.i0 = [{ id: 's-flour' }];
+        mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
+        renderIngredients();
+
+        expect(mockSubstitutesWanted.at(-1)).toBe(true);
+        expect(screen.queryByLabelText('Substitutes for Flour')).toBeNull();
+        expect(
+          screen
+            .getAllByLabelText(/^Substitutes for /)
+            .map(node => node.props.accessibilityLabel),
+        ).toEqual(['Substitutes for Butter']);
+
+        fireEvent.press(screen.getByLabelText('Substitutes for Butter'));
+        expect(screen.getByText('swaps for Butter: 2')).toBeTruthy();
+      });
+
+      it('asks for no swaps while nothing is flagged', () => {
+        mockSubstitutes.i0 = [{ id: 's-flour' }];
+        renderIngredients();
+
+        expect(mockSubstitutesWanted.at(-1)).toBe(false);
+        expect(screen.queryByLabelText(/^Substitutes for /)).toBeNull();
       });
 
       it('leads with who the recipe affects and flags each row', () => {

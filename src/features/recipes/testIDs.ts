@@ -49,4 +49,8 @@ export const recipesTestIDs = {
   /** The recipe page's household dietary summary, and its offline note. */
   householdSummary: 'recipe-household-summary',
   householdUnchecked: 'recipe-household-unchecked',
+  /** What can stand in for an ingredient, and one swap in it. */
+  substitutesSheet: 'recipe-substitutes-sheet',
+  substituteOption: (substituteId: string) =>
+    `recipe-substitute-${substituteId}`,
 };

@@ -1,0 +1,74 @@
+# What can stand in for a recipe's ingredients, for the household: curated
+# swaps, those whose parts the pantry holds first, none a member is allergic or
+# intolerant to. Its own query, read only while a row is flagged.
+#
+# It shares the cached `ingredientsConnection` with GetRecipe, whose first page
+# a write replaces: the connection's own fields (`pageInfo`, `totalCount`) are
+# selected as GetRecipe selects them, or each write leaves the recipe's read
+# incomplete and the page falls to "not found".
+query RecipeSubstitutes(
+  $recipeId: ID!
+  $homeId: ID!
+  $pantryId: ID
+  $ingredientsFirst: Int!
+) {
+  recipe(id: $recipeId) {
+    id
+    ingredientsConnection(first: $ingredientsFirst) {
+      edges {
+        node {
+          id
+          substitutes(homeId: $homeId, pantryId: $pantryId, limit: 5) {
+            substitute {
+              id
+              note
+              forQuantity
+              forUnit {
+                id
+                symbol
+              }
+            }
+            scaled
+            parts {
+              quantity
+              unit {
+                id
+                symbol
+              }
+              inPantry
+              item {
+                id
+                name
+              }
+            }
+            alerts {
+              state
+              membership {
+                id
+                userId
+                role
+                displayName
+              }
+              restriction {
+                id
+                diet
+                intolerance
+                healthGoal
+                item {
+                  id
+                  name
+                }
+                severity
+              }
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+}

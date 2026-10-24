@@ -40,6 +40,8 @@ import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientRow } from '#features/recipes/components/recipeDetail/IngredientRow';
+import { SubstitutesSheet } from '#features/recipes/components/recipeDetail/SubstitutesSheet';
+import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
 import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
@@ -263,6 +265,15 @@ const RecipeDetailScreen: React.FC = () => {
   const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
+  // Swaps are offered where the household flags an ingredient.
+  const substitutes = useRecipeSubstitutes(
+    recipeId,
+    household.summary.length > 0,
+  );
+  const [substituting, setSubstituting] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = () => {
@@ -647,8 +658,26 @@ const RecipeDetailScreen: React.FC = () => {
                 isAdded={addedIngredients.has(ingredient.id)}
                 onAdd={() => handleAddSingleIngredient(ingredient)}
                 alerts={household.alertsFor(ingredient.id)}
+                onSubstitute={
+                  household.alertsFor(ingredient.id).length > 0 &&
+                  substitutes.substitutesFor(ingredient.id).length > 0
+                    ? () =>
+                        setSubstituting({
+                          id: ingredient.id,
+                          name: ingredient.name,
+                        })
+                    : undefined
+                }
               />
             ))}
+            <SubstitutesSheet
+              visible={!!substituting}
+              ingredientName={substituting?.name ?? ''}
+              options={
+                substituting ? substitutes.substitutesFor(substituting.id) : []
+              }
+              onDismiss={() => setSubstituting(null)}
+            />
           </View>
         )}
 

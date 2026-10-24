@@ -1,4 +1,6 @@
 import React from 'react';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { ListItem } from '#components/molecules/ListItem';
@@ -23,6 +25,8 @@ interface IngredientRowProps {
   onAdd: () => void;
   /** The household's alerts on this ingredient, each a status line under its name. */
   alerts?: HouseholdAlert[];
+  /** Opens what can stand in for it; absent, the row offers no swap. */
+  onSubstitute?: () => void;
 }
 
 /** One ingredient on the recipe page: photo or nothing, name, amount, add. */
@@ -31,6 +35,7 @@ export const IngredientRow: React.FC<IngredientRowProps> = ({
   isAdded,
   onAdd,
   alerts,
+  onSubstitute,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -84,20 +89,38 @@ export const IngredientRow: React.FC<IngredientRowProps> = ({
         }
         leftElement={<RowThumbnail uri={imageUrl} />}
         rightElement={
-          <IconButton
-            name={isAdded ? 'checkmark-circle' : 'add-circle-outline'}
-            tone={isAdded ? 'success' : 'primary'}
-            onPress={onAdd}
-            disabled={isAdded}
-            accessibilityLabel={
-              isAdded ? t('labels.added') : t('labels.addNamed', { name })
-            }
-            accessibilityHint={
-              isAdded ? undefined : t('labels.addToShoppingList')
-            }
-          />
+          <View style={styles.actions}>
+            {!!onSubstitute && (
+              <IconButton
+                name="swap-horizontal-outline"
+                tone="primary"
+                onPress={onSubstitute}
+                accessibilityLabel={t('recipes.substitutes.open', { name })}
+              />
+            )}
+            <IconButton
+              name={isAdded ? 'checkmark-circle' : 'add-circle-outline'}
+              tone={isAdded ? 'success' : 'primary'}
+              onPress={onAdd}
+              disabled={isAdded}
+              accessibilityLabel={
+                isAdded ? t('labels.added') : t('labels.addNamed', { name })
+              }
+              accessibilityHint={
+                isAdded ? undefined : t('labels.addToShoppingList')
+              }
+            />
+          </View>
         }
       />
     </RowCard>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+}));
