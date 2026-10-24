@@ -17,6 +17,7 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface RelinkItemSheetProps {
   visible: boolean;
@@ -89,6 +90,7 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
       onDismiss={onDismiss}
       snapPoints={['85%']}
       title={t('relinkItem.title')}
+      contentContainerStyle={commonStyles.bottomSheetContent}
     >
       <View testID={pantryTestIDs.relinkSheet}>
         <Text role="body" tone="secondary" style={styles.hint}>
