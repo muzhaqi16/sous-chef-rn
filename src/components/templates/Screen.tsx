@@ -27,6 +27,7 @@ import {
   KEYBOARD_DISMISS_MODE,
   KEYBOARD_PERSIST_TAPS,
 } from '#components/templates/keyboardTaps';
+import { getScrollClearancePadding } from '#constants/layout';
 
 const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
   'never';
@@ -118,10 +119,15 @@ export const Screen: React.FC<ScreenProps> = props => {
       ? props.scrollTestID
       : undefined;
   const insets = useSafeAreaInsets();
-  // With a footer the footer clears the home indicator, so the content only
-  // needs its own trailing space.
-  const contentBottom = footer ? 0 : insets.bottom;
   const variant = header?.variant ?? (header ? 'standard' : 'none');
+  // With a footer the footer clears the home indicator, so the content only
+  // needs its own trailing space. A tab root's content scrolls out from under
+  // the floating tab bar and its +, which overlay it.
+  const contentBottom = footer
+    ? 0
+    : variant === 'tab'
+    ? getScrollClearancePadding(insets.bottom)
+    : insets.bottom;
   styles.useVariants({ gutter, chrome: variant === 'tab' ? 'tab' : 'other' });
 
   const chrome =
