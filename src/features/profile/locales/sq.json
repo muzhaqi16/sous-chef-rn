@@ -6,7 +6,7 @@
     "confirmPassword": "Konfirmo fjalëkalimin e ri",
     "success": "Fjalëkalimi u ndryshua!",
     "successOtherDevicesSignedOut": "Fjalëkalimi u ndryshua. U dole nga llogaria në pajisjet e tjera.",
-    "successBiometricOff": "Fjalëkalimi u ndryshua, por hyrja biometrike tani është e çaktivizuar. Aktivizoje sërish te Cilësimet.",
+    "successBiometricOff": "Fjalëkalimi u ndryshua. U dole nga llogaria në pajisjet e tjera dhe hyrja biometrike tani është e çaktivizuar. Aktivizoje sërish te Cilësimet.",
     "failed": "Nuk u ndryshua dot fjalëkalimi",
     "failedFallback": "Nuk u ndryshua dot fjalëkalimi. Provoje sërish."
   },

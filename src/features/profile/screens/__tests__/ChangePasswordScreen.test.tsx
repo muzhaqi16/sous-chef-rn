@@ -374,7 +374,7 @@ describe('ChangePasswordScreen', () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        'Password changed, but biometric sign-in is now off. Turn it back on in Settings.',
+        'Password changed. Your other devices have been signed out, and biometric sign-in is now off. Turn it back on in Settings.',
       ),
     );
   });

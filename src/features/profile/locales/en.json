@@ -6,7 +6,7 @@
     "confirmPassword": "Confirm New Password",
     "success": "Password changed successfully!",
     "successOtherDevicesSignedOut": "Password changed. Your other devices have been signed out.",
-    "successBiometricOff": "Password changed, but biometric sign-in is now off. Turn it back on in Settings.",
+    "successBiometricOff": "Password changed. Your other devices have been signed out, and biometric sign-in is now off. Turn it back on in Settings.",
     "failed": "Failed to change password",
     "failedFallback": "Failed to change password. Please try again."
   },

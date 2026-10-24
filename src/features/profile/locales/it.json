@@ -6,7 +6,7 @@
     "confirmPassword": "Conferma nuova password",
     "success": "Password cambiata!",
     "successOtherDevicesSignedOut": "Password cambiata. È stata chiusa la sessione sugli altri tuoi dispositivi.",
-    "successBiometricOff": "Password cambiata, ma l'accesso biometrico ora è disattivato. Riattivalo in Impostazioni.",
+    "successBiometricOff": "Password cambiata. È stata chiusa la sessione sugli altri tuoi dispositivi e l'accesso biometrico ora è disattivato. Riattivalo in Impostazioni.",
     "failed": "Impossibile cambiare la password",
     "failedFallback": "Impossibile cambiare la password. Riprova."
   },
