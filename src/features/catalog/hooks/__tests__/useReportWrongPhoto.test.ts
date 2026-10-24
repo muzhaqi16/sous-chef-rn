@@ -7,6 +7,7 @@ import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#/platform/presenters';
+import { changeLanguage } from '#/i18n';
 
 const sentReport = () =>
   recordMock(MarkItemForReviewDocument, {
@@ -88,6 +89,32 @@ describe('useReportWrongPhoto', () => {
         expect.stringContaining('admin'),
       ),
     );
+  });
+
+  // App copy translated for the reporter would reach moderators in four languages.
+  it('sends the same English reason whatever language the app is in', async () => {
+    await changeLanguage('sq');
+    const { mock, fired } = sentReport();
+    const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
+      operationMocks: [mock],
+    });
+
+    result.current.reportWrongPhoto('item-1');
+    confirmButtons()
+      .find(button => button.style !== 'cancel')
+      ?.onPress?.();
+
+    await waitFor(() =>
+      expect(fired).toEqual([
+        {
+          input: {
+            itemId: 'item-1',
+            reason: 'The photo shows a different product.',
+          },
+        },
+      ]),
+    );
+    await changeLanguage('en');
   });
 
   it('names the photo on screen when it is given', async () => {

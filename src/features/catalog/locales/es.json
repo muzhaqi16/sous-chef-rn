@@ -142,8 +142,7 @@
     "wrongPhotoAction": "Informar de foto incorrecta",
     "wrongPhotoConfirmTitle": "¿Informar de esta foto?",
     "wrongPhotoConfirmBody": "Un administrador comprobará si muestra este artículo.",
-    "wrongPhotoConfirm": "Informar",
-    "wrongPhotoReason": "La foto muestra un producto distinto."
+    "wrongPhotoConfirm": "Informar"
   },
   "addItemForm": {
     "modes": {

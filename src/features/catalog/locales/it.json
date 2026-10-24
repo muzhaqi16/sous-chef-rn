@@ -142,8 +142,7 @@
     "wrongPhotoAction": "Segnala foto errata",
     "wrongPhotoConfirmTitle": "Segnalare questa foto?",
     "wrongPhotoConfirmBody": "Un amministratore verificherà se mostra questo articolo.",
-    "wrongPhotoConfirm": "Segnala",
-    "wrongPhotoReason": "La foto mostra un prodotto diverso."
+    "wrongPhotoConfirm": "Segnala"
   },
   "addItemForm": {
     "modes": {
