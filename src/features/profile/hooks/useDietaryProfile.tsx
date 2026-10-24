@@ -39,7 +39,6 @@ export interface DietaryRestriction {
   healthGoal?: HealthGoal | null;
   severity: RestrictionSeverity;
   notes?: string | null;
-  appliesToHomeId?: string | null;
 }
 
 export interface DietaryProfileData {
@@ -179,7 +178,6 @@ export const useDietaryProfile = () => {
         healthGoal: r.healthGoal,
         severity: r.severity,
         notes: r.notes,
-        appliesToHomeId: r.appliesToHomeId,
       })),
       preferredCuisines: profile.preferredCuisines,
       dislikedIngredients: profile.dislikedIngredients,
@@ -255,14 +253,13 @@ export const useDietaryProfile = () => {
     restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
-    appliesToHomeId?: string,
   ) => {
     if (!(await ensureProfileExists())) return false;
     const settled = await settleMutation(
       () =>
         addRestriction({
           variables: {
-            input: { kind: restriction, severity, notes, appliesToHomeId },
+            input: { kind: restriction, severity, notes },
           },
         }),
       {

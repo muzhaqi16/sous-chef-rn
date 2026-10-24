@@ -60,7 +60,6 @@ query GetDietaryProfile {
         healthGoal
         severity
         notes
-        appliesToHomeId
         createdAt
       }
     }
@@ -145,7 +144,6 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
           healthGoal
           severity
           notes
-          appliesToHomeId
           createdAt
         }
         # The update upserts: this links a just-created row to `me`, which
@@ -183,7 +181,6 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
         healthGoal
         severity
         notes
-        appliesToHomeId
         createdAt
       }
     }
