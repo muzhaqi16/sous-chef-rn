@@ -88,6 +88,15 @@ jest.mock('../ProductResultCard', () =>
 );
 jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 
+// Alerts have their own tests; here the household has nothing to check.
+jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
+  useProductDietaryAlerts: () => ({
+    check: 'none',
+    alerts: [],
+    alternatives: [],
+  }),
+}));
+
 // The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
 const mockPackSizeOutcomes: PackSizeOutcome[] = [];
 jest.mock('../PackSizeSheet', () => ({
@@ -101,6 +110,7 @@ jest.mock('../PackSizeSheet', () => ({
 describe('SearchResults', () => {
   const mockItem = {
     id: 'item-1',
+    conceptIds: [],
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,

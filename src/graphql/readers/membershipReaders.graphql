@@ -10,6 +10,7 @@ fragment MembershipReaders on Membership {
   displayName
   homeId
   role
+  sharesDietaryNeeds
   status
   user {
     id

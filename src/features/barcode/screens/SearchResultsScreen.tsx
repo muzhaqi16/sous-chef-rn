@@ -66,7 +66,7 @@ export const SearchResultsScreen: React.FC<
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
   const { t } = useTranslation();
-  const { goBack, navigation } = useAppNavigation();
+  const { goBack, navigation, toSearchResults } = useAppNavigation();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -139,6 +139,16 @@ export const SearchResultsScreen: React.FC<
           source={source}
           pantryId={pantryId}
           shoppingListId={shoppingListId}
+          // An empty format lets the lookup detect the barcode's kind.
+          onOpenBarcode={alternative =>
+            toSearchResults({
+              barcode: alternative,
+              format: '',
+              source,
+              pantryId,
+              shoppingListId,
+            })
+          }
         />
       );
     }

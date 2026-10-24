@@ -774,5 +774,15 @@
     "body": "Tienes una notificación nueva",
     "coalesced_one": "{{count}} notificación nueva",
     "coalesced_other": "{{count}} notificaciones nuevas"
+  },
+  "dietaryAlerts": {
+    "title": "Para tu hogar",
+    "contains": "{{name}}: contiene {{what}}",
+    "mayContain": "{{name}}: puede contener {{what}}",
+    "notDiet": "{{name}}: no es {{what}}",
+    "mayNotDiet": "{{name}}: puede no ser {{what}}",
+    "checkLabel": "Revisa siempre la etiqueta: los datos del producto pueden estar incompletos.",
+    "stale": "Comprobado antes; puede no estar al día.",
+    "needsConnection": "Conéctate a internet para comprobarlo para tu hogar."
   }
 }

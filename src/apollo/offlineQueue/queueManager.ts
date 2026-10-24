@@ -78,7 +78,6 @@ const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
  */
 export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'homeId',
-  'appliesToHomeId',
   'pantryId',
   'shoppingListId',
   'shoppingListItemId',

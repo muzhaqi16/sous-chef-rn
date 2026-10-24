@@ -90,6 +90,7 @@ const convertToScannedItem = (
   brandNameOverride?: string,
 ): ScannedItem => ({
   id: item.id,
+  conceptIds: item.ancestors?.map(concept => concept.id) ?? [],
   name: item.name,
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),

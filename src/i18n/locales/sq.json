@@ -774,5 +774,15 @@
     "body": "Ke një njoftim të ri",
     "coalesced_one": "{{count}} njoftim i ri",
     "coalesced_other": "{{count}} njoftime të reja"
+  },
+  "dietaryAlerts": {
+    "title": "Për shtëpinë tënde",
+    "contains": "{{name}}: përmban {{what}}",
+    "mayContain": "{{name}}: mund të përmbajë {{what}}",
+    "notDiet": "{{name}}: nuk është {{what}}",
+    "mayNotDiet": "{{name}}: mund të mos jetë {{what}}",
+    "checkLabel": "Kontrollo gjithmonë etiketën: të dhënat e produktit mund të jenë të paplota.",
+    "stale": "U kontrollua më parë; mund të mos jetë i përditësuar.",
+    "needsConnection": "Lidhu me internetin për ta kontrolluar për shtëpinë tënde."
   }
 }

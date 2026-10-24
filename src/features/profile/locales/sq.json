@@ -90,7 +90,11 @@
     "fat": "Yndyrë",
     "loadingProfile": "Po ngarkohet profili dietik...",
     "loadFailedTitle": "Profili dietik nuk u ngarkua",
-    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish."
+    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish.",
+    "sharedWith": "E ndarë me",
+    "sharedWithShown": "Anëtarët e këtyre shtëpive shohin kufizimet e tua me emrin tënd kur skanojnë ose gatuajnë. Shënimet e tua mbeten private.",
+    "sharedWithNone": "Aktivizo një shtëpi që anëtarët e saj të shohin çfarë nuk mund të hash kur skanojnë ose gatuajnë.",
+    "sharingFailed": "Nuk u ndryshua dot kush i sheh kufizimet e tua. Provo përsëri."
   },
   "biometricSetup": {
     "authRequiredTitle": "Kërkohet autentifikimi",
@@ -153,7 +157,21 @@
     "intolerances": {
       "egg": "Vezë",
       "sulfite": "Sulfite"
-    }
+    },
+    "avoidTitle": "Ushqimet që shmang",
+    "avoidEmpty": "Zgjidh ushqime nga katalogu, si proshutë ose kërpudha.",
+    "avoidSheetTitle": "Shmang një ushqim",
+    "avoidHint": "Çdo lloj i tij shënohet, për ty dhe për shtëpitë me të cilat ndan.",
+    "avoidSearchPlaceholder": "Kërko ushqime",
+    "avoidNamed": "Shmang {{name}}",
+    "avoidSeverity": {
+      "preference": "Shmang",
+      "intolerance": "Intolerancë",
+      "allergy": "Alergji"
+    },
+    "avoidAllergy": "{{name}} (alergji)",
+    "avoidIntolerance": "{{name}} (intolerancë)",
+    "addAvoidFailed": "Ushqimi nuk u shtua dot. Provo përsëri."
   },
   "cookingPreferences": {
     "prepTimeRange": "Koha e përgatitjes duhet të jetë midis {{min}} dhe {{max}} minutash",

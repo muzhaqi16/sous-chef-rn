@@ -46,4 +46,7 @@ export const recipesTestIDs = {
   heartButton: 'recipe-heart-button',
   reportButton: 'recipe-report-button',
   reviewReportButton: (reviewId: string) => `review-report-${reviewId}`,
+  /** The recipe page's household dietary summary, and its offline note. */
+  householdSummary: 'recipe-household-summary',
+  householdUnchecked: 'recipe-household-unchecked',
 };

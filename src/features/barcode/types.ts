@@ -8,11 +8,12 @@ import type { DataAttributionValue } from '#/types/attribution';
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';
 
 /**
- * Where a scan started, and so what a result does: stock a pantry item or add a
- * shopping list line. A route param, so a string not a callback; it names the
- * features barcode serves, so it lives here, not in the shared navigation types.
+ * Where a scan started, and so what a result does: stock a pantry item, add a
+ * shopping list line, or put the product in store mode's cart. A route param,
+ * so a string not a callback; it names the features barcode serves, so it lives
+ * here, not in the shared navigation types.
  */
-export type BarcodeSource = 'pantry' | 'shoppingList';
+export type BarcodeSource = 'pantry' | 'shoppingList' | 'storeMode';
 
 type LookupNode = ItemByLookupQuery['items']['edges'][number]['node'];
 
@@ -28,6 +29,8 @@ type UnitRef = Pick<
  */
 export interface ScannedItem
   extends Pick<LookupNode, 'id' | 'name' | 'canEdit' | 'canSuggest'> {
+  /** The concepts above the product, nearest first; none for a created item. */
+  conceptIds: string[];
   description?: string;
   /** The primary photo's thumbnail, which an edit form starts from. */
   imageUrl?: string;

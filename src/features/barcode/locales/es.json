@@ -27,6 +27,13 @@
       "label": "Tamaño de un paquete",
       "invalid": "Introduce un tamaño mayor que 0.",
       "unitRequired": "Elige una unidad de la lista."
+    },
+    "addToCart": "Añadir al carrito",
+    "addToCartWithPrice": "Añadir con precio",
+    "alreadyInCart": "Ya está en el carrito",
+    "household": {
+      "alternatives": "Otros parecidos sin avisos",
+      "openAlternative": "Abrir {{name}}"
     }
   }
 }

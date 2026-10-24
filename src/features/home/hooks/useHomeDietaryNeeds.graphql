@@ -1,0 +1,26 @@
+# A home's dietary needs: each member who shares with it, by name, with their
+# restrictions, strictest first. The home's "Dietary needs" screen.
+query HomeDietaryNeeds($homeId: ID!) {
+  home(id: $homeId) {
+    id
+    dietaryNeeds {
+      membership {
+        id
+        userId
+        role
+        displayName
+      }
+      restrictions {
+        id
+        diet
+        intolerance
+        healthGoal
+        item {
+          id
+          name
+        }
+        severity
+      }
+    }
+  }
+}

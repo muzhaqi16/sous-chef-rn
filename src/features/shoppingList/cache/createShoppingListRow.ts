@@ -60,6 +60,8 @@ interface ShoppingRowCreate<TData> {
 }
 
 interface ShoppingRowCreated<TData> {
+  /** The id the create minted for the row. */
+  id: string;
   /** `kept` once the row is added or its create queued. */
   outcome: 'kept' | 'reverted';
   /** Why the row was withdrawn, for the surface to present; never presented here. */
@@ -113,11 +115,12 @@ export async function createShoppingListRow<TData>(
     { document, fallback, present: 'none', onFailed: withdraw },
   );
   if (settled.failure) {
-    return { outcome: 'reverted', failure: settled.failure, data: null };
+    return { id, outcome: 'reverted', failure: settled.failure, data: null };
   }
   if (refusedLine(settled.data)) {
     withdraw();
     return {
+      id,
       outcome: 'reverted',
       failure: {
         code: null,
@@ -128,5 +131,5 @@ export async function createShoppingListRow<TData>(
       data: settled.data,
     };
   }
-  return { outcome: 'kept', failure: null, data: settled.data };
+  return { id, outcome: 'kept', failure: null, data: settled.data };
 }

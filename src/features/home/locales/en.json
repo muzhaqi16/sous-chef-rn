@@ -104,7 +104,9 @@
     "youLabel": "You",
     "storageLocationsSubtitle": "Manage where items are stored",
     "leaveHomeDescription": "Leaving this home will remove your access to all shared pantries, shopping lists, meal plans, and templates.",
-    "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home."
+    "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home.",
+    "dietaryNeedsRowTitle": "What members can't eat",
+    "dietaryNeedsRowSubtitle": "Allergies and restrictions members share with this home"
   },
   "joinHome": {
     "homeFallback": "Home",
@@ -185,5 +187,15 @@
     "EXPIRED": "Expired",
     "REVOKED": "Revoked",
     "USED": "Used"
+  },
+  "homeDietaryNeeds": {
+    "title": "Dietary needs",
+    "emptyTitle": "No one shares their dietary needs yet",
+    "emptyBody": "Each member chooses to share in their Dietary Profile.",
+    "severity": {
+      "allergy": "Allergies",
+      "preference": "Preferences",
+      "goal": "Goals"
+    }
   }
 }

@@ -37,9 +37,10 @@ export interface DietaryRestriction {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  /** The avoided catalog item, as the root the server stored. */
+  item?: { id: string; name: string } | null;
   severity: RestrictionSeverity;
   notes?: string | null;
-  appliesToHomeId?: string | null;
 }
 
 export interface DietaryProfileData {
@@ -177,9 +178,9 @@ export const useDietaryProfile = () => {
         diet: r.diet,
         intolerance: r.intolerance,
         healthGoal: r.healthGoal,
+        item: r.item,
         severity: r.severity,
         notes: r.notes,
-        appliesToHomeId: r.appliesToHomeId,
       })),
       preferredCuisines: profile.preferredCuisines,
       dislikedIngredients: profile.dislikedIngredients,
@@ -255,14 +256,13 @@ export const useDietaryProfile = () => {
     restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
-    appliesToHomeId?: string,
   ) => {
     if (!(await ensureProfileExists())) return false;
     const settled = await settleMutation(
       () =>
         addRestriction({
           variables: {
-            input: { kind: restriction, severity, notes, appliesToHomeId },
+            input: { kind: restriction, severity, notes },
           },
         }),
       {

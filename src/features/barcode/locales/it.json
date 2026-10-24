@@ -27,6 +27,13 @@
       "label": "Dimensione di una confezione",
       "invalid": "Inserisci una dimensione maggiore di 0.",
       "unitRequired": "Scegli un’unità dall’elenco."
+    },
+    "addToCart": "Aggiungi al carrello",
+    "addToCartWithPrice": "Aggiungi con prezzo",
+    "alreadyInCart": "Già nel carrello",
+    "household": {
+      "alternatives": "Altri simili senza avvisi",
+      "openAlternative": "Apri {{name}}"
     }
   }
 }

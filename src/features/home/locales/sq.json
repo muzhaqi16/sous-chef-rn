@@ -104,7 +104,9 @@
     "youLabel": "Ti",
     "storageLocationsSubtitle": "Menaxho ku ruhen artikujt",
     "leaveHomeDescription": "Largimi nga kjo shtëpi do të heqë aksesin tënd në të gjitha qilarët, listat e blerjeve, planet e ushqimit dhe modelet e ndara.",
-    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë."
+    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë.",
+    "dietaryNeedsRowTitle": "Çfarë nuk mund të hanë anëtarët",
+    "dietaryNeedsRowSubtitle": "Alergjitë dhe kufizimet që anëtarët ndajnë me këtë shtëpi"
   },
   "joinHome": {
     "homeFallback": "Shtëpia",
@@ -185,5 +187,15 @@
     "EXPIRED": "Skaduar",
     "REVOKED": "Revokuar",
     "USED": "Përdorur"
+  },
+  "homeDietaryNeeds": {
+    "title": "Nevojat dietike",
+    "emptyTitle": "Askush nuk ka ndarë ende nevoja dietike",
+    "emptyBody": "Çdo anëtar zgjedh t’i ndajë në Profilin dietik.",
+    "severity": {
+      "allergy": "Alergjitë",
+      "preference": "Preferencat",
+      "goal": "Qëllimet"
+    }
   }
 }

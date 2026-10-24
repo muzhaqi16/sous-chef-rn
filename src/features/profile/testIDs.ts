@@ -23,6 +23,13 @@ export const profileTestIDs = {
   settingsShowShoppingListImagesSwitch:
     'settings-show-shopping-list-images-switch',
   settingsStoreModeSwitch: 'settings-store-mode-switch',
+  /** One home's switch in the dietary profile's "Shared with" section. */
+  dietarySharingSwitch: (homeId: string) => `dietary-sharing-switch-${homeId}`,
+  avoidSheet: 'dietary-avoid-sheet',
+  avoidSeverity: 'dietary-avoid-severity',
+  avoidSearchInput: 'dietary-avoid-search-input',
+  /** One food the avoid sheet's search found. */
+  avoidCandidate: (itemId: string) => `dietary-avoid-candidate-${itemId}`,
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
 
   cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',

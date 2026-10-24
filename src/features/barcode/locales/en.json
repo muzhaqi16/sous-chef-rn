@@ -27,6 +27,13 @@
       "label": "Size of one package",
       "invalid": "Enter a size greater than 0.",
       "unitRequired": "Pick a unit from the list."
+    },
+    "addToCart": "Add to cart",
+    "addToCartWithPrice": "Add with price",
+    "alreadyInCart": "Already in the cart",
+    "household": {
+      "alternatives": "Others like it that raise no alert",
+      "openAlternative": "Open {{name}}"
     }
   }
 }

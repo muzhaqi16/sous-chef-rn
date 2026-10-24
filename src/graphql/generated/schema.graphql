@@ -279,10 +279,6 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
-  """
-  Makes it a household restriction for this home; the caller must be an active member of it. Omit for a personal restriction
-  """
-  appliesToHomeId: ID
   """What the restriction restricts"""
   kind: RestrictionKindInput!
   """Free text, at most 1000 characters after trimming"""
@@ -802,6 +798,12 @@ input BrandOpsInput {
 input BrandOrderBy {
   createdAt: SortOrder
   name: SortOrder
+}
+
+"""The owner a source record names for a product's brand."""
+type BrandOwnerFact {
+  name: String!
+  source: ExternalSource!
 }
 
 """
@@ -4370,6 +4372,60 @@ enum Diet {
 }
 
 """
+One member restriction that a product, concept or recipe ingredient may
+break, with the strongest evidence for it. Nothing is ever stated as safe:
+the absence of an alert means only that the catalog holds no evidence.
+"""
+type DietaryAlert {
+  """
+  The evidence's own name: an allergen, an item, an analysis tag or a department
+  """
+  matched: String!
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  """The restriction the subject may break, as the home sees it"""
+  restriction: SharedDietaryRestriction!
+  """What kind of evidence raised the alert"""
+  source: DietaryAlertSource!
+  """CONTAINS or MAY_CONTAIN"""
+  state: DietaryAlertState!
+}
+
+"""
+What kind of evidence raised a dietary alert; the client writes the copy per kind.
+"""
+enum DietaryAlertSource {
+  """
+  An allergen the product declares, or one found in an ingredient's name; matched is its name
+  """
+  ALLERGEN
+  """
+  The subject is at or below an avoided catalog item; matched is that item's name
+  """
+  AVOIDED_ITEM
+  """
+  The store department the subject sits in, such as MEAT_SEAFOOD; only ever MAY_CONTAIN
+  """
+  DEPARTMENT
+  """
+  An Open Food Facts ingredients analysis, such as non-vegan; matched is the tag without its language prefix
+  """
+  INGREDIENTS_ANALYSIS
+}
+
+"""
+How strongly the evidence says a subject holds what a restriction avoids.
+"""
+enum DietaryAlertState {
+  """The evidence says the subject contains it"""
+  CONTAINS
+  """The evidence says only that the subject may contain it"""
+  MAY_CONTAIN
+}
+
+"""
 What a user eats and plans for: restrictions, tastes, daily nutrition goals
 and cooking limits. One per account. A meal plan linked to it measures its
 nutrition against these goals.
@@ -4389,7 +4445,9 @@ type DietaryProfile {
   cookingSkillLevel: CookingSkillLevel
   """When the profile was created"""
   createdAt: DateTime!
-  """Ingredients the user dislikes, as free text; empty when none"""
+  """
+  Ingredients the user dislikes, as free text; empty when none. Nothing screens against it: avoided items are restrictions
+  """
   dislikedIngredients: [String!]!
   """
   Daily fat goal in grams, measured as calorieTarget is; null or 0 when no goal is set
@@ -4416,6 +4474,10 @@ type DietaryProfile {
   """
   proteinTarget: Int
   """
+  The religious diet the user follows; null when none is set. Private to the user, never shared with a home
+  """
+  religiousDiet: ReligiousDiet
+  """
   The diets, intolerances and health goals the user follows, at most 100; empty when none
   """
   restrictions: [DietaryRestriction!]!
@@ -4429,7 +4491,8 @@ type DietaryProfile {
 }
 
 type DietaryRestriction {
-  appliesToHomeId: ID
+  """The home named when the restriction was added; decides nothing"""
+  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
   createdAt: DateTime!
   diet: Diet
   dietaryProfile: DietaryProfile!
@@ -4437,6 +4500,10 @@ type DietaryRestriction {
   healthGoal: HealthGoal
   id: ID!
   intolerance: Intolerance
+  """
+  The catalog item avoided, stored as the root of the item picked; null for the other kinds
+  """
+  item: Item
   notes: String
   severity: RestrictionSeverity!
   updatedAt: DateTime!
@@ -5179,6 +5246,15 @@ type Home {
   createdAt: DateTime!
   currency: CurrencyCode
   description: String
+  """
+  What this home's members cannot or will not eat: one entry per ACTIVE
+  member who shares with this home (Membership.sharesDietaryNeeds) and has at
+  least one restriction, the caller included, in the order membersConnection
+  lists them. Read live from each member's profile, so leaving, rejoining and
+  editing a restriction need nothing else. Readable by a member who can view
+  the home, guests included.
+  """
+  dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
   inviteLogsConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -5665,6 +5741,40 @@ type HouseholdMoneyReport {
   wasteValue: [CurrencyAmount!]
 }
 
+"""A price the household paid, as recorded."""
+type HouseholdPaidPrice {
+  basis: PriceBasis
+  """The price per kg, L or each, when the pack's facts allowed it"""
+  normalizedPrice: Float
+  """Whether it was a recorded sale price"""
+  onSale: Boolean!
+  paidAt: DateTime!
+  """How many units were bought; null when not known"""
+  quantity: Float
+  """The regular price per unit, when the source recorded one beside a sale"""
+  regularPrice: Float
+  """Where it was bought; null when no store was recorded"""
+  store: Store
+  unit: Unit!
+  """The price per one unit"""
+  unitPrice: Float!
+}
+
+"""
+What a household itself paid for an item: its own purchases and receipts
+only, under the comparison's trust rules. Another household's price, a
+catalog price and a manual price never count.
+"""
+type HouseholdPriceSummary {
+  currency: Currency!
+  """The household's newest paid price, however old; null when it has none"""
+  lastPaid: HouseholdPaidPrice
+  """The fewest days usual rests on"""
+  minimumObservations: Int!
+  """Null below minimumObservations days; a sale price never counts"""
+  usual: HouseholdUsualPrice
+}
+
 """A household's spend on one top-level category."""
 type HouseholdSpendCategory {
   """
@@ -5689,6 +5799,20 @@ type HouseholdSpendStore {
   spend: [CurrencyAmount!]!
   """The store; null for purchases that name none"""
   store: Store
+}
+
+"""
+A household's usual price: the median of its regular paid prices at one basis.
+"""
+type HouseholdUsualPrice {
+  """The basis the household bought by on the most days"""
+  basis: PriceBasis!
+  """The median price per basis; each day counts once, as that day's median"""
+  medianPrice: Float!
+  """The days counted"""
+  observations: Int!
+  """The window the days were counted over"""
+  windowDays: Int!
 }
 
 type IPStat {
@@ -6072,6 +6196,12 @@ type Item {
   solids measured by weight, COUNT for discrete items. Null when not declared.
   """
   baseDimension: BaseDimension
+  """
+  Who owns the product's brand: the owner a USDA record names, else an Open
+  Food Facts brand owner. Null when none is named, or the owner is the
+  brand itself. What the brand is part of is Brand.parent.
+  """
+  brandOwner: BrandOwnerFact
   """Brands linked to this item, at most 100; empty when none."""
   brands: [ItemBrand!]!
   """
@@ -6161,6 +6291,32 @@ type Item {
   """Free-text description of the item, or null when none is recorded."""
   description: String
   """
+  The home's dietary alerts for this item: one per restriction it may break,
+  among every ACTIVE member sharing with the home and the caller's own
+  restrictions, shared or not. Ordered by severity (ALLERGY to GOAL), then
+  CONTAINS before MAY_CONTAIN, then member order. A product is judged by its
+  declared allergens, its ingredients analysis and labels, its store
+  department and avoided items; a concept by the allergens its name names,
+  its department and avoided items. Unknown evidence raises nothing, and a
+  health goal never alerts. The caller must be an ACTIVE member of the home.
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
+  """
+  Other live products under this item's concept that raise no dietary alert
+  for the home and hold allergen or ingredient data, most popular first. Empty
+  for an unplaced product. Not a claim of safety: it lists products the
+  catalog holds no evidence against.
+  """
+  dietaryAlternatives(
+    """At most this many: default 5, at most 20"""
+    first: Int = 5
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [Item!]!
+  """
   Unit that netWeight is stated in, for example oz. On an item returned by a
   barcode lookup, the unit of that barcode's figure when it has one.
   """
@@ -6188,6 +6344,20 @@ type Item {
   recorded.
   """
   healthBenefits: [HealthBenefit!]!
+  """
+  What the household paid for this item. The caller must be an ACTIVE member
+  of the home.
+  """
+  householdPriceSummary(
+    """The currency read; the caller's own when omitted"""
+    currency: CurrencyCode
+    """One barcode of the item; all of them when omitted"""
+    gtin: String
+    """The household"""
+    homeId: ID!
+    """How far back usual counts: default 180 days, at most 365"""
+    windowDays: Int
+  ): HouseholdPriceSummary!
   """Unique identifier of the catalog item."""
   id: ID!
   """
@@ -6282,6 +6452,8 @@ type Item {
   has no field for.
   """
   nutritions: JSON
+  """Where the product comes from; null when no record states a country"""
+  origin: ProductOrigin
   """
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
@@ -6748,7 +6920,7 @@ type ItemPhoto {
 Where an item is cheaper. Catalog prices and the viewer's own household's paid
 prices count; other households' paid prices count, anonymously, only once at
 least two households and two people supplied them. Estimates do not. Rows are
-cheapest first within each basis.
+cheapest first within each basis. Sale and regular prices both count.
 """
 type ItemPriceComparison {
   currency: Currency!
@@ -7963,7 +8135,9 @@ type MealPlan {
   """Free text about the plan; null when none was given"""
   description: String
   """
-  The dietary profile nutritionGoalProgress measures the plan against; null when none is linked
+  The dietary profile nutritionGoalProgress measures the plan against. Null
+  when none is linked, and for any caller but the profile's owner or an
+  admin: a plan shared with a home does not show its creator's profile.
   """
   dietaryProfile: DietaryProfile
   """
@@ -8003,8 +8177,9 @@ type MealPlan {
   """The plan's name; never blank"""
   name: String!
   """
-  Progress toward nutrition goals from linked dietary profile.
-  Returns null if no dietary profile is linked.
+  Progress toward the linked dietary profile's nutrition goals. Null when no
+  profile is linked, and, since each target is the profile's, for any caller
+  but its owner or an admin.
   """
   nutritionGoalProgress: NutritionGoalProgress
   """
@@ -8563,6 +8738,18 @@ input MediaAssetsInput {
   images: [ImageInput!]
 }
 
+"""One sharing member of a home and the restrictions the home sees"""
+type MemberDietaryNeeds {
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  """
+  The member's restrictions, strictest first (ALLERGY to GOAL), then newest; never empty
+  """
+  restrictions: [SharedDietaryRestriction!]!
+}
+
 """A user's membership of a home: their role and permissions in it"""
 type Membership {
   """Grants adding items to the home's pantries"""
@@ -8608,6 +8795,12 @@ type Membership {
   except canViewPantry.
   """
   role: MembershipRole!
+  """
+  Whether the member's dietary restrictions appear in this home's
+  dietaryNeeds. Set only by the member (updateDietarySharing). A membership
+  starts shared; one that existed before the switch did started unshared.
+  """
+  sharesDietaryNeeds: Boolean!
   """
   Whether the membership is in force. Only an ACTIVE membership grants access
   to the home; LEFT, REMOVED and SUSPENDED memberships grant nothing.
@@ -9763,6 +9956,17 @@ type Mutation {
   updateDevice(input: UpdateDeviceInput!): UpdateDeviceResult!
   """Update the current user's dietary profile."""
   updateDietaryProfile(input: UpdateDietaryProfileInput!): UpdateDietaryProfileResult!
+  """
+  Turn the caller's own dietary sharing with a home on or off: whether their
+  restrictions appear in that home's dietaryNeeds. Any member sets their own,
+  guests included, and nobody sets another member's. A caller with no ACTIVE
+  membership in the home is refused (ForbiddenError). Setting the value the
+  switch already holds writes nothing, and a toggle resent under an
+  idempotencyKey already applied writes nothing and answers the membership as
+  it stands, so a replay converges; a change is announced on homeEvents as
+  MEMBERSHIP_UPDATED naming sharesDietaryNeeds.
+  """
+  updateDietarySharing(input: UpdateDietarySharingInput!): UpdateDietarySharingResult!
   """Update an external source mapping."""
   updateExternalSource(input: UpdateExternalSourceInput!): UpdateExternalSourceResult!
   """Update details of a favorited recipe (notes, folder, rating)."""
@@ -10764,6 +10968,16 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 type OperatingSystemStat {
   count: Int!
   osName: String!
+}
+
+"""One place a source stated that names a country."""
+type OriginFact {
+  """The country, ISO 3166-1 alpha-2"""
+  countryCode: CountryCode!
+  """The source that stated it"""
+  source: ExternalSource!
+  """The place as the source stated it"""
+  value: String!
 }
 
 type PackageBreakdown {
@@ -12299,6 +12513,11 @@ type PriceComparisonRow {
   latestPrice: Float!
   """The median price per basis over the window"""
   medianPrice: Float!
+  """
+  Whether the row rests on enough observations (the same minimum as a
+  household's usual price) to show as a range rather than one price
+  """
+  meetsMinimumSample: Boolean!
   observations: Int!
   scope: PriceComparisonScope!
   """Set when scope is STORE"""
@@ -12418,6 +12637,20 @@ input ProductDetailsInput {
   primaryUpc: String
   shelfLifeDays: Int
   shelfLifeOpenedDays: Int
+}
+
+"""
+Where a product comes from, as its source records state it. A stated place
+counts only when it names a country; nothing is inferred from a barcode
+prefix or from where the product is sold.
+"""
+type ProductOrigin {
+  """Its country of origin as the retailer states it: Kroger"""
+  countryOfOrigin: [OriginFact!]!
+  """Where its ingredients come from: Open Food Facts origins"""
+  ingredientsFrom: [OriginFact!]!
+  """Where it was made: Open Food Facts manufacturing places"""
+  madeIn: [OriginFact!]!
 }
 
 """
@@ -14720,6 +14953,16 @@ type RecipeIngredient {
   unit, or when no seeded unit of the system shares its dimension.
   """
   convertedQuantity: ConvertedValue
+  """
+  The home's dietary alerts for this ingredient, as on Item.dietaryAlerts.
+  An ingredient is judged by the allergens its name and its linked item's
+  name name, the linked item's department, and avoided items through the
+  linked item's root; an unlinked ingredient by its name alone.
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
   estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
@@ -15878,7 +16121,7 @@ Always include a __typename so the variant can be discriminated.
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 """
-What one restriction restricts: exactly one of a diet, an intolerance or a health goal.
+What one restriction restricts: exactly one of a diet, an intolerance, a health goal or a catalog item.
 """
 input RestrictionKindInput @oneOf {
   """A diet the user follows, such as VEGAN"""
@@ -15887,6 +16130,13 @@ input RestrictionKindInput @oneOf {
   healthGoal: HealthGoal
   """A food the user cannot tolerate, such as GLUTEN"""
   intolerance: Intolerance
+  """
+  A catalog item the user avoids: an active item they can see, else
+  NotFoundError. It is stored as its root (a placed product's concept, else
+  the item itself), which must be PUBLIC (ValidationError on kind.item), and
+  covers everything at or below that root and below its same-name twins.
+  """
+  item: ID
 }
 
 enum RestrictionSeverity {
@@ -16055,6 +16305,32 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError
+
+"""
+One member's restriction as a home they share with sees it: what it restricts
+and how strictly. It carries no notes and leads to no other part of the
+member's dietary profile.
+"""
+type SharedDietaryRestriction {
+  """The diet followed, when the restriction is a diet"""
+  diet: Diet
+  """The health goal pursued, when the restriction is a health goal"""
+  healthGoal: HealthGoal
+  """
+  The restriction's identifier, the same as on its owner's DietaryRestriction
+  """
+  id: ID!
+  """The food not tolerated, when the restriction is an intolerance"""
+  intolerance: Intolerance
+  """
+  The catalog item avoided, when the restriction avoids one: the root of the item picked
+  """
+  item: Item
+  """
+  How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
+  """
+  severity: RestrictionSeverity!
+}
 
 """
 Other participants changed a shared list's items in one 15-minute window (SHARED_LIST_CHANGED).
@@ -18629,7 +18905,7 @@ input UpdateDietaryProfileInput {
   """How much cooking experience the user claims; null clears it"""
   cookingSkillLevel: CookingSkillLevel
   """
-  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused
+  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
   """
   dislikedIngredients: [String!]
   """
@@ -18678,6 +18954,34 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfilePayload | ValidationError
+
+"""The caller's own sharing switch in one home."""
+input UpdateDietarySharingInput {
+  """A home the caller is an ACTIVE member of"""
+  homeId: ID!
+  """
+  A CUID2 the client mints per toggle, for an offline queue. A toggle sent
+  again under a key already applied writes nothing and answers the membership
+  as it stands, so a late resend never undoes a later toggle. Omit online.
+  """
+  idempotencyKey: ID
+  """Whether the caller's dietary restrictions are shown to this home"""
+  shared: Boolean!
+}
+
+type UpdateDietarySharingPayload {
+  """The home, whose dietaryNeeds reflect the switch"""
+  home: Home
+  """The caller's membership, carrying the switch as it now stands"""
+  membership: Membership!
+}
+
+"""
+Result of UpdateDietarySharing. Select on UpdateDietarySharingPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateDietarySharingResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietarySharingPayload | ValidationError
 
 input UpdateExternalSourceInput {
   externalName: String

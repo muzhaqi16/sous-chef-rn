@@ -90,7 +90,11 @@
     "fat": "Grassi",
     "loadingProfile": "Caricamento profilo alimentare...",
     "loadFailedTitle": "Impossibile caricare il tuo profilo alimentare",
-    "loadFailedSubtitle": "Controlla la connessione e riprova."
+    "loadFailedSubtitle": "Controlla la connessione e riprova.",
+    "sharedWith": "Condiviso con",
+    "sharedWithShown": "I membri di queste case vedono le tue restrizioni con il tuo nome quando scansionano o cucinano. Le tue note restano private.",
+    "sharedWithNone": "Attiva una casa perché i suoi membri vedano ciò che non puoi mangiare quando scansionano o cucinano.",
+    "sharingFailed": "Impossibile cambiare chi vede le tue restrizioni. Riprova."
   },
   "biometricSetup": {
     "authRequiredTitle": "Autenticazione richiesta",
@@ -153,7 +157,21 @@
     "intolerances": {
       "egg": "Uova",
       "sulfite": "Solfiti"
-    }
+    },
+    "avoidTitle": "Alimenti che evito",
+    "avoidEmpty": "Scegli alimenti dal catalogo, come pancetta o funghi.",
+    "avoidSheetTitle": "Evita un alimento",
+    "avoidHint": "Ogni sua varietà viene segnalata, a te e alle case con cui condividi.",
+    "avoidSearchPlaceholder": "Cerca alimenti",
+    "avoidNamed": "Evita {{name}}",
+    "avoidSeverity": {
+      "preference": "Evita",
+      "intolerance": "Intolleranza",
+      "allergy": "Allergia"
+    },
+    "avoidAllergy": "{{name}} (allergia)",
+    "avoidIntolerance": "{{name}} (intolleranza)",
+    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova."
   },
   "cookingPreferences": {
     "prepTimeRange": "Il tempo di preparazione deve essere tra {{min}} e {{max}} minuti",

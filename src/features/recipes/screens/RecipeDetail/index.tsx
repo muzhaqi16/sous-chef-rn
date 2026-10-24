@@ -40,6 +40,8 @@ import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientRow } from '#features/recipes/components/recipeDetail/IngredientRow';
+import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
+import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
@@ -260,6 +262,7 @@ const RecipeDetailScreen: React.FC = () => {
   const [showManageSheet, setShowManageSheet] = useState(false);
   const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
+  const household = useRecipeDietaryAlerts(recipeId);
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = () => {
@@ -600,6 +603,11 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
 
+        <HouseholdRecipeSummary
+          check={household.check}
+          alerts={household.summary}
+        />
+
         {/* Description */}
         {!!displayData.summary && (
           <View style={styles.section}>
@@ -638,6 +646,7 @@ const RecipeDetailScreen: React.FC = () => {
                 ingredient={ingredient}
                 isAdded={addedIngredients.has(ingredient.id)}
                 onAdd={() => handleAddSingleIngredient(ingredient)}
+                alerts={household.alertsFor(ingredient.id)}
               />
             ))}
           </View>
