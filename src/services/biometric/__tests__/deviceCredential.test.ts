@@ -76,6 +76,8 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { ensureDeviceId } from '#/services/auth/deviceId';
+import { RevokeDeviceCredentialDocument } from '#operations/auth/auth.generated';
+import { waitFor } from '@testing-library/react-native';
 
 jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...a: unknown[]) => mockClearCredentials(...a),
@@ -697,5 +699,78 @@ describe('renewing a stored sign-in after a password change', () => {
     // The password change's own message says the sign-in is off; a second
     // toast for the same refusal would stack under it.
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+});
+
+// Issued but not stored, a credential is live server-side with no holder.
+describe('a device credential the device could not store', () => {
+  const EMAIL = 'chef@example.com';
+  const revokes = () =>
+    mockMutate.mock.calls.filter(
+      ([options]) =>
+        (options as { mutation?: unknown }).mutation ===
+        RevokeDeviceCredentialDocument,
+    );
+  const issueSucceeds = () =>
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        issueDeviceCredential: {
+          __typename: 'DeviceCredentialPayload',
+          credential: 'issued',
+        },
+      },
+    });
+
+  beforeEach(() => {
+    mockMutate.mockReset();
+    mockMutate.mockResolvedValue({ data: {} });
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({
+      data: {
+        deviceCredentials: [
+          {
+            id: 'dc-new',
+            deviceId: MOCK_DEVICE_ID,
+            __typename: 'DeviceCredential',
+          },
+        ],
+      },
+    });
+    mockHasCredentials.mockResolvedValue(true);
+    keychainMock().saveCredentials.mockReset();
+  });
+
+  it('is revoked when enrolment cannot save it', async () => {
+    keychainMock().saveCredentials.mockRejectedValueOnce(
+      new Error('keystore unavailable'),
+    );
+    issueSucceeds();
+
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+
+    await waitFor(() => expect(revokes()).toHaveLength(1));
+    expect(revokes()[0]?.[0]).toMatchObject({
+      variables: { input: { id: 'dc-new' } },
+    });
+  });
+
+  it('is revoked when the renewal after a password change cannot be saved', async () => {
+    keychainMock().saveCredentials.mockRejectedValueOnce(
+      new Error('save prompt cancelled'),
+    );
+    issueSucceeds();
+
+    expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
+
+    await waitFor(() => expect(revokes()).toHaveLength(1));
+  });
+
+  it('is kept when it was stored', async () => {
+    issueSucceeds();
+
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe(
+      'enrolled',
+    );
+    expect(revokes()).toHaveLength(0);
   });
 });

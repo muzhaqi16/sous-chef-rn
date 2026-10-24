@@ -48,6 +48,9 @@ const REVOKE_BUDGET_MS = 3000;
 async function deviceCredentialIsLive(
   signInToken: string,
 ): Promise<boolean | null> {
+  // Asked once: the sign-in waits on it, and retryLink's attempts would hold it
+  // through the whole budget on a link that is failing anyway.
+  if (isApiUnavailable(useStore.getState())) return null;
   try {
     const deviceId = await ensureDeviceId();
     if (!deviceId) return null;
@@ -56,7 +59,7 @@ async function deviceCredentialIsLive(
     const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'no-cache',
-      context: { signInToken },
+      context: { signInToken, skipRetryLink: true },
     });
     if (!listed.data) return null;
     return listed.data.deviceCredentials.some(
@@ -313,6 +316,7 @@ async function enrolDeviceCredential(
   email: string,
   options?: { quiet?: boolean },
 ): Promise<EnrolOutcome> {
+  let issued = false;
   try {
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
@@ -320,18 +324,30 @@ async function enrolDeviceCredential(
       return 'unsaved';
     }
 
-    const issued = await authService.issueDeviceCredential(deviceId, options);
-    if (issued.status === 'refused') return 'refused';
+    const result = await authService.issueDeviceCredential(deviceId, options);
+    if (result.status === 'refused') return 'refused';
+    issued = true;
 
     const stored = await storeCredentials(
       email,
-      markDeviceCredential(issued.credential),
+      markDeviceCredential(result.credential),
     );
-    return stored ? 'enrolled' : 'unsaved';
+    if (stored) return 'enrolled';
   } catch (error) {
     logger.error('Enrol device credential error:', error);
-    return 'unsaved';
   }
+  // Issued but not stored, it is live with no holder. Not awaited: the flow
+  // that asked does not wait on cleanup, and a failure costs a stale row.
+  if (issued) {
+    void revokeDeviceCredentialForThisDevice().then(revoked => {
+      if (!revoked) {
+        logger.warn(
+          'A device credential this device could not store may still be live',
+        );
+      }
+    });
+  }
+  return 'unsaved';
 }
 
 /**

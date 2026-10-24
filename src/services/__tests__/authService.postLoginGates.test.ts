@@ -19,6 +19,8 @@ jest.mock('#/apollo/client', () => ({
 const navStates = new Map<string, Record<string, unknown>>();
 const mockStore = {
   user: null as unknown,
+  isOnline: true,
+  apiReachable: null as boolean | null,
   setAuth: jest.fn(() => true),
   clearAuth: jest.fn(),
   setAuthIsLoading: jest.fn(),
@@ -212,11 +214,13 @@ describe('a stored fingerprint sign-in, after a password sign-in', () => {
 
     await authService.login(INPUT);
 
-    // Asked with the sign-in's own token: the pair is not stored yet.
+    // Asked with the sign-in's own token: the pair is not stored yet. Once:
+    // the sign-in waits on it, so a failing link must not hold it through
+    // retryLink's attempts.
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         fetchPolicy: 'no-cache',
-        context: { signInToken: 'at' },
+        context: { signInToken: 'at', skipRetryLink: true },
       }),
     );
     expect(mockRemoveCredentials).not.toHaveBeenCalled();
@@ -242,6 +246,17 @@ describe('a stored fingerprint sign-in, after a password sign-in', () => {
     await authService.login(INPUT);
 
     expect(mockRemoveCredentials).toHaveBeenCalledWith(INPUT.email);
+    expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('is kept, and not asked about, while the API is unreachable', async () => {
+    mockStore.apiReachable = false;
+
+    await authService.login(INPUT);
+    mockStore.apiReachable = null;
+
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockRemoveCredentials).not.toHaveBeenCalled();
     expect(mockStore.setNavigationState).toHaveBeenCalledWith('main_app');
   });
 
