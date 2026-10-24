@@ -157,7 +157,21 @@
     "intolerances": {
       "egg": "Uova",
       "sulfite": "Solfiti"
-    }
+    },
+    "avoidTitle": "Alimenti che evito",
+    "avoidEmpty": "Scegli alimenti dal catalogo, come pancetta o funghi.",
+    "avoidSheetTitle": "Evita un alimento",
+    "avoidHint": "Ogni sua varietà viene segnalata, a te e alle case con cui condividi.",
+    "avoidSearchPlaceholder": "Cerca alimenti",
+    "avoidNamed": "Evita {{name}}",
+    "avoidSeverity": {
+      "preference": "Evita",
+      "intolerance": "Intolleranza",
+      "allergy": "Allergia"
+    },
+    "avoidAllergy": "{{name}} (allergia)",
+    "avoidIntolerance": "{{name}} (intolleranza)",
+    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova."
   },
   "cookingPreferences": {
     "prepTimeRange": "Il tempo di preparazione deve essere tra {{min}} e {{max}} minuti",

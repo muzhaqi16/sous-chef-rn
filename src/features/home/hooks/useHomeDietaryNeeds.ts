@@ -1,10 +1,10 @@
 import { useQuery } from '@apollo/client/react';
-import type { TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import type {
   MembershipRole,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { restrictionLabelKey } from '#domain/dietary';
+import { restrictionLabel } from '#domain/dietary';
 import { useDataState } from '#hooks/data/useDataState';
 import { HomeDietaryNeedsDocument } from './useHomeDietaryNeeds.generated';
 
@@ -14,10 +14,10 @@ export interface MemberDietaryNeeds {
   userId: string;
   role: MembershipRole;
   displayName: string | null;
-  /** Strictest first, as the server orders them. */
+  /** Strictest first, as the server orders them; each worded to show. */
   restrictions: {
     id: string;
-    labelKey: TranslationKey;
+    label: string;
     severity: RestrictionSeverity;
   }[];
 }
@@ -28,6 +28,7 @@ export interface MemberDietaryNeeds {
  * on every visit, so a member who left or stopped sharing is gone.
  */
 export function useHomeDietaryNeeds(homeId: string) {
+  const { t } = useTranslation();
   const { data, loading, error, refetch } = useQuery(HomeDietaryNeedsDocument, {
     variables: { homeId },
   });
@@ -40,7 +41,7 @@ export function useHomeDietaryNeeds(homeId: string) {
       displayName: membership.displayName,
       restrictions: restrictions.map(restriction => ({
         id: restriction.id,
-        labelKey: restrictionLabelKey(restriction),
+        label: restrictionLabel(restriction, t),
         severity: restriction.severity,
       })),
     }),

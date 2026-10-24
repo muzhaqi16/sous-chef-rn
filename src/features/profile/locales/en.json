@@ -157,7 +157,21 @@
     "intolerances": {
       "egg": "Egg",
       "sulfite": "Sulfite"
-    }
+    },
+    "avoidTitle": "Foods I avoid",
+    "avoidEmpty": "Pick foods from the catalog, such as bacon or mushrooms.",
+    "avoidSheetTitle": "Avoid a food",
+    "avoidHint": "Every kind of it is flagged, for you and the homes you share with.",
+    "avoidSearchPlaceholder": "Search foods",
+    "avoidNamed": "Avoid {{name}}",
+    "avoidSeverity": {
+      "preference": "Avoid",
+      "intolerance": "Intolerance",
+      "allergy": "Allergy"
+    },
+    "avoidAllergy": "{{name}} (allergy)",
+    "avoidIntolerance": "{{name}} (intolerance)",
+    "addAvoidFailed": "Couldn't add that food. Try again."
   },
   "cookingPreferences": {
     "prepTimeRange": "Prep time must be between {{min}} and {{max}} minutes",

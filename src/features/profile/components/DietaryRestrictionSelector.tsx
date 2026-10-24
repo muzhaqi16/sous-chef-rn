@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
+import { AvoidFoodSheet } from '#features/profile/components/AvoidFoodSheet';
 import type {
   Diet,
   Intolerance,
@@ -35,6 +36,8 @@ type DietaryRestrictionSelectorProps = {
     diet?: Diet | null;
     intolerance?: Intolerance | null;
     healthGoal?: HealthGoal | null;
+    item?: { id: string; name: string } | null;
+    severity: RestrictionSeverity;
   }[];
   onAdd: (
     restrictions: RestrictionKindInput[],
@@ -107,6 +110,19 @@ export const DietaryRestrictionSelector: React.FC<
     r.healthGoal ? [{ id: r.id, label: t(restrictionLabelKey(r)) }] : [],
   );
 
+  // An avoided food reads by its name; a stricter one says how strict.
+  const existingAvoidItems = existingRestrictions.flatMap(r => {
+    if (!r.item) return [];
+    const { name } = r.item;
+    const label =
+      r.severity === RestrictionSeverity.Allergy
+        ? t('dietaryProfile.avoidAllergy', { name })
+        : r.severity === RestrictionSeverity.Intolerance
+        ? t('dietaryProfile.avoidIntolerance', { name })
+        : name;
+    return [{ id: r.id, label }];
+  });
+
   // Prepare available items for sheets. Lifestyle shows all options (including
   // the current pick) so the user can switch; constraints/intolerances/goals
   // exclude what's already added.
@@ -150,6 +166,19 @@ export const DietaryRestrictionSelector: React.FC<
   const handleOpenIntoleranceSheet = () => {
     setSelectedIntoleranceIds([]);
     setIntoleranceSheetVisible(true);
+  };
+
+  const [isAvoidSheetVisible, setAvoidSheetVisible] = useState(false);
+
+  const handleAvoidFood = async (
+    itemId: string,
+    severity: RestrictionSeverity,
+  ) => {
+    const success = await onAdd([{ item: itemId }], severity);
+    if (!success) {
+      alertService.alert(t('labels.error'), t('dietaryProfile.addAvoidFailed'));
+    }
+    return success;
   };
 
   const handleOpenGoalSheet = () => {
@@ -330,6 +359,15 @@ export const DietaryRestrictionSelector: React.FC<
         emptyMessage={t('dietaryProfile.goalsEmpty')}
       />
 
+      {/* Foods I Avoid Section: catalog foods, each covering its every kind */}
+      <RestrictionSection
+        title={t('dietaryProfile.avoidTitle')}
+        existingItems={existingAvoidItems}
+        onRemove={onRemove}
+        onAddPress={() => setAvoidSheetVisible(true)}
+        emptyMessage={t('dietaryProfile.avoidEmpty')}
+      />
+
       {/* Diet Selection Sheet (single-select) */}
       <MultiSelectChipSheet
         visible={isDietSheetVisible}
@@ -377,6 +415,12 @@ export const DietaryRestrictionSelector: React.FC<
         onClose={() => setGoalSheetVisible(false)}
         onDone={handleSaveGoals}
         loading={isSavingGoals}
+      />
+
+      <AvoidFoodSheet
+        visible={isAvoidSheetVisible}
+        onDismiss={() => setAvoidSheetVisible(false)}
+        onPick={handleAvoidFood}
       />
     </View>
   );

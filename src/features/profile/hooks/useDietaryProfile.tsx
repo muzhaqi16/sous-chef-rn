@@ -37,6 +37,8 @@ export interface DietaryRestriction {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  /** The avoided catalog item, as the root the server stored. */
+  item?: { id: string; name: string } | null;
   severity: RestrictionSeverity;
   notes?: string | null;
 }
@@ -176,6 +178,7 @@ export const useDietaryProfile = () => {
         diet: r.diet,
         intolerance: r.intolerance,
         healthGoal: r.healthGoal,
+        item: r.item,
         severity: r.severity,
         notes: r.notes,
       })),

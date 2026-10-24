@@ -22,6 +22,10 @@ fragment UserReaders on User {
       diet
       healthGoal
       intolerance
+      item {
+        id
+        name
+      }
       notes
       severity
     }

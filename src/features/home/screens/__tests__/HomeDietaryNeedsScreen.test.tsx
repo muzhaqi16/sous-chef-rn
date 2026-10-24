@@ -64,12 +64,12 @@ describe('HomeDietaryNeedsScreen', () => {
         restrictions: [
           {
             id: 'r-1',
-            labelKey: 'recipes.intolerance.PEANUT',
+            label: t('recipes.intolerance.PEANUT'),
             severity: RestrictionSeverity.Allergy,
           },
           {
             id: 'r-2',
-            labelKey: 'dietaryProfile.diets.vegetarian',
+            label: 'Bacon',
             severity: RestrictionSeverity.Preference,
           },
         ],
@@ -82,7 +82,7 @@ describe('HomeDietaryNeedsScreen', () => {
         restrictions: [
           {
             id: 'r-3',
-            labelKey: 'recipes.healthGoal.LOW_CARB',
+            label: t('recipes.healthGoal.LOW_CARB'),
             severity: RestrictionSeverity.Goal,
           },
         ],

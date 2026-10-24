@@ -15,6 +15,10 @@ query HomeDietaryNeeds($homeId: ID!) {
         diet
         intolerance
         healthGoal
+        item {
+          id
+          name
+        }
         severity
       }
     }

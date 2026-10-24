@@ -157,7 +157,21 @@
     "intolerances": {
       "egg": "Vezë",
       "sulfite": "Sulfite"
-    }
+    },
+    "avoidTitle": "Ushqimet që shmang",
+    "avoidEmpty": "Zgjidh ushqime nga katalogu, si proshutë ose kërpudha.",
+    "avoidSheetTitle": "Shmang një ushqim",
+    "avoidHint": "Çdo lloj i tij shënohet, për ty dhe për shtëpitë me të cilat ndan.",
+    "avoidSearchPlaceholder": "Kërko ushqime",
+    "avoidNamed": "Shmang {{name}}",
+    "avoidSeverity": {
+      "preference": "Shmang",
+      "intolerance": "Intolerancë",
+      "allergy": "Alergji"
+    },
+    "avoidAllergy": "{{name}} (alergji)",
+    "avoidIntolerance": "{{name}} (intolerancë)",
+    "addAvoidFailed": "Ushqimi nuk u shtua dot. Provo përsëri."
   },
   "cookingPreferences": {
     "prepTimeRange": "Koha e përgatitjes duhet të jetë midis {{min}} dhe {{max}} minutash",

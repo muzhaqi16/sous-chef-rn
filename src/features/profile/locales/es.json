@@ -157,7 +157,21 @@
     "intolerances": {
       "egg": "Huevo",
       "sulfite": "Sulfitos"
-    }
+    },
+    "avoidTitle": "Alimentos que evito",
+    "avoidEmpty": "Elige alimentos del catálogo, como beicon o setas.",
+    "avoidSheetTitle": "Evitar un alimento",
+    "avoidHint": "Se marca cualquier variedad, para ti y para los hogares con los que compartes.",
+    "avoidSearchPlaceholder": "Buscar alimentos",
+    "avoidNamed": "Evitar {{name}}",
+    "avoidSeverity": {
+      "preference": "Evitar",
+      "intolerance": "Intolerancia",
+      "allergy": "Alergia"
+    },
+    "avoidAllergy": "{{name}} (alergia)",
+    "avoidIntolerance": "{{name}} (intolerancia)",
+    "addAvoidFailed": "No se pudo añadir ese alimento. Inténtalo de nuevo."
   },
   "cookingPreferences": {
     "prepTimeRange": "El tiempo de preparación debe estar entre {{min}} y {{max}} minutos",

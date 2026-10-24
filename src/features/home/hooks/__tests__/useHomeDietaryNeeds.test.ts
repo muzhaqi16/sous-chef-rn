@@ -10,6 +10,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '../useHomeDietaryNeeds.generated';
 import { useHomeDietaryNeeds } from '../useHomeDietaryNeeds';
+import { t } from '#/i18n';
 
 const needsMock = (
   dietaryNeeds: {
@@ -24,6 +25,7 @@ const needsMock = (
       diet: null;
       intolerance: Intolerance | null;
       healthGoal: null;
+      item: { id: string; name: string } | null;
       severity: RestrictionSeverity;
     }[];
   }[],
@@ -33,7 +35,7 @@ const needsMock = (
   });
 
 describe('useHomeDietaryNeeds', () => {
-  it('names each sharing member with their restrictions, worded', async () => {
+  it('names each sharing member with their restrictions, an avoided item by its name', async () => {
     const { result } = renderHookWithApollo(
       () => useHomeDietaryNeeds('home-1'),
       {
@@ -52,7 +54,16 @@ describe('useHomeDietaryNeeds', () => {
                   diet: null,
                   intolerance: Intolerance.Peanut,
                   healthGoal: null,
+                  item: null,
                   severity: RestrictionSeverity.Allergy,
+                },
+                {
+                  id: 'r-2',
+                  diet: null,
+                  intolerance: null,
+                  healthGoal: null,
+                  item: { id: 'bacon', name: 'Bacon' },
+                  severity: RestrictionSeverity.Preference,
                 },
               ],
             },
@@ -71,8 +82,13 @@ describe('useHomeDietaryNeeds', () => {
         restrictions: [
           {
             id: 'r-1',
-            labelKey: 'recipes.intolerance.PEANUT',
+            label: t('recipes.intolerance.PEANUT'),
             severity: RestrictionSeverity.Allergy,
+          },
+          {
+            id: 'r-2',
+            label: 'Bacon',
+            severity: RestrictionSeverity.Preference,
           },
         ],
       },

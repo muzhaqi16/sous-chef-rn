@@ -17,6 +17,10 @@ fragment HomeReaders on Home {
       diet
       healthGoal
       intolerance
+      item {
+        id
+        name
+      }
       severity
     }
   }

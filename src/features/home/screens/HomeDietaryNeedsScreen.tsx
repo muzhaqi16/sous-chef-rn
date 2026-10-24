@@ -105,7 +105,7 @@ export const HomeDietaryNeedsScreen: React.FC<HomeDietaryNeedsScreenProps> = ({
                               key={restriction.id}
                               variant={SEVERITY_BADGE[severity]}
                             >
-                              {t(restriction.labelKey)}
+                              {restriction.label}
                             </Badge>
                           ))}
                         </View>

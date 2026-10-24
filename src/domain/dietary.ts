@@ -139,3 +139,13 @@ export function restrictionLabelKey(restriction: {
     : undefined;
   return match ? match.labelKey : 'labels.unknown';
 }
+
+/** How a restriction reads: an avoided item by its catalog name, else its label. */
+export function restrictionLabel(
+  restriction: Parameters<typeof restrictionLabelKey>[0] & {
+    item?: { name: string } | null;
+  },
+  t: (key: TranslationKey) => string,
+): string {
+  return restriction.item?.name ?? t(restrictionLabelKey(restriction));
+}
