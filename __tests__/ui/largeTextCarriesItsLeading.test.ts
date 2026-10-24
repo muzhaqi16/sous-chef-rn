@@ -9,9 +9,9 @@
  * What makes this worth a guard rather than a code review is that it is
  * INVISIBLE IN ENGLISH. Unaccented Latin letters fit the clipped box, so the
  * screen looks right to everyone who builds it; the first thing lost is the
- * mark above the glyph. `PantryHeader`'s greeting shipped at
- * `fontSize['2xl'] + 2` with no leading, read correctly as "Hello, Chef!", and
- * rendered "Përshëndetje" with the dots sliced off both ë.
+ * mark above the glyph. A greeting shipped at `fontSize['2xl'] + 2` with no
+ * leading, read correctly as "Hello, Chef!", and rendered "Përshëndetje" with
+ * the dots sliced off both ë.
  *
  * Scope is the risk zone, not every `fontSize`: 24px is where the body line box
  * stops fitting the glyphs. Below it there is headroom; at or above it there is

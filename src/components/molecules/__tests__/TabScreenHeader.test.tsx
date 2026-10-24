@@ -4,6 +4,17 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import type { BarAction } from '#components/molecules/BarActions';
 
+const RECT = { x: 16, y: 60, width: 140, height: 28 };
+
+// The test renderer has no layout to measure; this reports a fixed rect so the
+// wiring is what is under test.
+jest.mock('#hooks/ui/useMeasuredRect', () => ({
+  useMeasuredRect: (onMeasure?: (rect: typeof RECT) => void) => ({
+    ref: { current: null },
+    measure: () => onMeasure?.({ x: 16, y: 60, width: 140, height: 28 }),
+  }),
+}));
+
 const action = (key: string): BarAction => ({
   icon: 'add',
   accessibilityLabel: key,
@@ -56,5 +67,21 @@ describe('TabScreenHeader', () => {
     expect(title.props.accessibilityHint).toBe('Switch plan');
     fireEvent.press(title);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports where a switchable title sits, for a spotlight', () => {
+    const onMeasure = jest.fn();
+    render(
+      <TabScreenHeader
+        title="Test Home"
+        switchable={{ onPress: jest.fn(), testID: 'title-switch', onMeasure }}
+      />,
+    );
+
+    const [titleRow] = screen.getByTestId('title-switch').children;
+    if (!titleRow || typeof titleRow === 'string') throw new Error('no title');
+    fireEvent(titleRow, 'layout');
+
+    expect(onMeasure).toHaveBeenCalledWith(RECT);
   });
 });

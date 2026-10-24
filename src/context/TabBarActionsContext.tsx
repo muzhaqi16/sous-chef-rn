@@ -98,7 +98,13 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
 
   const allowedScannerTabs = ['Pantry', 'ShoppingList'];
   // Shown on every main tab so switching tabs causes no layout shift.
-  const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
+  const allowedAddTabs = [
+    'Today',
+    'Pantry',
+    'ShoppingList',
+    'Recipe',
+    'MealPlan',
+  ];
 
   const [tabMenus, setTabMenus] = useState<
     Partial<Record<string, readonly TabBarAddAction[]>>

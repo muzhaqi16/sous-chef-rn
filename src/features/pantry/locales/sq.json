@@ -145,7 +145,6 @@
     "sortRecentlyAdded": "Të shtuara së fundi"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Shto në listën e blerjeve",
     "tutorialAddSubtitle": "Trokit për të shtuar këtë artikull në listën e blerjeve",
     "tutorialAddAllTitle": "Shto të gjitha menjëherë",
     "tutorialAddAllSubtitle": "Shto të gjithë artikujt me stok të ulët në listën e blerjeve menjëherë",
@@ -161,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "Asnjë qilar i disponueshëm",
     "viewAnalytics": "Analitika"
-  },
-  "pantryHeader": {
-    "greeting": "Përshëndetje, {{name}}!",
-    "homePromptSelect": "Prek për të zgjedhur një shtëpi",
-    "homeNoneYet": "Ende asnjë shtëpi",
-    "homeFallback": "Shtëpia jote",
-    "greetingNoName": "Përshëndetje!"
   },
   "adjustQuantity": {
     "description": "Korrigjo sasinë në stok dhe shëno arsyen.",
@@ -336,8 +328,6 @@
     "tabEmptyTitle": "Asnjë artikull në {{tabName}}",
     "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë skedë",
     "tabEmptyFallbackName": "këtë vendndodhje",
-    "tutorialManageHomesTitle": "Trokit për të menaxhuar shtëpitë",
-    "tutorialManageHomesSubtitle": "Kalo mes shtëpive ose menaxho cilësimet e shtëpisë",
     "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
     "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd",

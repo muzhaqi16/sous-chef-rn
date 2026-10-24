@@ -12,14 +12,13 @@ import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
-import { PantryHeader } from './PantryHeader';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { PantrySortModal, sortOptionLabelKey } from './PantrySortModal';
 import {
   PantryActionsProvider,
   type PantryItemActions,
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
-import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { usePantryImagePreload } from '#features/pantry/components/usePantryImagePreload';
@@ -57,11 +56,7 @@ export const PantryContent = React.forwardRef<
 >(
   (
     {
-      userName,
-      householdName,
-      avatarUrl,
-      notificationCount = 0,
-      stats,
+      pantryName,
       items,
       locationFilter,
       onLocationFilterChange,
@@ -80,13 +75,7 @@ export const PantryContent = React.forwardRef<
       onItemConsume,
       onItemWaste,
       onItemRestock,
-      onAvatarPress,
-      onHomePress,
-      onNotificationPress,
       onSettingsPress,
-      onLowStockNavigate,
-      onExpiringNavigate,
-      onExpiredNavigate,
       totalCount,
       onAddItem,
       hasMore = false,
@@ -104,7 +93,6 @@ export const PantryContent = React.forwardRef<
       noPantries,
       onSelectHome,
       onCreatePantry,
-      onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
       onScrollBeginDrag,
@@ -331,17 +319,18 @@ export const PantryContent = React.forwardRef<
               top, as on every other tab. */}
           <View style={styles.chrome}>
             <View style={styles.header}>
-              <PantryHeader
-                userName={userName}
-                householdName={householdName}
-                avatarUrl={avatarUrl}
-                notificationCount={notificationCount}
-                onAvatarPress={onAvatarPress}
-                onHomePress={onHomePress}
-                onNotificationPress={onNotificationPress}
-                onSelectPantryPress={onSettingsPress}
-                onSelectPantryLayout={onSettingsIconLayout}
-                onHomeBadgeLayout={onHomeBadgeLayout}
+              <TabScreenHeader
+                title={pantryName}
+                switchable={
+                  onSettingsPress
+                    ? {
+                        onPress: onSettingsPress,
+                        accessibilityHint: t('labels.selectPantry'),
+                        testID: pantryTestIDs.selectPantryButton,
+                        onMeasure: onSettingsIconLayout,
+                      }
+                    : undefined
+                }
               />
             </View>
             <SearchBar
@@ -358,14 +347,6 @@ export const PantryContent = React.forwardRef<
                 testID: pantryTestIDs.sortButton,
               }}
             />
-            {!!stats && (
-              <PantryAlertBar
-                stats={stats}
-                onLowStockNavigate={onLowStockNavigate}
-                onExpiringNavigate={onExpiringNavigate}
-                onExpiredNavigate={onExpiredNavigate}
-              />
-            )}
             <View style={styles.tabs}>
               <FilterTabs<LocationFilter>
                 tabs={tabsWithAddButton}

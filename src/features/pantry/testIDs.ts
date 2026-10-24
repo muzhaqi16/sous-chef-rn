@@ -7,7 +7,6 @@ const ITEM = 'pantry-item';
 export const pantryTestIDs = {
   screen: 'pantry-screen',
   loading: 'pantry-loading',
-  greetingRow: 'pantry-greeting-row',
   list: 'pantry-list',
   listSkeletonOverlay: 'pantry-list-skeleton-overlay',
   refreshControl: 'pantry-refresh-control',

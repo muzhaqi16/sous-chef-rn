@@ -1,0 +1,15 @@
+{
+  "today": {
+    "firstRunTitle": "Fillo me qilerin",
+    "firstRunDescription": "Shto ç'ke në kuzhinë dhe këtu do të shohësh çfarë po skadon, çfarë të gatuash dhe çfarë të blesh.",
+    "mealsTitle": "Vaktet e sotme",
+    "nothingPlanned": "Asgjë e planifikuar për sot",
+    "planMeal": "Planifiko një vakt",
+    "itemsLeft_one": "Mbetet {{count}} artikull për të blerë",
+    "itemsLeft_other": "Mbeten {{count}} artikuj për të blerë",
+    "householdHint": "Ndrysho ose menaxho shtëpitë",
+    "tutorialHouseholdTitle": "Trokit për të menaxhuar shtëpitë",
+    "tutorialHouseholdSubtitle": "Kalo mes shtëpive ose menaxho cilësimet e shtëpisë",
+    "householdFallback": "Shtëpia jote"
+  }
+}

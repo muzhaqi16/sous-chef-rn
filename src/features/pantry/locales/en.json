@@ -145,7 +145,6 @@
     "sortRecentlyAdded": "Recently Added"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Add to shopping list",
     "tutorialAddSubtitle": "Tap to add this item to your shopping list",
     "tutorialAddAllTitle": "Add all at once",
     "tutorialAddAllSubtitle": "Add all low stock items to your shopping list at once",
@@ -161,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "No pantries available",
     "viewAnalytics": "Analytics"
-  },
-  "pantryHeader": {
-    "greeting": "Hello, {{name}}!",
-    "homePromptSelect": "Tap to select a home",
-    "homeNoneYet": "No homes yet",
-    "homeFallback": "Your Home",
-    "greetingNoName": "Hello!"
   },
   "adjustQuantity": {
     "description": "Correct your stock count and record why.",
@@ -336,8 +328,6 @@
     "tabEmptyTitle": "No items in {{tabName}}",
     "tabEmptyDescription": "Items stored here will appear in this tab",
     "tabEmptyFallbackName": "this location",
-    "tutorialManageHomesTitle": "Tap to manage homes",
-    "tutorialManageHomesSubtitle": "Switch between homes or manage home settings",
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",
     "tutorialAddItemsSubtitle": "Tap + to add items to your pantry",

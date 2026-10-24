@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { WatchQueryFetchPolicy } from '@apollo/client';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#hooks/apollo/standDownOptions';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 import {
@@ -26,16 +29,7 @@ export type PantryListItemNode = NonNullable<
   NonNullable<GetPantryQuery['pantry']>['itemsConnection']['edges'][number]
 >['node'];
 
-/**
- * A secondary consumer on another tab stands its watcher down while blurred via
- * `skip`, and must pair that with `fetchPolicy: 'cache-first'`: Apollo resets a
- * re-enabled query to its INITIAL policy, so toggling `skip` alone pays a
- * `cache-and-network` round-trip on every focus.
- */
-export interface PantryQueryOptions {
-  skip?: boolean;
-  fetchPolicy?: WatchQueryFetchPolicy;
-}
+export type PantryQueryOptions = StandDownOptions;
 
 export function usePantryQuery(
   pantryId: string | undefined,
@@ -98,14 +92,7 @@ export function usePantryQuery(
             storageLocationsFirst: PAGE_SIZE.COMPACT,
             today,
           },
-          // A caller's policy holds for the query's life: the client default
-          // `nextFetchPolicy: 'cache-first'` would let a `cache-only` read fetch.
-          ...(options?.fetchPolicy
-            ? {
-                fetchPolicy: options.fetchPolicy,
-                nextFetchPolicy: options.fetchPolicy,
-              }
-            : {}),
+          ...heldFetchPolicy(options?.fetchPolicy),
           errorPolicy: 'ignore', // Return cached data on network errors
         },
   );

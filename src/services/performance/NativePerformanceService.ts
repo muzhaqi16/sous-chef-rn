@@ -233,9 +233,9 @@ export const NativePerformanceService = {
 
   /**
    * First meaningful paint — real content, not RN's first frame. Fired once per
-   * session by `useFlashListPerformance` on `hasFinishedLayout && hasRealContent`;
-   * NOT `onLoad`, which a sentinel-only skeleton layout consumes. Known scope: a
-   * launch that never renders an instrumented list never fires this.
+   * session: by Today's `useMarkFullyDrawn` when it shows content, or by
+   * `useFlashListPerformance` on `hasFinishedLayout && hasRealContent`, NOT
+   * `onLoad`, which a sentinel-only skeleton layout consumes.
    */
   markFullyDrawn() {
     const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })

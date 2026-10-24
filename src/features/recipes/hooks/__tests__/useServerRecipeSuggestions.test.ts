@@ -126,6 +126,26 @@ describe('useServerRecipeSuggestions', () => {
     expect(result.current.rows).toEqual([]);
   });
 
+  it('keeps its last answer when a later ask fails', async () => {
+    const answered = recordMock(RecipeSuggestionsDocument, {
+      data: { recipeSuggestions: { edges: [edge('r-1', 50)] } },
+      maxUsageCount: 1,
+    });
+    const failed = recordMock(RecipeSuggestionsDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderSuggestions([answered.mock, failed.mock]);
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.unanswered).toBe(false);
+  });
+
   it('asks for nothing when switched off', () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock], false);

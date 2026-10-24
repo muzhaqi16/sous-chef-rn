@@ -21,6 +21,7 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
   },
   createBottomTabScreen: <T,>(config: T): T => config,
 }));
+jest.mock('../TodayStack', () => ({ TodayStack: 'TodayStack' }));
 jest.mock('../PantryStack', () => ({ PantryStack: 'PantryStack' }));
 jest.mock('../ShoppingListStack', () => ({
   ShoppingListStack: 'ShoppingListStack',

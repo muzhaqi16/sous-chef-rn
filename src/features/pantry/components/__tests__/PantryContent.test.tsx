@@ -226,24 +226,6 @@ jest.mock('#components/atoms/PaginationFooter', () => ({
   PaginationFooter: () => null,
 }));
 
-jest.mock('../PantryHeader', () => ({
-  PantryHeader: ({
-    userName,
-    householdName,
-  }: {
-    userName: string;
-    householdName: string;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="pantry-header">
-        <Text>{userName}</Text>
-        <Text>{householdName}</Text>
-      </View>
-    );
-  },
-}));
-
 jest.mock('../PantrySortModal', () => ({
   ...jest.requireActual('../PantrySortModal'),
   PantrySortModal: ({ visible }: { visible: boolean }) => {
@@ -330,24 +312,6 @@ jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
   },
 }));
 
-jest.mock('../PantryAlertBar', () => ({
-  PantryAlertBar: ({
-    stats,
-    sortLabel,
-  }: {
-    stats: { expiringCount: number };
-    sortLabel?: string;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="pantry-alert-bar">
-        <Text>Alert: {stats.expiringCount} expiring</Text>
-        {sortLabel ? <Text>{sortLabel}</Text> : null}
-      </View>
-    );
-  },
-}));
-
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   getExpirationStatus: jest.fn(() => ({
     text: '3 days left',
@@ -381,8 +345,7 @@ jest.mock('#features/pantry/utils/pantryFilters', () => ({
 }));
 
 const defaultProps = {
-  userName: 'John',
-  householdName: 'My Kitchen',
+  pantryName: 'My Kitchen',
   items: [] as PantryItem[],
   locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
@@ -407,10 +370,21 @@ describe('PantryContent', () => {
     expect(screen.getByTestId('pantry-list')).toBeTruthy();
   });
 
-  it('renders the pantry header with user and household name', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByText('John')).toBeTruthy();
+  it("titles the header with the pantry's name, which opens Select pantry", () => {
+    const onSettingsPress = jest.fn();
+    render(
+      <PantryContent {...defaultProps} onSettingsPress={onSettingsPress} />,
+    );
+
+    fireEvent.press(screen.getByTestId(pantryTestIDs.selectPantryButton));
+
     expect(screen.getByText('My Kitchen')).toBeTruthy();
+    expect(onSettingsPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no status counts: they are on Today', () => {
+    render(<PantryContent {...defaultProps} />);
+    expect(screen.queryByText(/expired|expiring|low stock/i)).toBeNull();
   });
 
   it('renders the search bar with correct placeholder', () => {
@@ -424,8 +398,8 @@ describe('PantryContent', () => {
     render(<PantryContent {...defaultProps} onRefresh={jest.fn()} />);
     const list = within(screen.getByTestId('pantry-list'));
 
-    expect(screen.getByText('John')).toBeTruthy();
-    expect(list.queryByText('John')).toBeNull();
+    expect(screen.getByText('My Kitchen')).toBeTruthy();
+    expect(list.queryByText('My Kitchen')).toBeNull();
     expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
     expect(list.queryByTestId('pantry-search-input')).toBeNull();
     expect(screen.getByTestId('filter-tabs')).toBeTruthy();
@@ -760,23 +734,6 @@ describe('PantryContent', () => {
     });
   });
 
-  it('renders alert bar when stats are provided', () => {
-    const stats = {
-      totalItems: 10,
-      expiringCount: 3,
-      expiredCount: 0,
-      lowStockCount: 2,
-    };
-    render(<PantryContent {...defaultProps} stats={stats} />);
-    expect(screen.getByTestId('pantry-alert-bar')).toBeTruthy();
-    expect(screen.getByText('Alert: 3 expiring')).toBeTruthy();
-  });
-
-  it('does not render alert bar when stats are not provided', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.queryByTestId('pantry-alert-bar')).toBeNull();
-  });
-
   it('includes add location tab when onAddLocation is provided', () => {
     const onAddLocation = jest.fn();
     render(<PantryContent {...defaultProps} onAddLocation={onAddLocation} />);
@@ -818,13 +775,7 @@ describe('PantryContent', () => {
     });
 
     const sortItems = [createMockPantryItem({ id: '1' })];
-    const stats = {
-      totalItems: 1,
-      expiringCount: 0,
-      expiredCount: 0,
-      lowStockCount: 0,
-    };
-    render(<PantryContent {...defaultProps} items={sortItems} stats={stats} />);
+    render(<PantryContent {...defaultProps} items={sortItems} />);
     expect(
       screen.getByTestId(pantryTestIDs.sortButton).props.accessibilityLabel,
     ).toBe('Sort, now by Name');
@@ -977,11 +928,6 @@ describe('PantryContent', () => {
   it('renders empty state without action when onAddItem is not provided', () => {
     render(<PantryContent {...defaultProps} items={[]} />);
     expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-  });
-
-  it('renders with notification count', () => {
-    render(<PantryContent {...defaultProps} notificationCount={5} />);
-    expect(screen.getByText('John')).toBeTruthy();
   });
 
   describe('loading skeleton (chrome stays, skeleton rows below)', () => {

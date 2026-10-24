@@ -1,0 +1,15 @@
+{
+  "today": {
+    "firstRunTitle": "Start with your pantry",
+    "firstRunDescription": "Add what's in your kitchen, and this is where you'll see what's expiring, what to cook and what to buy.",
+    "mealsTitle": "Meals today",
+    "nothingPlanned": "Nothing planned for today",
+    "planMeal": "Plan a meal",
+    "itemsLeft_one": "{{count}} item left to buy",
+    "itemsLeft_other": "{{count}} items left to buy",
+    "householdHint": "Switch or manage households",
+    "tutorialHouseholdTitle": "Tap to manage homes",
+    "tutorialHouseholdSubtitle": "Switch between homes or manage home settings",
+    "householdFallback": "Your Home"
+  }
+}

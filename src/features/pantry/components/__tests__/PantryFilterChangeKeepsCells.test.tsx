@@ -58,8 +58,7 @@ jest.mock('@shopify/flash-list', () => {
 import { PantryContent } from '../PantryContent';
 
 const baseProps = {
-  userName: 'John',
-  householdName: 'My Kitchen',
+  pantryName: 'My Kitchen',
   items: [],
   locationFilter: 'all' as const,
   onLocationFilterChange: jest.fn(),

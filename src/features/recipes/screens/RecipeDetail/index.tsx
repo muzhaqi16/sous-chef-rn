@@ -55,6 +55,7 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
@@ -622,20 +623,15 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Ingredients */}
         {displayData.ingredients.length > 0 && (
           <View style={styles.ingredientsSection}>
-            <View style={styles.ingredientsSectionHeader}>
-              <SectionHeader style={styles.sectionTitleSpacing}>
-                {t('itemPhotos.perspective.ingredient_list')}
-              </SectionHeader>
-              <Pressable
-                onPress={handleAddAll}
-                disabled={addingToList}
-                style={({ pressed }) => pressed && { opacity: 0.7 }}
-              >
-                <Text role="label" style={styles.addAllButton}>
-                  {addingToList ? t('labels.adding') : t('recipes.addAll')}
-                </Text>
-              </Pressable>
-            </View>
+            <SectionHeaderRow
+              title={t('itemPhotos.perspective.ingredient_list')}
+              action={{
+                label: addingToList ? t('labels.adding') : t('recipes.addAll'),
+                onPress: handleAddAll,
+                disabled: addingToList,
+              }}
+              style={styles.ingredientsSectionHeader}
+            />
             {displayData.ingredients.map((ingredient, index) => (
               <IngredientRow
                 key={`${ingredient.id}-${index}`}
@@ -843,13 +839,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   ingredientsSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: theme.spacing.md,
-  },
-  addAllButton: {
-    color: theme.colors.primary,
   },
   description: {
     color: theme.colors.textSecondary,

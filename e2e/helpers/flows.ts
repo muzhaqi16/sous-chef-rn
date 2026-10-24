@@ -1,5 +1,6 @@
 import { element, by, waitFor, device } from 'detox';
 import { kitTestIDs } from '../../src/components/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
 import { launchAppWithFabricWorkaround } from '../init';
 import { LandingAuthScreen } from '../screens/LandingAuthScreen';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -11,7 +12,7 @@ import {
 } from '../screens/OnboardingScreens';
 import { PantryScreen } from '../screens/PantryScreen';
 import { dismissBiometricPromptIfPresent, isLoggedIn } from './auth';
-import { delay } from './waitFor';
+import { delay, TIMEOUTS, waitForScreen } from './waitFor';
 import { getAuthTokens } from './tokenProvider';
 
 const landingScreen = new LandingAuthScreen();
@@ -50,6 +51,17 @@ async function skipOptionalOnboardingScreens() {
 }
 
 /**
+ * A launch lands on Today. The specs that bootstrap a session start on Pantry,
+ * so this goes there, and fails if Today never showed: a launch that landed
+ * elsewhere is a finding, not a detour.
+ */
+async function landOnTodayThenPantry() {
+  await waitForScreen(todayTestIDs.screen, TIMEOUTS.NETWORK);
+  await element(by.id(kitTestIDs.tab('Pantry'))).tap();
+  await pantryScreen.waitForScreen();
+}
+
+/**
  * Fresh install plus login. Injects tokens for speed and falls back to a UI
  * login when injection does not produce a logged-in state.
  */
@@ -73,7 +85,7 @@ export async function bootstrapFreshAuthenticatedSession() {
     if (loggedIn) {
       console.log('✅ Token injection successful (fresh session)');
       await skipOptionalOnboardingScreens();
-      await pantryScreen.waitForScreen();
+      await landOnTodayThenPantry();
       return;
     }
 
@@ -98,7 +110,7 @@ export async function bootstrapFreshAuthenticatedSession() {
   await loginScreen.loginAsTestUser();
 
   await skipOptionalOnboardingScreens();
-  await pantryScreen.waitForScreen();
+  await landOnTodayThenPantry();
 }
 
 /**

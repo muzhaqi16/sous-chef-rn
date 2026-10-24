@@ -114,7 +114,7 @@ function buildModeConfig(
       tutorialSteps: [
         {
           featureId: 'low_stock_tutorial_item_cart',
-          title: t('filteredPantry.tutorialAddTitle'),
+          title: t('labels.addToShoppingList'),
           subtitle: t('filteredPantry.tutorialAddSubtitle'),
           rectKey: 'itemCart',
         },

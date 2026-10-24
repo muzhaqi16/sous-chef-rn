@@ -125,9 +125,16 @@ const ListItemComponent: React.FC<ListItemProps> = ({
     );
   }
 
+  // A named row with nothing to press still reads as one element.
   return (
     <View style={commonStyles.rowSurface}>
-      <View style={commonStyles.rowContent}>{content}</View>
+      <View
+        style={commonStyles.rowContent}
+        accessible={!!accessibilityLabel}
+        accessibilityLabel={accessibilityLabel}
+      >
+        {content}
+      </View>
     </View>
   );
 };

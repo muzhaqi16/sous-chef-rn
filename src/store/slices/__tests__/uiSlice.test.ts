@@ -15,6 +15,29 @@ describe('uiSlice', () => {
       expect(state.tutorialResetGeneration).toBe(0);
       expect(state.pendingCroppedImage).toBeNull();
       expect(state.pendingItemImages).toBeNull();
+      expect(state.pendingTabAdd).toBeNull();
+    });
+  });
+
+  describe('cross-tab add hand-off', () => {
+    it('hands the add to the tab it names, once', () => {
+      const store = createTestStore();
+      store.getState().setPendingTabAdd({ tab: 'Pantry', actionKey: 'search' });
+
+      expect(store.getState().takePendingTabAdd('Pantry')).toEqual({
+        tab: 'Pantry',
+        actionKey: 'search',
+      });
+      expect(store.getState().takePendingTabAdd('Pantry')).toBeNull();
+    });
+
+    // The user reached another tab first; the add must not fire later.
+    it('drops an add when another tab gains focus first', () => {
+      const store = createTestStore();
+      store.getState().setPendingTabAdd({ tab: 'Pantry' });
+
+      expect(store.getState().takePendingTabAdd('Recipe')).toBeNull();
+      expect(store.getState().pendingTabAdd).toBeNull();
     });
   });
 

@@ -1263,6 +1263,12 @@
       "body": "query SignedInEmailVerification {\n  me {\n    id\n    emailVerified\n    __typename\n  }\n}"
     },
     {
+      "id": "561dd2d899b43ac4cee7aeb9ac02fb85bbcabdf972c6b5b4a26089bc3f9ea8db",
+      "name": "TodayCounts",
+      "type": "query",
+      "body": "query TodayCounts($id: ID!, $today: LocalDate!) {\n  pantry(id: $id) {\n    id\n    stats(today: $today) {\n      totalItems\n      expiredCount\n      expiringCount\n      lowStockCount\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "7f08bbfaddd2f76ade7e73e591ab45fccc50151f463dcb9f5ff5e6d481d4e09c",
       "name": "ToggleReviewHelpful",
       "type": "mutation",

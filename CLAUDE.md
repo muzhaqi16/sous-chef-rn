@@ -60,7 +60,7 @@ Every other whole-tree gate and which hook or workflow runs it:
 
 Map and reasoning: `docs/architecture.md`.
 
-- `src/features/<name>/` holds all twelve features, auth and onboarding included;
+- `src/features/<name>/` holds all fourteen features, auth and onboarding included;
   `src/screens/` holds only `SplashScreen` and `NotFoundScreen`. Feature shape:
   `manifest.ts` (`id` = dir name), `screens/` (+ `registration.ts`), `hooks/`,
   `components/`, colocated `.graphql`.

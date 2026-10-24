@@ -1,5 +1,4 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import type { PantryStats } from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type {
@@ -25,16 +24,8 @@ export interface PantryContentRef {
 }
 
 export interface PantryContentProps {
-  /** Omitted when the account has no name yet; the header greets without one. */
-  userName?: string;
-  householdName: string;
-  avatarUrl?: string | null;
-  notificationCount?: number;
-
-  stats?: Pick<
-    PantryStats,
-    'totalItems' | 'expiringCount' | 'expiredCount' | 'lowStockCount'
-  > | null;
+  /** The header's title: the pantry shown, which it switches. */
+  pantryName: string;
 
   // Opaque fragment refs, unmasked by the leaf card. Carries `id` so the
   // keyExtractor and sort comparators work without unmasking.
@@ -65,13 +56,8 @@ export interface PantryContentProps {
   onItemWaste?: (id: string) => void;
   onItemRestock?: (id: string) => void;
 
-  onAvatarPress?: () => void;
-  onHomePress?: () => void;
-  onNotificationPress?: () => void;
+  /** Opens the Select pantry sheet from the title. */
   onSettingsPress?: () => void;
-  onLowStockNavigate?: () => void;
-  onExpiringNavigate?: () => void;
-  onExpiredNavigate?: () => void;
 
   onRefresh?: () => void;
   onEndReached?: () => void;
@@ -106,15 +92,7 @@ export interface PantryContentProps {
    */
   serverMode?: boolean;
 
-  /** Screen-coordinate rect of the home badge. */
-  onHomeBadgeLayout?: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
-
-  /** Screen-coordinate rect of the settings gear icon. */
+  /** Screen-coordinate rect of the title, which opens Select pantry. */
   onSettingsIconLayout?: (rect: {
     x: number;
     y: number;

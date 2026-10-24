@@ -527,6 +527,10 @@
     "durationDays_other": "{{count}} ditë",
     "currency": "Monedha",
     "today": "Sot",
+    "seeAll": "Shiko të gjitha",
+    "addPantryItem": "Shto artikull në qilar",
+    "addMeal": "Shto vakt",
+    "addRecipe": "Shto recetë",
     "packageSize": "Madhësia e paketimit",
     "unit": "Njësia"
   },

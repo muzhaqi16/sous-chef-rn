@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useScreenFocusEffect } from '#platform/screen';
+import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
@@ -111,14 +111,8 @@ export function useCatalogDiscovery(
   const defaultPantry = defaultPantryOf(currentHome);
 
   // The Recipes tab stays mounted hidden, so blurred the pantry watch is
-  // skipped and `usePreservedConnection` holds it. Starts FOCUSED: tabs are
-  // lazy, and a blurred first render fires a throwaway random-mode fetch.
-  const [isFocused, setIsFocused] = useState(true);
-  const [onFocusChange] = useState(() => () => {
-    setIsFocused(true);
-    return () => setIsFocused(false);
-  });
-  useScreenFocusEffect(onFocusChange);
+  // skipped and `usePreservedConnection` holds it.
+  const isFocused = useIsScreenFocused();
 
   const {
     state: {

@@ -213,10 +213,10 @@ export const pantryFeature: FeatureManifest = {
 };
 ```
 
-There are twelve: `pantry`, `shoppingList`, `recipes`, `mealPlan`, `home`,
-`barcode`, `notifications`, `profile`, `catalog`, `auth`, `onboarding`,
-`devtools`. Only the first four declare a `tab`; the rest are reached from
-headers, buttons, push taps or the root navigator's groups. Removing a feature
+There are fourteen: `today`, `pantry`, `shoppingList`, `recipes`, `mealPlan`,
+`home`, `barcode`, `notifications`, `profile`, `catalog`, `receipts`, `auth`,
+`onboarding`, `devtools`. Only the first five declare a `tab`; the rest are
+reached from headers, buttons, push taps or the root navigator's groups. Removing a feature
 from a fork is deleting its folder and its registry entries.
 
 ### Three registries
@@ -925,7 +925,7 @@ src/
 ├── context/         App-level React context
 ├── domain/          Domain logic SEVERAL features share — neither kit nor one
 │                    feature's internals; admission is by consumer count
-├── features/        The twelve feature modules (see above), registry.ts for
+├── features/        The fourteen feature modules (see above), registry.ts for
 │                    navigation and registry.static.ts for the app shell
 ├── graphql/         Shared operations, generated schema + types
 ├── hooks/           Shared hooks ONLY — what more than one feature uses:

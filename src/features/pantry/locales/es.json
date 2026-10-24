@@ -145,7 +145,6 @@
     "sortRecentlyAdded": "Añadidos recientemente"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Añadir a la lista de la compra",
     "tutorialAddSubtitle": "Toca para añadir este artículo a tu lista de la compra",
     "tutorialAddAllTitle": "Añadir todo de una vez",
     "tutorialAddAllSubtitle": "Añade todos los artículos con poco stock a tu lista de la compra de una vez",
@@ -161,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "No hay despensas disponibles",
     "viewAnalytics": "Análisis"
-  },
-  "pantryHeader": {
-    "greeting": "¡Hola, {{name}}!",
-    "homePromptSelect": "Toca para elegir un hogar",
-    "homeNoneYet": "Aún no hay hogares",
-    "homeFallback": "Tu hogar",
-    "greetingNoName": "¡Hola!"
   },
   "adjustQuantity": {
     "description": "Corrige tus existencias e indica el motivo.",
@@ -336,8 +328,6 @@
     "tabEmptyTitle": "Sin artículos en {{tabName}}",
     "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta pestaña",
     "tabEmptyFallbackName": "esta ubicación",
-    "tutorialManageHomesTitle": "Toca para gestionar hogares",
-    "tutorialManageHomesSubtitle": "Cambia entre hogares o gestiona la configuración del hogar",
     "tutorialPantrySettingsSubtitle": "Cambia entre listas de despensa y crea nuevas despensas",
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
     "tutorialAddItemsSubtitle": "Toca + para añadir artículos a tu despensa",

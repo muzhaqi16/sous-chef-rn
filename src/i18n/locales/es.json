@@ -527,6 +527,10 @@
     "durationDays_other": "{{count}} días",
     "currency": "Moneda",
     "today": "Hoy",
+    "seeAll": "Ver todo",
+    "addPantryItem": "Añadir artículo a la despensa",
+    "addMeal": "Añadir comida",
+    "addRecipe": "Añadir receta",
     "packageSize": "Tamaño del paquete",
     "unit": "Unidad"
   },

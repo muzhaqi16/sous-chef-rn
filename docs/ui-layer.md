@@ -39,8 +39,8 @@ optional:
   so a 24pt icon centred in its 44pt target starts where content does. `Header`
   and `CollapsingHeroDetail`'s bar both use it and are both 60pt tall
   (`__tests__/ui/headerGeometry.test.tsx`). Standard titles are always centred.
-- **One action contract.** Every bar's actions are `BarAction`s, an icon or a
-  text label, rendered by `BarActions` (`src/components/molecules/BarActions.tsx`);
+- **One action contract.** Every bar's actions are `BarAction`s, an icon (or a
+  photo, `photoUri`, for Profile) or a text label, rendered by `BarActions` (`src/components/molecules/BarActions.tsx`);
   no bar takes a bare node. In `Header` each is a whole 44pt target and a label
   is padded by the slack an icon has, so Save lands on the gutter just as a
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
@@ -59,10 +59,14 @@ optional:
   into one of the two, such as a ⋮ menu. The standard header keeps its overflow
   into "more".
 - **A title that names a switchable thing switches it.** `header.switchable`
-  (`TitleSwitch`: `onPress`, `open`, `accessibilityHint`, `testID`) draws the
-  chevron (`ExpandChevron`) and makes the title open the picker, on either
-  variant: a meal plan, a shopping list, the receipt's store. No separate action
+  (`TitleSwitch`: `onPress`, `open`, `accessibilityHint`, `testID`, and
+  `onMeasure` for a spotlight) draws the chevron (`ExpandChevron`) and makes the
+  title open the picker, on either variant: the household on Today, a pantry on
+  Pantry, a meal plan, a shopping list, the receipt's store. No separate action
   opens the same picker.
+- **App-wide controls live on Today.** Its header holds the household switch,
+  notifications and Profile; every other tab's header holds only its own title
+  and actions, and Today's `+` starts any tab's add.
 - **One way in per action.** A menu or sheet does not repeat an action that a
   visible control on the same screen already offers: Meal Plan's ⋮ sheet does
   not offer the header's "Generate shopping list".

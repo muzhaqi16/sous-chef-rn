@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppStore } from '#store/useAppStore';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
+import type { StandDownOptions } from '#hooks/apollo/standDownOptions';
 import { useMealPlan } from './useMealPlan';
 
-interface UseActiveMealPlanArgs {
+interface UseActiveMealPlanArgs extends StandDownOptions {
   /** Plan the list hook considers current: active > nearest upcoming > latest. */
   currentPlanId: string | null;
   /** The plan ids the overview has loaded, in display order. */
@@ -28,6 +29,8 @@ interface UseActiveMealPlanArgs {
 export function useActiveMealPlan({
   currentPlanId,
   planIds,
+  skip,
+  fetchPolicy,
 }: UseActiveMealPlanArgs) {
   const client = useApolloClient();
   const selectedMealPlanId = useAppStore(s => s.selectedMealPlanId);
@@ -42,7 +45,7 @@ export function useActiveMealPlan({
       (id): id is string => !!id && !unavailablePlanIds.has(id),
     ) ?? null;
 
-  const plan = useMealPlan(activePlanId);
+  const plan = useMealPlan(activePlanId, { skip, fetchPolicy });
 
   // "Adjusting state during render" (not an effect) per project conventions:
   // the id is dead as of this render, so re-deriving `activePlanId` on the

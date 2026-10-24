@@ -6,6 +6,7 @@ import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { BarActions, type BarAction } from '#components/molecules/BarActions';
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /** A title that names one of several things the user can switch between. */
 export interface TitleSwitch {
@@ -15,6 +16,13 @@ export interface TitleSwitch {
   /** What pressing the title does, for a screen reader. */
   accessibilityHint?: string;
   testID?: string;
+  /** Where the title sits, for a spotlight that points at it. */
+  onMeasure?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 /** A tab's header holds its title and at most this many actions for the tab. */
@@ -38,8 +46,17 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
     );
   }
 
+  const { ref: titleRef, measure: measureTitle } = useMeasuredRect(
+    switchable?.onMeasure,
+  );
+
   const titleContent = (
-    <View style={styles.titleRow}>
+    <View
+      ref={titleRef}
+      collapsable={false}
+      onLayout={measureTitle}
+      style={styles.titleRow}
+    >
       <Text
         role="title"
         style={styles.title}
@@ -59,6 +76,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
       <View style={styles.leftContent}>
         {switchable ? (
           <Pressable
+            style={styles.titleSwitch}
             onPress={switchable.onPress}
             accessibilityRole="button"
             accessibilityHint={switchable.accessibilityHint}
@@ -94,6 +112,11 @@ const styles = StyleSheet.create(theme => ({
   leftContent: {
     flex: 1,
     marginRight: theme.spacing.md,
+  },
+  // Hugs the title and chevron, so the empty end of the bar opens nothing.
+  titleSwitch: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   titleRow: {
     flexDirection: 'row',

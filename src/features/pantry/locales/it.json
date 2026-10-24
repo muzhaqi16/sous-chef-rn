@@ -145,7 +145,6 @@
     "sortRecentlyAdded": "Aggiunti di recente"
   },
   "filteredPantry": {
-    "tutorialAddTitle": "Aggiungi alla lista della spesa",
     "tutorialAddSubtitle": "Tocca per aggiungere questo articolo alla tua lista della spesa",
     "tutorialAddAllTitle": "Aggiungi tutto in una volta",
     "tutorialAddAllSubtitle": "Aggiungi tutti gli articoli con poche scorte alla lista della spesa in una volta",
@@ -161,13 +160,6 @@
   "pantrySelector": {
     "emptyMessage": "Nessuna dispensa disponibile",
     "viewAnalytics": "Statistiche"
-  },
-  "pantryHeader": {
-    "greeting": "Ciao, {{name}}!",
-    "homePromptSelect": "Tocca per scegliere una casa",
-    "homeNoneYet": "Nessuna casa ancora",
-    "homeFallback": "La tua casa",
-    "greetingNoName": "Ciao!"
   },
   "adjustQuantity": {
     "description": "Correggi le scorte e indica il motivo.",
@@ -336,8 +328,6 @@
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
     "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
     "tabEmptyFallbackName": "questa posizione",
-    "tutorialManageHomesTitle": "Tocca per gestire le case",
-    "tutorialManageHomesSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
     "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa",

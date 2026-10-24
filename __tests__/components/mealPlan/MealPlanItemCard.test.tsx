@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
-import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
+import { MealPlanItemCard } from '#features/mealPlan/ui/MealPlanItemCard';
 import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,
-} from '#features/mealPlan/components/MealPlanItemCard.generated';
+} from '#features/mealPlan/ui/MealPlanItemCard.generated';
 import {
   renderWithApollo,
   seedCache,

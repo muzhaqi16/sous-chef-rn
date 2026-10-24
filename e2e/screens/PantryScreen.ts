@@ -28,8 +28,8 @@ export class PantryScreen extends BaseScreen {
   /** Last field filled here, so it is the one holding the keyboard. */
   protected override keyboardInput = this.searchInput;
 
-  /** The greeting row: above the keyboard and carries no press handler. */
-  protected override blurTarget = pantryTestIDs.greetingRow;
+  // No blur target: the search is a lone field, not a focus chain, so its
+  // return key drops the keyboard on its own.
   private readonly sortButton = pantryTestIDs.sortButton;
   private readonly emptyState = pantryTestIDs.emptyState;
   private readonly loadingIndicator = pantryTestIDs.loading;

@@ -75,6 +75,10 @@ export function useAppNavigation() {
       navigation.navigate('Home', { screen: 'Pantry' }, { pop: true }),
     toShoppingListMain: () =>
       navigation.navigate('Home', { screen: 'ShoppingList' }, { pop: true }),
+    toRecipeMain: () =>
+      navigation.navigate('Home', { screen: 'Recipe' }, { pop: true }),
+    toMealPlanMain: () =>
+      navigation.navigate('Home', { screen: 'MealPlan' }, { pop: true }),
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),

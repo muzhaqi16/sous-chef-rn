@@ -13,6 +13,7 @@ import { authFeature } from './auth/manifest';
 import { onboardingFeature } from './onboarding/manifest';
 import { devtoolsFeature } from './devtools/manifest';
 import { receiptsFeature } from './receipts/manifest';
+import { todayFeature } from './today/manifest';
 
 /**
  * Canonical list of all features. Navigation consumers iterate this to build
@@ -32,6 +33,7 @@ export const FEATURE_REGISTRY: FeatureManifest[] = [
   onboardingFeature,
   devtoolsFeature,
   receiptsFeature,
+  todayFeature,
 ];
 
 /**

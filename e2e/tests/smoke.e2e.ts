@@ -12,10 +12,12 @@ import { mealPlanTestIDs } from '../../src/features/mealPlan/testIDs';
 import { pantryTestIDs } from '../../src/features/pantry/testIDs';
 import { recipesTestIDs } from '../../src/features/recipes/testIDs';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
 
 /** Tab id → the screen that tab must render; a tab that navigates nowhere
  *  fails here rather than being skipped. */
 const TABS: ReadonlyArray<[tab: string, screen: string]> = [
+  [kitTestIDs.tab('Today'), todayTestIDs.screen],
   [kitTestIDs.tab('Pantry'), pantryTestIDs.screen],
   [kitTestIDs.tab('ShoppingList'), shoppingListTestIDs.screen],
   [kitTestIDs.tab('Recipe'), recipesTestIDs.recipesScreen],
@@ -47,6 +49,13 @@ describe('Smoke Tests', () => {
     for (const [tab] of TABS) {
       await expect(element(by.id(tab))).toExist();
     }
+  });
+
+  it('reaches Profile from Today', async () => {
+    await element(by.id(kitTestIDs.tab('Today'))).tap();
+    await waitFor(element(by.id(todayTestIDs.screen)))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.LONG);
     await expect(element(by.id(kitTestIDs.tab('Profile')))).toExist();
   });
 

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { act, screen } from '@testing-library/react-native';
 // PantryMain reads the notification badge straight from the Apollo cache
 // (`useUnreadNotificationCount`, cache-only) rather than from a store mirror,
 // so it needs a client in context even though every other dependency here is
@@ -11,6 +11,7 @@ import { PantryMain } from '../PantryMain';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -31,7 +32,18 @@ jest.mock('@react-navigation/native', () => ({
 // --- Tab bar ---
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setOverlayOpen: jest.fn() }),
-  useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
+  useTabBarState: () => ({
+    addButtonRect: { x: 160, y: 760, width: 56, height: 56 },
+    isOverlayOpen: false,
+  }),
+}));
+jest.mock('#hooks/ui/useTutorialSequence', () => ({
+  useTutorialSequence: jest.fn(() => ({
+    currentStep: null,
+    advance: jest.fn(),
+    advanceInPlace: jest.fn(),
+    skipAll: jest.fn(),
+  })),
 }));
 jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
   useTabBarAddMenu: jest.fn(),
@@ -54,16 +66,6 @@ jest.mock('#store', () => {
 
 // --- Facade hook: usePantryScreen ---
 const defaultPantryScreen = {
-  // User
-  authUser: {
-    id: 'u1',
-    name: 'Test',
-    email: 'test@t.com',
-    profilePicture: null,
-  },
-  userName: 'Test',
-  householdName: 'My Home',
-
   // Home / Pantry resolution
   pantry: { id: 'p1', name: 'Kitchen' } as { id: string; name: string } | null,
   pantries: [{ id: 'p1', name: 'Kitchen' }],
@@ -80,11 +82,6 @@ const defaultPantryScreen = {
 
   // Pantry data
   pantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
-    totalItems: number;
-    expiringCount: number;
-    lowStockCount: number;
-  } | null,
   totalCount: 0,
   itemsFailure: null as PantryItemsFailure | null,
 
@@ -209,9 +206,7 @@ jest.mock('#features/pantry/components/PantryContent', () => {
         });
         return (
           <View testID="pantry-content">
-            <Text>{props.userName}</Text>
-            <Text>{props.householdName}</Text>
-            <Text testID="prop-stats">{JSON.stringify(props.stats)}</Text>
+            <Text>{props.pantryName}</Text>
             <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
             <Text testID="prop-loading">{String(props.loading)}</Text>
             <Text testID="prop-itemCount">
@@ -314,14 +309,9 @@ describe('PantryMain', () => {
     expect(screen.getByTestId('pantry-screen')).toBeTruthy();
   });
 
-  it('renders PantryContent with user name', () => {
+  it("renders PantryContent with the pantry's name", () => {
     renderWithApollo(<PantryMain />);
-    expect(screen.getByText('Test')).toBeTruthy();
-  });
-
-  it('renders PantryContent with household name', () => {
-    renderWithApollo(<PantryMain />);
-    expect(screen.getByText('My Home')).toBeTruthy();
+    expect(screen.getByText('Kitchen')).toBeTruthy();
   });
 
   it('renders the item selector', () => {
@@ -356,17 +346,15 @@ describe('PantryMain', () => {
   });
 
   describe('passes hook data as props to PantryContent', () => {
-    it('passes stats to PantryContent when stats exist', () => {
-      const stats = { totalItems: 12, expiringCount: 3, lowStockCount: 2 };
-      mockPantryScreen({ stats });
+    it("titles the header with the current pantry's name", () => {
       renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.stats).toEqual(stats);
+      expect(capturedPantryContentProps.pantryName).toBe('Kitchen');
     });
 
-    it('passes null stats when hook returns null', () => {
-      mockPantryScreen({ stats: null });
+    it('titles it "Pantry" before one resolves', () => {
+      mockPantryScreen({ pantry: null });
       renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.stats).toBeNull();
+      expect(capturedPantryContentProps.pantryName).toBe('Pantry');
     });
 
     it('passes totalCount to PantryContent', () => {
@@ -427,14 +415,10 @@ describe('PantryMain', () => {
         selectedHomeId: null,
         noHomeSelected: true,
         noHomes: false,
-        householdName: 'Tap to select a home',
       });
       renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(true);
       expect(capturedPantryContentProps.noHomes).toBe(false);
-      expect(capturedPantryContentProps.householdName).toBe(
-        'Tap to select a home',
-      );
     });
 
     it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
@@ -444,12 +428,10 @@ describe('PantryMain', () => {
         selectedHomeId: null,
         noHomeSelected: false,
         noHomes: true,
-        householdName: 'No homes yet',
       });
       renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomes).toBe(true);
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
-      expect(capturedPantryContentProps.householdName).toBe('No homes yet');
     });
 
     it('passes onSelectHome callback that navigates to HomeManagement', () => {
@@ -468,7 +450,6 @@ describe('PantryMain', () => {
       renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.noHomes).toBe(false);
-      expect(capturedPantryContentProps.householdName).toBe('My Home');
     });
 
     it('passes noPantries=true and onCreatePantry when home has no pantries', () => {
@@ -543,6 +524,28 @@ describe('PantryMain', () => {
       renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.searchQuery).toBe('test');
       expect(typeof capturedPantryContentProps.onSearchChange).toBe('function');
+    });
+  });
+
+  describe('tutorial', () => {
+    const lastTutorial = () => {
+      const [options] = jest.mocked(useTutorialSequence).mock.lastCall ?? [];
+      return options;
+    };
+
+    it('points Select pantry at the title and keeps the + step', () => {
+      const titleRect = { x: 16, y: 60, width: 120, height: 28 };
+      renderWithApollo(<PantryMain />);
+      act(() => capturedPantryContentProps.onSettingsIconLayout?.(titleRect));
+
+      expect(lastTutorial()?.steps.map(step => step.featureId)).toEqual([
+        'pantry_tutorial_settings',
+        'pantry_tutorial_add',
+      ]);
+      expect(lastTutorial()?.targetRects).toEqual({
+        settingsIcon: titleRect,
+        addButton: { x: 160, y: 760, width: 56, height: 56 },
+      });
     });
   });
 });

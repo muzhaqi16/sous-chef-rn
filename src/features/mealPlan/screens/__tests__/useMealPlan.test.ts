@@ -22,6 +22,19 @@ const PLAN_PAGES = {
 };
 
 describe('useMealPlan', () => {
+  // A tab that reads the plan from beside Meal Plan stands down while hidden.
+  it('asks for nothing while the caller skips it', () => {
+    const get = recordMock(GetMealPlanDocument, {
+      error: new Error('should not fire while skipped'),
+    });
+
+    renderHookWithApollo(() => useMealPlan('plan-3', { skip: true }), {
+      operationMocks: [get.mock],
+    });
+
+    expect(get.fired).toHaveLength(0);
+  });
+
   it('skips the detail query until the local-first create is acknowledged', async () => {
     // The row does not exist server-side yet, so this read could only come back
     // RESOURCE_NOT_FOUND.

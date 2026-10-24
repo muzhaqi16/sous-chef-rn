@@ -1,5 +1,7 @@
 import React from 'react';
+import { StyleSheet } from 'react-native-unistyles';
 
+import { CachedImage } from '#components/atoms/CachedImage';
 import {
   ThemedActivityIndicator,
   ThemedIcon,
@@ -35,6 +37,8 @@ export interface HeaderAction {
    * "button". Optional here is how four of them shipped unnamed.
    */
   accessibilityLabel: string;
+  /** A photo in place of the glyph, such as the user's own; the glyph shows without one. */
+  photoUri?: string | null;
   /** Header bars only. */
   badge?: number;
   size?: number;
@@ -107,6 +111,18 @@ export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
     );
   }
 
+  if (action.photoUri) {
+    const size = action.size ?? defaultSize;
+    return (
+      <CachedImage
+        uri={action.photoUri}
+        style={styles.photo(size)}
+        displaySize={size}
+        accessible={false}
+      />
+    );
+  }
+
   const tone = action.disabled
     ? 'textTertiary'
     : action.color
@@ -128,3 +144,11 @@ export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
     />
   );
 };
+
+const styles = StyleSheet.create({
+  photo: (size: number) => ({
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+  }),
+});

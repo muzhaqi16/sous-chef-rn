@@ -162,6 +162,7 @@ describe('resetManager', () => {
         });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.pendingPantryScrollToTop).toBe(false);
+        expect(firstCall.pendingTabAdd).toBeNull();
         expect(firstCall.pendingCroppedImage).toBeNull();
         expect(firstCall.pendingItemImages).toBeNull();
         expect(firstCall.tutorialResetGeneration).toBeUndefined();

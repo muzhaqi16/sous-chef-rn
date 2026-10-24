@@ -303,7 +303,7 @@ describe('FilteredPantryItems', () => {
       mockAllItems = rows();
       renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
       expect(
-        screen.queryAllByLabelText('Add to Shopping List').length,
+        screen.queryAllByLabelText('Add to shopping list').length,
       ).toBeGreaterThan(0);
     });
 
@@ -312,7 +312,7 @@ describe('FilteredPantryItems', () => {
       mockListCanAddItems = false;
       try {
         renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
-        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+        expect(screen.queryAllByLabelText('Add to shopping list')).toEqual([]);
       } finally {
         mockListCanAddItems = true;
       }
@@ -336,7 +336,7 @@ describe('FilteredPantryItems', () => {
       mockListCanAddItems = false;
       try {
         renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-        expect(screen.queryAllByLabelText('Add to Shopping List')).toEqual([]);
+        expect(screen.queryAllByLabelText('Add to shopping list')).toEqual([]);
       } finally {
         mockListCanAddItems = true;
       }
@@ -353,7 +353,7 @@ describe('FilteredPantryItems', () => {
         renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
 
         expect(
-          screen.queryAllByLabelText('Add to Shopping List').length,
+          screen.queryAllByLabelText('Add to shopping list').length,
         ).toBeGreaterThan(0);
       } finally {
         mockSelectedListId = 'list-1';
@@ -369,7 +369,7 @@ describe('FilteredPantryItems', () => {
       // sometimes fails.
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
 
-      fireEvent.press(screen.getAllByLabelText('Add to Shopping List')[0]!);
+      fireEvent.press(screen.getAllByLabelText('Add to shopping list')[0]!);
 
       await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
       // The fixtures give every row a catalog id unlike its own, so passing
