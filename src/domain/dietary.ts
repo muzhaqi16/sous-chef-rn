@@ -1,10 +1,15 @@
 import type { TranslationKey } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import {
   CookingSkillLevel,
   Diet,
+  DietaryAlertState,
   HealthGoal,
   Intolerance,
+  RestrictionSeverity,
+  type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
+import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 /**
  * Stackable dietary constraints — they layer on a lifestyle diet, so they stay
@@ -148,4 +153,108 @@ export function restrictionLabel(
   t: (key: TranslationKey) => string,
 ): string {
   return restriction.item?.name ?? t(restrictionLabelKey(restriction));
+}
+
+/** One member restriction a product or ingredient meets, worded to show. */
+export interface HouseholdAlert {
+  /** The restriction's id: one alert per restriction. */
+  id: string;
+  /** The member's name in the home; "You" for the user. */
+  memberName: string;
+  /** What the restriction restricts, as the user's language words it. */
+  what: string;
+  state: DietaryAlertState;
+  severity: RestrictionSeverity;
+  /** A diet reads "not vegan", where the others read "contains peanut". */
+  isDiet: boolean;
+}
+
+/** An alert as the API answers it, less what the app never shows. */
+interface AlertFromServer {
+  state: DietaryAlertState;
+  membership: {
+    id: string;
+    userId: string;
+    role: MembershipRole;
+    displayName: string | null;
+  };
+  restriction: Parameters<typeof restrictionLabel>[0] & {
+    id: string;
+    severity: RestrictionSeverity;
+  };
+}
+
+/**
+ * Words an alert from its restriction, never from the server's `matched`
+ * evidence, which is English or an enum.
+ */
+export function toHouseholdAlert(
+  { state, membership, restriction }: AlertFromServer,
+  t: Translate,
+  currentUserId: string | undefined,
+): HouseholdAlert {
+  return {
+    id: restriction.id,
+    memberName: getMemberDisplayName(
+      {
+        id: membership.id,
+        role: membership.role,
+        displayName: membership.displayName,
+        user: { id: membership.userId },
+      },
+      t,
+      currentUserId,
+    ),
+    what: restrictionLabel(restriction, t),
+    state,
+    severity: restriction.severity,
+    isDiet: !!restriction.diet,
+  };
+}
+
+/** An allergy or intolerance reads as a warning; a preference or goal, a note. */
+export const isStrictSeverity = (severity: RestrictionSeverity): boolean =>
+  severity === RestrictionSeverity.Allergy ||
+  severity === RestrictionSeverity.Intolerance;
+
+/** "Ana: contains peanut", or for a diet "Sam: not vegan"; may-contain softer. */
+export function householdAlertKey(alert: HouseholdAlert): TranslationKey {
+  const contains = alert.state === DietaryAlertState.Contains;
+  if (alert.isDiet) {
+    return contains ? 'dietaryAlerts.notDiet' : 'dietaryAlerts.mayNotDiet';
+  }
+  return contains ? 'dietaryAlerts.contains' : 'dietaryAlerts.mayContain';
+}
+
+/**
+ * - `checked`: the server answered just now.
+ * - `stale`: offline, showing the answer received earlier.
+ * - `unchecked`: offline with no earlier answer; never shown as "nothing found".
+ * - `loading`: the first answer is on its way.
+ * - `none`: no home to check against.
+ */
+export type HouseholdCheck =
+  | 'checked'
+  | 'stale'
+  | 'unchecked'
+  | 'loading'
+  | 'none';
+
+export function householdCheckOf({
+  hasHome,
+  answered,
+  offline,
+  failed,
+  loading,
+}: {
+  hasHome: boolean;
+  answered: boolean;
+  offline: boolean;
+  failed: boolean;
+  loading: boolean;
+}): HouseholdCheck {
+  if (!hasHome) return 'none';
+  if (answered) return offline ? 'stale' : 'checked';
+  if (loading && !offline && !failed) return 'loading';
+  return 'unchecked';
 }

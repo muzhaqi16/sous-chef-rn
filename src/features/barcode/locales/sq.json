@@ -32,14 +32,6 @@
     "addToCartWithPrice": "Shto me çmim",
     "alreadyInCart": "Është tashmë në shportë",
     "household": {
-      "title": "Për shtëpinë tënde",
-      "contains": "{{name}}: përmban {{what}}",
-      "mayContain": "{{name}}: mund të përmbajë {{what}}",
-      "notDiet": "{{name}}: nuk është {{what}}",
-      "mayNotDiet": "{{name}}: mund të mos jetë {{what}}",
-      "checkLabel": "Kontrollo gjithmonë etiketën: të dhënat e produktit mund të jenë të paplota.",
-      "stale": "U kontrollua më parë; mund të mos jetë i përditësuar.",
-      "needsConnection": "Lidhu me internetin për ta kontrolluar për shtëpinë tënde.",
       "alternatives": "Të ngjashëm pa paralajmërime",
       "openAlternative": "Hap {{name}}"
     }

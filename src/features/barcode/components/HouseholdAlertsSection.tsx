@@ -1,48 +1,29 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import {
-  DietaryAlertState,
-  RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+  householdAlertKey,
+  isStrictSeverity,
+  type HouseholdAlert,
+  type HouseholdCheck,
+} from '#domain/dietary';
 import { Card } from '#components/atoms/Card';
 import { Icon } from '#components/atoms/Icon';
 import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
-import type {
-  DietaryAlternative,
-  HouseholdCheck,
-  ProductDietaryAlert,
-} from '#features/barcode/hooks/useProductDietaryAlerts';
+import type { DietaryAlternative } from '#features/barcode/hooks/useProductDietaryAlerts';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 
 interface HouseholdAlertsSectionProps {
   check: HouseholdCheck;
-  alerts: ProductDietaryAlert[];
+  alerts: HouseholdAlert[];
   alternatives: DietaryAlternative[];
   /** Opens an alternative's own result; absent, the alternatives only list. */
   onOpenAlternative?: (alternative: DietaryAlternative) => void;
 }
-
-const isStrict = (severity: RestrictionSeverity) =>
-  severity === RestrictionSeverity.Allergy ||
-  severity === RestrictionSeverity.Intolerance;
-
-/** "Ana: contains peanut", or for a diet "Sam: not vegan"; may-contain softer. */
-const frameKey = (alert: ProductDietaryAlert): TranslationKey => {
-  const contains = alert.state === DietaryAlertState.Contains;
-  if (alert.isDiet) {
-    return contains
-      ? 'barcode.household.notDiet'
-      : 'barcode.household.mayNotDiet';
-  }
-  return contains
-    ? 'barcode.household.contains'
-    : 'barcode.household.mayContain';
-};
 
 /**
  * What a scanned product means for the household, above the card's actions.
@@ -60,7 +41,7 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
     return (
       <Card style={styles.card} testID={barcodeTestIDs.householdUnchecked}>
         <Text role="caption" tone="secondary">
-          {t('barcode.household.needsConnection')}
+          {t('dietaryAlerts.needsConnection')}
         </Text>
       </Card>
     );
@@ -71,9 +52,9 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
 
   return (
     <Card style={styles.card} testID={barcodeTestIDs.householdAlerts}>
-      <Text role="bodyStrong">{t('barcode.household.title')}</Text>
+      <Text role="bodyStrong">{t('dietaryAlerts.title')}</Text>
       {alerts.map(alert => {
-        const strict = isStrict(alert.severity);
+        const strict = isStrictSeverity(alert.severity);
         return (
           <View key={alert.id} style={styles.alertRow}>
             <Icon
@@ -86,18 +67,21 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
               tone={strict ? 'danger' : 'secondary'}
               style={styles.alertText}
             >
-              {t(frameKey(alert), { name: alert.memberName, what: alert.what })}
+              {t(householdAlertKey(alert), {
+                name: alert.memberName,
+                what: alert.what,
+              })}
             </Text>
           </View>
         );
       })}
       {check === 'stale' && (
         <Text role="caption" tone="secondary">
-          {t('barcode.household.stale')}
+          {t('dietaryAlerts.stale')}
         </Text>
       )}
       <Text role="caption" tone="tertiary">
-        {t('barcode.household.checkLabel')}
+        {t('dietaryAlerts.checkLabel')}
       </Text>
       {alternatives.length > 0 && (
         <View style={styles.alternatives}>

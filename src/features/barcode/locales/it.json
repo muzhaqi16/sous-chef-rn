@@ -32,14 +32,6 @@
     "addToCartWithPrice": "Aggiungi con prezzo",
     "alreadyInCart": "Già nel carrello",
     "household": {
-      "title": "Per la tua casa",
-      "contains": "{{name}}: contiene {{what}}",
-      "mayContain": "{{name}}: può contenere {{what}}",
-      "notDiet": "{{name}}: non è {{what}}",
-      "mayNotDiet": "{{name}}: potrebbe non essere {{what}}",
-      "checkLabel": "Controlla sempre l'etichetta: i dati del prodotto possono essere incompleti.",
-      "stale": "Verificato in precedenza; potrebbe non essere aggiornato.",
-      "needsConnection": "Connettiti a internet per verificarlo per la tua casa.",
       "alternatives": "Altri simili senza avvisi",
       "openAlternative": "Apri {{name}}"
     }

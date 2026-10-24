@@ -5,11 +5,11 @@ import {
   DietaryAlertState,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import type { ProductDietaryAlert } from '#features/barcode/hooks/useProductDietaryAlerts';
+import type { HouseholdAlert } from '#domain/dietary';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { HouseholdAlertsSection } from '../HouseholdAlertsSection';
 
-const PEANUT: ProductDietaryAlert = {
+const PEANUT: HouseholdAlert = {
   id: 'r-peanut',
   memberName: 'Tani',
   what: 'Peanut',
@@ -17,7 +17,7 @@ const PEANUT: ProductDietaryAlert = {
   severity: RestrictionSeverity.Allergy,
   isDiet: false,
 };
-const VEGAN: ProductDietaryAlert = {
+const VEGAN: HouseholdAlert = {
   id: 'r-vegan',
   memberName: 'You',
   what: 'Vegan',
@@ -38,16 +38,16 @@ describe('HouseholdAlertsSection', () => {
 
     expect(
       screen.getByText(
-        t('barcode.household.contains', { name: 'Tani', what: 'Peanut' }),
+        t('dietaryAlerts.contains', { name: 'Tani', what: 'Peanut' }),
       ),
     ).toBeTruthy();
     expect(
       screen.getByText(
-        t('barcode.household.mayNotDiet', { name: 'You', what: 'Vegan' }),
+        t('dietaryAlerts.mayNotDiet', { name: 'You', what: 'Vegan' }),
       ),
     ).toBeTruthy();
-    expect(screen.getByText(t('barcode.household.checkLabel'))).toBeTruthy();
-    expect(screen.queryByText(t('barcode.household.stale'))).toBeNull();
+    expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();
+    expect(screen.queryByText(t('dietaryAlerts.stale'))).toBeNull();
   });
 
   it('shows nothing when nothing was found, never calling the product safe', () => {
@@ -56,7 +56,7 @@ describe('HouseholdAlertsSection', () => {
     );
 
     expect(screen.queryByTestId(barcodeTestIDs.householdAlerts)).toBeNull();
-    expect(screen.queryByText(t('barcode.household.checkLabel'))).toBeNull();
+    expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
   });
 
   it('marks an earlier answer offline as possibly out of date', () => {
@@ -68,7 +68,7 @@ describe('HouseholdAlertsSection', () => {
       />,
     );
 
-    expect(screen.getByText(t('barcode.household.stale'))).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.stale'))).toBeTruthy();
   });
 
   it('says a never-checked product needs a connection', () => {
@@ -80,9 +80,7 @@ describe('HouseholdAlertsSection', () => {
       />,
     );
 
-    expect(
-      screen.getByText(t('barcode.household.needsConnection')),
-    ).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.needsConnection'))).toBeTruthy();
   });
 
   it('opens an alternative that has a barcode', () => {

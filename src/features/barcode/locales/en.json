@@ -32,14 +32,6 @@
     "addToCartWithPrice": "Add with price",
     "alreadyInCart": "Already in the cart",
     "household": {
-      "title": "For your household",
-      "contains": "{{name}}: contains {{what}}",
-      "mayContain": "{{name}}: may contain {{what}}",
-      "notDiet": "{{name}}: not {{what}}",
-      "mayNotDiet": "{{name}}: may not be {{what}}",
-      "checkLabel": "Always check the label: product data can be incomplete.",
-      "stale": "Checked earlier; this may be out of date.",
-      "needsConnection": "Connect to the internet to check this for your household.",
       "alternatives": "Others like it that raise no alert",
       "openAlternative": "Open {{name}}"
     }

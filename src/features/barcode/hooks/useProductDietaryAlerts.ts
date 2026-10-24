@@ -1,28 +1,14 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import type {
-  DietaryAlertState,
-  RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
-import { restrictionLabel } from '#domain/dietary';
+import {
+  householdCheckOf,
+  toHouseholdAlert,
+  type HouseholdAlert,
+  type HouseholdCheck,
+} from '#domain/dietary';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useSelectedHomeId, useUser } from '#store/useAppStore';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { ProductDietaryAlertsDocument } from './useProductDietaryAlerts.generated';
-
-/** One member restriction a product meets, worded to show. */
-export interface ProductDietaryAlert {
-  /** The restriction's id: one alert per restriction. */
-  id: string;
-  /** The member's name in the home; "You" for the user. */
-  memberName: string;
-  /** What the restriction restricts, as the user's language words it. */
-  what: string;
-  state: DietaryAlertState;
-  severity: RestrictionSeverity;
-  /** A diet reads "not vegan", where the others read "contains peanuts". */
-  isDiet: boolean;
-}
 
 /** A product of the same kind that meets no member's restriction. */
 export interface DietaryAlternative {
@@ -31,20 +17,6 @@ export interface DietaryAlternative {
   imageUrl: string | null;
   primaryUpc: string | null;
 }
-
-/**
- * - `checked`: the server answered just now.
- * - `stale`: offline, showing the answer received earlier.
- * - `unchecked`: offline with no earlier answer; never shown as "nothing found".
- * - `loading`: the first answer is on its way.
- * - `none`: no home to check against.
- */
-export type HouseholdCheck =
-  | 'checked'
-  | 'stale'
-  | 'unchecked'
-  | 'loading'
-  | 'none';
 
 /**
  * The household's alerts for one product, read through the persisted cache so
@@ -61,24 +33,8 @@ export function useProductDietaryAlerts(itemId: string) {
   );
 
   const item = data?.item;
-  const alerts: ProductDietaryAlert[] = (item?.dietaryAlerts ?? []).map(
-    ({ state, membership, restriction }) => ({
-      id: restriction.id,
-      memberName: getMemberDisplayName(
-        {
-          id: membership.id,
-          role: membership.role,
-          displayName: membership.displayName,
-          user: { id: membership.userId },
-        },
-        t,
-        currentUserId,
-      ),
-      what: restrictionLabel(restriction, t),
-      state,
-      severity: restriction.severity,
-      isDiet: !!restriction.diet,
-    }),
+  const alerts: HouseholdAlert[] = (item?.dietaryAlerts ?? []).map(alert =>
+    toHouseholdAlert(alert, t, currentUserId),
   );
   const alternatives: DietaryAlternative[] = (
     item?.dietaryAlternatives ?? []
@@ -89,17 +45,13 @@ export function useProductDietaryAlerts(itemId: string) {
     primaryUpc,
   }));
 
-  const check: HouseholdCheck = !homeId
-    ? 'none'
-    : item
-    ? offline
-      ? 'stale'
-      : 'checked'
-    : offline || error
-    ? 'unchecked'
-    : loading
-    ? 'loading'
-    : 'unchecked';
+  const check: HouseholdCheck = householdCheckOf({
+    hasHome: !!homeId,
+    answered: !!item,
+    offline,
+    failed: !!error,
+    loading,
+  });
 
   return { check, alerts, alternatives };
 }
