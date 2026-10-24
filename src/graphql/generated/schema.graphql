@@ -4570,6 +4570,13 @@ type EntryImage {
   """The credit a catalog photo needs; null for a household upload."""
   credit: ImageCredit
   source: EntryImageSource!
+  """
+  The image sized for a row. A catalog photo, or one the household picked, is
+  that photo's thumbnail rendition (the photo itself when it has none); its
+  original is in Item.photos under catalogImageId. A household upload is
+  served as stored, at most 1600 px on its long side: it has no rendition and
+  is not among Item.photos.
+  """
   url: String!
 }
 
