@@ -54,6 +54,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',
   receiptParseId: 'a receipt parse is created online only, never queued',
+  substituteId: 'curated substitutes are admin reference data',
 };
 
 function unwrap(type: GraphQLInputType): GraphQLInputType {
