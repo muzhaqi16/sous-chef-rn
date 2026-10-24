@@ -5931,6 +5931,55 @@ enum IngredientMatchConfidence {
   UNSURE
 }
 
+"""
+A curated swap: what can stand in for a concept in a recipe. Our own data,
+managed by admins.
+"""
+type IngredientSubstitute {
+  """The concept it stands in for"""
+  concept: Item!
+  createdAt: DateTime!
+  """How much of the original the parts replace, in forUnit"""
+  forQuantity: Float!
+  forUnit: Unit!
+  id: ID!
+  """A cook's note, such as when the swap does not suit"""
+  note: String
+  """Its parts, in order"""
+  parts: [IngredientSubstitutePart!]!
+  """Curated order among one concept's substitutes, lowest first"""
+  position: Int!
+  role: SubstituteRole
+  updatedAt: DateTime!
+  version: Int!
+}
+
+"""A substitute as one recipe ingredient is offered it."""
+type IngredientSubstituteOption {
+  """
+  The home's PREFERENCE and GOAL alerts the parts raise; an allergy or intolerance drops the option
+  """
+  alerts: [DietaryAlert!]!
+  """Its parts in the amounts this ingredient needs"""
+  parts: [SubstitutePartAmount!]!
+  """
+  Whether the parts are scaled to the ingredient's amount. False when the
+  amount converts to the substitute's unit only by an assumption, or the
+  recipe states none: the parts are then as curated, for forQuantity.
+  """
+  scaled: Boolean!
+  substitute: IngredientSubstitute!
+}
+
+"""One part of a substitute, for its forQuantity of the original."""
+type IngredientSubstitutePart {
+  concept: Item!
+  id: ID!
+  position: Int!
+  quantity: Float!
+  unit: Unit!
+}
+
 """Input for ingredient usage when marking recipe as cooked"""
 input IngredientUsageInput {
   actualQuantity: Float!
@@ -5946,6 +5995,14 @@ input IngredientUsageInput {
   """
   pantryItemId: ID
   recipeIngredientId: ID!
+  """
+  A curated substitute the cook used instead of the ingredient, as
+  RecipeIngredient.substitutes offered it. The entry draws one part:
+  pantryItemId is required and must hold one of the substitute's parts. The
+  ingredient may have one such entry per part, all naming this substitute,
+  with or without exactStacks; its own stacks are then not drawn.
+  """
+  substituteId: ID
 }
 
 """
@@ -15015,6 +15072,18 @@ type RecipeIngredient {
   recipe: Recipe!
   section: String
   sortOrder: Int!
+  """
+  What can stand in for this ingredient: the curated substitutes for its
+  concept and every concept above it. All parts in the pantry first, then
+  some, then none. An option a home member is allergic or intolerant to is
+  not offered. The caller must be an ACTIVE member of the home.
+  """
+  substitutes(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+    """The pantry checked for parts; the home's default pantry when omitted"""
+    pantryId: ID
+  ): [IngredientSubstituteOption!]!
   unit: Unit
 }
 
@@ -18226,6 +18295,35 @@ type Subscription {
     """The user to watch: yourself, or anyone for an admin or moderator"""
     userId: ID!
   ): UserEvent!
+}
+
+"""
+One part of an offered substitute, in the amount this ingredient needs.
+"""
+type SubstitutePartAmount {
+  """Whether the pantry holds a stack of it, or of an item under it"""
+  inPantry: Boolean!
+  """The concept to use"""
+  item: Item!
+  """
+  Scaled to the ingredient's amount when the option is scaled; else as curated
+  """
+  quantity: Float!
+  unit: Unit!
+}
+
+"""
+The job an ingredient does in a dish, which its substitute must also do.
+"""
+enum SubstituteRole {
+  ACID
+  BINDER
+  FAT
+  FLAVOR
+  LEAVENING
+  LIQUID
+  SWEETENER
+  THICKENER
 }
 
 """
