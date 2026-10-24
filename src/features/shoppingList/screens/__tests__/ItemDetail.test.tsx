@@ -25,6 +25,7 @@ import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
+import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -54,7 +55,11 @@ jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
-  ItemPhotoCarousel: () => null,
+  ItemPhotoCarousel: ({ leadImageUrl }: { leadImageUrl?: string | null }) => {
+    if (!leadImageUrl) return null;
+    const { View } = require('react-native');
+    return <View testID="carousel-lead" accessibilityLabel={leadImageUrl} />;
+  },
 }));
 jest.mock('#components/molecules/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => {
@@ -496,6 +501,30 @@ describe('ShoppingListItemDetail', () => {
     });
     await waitFor(() =>
       expect(screen.getByTestId('shopping-item-hero-image')).toBeTruthy(),
+    );
+  });
+
+  // The household overrides the item photo on its own entries.
+  it("leads the hero with the household's own photo", async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            image: {
+              __typename: 'EntryImage',
+              url: 'https://signed.example.com/our-bread.jpg',
+              source: EntryImageSource.Household,
+              catalogImageId: null,
+            },
+          }),
+        ),
+      ],
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('carousel-lead').props.accessibilityLabel).toBe(
+        'https://signed.example.com/our-bread.jpg',
+      ),
     );
   });
 

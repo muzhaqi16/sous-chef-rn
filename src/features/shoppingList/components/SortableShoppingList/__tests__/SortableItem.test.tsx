@@ -118,9 +118,9 @@ jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
 }));
 
 jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: () => {
+  CachedImage: ({ uri }: { uri?: string | null }) => {
     const { View } = require('react-native');
-    return <View testID="cached-image" />;
+    return <View testID="cached-image" accessibilityLabel={uri ?? undefined} />;
   },
 }));
 
@@ -217,6 +217,7 @@ import { QueueStatus } from '#/apollo/offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -300,6 +301,28 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderRow(entry);
     expect(screen.getByText('Milk')).toBeTruthy();
+  });
+
+  // The household overrides the item photo on its own entries.
+  it("shows the household's photo over the catalog's", () => {
+    renderRow(
+      seedItem({
+        image: {
+          __typename: 'EntryImage',
+          url: 'https://cdn.example.com/our-milk.jpg',
+          source: EntryImageSource.Household,
+        },
+        item: {
+          __typename: 'Item',
+          id: 'milk',
+          imageUrl: 'https://cdn.example.com/catalog-milk.jpg',
+          images: [],
+        },
+      }),
+    );
+    expect(screen.getByTestId('cached-image').props.accessibilityLabel).toBe(
+      'https://cdn.example.com/our-milk.jpg',
+    );
   });
 
   it('renders the item subtitle derived from category', () => {

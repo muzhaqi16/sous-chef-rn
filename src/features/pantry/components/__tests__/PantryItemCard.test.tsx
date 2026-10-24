@@ -10,7 +10,10 @@ import {
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
 import { PantryActionsProvider } from '../PantryActionsContext';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { changeLanguage } from '#/i18n';
 
@@ -130,6 +133,7 @@ interface BuildItemOverrides {
   storageLocationName?: string | null;
   expiresOn?: string | null;
   imageUrl?: string | null;
+  image?: PantryItemCard_PantryItemFragment['image'];
   packageBreakdown?: {
     count: number;
     contentUnit: { id: string; name: string; symbol: string };
@@ -156,7 +160,7 @@ function buildItem(
   return {
     __typename: 'PantryItem',
     id: overrides.id ?? 'pantry-1',
-    image: null,
+    image: overrides.image ?? null,
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
     heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
@@ -402,6 +406,21 @@ describe('PantryItemCard', () => {
   it('renders image left slot when item has imageUrl', () => {
     renderCard({ imageUrl: 'https://example.com/milk.jpg' });
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
+  });
+
+  // The household overrides the item photo on its own entries.
+  it("shows the household's photo over the catalog's", () => {
+    renderCard({
+      imageUrl: 'https://example.com/catalog-milk.jpg',
+      image: {
+        __typename: 'EntryImage',
+        url: 'https://example.com/our-milk.jpg',
+        source: EntryImageSource.Household,
+      },
+    });
+    expect(screen.getByTestId('card-left-image').props.accessibilityLabel).toBe(
+      'https://example.com/our-milk.jpg',
+    );
   });
 
   it('renders placeholder image slot when no imageUrl', () => {
