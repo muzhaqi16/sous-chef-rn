@@ -2,7 +2,7 @@ import { toastService } from '#/services/toastService';
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -23,7 +23,7 @@ import { ResetPasswordScreen } from '../ResetPasswordScreen';
 // --- Mocks ---
 
 const mockGoBack = jest.fn();
-const mockNavigateToLogin = jest.fn();
+const mockReplaceWithLogin = jest.fn();
 const mockToastError = jest.mocked(toastService.error);
 const mockLogout = jest
   .spyOn(authService, 'logout')
@@ -47,7 +47,7 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
-    navigateToLogin: mockNavigateToLogin,
+    replaceWithLogin: mockReplaceWithLogin,
   }),
 }));
 
@@ -160,6 +160,43 @@ const renderOnForm = async (extraMocks: MockedResponse[] = []) => {
   return result;
 };
 
+/** The auto-mocked wrapper swallows a submit; this runs it for real. */
+const runSubmitForReal = () =>
+  (executeWithLoadingState as jest.Mock).mockImplementation(
+    async (
+      fn: () => Promise<void>,
+      setLoading: (v: boolean) => void,
+      onError?: (e: unknown) => void,
+    ) => {
+      setLoading(true);
+      try {
+        await fn();
+      } catch (error) {
+        onError?.(error);
+      } finally {
+        setLoading(false);
+      }
+    },
+  );
+
+const resetMock = (
+  resetPassword: MockDataFor<typeof ResetPasswordDocument>['resetPassword'],
+): MockFor<typeof ResetPasswordDocument> => ({
+  request: {
+    query: ResetPasswordDocument,
+    variables: { input: { token: TOKEN, newPassword: 'Test123!' } },
+  },
+  result: { data: { resetPassword } },
+});
+
+const submitNewPassword = async () => {
+  const user = userEvent.setup();
+  await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+  await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
+  await user.press(screen.getByTestId('button-Reset Password'));
+  return user;
+};
+
 const NEW_PASSWORD_INPUT = () =>
   screen.getByTestId('password-input-Enter your new password');
 const CONFIRM_PASSWORD_INPUT = () =>
@@ -231,10 +268,9 @@ describe('ResetPasswordScreen', () => {
     expect(screen.getByText(/Enter your new password below/)).toBeTruthy();
   });
 
-  // Opening a link must not end a session by itself — any web page can present
-  // one. These four cover the whole rule: the session survives until the SERVER
-  // says the token is genuine, and survives outright if it says otherwise.
-  it('does NOT clear the session before the token is validated', () => {
+  // Any web page can present a link, and it may be another account's: opening
+  // one, genuine or not, leaves the session alone. Only a completed reset ends it.
+  it('keeps the session while the token is checked', () => {
     renderWithApollo(<ResetPasswordScreen />, {
       operationMocks: [validateMock()],
     });
@@ -243,23 +279,20 @@ describe('ResetPasswordScreen', () => {
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
-  // Through the one sign-out, never a bare `clearAuth`: that left the refresh
-  // token live, the socket open and the account's cache on disk. Without the
-  // sign-out's discards: the link may be another account's, and opening it is
-  // not this account choosing to drop its stored sign-in or unsynced writes.
-  it('signs the session out only once the server accepts the token, keeping its work', async () => {
-    await renderOnForm();
-    expect(mockLogout).toHaveBeenCalledTimes(1);
-    expect(mockLogout).toHaveBeenCalledWith({
-      keepBiometricCredentials: true,
-      keepQueuedWrites: true,
-    });
-  });
-
-  it('signs nobody out when no session is held', async () => {
-    useStore.setState({ accessToken: null, refreshToken: null });
+  it('keeps the session when the server accepts the token', async () => {
     await renderOnForm();
     expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it('tells a signed-in reader that finishing signs them out here', async () => {
+    await renderOnForm();
+    expect(screen.getByTestId('reset-password-signs-out-note')).toBeTruthy();
+  });
+
+  it('has nothing to warn about when nobody is signed in', async () => {
+    useStore.setState({ accessToken: null, refreshToken: null });
+    await renderOnForm();
+    expect(screen.queryByTestId('reset-password-signs-out-note')).toBeNull();
   });
 
   it('keeps the session and shows the invalid-link view for a spent token', async () => {
@@ -296,7 +329,7 @@ describe('ResetPasswordScreen', () => {
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
-  it('calls goBack when header close button is pressed', async () => {
+  it('goes back to where the link was opened from when closed', async () => {
     const user = userEvent.setup();
     await renderOnForm();
     await user.press(screen.getByTestId('header-close'));
@@ -346,107 +379,74 @@ describe('ResetPasswordScreen', () => {
   });
 
   it('shows the invalid-link view when the server reports the token spent', async () => {
-    // The auto-mocked wrapper swallows the submit, so run the callback for real
-    // to exercise the mutation and its result handling.
-    (executeWithLoadingState as jest.Mock).mockImplementation(
-      async (
-        fn: () => Promise<void>,
-        setLoading: (v: boolean) => void,
-        onError?: (e: unknown) => void,
-      ) => {
-        setLoading(true);
-        try {
-          await fn();
-        } catch (error) {
-          onError?.(error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    );
+    runSubmitForReal();
+    await renderOnForm([
+      resetMock({
+        __typename: 'ResetPasswordPayload',
+        status: PasswordActionStatus.InvalidOrExpired,
+      }),
+    ]);
 
-    const operationMocks: MockedResponse[] = [
-      {
-        request: {
-          query: ResetPasswordDocument,
-          variables: {
-            input: {
-              token: 'valid-token-0123456789',
-              newPassword: 'Test123!',
-            },
-          },
-        },
-        result: {
-          data: {
-            resetPassword: {
-              __typename: 'ResetPasswordPayload',
-              status: PasswordActionStatus.InvalidOrExpired,
-            },
-          },
-        },
-      },
-    ];
-
-    const user = userEvent.setup();
-    await renderOnForm(operationMocks);
-
-    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
-    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
-    await user.press(screen.getByTestId('button-Reset Password'));
+    await submitNewPassword();
 
     // A spent link must take the user off the form — it can never succeed.
     expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
   });
 
+  // The server ended every session of the link's account, perhaps this one, so
+  // the session here ends through the one sign-out, without its discards.
+  it('signs the session out once the reset completes, keeping its work, and offers sign-in', async () => {
+    runSubmitForReal();
+    await renderOnForm([
+      resetMock({
+        __typename: 'ResetPasswordPayload',
+        status: PasswordActionStatus.Completed,
+      }),
+    ]);
+
+    const user = await submitNewPassword();
+
+    expect(await screen.findByText('Password reset')).toBeTruthy();
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledWith({
+      keepBiometricCredentials: true,
+      keepQueuedWrites: true,
+    });
+
+    await user.press(screen.getByTestId('button-Sign In'));
+    expect(mockReplaceWithLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it('signs nobody out after a reset when no session is held', async () => {
+    useStore.setState({ accessToken: null, refreshToken: null });
+    runSubmitForReal();
+    await renderOnForm([
+      resetMock({
+        __typename: 'ResetPasswordPayload',
+        status: PasswordActionStatus.Completed,
+      }),
+    ]);
+
+    await submitNewPassword();
+
+    expect(await screen.findByText('Password reset')).toBeTruthy();
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
   it('reports a refused password on the field, in the reader’s language', async () => {
-    (executeWithLoadingState as jest.Mock).mockImplementation(
-      async (
-        fn: () => Promise<void>,
-        setLoading: (v: boolean) => void,
-        onError?: (e: unknown) => void,
-      ) => {
-        setLoading(true);
-        try {
-          await fn();
-        } catch (error) {
-          onError?.(error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    );
+    runSubmitForReal();
 
     const SERVER_PROSE = 'Password must contain an uppercase letter';
-    const operationMocks: MockedResponse[] = [
-      {
-        request: {
-          query: ResetPasswordDocument,
-          variables: {
-            input: {
-              token: 'valid-token-0123456789',
-              newPassword: 'Test123!',
-            },
-          },
-        },
-        result: {
-          data: {
-            resetPassword: {
-              __typename: 'ValidationError',
-              code: ErrorCode.ValidationFailed,
-              message: SERVER_PROSE,
-              field: 'newPassword',
-            },
-          },
-        },
-      },
-    ];
+    await renderOnForm([
+      resetMock({
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        message: SERVER_PROSE,
+        field: 'newPassword',
+      }),
+    ]);
 
-    const user = userEvent.setup();
-    await renderOnForm(operationMocks);
-
-    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
-    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
-    await user.press(screen.getByTestId('button-Reset Password'));
+    await submitNewPassword();
 
     // The mocked PasswordInput surfaces its errorMessage as the a11y hint.
     await waitFor(() =>
@@ -464,6 +464,7 @@ describe('ResetPasswordScreen', () => {
 describe('ResetPasswordScreen - invalid token', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useStore.setState({ accessToken: null, refreshToken: null });
     (useRoute as jest.Mock).mockReturnValue({
       params: { token: 'short' },
       key: 'test-key',
@@ -476,15 +477,20 @@ describe('ResetPasswordScreen - invalid token', () => {
     expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
   });
 
-  it('renders Return to Login button in invalid state', () => {
-    renderWithApollo(<ResetPasswordScreen />);
-    expect(screen.getByText('Return to Login')).toBeTruthy();
-  });
-
-  it('navigates to login when Return to Login is pressed', async () => {
+  it('takes a signed-out reader to sign-in', async () => {
     const user = userEvent.setup();
     renderWithApollo(<ResetPasswordScreen />);
     await user.press(screen.getByText('Return to Login'));
-    expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
+    expect(mockReplaceWithLogin).toHaveBeenCalledTimes(1);
+  });
+
+  // Signed in, there is no sign-in screen to return to.
+  it('takes a signed-in reader back to where the link was opened', async () => {
+    useStore.setState({ accessToken: 'live-access', refreshToken: 'live' });
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />);
+    await user.press(screen.getByText('Go Back'));
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockReplaceWithLogin).not.toHaveBeenCalled();
   });
 });
