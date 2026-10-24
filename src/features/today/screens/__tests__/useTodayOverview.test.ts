@@ -1,5 +1,8 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { useStore } from '#store';
 import {
   recordMock,
   renderHookWithApollo,
@@ -42,15 +45,29 @@ type CurrentHome = NonNullable<
 const testHome = { id: 'h1', name: 'Test Home' } as CurrentHome;
 
 function inHousehold(pantryId: string | null) {
+  const pantry = pantryId
+    ? { id: pantryId, name: 'Kitchen', isDefault: true }
+    : null;
   mockedCurrentPantry.mockReturnValue({
-    pantry: pantryId
-      ? { id: pantryId, name: 'Kitchen', isDefault: true }
-      : null,
-    pantries: [],
+    pantry,
+    pantries: pantry ? [{ __typename: 'Pantry', ...pantry }] : [],
     setSelectedPantryId: jest.fn(),
     currentHome: pantryId ? testHome : undefined,
     selectedHomeId: pantryId ? 'h1' : null,
     homeCount: pantryId ? 1 : 0,
+    isReady: true,
+  });
+}
+
+/** A selected home with no pantry: its details loaded, or still on their way. */
+function inHouseholdWithoutPantry({ homeLoaded }: { homeLoaded: boolean }) {
+  mockedCurrentPantry.mockReturnValue({
+    pantry: null,
+    pantries: [],
+    setSelectedPantryId: jest.fn(),
+    currentHome: homeLoaded ? testHome : undefined,
+    selectedHomeId: 'h1',
+    homeCount: 1,
     isReady: true,
   });
 }
@@ -147,10 +164,14 @@ function renderOverview(
     suggestionsMock(),
     listsMock(),
   ],
+  cache?: InMemoryCache,
 ) {
   return renderHookWithApollo(
     () => ({ overview: useTodayOverview(), client: useApolloClient() }),
-    { operationMocks: mocks.map(recorded => recorded.mock) },
+    {
+      operationMocks: mocks.map(recorded => recorded.mock),
+      ...(cache && { cache }),
+    },
   );
 }
 
@@ -396,4 +417,119 @@ it('reports a failed count read as a failure, never as an empty household', asyn
   await waitFor(() =>
     expect(['error', 'offline']).toContain(result.current.overview.state),
   );
+});
+
+describe('a home with no pantry', () => {
+  it('settles with its meals and no counts', async () => {
+    inHouseholdWithoutPantry({ homeLoaded: true });
+    const { result } = renderOverview([
+      plansMock(),
+      planMock(),
+      suggestionsMock(),
+      listsMock(),
+    ]);
+
+    await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+    expect(result.current.overview.state).toBe('ready');
+    expect(result.current.overview.counts).toBeNull();
+  });
+
+  it('is a first run with no plans or lists either', async () => {
+    inHouseholdWithoutPantry({ homeLoaded: true });
+    const { result } = renderOverview([
+      plansMock(false),
+      suggestionsMock(0),
+      listsMock(false),
+    ]);
+
+    await waitFor(() => expect(result.current.overview.state).toBe('empty'));
+  });
+
+  it('is still loading while the home itself has not arrived', async () => {
+    inHouseholdWithoutPantry({ homeLoaded: false });
+    const { result } = renderOverview([
+      plansMock(false),
+      suggestionsMock(0),
+      listsMock(false),
+    ]);
+
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    expect(result.current.overview.state).toBe('loading');
+  });
+});
+
+it('shows the plan covering today, not the one last opened on Meal Plan', async () => {
+  useStore.setState({ selectedMealPlanId: 'mp-next' });
+  const plans = recordMock(GetMealPlansDocument, {
+    data: {
+      mealPlans: connectionOf([
+        { id: 'mp-next', startDate: '2026-03-16', endDate: '2026-03-22' },
+        { id: 'mp1', startDate: '2026-03-09', endDate: '2026-03-15' },
+      ]),
+    },
+  });
+  const { result } = renderOverview([
+    countsMock(),
+    plans,
+    planMock(),
+    suggestionsMock(),
+    listsMock(),
+  ]);
+
+  await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+  expect(result.current.overview.meals[0]?.id).toBe('mi1');
+  useStore.setState({ selectedMealPlanId: null });
+});
+
+describe("a new day's counts", () => {
+  /** Yesterday's counts, as a cold start restores them: `stats` has no day in its key. */
+  function cacheWithYesterdaysCounts() {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: TodayCountsDocument,
+      variables: { id: 'p1', today: '2026-03-09' },
+      data: {
+        __typename: 'Query',
+        pantry: {
+          __typename: 'Pantry',
+          id: 'p1',
+          stats: { __typename: 'PantryStats', ...stats(9, 1, 3) },
+        },
+      },
+    });
+    return cache;
+  }
+
+  it('are confirmed with the server once, then answered from the cache', async () => {
+    const counts = countsMock(stats(9, 6, 3));
+    const { result } = renderOverview(
+      [counts, plansMock(), planMock(), suggestionsMock(), listsMock()],
+      cacheWithYesterdaysCounts(),
+    );
+
+    await waitFor(() =>
+      expect(result.current.overview.counts?.expired).toBe(6),
+    );
+    expect(counts.fired).toEqual([{ id: 'p1', today: TODAY }]);
+
+    act(() => memoryScreen().setFocused(false));
+    act(() => memoryScreen().setFocused(true));
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    expect(counts.fired).toHaveLength(1);
+    expect(result.current.overview.counts?.expired).toBe(6);
+  });
+
+  it('show the last counts held when the server cannot answer', async () => {
+    const counts = recordMock(TodayCountsDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderOverview(
+      [counts, plansMock(), planMock(), suggestionsMock(), listsMock()],
+      cacheWithYesterdaysCounts(),
+    );
+
+    await waitFor(() => expect(counts.fired).toHaveLength(1));
+    expect(result.current.overview.state).toBe('ready');
+    expect(result.current.overview.counts?.expired).toBe(1);
+  });
 });
