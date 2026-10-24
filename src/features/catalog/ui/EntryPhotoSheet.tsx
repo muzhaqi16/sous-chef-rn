@@ -2,9 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
+import type { IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
+import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
 import { Loading } from '#components/molecules/Loading';
 import { Sheet } from '#components/templates/Sheet';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
@@ -26,7 +26,7 @@ interface EntryPhotoSheetProps {
 interface Choice {
   key: string;
   labelKey: TranslationKey;
-  icon: string;
+  icon: IconName;
   testID: string;
   onPress: () => void;
 }
@@ -119,20 +119,17 @@ export const EntryPhotoSheet: React.FC<EntryPhotoSheetProps> = ({
         {busy ? (
           <Loading size="small" message={t('entryPhoto.saving')} />
         ) : (
-          choices.map(choice => (
-            <AppPressable
-              key={choice.key}
-              testID={choice.testID}
-              style={styles.choice}
-              onPress={choice.onPress}
-              accessibilityRole="button"
-            >
-              <Icon name={choice.icon} size={20} tone="primary" />
-              <Text role="bodyStrong" style={styles.choiceLabel}>
-                {t(choice.labelKey)}
-              </Text>
-            </AppPressable>
-          ))
+          <View style={styles.choices}>
+            {choices.map(choice => (
+              <ActionMenuRow
+                key={choice.key}
+                testID={choice.testID}
+                icon={choice.icon}
+                label={t(choice.labelKey)}
+                onPress={choice.onPress}
+              />
+            ))}
+          </View>
         )}
       </View>
     </Sheet>
@@ -143,17 +140,7 @@ const styles = StyleSheet.create(theme => ({
   note: {
     marginBottom: theme.spacing.md,
   },
-  choice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.basePlus,
-    paddingHorizontal: theme.spacing.base,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.md,
-  },
-  choiceLabel: {
-    flex: 1,
+  choices: {
+    gap: theme.spacing.sm,
   },
 }));
