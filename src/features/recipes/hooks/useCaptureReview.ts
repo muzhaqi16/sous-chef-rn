@@ -20,7 +20,7 @@ export interface CaptureCandidate {
  * each line it did not link, found by the line as written.
  */
 export function useCaptureReview(recipeId: string | undefined) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const capture = useFinishedCapture(useHeldCaptureId(recipeId));
   if (!capture) return { review: null };
 
@@ -30,7 +30,7 @@ export function useCaptureReview(recipeId: string | undefined) {
         region:
           region.basis === MeasurementRegionBasis.Default
             ? region.region
-            : formatCountryName(region.region, i18n.language),
+            : formatCountryName(region.region, t),
       })
     : null;
   const warnings = [
