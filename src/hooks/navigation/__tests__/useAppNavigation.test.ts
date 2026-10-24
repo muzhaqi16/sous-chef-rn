@@ -1,9 +1,16 @@
 import { renderHook, act } from '@testing-library/react-native';
+import { CommonActions } from '@react-navigation/native';
 import { useAppNavigation } from '../useAppNavigation';
 
 const mockGoBack = jest.fn();
 const mockCanGoBack = jest.fn().mockReturnValue(true);
 const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
+// The root stack: with `Auth` active, it is the screen the app starts on.
+const mockRootState = jest.fn(() => ({
+  routeNames: ['Auth', 'ResetPassword', 'NotFound'],
+  routes: [{ name: 'ResetPassword' }],
+}));
 
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
@@ -13,6 +20,9 @@ jest.mock('@react-navigation/native', () => {
       goBack: mockGoBack,
       canGoBack: mockCanGoBack,
       navigate: mockNavigate,
+      dispatch: mockDispatch,
+      getParent: () => undefined,
+      getState: mockRootState,
     }),
   };
 });
@@ -32,9 +42,12 @@ describe('useAppNavigation', () => {
       });
 
       expect(mockGoBack).toHaveBeenCalledTimes(1);
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
-    it('does nothing when canGoBack is false', () => {
+    // A link that opened the app, or a session end that removed what was under
+    // it, leaves the link's screen alone on the stack: its close still leaves.
+    it('takes a deep-link screen alone on the stack to the screen the app starts on', () => {
       mockCanGoBack.mockReturnValue(false);
       const { result } = renderHook(() => useAppNavigation());
 
@@ -43,6 +56,25 @@ describe('useAppNavigation', () => {
       });
 
       expect(mockGoBack).not.toHaveBeenCalled();
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.reset({ index: 0, routes: [{ name: 'Auth' }] }),
+      );
+    });
+
+    it('stays on the screen the app starts on, with nothing under it', () => {
+      mockCanGoBack.mockReturnValue(false);
+      mockRootState.mockReturnValueOnce({
+        routeNames: ['Auth', 'ResetPassword', 'NotFound'],
+        routes: [{ name: 'Auth' }],
+      });
+      const { result } = renderHook(() => useAppNavigation());
+
+      act(() => {
+        result.current.goBack();
+      });
+
+      expect(mockGoBack).not.toHaveBeenCalled();
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
   });
 
@@ -209,6 +241,18 @@ describe('useAppNavigation', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toLogin());
       expect(mockNavigate).toHaveBeenCalledWith('Auth', { screen: 'Login' });
+    });
+
+    // Neither the link nor a signed-out flow under it stays: one `Auth`, on Login.
+    it('replaceWithLogin leaves the root holding only Auth > Login', () => {
+      const { result } = renderHook(() => useAppNavigation());
+      act(() => result.current.replaceWithLogin());
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Auth', params: { screen: 'Login' } }],
+        }),
+      );
     });
   });
 
