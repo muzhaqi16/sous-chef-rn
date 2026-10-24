@@ -279,10 +279,6 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
-  """
-  Makes it a household restriction for this home; the caller must be an active member of it. Omit for a personal restriction
-  """
-  appliesToHomeId: ID
   """What the restriction restricts"""
   kind: RestrictionKindInput!
   """Free text, at most 1000 characters after trimming"""
@@ -4429,7 +4425,8 @@ type DietaryProfile {
 }
 
 type DietaryRestriction {
-  appliesToHomeId: ID
+  """The home named when the restriction was added; decides nothing"""
+  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
   createdAt: DateTime!
   diet: Diet
   dietaryProfile: DietaryProfile!
@@ -5179,6 +5176,15 @@ type Home {
   createdAt: DateTime!
   currency: CurrencyCode
   description: String
+  """
+  What this home's members cannot or will not eat: one entry per ACTIVE
+  member who shares with this home (Membership.sharesDietaryNeeds) and has at
+  least one restriction, the caller included, in the order membersConnection
+  lists them. Read live from each member's profile, so leaving, rejoining and
+  editing a restriction need nothing else. Readable by a member who can view
+  the home, guests included.
+  """
+  dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
   inviteLogsConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -7959,7 +7965,9 @@ type MealPlan {
   """Free text about the plan; null when none was given"""
   description: String
   """
-  The dietary profile nutritionGoalProgress measures the plan against; null when none is linked
+  The dietary profile nutritionGoalProgress measures the plan against. Null
+  when none is linked, and for any caller but the profile's owner or an
+  admin: a plan shared with a home does not show its creator's profile.
   """
   dietaryProfile: DietaryProfile
   """
@@ -7999,8 +8007,9 @@ type MealPlan {
   """The plan's name; never blank"""
   name: String!
   """
-  Progress toward nutrition goals from linked dietary profile.
-  Returns null if no dietary profile is linked.
+  Progress toward the linked dietary profile's nutrition goals. Null when no
+  profile is linked, and, since each target is the profile's, for any caller
+  but its owner or an admin.
   """
   nutritionGoalProgress: NutritionGoalProgress
   """
@@ -8559,6 +8568,18 @@ input MediaAssetsInput {
   images: [ImageInput!]
 }
 
+"""One sharing member of a home and the restrictions the home sees"""
+type MemberDietaryNeeds {
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  """
+  The member's restrictions, strictest first (ALLERGY to GOAL), then newest; never empty
+  """
+  restrictions: [SharedDietaryRestriction!]!
+}
+
 """A user's membership of a home: their role and permissions in it"""
 type Membership {
   """Grants adding items to the home's pantries"""
@@ -8604,6 +8625,12 @@ type Membership {
   except canViewPantry.
   """
   role: MembershipRole!
+  """
+  Whether the member's dietary restrictions appear in this home's
+  dietaryNeeds. Set only by the member (updateDietarySharing). A membership
+  starts shared; one that existed before the switch did started unshared.
+  """
+  sharesDietaryNeeds: Boolean!
   """
   Whether the membership is in force. Only an ACTIVE membership grants access
   to the home; LEFT, REMOVED and SUSPENDED memberships grant nothing.
@@ -9759,6 +9786,15 @@ type Mutation {
   updateDevice(input: UpdateDeviceInput!): UpdateDeviceResult!
   """Update the current user's dietary profile."""
   updateDietaryProfile(input: UpdateDietaryProfileInput!): UpdateDietaryProfileResult!
+  """
+  Turn the caller's own dietary sharing with a home on or off: whether their
+  restrictions appear in that home's dietaryNeeds. Any member sets their own,
+  guests included, and nobody sets another member's. A caller with no ACTIVE
+  membership in the home is refused (ForbiddenError). Setting the value the
+  switch already holds writes nothing, so a replay converges; a change is
+  announced on homeEvents as MEMBERSHIP_UPDATED naming sharesDietaryNeeds.
+  """
+  updateDietarySharing(input: UpdateDietarySharingInput!): UpdateDietarySharingResult!
   """Update an external source mapping."""
   updateExternalSource(input: UpdateExternalSourceInput!): UpdateExternalSourceResult!
   """Update details of a favorited recipe (notes, folder, rating)."""
@@ -16053,6 +16089,28 @@ Always include a __typename so the variant can be discriminated.
 union ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError
 
 """
+One member's restriction as a home they share with sees it: what it restricts
+and how strictly. It carries no notes and leads to no other part of the
+member's dietary profile.
+"""
+type SharedDietaryRestriction {
+  """The diet followed, when the restriction is a diet"""
+  diet: Diet
+  """The health goal pursued, when the restriction is a health goal"""
+  healthGoal: HealthGoal
+  """
+  The restriction's identifier, the same as on its owner's DietaryRestriction
+  """
+  id: ID!
+  """The food not tolerated, when the restriction is an intolerance"""
+  intolerance: Intolerance
+  """
+  How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
+  """
+  severity: RestrictionSeverity!
+}
+
+"""
 Other participants changed a shared list's items in one 15-minute window (SHARED_LIST_CHANGED).
 """
 type SharedListChangedNotificationData {
@@ -18674,6 +18732,28 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfilePayload | ValidationError
+
+"""The caller's own sharing switch in one home."""
+input UpdateDietarySharingInput {
+  """A home the caller is an ACTIVE member of"""
+  homeId: ID!
+  """Whether the caller's dietary restrictions are shown to this home"""
+  shared: Boolean!
+}
+
+type UpdateDietarySharingPayload {
+  """The home, whose dietaryNeeds reflect the switch"""
+  home: Home
+  """The caller's membership, carrying the switch as it now stands"""
+  membership: Membership!
+}
+
+"""
+Result of UpdateDietarySharing. Select on UpdateDietarySharingPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateDietarySharingResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietarySharingPayload | ValidationError
 
 input UpdateExternalSourceInput {
   externalName: String
