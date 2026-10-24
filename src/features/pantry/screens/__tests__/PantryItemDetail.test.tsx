@@ -3,6 +3,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -12,12 +13,15 @@ import {
   BatchStatus,
   EntryImageSource,
   ExternalSource,
+  ItemImageStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import {
   pantryItemData,
   type PantryItemFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryItemFixtures';
+
+type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
 import { PantryItemDetail } from '../PantryItemDetail';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 
@@ -503,6 +507,58 @@ describe('PantryItemDetail (integration)', () => {
     });
     await screen.findAllByText('Milk');
     expect(headerAction('entry-photo-change-button')).toBeNull();
+  });
+
+  describe('picking one of the item photos', () => {
+    const photo = (id: string): ItemPhotoFixture => ({
+      __typename: 'ItemPhoto',
+      id,
+      url: `https://cdn.test/${id}.jpg`,
+      perspective: null,
+      isPrimary: false,
+      status: ItemImageStatus.Approved,
+      credit: null,
+      variants: [],
+    });
+    const pickOffered = async (fixture: Partial<typeof fullItem>) => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [itemMock({ ...fullItem, ...fixture })],
+      });
+      await screen.findAllByText('Milk');
+      const change = headerAction(catalogTestIDs.entryPhotoChangeButton);
+      if (change) fireEvent.press(change);
+      await screen.findByTestId(catalogTestIDs.entryPhotoSheet);
+      return screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto);
+    };
+
+    it('is offered while there is a photo other than the one in use', async () => {
+      expect(
+        await pickOffered({
+          photos: [photo('front'), photo('back')],
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://cdn.test/front.jpg',
+            source: EntryImageSource.Household,
+            catalogImageId: 'front',
+          },
+        }),
+      ).toBeTruthy();
+    });
+
+    // The viewer offers "Use this photo" on every photo but the one in use.
+    it('is not offered when the only photo is already in use', async () => {
+      expect(
+        await pickOffered({
+          photos: [photo('front')],
+          image: {
+            __typename: 'EntryImage',
+            url: 'https://cdn.test/front.jpg',
+            source: EntryImageSource.Household,
+            catalogImageId: 'front',
+          },
+        }),
+      ).toBeNull();
+    });
   });
 
   it('offers "Not this item?" to a member who can edit', async () => {

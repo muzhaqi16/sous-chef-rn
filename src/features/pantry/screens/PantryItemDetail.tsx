@@ -181,6 +181,10 @@ export const PantryItemDetail: React.FC<
   const categoryName = item?.item.categories[0]?.category.name ?? null;
   const gallery = entryGallery(item?.image, item?.item.photos);
   const itemPhotos = gallery.photos;
+  // The viewer offers "Use this photo" on every photo but the one in use.
+  const pickableIndex = itemPhotos.findIndex(
+    photo => photo.id !== item?.image?.catalogImageId,
+  );
   const nutritionFacts = item?.item.nutritionFacts ?? null;
   const showImages =
     itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
@@ -616,10 +620,10 @@ export const PantryItemDetail: React.FC<
           entryPhoto={entryPhoto}
           hasHouseholdPhoto={item.image?.source === EntryImageSource.Household}
           onPickItemPhoto={
-            itemPhotos.length > 0
+            pickableIndex >= 0
               ? () => {
                   setPhotoSheetVisible(false);
-                  setViewerIndex(0);
+                  setViewerIndex(pickableIndex);
                 }
               : undefined
           }

@@ -54,6 +54,8 @@ export interface PantryItemFixture {
   imageUrl?: string | null;
   /** The photo the entry shows (`PantryItem.image`); none by default. */
   image?: PantryItemNode['image'];
+  /** The catalog item's photos; none by default. */
+  photos?: PantryItemNode['item']['photos'];
 }
 
 function unit(
@@ -134,7 +136,7 @@ export function pantryItemData(
         name: 'Milk',
         imageUrl: fixture.imageUrl ?? null,
         images: [],
-        photos: [],
+        photos: fixture.photos ?? [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
         nutritionFacts: fixture.nutritionFacts ?? null,
