@@ -30,22 +30,39 @@ const oneJar: ScanAmountFormValues = {
   sizeInput: '3',
   sizeUnitDisplay: 'lb',
   sizeUnitId: 'unit-lb',
+  consumeUnitDisplay: '',
+  consumeUnitId: null,
+};
+
+const usedInTbsp: ScanAmountFormValues = {
+  ...oneJar,
+  consumeUnitDisplay: 'tbsp',
+  consumeUnitId: 'unit-tbsp',
 };
 
 const Harness = ({
   values,
   editing = false,
   onEdit = () => {},
+  createsStack = true,
 }: {
   values: ScanAmountFormValues;
   editing?: boolean;
   onEdit?: () => void;
+  createsStack?: boolean;
 }) => {
   const form = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
     defaultValues: values,
   });
-  return <ScanAmountSection form={form} editing={editing} onEdit={onEdit} />;
+  return (
+    <ScanAmountSection
+      form={form}
+      editing={editing}
+      onEdit={onEdit}
+      createsStack={createsStack}
+    />
+  );
 };
 
 describe('ScanAmountSection', () => {
@@ -107,5 +124,29 @@ describe('ScanAmountSection', () => {
     fireEvent.changeText(screen.getByTestId(barcodeTestIDs.scanAmountSize), '');
 
     await waitFor(() => expect(screen.queryByText(unitRequired)).toBeNull());
+  });
+
+  describe('the unit it is used in', () => {
+    it('reads on the summary once picked', () => {
+      render(<Harness values={usedInTbsp} />);
+      expect(screen.getByText('Used in tbsp')).toBeTruthy();
+    });
+
+    it('leaves the summary line out until one is picked', () => {
+      render(<Harness values={oneJar} />);
+      expect(screen.queryByText(/^Used in/)).toBeNull();
+    });
+
+    it('is asked for when the add creates the stack', () => {
+      render(<Harness values={oneJar} editing />);
+      expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
+      expect(screen.getByText(t('labels.usedInHint'))).toBeTruthy();
+    });
+
+    // The add restocks a held stack, which keeps its own; the edit form sets it.
+    it('is not asked for a product the pantry already holds', () => {
+      render(<Harness values={usedInTbsp} editing createsStack={false} />);
+      expect(screen.queryByText(t('labels.usedIn'))).toBeNull();
+    });
   });
 });

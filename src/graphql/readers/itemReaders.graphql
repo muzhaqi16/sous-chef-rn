@@ -83,26 +83,6 @@ fragment ItemReaders on Item {
     vitaminD
   }
   packageSize {
-    declared {
-      imperial {
-        unit {
-          id
-          displayAsFraction
-          symbol
-          type
-        }
-        value
-      }
-      metric {
-        unit {
-          id
-          displayAsFraction
-          symbol
-          type
-        }
-        value
-      }
-    }
     imperial {
       unit {
         id

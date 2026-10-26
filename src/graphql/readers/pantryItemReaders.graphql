@@ -8,6 +8,11 @@ fragment PantryItemReaders on PantryItem {
     name
   }
   condition
+  consumeUnit {
+    id
+    name
+    symbol
+  }
   costCurrency {
     id
     code

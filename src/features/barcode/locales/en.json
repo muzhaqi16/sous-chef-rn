@@ -33,7 +33,8 @@
       "countUnit": "Count packages in a counting unit like jar, can or pc.",
       "unitRequired": "Pick a unit from the list.",
       "sizeInvalid": "Enter a size greater than 0.",
-      "sizeUnitRequired": "Pick the size’s unit from the list."
+      "sizeUnitRequired": "Pick the size’s unit from the list.",
+      "usedInSummary": "Used in {{unit}}"
     },
     "nutrition": {
       "title": "Nutrition facts"

@@ -84,11 +84,15 @@ export interface ScannedItem
  * What a pantry add from a scan records: whole packages counted in a COUNT unit
  * (a `size` only when the user gave one; else the record's), or a measured amount.
  */
-export type ScanAmount =
+export type ScanAmount = (
   | {
       packaged: true;
       count: number;
       unitId: string;
       size: PackageSizeInput | null;
     }
-  | { packaged: false; quantity: number; unitId: string };
+  | { packaged: false; quantity: number; unitId: string }
+) & {
+  /** The unit the household uses it in, set on the stack the add creates. */
+  consumeUnitId: string | null;
+};

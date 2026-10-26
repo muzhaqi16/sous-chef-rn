@@ -40,26 +40,6 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
         type
       }
     }
-    declared {
-      metric {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
-      }
-      imperial {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
-      }
-    }
   }
   remaining {
     value

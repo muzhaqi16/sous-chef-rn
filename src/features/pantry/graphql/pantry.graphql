@@ -591,6 +591,9 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+    }
   }
 }
 

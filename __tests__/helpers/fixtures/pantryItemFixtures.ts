@@ -160,6 +160,7 @@ export function pantryItemData(
       unit: trackingUnit,
       displayUnit: null,
       netWeightUnit: null,
+      consumeUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
             __typename: 'StorageLocation',

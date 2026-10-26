@@ -425,6 +425,60 @@ describe('useOperationUnits', () => {
       });
     });
 
+    // Honey held in jars of grams, used by the tablespoon.
+    describe('a stack the household uses in tablespoons', () => {
+      const tbsp = makeRankedUnit({
+        rank: 1,
+        unit: {
+          __typename: 'Unit',
+          id: 'u-tbsp',
+          name: 'tablespoon',
+          symbol: 'tbsp',
+          type: UnitType.Volume,
+          unitRole: UnitRole.Measurement,
+          commonFractions: null,
+          displayAsFraction: true,
+        },
+      });
+      const grams = makeRankedUnit({ rank: 2 });
+
+      const defaultFor = async (
+        operation: PantryOperation,
+        units = [grams, tbsp],
+      ) => {
+        const { result } = renderHook(
+          () =>
+            useOperationUnits({
+              ...defaultOptions,
+              netWeightUnitId: 'unit-1',
+              consumeUnitId: 'u-tbsp',
+              operation,
+            }),
+          {
+            wrapper: createApolloTestWrapper({
+              operationMocks: [consumptionMock(units)],
+            }),
+          },
+        );
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        return result.current.defaultUnit?.unitId;
+      };
+
+      it('opens a use on it, ahead of the net weight unit', async () => {
+        expect(await defaultFor(PantryOperation.Consume)).toBe('u-tbsp');
+      });
+
+      it('leaves waste on the net weight unit', async () => {
+        expect(await defaultFor(PantryOperation.Waste)).toBe('unit-1');
+      });
+
+      it('falls back once the stack no longer takes it', async () => {
+        expect(await defaultFor(PantryOperation.Consume, [grams])).toBe(
+          'unit-1',
+        );
+      });
+    });
+
     it('exposes defaultIncrement and commonFractions from default unit', async () => {
       const { result } = renderHook(
         () =>

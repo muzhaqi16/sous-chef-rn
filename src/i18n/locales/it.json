@@ -195,7 +195,8 @@
       "amountMeasuredQuantity": "Inserisci una quantità maggiore di zero.",
       "amountPackagesSize": "Non sappiamo quanto contiene una confezione. Indica la dimensione della confezione o la quantità con la sua unità (ad esempio 1 kg).",
       "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco.",
-      "primaryUpc": "Quel codice a barre non è valido. Controlla le cifre e riprova."
+      "primaryUpc": "Quel codice a barre non è valido. Controlla le cifre e riprova.",
+      "consumeUnit": "Questo articolo non si può usare in quell'unità. Scegline un'altra dall'elenco."
     },
     "unitDenied": {
       "noRoute": "Quell'unità non può essere convertita nel modo in cui questo articolo viene registrato.",
@@ -537,7 +538,10 @@
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
-    }
+    },
+    "usedIn": "Si usa in",
+    "tbspCup": "tbsp, tazza",
+    "usedInHint": "Con cosa lo misuri quando lo usi, come tbsp per il miele."
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",

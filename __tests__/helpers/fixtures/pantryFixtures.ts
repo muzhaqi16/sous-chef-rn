@@ -117,6 +117,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
     },
     held: countHeld(item.heldQuantity ?? item.quantity ?? 1),
+    consumeUnit: null,
     createdAt: '2026-01-01',
     updatedAt: '2026-01-01',
     storageState: StorageState.Ambient,

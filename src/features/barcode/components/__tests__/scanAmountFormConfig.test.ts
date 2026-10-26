@@ -49,7 +49,6 @@ const honey: ScannedItem = {
     unit: { __typename: 'Unit', id: 'unit-g' },
     metric: reading(1.36, 'unit-kg', 'kg'),
     imperial: reading(3, 'unit-lb', 'lb'),
-    declared: null,
   },
 };
 
@@ -98,6 +97,9 @@ describe('the amount a scan prefills', () => {
       sizeInput: '3',
       sizeUnitDisplay: 'lb',
       sizeUnitId: 'unit-lb',
+      // Nothing suggests one yet, so it starts empty.
+      consumeUnitDisplay: '',
+      consumeUnitId: null,
     });
     expect(scanAmountDefaults(honey, jar, UnitSystem.Metric)).toMatchObject({
       sizeInput: '1.36',
@@ -139,6 +141,7 @@ describe('the amount schema', () => {
     ['unitId', { unitId: 'unit-cup', unitType: UnitType.Volume }],
     ['sizeInput', { sizeInput: '0' }],
     ['sizeUnitId', { sizeUnitId: null }],
+    ['consumeUnitId', { consumeUnitDisplay: 'tbs', consumeUnitId: null }],
   ])('reports a bad %s on that field', async (path, override) => {
     expect(await pathOf({ ...filled, ...override })).toBe(path);
   });
@@ -177,7 +180,21 @@ describe('what a scan records', () => {
       count: 1,
       unitId: 'unit-jar',
       size: null,
+      consumeUnitId: null,
     });
+  });
+
+  it('records the unit it is used in', () => {
+    expect(
+      scanAmountOf(
+        {
+          ...prefilled,
+          consumeUnitDisplay: 'tbsp',
+          consumeUnitId: 'unit-tbsp',
+        },
+        prefilled,
+      ),
+    ).toMatchObject({ consumeUnitId: 'unit-tbsp' });
   });
 
   it('sends a size the user changed', () => {
@@ -199,6 +216,11 @@ describe('what a scan records', () => {
         },
         prefilled,
       ),
-    ).toEqual({ packaged: false, quantity: 3, unitId: 'unit-lb' });
+    ).toEqual({
+      packaged: false,
+      quantity: 3,
+      unitId: 'unit-lb',
+      consumeUnitId: null,
+    });
   });
 });

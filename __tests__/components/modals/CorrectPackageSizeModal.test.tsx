@@ -94,7 +94,7 @@ const measure = (
   value: number,
   metric: Reading,
   imperial: Reading,
-): NonNullable<Batch['remaining']> => ({
+): NonNullable<Batch['packageSize']> => ({
   __typename: 'Measure',
   value,
   unit: { __typename: 'Unit', id: 'u-g' },
@@ -128,10 +128,11 @@ const honeyJar: Batch = {
   batchNumber: 2,
   netWeight: 1360.78,
   remainingNetWeight: 680.39,
-  packageSize: {
-    ...measure(1360.78, reading(1.36, 'u-kg', 'kg'), reading(3, 'u-lb', 'lb')),
-    declared: null,
-  },
+  packageSize: measure(
+    1360.78,
+    reading(1.36, 'u-kg', 'kg'),
+    reading(3, 'u-lb', 'lb'),
+  ),
   remaining: measure(
     680.39,
     reading(680, 'u-g', 'g'),
@@ -257,14 +258,11 @@ describe('CorrectPackageSizeModal', () => {
         {
           ...honeyJar,
           netWeight: 1133.98,
-          packageSize: {
-            ...measure(
-              1133.98,
-              reading(1.13, 'u-kg', 'kg'),
-              reading(2.5, 'u-lb', 'lb'),
-            ),
-            declared: null,
-          },
+          packageSize: measure(
+            1133.98,
+            reading(1.13, 'u-kg', 'kg'),
+            reading(2.5, 'u-lb', 'lb'),
+          ),
         },
         UnitSystem.Imperial,
       );

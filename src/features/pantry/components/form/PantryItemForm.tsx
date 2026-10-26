@@ -76,6 +76,9 @@ export interface PantryItemFormData {
   netWeight?: string;
   netWeightUnit?: string;
   netWeightUnitId?: string;
+  /** The unit it is used in, as typed or picked; `consumeUnitId` is the pick. */
+  consumeUnit?: string;
+  consumeUnitId?: string;
 
   storageState: StorageState;
   condition: ItemCondition;
@@ -106,6 +109,8 @@ const EMPTY_FORM_VALUES: PantryItemFormData = {
   netWeight: '',
   netWeightUnit: '',
   netWeightUnitId: '',
+  consumeUnit: '',
+  consumeUnitId: '',
   storageState: StorageState.Ambient,
   condition: ItemCondition.Good,
   location: '',
@@ -159,6 +164,8 @@ const formValuesFromItem = (
   restockQuantity: decimalQuantityInput(item.restockQuantity),
   brand: item.brand?.name ?? '',
   ...packageSizeFields(item, system),
+  consumeUnit: getUnitDisplayText(item.consumeUnit),
+  consumeUnitId: item.consumeUnit?.id ?? '',
   storageState: item.storageState,
   condition: item.condition,
   location: item.storageLocation?.name ?? '',
@@ -304,6 +311,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // re-run both — `shouldValidate` re-runs only the field it wrote.
   const revalidateNetWeight = () => {
     void trigger(['netWeightUnit', 'netWeight']);
+  };
+
+  const handleConsumeUnitSelected = (unitId: string | null) => {
+    setValue('consumeUnitId', unitId ?? '', { shouldDirty: true });
   };
 
   const handleNetWeightUnitSelected = (unitId: string | null) => {
@@ -461,6 +472,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             control={control}
             onNetWeightChanged={revalidateNetWeight}
             onNetWeightUnitSelected={handleNetWeightUnitSelected}
+            onConsumeUnitSelected={handleConsumeUnitSelected}
           />
         )}
 

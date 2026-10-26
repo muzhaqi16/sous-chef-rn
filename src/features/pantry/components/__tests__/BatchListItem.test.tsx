@@ -118,8 +118,8 @@ describe('BatchListItem', () => {
     });
   });
 
-  // A can of Unmeat tuna: 180 g as stored, its label's "6.35 oz (180 g)".
-  it('shows the package size in the user\u2019s unit system, as the label prints it', () => {
+  // A can of Unmeat tuna: 180 g as stored; the API reads its label's "6.35 oz".
+  it('shows the package size in the user\u2019s unit system', () => {
     type BatchSize = NonNullable<PantryItemBatchFragment['packageSize']>;
     const reading = (
       value: number,
@@ -141,12 +141,7 @@ describe('BatchListItem', () => {
       value: 180,
       unit: { __typename: 'Unit', id: 'unit-g' },
       metric: reading(180, 'unit-g', 'g'),
-      imperial: reading(6.3, 'unit-oz', 'oz'),
-      declared: {
-        __typename: 'DeclaredQuantity',
-        metric: reading(180, 'unit-g', 'g'),
-        imperial: reading(6.35, 'unit-oz', 'oz'),
-      },
+      imperial: reading(6.35, 'unit-oz', 'oz'),
     };
     const cache = makeCache();
     writeUnitSystemSettings(cache, UnitSystem.System, UnitSystem.Imperial);

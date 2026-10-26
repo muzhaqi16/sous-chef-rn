@@ -195,7 +195,8 @@
       "amountMeasuredQuantity": "Shkruaj një sasi më të madhe se zero.",
       "amountPackagesSize": "Nuk e dimë sa përmban një paketë e kësaj. Shkruaj madhësinë e paketës ose sasinë me njësinë e saj (p.sh. 1 kg).",
       "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista.",
-      "primaryUpc": "Ai barkod nuk është i vlefshëm. Kontrollo shifrat dhe provo përsëri."
+      "primaryUpc": "Ai barkod nuk është i vlefshëm. Kontrollo shifrat dhe provo përsëri.",
+      "consumeUnit": "Ky artikull nuk mund të përdoret në atë njësi. Zgjidh një tjetër nga lista."
     },
     "unitDenied": {
       "noRoute": "Kjo njësi nuk mund të konvertohet në mënyrën si regjistrohet ky artikull.",
@@ -537,7 +538,10 @@
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
-    }
+    },
+    "usedIn": "Përdoret në",
+    "tbspCup": "tbsp, filxhan",
+    "usedInHint": "Me çfarë e mat kur e përdor, si tbsp për mjaltin."
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",

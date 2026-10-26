@@ -44,6 +44,12 @@ fragment PantryItemForm_pantryItem on PantryItem {
     name
     symbol
   }
+  # The unit the household uses the stack in; a use opens on it.
+  consumeUnit {
+    id
+    name
+    symbol
+  }
   # netWeight as the detail shows it, which the size field opens on.
   packageSize {
     value

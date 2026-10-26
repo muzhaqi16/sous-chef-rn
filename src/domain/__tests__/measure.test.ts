@@ -10,7 +10,6 @@ import {
 
 const lb = { symbol: 'lb', displayAsFraction: false };
 const kg = { symbol: 'kg', displayAsFraction: false };
-const oz = { symbol: 'oz', displayAsFraction: false };
 const g = { symbol: 'g', displayAsFraction: false };
 const cup = { symbol: 'cup', displayAsFraction: true };
 const can = {
@@ -26,38 +25,12 @@ const honey: MeasureShape = {
   imperial: { value: 3, unit: lb },
 };
 
-// A "6.35 oz (180 g)" can: the API's ounce reading rounds to its 0.1 step.
-const tuna: MeasureShape = {
-  metric: { value: 180, unit: g },
-  imperial: { value: 6.3, unit: oz },
-  declared: {
-    metric: { value: 180, unit: g },
-    imperial: { value: 6.35, unit: oz },
-  },
-};
-
 describe('reading an amount in the user’s unit system', () => {
   it.each([
     [UnitSystem.Imperial, '3 lb'],
     [UnitSystem.Metric, '1.36 kg'],
   ] as const)('reads %s as %s', (system, text) => {
     expect(formatReading(readingOf(honey, system))).toBe(text);
-  });
-
-  it('prefers the label’s own figure over a rounded reading', () => {
-    expect(formatReading(readingOf(tuna, UnitSystem.Imperial))).toBe('6.35 oz');
-    expect(formatReading(readingOf(tuna, UnitSystem.Metric))).toBe('180 g');
-  });
-
-  it('keeps the reading where the label prints nothing in that system', () => {
-    const metricOnlyLabel: MeasureShape = {
-      ...tuna,
-      declared: { metric: { value: 180, unit: g }, imperial: null },
-    };
-    expect(readingOf(metricOnlyLabel, UnitSystem.Imperial)).toEqual({
-      value: 6.3,
-      unit: oz,
-    });
   });
 
   it('never converts a count', () => {

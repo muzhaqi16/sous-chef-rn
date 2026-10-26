@@ -14,6 +14,7 @@ import type {
   UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
 import { isOwnKey } from '#/utils/isOwnKey';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
@@ -75,7 +76,7 @@ export interface UsePantryItemFormSubmitParams {
   unitChange: Pick<UnitChangeDeps, 'preview' | 'change'>;
   /** Reports a problem the user can fix on the field it concerns. */
   reportFieldError: (
-    field: UnitChangeField | 'netWeightUnit',
+    field: UnitChangeField | 'netWeightUnit' | 'consumeUnit',
     message: string,
   ) => void;
   /** Runs once every write was applied or queued; a refusal keeps the form open. */
@@ -149,6 +150,24 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
           return;
         }
         data.netWeightUnitId = resolvedNetWeightUnitId;
+      }
+
+      const consumeUnitText = (data.consumeUnit ?? '').trim();
+      if (consumeUnitText) {
+        const resolvedConsumeUnitId =
+          firstNonBlank(data.consumeUnitId) ??
+          (await params.resolveUnitId(null, consumeUnitText));
+        if (!resolvedConsumeUnitId) {
+          params.reportFieldError(
+            'consumeUnit',
+            t('itemForm.unknownUnit', { unit: consumeUnitText }),
+          );
+          return;
+        }
+        data.consumeUnitId = resolvedConsumeUnitId;
+      } else {
+        // Emptied, it clears the stack's.
+        data.consumeUnitId = '';
       }
 
       const dirtyFieldsRecord = toDirtyFlags(params.dirtyFields);

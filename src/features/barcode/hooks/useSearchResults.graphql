@@ -89,26 +89,6 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
               type
             }
           }
-          declared {
-            metric {
-              value
-              unit {
-                id
-                symbol
-                displayAsFraction
-                type
-              }
-            }
-            imperial {
-              value
-              unit {
-                id
-                symbol
-                displayAsFraction
-                type
-              }
-            }
-          }
         }
         # The result's nutrition card, and the full sheet it opens.
         nutritionFacts {
@@ -215,26 +195,6 @@ fragment useSearchResults_item on Item {
         symbol
         displayAsFraction
         type
-      }
-    }
-    declared {
-      metric {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
-      }
-      imperial {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
       }
     }
   }

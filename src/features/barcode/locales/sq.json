@@ -33,7 +33,8 @@
       "countUnit": "Numëro paketat me një njësi numërimi, si pc.",
       "unitRequired": "Zgjidh një njësi nga lista.",
       "sizeInvalid": "Vendos një madhësi më të madhe se 0.",
-      "sizeUnitRequired": "Zgjidh nga lista njësinë e madhësisë."
+      "sizeUnitRequired": "Zgjidh nga lista njësinë e madhësisë.",
+      "usedInSummary": "Përdoret në {{unit}}"
     },
     "nutrition": {
       "title": "Vlerat ushqyese"

@@ -33,7 +33,8 @@
       "countUnit": "Conta le confezioni in un’unità di conteggio, come pc.",
       "unitRequired": "Scegli un’unità dall’elenco.",
       "sizeInvalid": "Inserisci una dimensione maggiore di 0.",
-      "sizeUnitRequired": "Scegli dall’elenco l’unità della dimensione."
+      "sizeUnitRequired": "Scegli dall’elenco l’unità della dimensione.",
+      "usedInSummary": "Si usa in {{unit}}"
     },
     "nutrition": {
       "title": "Valori nutrizionali"

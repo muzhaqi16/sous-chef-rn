@@ -380,6 +380,65 @@ describe('usePantryItemFormSubmit', () => {
     });
   });
 
+  // Honey used by the tablespoon: a use opens on it.
+  describe('the unit it is used in', () => {
+    it('resolves a typed unit to its id', async () => {
+      const resolveUnitId = jest.fn().mockResolvedValue('unit-tbsp');
+      const params = defaults({ dirtyFields: { consumeUnit: true } });
+      const { result } = renderHook(() =>
+        usePantryItemFormSubmit({ ...params, resolveUnitId }),
+      );
+
+      const data = { ...baseData, consumeUnit: 'tbsp', consumeUnitId: '' };
+      await result.current.handleSave(data);
+
+      expect(resolveUnitId).toHaveBeenCalledWith(null, 'tbsp');
+      expect(data.consumeUnitId).toBe('unit-tbsp');
+      expect(params.updatePantryItemFields).toHaveBeenCalled();
+    });
+
+    it('keeps a picked unit without resolving it again', async () => {
+      const params = defaults({ dirtyFields: { consumeUnitId: true } });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      const data = {
+        ...baseData,
+        consumeUnit: 'tbsp',
+        consumeUnitId: 'unit-tbsp',
+      };
+      await result.current.handleSave(data);
+
+      expect(params.resolveUnitId).not.toHaveBeenCalled();
+      expect(data.consumeUnitId).toBe('unit-tbsp');
+    });
+
+    it('reports a unit it cannot resolve on the field, and saves nothing', async () => {
+      const params = defaults({
+        dirtyFields: { consumeUnit: true },
+        resolveUnitId: jest.fn().mockResolvedValue(null),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, consumeUnit: 'tbs' });
+
+      expect(params.reportFieldError).toHaveBeenCalledWith(
+        'consumeUnit',
+        '"tbs" isn\'t a unit we recognise. Pick one from the list.',
+      );
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+    });
+
+    it('clears the stack’s once emptied', async () => {
+      const params = defaults({ dirtyFields: { consumeUnit: true } });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      const data = { ...baseData, consumeUnit: '', consumeUnitId: 'unit-tbsp' };
+      await result.current.handleSave(data);
+
+      expect(data.consumeUnitId).toBe('');
+    });
+  });
+
   describe('edit mode', () => {
     it('alerts when editing without an existing item', async () => {
       const params = defaults({ existingPantryItem: null });

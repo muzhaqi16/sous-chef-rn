@@ -44,6 +44,8 @@ export interface FormDataInput {
   netWeight?: string;
   netWeightUnit?: string;
   netWeightUnitId?: string;
+  consumeUnit?: string;
+  consumeUnitId?: string;
 }
 
 /** Which form fields the user changed; a clean field is absent or false. */

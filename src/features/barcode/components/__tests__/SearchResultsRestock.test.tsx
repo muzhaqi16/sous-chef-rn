@@ -71,6 +71,7 @@ const ONE_PACKAGE = {
   count: 1,
   unitId: 'unit-pc',
   size: null,
+  consumeUnitId: null,
 };
 
 const onScanAnother = jest.fn();

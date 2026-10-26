@@ -79,7 +79,13 @@ export function useAddScannedItem({
   const addToPantry = (item: ScannedItem, amount: ScanAmount) =>
     addItem(
       item.name,
-      { item: scannedPantrySource(item), amount: scannedAmountOf(amount) },
+      {
+        item: scannedPantrySource(item),
+        amount: scannedAmountOf(amount),
+        ...(amount.consumeUnitId && {
+          consumeUnit: { id: amount.consumeUnitId },
+        }),
+      },
       {
         local: {
           itemId: item.id,

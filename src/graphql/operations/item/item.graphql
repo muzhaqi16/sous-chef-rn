@@ -178,26 +178,6 @@ mutation CreateItem($input: CreateItemInput!) {
               type
             }
           }
-          declared {
-            metric {
-              value
-              unit {
-                id
-                symbol
-                displayAsFraction
-                type
-              }
-            }
-            imperial {
-              value
-              unit {
-                id
-                symbol
-                displayAsFraction
-                type
-              }
-            }
-          }
         }
         type
         storageState

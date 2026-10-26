@@ -289,7 +289,6 @@ describe('useSearchResults', () => {
                 type: UnitType.Weight,
               },
             },
-            declared: null,
           },
         },
         {

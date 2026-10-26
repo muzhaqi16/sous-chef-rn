@@ -227,6 +227,7 @@ describe('SearchResults', () => {
     expect(firedInput).not.toHaveProperty('quantity');
     expect(firedInput).not.toHaveProperty('netWeight');
     expect(firedInput).not.toHaveProperty('unit');
+    expect(firedInput).not.toHaveProperty('consumeUnit');
   });
 
   // The device's units are a persisted store, which hydrates after mount.
@@ -297,7 +298,6 @@ describe('SearchResults', () => {
                 type: UnitType.Weight,
               },
             },
-            declared: null,
           },
         }}
       />,

@@ -103,9 +103,11 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
     onChangeText,
     onUnitSelected,
     error,
+    testID,
   }: {
     label?: string;
     value?: string;
+    testID?: string;
     onChangeText?: (text: string) => void;
     onUnitSelected?: (
       unitId: string | null,
@@ -122,7 +124,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
         {label ? <Text>{label}</Text> : null}
         <Text>{`unit:${value ?? ''}`}</Text>
         <Pressable
-          testID="pick-unit"
+          testID={testID ? `${testID}-pick` : 'pick-unit'}
           onPress={() => {
             // The real field's onSelect order: the symbol first, then the id.
             onChangeText?.('lb');
@@ -610,5 +612,33 @@ describe('PantryItemForm — package size in the user’s units', () => {
       '1360.78',
     );
     expect(screen.getByText('unit:g')).toBeTruthy();
+  });
+});
+
+describe('PantryItemForm — the unit it is used in', () => {
+  it('opens on the stack’s, so it can be changed or cleared', async () => {
+    const cache = buildCache({});
+    const data = pantryItemData({ id: 'item-1' });
+    const stack = data.pantryItem;
+    if (!stack) throw new Error('fixture has no item');
+    stack.consumeUnit = {
+      __typename: 'Unit',
+      id: 'unit-tbsp',
+      name: 'tablespoon',
+      symbol: 'tbsp',
+    };
+    cache.writeQuery({
+      query: PantryItemForEditDocument,
+      variables: { id: 'item-1' },
+      data,
+    });
+    renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
+
+    const user = userEvent.setup();
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Product'));
+
+    expect(screen.getByText('Used in')).toBeTruthy();
+    expect(screen.getByText('unit:tbsp')).toBeTruthy();
   });
 });

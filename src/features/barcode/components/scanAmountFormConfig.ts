@@ -25,6 +25,9 @@ export interface ScanAmountFormValues {
   sizeInput: string;
   sizeUnitDisplay: string;
   sizeUnitId: string | null;
+  /** The unit the household uses it in (tbsp for honey); empty for none. */
+  consumeUnitDisplay: string;
+  consumeUnitId: string | null;
 }
 
 interface UnitChoice {
@@ -84,6 +87,16 @@ export const scanAmountSchema: ObjectSchema<ScanAmountFormValues> = object({
       packagedOnly(
         ({ sizeInput, sizeUnitId }) => !sizeInput.trim() || !!sizeUnitId,
       ),
+    ),
+  consumeUnitDisplay: string().defined(),
+  consumeUnitId: string()
+    .nullable()
+    .defined()
+    .test(
+      'consume-unit-picked',
+      lazyMessage('barcode.amount.unitRequired'),
+      (value, context: { parent: ScanAmountFormValues }) =>
+        !context.parent.consumeUnitDisplay.trim() || !!value,
     ),
 });
 
@@ -156,6 +169,8 @@ export function scanAmountDefaults(
     sizeInput: size ? formatQuantityForInput(size.value, AS_DECIMAL) : '',
     sizeUnitDisplay: size?.unit.symbol ?? '',
     sizeUnitId: size?.unit.id ?? null,
+    consumeUnitDisplay: '',
+    consumeUnitId: null,
   };
 }
 
@@ -170,7 +185,12 @@ export function scanAmountOf(
   const quantity = parseFractionalInput(values.quantityInput);
   const { unitId } = values;
   if (quantity === null || !unitId) return null;
-  if (!values.packaged) return { packaged: false, quantity, unitId };
+  const consumeUnitId = values.consumeUnitDisplay.trim()
+    ? values.consumeUnitId
+    : null;
+  if (!values.packaged) {
+    return { packaged: false, quantity, unitId, consumeUnitId };
+  }
   const sizeChanged =
     values.sizeInput !== prefilled.sizeInput ||
     values.sizeUnitId !== prefilled.sizeUnitId;
@@ -181,5 +201,5 @@ export function scanAmountOf(
           netWeightUnitId: values.sizeUnitId,
         }
       : null;
-  return { packaged: true, count: quantity, unitId, size };
+  return { packaged: true, count: quantity, unitId, size, consumeUnitId };
 }

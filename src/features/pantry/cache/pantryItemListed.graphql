@@ -79,6 +79,9 @@ fragment pantryItem_listed on PantryItem {
     name
     symbol
   }
+  consumeUnit {
+    id
+  }
   storageLocation {
     id
     name

@@ -33,7 +33,8 @@
       "countUnit": "Cuenta los envases en una unidad de recuento, como pc.",
       "unitRequired": "Elige una unidad de la lista.",
       "sizeInvalid": "Introduce un tamaño mayor que 0.",
-      "sizeUnitRequired": "Elige de la lista la unidad del tamaño."
+      "sizeUnitRequired": "Elige de la lista la unidad del tamaño.",
+      "usedInSummary": "Se usa en {{unit}}"
     },
     "nutrition": {
       "title": "Información nutricional"

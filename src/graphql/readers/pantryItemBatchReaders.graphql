@@ -16,26 +16,6 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   notes
   openedAt
   packageSize {
-    declared {
-      imperial {
-        unit {
-          id
-          displayAsFraction
-          symbol
-          type
-        }
-        value
-      }
-      metric {
-        unit {
-          id
-          displayAsFraction
-          symbol
-          type
-        }
-        value
-      }
-    }
     imperial {
       unit {
         id

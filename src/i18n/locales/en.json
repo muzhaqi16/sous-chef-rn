@@ -195,7 +195,8 @@
       "amountMeasuredQuantity": "Enter an amount greater than zero.",
       "amountPackagesSize": "We don't know how much one package of this holds. Enter the package size, or the amount with its unit (like 1 kg).",
       "unitId": "That unit can't be used here. Pick one from the list.",
-      "primaryUpc": "That barcode isn’t valid. Check its digits and try again."
+      "primaryUpc": "That barcode isn’t valid. Check its digits and try again.",
+      "consumeUnit": "This item can't be used in that unit. Pick another from the list."
     },
     "unitDenied": {
       "noRoute": "That unit can't be converted to how this item is tracked.",
@@ -537,7 +538,10 @@
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
-    }
+    },
+    "usedIn": "Used in",
+    "tbspCup": "tbsp, cup",
+    "usedInHint": "What you measure it out in, like tbsp for honey."
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

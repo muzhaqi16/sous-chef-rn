@@ -33,6 +33,7 @@ const ONE_PACKAGE = {
   count: 1,
   unitId: 'unit-pc',
   size: null,
+  consumeUnitId: null,
 } as const satisfies ScanAmount;
 
 const ADDED_ITEM = gql`
@@ -135,6 +136,7 @@ describe('restocking the row a scan duplicated', () => {
           count: 2,
           unitId: 'unit-jar',
           size,
+          consumeUnitId: null,
         });
       });
 
@@ -161,6 +163,7 @@ describe('restocking the row a scan duplicated', () => {
           count: 2,
           unitId: 'unit-jar',
           size,
+          consumeUnitId: null,
         });
       });
 
@@ -227,6 +230,7 @@ describe('restocking the row a scan duplicated', () => {
         packaged: false,
         quantity: 750,
         unitId: 'unit-ml',
+        consumeUnitId: null,
       });
     });
 

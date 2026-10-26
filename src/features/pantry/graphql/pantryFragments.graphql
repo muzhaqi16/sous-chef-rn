@@ -56,26 +56,6 @@ fragment PantryItemBatchFragment on PantryItemBatch {
         type
       }
     }
-    declared {
-      metric {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
-      }
-      imperial {
-        value
-        unit {
-          id
-          symbol
-          displayAsFraction
-          type
-        }
-      }
-    }
   }
   # remainingNetWeight read in each unit system.
   remaining {

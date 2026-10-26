@@ -255,6 +255,25 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
     });
 
+    it('sets the unit it is used in, and clears it once emptied', () => {
+      expect(
+        buildDirtyUpdateInput(
+          { ...baseFormData, consumeUnit: 'tbsp', consumeUnitId: 'unit-tbsp' },
+          { consumeUnit: true },
+          null,
+          null,
+        ),
+      ).toEqual({ consumeUnit: { id: 'unit-tbsp' } });
+      expect(
+        buildDirtyUpdateInput(
+          { ...baseFormData, consumeUnit: '', consumeUnitId: '' },
+          { consumeUnit: true },
+          null,
+          null,
+        ),
+      ).toEqual({ consumeUnit: null });
+    });
+
     // `unit` only relabels the unit in use; the unit changes through
     // `changePantryItemUnit`, so a dirty unit field sends nothing here.
     it('never sends a unit', () => {

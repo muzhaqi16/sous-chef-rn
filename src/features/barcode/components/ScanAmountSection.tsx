@@ -32,6 +32,8 @@ interface ScanAmountSectionProps {
   /** The fields show once opened; until then the summary stands for them. */
   editing: boolean;
   onEdit: () => void;
+  /** Whether the add creates a stack, which alone takes a consume unit here. */
+  createsStack: boolean;
 }
 
 const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
@@ -41,24 +43,36 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
   form,
   editing,
   onEdit,
+  createsStack,
 }) => {
   const { t } = useTranslation();
   const { control, setValue, trigger } = form;
-  const [packaged, quantityInput, unitDisplay, sizeInput, sizeUnitDisplay] =
-    useWatch({
-      control,
-      name: [
-        'packaged',
-        'quantityInput',
-        'unitDisplay',
-        'sizeInput',
-        'sizeUnitDisplay',
-      ],
-    });
+  const [
+    packaged,
+    quantityInput,
+    unitDisplay,
+    sizeInput,
+    sizeUnitDisplay,
+    consumeUnitDisplay,
+  ] = useWatch({
+    control,
+    name: [
+      'packaged',
+      'quantityInput',
+      'unitDisplay',
+      'sizeInput',
+      'sizeUnitDisplay',
+      'consumeUnitDisplay',
+    ],
+  });
   const { fieldState: unitState } = useController({ control, name: 'unitId' });
   const { fieldState: sizeUnitState } = useController({
     control,
     name: 'sizeUnitId',
+  });
+  const { fieldState: consumeUnitState } = useController({
+    control,
+    name: 'consumeUnitId',
   });
 
   const amount = formatQuantityWithUnit(
@@ -76,6 +90,10 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
   const summary = size
     ? t('barcode.amount.eachPackage', { amount, size })
     : amount;
+  const usedIn =
+    createsStack && consumeUnitDisplay.trim()
+      ? t('barcode.amount.usedInSummary', { unit: consumeUnitDisplay.trim() })
+      : null;
 
   if (!editing) {
     return (
@@ -91,6 +109,11 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
               {t('barcode.amount.title')}
             </Text>
             <Text role="bodyStrong">{summary}</Text>
+            {usedIn ? (
+              <Text role="body" tone="secondary">
+                {usedIn}
+              </Text>
+            ) : null}
           </View>
           <Text role="label" tone="accent">
             {t('labels.edit')}
@@ -217,6 +240,43 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           />
         </FieldRow>
       ) : null}
+
+      {createsStack ? (
+        <View style={styles.usedIn}>
+          <Controller
+            control={control}
+            name="consumeUnitDisplay"
+            render={({ field }) => (
+              <UnitAutocompleteField
+                variant="modal"
+                label={t('labels.usedIn')}
+                value={field.value}
+                onChangeText={text => {
+                  field.onChange(text);
+                  // Clearing it clears the unpicked-unit error.
+                  if (!text.trim() && consumeUnitState.error) {
+                    void trigger('consumeUnitId');
+                  }
+                }}
+                onUnitSelected={(unitId, unitName, _unitType, unitSymbol) => {
+                  setValue('consumeUnitId', unitId, {
+                    shouldDirty: true,
+                    shouldValidate: unitId !== null,
+                  });
+                  const shown = unitSymbol ?? unitName;
+                  if (shown) setValue('consumeUnitDisplay', shown);
+                }}
+                error={consumeUnitState.error?.message}
+                placeholder={t('labels.tbspCup')}
+                testID={barcodeTestIDs.scanAmountUsedIn}
+              />
+            )}
+          />
+          <Text role="caption" tone="secondary">
+            {t('labels.usedInHint')}
+          </Text>
+        </View>
+      ) : null}
     </Card>
   );
 };
@@ -241,6 +301,9 @@ const styles = StyleSheet.create(theme => ({
   },
   switchText: {
     flex: 1,
+    gap: theme.spacing.xs,
+  },
+  usedIn: {
     gap: theme.spacing.xs,
   },
 }));

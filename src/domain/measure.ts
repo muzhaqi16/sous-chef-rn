@@ -39,15 +39,14 @@ export interface MeasureReadingShape {
 }
 
 /**
- * An amount's readings in both systems, and the label's own where it has one.
- * Generic over the reading, so a caller keeps the fields it selected.
+ * An amount's readings in both systems. Generic over the reading, so a caller
+ * keeps the fields it selected.
  */
 export interface MeasureShape<
   R extends MeasureReadingShape = MeasureReadingShape,
 > {
   metric: R;
   imperial: R;
-  declared?: { metric?: R | null; imperial?: R | null } | null;
 }
 
 const IN_SYSTEM: Record<ReadingSystem, 'metric' | 'imperial'> = {
@@ -56,16 +55,14 @@ const IN_SYSTEM: Record<ReadingSystem, 'metric' | 'imperial'> = {
 };
 
 /**
- * The figure shown in `system`: the label's own where it prints one in that
- * system (6.35 oz, not a rounded 6.3 oz), else the API's reading. A count reads
- * the same in both.
+ * The figure shown in `system`. The API reads the label's own figure where it
+ * prints one (6.35 oz, not a rounded 6.3 oz); a count reads the same in both.
  */
 export function readingOf<R extends MeasureReadingShape>(
   measure: MeasureShape<R>,
   system: ReadingSystem,
 ): R {
-  const key = IN_SYSTEM[system];
-  return measure.declared?.[key] ?? measure[key];
+  return measure[IN_SYSTEM[system]];
 }
 
 /** A reading's unit's own notation; a count as every count reads. */

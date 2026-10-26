@@ -120,6 +120,11 @@ export function buildDirtyUpdateInput(
     input.netWeight = netWeightInput;
   }
 
+  if (dirtyFields.consumeUnit || dirtyFields.consumeUnitId) {
+    const consumeUnitId = firstNonBlank(data.consumeUnitId);
+    input.consumeUnit = consumeUnitId ? { id: consumeUnitId } : null;
+  }
+
   if (dirtyFields.brand) {
     if (brandId) {
       input.brand = { id: brandId };

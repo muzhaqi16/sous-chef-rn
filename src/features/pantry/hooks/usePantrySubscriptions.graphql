@@ -110,6 +110,9 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     name
     symbol
   }
+  consumeUnit {
+    id
+  }
   storageLocation {
     id
     name

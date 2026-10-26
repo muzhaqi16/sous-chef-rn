@@ -47,8 +47,9 @@ import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 /** The amount field a refusal names, so it is shown there and not alerted. */
 const amountFieldOf = (
   field: string | undefined,
-): 'quantityInput' | 'unitId' | 'sizeInput' | null => {
+): 'quantityInput' | 'unitId' | 'sizeInput' | 'consumeUnitId' | null => {
   if (!field) return null;
+  if (field === 'consumeUnit') return 'consumeUnitId';
   if (field === 'netWeight' || field.endsWith('.size')) return 'sizeInput';
   if (field.endsWith('unitId')) return 'unitId';
   if (field.endsWith('.count') || field.endsWith('.quantity')) {
@@ -317,6 +318,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             form={amountForm}
             editing={isEditingAmount}
             onEdit={() => setIsEditingAmount(true)}
+            createsStack={heldUnit === null}
           />
         )}
 
