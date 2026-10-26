@@ -100,9 +100,14 @@ export const scanAmountSchema: ObjectSchema<ScanAmountFormValues> = object({
     ),
 });
 
+/** A package of several pieces ("6 x 250mL"), counted as its pieces. */
+export const isMultipack = (item: ScannedItem): boolean =>
+  (item.packs?.count ?? 1) > 1;
+
 /**
  * The COUNT unit a scan is counted in: the pantry's counted stack of the item,
- * so a repeat scan joins it, else a counted tracking unit, else a piece.
+ * so a repeat scan joins it, else the container its label names (can, jar),
+ * else a counted tracking unit, else a piece.
  */
 export function packageUnitOf(
   item: ScannedItem,
@@ -117,6 +122,8 @@ export function packageUnitOf(
         : units.find(unit => unit.id === heldUnit.id);
     if (held) return held;
   }
+  const container = item.packs?.container;
+  if (container) return { ...container, type: UnitType.Count };
   if (trackingUnit?.type === UnitType.Count) return trackingUnit;
   return (
     units.find(
@@ -135,6 +142,10 @@ const readingOfSize = (
 };
 
 function packSizeOf(item: ScannedItem, system: ReadingSystem) {
+  // A multipack's size is one piece's: the package's total is count × each.
+  if (item.packs && isMultipack(item)) {
+    return readingOfSize(item.packs.each, system);
+  }
   if (item.packageSize) return readingOfSize(item.packageSize, system);
   return item.netWeightKind === NetWeightKind.Package &&
     item.netWeight != null &&
@@ -154,7 +165,10 @@ export function packageUnitFields(
   };
 }
 
-/** One package of the product, in its package unit, holding the pack's size. */
+/**
+ * One package of the product, in its package unit, holding the pack's size; a
+ * multipack as its pieces ("6 can · 250 ml each").
+ */
 export function scanAmountDefaults(
   item: ScannedItem,
   packageUnit: UnitChoice | null,
@@ -163,7 +177,9 @@ export function scanAmountDefaults(
   const size = packSizeOf(item, system);
   return {
     packaged: true,
-    quantityInput: '1',
+    quantityInput: String(
+      item.packs && isMultipack(item) ? item.packs.count : 1,
+    ),
     ...packageUnitFields(packageUnit),
     sizeInput: size ? formatQuantityForInput(size.value, AS_DECIMAL) : '',
     sizeUnitDisplay: size?.unit.symbol ?? '',
@@ -175,11 +191,13 @@ export function scanAmountDefaults(
 
 /**
  * What a valid form records. A size still as prefilled is the record's, which
- * the API applies itself, so only one the user changed is sent.
+ * the API applies itself, so only one the user changed is sent. A multipack's
+ * prefill is one piece's size, never the record's total, so it always goes.
  */
 export function scanAmountOf(
   values: ScanAmountFormValues,
   prefilled: ScanAmountFormValues,
+  { piecesPrefilled = false }: { piecesPrefilled?: boolean } = {},
 ): ScanAmount | null {
   const quantity = parseFractionalInput(values.quantityInput);
   const { unitId } = values;
@@ -191,6 +209,7 @@ export function scanAmountOf(
     return { packaged: false, quantity, unitId, consumeUnitId };
   }
   const sizeChanged =
+    piecesPrefilled ||
     values.sizeInput !== prefilled.sizeInput ||
     values.sizeUnitId !== prefilled.sizeUnitId;
   const size =

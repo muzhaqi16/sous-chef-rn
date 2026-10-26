@@ -114,6 +114,7 @@ const convertToScannedItem = (
       }
     : undefined,
   packageSize: item.packageSize ?? undefined,
+  packs: item.packs ?? undefined,
   trackingUnit: item.trackingUnit
     ? {
         id: item.trackingUnit.id,

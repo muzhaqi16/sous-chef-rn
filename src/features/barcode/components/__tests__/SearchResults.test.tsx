@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import type { ScannedItem } from '#features/barcode/types';
 import {
   ErrorCode,
   ExternalSource,
@@ -315,6 +316,75 @@ describe('SearchResults', () => {
         count: 1,
         unitId: 'unit-pc',
         size: { netWeight: 2, netWeightUnitId: 'unit-kg' },
+      },
+    });
+  });
+
+  // USM-4: a "6 x 250mL" six-pack adds as 6 cans of 250 ml, never as one
+  // package of the record's 1500 mL.
+  it('adds a six-pack as its six cans, each one can’s size', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    const volume = (
+      value: number,
+      unitId: string,
+      symbol: string,
+    ): NonNullable<ScannedItem['packageSize']>['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unitId,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Volume,
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          variationId: 'esm-six',
+          packageSize: {
+            __typename: 'Measure',
+            value: 1500,
+            unitId: 'unit-ml',
+            metric: volume(1.5, 'unit-l', 'L'),
+            imperial: volume(50.72, 'unit-floz', 'fl oz'),
+          },
+          packs: {
+            __typename: 'PackStatement',
+            count: 6,
+            each: {
+              __typename: 'Measure',
+              value: 250,
+              unitId: 'unit-ml',
+              metric: volume(250, 'unit-ml', 'ml'),
+              imperial: volume(8.45, 'unit-floz', 'fl oz'),
+            },
+            container: { __typename: 'Unit', id: 'unit-can', symbol: 'can' },
+          },
+        }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    expect(screen.getByText('6 can · 250 ml each')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual({
+      packages: {
+        count: 6,
+        unitId: 'unit-can',
+        size: { netWeight: 250, netWeightUnitId: 'unit-ml' },
       },
     });
   });

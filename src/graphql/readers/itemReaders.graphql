@@ -65,6 +65,16 @@ fragment ItemReaders on Item {
   packageSize {
     ...MeasureReaders
   }
+  packs {
+    container {
+      id
+      symbol
+    }
+    count
+    each {
+      ...MeasureReaders
+    }
+  }
   photos {
     id
     credit {

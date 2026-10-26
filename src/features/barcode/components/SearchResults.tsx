@@ -24,6 +24,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
 import {
+  isMultipack,
   packageUnitFields,
   packageUnitOf,
   scanAmountDefaults,
@@ -251,7 +252,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
   // An invalid amount opens its fields, so the message shows where it applies.
   const submitPantryAdd = amountForm.handleSubmit(
-    values => addItem(scanAmountOf(values, prefilledAmount)),
+    values =>
+      addItem(
+        scanAmountOf(values, prefilledAmount, {
+          piecesPrefilled: isMultipack(item),
+        }),
+      ),
     errors => {
       setIsEditingAmount(true);
       logValidationErrors(errors);

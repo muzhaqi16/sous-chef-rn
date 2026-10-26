@@ -6,6 +6,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { ScannedItem } from '#features/barcode/types';
 import {
+  isMultipack,
   packageUnitOf,
   scanAmountDefaults,
   scanAmountOf,
@@ -218,6 +219,105 @@ describe('what a scan records', () => {
       quantity: 3,
       unitId: 'unit-lb',
       consumeUnitId: null,
+    });
+  });
+});
+
+// A "6 x 250mL" six-pack: the record keeps one package of 1500 mL, and the
+// label's pieces come as `packs`.
+describe('a multipack', () => {
+  const can = { id: 'unit-can', symbol: 'can' };
+  const volume = (value: number, id: string, symbol: string) => ({
+    ...reading(value, id, symbol),
+    type: UnitType.Volume,
+  });
+  const sixPack: ScannedItem = {
+    id: 'item-sparkling',
+    conceptIds: [],
+    name: 'Sparkling Water',
+    upc: '012000001291',
+    canEdit: false,
+    canSuggest: true,
+    packageSize: {
+      __typename: 'Measure',
+      value: 1500,
+      unitId: 'unit-ml',
+      metric: volume(1.5, 'unit-l', 'L'),
+      imperial: volume(50.72, 'unit-floz', 'fl oz'),
+    },
+    packs: {
+      __typename: 'PackStatement',
+      count: 6,
+      each: {
+        __typename: 'Measure',
+        value: 250,
+        unitId: 'unit-ml',
+        metric: volume(250, 'unit-ml', 'ml'),
+        imperial: volume(8.45, 'unit-floz', 'fl oz'),
+      },
+      container: { __typename: 'Unit', ...can },
+    },
+  };
+
+  it('is counted in the container its label names', () => {
+    expect(isMultipack(sixPack)).toBe(true);
+    expect(packageUnitOf(sixPack, null, [piece])).toEqual({
+      ...can,
+      __typename: 'Unit',
+      type: UnitType.Count,
+    });
+  });
+
+  it('still joins a counted stack the pantry holds', () => {
+    expect(
+      packageUnitOf(sixPack, { id: 'unit-pc', type: UnitType.Count }, [piece]),
+    ).toEqual(piece);
+  });
+
+  it('prefills its pieces: 6, each one piece’s size', () => {
+    const prefill = scanAmountDefaults(
+      sixPack,
+      packageUnitOf(sixPack, null, [piece]),
+      UnitSystem.Metric,
+    );
+    expect(prefill).toMatchObject({
+      quantityInput: '6',
+      unitDisplay: 'can',
+      unitId: 'unit-can',
+      sizeInput: '250',
+      sizeUnitDisplay: 'ml',
+      sizeUnitId: 'unit-ml',
+    });
+  });
+
+  // Without the size, the API would give each can the record's whole 1500 mL.
+  it('always sends the piece’s size, as prefilled', () => {
+    const prefill = scanAmountDefaults(
+      sixPack,
+      packageUnitOf(sixPack, null, [piece]),
+      UnitSystem.Metric,
+    );
+    expect(
+      scanAmountOf(prefill, prefill, { piecesPrefilled: isMultipack(sixPack) }),
+    ).toEqual({
+      packaged: true,
+      count: 6,
+      unitId: 'unit-can',
+      size: { netWeight: 250, netWeightUnitId: 'unit-ml' },
+      consumeUnitId: null,
+    });
+  });
+
+  it('reads as one package where the label states no pieces', () => {
+    const single: ScannedItem = {
+      ...sixPack,
+      packs: { ...sixPack.packs!, count: 1, each: sixPack.packageSize! },
+    };
+    expect(isMultipack(single)).toBe(false);
+    expect(scanAmountDefaults(single, piece, UnitSystem.Metric)).toMatchObject({
+      quantityInput: '1',
+      sizeInput: '1.5',
+      sizeUnitDisplay: 'L',
     });
   });
 });
