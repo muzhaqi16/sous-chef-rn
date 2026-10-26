@@ -77,17 +77,16 @@ export const HomeDietaryNeedsScreen: React.FC<HomeDietaryNeedsScreenProps> = ({
   const { members, state, retry } = useHomeDietaryNeeds(homeId);
 
   const nameOf = (member: MemberDietaryNeeds) =>
-    member.userId === currentUser?.id
-      ? t('homeDetail.youLabel')
-      : getMemberDisplayName(
-          {
-            id: member.membershipId,
-            role: member.role,
-            displayName: member.displayName,
-          },
-          t,
-          currentUser?.id,
-        );
+    getMemberDisplayName(
+      {
+        id: member.membershipId,
+        role: member.role,
+        displayName: member.displayName,
+        user: { id: member.userId },
+      },
+      t,
+      currentUser?.id,
+    );
 
   return (
     <SubScreen

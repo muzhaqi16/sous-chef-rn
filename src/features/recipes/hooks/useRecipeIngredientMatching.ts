@@ -20,7 +20,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import {
   RecipeSubstitutesDocument,
   type RecipeSubstitutesQuery,
@@ -170,9 +170,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   ): CookSubstitute | null => {
     const texts = option.parts.map(part =>
       t('recipes.substitutes.part', {
-        amount: [formatQuantityForDisplay(part.quantity), part.unit.symbol]
-          .filter(Boolean)
-          .join(' '),
+        amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
         name: part.item.name,
       }),
     );

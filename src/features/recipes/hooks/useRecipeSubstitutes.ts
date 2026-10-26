@@ -2,7 +2,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { toHouseholdAlert, type HouseholdAlert } from '#domain/dietary';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import {
   useSelectedHomeId,
   useSelectedPantryId,
@@ -26,9 +26,6 @@ export interface SubstituteOption {
 }
 
 const NO_OPTIONS: SubstituteOption[] = [];
-
-const amountOf = (quantity: number, unit: string) =>
-  [formatQuantityForDisplay(quantity), unit].filter(Boolean).join(' ');
 
 /**
  * What can stand in for each of a recipe's ingredients, read only when
@@ -68,7 +65,7 @@ export function useRecipeSubstitutes(
           parts: parts.map(part => ({
             key: part.item.id,
             text: t('recipes.substitutes.part', {
-              amount: amountOf(part.quantity, part.unit.symbol),
+              amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
               name: part.item.name,
             }),
             inPantry: part.inPantry,
@@ -76,7 +73,10 @@ export function useRecipeSubstitutes(
           stock: held === parts.length ? 'all' : held > 0 ? 'some' : 'none',
           per: scaled
             ? null
-            : amountOf(substitute.forQuantity, substitute.forUnit.symbol),
+            : formatQuantityWithUnit(
+                substitute.forQuantity,
+                substitute.forUnit.symbol,
+              ),
           note: substitute.note,
           alerts: alerts.map(alert =>
             toHouseholdAlert(alert, t, currentUserId),
