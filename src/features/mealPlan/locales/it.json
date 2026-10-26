@@ -25,6 +25,7 @@
   "addMealSheet": {
     "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",
     "addCustom": "Aggiungi «{{query}}» come pasto personalizzato",
+    "searchAllRecipes": "Cerca «{{query}}» in tutte le ricette",
     "yourRecipes": "Le tue ricette",
     "servings": "{{count}} porzioni",
     "noSavedRecipes": "Nessuna ricetta salvata",

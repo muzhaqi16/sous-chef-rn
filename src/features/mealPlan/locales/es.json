@@ -25,6 +25,7 @@
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",
     "addCustom": "Añadir «{{query}}» como comida personalizada",
+    "searchAllRecipes": "Buscar «{{query}}» en todas las recetas",
     "yourRecipes": "Tus recetas",
     "servings": "{{count}} raciones",
     "noSavedRecipes": "Aún no hay recetas guardadas",

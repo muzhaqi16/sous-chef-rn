@@ -30,6 +30,7 @@ import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { MAX_RECIPE_QUERY_LENGTH } from '#domain/catalogRecipes';
 import { useOpenCatalogRecipe } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import {
+  MIN_QUERY_LENGTH,
   useRecipeTextSearch,
   type PickerDietTag,
   type PickerRecipe,
@@ -60,10 +61,12 @@ const DIET_TAG_LABEL_KEYS: Record<PickerDietTag, TranslationKey> = {
 function resetSheetState(
   initialMealType: MealType | undefined,
   setSearchQuery: (v: string) => void,
+  setSearchedQuery: (v: string) => void,
   setSelectedMealType: (v: MealType) => void,
   setLoadingItemKey: (v: string | null) => void,
 ) {
   setSearchQuery('');
+  setSearchedQuery('');
   setSelectedMealType(initialMealType ?? MealType.Dinner);
   setLoadingItemKey(null);
 }
@@ -91,6 +94,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const hasQuery = searchQuery.trim().length > 0;
+  // A catalog search can be a metered Spoonacular call under a hard cap, so it
+  // runs when the user asks; typing only narrows the saved recipes.
+  const [searchedQuery, setSearchedQuery] = useState('');
+  const catalogSearched =
+    searchedQuery !== '' && searchedQuery === searchQuery.trim();
+  const canSearchCatalog = searchQuery.trim().length >= MIN_QUERY_LENGTH;
   const {
     state: { recipes, hasMore, isLoadingRemainingPages },
     actions: { loadMore },
@@ -116,6 +125,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       resetSheetState(
         initialMealType,
         setSearchQuery,
+        setSearchedQuery,
         setSelectedMealType,
         setLoadingItemKey,
       );
@@ -124,13 +134,19 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     }
   }, [visible, initialMealType, clearSearchResults]);
 
-  const handleDebouncedSearch = (text: string) => {
+  const handleSearchCatalog = () => {
+    // The field's own value: the debounce may not have reported it yet.
+    const text = searchBarRef.current?.getValue() ?? searchQuery;
+    const trimmed = text.trim();
+    if (trimmed.length < MIN_QUERY_LENGTH) return;
     setSearchQuery(text);
-    searchRecipes(text);
+    setSearchedQuery(trimmed);
+    searchRecipes(trimmed);
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
+    setSearchedQuery('');
     clearSearchResults();
   };
 
@@ -193,9 +209,13 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   // when its name matches, else with the results, which the API matches by
   // more than the name.
   const savedIds = new Set(filteredRecipes.map(r => r.recipe?.id));
-  const otherResults = searchResults.filter(
-    item => !('recipeId' in item.target) || !savedIds.has(item.target.recipeId),
-  );
+  const otherResults = catalogSearched
+    ? searchResults.filter(
+        item =>
+          !('recipeId' in item.target) || !savedIds.has(item.target.recipeId),
+      )
+    : [];
+  const searchingCatalog = catalogSearched && searchingApi;
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
     key: type,
@@ -230,9 +250,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           <SearchBar
             ref={searchBarRef}
             placeholder={t('addMealSheet.searchPlaceholder')}
-            onChangeText={handleDebouncedSearch}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearchCatalog}
+            returnKeyType="search"
             onClear={handleClearSearch}
-            isLoading={searchingApi}
+            isLoading={searchingCatalog}
             debounceMs={500}
             autoCapitalize="none"
             maxLength={MAX_RECIPE_QUERY_LENGTH}
@@ -307,10 +329,28 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 />
               ) : null}
 
+              {canSearchCatalog && !catalogSearched ? (
+                <AppPressable
+                  onPress={handleSearchCatalog}
+                  style={styles.customMealRow}
+                >
+                  <Icon name="search" size={24} tone="primary" />
+                  <Text
+                    role="bodyStrong"
+                    style={styles.customMealText}
+                    numberOfLines={1}
+                  >
+                    {t('addMealSheet.searchAllRecipes', {
+                      query: searchQuery.trim(),
+                    })}
+                  </Text>
+                </AppPressable>
+              ) : null}
+
               {/* Additional search results */}
-              {hasQuery && (searchingApi || otherResults.length > 0) ? (
+              {hasQuery && (searchingCatalog || otherResults.length > 0) ? (
                 <>
-                  {searchingApi ? (
+                  {searchingCatalog ? (
                     <View style={styles.centeredSpinner}>
                       <PrimaryActivityIndicator size="small" />
                     </View>
@@ -379,9 +419,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               ) : null}
 
               {hasQuery &&
+              (catalogSearched || !canSearchCatalog) &&
               filteredRecipes.length === 0 &&
               !isLoadingRemainingPages &&
-              !searchingApi &&
+              !searchingCatalog &&
               otherResults.length === 0 ? (
                 <EmptyState
                   size="compact"

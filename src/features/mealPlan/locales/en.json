@@ -25,6 +25,7 @@
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",
     "addCustom": "Add \"{{query}}\" as custom meal",
+    "searchAllRecipes": "Search all recipes for \"{{query}}\"",
     "yourRecipes": "Your Recipes",
     "servings": "{{count}} servings",
     "noSavedRecipes": "No saved recipes yet",

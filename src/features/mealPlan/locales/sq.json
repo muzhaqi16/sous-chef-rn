@@ -25,6 +25,7 @@
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
     "addCustom": "Shto «{{query}}» si vakt të personalizuar",
+    "searchAllRecipes": "Kërko «{{query}}» në të gjitha recetat",
     "yourRecipes": "Recetat e tua",
     "servings": "{{count}} racione",
     "noSavedRecipes": "Asnjë recetë e ruajtur",

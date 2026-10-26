@@ -34,6 +34,7 @@ jest.mock('#components/molecules/SearchBar', () => {
         props: {
           placeholder?: string;
           onChangeText?: (text: string) => void;
+          onSubmitEditing?: () => void;
           maxLength?: number;
         },
         ref: React.Ref<{
@@ -44,17 +45,22 @@ jest.mock('#components/molecules/SearchBar', () => {
           setValue: (value: string) => void;
         }>,
       ) => {
+        const text = R.useRef('');
         R.useImperativeHandle(ref, () => ({
           clear: jest.fn(),
           focus: jest.fn(),
           blur: jest.fn(),
-          getValue: jest.fn(() => ''),
+          getValue: () => text.current,
           setValue: jest.fn(),
         }));
         return (
           <TextInput
             placeholder={props.placeholder}
-            onChangeText={props.onChangeText}
+            onChangeText={(next: string) => {
+              text.current = next;
+              props.onChangeText?.(next);
+            }}
+            onSubmitEditing={props.onSubmitEditing}
             maxLength={props.maxLength}
             testID="search-bar"
           />
@@ -185,6 +191,14 @@ const defaultProps = {
   onClose: jest.fn(),
   onAddRecipe: jest.fn(),
   onAddCustomMeal: jest.fn(),
+};
+
+const searchField = () =>
+  screen.getByPlaceholderText('Search recipes or add a custom meal...');
+
+const typeAndSearch = (text: string) => {
+  fireEvent.changeText(searchField(), text);
+  fireEvent(searchField(), 'submitEditing');
 };
 
 const { useSavedRecipes: mockUseSavedRecipes } = jest.requireMock<{
@@ -340,20 +354,40 @@ describe('AddMealSheet', () => {
     expect(screen.queryByText('No recipes match your search')).toBeNull();
   });
 
-  it('shows the no-results message when the query matches no saved recipe', async () => {
+  it('shows the no-results message once the catalog search settles empty', async () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
-    const searchInput = screen.getByPlaceholderText(
-      'Search recipes or add a custom meal...',
-    );
-    fireEvent.changeText(searchInput, 'zzz');
+    fireEvent.changeText(searchField(), 'zzz');
 
     expect(screen.queryByText('Pasta Carbonara')).toBeNull();
     expect(screen.queryByText('Chicken Salad')).toBeNull();
-    // The query is long enough to trigger the API search, so the message only
-    // appears once that settles empty and the spinner clears.
+    expect(screen.queryByText('No recipes match your search')).toBeNull();
+
+    fireEvent.press(screen.getByText('Search all recipes for "zzz"'));
+
     expect(
       await screen.findByText('No recipes match your search'),
     ).toBeTruthy();
+  });
+
+  it('asks the catalog only when Search is pressed, never while typing', async () => {
+    const search = searchAnswering([]);
+    renderWithApollo(<AddMealSheet {...defaultProps} />, [search.mock]);
+
+    for (const text of ['Lasa', 'Lasag', 'Lasagn', 'Lasagna']) {
+      fireEvent.changeText(searchField(), text);
+    }
+    await waitFor(() =>
+      expect(screen.getByText('Search all recipes for "Lasagna"')).toBeTruthy(),
+    );
+    expect(search.fired).toEqual([]);
+
+    fireEvent(searchField(), 'submitEditing');
+
+    await waitFor(() => expect(search.fired).toHaveLength(1));
+    expect(search.fired[0]).toEqual(
+      expect.objectContaining({ query: 'Lasagna' }),
+    );
+    expect(screen.queryByText('Search all recipes for "Lasagna"')).toBeNull();
   });
 
   describe('a catalog result', () => {
@@ -375,10 +409,7 @@ describe('AddMealSheet', () => {
         searchAnswering([lasagna]).mock,
         opened,
       ]);
-      fireEvent.changeText(
-        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
-        'Lasagna',
-      );
+      typeAndSearch('Lasagna');
       fireEvent.press(await screen.findByText('Lasagna'));
     };
 
@@ -447,10 +478,7 @@ describe('AddMealSheet', () => {
         searchAnswering([held('r9', 'Beef Stew')]).mock,
         open.mock,
       ]);
-      fireEvent.changeText(
-        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
-        'Stew',
-      );
+      typeAndSearch('Stew');
       fireEvent.press(await screen.findByText('Beef Stew'));
 
       expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
@@ -467,10 +495,7 @@ describe('AddMealSheet', () => {
           held('r10', 'Pasta Bake'),
         ]).mock,
       ]);
-      fireEvent.changeText(
-        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
-        'Pasta',
-      );
+      typeAndSearch('Pasta');
 
       expect(await screen.findByText('Pasta Bake')).toBeTruthy();
       expect(screen.getAllByText('Pasta Carbonara')).toHaveLength(1);
@@ -480,10 +505,7 @@ describe('AddMealSheet', () => {
       renderWithApollo(<AddMealSheet {...defaultProps} />, [
         searchAnswering([held('r2', 'Chicken Salad')]).mock,
       ]);
-      fireEvent.changeText(
-        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
-        'chiken',
-      );
+      typeAndSearch('chiken');
 
       expect(await screen.findByText('Chicken Salad')).toBeTruthy();
       expect(screen.getAllByText('Chicken Salad')).toHaveLength(1);
