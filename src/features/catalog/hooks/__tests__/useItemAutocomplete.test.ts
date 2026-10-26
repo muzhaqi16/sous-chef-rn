@@ -72,11 +72,16 @@ function createItemsMock(
     },
   };
 }
-function createSemanticMock(): MockFor<typeof SearchItemsSemanticDocument> {
+function createSemanticMock(
+  prompts: string[] = [],
+): MockFor<typeof SearchItemsSemanticDocument> {
   return {
     request: {
       query: SearchItemsSemanticDocument,
-      variables: () => true,
+      variables: vars => {
+        prompts.push(vars.prompt);
+        return true;
+      },
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
@@ -218,6 +223,95 @@ describe('useItemAutocomplete', () => {
     const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     expect(result.current.isLoading).toBe(false);
+  });
+
+  describe('semantic fallback', () => {
+    // The sheets pass `debounceMs: 0` behind a 250 ms SearchBar debounce, so
+    // each keystroke at phone speed reaches the hook as its own term.
+    async function typeAtPhoneSpeed(
+      onChange: (text: string) => void,
+      phrase: string,
+    ) {
+      for (let i = 1; i <= phrase.length; i++) {
+        act(() => onChange(phrase.slice(0, i)));
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(300);
+        });
+      }
+    }
+
+    it('asks once the typing pauses, not for every keystroke', async () => {
+      const prompts: string[] = [];
+      const { result } = renderHookWithApollo(
+        () => useItemAutocomplete({ debounceMs: 0 }),
+        { operationMocks: [createItemsMock([]), createSemanticMock(prompts)] },
+      );
+
+      await typeAtPhoneSpeed(
+        result.current.handleSearchTermChange,
+        'chiken brest',
+      );
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(2000);
+      });
+
+      expect(prompts).toEqual(['chiken brest']);
+    });
+
+    it('stays loading through the quiet window', async () => {
+      const { result } = renderHookWithApollo(
+        () => useItemAutocomplete({ debounceMs: 0 }),
+        { operationMocks: [createItemsMock([]), createSemanticMock()] },
+      );
+
+      act(() => {
+        result.current.handleSearchTermChange('chiken');
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(300);
+      });
+
+      expect(result.current.isLoading).toBe(true);
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(2000);
+      });
+
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('does not ask when autocomplete finds the item', async () => {
+      const prompts: string[] = [];
+      const itemsMock = createItemsMock([]);
+      const { result } = renderHookWithApollo(
+        () => useItemAutocomplete({ debounceMs: 0 }),
+        {
+          operationMocks: [
+            {
+              ...itemsMock,
+              result: {
+                data: {
+                  autocompleteItems: {
+                    totalCount: 1,
+                    suggestions: [makeSuggestion('i1', 'Milk')],
+                  },
+                },
+              },
+            },
+            createSemanticMock(prompts),
+          ],
+        },
+      );
+
+      act(() => {
+        result.current.handleSearchTermChange('milk');
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(2000);
+      });
+
+      expect(prompts).toEqual([]);
+    });
   });
 
   it('offline cold-start: serves persisted seen-items as fallback suggestions', () => {

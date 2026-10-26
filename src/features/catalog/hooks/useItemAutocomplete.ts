@@ -56,13 +56,24 @@ function semanticItemToSuggestion(node: SemanticItem): ItemSuggestion {
   };
 }
 
+// The API allows 10 semantic searches a minute per user, and a phone typist's
+// keystrokes are further apart than the 250 ms search debounce, so semantic
+// search waits for the typing to pause rather than following every keystroke.
+const SEMANTIC_QUIET_MS = 600;
+
 export function useItemAutocomplete(options?: { debounceMs?: number }) {
-  const [fetchItems, { data, loading }] = useLazyQuery(
+  const [fetchItems, { data, loading, variables }] = useLazyQuery(
     AutocompleteItemsDocument,
     { refetchOn: false },
   );
-  const [fetchSemantic, { data: semanticData, loading: semanticLoading }] =
-    useLazyQuery(SearchItemsSemanticDocument, { refetchOn: false });
+  const [
+    fetchSemantic,
+    {
+      data: semanticData,
+      loading: semanticLoading,
+      variables: semanticVariables,
+    },
+  ] = useLazyQuery(SearchItemsSemanticDocument, { refetchOn: false });
 
   const [activeTerm, setActiveTerm] = useState('');
 
@@ -78,13 +89,23 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   // once autocomplete has finished empty.
   const autocompleteSuggestions = data?.autocompleteItems.suggestions ?? [];
   const hasAutocompleteResults = autocompleteSuggestions.length > 0;
+  const autocompleteFoundNothing =
+    activeTerm !== '' &&
+    !loading &&
+    !!data &&
+    !hasAutocompleteResults &&
+    variables.input.query === activeTerm;
+  const semanticPending =
+    autocompleteFoundNothing && semanticVariables.prompt !== activeTerm;
   useEffect(() => {
-    if (!activeTerm || loading || hasAutocompleteResults) return;
-    if (!data) return;
-    void fetchSemantic({ variables: { prompt: activeTerm, first: 10 } }).catch(
-      error => logger.warn('Semantic item search failed', error),
-    );
-  }, [activeTerm, loading, hasAutocompleteResults, data, fetchSemantic]);
+    if (!semanticPending) return;
+    const timer = setTimeout(() => {
+      void fetchSemantic({
+        variables: { prompt: activeTerm, first: 10 },
+      }).catch(error => logger.warn('Semantic item search failed', error));
+    }, SEMANTIC_QUIET_MS);
+    return () => clearTimeout(timer);
+  }, [semanticPending, activeTerm, fetchSemantic]);
 
   const semanticSuggestions = (
     semanticData?.searchItemsSemantic.edges ?? []
@@ -119,7 +140,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   const autocomplete = useAutocompleteSearch<ItemSuggestion>({
     search,
     getResults,
-    loading: loading || semanticLoading,
+    // The quiet window counts as loading, or the empty state flashes before
+    // the semantic answer arrives.
+    loading: loading || semanticLoading || semanticPending,
     keyExtractor: item => item.id,
     minChars: 2,
     debounceMs: options?.debounceMs ?? 250,
