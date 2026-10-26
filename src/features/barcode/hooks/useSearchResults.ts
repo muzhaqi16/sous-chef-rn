@@ -112,16 +112,7 @@ const convertToScannedItem = (
         symbol: item.displayUnit.symbol,
       }
     : undefined,
-  convertedNetWeight: item.convertedNetWeight
-    ? {
-        value: item.convertedNetWeight.value,
-        unit: {
-          id: item.convertedNetWeight.unit.id,
-          name: item.convertedNetWeight.unit.name,
-          symbol: item.convertedNetWeight.unit.symbol,
-        },
-      }
-    : undefined,
+  packageSize: item.packageSize ?? undefined,
   trackingUnit: item.trackingUnit
     ? {
         id: item.trackingUnit.id,

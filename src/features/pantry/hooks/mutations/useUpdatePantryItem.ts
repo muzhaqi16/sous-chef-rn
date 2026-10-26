@@ -106,7 +106,13 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
         ? parseDecimalInput(input.restockQuantity)
         : null;
     }
-    if (dirtyFields.netWeight) {
+    // A size in another unit re-expresses every batch, which only the server
+    // can do; its answer is the first figure shown.
+    const sizeUnitId = updateInput.netWeight?.netWeightUnitId;
+    if (
+      dirtyFields.netWeight &&
+      (!sizeUnitId || sizeUnitId === currentItem.netWeightUnit?.id)
+    ) {
       optimisticUpdate.netWeight = input.netWeight
         ? parseDecimalInput(input.netWeight)
         : null;

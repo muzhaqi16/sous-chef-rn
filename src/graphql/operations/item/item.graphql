@@ -155,12 +155,48 @@ mutation CreateItem($input: CreateItemInput!) {
           name
           symbol
         }
-        convertedNetWeight {
+        packageSize {
           value
           unit {
             id
-            name
-            symbol
+          }
+          metric {
+            value
+            unit {
+              id
+              symbol
+              displayAsFraction
+              type
+            }
+          }
+          imperial {
+            value
+            unit {
+              id
+              symbol
+              displayAsFraction
+              type
+            }
+          }
+          declared {
+            metric {
+              value
+              unit {
+                id
+                symbol
+                displayAsFraction
+                type
+              }
+            }
+            imperial {
+              value
+              unit {
+                id
+                symbol
+                displayAsFraction
+                type
+              }
+            }
           }
         }
         type

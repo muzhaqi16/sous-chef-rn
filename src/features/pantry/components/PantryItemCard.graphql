@@ -11,6 +11,32 @@ fragment PantryItemCard_pantryItem on PantryItem {
       symbol
     }
   }
+  # displayAmount read in each unit system: the row shows it while it is
+  # still the figure displayAmount holds.
+  held {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   expiresOn
   storageState
   lastUsedAt

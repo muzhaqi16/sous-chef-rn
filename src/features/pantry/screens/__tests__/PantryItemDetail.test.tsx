@@ -1,11 +1,15 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import type {
+  MockDataFor,
+  QueryDataFor,
+} from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
@@ -14,7 +18,11 @@ import {
   EntryImageSource,
   ExternalSource,
   ItemImageStatus,
+  UnitSystem,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import {
   pantryItemData,
@@ -690,5 +698,139 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
     await screen.findAllByText('Milk');
+  });
+
+  // The weights read in the user's unit system by the API's own readings,
+  // whatever unit the stack stores them in.
+  describe('weights in the user\u2019s unit system', () => {
+    type PackageSizeData = NonNullable<
+      NonNullable<
+        QueryDataFor<typeof GetPantryItemDocument>['pantryItem']
+      >['packageSize']
+    >;
+    type ReadingUnit = PackageSizeData['metric']['unit'];
+
+    const unit = (
+      id: string,
+      symbol: string,
+      type = UnitType.Weight,
+    ): ReadingUnit => ({
+      __typename: 'Unit',
+      id,
+      symbol,
+      displayAsFraction: false,
+      type,
+    });
+    const g = unit('unit-g', 'g');
+    const oz = unit('unit-oz', 'oz');
+    const kg = unit('unit-kg', 'kg');
+    const lb = unit('unit-lb', 'lb');
+
+    const measure = (
+      value: number,
+      stored: ReadingUnit,
+      metric: [number, ReadingUnit],
+      imperial: [number, ReadingUnit],
+    ): PackageSizeData => ({
+      __typename: 'Measure',
+      value,
+      unit: { __typename: 'Unit', id: stored.id },
+      metric: {
+        __typename: 'MeasureReading',
+        value: metric[0],
+        unit: metric[1],
+      },
+      imperial: {
+        __typename: 'MeasureReading',
+        value: imperial[0],
+        unit: imperial[1],
+      },
+    });
+
+    /** A stack whose package size is stored as `value` `stored`. */
+    const weighed = (
+      value: number,
+      stored: ReadingUnit,
+      remaining?: number,
+    ) => {
+      const data = pantryItemData(fullItem);
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.netWeight = value;
+      item.netWeightUnit = {
+        __typename: 'Unit',
+        id: stored.id,
+        name: stored.symbol,
+        symbol: stored.symbol,
+      };
+      item.packageSize = measure(value, stored, [1.36, kg], [3, lb]);
+      if (remaining !== undefined) {
+        item.remainingNetWeight = remaining;
+        item.remaining = measure(remaining, stored, [940, g], [2.07, lb]);
+      }
+      return recordMock(GetPantryItemDocument, { data }).mock;
+    };
+
+    const settings = (preferredUnitSystem: UnitSystem) =>
+      recordMock(GetUserSettingsDocument, {
+        data: {
+          me: {
+            __typename: 'User',
+            id: 'user-1',
+            settings: {
+              __typename: 'UserSettings',
+              id: 'settings-1',
+              preferredUnitSystem,
+              deviceUnitSystem: UnitSystem.Imperial,
+            },
+          },
+        },
+      }).mock;
+
+    it.each([
+      ['grams', 1360.78, g],
+      ['ounces', 48, oz],
+    ])(
+      'reads a package size stored in %s as pounds on an imperial device',
+      async (_label, value, stored) => {
+        renderWithApollo(<PantryItemDetail route={route} />, {
+          operationMocks: [weighed(value, stored), settings(UnitSystem.System)],
+        });
+        expect(await screen.findByText('3 lb')).toBeTruthy();
+      },
+    );
+
+    it('reads it in kilograms for a metric user', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [weighed(1360.78, g), settings(UnitSystem.Metric)],
+      });
+      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+    });
+
+    it('follows a change of setting at once, with no request for it', async () => {
+      const cache = makeCache();
+      writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        cache,
+        operationMocks: [weighed(1360.78, g)],
+      });
+      expect(await screen.findByText('3 lb')).toBeTruthy();
+
+      act(() => {
+        cache.modify({
+          id: 'UserSettings:settings-1',
+          fields: { preferredUnitSystem: () => UnitSystem.Metric },
+        });
+      });
+
+      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+    });
+
+    it('reads what remains in the same system', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [weighed(1360.78, g, 940), settings(UnitSystem.System)],
+      });
+      expect(await screen.findByText('2.07 lb')).toBeTruthy();
+    });
   });
 });

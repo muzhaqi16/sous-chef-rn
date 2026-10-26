@@ -23,14 +23,6 @@ fragment ItemReaders on Item {
     }
     isPrimary
   }
-  convertedNetWeight {
-    unit {
-      id
-      name
-      symbol
-    }
-    value
-  }
   dataAttributions {
     licenseUrl
     notice
@@ -89,6 +81,50 @@ fragment ItemReaders on Item {
     totalSugars
     transFat
     vitaminD
+  }
+  packageSize {
+    declared {
+      imperial {
+        unit {
+          id
+          displayAsFraction
+          symbol
+          type
+        }
+        value
+      }
+      metric {
+        unit {
+          id
+          displayAsFraction
+          symbol
+          type
+        }
+        value
+      }
+    }
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
   }
   photos {
     id

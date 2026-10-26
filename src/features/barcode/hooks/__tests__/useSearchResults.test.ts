@@ -259,21 +259,45 @@ describe('useSearchResults', () => {
         },
       ],
       [
-        "reports the scanned pack's size in the user's unit system",
+        "reports the scanned pack's size as read in each unit system",
         {
           netWeight: 1360.78,
           netWeightKind: NetWeightKind.Package,
-          convertedNetWeight: {
-            value: 3,
-            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+          packageSize: {
+            __typename: 'Measure',
+            value: 1360.78,
+            unit: { __typename: 'Unit', id: 'unit-g' },
+            metric: {
+              __typename: 'MeasureReading',
+              value: 1.36,
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-kg',
+                symbol: 'kg',
+                displayAsFraction: false,
+                type: UnitType.Weight,
+              },
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-lb',
+                symbol: 'lb',
+                displayAsFraction: false,
+                type: UnitType.Weight,
+              },
+            },
+            declared: null,
           },
         },
         {
           netWeight: 1360.78,
-          convertedNetWeight: {
-            value: 3,
-            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
-          },
+          packageSize: expect.objectContaining({
+            imperial: expect.objectContaining({ value: 3 }),
+            metric: expect.objectContaining({ value: 1.36 }),
+          }),
         },
       ],
     ])('%s', async (_name, node, expected) => {

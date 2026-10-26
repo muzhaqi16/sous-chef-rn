@@ -13,6 +13,30 @@ fragment shoppingListItem_listed on ShoppingListItem {
     id
     symbol
   }
+  amount {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   purchaseInfo {
     isPurchased
     movedToPantryAt

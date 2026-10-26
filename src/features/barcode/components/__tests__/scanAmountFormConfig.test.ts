@@ -1,5 +1,9 @@
 import type { ValidationError } from 'yup';
-import { NetWeightKind, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  NetWeightKind,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import type { ScannedItem } from '#features/barcode/types';
 import {
   packageUnitOf,
@@ -12,7 +16,22 @@ import {
 const piece = { id: 'unit-pc', symbol: 'pc', type: UnitType.Count };
 const jar = { id: 'unit-jar', symbol: 'jar', type: UnitType.Count };
 const cup = { id: 'unit-cup', symbol: 'cup', type: UnitType.Volume };
-const pound = { id: 'unit-lb', name: 'pound', symbol: 'lb' };
+type PackageSize = NonNullable<ScannedItem['packageSize']>;
+const reading = (
+  value: number,
+  id: string,
+  symbol: string,
+): PackageSize['metric'] => ({
+  __typename: 'MeasureReading',
+  value,
+  unit: {
+    __typename: 'Unit',
+    id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  },
+});
 
 const honey: ScannedItem = {
   id: 'item-honey',
@@ -24,7 +43,14 @@ const honey: ScannedItem = {
   netWeight: 1360.78,
   netWeightKind: NetWeightKind.Package,
   displayUnit: { id: 'unit-g', name: 'gram', symbol: 'g' },
-  convertedNetWeight: { value: 3, unit: pound },
+  packageSize: {
+    __typename: 'Measure',
+    value: 1360.78,
+    unit: { __typename: 'Unit', id: 'unit-g' },
+    metric: reading(1.36, 'unit-kg', 'kg'),
+    imperial: reading(3, 'unit-lb', 'lb'),
+    declared: null,
+  },
 };
 
 describe('the package a scan is counted in', () => {
@@ -63,7 +89,7 @@ describe('the package a scan is counted in', () => {
 
 describe('the amount a scan prefills', () => {
   it('is one package holding the pack size in the user’s unit system', () => {
-    expect(scanAmountDefaults(honey, jar)).toEqual({
+    expect(scanAmountDefaults(honey, jar, UnitSystem.Imperial)).toEqual({
       packaged: true,
       quantityInput: '1',
       unitDisplay: 'jar',
@@ -73,21 +99,27 @@ describe('the amount a scan prefills', () => {
       sizeUnitDisplay: 'lb',
       sizeUnitId: 'unit-lb',
     });
+    expect(scanAmountDefaults(honey, jar, UnitSystem.Metric)).toMatchObject({
+      sizeInput: '1.36',
+      sizeUnitDisplay: 'kg',
+      sizeUnitId: 'unit-kg',
+    });
   });
 
   it('leaves the size empty when the record states no package size', () => {
-    const unsized = { ...honey, convertedNetWeight: undefined };
+    const unsized = { ...honey, packageSize: undefined };
     expect(
       scanAmountDefaults(
         { ...unsized, netWeightKind: NetWeightKind.Serving },
         piece,
+        UnitSystem.Imperial,
       ),
     ).toMatchObject({ sizeInput: '', sizeUnitId: null });
   });
 });
 
 describe('the amount schema', () => {
-  const filled = scanAmountDefaults(honey, jar);
+  const filled = scanAmountDefaults(honey, jar, UnitSystem.Imperial);
 
   const pathOf = async (values: ScanAmountFormValues) => {
     const error = await scanAmountSchema
@@ -137,7 +169,7 @@ describe('the amount schema', () => {
 });
 
 describe('what a scan records', () => {
-  const prefilled = scanAmountDefaults(honey, jar);
+  const prefilled = scanAmountDefaults(honey, jar, UnitSystem.Imperial);
 
   it('leaves the record’s size to the API while the size is as prefilled', () => {
     expect(scanAmountOf(prefilled, prefilled)).toEqual({

@@ -2,7 +2,12 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ProductResultCard } from '../ProductResultCard';
-import { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import type { ReadingSystem } from '#domain/measure';
+import {
+  NetWeightKind,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: { uri: string }) => {
@@ -19,18 +24,30 @@ describe('ProductResultCard', () => {
   };
 
   it('renders item name and barcode', () => {
-    render(<ProductResultCard item={baseItem} />);
+    render(
+      <ProductResultCard readingSystem={UnitSystem.Metric} item={baseItem} />,
+    );
     expect(screen.getByText('Organic Milk')).toBeTruthy();
     expect(screen.getByText('Barcode: 123456789')).toBeTruthy();
   });
 
   it('renders brand name when provided', () => {
-    render(<ProductResultCard item={{ ...baseItem, brandName: 'Horizon' }} />);
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={{ ...baseItem, brandName: 'Horizon' }}
+      />,
+    );
     expect(screen.getByText('Horizon')).toBeTruthy();
   });
 
   it('renders price when provided', () => {
-    render(<ProductResultCard item={{ ...baseItem, price: 4.99 }} />);
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={{ ...baseItem, price: 4.99 }}
+      />,
+    );
     expect(screen.getByText('$4.99')).toBeTruthy();
   });
 
@@ -39,6 +56,7 @@ describe('ProductResultCard', () => {
   it('shows a package figure as the size', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           netWeight: 500,
@@ -50,27 +68,39 @@ describe('ProductResultCard', () => {
     expect(screen.getByText('500 g')).toBeTruthy();
   });
 
-  // A 3 LB (1.36 kg) honey reads as its label does for an imperial user, not
+  // A 3 LB (1.36 kg) honey reads as its label does in each unit system, never
   // as the grams the catalog stores.
-  it('shows the pack size in the user’s unit system', () => {
+  it.each<[ReadingSystem, string]>([
+    [UnitSystem.Imperial, '3 lb'],
+    [UnitSystem.Metric, '1.36 kg'],
+  ])('shows the pack size in the user’s unit system (%s)', (system, text) => {
+    const reading = (value: number, symbol: string) => ({
+      value,
+      unit: { symbol, displayAsFraction: false, type: UnitType.Weight },
+    });
     render(
       <ProductResultCard
+        readingSystem={system}
         item={{
           ...baseItem,
           netWeight: 1360.78,
           netWeightKind: NetWeightKind.Package,
           displayUnit: { name: 'gram', symbol: 'g' },
-          convertedNetWeight: { value: 3, unit: { symbol: 'lb' } },
+          packageSize: {
+            metric: reading(1.36, 'kg'),
+            imperial: reading(3, 'lb'),
+          },
         }}
       />,
     );
-    expect(screen.getByText('3 lb')).toBeTruthy();
+    expect(screen.getByText(text)).toBeTruthy();
     expect(screen.queryByText(/gram/)).toBeNull();
   });
 
   it('labels a serving figure as a serving', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           netWeight: 30,
@@ -83,13 +113,20 @@ describe('ProductResultCard', () => {
   });
 
   it('renders format when provided', () => {
-    render(<ProductResultCard item={baseItem} format="UPC-A" />);
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={baseItem}
+        format="UPC-A"
+      />,
+    );
     expect(screen.getByText('Format: UPC-A')).toBeTruthy();
   });
 
   it('shows its image, credited under it', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           image: {
@@ -113,6 +150,7 @@ describe('ProductResultCard', () => {
   it('shows no credit for an image that needs none', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{ ...baseItem, image: { url: 'https://cdn.test/front.jpg' } }}
       />,
     );

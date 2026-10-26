@@ -33,6 +33,30 @@ fragment PantryItemReaders on PantryItem {
   }
   earliestBatchExpiresOn
   expiresOn
+  held {
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
+  }
   heldQuantity
   image {
     catalogImageId
@@ -132,6 +156,30 @@ fragment PantryItemReaders on PantryItem {
     }
     totalNetWeight
   }
+  packageSize {
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
+  }
   pantryId
   portionUnit {
     id
@@ -166,6 +214,30 @@ fragment PantryItemReaders on PantryItem {
       symbol
     }
     totalContentUnits
+  }
+  remaining {
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
   }
   remainingNetWeight
   remainingPortions

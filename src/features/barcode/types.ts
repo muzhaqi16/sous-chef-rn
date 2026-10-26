@@ -63,8 +63,8 @@ export interface ScannedItem
   /** What `netWeight` measures; only a PACKAGE figure is a package size. */
   netWeightKind?: NetWeightKind;
   displayUnit?: UnitRef;
-  /** A PACKAGE `netWeight` in the user's unit system; none for another kind. */
-  convertedNetWeight?: { value: number; unit: UnitRef };
+  /** A PACKAGE `netWeight` read in each unit system; none for another kind. */
+  packageSize?: NonNullable<LookupNode['packageSize']>;
   /** The unit an add naming no unit counts the row in. */
   trackingUnit?: TrackingUnitRef;
   /** The scanned barcode's own brand; never one picked from the item's list. */

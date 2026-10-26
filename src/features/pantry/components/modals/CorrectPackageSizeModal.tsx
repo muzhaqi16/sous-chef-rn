@@ -30,6 +30,8 @@ import {
 } from './correctWeightFormConfig';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
+import { currentReading, formatReading } from '#domain/measure';
 
 interface CorrectPackageSizeModalProps {
   visible: boolean;
@@ -57,6 +59,24 @@ export const CorrectPackageSizeModal: React.FC<
   });
   const pantryItem = itemFragment.complete ? itemFragment.data : null;
   const batch = batchId && batchFragment.complete ? batchFragment.data : null;
+  const readingSystem = useReadingSystem();
+  const netWeightUnitId = pantryItem?.netWeightUnit?.id;
+  const sizeReading = currentReading(
+    batch?.packageSize,
+    { value: batch?.netWeight, unitId: netWeightUnitId },
+    readingSystem,
+  );
+  const remainingReading = currentReading(
+    batch?.remaining,
+    { value: batch?.remainingNetWeight, unitId: netWeightUnitId },
+    readingSystem,
+  );
+  // The size is edited as it reads; the server converts it back to the
+  // stack's unit, except from the tracking unit, which it refuses.
+  const seedReading =
+    sizeReading && sizeReading.unit.id !== pantryItem?.unit.id
+      ? sizeReading
+      : null;
 
   const { control, handleSubmit, setValue, reset, getValues } =
     useForm<CorrectWeightFormValues>({
@@ -76,9 +96,14 @@ export const CorrectPackageSizeModal: React.FC<
     setPendingSeed(
       nextSeedKey && pantryItem && batch
         ? {
-            weightInput: formatNumberForInput(batch.netWeight),
-            unitDisplay: getUnitDisplayText(pantryItem.netWeightUnit),
-            selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
+            weightInput: formatNumberForInput(
+              seedReading?.value ?? batch.netWeight,
+            ),
+            unitDisplay: getUnitDisplayText(
+              seedReading?.unit ?? pantryItem.netWeightUnit,
+            ),
+            selectedUnitId:
+              seedReading?.unit.id ?? pantryItem.netWeightUnit?.id ?? null,
             reason: '',
           }
         : null,
@@ -100,13 +125,12 @@ export const CorrectPackageSizeModal: React.FC<
   const [isSaving, setIsSaving] = useState(false);
   // Reaching here means the schema passed; a refusal renders under its field.
   const submit = handleSubmit(async values => {
-    const netWeightUnitId =
-      getValues().selectedUnitId ?? pantryItem?.netWeightUnit?.id;
-    if (!netWeightUnitId) return;
+    const typedUnitId = getValues().selectedUnitId ?? netWeightUnitId;
+    if (!typedUnitId) return;
     setIsSaving(true);
     const corrected = await onConfirm({
       netWeight: parseWeight(values),
-      netWeightUnitId,
+      netWeightUnitId: typedUnitId,
       reason: values.reason.trim(),
     });
     setIsSaving(false);
@@ -116,14 +140,15 @@ export const CorrectPackageSizeModal: React.FC<
     void submit();
   };
 
-  const sizeText = formatNetWeightDisplay(
-    batch?.netWeight,
-    pantryItem?.netWeightUnit,
-  );
-  const remainingText = formatNetWeightDisplay(
-    batch?.remainingNetWeight,
-    pantryItem?.netWeightUnit,
-  );
+  const sizeText = sizeReading
+    ? formatReading(sizeReading)
+    : formatNetWeightDisplay(batch?.netWeight, pantryItem?.netWeightUnit);
+  const remainingText = remainingReading
+    ? formatReading(remainingReading)
+    : formatNetWeightDisplay(
+        batch?.remainingNetWeight,
+        pantryItem?.netWeightUnit,
+      );
 
   return (
     <Sheet

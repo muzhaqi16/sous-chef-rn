@@ -64,14 +64,50 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
           name
           symbol
         }
-        # The scanned pack's PACKAGE size in the caller's unit system: what the
-        # card and the add's size prefill show.
-        convertedNetWeight {
+        # The scanned pack's PACKAGE size, read in each unit system with the
+        # label's own figure: what the card and the add's size prefill show.
+        packageSize {
           value
           unit {
             id
-            name
-            symbol
+          }
+          metric {
+            value
+            unit {
+              id
+              symbol
+              displayAsFraction
+              type
+            }
+          }
+          imperial {
+            value
+            unit {
+              id
+              symbol
+              displayAsFraction
+              type
+            }
+          }
+          declared {
+            metric {
+              value
+              unit {
+                id
+                symbol
+                displayAsFraction
+                type
+              }
+            }
+            imperial {
+              value
+              unit {
+                id
+                symbol
+                displayAsFraction
+                type
+              }
+            }
           }
         }
         # The result's nutrition card, and the full sheet it opens.
@@ -158,12 +194,48 @@ fragment useSearchResults_item on Item {
     name
     symbol
   }
-  convertedNetWeight {
+  packageSize {
     value
     unit {
       id
-      name
-      symbol
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    declared {
+      metric {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
+      imperial {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
     }
   }
   nutritionFacts {

@@ -119,6 +119,8 @@ export function pantryItemData(
       lastUsedAt: null,
       netWeight: null,
       remainingNetWeight: null,
+      packageSize: null,
+      remaining: null,
       portionUnitId: null,
       portionUnit: null,
       remainingPortions: null,

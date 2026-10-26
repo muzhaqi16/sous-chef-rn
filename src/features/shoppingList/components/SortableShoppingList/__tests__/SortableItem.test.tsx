@@ -187,7 +187,10 @@ jest.mock('../SortableListThemeContext', () => ({
     textSecondary: '#666',
     screenWidth: 375,
   })),
-  useShoppingListRowOptions: jest.fn(() => ({ showImages: true })),
+  useShoppingListRowOptions: jest.fn(() => ({
+    showImages: true,
+    readingSystem: 'METRIC',
+  })),
 }));
 
 jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
@@ -217,7 +220,12 @@ import { QueueStatus } from '#/apollo/offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import { useShoppingListRowOptions } from '../SortableListThemeContext';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -236,6 +244,7 @@ function seedItem(overrides: Record<string, unknown> = {}) {
     category: '2 liters',
     unitName: null,
     unit: null,
+    amount: null,
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
@@ -257,8 +266,16 @@ const seedRow = (
 ) => seedCache([{ fragment: SortableItem_ItemFragmentDoc, data: entry }]);
 
 /** Seeds `entry` and renders its row, ticked or not. */
-const renderRow = (entry: ReturnType<typeof seedItem>, isPurchased = false) =>
-  renderWithApollo(
+const renderRow = (
+  entry: ReturnType<typeof seedItem>,
+  isPurchased = false,
+  readingSystem: UnitSystem.Metric | UnitSystem.Imperial = UnitSystem.Metric,
+) => {
+  (useShoppingListRowOptions as jest.Mock).mockReturnValue({
+    showImages: true,
+    readingSystem,
+  });
+  return renderWithApollo(
     <SwipeableListItem
       item={shoppingListRowItem(entry.id, { isPurchased })}
       index={0}
@@ -266,6 +283,7 @@ const renderRow = (entry: ReturnType<typeof seedItem>, isPurchased = false) =>
     />,
     { cache: seedRow(entry) },
   );
+};
 
 const mockRegisterRect = jest.fn();
 
@@ -779,6 +797,101 @@ describe('SwipeableListItem (SortableItem)', () => {
         />,
       );
       expect(mockRegisterRect).toHaveBeenCalledWith('itemCard', null);
+    });
+  });
+
+  // The server reads a line's weight or volume in each unit system; the row
+  // shows the user's while that reading still describes the line.
+  describe('the amount in the user\u2019s unit system', () => {
+    const unit = (id: string, symbol: string, type: UnitType) => ({
+      __typename: 'Unit',
+      id,
+      symbol,
+      displayAsFraction: false,
+      type,
+    });
+    const twoPounds = seedItem({
+      quantity: 2,
+      unit: { __typename: 'Unit', id: 'unit-lb', symbol: 'lb' },
+      amount: {
+        __typename: 'Measure',
+        value: 2,
+        unit: { __typename: 'Unit', id: 'unit-lb' },
+        metric: {
+          __typename: 'MeasureReading',
+          value: 0.91,
+          unit: unit('unit-kg', 'kg', UnitType.Weight),
+        },
+        imperial: {
+          __typename: 'MeasureReading',
+          value: 2,
+          unit: unit('unit-lb', 'lb', UnitType.Weight),
+        },
+      },
+    });
+
+    it('reads a line typed in pounds in kilograms for a metric user', () => {
+      renderRow(twoPounds, false, UnitSystem.Metric);
+      expect(screen.getByLabelText('Milk, 2 liters, 0.91 kg')).toBeTruthy();
+    });
+
+    it('reads it in pounds for an imperial user', () => {
+      renderRow(twoPounds, false, UnitSystem.Imperial);
+      expect(screen.getByLabelText('Milk, 2 liters, 2 lb')).toBeTruthy();
+    });
+
+    // A kilogram is a unit nobody halves, as the pantry writes it too.
+    it('writes a reading in its unit’s notation, never "1/2 kg"', () => {
+      renderRow(
+        seedItem({
+          quantity: 1.1,
+          unit: { __typename: 'Unit', id: 'unit-lb', symbol: 'lb' },
+          amount: {
+            __typename: 'Measure',
+            value: 1.1,
+            unit: { __typename: 'Unit', id: 'unit-lb' },
+            metric: {
+              __typename: 'MeasureReading',
+              value: 0.5,
+              unit: unit('unit-kg', 'kg', UnitType.Weight),
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 1.1,
+              unit: unit('unit-lb', 'lb', UnitType.Weight),
+            },
+          },
+        }),
+        false,
+        UnitSystem.Metric,
+      );
+      expect(screen.getByLabelText('Milk, 2 liters, 0.5 kg')).toBeTruthy();
+    });
+
+    it('keeps a count’s own label', () => {
+      renderRow(
+        seedItem({
+          quantity: 3,
+          unitName: 'cans',
+          unit: { __typename: 'Unit', id: 'unit-pc', symbol: 'pc' },
+          amount: {
+            __typename: 'Measure',
+            value: 3,
+            unit: { __typename: 'Unit', id: 'unit-pc' },
+            metric: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unit: unit('unit-pc', 'pc', UnitType.Count),
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unit: unit('unit-pc', 'pc', UnitType.Count),
+            },
+          },
+        }),
+      );
+      expect(screen.getByLabelText('Milk, 2 liters, 3 cans')).toBeTruthy();
     });
   });
 });

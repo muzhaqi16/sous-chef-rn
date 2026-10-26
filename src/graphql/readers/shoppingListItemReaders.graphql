@@ -11,6 +11,30 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       displayName
     }
   }
+  amount {
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
+  }
   brand {
     id
     name

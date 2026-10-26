@@ -13,6 +13,7 @@ import {
 } from '#utils/formatQuantity';
 import type { HeldUnit } from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '#features/barcode/types';
+import { readingOf, type ReadingSystem } from '#domain/measure';
 
 export interface ScanAmountFormValues {
   packaged: boolean;
@@ -111,9 +112,18 @@ export function packageUnitOf(
   );
 }
 
-/** The scanned pack's size, in the user's unit system when the API converted it. */
-function packSizeOf(item: ScannedItem) {
-  if (item.convertedNetWeight) return item.convertedNetWeight;
+/** The scanned pack's size, as the user's unit system reads it where the API read it. */
+/** A `Measure` reading with its unit's id, which the size field records. */
+const readingOfSize = (
+  size: NonNullable<ScannedItem['packageSize']>,
+  system: ReadingSystem,
+) => {
+  const { value, unit } = readingOf(size, system);
+  return { value, unit: { id: unit.id, symbol: unit.symbol } };
+};
+
+function packSizeOf(item: ScannedItem, system: ReadingSystem) {
+  if (item.packageSize) return readingOfSize(item.packageSize, system);
   return item.netWeightKind === NetWeightKind.Package &&
     item.netWeight != null &&
     item.displayUnit
@@ -136,8 +146,9 @@ export function packageUnitFields(
 export function scanAmountDefaults(
   item: ScannedItem,
   packageUnit: UnitChoice | null,
+  system: ReadingSystem,
 ): ScanAmountFormValues {
-  const size = packSizeOf(item);
+  const size = packSizeOf(item, system);
   return {
     packaged: true,
     quantityInput: '1',

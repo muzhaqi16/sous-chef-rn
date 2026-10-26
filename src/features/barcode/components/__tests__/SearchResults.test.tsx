@@ -4,6 +4,7 @@ import {
   ErrorCode,
   ExternalSource,
   NetWeightKind,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
@@ -270,16 +271,41 @@ describe('SearchResults', () => {
           ...mockItem,
           variationId: 'esm-1',
           netWeightKind: NetWeightKind.Package,
-          convertedNetWeight: {
-            value: 3,
-            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+          packageSize: {
+            __typename: 'Measure',
+            value: 1360.78,
+            unit: { __typename: 'Unit', id: 'unit-g' },
+            metric: {
+              __typename: 'MeasureReading',
+              value: 1.36,
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-kg',
+                symbol: 'kg',
+                displayAsFraction: false,
+                type: UnitType.Weight,
+              },
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-lb',
+                symbol: 'lb',
+                displayAsFraction: false,
+                type: UnitType.Weight,
+              },
+            },
+            declared: null,
           },
         }}
       />,
       { operationMocks: [rec.mock] },
     );
 
-    expect(screen.getByText('1 pc · 3 lb each')).toBeTruthy();
+    // No settings cached: the API's own fallback, metric.
+    expect(screen.getByText('1 pc · 1.36 kg each')).toBeTruthy();
     fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
     fireEvent.changeText(
       screen.getByTestId(barcodeTestIDs.scanAmountSize),
@@ -294,7 +320,7 @@ describe('SearchResults', () => {
       packages: {
         count: 1,
         unitId: 'unit-pc',
-        size: { netWeight: 2, netWeightUnitId: 'unit-lb' },
+        size: { netWeight: 2, netWeightUnitId: 'unit-kg' },
       },
     });
   });

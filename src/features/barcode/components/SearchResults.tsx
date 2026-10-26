@@ -19,6 +19,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { useCachedUnits } from '#store/useAppStore';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
@@ -104,8 +105,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [heldUnit] = useState(() => heldUnitOf(item.id));
   const packageUnit = packageUnitOf(item, heldUnit, cachedUnits);
   // Read once: the form starts from it, and a send compares against it.
+  const readingSystem = useReadingSystem();
   const [prefilledAmount] = useState(() =>
-    scanAmountDefaults(item, packageUnit),
+    scanAmountDefaults(item, packageUnit, readingSystem),
   );
   const amountForm = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
@@ -303,6 +305,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       >
         <ProductResultCard
           item={item}
+          readingSystem={readingSystem}
           format={format}
           onEditItem={onEditItem}
           onCreateVariant={onCreateVariant}

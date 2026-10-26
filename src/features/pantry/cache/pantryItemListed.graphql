@@ -15,6 +15,30 @@ fragment pantryItem_listed on PantryItem {
       symbol
     }
   }
+  held {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   expiresOn
   storageState
   lastUsedAt

@@ -901,11 +901,15 @@ mutation ConvertExpiredToWaste(
 # active set (cost dilution, expired batches) while showing only the first few.
 # `totalCount` is what its "view all" affordance counts, so a stack past this
 # page still names its real size instead of silently reading 100.
-query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
+query GetPantryItemBatches(
+  $pantryItemId: ID!
+  $status: BatchStatus
+  $batchesFirst: Int = 100
+) {
   pantryItemBatchesConnection(
     pantryItemId: $pantryItemId
     status: $status
-    first: 100
+    first: $batchesFirst
   ) {
     totalCount
     # Shares a cache field with GetPantryItemBatchHistory (keyArgs is

@@ -9,6 +9,32 @@ fragment SortableItem_item on ShoppingListItem {
     id
     symbol
   }
+  # quantity read in each unit system: the row shows a weight or volume in the
+  # user's while it is still the figure quantity holds.
+  amount {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   purchaseInfo {
     isPurchased
     # Set once this line's purchase reached the pantry. Read to render a

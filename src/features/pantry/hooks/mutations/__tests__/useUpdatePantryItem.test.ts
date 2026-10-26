@@ -27,6 +27,12 @@ jest.mock('../utils', () => ({
       const input: Record<string, unknown> = {};
       if (dirtyFields.itemName) input.itemName = data.itemName;
       if (dirtyFields.notes) input.storageNotes = data.notes;
+      if (dirtyFields.netWeight) {
+        input.netWeight = {
+          netWeight: Number(data.netWeight),
+          netWeightUnitId: data.netWeightUnitId,
+        };
+      }
       return input;
     },
   ),
@@ -179,6 +185,57 @@ describe('useUpdatePantryItem', () => {
     // Early return — buildDirtyUpdateInput returns {} so the mutation never fires.
     const { buildDirtyUpdateInput } = jest.requireMock('../utils');
     expect(buildDirtyUpdateInput.mock.results[0]?.value).toEqual({});
+  });
+});
+
+describe('useUpdatePantryItem — a package size typed in another unit', () => {
+  const queued = {
+    request: { query: UpdatePantryItemDocument, variables: () => true },
+    result: { data: { updatePantryItem: null } },
+  };
+  const readNetWeight = (cache: ReturnType<typeof seedCache>) =>
+    cache.readFragment<{ netWeight: number | null }>({
+      id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
+      fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+      fragmentName: 'useUpdatePantryItem_pantryItem',
+    })?.netWeight;
+
+  const saveSize = async (netWeight: string, netWeightUnitId: string) => {
+    const cache = seedCache([
+      buildPantryItem({
+        netWeight: 1360.78,
+        netWeightUnit: {
+          __typename: 'Unit',
+          id: 'unit-g',
+          name: 'gram',
+          symbol: 'g',
+        },
+      }),
+    ]);
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [queued],
+    });
+    await act(async () => {
+      await result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData({ netWeight, netWeightUnitId }),
+        dirtyFields: { netWeight: true },
+        selectedLocationId: null,
+        selectedBrandId: null,
+      });
+    });
+    return readNetWeight(cache);
+  };
+
+  // 2.5 written against the stack's grams would read "2.5 g" until the server
+  // re-expresses the batches in pounds.
+  it('writes nothing ahead of the server for a size in pounds on a gram stack', async () => {
+    expect(await saveSize('2.5', 'unit-lb')).toBe(1360.78);
+  });
+
+  it('writes a size in the stack’s own unit at once', async () => {
+    expect(await saveSize('1000', 'unit-g')).toBe(1000);
   });
 });
 

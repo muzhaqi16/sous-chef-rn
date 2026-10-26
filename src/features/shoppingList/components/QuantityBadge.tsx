@@ -10,6 +10,7 @@ import type { RowThemeColors } from '#components/atoms/rowTheme';
 import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
+  type QuantityNotation,
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
@@ -18,6 +19,7 @@ interface QuantityBadgeProps {
   testID?: string;
   quantity: number;
   quantityInput?: string | null;
+  notation?: QuantityNotation;
   unit?: string | null;
   onPress: () => void;
   disabled?: boolean;
@@ -29,6 +31,7 @@ interface QuantityBadgeProps {
 export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   quantity,
   quantityInput,
+  notation,
   unit,
   onPress,
   disabled = false,
@@ -39,9 +42,11 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   const { t } = useTranslation();
   const formattedQuantity = formatQuantityForDisplay(quantity, {
     quantityInput,
+    notation,
   });
   const accessibilityText = formatQuantityWithUnit(quantity, unit, {
     quantityInput,
+    notation,
   });
 
   const isDisabled = disabled || isPurchased;

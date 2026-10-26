@@ -6,6 +6,10 @@ fragment CorrectPackageSizeModal_pantryItem on PantryItem {
     name
     symbol
   }
+  # The server refuses a package size stated in the tracking unit.
+  unit {
+    id
+  }
 }
 
 fragment CorrectPackageSizeModal_batch on PantryItemBatch {
@@ -13,4 +17,72 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
   batchNumber
   netWeight
   remainingNetWeight
+  packageSize {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    declared {
+      metric {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
+      imperial {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
+    }
+  }
+  remaining {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
 }

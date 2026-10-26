@@ -32,6 +32,76 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   # netWeight is only the default new stock inherits.
   netWeight
   remainingNetWeight
+  # netWeight read in each unit system, with the label's figure where it has one.
+  packageSize {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    declared {
+      metric {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
+      imperial {
+        value
+        unit {
+          id
+          symbol
+          displayAsFraction
+          type
+        }
+      }
+    }
+  }
+  # remainingNetWeight read in each unit system.
+  remaining {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   portionsPerTrackingUnit
   # When the stock was bought (a receipt's day for a receipt), where createdAt
   # is when the batch was recorded; null on an unpriced add.

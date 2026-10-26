@@ -32,6 +32,30 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       symbol
     }
   }
+  held {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   version
   createdAt
   updatedAt

@@ -30,6 +30,8 @@ import {
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { shownLineReading } from '#features/shoppingList/utils/lineReading';
+import { readingNotation } from '#domain/measure';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
@@ -144,11 +146,20 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   ) : (
     detailText
   );
-  const unitDisplay = firstNonBlank(data.unitName, data.unit?.symbol);
+  const { showImages, readingSystem } = useShoppingListRowOptions();
+  const shownReading = complete ? shownLineReading(data, readingSystem) : null;
+  const unitDisplay = shownReading
+    ? shownReading.unit.symbol
+    : firstNonBlank(data.unitName, data.unit?.symbol);
+  const shownQuantity = shownReading ? shownReading.value : quantity;
+  const shownQuantityInput = shownReading ? null : quantityInput;
+  // 0.5 kg, not "1/2 kg": a reading takes its unit's notation, as the pantry's do.
+  const shownNotation = shownReading
+    ? readingNotation(shownReading.unit)
+    : undefined;
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.
   const imageUrl = resolveImageUrl(data);
-  const { showImages } = useShoppingListRowOptions();
 
   const isTutorialSwipeTarget =
     tutorial?.currentStep ===
@@ -259,8 +270,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         <QuantityBadge
           // Keyed by item id so a test can open one specific row's sheet.
           testID={shoppingListTestIDs.itemQuantity(itemId)}
-          quantity={quantity}
-          quantityInput={quantityInput}
+          quantity={shownQuantity}
+          quantityInput={shownQuantityInput}
+          notation={shownNotation}
           unit={unitDisplay}
           // The handler is withheld from a viewer who may not edit, so its
           // absence is the gate — the sheet it opens is fully interactive and
@@ -345,7 +357,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             itemName,
             isPurchased && t('shoppingListScreens.purchased'),
             isPendingSync ? t('status.syncing') : detailText,
-            formatQuantityWithUnit(quantity, unitDisplay, { quantityInput }),
+            formatQuantityWithUnit(shownQuantity, unitDisplay, {
+              quantityInput: shownQuantityInput,
+              notation: shownNotation,
+            }),
             isPurchased && isStocked && t('shoppingList.alreadyInPantry'),
           )}
           // Keyed by id, not index: a drag would repoint an index-keyed testID at

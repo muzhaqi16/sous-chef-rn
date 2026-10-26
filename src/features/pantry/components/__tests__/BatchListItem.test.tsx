@@ -1,8 +1,13 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
-import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
@@ -23,6 +28,8 @@ const batch = (quantity: number): PantryItemBatchFragment => ({
   depletedAt: null,
   netWeight: null,
   remainingNetWeight: null,
+  packageSize: null,
+  remaining: null,
   portionsPerTrackingUnit: null,
   createdAt: '2026-08-01',
   updatedAt: '2026-08-01',
@@ -109,5 +116,49 @@ describe('BatchListItem', () => {
       });
       expect(screen.getByText('11 pc')).toBeTruthy();
     });
+  });
+
+  // A can of Unmeat tuna: 180 g as stored, its label's "6.35 oz (180 g)".
+  it('shows the package size in the user\u2019s unit system, as the label prints it', () => {
+    type BatchSize = NonNullable<PantryItemBatchFragment['packageSize']>;
+    const reading = (
+      value: number,
+      id: string,
+      symbol: string,
+    ): BatchSize['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unit: {
+        __typename: 'Unit',
+        id,
+        symbol,
+        displayAsFraction: false,
+        type: UnitType.Weight,
+      },
+    });
+    const packageSize: BatchSize = {
+      __typename: 'Measure',
+      value: 180,
+      unit: { __typename: 'Unit', id: 'unit-g' },
+      metric: reading(180, 'unit-g', 'g'),
+      imperial: reading(6.3, 'unit-oz', 'oz'),
+      declared: {
+        __typename: 'DeclaredQuantity',
+        metric: reading(180, 'unit-g', 'g'),
+        imperial: reading(6.35, 'unit-oz', 'oz'),
+      },
+    };
+    const cache = makeCache();
+    writeUnitSystemSettings(cache, UnitSystem.System, UnitSystem.Imperial);
+
+    renderWithApollo(
+      <BatchListItem
+        batch={{ ...batch(1), netWeight: 180, packageSize }}
+        netWeightUnitSymbol="g"
+        netWeightUnitId="unit-g"
+      />,
+      { cache },
+    );
+    expect(screen.getByText('Package: 6.35 oz')).toBeTruthy();
   });
 });

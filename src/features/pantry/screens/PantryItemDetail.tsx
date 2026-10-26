@@ -37,6 +37,8 @@ import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
+import { currentReading, formatReading } from '#domain/measure';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import {
   BatchStatus,
   EntryImageSource,
@@ -111,6 +113,7 @@ export const PantryItemDetail: React.FC<
   const selectedPantryId = useSelectedPantryId();
   const selectedHomeId = useSelectedHomeId();
   const today = useToday();
+  const readingSystem = useReadingSystem();
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
@@ -189,18 +192,30 @@ export const PantryItemDetail: React.FC<
   const showImages =
     itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
+  // Each weight reads in the user's unit system while its Measure still
+  // describes the stored figure; after a local edit, as stored until the
+  // server answers with new readings.
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
     t,
   );
-  const netWeightText = formatNetWeightDisplay(
-    item?.netWeight,
-    item?.netWeightUnit,
+  const netWeightUnitId = item?.netWeightUnit?.id;
+  const packageSizeReading = currentReading(
+    item?.packageSize,
+    { value: item?.netWeight, unitId: netWeightUnitId },
+    readingSystem,
   );
-  const remainingNetWeightText = formatNetWeightDisplay(
-    item?.remainingNetWeight,
-    item?.netWeightUnit,
+  const netWeightText = packageSizeReading
+    ? formatReading(packageSizeReading)
+    : formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
+  const remainingReading = currentReading(
+    item?.remaining,
+    { value: item?.remainingNetWeight, unitId: netWeightUnitId },
+    readingSystem,
   );
+  const remainingNetWeightText = remainingReading
+    ? formatReading(remainingReading)
+    : formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
     t,
@@ -483,6 +498,7 @@ export const PantryItemDetail: React.FC<
               batches={batches}
               unitSymbol={item.unit.symbol}
               netWeightUnitSymbol={item.netWeightUnit?.symbol}
+              netWeightUnitId={item.netWeightUnit?.id}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({

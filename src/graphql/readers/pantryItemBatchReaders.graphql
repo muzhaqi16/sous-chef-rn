@@ -15,6 +15,50 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   netWeight
   notes
   openedAt
+  packageSize {
+    declared {
+      imperial {
+        unit {
+          id
+          displayAsFraction
+          symbol
+          type
+        }
+        value
+      }
+      metric {
+        unit {
+          id
+          displayAsFraction
+          symbol
+          type
+        }
+        value
+      }
+    }
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
+  }
   pantryItemId
   portionsPerTrackingUnit
   purchase {
@@ -22,6 +66,30 @@ fragment PantryItemBatchReaders on PantryItemBatch {
     purchaseDate
   }
   quantity
+  remaining {
+    imperial {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    metric {
+      unit {
+        id
+        displayAsFraction
+        symbol
+        type
+      }
+      value
+    }
+    unit {
+      id
+    }
+    value
+  }
   remainingNetWeight
   status
   store {

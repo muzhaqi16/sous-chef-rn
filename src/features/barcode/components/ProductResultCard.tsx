@@ -12,6 +12,12 @@ import {
   type QuantityDisplayOptions,
 } from '#utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import {
+  formatReading,
+  readingOf,
+  type MeasureShape,
+  type ReadingSystem,
+} from '#domain/measure';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
@@ -28,8 +34,8 @@ interface Item {
     name?: string;
     symbol?: string;
   };
-  /** A PACKAGE figure in the user's unit system, which the card shows instead. */
-  convertedNetWeight?: { value: number; unit: { symbol: string } };
+  /** A PACKAGE figure read in each unit system, which the card shows instead. */
+  packageSize?: MeasureShape;
   price?: number;
   upc: string;
   image?: { url: string; credit?: PhotoCreditValue };
@@ -44,6 +50,8 @@ const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
 
 interface ItemCardProps {
   item: Item;
+  /** The unit system the pack size reads in. */
+  readingSystem: ReadingSystem;
   format?: string;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
@@ -54,6 +62,7 @@ interface ItemCardProps {
 
 export const ProductResultCard: React.FC<ItemCardProps> = ({
   item,
+  readingSystem,
   format,
   onEditItem,
   onCreateVariant,
@@ -62,13 +71,9 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   const { t } = useTranslation();
   const money = useMoney();
   const showActions = !!onEditItem || !!onCreateVariant;
-  const { image, convertedNetWeight } = item;
-  const amount = convertedNetWeight
-    ? formatQuantityWithUnit(
-        convertedNetWeight.value,
-        convertedNetWeight.unit.symbol,
-        AS_DECIMAL,
-      )
+  const { image, packageSize } = item;
+  const amount = packageSize
+    ? formatReading(readingOf(packageSize, readingSystem))
     : item.netWeight == null
     ? null
     : formatQuantityWithUnit(

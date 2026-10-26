@@ -30,6 +30,55 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  # Both read in each unit system; the label's own figure where it states it.
+  packageSize {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
+  remaining {
+    value
+    unit {
+      id
+    }
+    metric {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    imperial {
+      value
+      unit {
+        id
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+  }
   portionUnitId
   portionUnit {
     id
