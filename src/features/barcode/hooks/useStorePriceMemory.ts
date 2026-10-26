@@ -63,7 +63,11 @@ export function useStorePriceMemory(
     listId ? { variables: { itemId, listId } } : skipToken,
   );
 
-  const summary = paid.data?.item?.householdPriceSummary;
+  // `skipToken` keeps the last run's answer, which may be another home's.
+  const summary =
+    paid.variables.homeId === homeId
+      ? paid.data?.item?.householdPriceSummary
+      : undefined;
   const money = (
     amount: number,
     currency: { code: string; decimalPlaces: number },

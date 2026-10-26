@@ -66,8 +66,10 @@ export function useRecipeDietaryAlerts(recipeId: string | undefined) {
       : skipToken,
   );
 
+  // `skipToken` keeps the last run's answer: with no home it is another's.
+  const recipe = recipeId && homeId ? data?.recipe : undefined;
   const byIngredient = new Map<string, HouseholdAlert[]>();
-  for (const { node } of data?.recipe?.ingredientsConnection.edges ?? []) {
+  for (const { node } of recipe?.ingredientsConnection.edges ?? []) {
     if (node.dietaryAlerts.length === 0) continue;
     byIngredient.set(
       node.id,
@@ -80,7 +82,7 @@ export function useRecipeDietaryAlerts(recipeId: string | undefined) {
   return {
     check: householdCheckOf({
       hasHome: !!homeId && !!recipeId,
-      answered: !!data?.recipe,
+      answered: !!recipe,
       offline,
       failed: !!error,
       loading,
