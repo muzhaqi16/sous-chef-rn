@@ -3246,6 +3246,22 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `dat
 """
 scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
+"""A package figure as the product's label prints it."""
+type DeclaredQuantity {
+  """
+  The first figure the label prints in imperial units; null when it prints none.
+  """
+  imperial: MeasureReading
+  """
+  The first figure the label prints in metric units; null when it prints none.
+  """
+  metric: MeasureReading
+  """
+  The label's own text, as the barcode record keeps it (6.35 oz (180 g)).
+  """
+  text: String!
+}
+
 """
 An invite to decline, by exactly one of its emailed token or its id. By id,
 the caller must be its addressee with a verified email, as on acceptance.
@@ -6405,7 +6421,7 @@ type Item {
   so two callers reading the same item can get different answers. Null for a
   serving or reference figure.
   """
-  convertedNetWeight: ConvertedValue
+  convertedNetWeight: ConvertedValue @deprecated(reason: "Use packageSize, which reads in both unit systems.")
   """When the item was created."""
   createdAt: DateTime!
   """
@@ -6594,6 +6610,13 @@ type Item {
   nutritions: JSON
   """Where the product comes from; null when no record states a country"""
   origin: ProductOrigin
+  """
+  One package's size, read in both unit systems: the PACKAGE netWeight in
+  displayUnit, scoped to the scanned pack on a barcode lookup. Its declared
+  figure is the record's label where it states this size. Null for a
+  serving or reference figure.
+  """
+  packageSize: Measure
   """
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
@@ -8813,6 +8836,39 @@ type MealTypeNutrition {
   totalCarbs: Float!
   totalFat: Float!
   totalProtein: Float!
+}
+
+"""
+An amount as stored, and as it reads in each unit system. The readings are
+the same for every viewer: a client shows metric or imperial by its own
+setting, so a change of setting needs no new request.
+"""
+type Measure {
+  """
+  What the product's label prints for this figure. Null unless a barcode
+  record's label states exactly this amount.
+  """
+  declared: DeclaredQuantity
+  """
+  The amount in imperial (US customary) units, by the same rule as metric.
+  """
+  imperial: MeasureReading!
+  """
+  The amount in metric units: climbed from its base to the largest unit that
+  keeps it readable, rounded at that unit's display step. A count, or a unit
+  both systems use (tbsp), reads as stored.
+  """
+  metric: MeasureReading!
+  """The unit value is stored in."""
+  unit: Unit!
+  """The figure exactly as stored, in unit; never rounded here."""
+  value: Float!
+}
+
+"""One unit system's reading of an amount."""
+type MeasureReading {
+  unit: Unit!
+  value: Float!
 }
 
 """An amount in a unit."""
@@ -11131,8 +11187,14 @@ type OriginFact {
 type PackageBreakdown {
   contentUnit: Unit!
   count: Float!
+  """perUnitNetWeight in its unit, read in both unit systems; null with it."""
+  perUnit: Measure
   perUnitNetWeight: Float
   perUnitNetWeightUnit: Unit
+  """
+  totalNetWeight in perUnitNetWeightUnit, read in both unit systems; null with it.
+  """
+  total: Measure
   totalNetWeight: Float
 }
 
@@ -11471,6 +11533,8 @@ type PantryItem {
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
   expiresOn: LocalDate
+  """displayAmount's quantity in its unit, read in both unit systems."""
+  held: Measure!
   """
   The exact amount held in the tracking unit: each batch by its own package size, a
   partly used package as its fraction (1.25 jars). quantity counts a partly used
@@ -11555,6 +11619,12 @@ type PantryItem {
   one. Null when the tracking unit is not such a package.
   """
   packageBreakdown: PackageBreakdown
+  """
+  netWeight in netWeightUnit, read in both unit systems. Its declared figure
+  is the stack's barcode record's label where it states this size. Null with
+  netWeight.
+  """
+  packageSize: Measure
   """The pantry holding this stack"""
   pantry: Pantry!
   """The id of the pantry holding this stack"""
@@ -11600,6 +11670,10 @@ type PantryItem {
   tracking unit is a package the catalog defines for the item.
   """
   quantityBreakdown: QuantityBreakdown
+  """
+  remainingNetWeight in netWeightUnit, read in both unit systems; null with it.
+  """
+  remaining: Measure
   """
   The net weight left across the stack's batches, in netWeightUnit (2 jars of
   12.5 oz = 25 oz). Null when the stack tracks no net weight.
@@ -11648,6 +11722,8 @@ type PantryItem {
   storeId: ID
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
+  """tareWeight in netWeightUnit, read in both unit systems; null with it."""
+  tare: Measure
   """
   The empty container's weight, in netWeightUnit: a recount by grossWeight records gross − tare. Null when none is recorded.
   """
@@ -11735,6 +11811,12 @@ type PantryItemBatch {
   netWeight: Float
   notes: String
   openedAt: DateTime
+  """
+  netWeight in the stack's net-weight unit, read in both unit systems. Its
+  declared figure is the stack's barcode record's label where it states this
+  size. Null with netWeight.
+  """
+  packageSize: Measure
   pantryItemId: ID!
   """This batch's own portions per tracking unit (an 18-egg pack is 18)."""
   portionsPerTrackingUnit: Float
@@ -11751,6 +11833,10 @@ type PantryItemBatch {
   """
   purchaseId: ID
   quantity: Float!
+  """
+  remainingNetWeight in the stack's net-weight unit, read in both unit systems; null with it.
+  """
+  remaining: Measure
   remainingNetWeight: Float
   """The RESTOCK ledger entry this batch was created alongside."""
   sourceUsageId: ID
@@ -13115,6 +13201,8 @@ type QuantityBreakdown {
   fullPackages: Int!
   """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
+  """remainingWeight in its unit, read in both unit systems; null with it."""
+  remaining: Measure
   """Total remaining weight/volume"""
   remainingWeight: Float
   """Unit of the remaining weight"""
@@ -17038,6 +17126,8 @@ type ShoppingListItem {
   addedBy: User
   """The id of the member who added the line; null when none is recorded"""
   addedById: ID
+  """quantity in unit, read in both unit systems; null when either is."""
+  amount: Measure
   """
   The brand chosen for this line, independent of the catalog item's brands: the one an add or update named, else a scanned product's; null when none
   """
@@ -17088,6 +17178,10 @@ type ShoppingListItem {
   Free-text notes, at most 500 characters from a client; null when none. Adding a recipe can write the ingredient's note, or append an amount it could not add into the line's unit
   """
   notes: String
+  """
+  netWeight in netWeightUnit, read in both unit systems; null with netWeight.
+  """
+  packageSize: Measure
   """
   The line's estimated price per one of its unit, in the list's currency, and its budget
   """
