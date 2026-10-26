@@ -1,8 +1,14 @@
 # The caller's homes and their own dietary sharing switch in each: the dietary
 # profile's "Shared with" section.
+#
+# It shares the cached `homes` connection with GetHomes, which a first page
+# replaces: the edge's `cursor` and the connection's `pageInfo` and `totalCount`
+# are selected as GetHomes selects them, or this read leaves every home
+# reader's list incomplete.
 query DietarySharingHomes {
   homes(first: 50) {
     edges {
+      cursor
       node {
         id
         name
@@ -12,6 +18,11 @@ query DietarySharingHomes {
         }
       }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 

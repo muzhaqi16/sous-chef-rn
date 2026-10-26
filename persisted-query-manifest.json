@@ -459,10 +459,10 @@
       "body": "mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {\n  deleteStorageLocation(input: $input) {\n    __typename\n    ... on DeleteStorageLocationPayload {\n      storageLocation {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "426014b36b460f41d7ee8c90f9aa1575b5cfcdf9552c14a119e214fb33b35267",
+      "id": "2b28bb2bec26aaef258e4af7c530cc7618eac129a95b6f5a1a73b21b77e09c83",
       "name": "DietarySharingHomes",
       "type": "query",
-      "body": "query DietarySharingHomes {\n  homes(first: 50) {\n    edges {\n      node {\n        id\n        name\n        myMembership {\n          id\n          sharesDietaryNeeds\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query DietarySharingHomes {\n  homes(first: 50) {\n    edges {\n      cursor\n      node {\n        id\n        name\n        myMembership {\n          id\n          sharesDietaryNeeds\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
       "id": "12656f47a1bfc19766f3baa3022dcb755184317f6a8cb9f9ad1c934663b62760",
