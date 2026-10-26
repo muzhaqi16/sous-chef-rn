@@ -195,7 +195,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Package Details Row */}
       {!!packageBreakdownText && (
         <InfoRow
-          label={t('pantryItemDetail.fields.package')}
+          label={t('labels.package')}
           value={packageBreakdownText}
           icon="layers-outline"
           showColon={false}

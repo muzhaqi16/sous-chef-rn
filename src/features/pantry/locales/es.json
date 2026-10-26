@@ -15,7 +15,6 @@
     "tags": "Etiquetas",
     "usageHistory": "Historial de uso",
     "fields": {
-      "package": "Paquete",
       "shelfLife": "Vida útil",
       "acquired": "Adquirido",
       "costPerUnit": "Coste/unidad",

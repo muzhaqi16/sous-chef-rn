@@ -1,18 +1,19 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import type { ScannedItem } from '#features/barcode/types';
+import type { ScanAmount, ScannedItem } from '#features/barcode/types';
 import {
   AcquisitionMethod,
-  type PackageSizeInput,
+  type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
 import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import { refByIdOrName } from '#/utils/refInput';
+import { stockAmountOf } from '#domain/stockAmount';
 import { useTranslation } from '#/i18n';
 
-/** A scanned item is always one container: the per-container weight is separate. */
+/** A list line from a scan is one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;
 
 /**
@@ -27,6 +28,19 @@ const scannedListItemRef = (item: ScannedItem) =>
 /** The unit an add naming none counts in; the default unit on a fresh item. */
 const scannedUnitId = (item: ScannedItem) =>
   item.trackingUnit?.id ?? item.unitId;
+
+/**
+ * Packages always name their COUNT unit: left to the API, they land in the
+ * item's tracking unit, which can be a measure, and a can becomes 3.4 cup.
+ */
+const scannedAmountOf = (amount: ScanAmount): StockAmountInput =>
+  amount.packaged
+    ? stockAmountOf(amount.count, {
+        asPackages: true,
+        packageSize: amount.size,
+        unitId: amount.unitId,
+      })
+    : stockAmountOf(amount.quantity, { unitId: amount.unitId });
 
 /** Whether the shopping-list row survived the create, and its id if it did. */
 export type ScannedListOutcome =
@@ -49,7 +63,7 @@ export function useAddScannedItem({
 }: UseAddScannedItemArgs) {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const { addItem } = usePantryIntake(pantryId);
+  const { addItem, heldUnitOf } = usePantryIntake(pantryId);
   const { restock } = usePantryRestock(pantryId);
 
   const [addToShoppingListMutation] = useMutation(
@@ -60,49 +74,50 @@ export function useAddScannedItem({
     },
   );
 
-  // No `unit`, and `netWeight` only for a size the user entered where the record
-  // states none: one sent here is kept as the user's, not the record's. A refusal
-  // of an add carrying it is left to the caller, whose prompt shows it on the size.
-  const addToPantry = (item: ScannedItem, packageSize?: PackageSizeInput) =>
+  // A size goes only when the user gave one: one sent is kept as the user's,
+  // not the record's. A refusal is the caller's to show, on the field it names.
+  const addToPantry = (item: ScannedItem, amount: ScanAmount) =>
     addItem(
       item.name,
-      {
-        item: scannedPantrySource(item),
-        quantity: SCANNED_QUANTITY,
-        ...(packageSize && { netWeight: packageSize }),
-      },
+      { item: scannedPantrySource(item), amount: scannedAmountOf(amount) },
       {
         local: {
           itemId: item.id,
-          unitId: scannedUnitId(item),
+          unitId: amount.unitId,
           acquisitionMethod: AcquisitionMethod.BarcodeScan,
         },
-        present: packageSize ? 'none' : 'alert',
+        present: 'none',
       },
     );
 
   /**
-   * Restock the duplicate check's row by one container, of the user's size
-   * when the record states none; with no size at all it goes as a forced add
-   * (`usePantryRestock`). Resolves whether it stands, the user told if not.
+   * Restock the duplicate check's row by the amount stated: packages by their
+   * count, sized by the user's size or the record's, with no size at all as a
+   * forced add (`usePantryRestock`). Resolves whether it stands, the user told
+   * if not.
    */
   const restockDuplicate = async (
     item: ScannedItem,
     existingPantryItemId: string,
-    packageSize?: PackageSizeInput,
+    amount: ScanAmount,
   ): Promise<boolean> => {
-    const outcome = await restock(existingPantryItemId, {
-      bought: {
-        count: SCANNED_QUANTITY,
-        packageSize,
-        item: {
-          source: scannedPantrySource(item),
-          name: item.name,
-          itemId: item.id,
-        },
-      },
-      present: 'alert',
-    });
+    const outcome = await restock(
+      existingPantryItemId,
+      amount.packaged
+        ? {
+            bought: {
+              count: amount.count,
+              packageSize: amount.size,
+              item: {
+                source: scannedPantrySource(item),
+                name: item.name,
+                itemId: item.id,
+              },
+            },
+            present: 'alert',
+          }
+        : { amount: scannedAmountOf(amount), present: 'alert' },
+    );
     return outcome.status === 'restocked';
   };
 
@@ -140,5 +155,6 @@ export function useAddScannedItem({
     addToPantry,
     restockDuplicate,
     addToShoppingList,
+    heldUnitOf,
   };
 }

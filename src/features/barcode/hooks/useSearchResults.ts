@@ -111,11 +111,22 @@ const convertToScannedItem = (
         symbol: item.displayUnit.symbol,
       }
     : undefined,
+  convertedNetWeight: item.convertedNetWeight
+    ? {
+        value: item.convertedNetWeight.value,
+        unit: {
+          id: item.convertedNetWeight.unit.id,
+          name: item.convertedNetWeight.unit.name,
+          symbol: item.convertedNetWeight.unit.symbol,
+        },
+      }
+    : undefined,
   trackingUnit: item.trackingUnit
     ? {
         id: item.trackingUnit.id,
         name: item.trackingUnit.name,
         symbol: item.trackingUnit.symbol,
+        type: item.trackingUnit.type,
       }
     : undefined,
   // The brand typed into the create form is the item's; a scan's is the

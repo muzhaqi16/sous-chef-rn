@@ -531,6 +531,7 @@
     "addPantryItem": "Añadir artículo a la despensa",
     "addMeal": "Añadir comida",
     "addRecipe": "Añadir receta",
+    "package": "Paquete",
     "packageSize": "Tamaño del paquete",
     "unit": "Unidad",
     "sources": {

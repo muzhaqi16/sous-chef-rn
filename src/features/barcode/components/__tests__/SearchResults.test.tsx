@@ -13,7 +13,6 @@ import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/us
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { t } from '#/i18n';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
-import type { PackSizeOutcome } from '../PackSizeSheet';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
@@ -73,7 +72,12 @@ jest.mock('#domain/pantryItemDuplicate', () => {
   };
 });
 
+// The counting units the device holds: a scan is counted in a piece.
+const mockCachedUnits = [
+  { id: 'unit-pc', name: 'piece', symbol: 'pc', type: 'COUNT' },
+];
 jest.mock('#store/useAppStore', () => ({
+  useCachedUnits: () => mockCachedUnits,
   useAppStore: jest.fn(
     (
       selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
@@ -88,6 +92,9 @@ jest.mock('../ProductResultCard', () =>
   require('#/test-utils/searchResultsStubs'),
 );
 jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () =>
+  require('#/test-utils/searchResultsStubs'),
+);
 
 // Alerts have their own tests; here the household has nothing to check.
 jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
@@ -118,15 +125,8 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
   useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
 }));
 
-// The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
-const mockPackSizeOutcomes: PackSizeOutcome[] = [];
-jest.mock('../PackSizeSheet', () => ({
-  PackSizeSheet:
-    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming(
-      { netWeight: 32, netWeightUnitId: 'unit-oz' },
-      (outcome: PackSizeOutcome) => mockPackSizeOutcomes.push(outcome),
-    ),
-}));
+/** One package counted in a piece, sized by the record: what a scan adds. */
+const ONE_PACKAGE = { packages: { count: 1, unitId: 'unit-pc' } };
 
 describe('SearchResults', () => {
   const mockItem = {
@@ -148,7 +148,6 @@ describe('SearchResults', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPackSizeOutcomes.length = 0;
   });
 
   it('renders item name', () => {
@@ -188,10 +187,11 @@ describe('SearchResults', () => {
     expect(screen.getByText('Scan Another')).toBeTruthy();
   });
 
-  // A 1.89 L carton is ONE container. Its size belongs to the barcode's record,
-  // which the add names: a netWeight sent beside it would be stored as the
-  // user's own edit.
-  it('adds one container naming the scanned record, and no size of its own', async () => {
+  // A 1.89 L carton is ONE container, counted as one: left to the API, a count
+  // lands in the item's tracking unit, which can be a measure (1 oz, 1 cup).
+  // Its size belongs to the barcode's record, which the add names: a size sent
+  // beside it would be stored as the user's own edit.
+  it('adds one counted package naming the scanned record, and no size of its own', async () => {
     const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
@@ -219,10 +219,83 @@ describe('SearchResults', () => {
     await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
-    expect(firedInput.quantity).toBe(1);
+    expect(firedInput.amount).toEqual(ONE_PACKAGE);
     expect(firedInput.item).toEqual({ variation: 'esm-1' });
+    expect(firedInput).not.toHaveProperty('quantity');
     expect(firedInput).not.toHaveProperty('netWeight');
     expect(firedInput).not.toHaveProperty('unit');
+  });
+
+  it('sends a package size the user changed', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          variationId: 'esm-1',
+          netWeightKind: NetWeightKind.Package,
+          convertedNetWeight: {
+            value: 3,
+            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+          },
+        }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    expect(screen.getByText('1 pc · 3 lb each')).toBeTruthy();
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountSize),
+      '2',
+    );
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual({
+      packages: {
+        count: 1,
+        unitId: 'unit-pc',
+        size: { netWeight: 2, netWeightUnitId: 'unit-lb' },
+      },
+    });
+  });
+
+  it('adds nothing while the amount is invalid, and opens it to show why', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    renderWithApollo(<SearchResults {...defaultProps} />, {
+      operationMocks: [rec.mock],
+    });
+
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
+      '1 1/2',
+    );
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    expect(
+      await screen.findByText(t('barcode.amount.wholePackages')),
+    ).toBeTruthy();
+    expect(rec.fired).toHaveLength(0);
   });
 
   it('sends the day of the add on the input, for its default expiry', async () => {
@@ -288,7 +361,9 @@ describe('SearchResults', () => {
       expect(screen.queryByText(/Open Food Facts/)).toBeNull();
     });
 
-    it('asks for the pack size it lacks, then stores the one entered', async () => {
+    // The size is the user's to add if they know it; unasked, the API counts
+    // an unsized package in a counted stack.
+    it('adds one counted package without asking for the size it lacks', async () => {
       const rec = created();
       const onScanAnother = jest.fn();
       renderWithApollo(
@@ -305,26 +380,15 @@ describe('SearchResults', () => {
         { operationMocks: [rec.mock] },
       );
 
+      expect(screen.getByText('1 pc')).toBeTruthy();
       fireEvent.press(screen.getByTestId('primary-btn'));
-      // Nothing is added until the size is given.
-      expect(rec.fired).toHaveLength(0);
-
-      fireEvent.press(screen.getByTestId('pack-size-stub'));
 
       await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
-      expect(firedInput.netWeight).toEqual({
-        netWeight: 32,
-        netWeightUnitId: 'unit-oz',
-      });
+      expect(firedInput.amount).toEqual(ONE_PACKAGE);
       expect(firedInput.item).toEqual({ variation: 'off-1' });
-      // The prompt closes only once the add has landed.
-      await waitFor(() =>
-        expect(mockPackSizeOutcomes).toEqual([{ status: 'done' }]),
-      );
-      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
-      expect(onScanAnother).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(onScanAnother).toHaveBeenCalledTimes(1));
     });
 
     describe('a refused add', () => {
@@ -346,7 +410,7 @@ describe('SearchResults', () => {
           },
         });
 
-      it('keeps the prompt open with the reason on the size, and no alert', async () => {
+      it('shows a refused size on the size field, opened, and no alert', async () => {
         const rec = refusedOn('netWeight');
         const onScanAnother = jest.fn();
         renderWithApollo(
@@ -359,33 +423,26 @@ describe('SearchResults', () => {
         );
 
         fireEvent.press(screen.getByTestId('primary-btn'));
-        fireEvent.press(screen.getByTestId('pack-size-stub'));
 
-        await waitFor(() =>
-          expect(mockPackSizeOutcomes).toEqual([
-            { status: 'refused', sizeError: t('errors.field.netWeight') },
-          ]),
-        );
-        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        expect(
+          await screen.findByText(t('errors.field.netWeight')),
+        ).toBeTruthy();
+        expect(screen.getByTestId(barcodeTestIDs.scanAmountSize)).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
         expect(alertService.alert).not.toHaveBeenCalled();
         expect(onScanAnother).not.toHaveBeenCalled();
       });
 
-      it('alerts any other refusal, with the prompt still open', async () => {
+      it('alerts a refusal no amount field can show', async () => {
         const rec = refusedOn('quantity');
         renderWithApollo(<SearchResults {...defaultProps} item={offItem} />, {
           operationMocks: [rec.mock],
         });
 
         fireEvent.press(screen.getByTestId('primary-btn'));
-        fireEvent.press(screen.getByTestId('pack-size-stub'));
 
-        await waitFor(() =>
-          expect(mockPackSizeOutcomes).toEqual([{ status: 'refused' }]),
-        );
-        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
+        await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
         expect(alertService.alert).toHaveBeenCalledTimes(1);
         expect(alertService.alert).toHaveBeenCalledWith(
           t('labels.error'),
@@ -413,10 +470,9 @@ describe('SearchResults', () => {
       fireEvent.press(screen.getByTestId('primary-btn'));
 
       await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
-      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
-      expect(firedInput).not.toHaveProperty('netWeight');
+      expect(firedInput.amount).toEqual(ONE_PACKAGE);
     });
   });
 

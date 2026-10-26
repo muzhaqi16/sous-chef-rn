@@ -131,6 +131,7 @@ export const SearchResultsScreen: React.FC<
     if (item) {
       return (
         <SearchResults
+          key={item.id}
           item={item}
           format={format}
           onScanAnother={handleScanAnother}

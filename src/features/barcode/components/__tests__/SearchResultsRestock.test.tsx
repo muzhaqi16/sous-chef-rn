@@ -24,11 +24,15 @@ jest.mock('#features/barcode/hooks/useAddScannedItem', () => ({
     addToPantry: (...args: unknown[]) => mockAddToPantry(...args),
     restockDuplicate: (...args: unknown[]) => mockRestockDuplicate(...args),
     addToShoppingList: jest.fn(),
+    heldUnitOf: () => null,
   }),
 }));
 
 const mockSetPendingPantryScrollToTop = jest.fn();
 jest.mock('#store/useAppStore', () => ({
+  useCachedUnits: () => [
+    { id: 'unit-pc', name: 'piece', symbol: 'pc', type: 'COUNT' },
+  ],
   useAppStore: (
     selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
   ) =>
@@ -61,14 +65,13 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
   useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
 }));
 
-const PACK_SIZE = { netWeight: 500, netWeightUnitId: 'unit-ml' };
-jest.mock('../PackSizeSheet', () => ({
-  PackSizeSheet:
-    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming({
-      netWeight: 500,
-      netWeightUnitId: 'unit-ml',
-    }),
-}));
+/** What the add stated: one package counted in a piece, sized by the record. */
+const ONE_PACKAGE = {
+  packaged: true,
+  count: 1,
+  unitId: 'unit-pc',
+  size: null,
+};
 
 const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
@@ -119,7 +122,7 @@ describe('restocking a duplicate the scanner found', () => {
     expect(mockRestockDuplicate).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'item-1' }),
       'pantry-item-9',
-      undefined,
+      ONE_PACKAGE,
     );
     // The hook presents the refusal; the screen adds no second message.
     expect(alertService.alert).not.toHaveBeenCalled();
@@ -136,31 +139,18 @@ describe('restocking a duplicate the scanner found', () => {
     expect(mockSetPendingPantryScrollToTop).toHaveBeenCalledWith(true);
   });
 
-  // The size the user gave is what the pantry's stock of it grows by.
-  it('restocks by the pack size the user entered, the prompt having closed', async () => {
+  // The amount the add stated is what the pantry's stock of it grows by.
+  it('restocks by the amount the add stated', async () => {
     mockRestockDuplicate.mockResolvedValue(true);
     const user = userEvent.setup();
-    renderWithApollo(
-      <SearchResults
-        {...props}
-        item={{
-          ...props.item,
-          source: 'OPENFOODFACTS',
-          netWeight: undefined,
-          variationId: 'off-1',
-        }}
-      />,
-    );
+    renderWithApollo(<SearchResults {...props} />);
 
     await user.press(screen.getByTestId('primary-btn'));
-    await user.press(screen.getByTestId('pack-size-stub'));
 
     expect(mockAddToPantry).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'item-1' }),
-      PACK_SIZE,
+      ONE_PACKAGE,
     );
-    // The duplicate prompt takes over from the size prompt.
-    expect(screen.queryByTestId('pack-size-stub')).toBeNull();
     const opts = (promptPantryDuplicate as jest.Mock).mock.lastCall?.[0] as {
       onRestock: () => void;
     };
@@ -171,7 +161,7 @@ describe('restocking a duplicate the scanner found', () => {
     expect(mockRestockDuplicate).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'item-1' }),
       'pantry-item-9',
-      PACK_SIZE,
+      ONE_PACKAGE,
     );
     expect(onScanAnother).toHaveBeenCalledTimes(1);
   });

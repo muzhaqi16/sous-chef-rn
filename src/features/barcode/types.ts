@@ -1,6 +1,7 @@
 import type {
   ItemType,
   NetWeightKind,
+  PackageSizeInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { PhotoCreditValue } from '#/types/attribution';
@@ -21,6 +22,9 @@ type UnitRef = Pick<
   NonNullable<LookupNode['displayUnit']>,
   'id' | 'name' | 'symbol'
 >;
+
+type TrackingUnitRef = UnitRef &
+  Pick<NonNullable<LookupNode['trackingUnit']>, 'type'>;
 
 /**
  * A scan's result: the item a lookup found or the scan's new-item form created.
@@ -56,8 +60,10 @@ export interface ScannedItem
   /** What `netWeight` measures; only a PACKAGE figure is a package size. */
   netWeightKind?: NetWeightKind;
   displayUnit?: UnitRef;
+  /** A PACKAGE `netWeight` in the user's unit system; none for another kind. */
+  convertedNetWeight?: { value: number; unit: UnitRef };
   /** The unit an add naming no unit counts the row in. */
-  trackingUnit?: UnitRef;
+  trackingUnit?: TrackingUnitRef;
   /** The scanned barcode's own brand; never one picked from the item's list. */
   brandName?: string;
   brandId?: string;
@@ -70,3 +76,16 @@ export interface ScannedItem
   tags?: string[];
   categories?: Array<{ id: string; name: string; isPrimary?: boolean }>;
 }
+
+/**
+ * What a pantry add from a scan records: whole packages counted in a COUNT unit
+ * (a `size` only when the user gave one; else the record's), or a measured amount.
+ */
+export type ScanAmount =
+  | {
+      packaged: true;
+      count: number;
+      unitId: string;
+      size: PackageSizeInput | null;
+    }
+  | { packaged: false; quantity: number; unitId: string };

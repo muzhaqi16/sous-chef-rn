@@ -531,6 +531,7 @@
     "addPantryItem": "Aggiungi articolo alla dispensa",
     "addMeal": "Aggiungi pasto",
     "addRecipe": "Aggiungi ricetta",
+    "package": "Confezione",
     "packageSize": "Dimensione della confezione",
     "unit": "Unità",
     "sources": {

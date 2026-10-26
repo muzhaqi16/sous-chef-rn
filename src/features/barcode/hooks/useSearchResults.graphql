@@ -64,7 +64,17 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
           name
           symbol
         }
-        # The unit an add naming no unit counts in, for the local row.
+        # The scanned pack's PACKAGE size in the caller's unit system: what the
+        # card and the add's size prefill show.
+        convertedNetWeight {
+          value
+          unit {
+            id
+            name
+            symbol
+          }
+        }
+        # A count unit here is the add's package unit; a measure is not.
         trackingUnit(pantry: $pantry) {
           id
           name
@@ -126,6 +136,14 @@ fragment useSearchResults_item on Item {
     id
     name
     symbol
+  }
+  convertedNetWeight {
+    value
+    unit {
+      id
+      name
+      symbol
+    }
   }
   type
   storageState

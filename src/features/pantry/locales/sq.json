@@ -15,7 +15,6 @@
     "tags": "Etiketa",
     "usageHistory": "Historiku i përdorimit",
     "fields": {
-      "package": "Paketimi",
       "shelfLife": "Afati i ruajtjes",
       "acquired": "Marrë më",
       "costPerUnit": "Kosto/njësi",

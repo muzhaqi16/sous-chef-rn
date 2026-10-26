@@ -15,7 +15,6 @@
     "tags": "Tags",
     "usageHistory": "Usage History",
     "fields": {
-      "package": "Package",
       "shelfLife": "Shelf Life",
       "acquired": "Acquired",
       "costPerUnit": "Cost/Unit",

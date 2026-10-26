@@ -22,11 +22,18 @@
     "upc": "UPC/Codice a barre",
     "servingAmount": "Una porzione: {{amount}}",
     "referenceAmount": "Valori nutrizionali per {{amount}}",
-    "packSize": {
-      "body": "Open Food Facts non indica la dimensione di questo prodotto. Inseriscila una volta per aggiungerlo alla dispensa.",
-      "label": "Dimensione di una confezione",
-      "invalid": "Inserisci una dimensione maggiore di 0.",
-      "unitRequired": "Scegli un’unità dall’elenco."
+    "amount": {
+      "title": "Si aggiunge alla dispensa",
+      "eachPackage": "{{amount}} · {{size}} a confezione",
+      "packaged": "A confezioni",
+      "packagedHint": "Si conta per confezione. Disattivalo per aggiungere una quantità, come 500 g.",
+      "sizeLabel": "Dimensione di una confezione",
+      "quantityInvalid": "Inserisci una quantità maggiore di 0.",
+      "wholePackages": "Le confezioni si contano intere: 1, 2, 3…",
+      "countUnit": "Conta le confezioni in un’unità di conteggio, come pc.",
+      "unitRequired": "Scegli un’unità dall’elenco.",
+      "sizeInvalid": "Inserisci una dimensione maggiore di 0.",
+      "sizeUnitRequired": "Scegli dall’elenco l’unità della dimensione."
     },
     "addToCart": "Aggiungi al carrello",
     "addToCartWithPrice": "Aggiungi con prezzo",

@@ -50,6 +50,24 @@ describe('ProductResultCard', () => {
     expect(screen.getByText('500 g')).toBeTruthy();
   });
 
+  // A 3 LB (1.36 kg) honey reads as its label does for an imperial user, not
+  // as the grams the catalog stores.
+  it('shows the pack size in the user’s unit system', () => {
+    render(
+      <ProductResultCard
+        item={{
+          ...baseItem,
+          netWeight: 1360.78,
+          netWeightKind: NetWeightKind.Package,
+          displayUnit: { name: 'gram', symbol: 'g' },
+          convertedNetWeight: { value: 3, unit: { symbol: 'lb' } },
+        }}
+      />,
+    );
+    expect(screen.getByText('3 lb')).toBeTruthy();
+    expect(screen.queryByText(/gram/)).toBeNull();
+  });
+
   it('labels a serving figure as a serving', () => {
     render(
       <ProductResultCard

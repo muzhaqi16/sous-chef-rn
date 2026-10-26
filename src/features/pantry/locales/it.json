@@ -15,7 +15,6 @@
     "tags": "Tag",
     "usageHistory": "Cronologia d'uso",
     "fields": {
-      "package": "Confezione",
       "shelfLife": "Conservazione",
       "acquired": "Acquisito",
       "costPerUnit": "Costo/unità",

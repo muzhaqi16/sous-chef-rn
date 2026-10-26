@@ -250,7 +250,30 @@ describe('useSearchResults', () => {
           netWeightKind: 'SERVING',
           brandId: 'brand-pack',
           brandName: 'Pack Brand',
-          trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
+          trackingUnit: {
+            id: 'unit-can',
+            name: 'can',
+            symbol: 'can',
+            type: UnitType.Count,
+          },
+        },
+      ],
+      [
+        "reports the scanned pack's size in the user's unit system",
+        {
+          netWeight: 1360.78,
+          netWeightKind: NetWeightKind.Package,
+          convertedNetWeight: {
+            value: 3,
+            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+          },
+        },
+        {
+          netWeight: 1360.78,
+          convertedNetWeight: {
+            value: 3,
+            unit: { id: 'unit-lb', name: 'pound', symbol: 'lb' },
+          },
         },
       ],
     ])('%s', async (_name, node, expected) => {

@@ -6,9 +6,11 @@ export const barcodeTestIDs = {
   /** `ProductResultCard`'s edit action: the press target, and its label. */
   productEditAction: 'product-result-edit-action',
   productEditActionLabel: 'product-result-edit-action-label',
-  /** The pack-size prompt a product without a package size asks before adding. */
-  packSizeInput: 'pack-size-input',
-  packSizeConfirm: 'pack-size-confirm',
+  /** What a pantry add records: its summary, which opens the fields below. */
+  scanAmountSummary: 'scan-amount-summary',
+  scanAmountQuantity: 'scan-amount-quantity',
+  scanAmountPackaged: 'scan-amount-packaged',
+  scanAmountSize: 'scan-amount-size',
   /** The household's dietary alerts on a scan, and its offline note. */
   householdAlerts: 'household-alerts',
   householdUnchecked: 'household-unchecked',

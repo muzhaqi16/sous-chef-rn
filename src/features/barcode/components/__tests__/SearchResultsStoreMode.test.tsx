@@ -9,6 +9,7 @@ import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 
 const mockAddToShoppingList = jest.fn();
@@ -17,6 +18,7 @@ jest.mock('#features/barcode/hooks/useAddScannedItem', () => ({
     addToPantry: jest.fn(),
     restockDuplicate: jest.fn(),
     addToShoppingList: (...args: unknown[]) => mockAddToShoppingList(...args),
+    heldUnitOf: () => null,
   }),
 }));
 
@@ -71,6 +73,7 @@ jest.mock('#features/shoppingList/ui/PurchaseAmountSheet', () => {
 });
 
 jest.mock('#store/useAppStore', () => ({
+  useCachedUnits: () => [],
   useAppStore: (
     selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
   ) => selector({ setPendingPantryScrollToTop: jest.fn() }),
@@ -127,7 +130,12 @@ const props: SearchResultsProps = {
     upc: '051500255162',
     canEdit: false,
     canSuggest: true,
-    trackingUnit: { id: 'unit-jar', name: 'jar', symbol: 'jar' },
+    trackingUnit: {
+      id: 'unit-jar',
+      name: 'jar',
+      symbol: 'jar',
+      type: UnitType.Count,
+    },
   },
   onScanAnother,
   source: 'storeMode',
