@@ -1846,6 +1846,14 @@ input ConnectivityInput {
   isLocationEnabled: Boolean
 }
 
+"""What a figure rests on where no fact states it."""
+enum ConversionAssumption {
+  """Water's density"""
+  DENSITY
+  """The catalog's package size, which the stack does not record"""
+  PACKAGE
+}
+
 """Conversion availability result"""
 type ConversionAvailability {
   available: Boolean!
@@ -2475,6 +2483,11 @@ client adopts in place of the id it minted.
 enum CreateOutcome {
   """A new row was written"""
   CREATED
+  """
+  A new row was written beside a held row of the same item, which it
+  converts into only by an assumption or not at all (PantryItem.keptApart)
+  """
+  KEPT_APART
   """An existing row absorbed the create"""
   MERGED
 }
@@ -7544,6 +7557,14 @@ Always include a __typename so the variant can be discriminated.
 """
 union JoinShoppingListByShareCodeResult = ConflictError | ForbiddenError | JoinShoppingListByShareCodePayload | NotFoundError | ValidationError
 
+"""Why a pantry stack stands apart from another stack of its item."""
+enum KeptApartReason {
+  """Only an assumed density or package size relates them"""
+  ASSUMED_CONVERSION
+  """No conversion relates it to the held stack"""
+  NO_CONVERSION
+}
+
 input LeaveHomeInput {
   homeId: ID!
 }
@@ -11660,6 +11681,12 @@ type PantryItem {
   such as its images.
   """
   itemUpc: String
+  """
+  Why this stack stands apart from another stack of its item in this pantry:
+  the add that opened it converts into that stack only by an assumption, or
+  not at all. Null for a stack that is its item's only one.
+  """
+  keptApart: KeptApartReason
   """The user who last changed this stack; null when unknown"""
   lastModifiedBy: User
   """
@@ -11707,6 +11734,11 @@ type PantryItem {
   pantry: Pantry!
   """The id of the pantry holding this stack"""
   pantryId: ID!
+  """
+  For an ASSUMED_CONVERSION stack: the held stack it would merge into, and
+  what it would bring there, for a member to confirm. Null otherwise.
+  """
+  pendingMerge: PendingMerge
   """
   The unit one portion is counted in (a clove); null when the stack defines no portion
   """
@@ -11798,6 +11830,12 @@ type PantryItem {
   The store this stack was bought at when it was added; a later restock's store is on its batch. Null when none was given.
   """
   storeId: ID
+  """
+  For a NO_CONVERSION stack: the catalog's package size, which, recorded as
+  this stack's, relates its count to the held stack. Null otherwise, or when
+  the catalog states none.
+  """
+  suggestedPackageSize: Measure
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
   """tareWeight in netWeightUnit, read in both unit systems; null with it."""
@@ -12767,6 +12805,18 @@ enum PasswordActionStatus {
   SENT
   """The token was valid (validatePasswordResetToken)."""
   VALIDATED
+}
+
+"""
+A merge a member can confirm: the stack this one would join, and what it would bring.
+"""
+type PendingMerge {
+  """What proposed rests on; null once facts convert it"""
+  assumption: ConversionAssumption
+  """This stack's stock in with's unit"""
+  proposed: Measure!
+  """The held stack this one would merge into"""
+  with: PantryItem!
 }
 
 """Period granularity for ledger analytics"""
