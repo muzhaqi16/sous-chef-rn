@@ -360,5 +360,39 @@
     },
     "emptyTitle": "Aún no hay denuncias",
     "emptyDescription": "Las denuncias que envíes a los moderadores aparecen aquí, con el estado de cada una."
+  },
+  "brandLists": {
+    "title": "Listas de marcas",
+    "intro": "Guarda tus propias listas de marcas, como las que boicoteas o evitas. Al escanear, te avisa si la marca de un producto está en una lista activa.",
+    "emptyTitle": "Aún no hay listas de marcas",
+    "emptyBody": "Crea una lista y añade marcas aquí o directamente desde un escaneo.",
+    "newList": "Nueva lista de marcas",
+    "nameLabel": "Nombre de la lista",
+    "namePlaceholder": "p. ej. Boicot",
+    "rename": "Cambiar nombre",
+    "deleteList": "Eliminar lista",
+    "deleteTitle": "¿Eliminar {{name}}?",
+    "deleteBody": "Sus marcas se eliminan con ella.",
+    "brandCount_one": "{{count}} marca",
+    "brandCount_other": "{{count}} marcas",
+    "applies": "Usar esta lista al escanear",
+    "useNamed": "Usar {{name}} al escanear",
+    "addBrand": "Añadir una marca",
+    "addBrandTitle": "Añadir una marca a {{name}}",
+    "searchBrands": "Buscar marcas",
+    "noteLabel": "Motivo (opcional)",
+    "notePlaceholder": "p. ej. empresa matriz",
+    "noBrands": "Esta lista aún no tiene marcas.",
+    "errors": {
+      "createFailed": "No se pudo crear la lista.",
+      "updateFailed": "No se pudo actualizar la lista.",
+      "deleteFailed": "No se pudo eliminar la lista.",
+      "addFailed": "No se pudo añadir la marca.",
+      "removeFailed": "No se pudo quitar la marca."
+    },
+    "nameRequired": "Ponle un nombre a la lista.",
+    "nameTooLong": "El nombre no puede pasar de 100 caracteres.",
+    "pickList": "Elige una lista",
+    "alreadyOn": "Ya está en ella"
   }
 }

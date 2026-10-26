@@ -66,7 +66,8 @@ export const SearchResultsScreen: React.FC<
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
   const { t } = useTranslation();
-  const { goBack, navigation, toSearchResults } = useAppNavigation();
+  const { goBack, navigation, toSearchResults, toBrandLists } =
+    useAppNavigation();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -149,6 +150,7 @@ export const SearchResultsScreen: React.FC<
               shoppingListId,
             })
           }
+          onOpenBrandLists={toBrandLists}
         />
       );
     }

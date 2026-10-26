@@ -38,6 +38,7 @@ export const useConfigurableSettings = () => {
     toAppSettings,
     toDataSources,
     toMyReports,
+    toBrandLists,
     toAppearance,
     toDebugInfo,
     toPerformanceDashboard,
@@ -236,6 +237,8 @@ export const useConfigurableSettings = () => {
         return { ...baseItem, onPress: toDataSources };
       case 'myReports':
         return { ...baseItem, onPress: toMyReports };
+      case 'brandLists':
+        return { ...baseItem, onPress: toBrandLists };
       case 'appearance':
         return { ...baseItem, onPress: toAppearance };
       case 'debugInfo':

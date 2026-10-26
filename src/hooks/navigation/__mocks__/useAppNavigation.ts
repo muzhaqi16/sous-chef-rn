@@ -19,6 +19,8 @@ const mockNavigation = {
   toStoreMode: jest.fn(),
   toHomeDetail: jest.fn(),
   toHomeDietaryNeeds: jest.fn(),
+  toBrandLists: jest.fn(),
+  toBrandList: jest.fn(),
   toReceiptScan: jest.fn(),
   toBarcode: jest.fn(),
   navigation: {

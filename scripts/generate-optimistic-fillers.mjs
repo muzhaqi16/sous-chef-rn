@@ -377,6 +377,30 @@ const TARGETS = [
       favorites_row: ['NEUTRAL_LOCAL_SAVED_RECIPE', 'Favorites_RowFragment'],
     },
   },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'hooks',
+      'useBrandLists.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'hooks',
+      'useBrandListsNeutral.generated.ts',
+    ),
+    typesFrom: './useBrandLists.generated',
+    unmasked: true,
+    fragments: {
+      useBrandLists_row: [
+        'NEUTRAL_LOCAL_BRAND_LIST',
+        'UseBrandLists_RowFragment',
+      ],
+    },
+  },
 ];
 
 function neutralForField(schema, parentType, fieldName, selectionSet, path) {

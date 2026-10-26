@@ -360,5 +360,39 @@
     },
     "emptyTitle": "Ancora nessuna segnalazione",
     "emptyDescription": "Le segnalazioni che invii ai moderatori compaiono qui, con lo stato di ciascuna."
+  },
+  "brandLists": {
+    "title": "Liste di marchi",
+    "intro": "Tieni le tue liste di marchi, ad esempio quelli che boicotti o eviti. La scansione ti avvisa quando il marchio di un prodotto è in una lista attiva.",
+    "emptyTitle": "Ancora nessuna lista di marchi",
+    "emptyBody": "Crea una lista e aggiungi i marchi qui o direttamente da una scansione.",
+    "newList": "Nuova lista di marchi",
+    "nameLabel": "Nome della lista",
+    "namePlaceholder": "es. Boicottaggio",
+    "rename": "Rinomina lista",
+    "deleteList": "Elimina lista",
+    "deleteTitle": "Eliminare {{name}}?",
+    "deleteBody": "I suoi marchi vengono rimossi con essa.",
+    "brandCount_one": "{{count}} marchio",
+    "brandCount_other": "{{count}} marchi",
+    "applies": "Usa questa lista nelle scansioni",
+    "useNamed": "Usa {{name}} nelle scansioni",
+    "addBrand": "Aggiungi un marchio",
+    "addBrandTitle": "Aggiungi un marchio a {{name}}",
+    "searchBrands": "Cerca marchi",
+    "noteLabel": "Motivo (facoltativo)",
+    "notePlaceholder": "es. società madre",
+    "noBrands": "Questa lista non ha ancora marchi.",
+    "errors": {
+      "createFailed": "Impossibile creare la lista.",
+      "updateFailed": "Impossibile aggiornare la lista.",
+      "deleteFailed": "Impossibile eliminare la lista.",
+      "addFailed": "Impossibile aggiungere il marchio.",
+      "removeFailed": "Impossibile rimuovere il marchio."
+    },
+    "nameRequired": "Dai un nome alla lista.",
+    "nameTooLong": "Il nome non può superare i 100 caratteri.",
+    "pickList": "Scegli una lista",
+    "alreadyOn": "Già presente"
   }
 }

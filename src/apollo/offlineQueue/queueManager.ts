@@ -97,6 +97,8 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'storeId',
   'targetStoreId',
   'preferredStoreId',
+  // A brand list a queued createBrandList may have minted.
+  'brandListId',
 ];
 
 /** `value` with every occurrence of the id `from` replaced by `to`. */

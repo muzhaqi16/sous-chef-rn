@@ -360,5 +360,39 @@
     },
     "emptyTitle": "Ende asnjë raportim",
     "emptyDescription": "Raportimet që u dërgon moderatorëve shfaqen këtu, me gjendjen e secilit."
+  },
+  "brandLists": {
+    "title": "Listat e markave",
+    "intro": "Mbaj listat e tua të markave, si ato që bojkoton ose shmang. Skanimi të tregon kur marka e një produkti është në një listë aktive.",
+    "emptyTitle": "Ende nuk ka lista markash",
+    "emptyBody": "Krijo një listë, pastaj shto marka këtu ose drejt nga një skanim.",
+    "newList": "Listë e re markash",
+    "nameLabel": "Emri i listës",
+    "namePlaceholder": "p.sh. Bojkot",
+    "rename": "Riemërto listën",
+    "deleteList": "Fshi listën",
+    "deleteTitle": "Të fshihet {{name}}?",
+    "deleteBody": "Markat e saj hiqen bashkë me të.",
+    "brandCount_one": "{{count}} markë",
+    "brandCount_other": "{{count}} marka",
+    "applies": "Përdore këtë listë në skanime",
+    "useNamed": "Përdor {{name}} në skanime",
+    "addBrand": "Shto një markë",
+    "addBrandTitle": "Shto një markë te {{name}}",
+    "searchBrands": "Kërko marka",
+    "noteLabel": "Arsyeja (opsionale)",
+    "notePlaceholder": "p.sh. kompania mëmë",
+    "noBrands": "Kjo listë nuk ka ende marka.",
+    "errors": {
+      "createFailed": "Lista nuk u krijua dot.",
+      "updateFailed": "Lista nuk u përditësua dot.",
+      "deleteFailed": "Lista nuk u fshi dot.",
+      "addFailed": "Marka nuk u shtua dot.",
+      "removeFailed": "Marka nuk u hoq dot."
+    },
+    "nameRequired": "Jepi listës një emër.",
+    "nameTooLong": "Emri nuk mund të kalojë 100 karaktere.",
+    "pickList": "Zgjidh një listë",
+    "alreadyOn": "Është tashmë në të"
   }
 }

@@ -63,6 +63,11 @@
       "source": {
         "kroger": "Kroger"
       }
+    },
+    "brandLists": {
+      "onList": "Në listën tënde «{{list}}»",
+      "viaParent": "Në listë si {{parent}}, kompania mëmë",
+      "addToList": "Shto {{brand}} në një listë"
     }
   }
 }

@@ -191,6 +191,11 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
         labelKey: 'profile.labels.dietaryProfile',
         type: 'navigation',
       },
+      {
+        key: 'brandLists',
+        labelKey: 'brandLists.title',
+        type: 'navigation',
+      },
     ],
   },
   {

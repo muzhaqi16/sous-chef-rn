@@ -44,6 +44,12 @@ jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
   useProductOrigin: () => ({ lines: [] }),
 }));
+jest.mock('#features/barcode/hooks/useProductBrandListings', () => ({
+  useProductBrandListings: () => ({ listings: [], refresh: jest.fn() }),
+}));
+jest.mock('#features/profile/hooks/useBrandLists', () => ({
+  useBrandLists: () => ({ lists: [], addBrand: jest.fn() }),
+}));
 jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
   useProductDietaryAlerts: () => ({
     check: 'none',

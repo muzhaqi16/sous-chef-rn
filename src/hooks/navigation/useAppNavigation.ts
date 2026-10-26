@@ -105,6 +105,9 @@ export function useAppNavigation() {
     toAppSettings: () => navigation.navigate('AppSettings'),
     toDataSources: () => navigation.navigate('DataSources'),
     toMyReports: () => navigation.navigate('MyReports'),
+    toBrandLists: () => navigation.navigate('BrandLists'),
+    toBrandList: (params: RootStackParamList['BrandList']) =>
+      navigation.navigate('BrandList', params),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
     toReceiptScan: () =>

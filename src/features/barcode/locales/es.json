@@ -63,6 +63,11 @@
       "source": {
         "kroger": "Kroger"
       }
+    },
+    "brandLists": {
+      "onList": "En tu lista «{{list}}»",
+      "viaParent": "Listada como {{parent}}, su empresa matriz",
+      "addToList": "Añadir {{brand}} a una lista"
     }
   }
 }

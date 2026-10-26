@@ -12,6 +12,7 @@ import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { t } from '#/i18n';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
 import type { PackSizeOutcome } from '../PackSizeSheet';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -91,6 +92,20 @@ jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
 // Alerts have their own tests; here the household has nothing to check.
 jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
   useProductOrigin: () => ({ lines: [] }),
+}));
+const mockRefreshListings = jest.fn();
+jest.mock('#features/barcode/hooks/useProductBrandListings', () => ({
+  useProductBrandListings: () => ({
+    listings: [],
+    refresh: mockRefreshListings,
+  }),
+}));
+const mockAddBrand = jest.fn();
+jest.mock('#features/profile/hooks/useBrandLists', () => ({
+  useBrandLists: () => ({
+    lists: [{ id: 'list-avoid', name: 'Avoid', enabled: true, brands: [] }],
+    addBrand: mockAddBrand,
+  }),
 }));
 jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
   useProductDietaryAlerts: () => ({
@@ -466,6 +481,26 @@ describe('SearchResults', () => {
     expect(line?.brand).toBeUndefined();
     expect(line?.netWeight).toBeUndefined();
     expect(line?.unit).toBeUndefined();
+  });
+
+  it("puts the scanned brand on one of the user's lists, then re-reads its listings", async () => {
+    mockAddBrand.mockResolvedValue(true);
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{ ...mockItem, brandId: 'brand-pack', brandName: 'Pack Brand' }}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.addBrandToList));
+    fireEvent.press(screen.getByText('Avoid'));
+
+    await waitFor(() => expect(mockRefreshListings).toHaveBeenCalled());
+    expect(mockAddBrand).toHaveBeenCalledWith(
+      'list-avoid',
+      { id: 'brand-pack', name: 'Pack Brand' },
+      null,
+    );
   });
 
   describe('the pantry item count', () => {

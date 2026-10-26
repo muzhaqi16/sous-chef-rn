@@ -26,6 +26,10 @@ import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory
 import { StorePriceSection } from './StorePriceSection';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
 import { ProductOriginSection } from './ProductOriginSection';
+import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
+import { BrandListingsSection } from './BrandListingsSection';
+import { useBrandLists } from '#features/profile/hooks/useBrandLists';
+import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -39,6 +43,8 @@ export interface SearchResultsProps {
   shoppingListId?: string;
   /** Opens another barcode's result, for a household alternative. */
   onOpenBarcode?: (barcode: string) => void;
+  /** Opens the user's brand lists, for a user who has none yet. */
+  onOpenBrandLists?: () => void;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -52,12 +58,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   pantryId,
   shoppingListId,
   onOpenBarcode,
+  onOpenBrandLists,
 }) => {
   const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAskingPackSize, setIsAskingPackSize] = useState(false);
   const [isAskingPrice, setIsAskingPrice] = useState(false);
+  const [isAddingToList, setIsAddingToList] = useState(false);
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
@@ -69,6 +77,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
   const household = useProductDietaryAlerts(item.id);
   const origin = useProductOrigin(item.id, item.brandParentName);
+  const brandListings = useProductBrandListings(item.id);
+  const brandLists = useBrandLists();
+  // The scanned barcode's own brand: the one a list matches on a scan.
+  const scannedBrand =
+    item.brandId && item.brandName
+      ? { id: item.brandId, name: item.brandName }
+      : null;
   // The unit the price sheet counts in: the matched line's, else the
   // product's own. A line with no unit of its own gets no comparison.
   const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
@@ -268,6 +283,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
       <ProductOriginSection {...origin} />
 
+      <BrandListingsSection
+        listings={brandListings.listings}
+        brandName={scannedBrand?.name ?? null}
+        onAddToList={() => setIsAddingToList(true)}
+      />
+
       <HouseholdAlertsSection
         {...household}
         onOpenAlternative={
@@ -321,6 +342,28 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           itemName={item.name}
           onDismiss={() => setIsAskingPackSize(false)}
           onConfirm={handlePackSize}
+        />
+      )}
+
+      {!!scannedBrand && (
+        <AddToBrandListSheet
+          visible={isAddingToList}
+          brand={scannedBrand}
+          lists={brandLists.lists}
+          onDismiss={() => setIsAddingToList(false)}
+          onPick={async (listId, reason) => {
+            const added = await brandLists.addBrand(
+              listId,
+              scannedBrand,
+              reason,
+            );
+            if (added) brandListings.refresh();
+            return added;
+          }}
+          onMakeList={() => {
+            setIsAddingToList(false);
+            onOpenBrandLists?.();
+          }}
         />
       )}
 

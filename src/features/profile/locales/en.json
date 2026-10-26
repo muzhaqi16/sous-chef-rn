@@ -360,5 +360,39 @@
     },
     "emptyTitle": "No reports yet",
     "emptyDescription": "Reports you send to the moderators appear here, with where each one stands."
+  },
+  "brandLists": {
+    "title": "Brand lists",
+    "intro": "Keep your own lists of brands, such as ones you boycott or avoid. A scan tells you when a product's brand is on a list you have on.",
+    "emptyTitle": "No brand lists yet",
+    "emptyBody": "Make a list, then add brands here or straight from a scan.",
+    "newList": "New brand list",
+    "nameLabel": "List name",
+    "namePlaceholder": "e.g. Boycott",
+    "rename": "Rename list",
+    "deleteList": "Delete list",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteBody": "Its brands are removed with it.",
+    "brandCount_one": "{{count}} brand",
+    "brandCount_other": "{{count}} brands",
+    "applies": "Use this list on scans",
+    "useNamed": "Use {{name}} on scans",
+    "addBrand": "Add a brand",
+    "addBrandTitle": "Add a brand to {{name}}",
+    "searchBrands": "Search brands",
+    "noteLabel": "Why (optional)",
+    "notePlaceholder": "e.g. parent company",
+    "noBrands": "No brands on this list yet.",
+    "errors": {
+      "createFailed": "Couldn't create the list.",
+      "updateFailed": "Couldn't update the list.",
+      "deleteFailed": "Couldn't delete the list.",
+      "addFailed": "Couldn't add the brand.",
+      "removeFailed": "Couldn't remove the brand."
+    },
+    "nameRequired": "Give the list a name.",
+    "nameTooLong": "Keep the name to 100 characters.",
+    "pickList": "Choose a list",
+    "alreadyOn": "Already on it"
   }
 }

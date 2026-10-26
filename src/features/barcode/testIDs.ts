@@ -18,4 +18,7 @@ export const barcodeTestIDs = {
   storePrices: 'store-prices',
   /** Where a scanned product comes from and who owns its brand. */
   productOrigin: 'product-origin',
+  /** The user's own lists a scanned brand is on, and the add action. */
+  brandListings: 'brand-listings',
+  addBrandToList: 'add-brand-to-list',
 };

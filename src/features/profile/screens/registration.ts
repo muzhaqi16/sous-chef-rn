@@ -20,6 +20,12 @@ const ChangePasswordScreen = React.lazy(() => import('./ChangePasswordScreen'));
 const AppearanceScreen = React.lazy(() => import('./AppearanceScreen'));
 const DataSourcesScreen = React.lazy(() => import('./DataSourcesScreen'));
 const MyReportsScreen = React.lazy(() => import('./MyReportsScreen'));
+const BrandListsScreen = React.lazy(() =>
+  import('./BrandListsScreen').then(m => ({ default: m.BrandListsScreen })),
+);
+const BrandListScreen = React.lazy(() =>
+  import('./BrandListScreen').then(m => ({ default: m.BrandListScreen })),
+);
 // Owned by the notifications feature but only ever reached from Profile's
 // settings rows, so it is registered alongside them.
 const NotificationSettingsScreen = React.lazy(
@@ -94,6 +100,16 @@ export const profileScreens = {
   }),
   MyReports: createNativeStackScreen({
     screen: MyReportsScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  BrandLists: createNativeStackScreen({
+    screen: BrandListsScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  BrandList: createNativeStackScreen({
+    screen: BrandListScreen,
     options: settingsScreenOptions,
     linking: null,
   }),
