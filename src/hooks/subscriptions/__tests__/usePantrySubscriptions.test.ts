@@ -251,6 +251,40 @@ describe('usePantrySubscriptions', () => {
     expect(mockAddToConnection).not.toHaveBeenCalled();
   });
 
+  // USM-3: a merge names the survivor as the node and the folded stacks in
+  // `mergedIds`. Those rows are gone, and the survivor took their stock.
+  it('drops the merged rows and reads the survivor back', async () => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const client = makeClient(
+      jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
+      jest.fn().mockResolvedValue({
+        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+      }),
+    );
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(MutationType.Merged, undefined),
+        mergedIds: ['item-2', 'item-3'],
+      },
+      client,
+    );
+
+    expect(mockRemoveFromConnection.mock.calls).toEqual([
+      [client.cache, 'pantry-1', 'item-2', { evictItem: true }],
+      [client.cache, 'pantry-1', 'item-3', { evictItem: true }],
+    ]);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { id: 'item-1' } }),
+    );
+    expect(mockAddToConnection).not.toHaveBeenCalled();
+    // The counts move with the rows; the server's summary states them.
+    await flushSummaryRead();
+    expect(summaryReads(client.query)).toHaveLength(1);
+  });
+
   it('ignores its own echo', async () => {
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));

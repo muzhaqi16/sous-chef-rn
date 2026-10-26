@@ -123,6 +123,10 @@ export function useAppNavigation() {
       navigation.navigate('PantryItem', params),
     toPantryItemDetail: (params: RootStackParamList['PantryItemDetail']) =>
       navigation.navigate('PantryItemDetail', params),
+    /** A detail whose stack was merged away shows the survivor in its place. */
+    replaceWithPantryItemDetail: (
+      params: RootStackParamList['PantryItemDetail'],
+    ) => navigation.dispatch(replaceAction('PantryItemDetail', params)),
     toNutritionScreen: (params: RootStackParamList['NutritionScreen']) =>
       navigation.navigate('NutritionScreen', params),
     toPantryAnalytics: (params: RootStackParamList['PantryAnalytics']) =>

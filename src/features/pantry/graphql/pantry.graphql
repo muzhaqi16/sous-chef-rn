@@ -1067,6 +1067,9 @@ subscription PantryEvents($pantryId: ID!) {
     subtype
     pantryId
     timestamp
+    # On a MERGED event, the stacks folded into `node`: gone as rows, their
+    # ids now read as the survivor.
+    mergedIds
     node {
       __typename
       ... on PantryItem {

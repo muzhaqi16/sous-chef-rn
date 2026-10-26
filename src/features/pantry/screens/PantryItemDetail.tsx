@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { HorizontalRail } from '#components/molecules/HorizontalRail';
@@ -106,6 +106,7 @@ export const PantryItemDetail: React.FC<
     toNutritionScreen,
     toPantryBatchHistory,
     toPantryUsageHistory,
+    replaceWithPantryItemDetail,
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
@@ -123,11 +124,18 @@ export const PantryItemDetail: React.FC<
     batchPricing,
     batchTotalCount,
     deletedOnServer,
+    mergedIntoId,
     itemLoading,
     itemError,
     isUnconfirmed,
     refreshAll,
   } = usePantryItemDetailData(itemId);
+
+  // Merged away: the survivor takes this screen's place, so Back still leads
+  // where it did.
+  useEffect(() => {
+    if (mergedIntoId) replaceWithPantryItemDetail({ itemId: mergedIntoId });
+  }, [mergedIntoId, replaceWithPantryItemDetail]);
 
   const handleRefresh = () => {
     void executeRefreshWithFinally(refreshAll, setRefreshing);

@@ -759,9 +759,10 @@ export class QueueManager {
   }
 
   /**
-   * A create the server merged into a row it held, maybe another member's, and
-   * whose minted id it now refuses. A removal of the minted row is dropped: it
-   * would delete a row the person never saw.
+   * A row the server merged into another it held, maybe another member's, and
+   * whose id it now refuses: a merged create, or a stack merged since its
+   * delta was queued. A removal of that row is dropped: it would delete a row
+   * the person never saw.
    */
   private adoptSurvivingRow(
     replayed: QueuedMutation,

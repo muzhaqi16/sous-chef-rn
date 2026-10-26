@@ -56,6 +56,10 @@ export function usePantryItemDetailData(itemId: string) {
   const deletedOnServer =
     !isUnconfirmed &&
     (answeredNoSuchItem || isResourceNotFoundError(itemError));
+  // A stack merged into another answers as the survivor (USM-3): its id, not
+  // this one, is what the screen should show.
+  const answered = itemData?.pantryItem;
+  const mergedIntoId = answered && answered.id !== itemId ? answered.id : null;
 
   // Edges arrive masked, and a batch's own edit leaves the query result as it
   // was: each is read live so status/expiresOn reads and BatchSection's
@@ -86,6 +90,7 @@ export function usePantryItemDetailData(itemId: string) {
     batchTotalCount:
       batchesData?.pantryItemBatchesConnection.totalCount ?? undefined,
     deletedOnServer,
+    mergedIntoId,
     itemLoading,
     itemError,
     isUnconfirmed,

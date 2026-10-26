@@ -137,6 +137,16 @@ async function handleItemChanged(
     return;
   }
 
+  // A merge folded `mergedIds` into the node: those rows are gone, and the
+  // survivor, which took their stock, reads back below as an update.
+  if (mutation === MutationType.Merged) {
+    for (const mergedId of payload.mergedIds ?? []) {
+      removeFromPantryItemsConnection(client.cache, pantryId, mergedId, {
+        evictItem: true,
+      });
+    }
+  }
+
   const add = isAdd(mutation);
   if (!add && !isItemCached(client, itemId)) return;
 

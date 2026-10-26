@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { t } from '#/i18n';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -70,12 +70,14 @@ jest.mock('#features/pantry/hooks/usePantryItemDetailActions', () => ({
 }));
 
 const mockToRecipeDetail = jest.fn();
+const mockReplaceWithPantryItemDetail = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     goBack: jest.fn(),
     navigateTo: { pantryItem: jest.fn(), nutritionScreen: jest.fn() },
     navigate: jest.fn(),
     toRecipeDetail: mockToRecipeDetail,
+    replaceWithPantryItemDetail: mockReplaceWithPantryItemDetail,
   }),
 }));
 
@@ -679,6 +681,30 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.getByText('4.8')).toBeTruthy();
     expect(screen.getByText('3.6')).toBeTruthy();
     expect(screen.getByText('Per 100 ml')).toBeTruthy();
+  });
+
+  // USM-3: a stack merged into another answers as the survivor, which takes
+  // this screen's place.
+  it('shows the survivor in place of a stack merged into it', async () => {
+    renderWithApollo(
+      <PantryItemDetail route={{ params: { itemId: 'pi-merged' } }} />,
+      { operationMocks: [itemMock(fullItem)] },
+    );
+
+    await waitFor(() =>
+      expect(mockReplaceWithPantryItemDetail).toHaveBeenCalledWith({
+        itemId: 'pi1',
+      }),
+    );
+  });
+
+  it('stays put when the answer is the stack it asked for', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+
+    await screen.findAllByText('Milk');
+    expect(mockReplaceWithPantryItemDetail).not.toHaveBeenCalled();
   });
 
   // A product whose record states none reads its concept's values: titled as
