@@ -55,6 +55,13 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   const [severity, setSeverity] = useState(RestrictionSeverity.Preference);
   const [saving, setSaving] = useState(false);
 
+  // Adjusting state during render: a fresh open starts at the mildest.
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) setSeverity(RestrictionSeverity.Preference);
+  }
+
   useEffect(() => {
     if (!visible) reset();
   }, [visible, reset]);

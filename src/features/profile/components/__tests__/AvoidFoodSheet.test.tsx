@@ -80,6 +80,28 @@ describe('AvoidFoodSheet', () => {
     );
   });
 
+  it('opens again at the mildest severity', async () => {
+    const onPick = jest.fn().mockResolvedValue(true);
+    const sheet = (visible: boolean) => (
+      <AvoidFoodSheet visible={visible} onDismiss={jest.fn()} onPick={onPick} />
+    );
+    const { rerender } = renderWithApollo(sheet(true));
+    fireEvent.press(
+      screen.getByText(t('dietaryProfile.avoidSeverity.allergy')),
+    );
+
+    rerender(sheet(false));
+    rerender(sheet(true));
+    fireEvent.press(screen.getByText('Bacon'));
+
+    await waitFor(() =>
+      expect(onPick).toHaveBeenCalledWith(
+        'bacon',
+        RestrictionSeverity.Preference,
+      ),
+    );
+  });
+
   it('stays open when the food could not be added', async () => {
     const { onDismiss, onPick } = renderSheet(false);
 
