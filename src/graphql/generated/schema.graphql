@@ -225,6 +225,12 @@ input AddBrandToListInput {
   """A catalog brand, such as a scanned product's Item.variationBrand"""
   brandId: ID!
   brandListId: ID!
+  """
+  Optional client-generated permanent ID (CUID2) for the entry. A replay with
+  an id already applied converges on that entry; an id naming another entry
+  is a ConflictError.
+  """
+  id: ID
   """The owner's own note, at most 500 characters"""
   reason: String
 }
@@ -15907,9 +15913,11 @@ enum ReligiousDiet {
   KOSHER
 }
 
+"""Names the entry by id, or by brandListId and brandId."""
 input RemoveBrandFromListInput {
-  brandId: ID!
-  brandListId: ID!
+  brandId: ID
+  brandListId: ID
+  id: ID
 }
 
 type RemoveBrandFromListPayload {
