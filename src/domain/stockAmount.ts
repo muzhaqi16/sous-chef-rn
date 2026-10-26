@@ -51,17 +51,17 @@ interface BoughtOptions {
 /**
  * `count` of a product bought. Never an amount in the unit the write defaults
  * to: that is the held stack's, so 1 lands as 1 mL of milk. A counted stack
- * counts it, in the buyer's unit or its own; otherwise it is packages, for the
- * API to size.
+ * counts one in its own unit; any other is packages, in the buyer's unit, for
+ * the API to size or restate.
  */
 export function boughtAmountOf(
   count: number,
   { heldUnit, packageSize, unitId }: BoughtOptions = {},
 ): StockAmountInput {
   if (heldUnit?.type === UnitType.Count) {
-    return packageSize
+    return packageSize || (unitId != null && unitId !== heldUnit.id)
       ? stockAmountOf(count, { asPackages: true, packageSize, unitId })
-      : stockAmountOf(count, { unitId: unitId ?? heldUnit.id });
+      : stockAmountOf(count, { unitId: heldUnit.id });
   }
   // A stack held by weight refuses a package unit: count × size is what lands.
   return stockAmountOf(count, {

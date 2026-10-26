@@ -39,10 +39,17 @@ describe('boughtAmountOf', () => {
     ).toStrictEqual({ packages: { count: 1, size: JAR } });
   });
 
-  it("counts in the buyer's unit, naming it wherever the stack can take it", () => {
+  it("counts in a counted stack's own unit when the buyer names it", () => {
+    expect(
+      boughtAmountOf(2, { heldUnit: PIECE, unitId: 'piece' }),
+    ).toStrictEqual({ measured: { quantity: 2, unitId: 'piece' } });
+  });
+
+  // The API restates it into the stack, or a forced add keeps it apart.
+  it("states packages in the buyer's unit wherever the stack can take it", () => {
     const unitId = 'jar';
     expect(boughtAmountOf(2, { heldUnit: PIECE, unitId })).toStrictEqual({
-      measured: { quantity: 2, unitId },
+      packages: { count: 2, unitId },
     });
     expect(
       boughtAmountOf(2, { heldUnit: PIECE, packageSize: JAR, unitId }),

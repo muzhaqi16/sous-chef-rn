@@ -119,12 +119,15 @@ describe('restocking the row a scan duplicated', () => {
     ],
     ['unsized', null, { measured: { quantity: 2, unitId: 'unit-jar' } }],
   ])(
-    'restocks a counted stack by the %s packages in the unit picked',
+    'restocks a counted stack by the %s packages in its own unit',
     async (_label, size, amount) => {
       const restock = recordMock(RestockPantryItemDocument, {
         data: { restockPantryItem: null },
       });
-      const { result } = renderScan(heldIn(UnitType.Count, 'unit-pc'), restock);
+      const { result } = renderScan(
+        heldIn(UnitType.Count, 'unit-jar'),
+        restock,
+      );
 
       await act(async () => {
         await result.current.restockDuplicate(SCANNED, ROW_ID, {
@@ -136,6 +139,35 @@ describe('restocking the row a scan duplicated', () => {
       });
 
       expect(amountSent(restock)).toStrictEqual(amount);
+    },
+  );
+
+  // A restock refuses a unit its stack is not counted in; a forced add joins
+  // the stack when the unit restates into it, else keeps it apart.
+  it.each([
+    ['sized', { netWeight: 400, netWeightUnitId: 'unit-g' }],
+    ['unsized', null],
+  ])(
+    'adds %s packages in another counted unit as a forced add',
+    async (_label, size) => {
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const { result } = renderScan(heldIn(UnitType.Count, 'unit-pc'), create);
+
+      await act(async () => {
+        await result.current.restockDuplicate(SCANNED, ROW_ID, {
+          packaged: true,
+          count: 2,
+          unitId: 'unit-jar',
+          size,
+        });
+      });
+
+      expect(create.fired[0]?.input).toMatchObject({ forceAdd: true });
+      expect(amountSent(create)).toStrictEqual({
+        packages: { count: 2, unitId: 'unit-jar', ...(size ? { size } : {}) },
+      });
     },
   );
 

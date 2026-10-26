@@ -71,7 +71,8 @@ type PantryRestockOptions = Stated & {
 /**
  * The one restock of a held stack: an amount countable in its own unit moves
  * the row at once, offline too; packages wait for the server to size them. A
- * count nothing sizes goes as a `forceAdd` add, counted into a counted stack.
+ * count nothing sizes, or one in a unit the stack is not counted in, goes as a
+ * `forceAdd` add.
  */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -117,18 +118,23 @@ export function usePantryRestock(pantryId: string | undefined) {
       ...details
     }: PantryRestockOptions,
   ): Promise<PantryRestockOutcome> => {
+    const heldUnit = readStackUnit(client.cache, pantryItemId);
     const amount =
       stated ??
       boughtAmountOf(bought.count, {
-        heldUnit: readStackUnit(client.cache, pantryItemId),
+        heldUnit,
         packageSize: bought.packageSize,
         unitId: bought.unitId,
       });
     const refusal = fallback ?? t('errors.restockFailedRetry');
-    // A restock names one stack and refuses packages nothing sizes; an add
-    // with `forceAdd` counts them as the API counts any add: in a counted stack
-    // of the item, joined if one is held.
-    if (bought && amount.packages && !amount.packages.size) {
+    // A restock names one stack: it refuses packages nothing sizes, and a count
+    // in a unit the stack is not counted in. An add with `forceAdd` takes both
+    // as the API counts any add: joined to a held stack its unit restates
+    // into, else a stack of its own.
+    const { packages } = amount;
+    const inOtherUnit =
+      packages?.unitId != null && packages.unitId !== heldUnit?.id;
+    if (bought && packages && (!packages.size || inOtherUnit)) {
       const { itemId } = bought.item;
       const outcome = await intake.addItem(
         bought.item.name,
