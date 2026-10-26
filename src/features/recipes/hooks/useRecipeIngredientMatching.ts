@@ -352,18 +352,22 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
-    const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
-      em => {
+    // Each entry keeps its stack's name: a skip reports the entry by it.
+    const entries: { stackName: string; usage: IngredientUsageInput }[] =
+      editableMatches.flatMap(em => {
         const swap = em.selectedSubstitute;
         if (swap) {
           if (!em.isIncluded) return [];
           // Its parts are drawn instead; the ingredient's own stacks are not.
           return swap.parts.map(part => ({
-            recipeIngredientId: em.ingredient.id,
-            pantryItemId: part.stack.id,
-            actualQuantity: part.quantity,
-            actualUnitId: part.unitId,
-            substituteId: swap.id,
+            stackName: part.stack.itemName,
+            usage: {
+              recipeIngredientId: em.ingredient.id,
+              pantryItemId: part.stack.id,
+              actualQuantity: part.quantity,
+              actualUnitId: part.unitId,
+              substituteId: swap.id,
+            },
           }));
         }
         const pantryItem = em.selectedStack;
@@ -378,17 +382,20 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         }
         return [
           {
-            recipeIngredientId: em.ingredient.id,
-            pantryItemId: pantryItem.id,
-            actualQuantity: quantity,
-            actualUnitId:
-              em.adjustedUnitId ??
-              em.match.suggestedUnit?.id ??
-              pantryItem.unit.id,
+            stackName: pantryItem.itemName,
+            usage: {
+              recipeIngredientId: em.ingredient.id,
+              pantryItemId: pantryItem.id,
+              actualQuantity: quantity,
+              actualUnitId:
+                em.adjustedUnitId ??
+                em.match.suggestedUnit?.id ??
+                pantryItem.unit.id,
+            },
           },
         ];
-      },
-    );
+      });
+    const ingredientsUsed = entries.map(entry => entry.usage);
 
     if (ingredientsUsed.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
@@ -436,8 +443,21 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }
     // The cook commits whole. What it reports apart are the entries no
     // conversion could take to their stack's unit; queued, every entry replays.
-    const skippedCount = data?.skippedIngredients.length ?? 0;
-    const deductedCount = ingredientsUsed.length - skippedCount;
+    // The toast counts ingredients, and a swap's parts are entries of one. A
+    // skip no entry's stack claims still counts, so none is hidden.
+    const notDeducted = new Set(
+      (data?.skippedIngredients ?? []).map(
+        ({ itemName }) =>
+          entries.find(entry => entry.stackName === itemName)?.usage
+            .recipeIngredientId ?? itemName,
+      ),
+    );
+    const skippedCount = notDeducted.size;
+    const deductedCount = Math.max(
+      0,
+      new Set(ingredientsUsed.map(usage => usage.recipeIngredientId)).size -
+        skippedCount,
+    );
     toastService.success(
       skippedCount > 0
         ? t('recipes.deductedFromPantryFailed', {
