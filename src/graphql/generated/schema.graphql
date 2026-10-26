@@ -1476,12 +1476,6 @@ enum CategoryType {
 }
 
 input ChangePantryItemItemInput {
-  """
-  Onto an item the pantry holds: the stack merges into the held one where
-  it converts on facts, and the payload's pantryItem is that stack; else it
-  is moved and kept apart (PantryItem.keptApart). False when omitted.
-  """
-  forceAdd: Boolean
   idempotencyKey: ID
   """
   The catalog item the stack is; an item merged into another names that one
@@ -1850,14 +1844,6 @@ input ConnectivityInput {
   carrier: String
   isAirplaneMode: Boolean
   isLocationEnabled: Boolean
-}
-
-"""What a figure rests on where no fact states it."""
-enum ConversionAssumption {
-  """Water's density"""
-  DENSITY
-  """The catalog's package size, which the stack does not record"""
-  PACKAGE
 }
 
 """Conversion availability result"""
@@ -2489,11 +2475,6 @@ client adopts in place of the id it minted.
 enum CreateOutcome {
   """A new row was written"""
   CREATED
-  """
-  A new row was written beside a held row of the same item, which it
-  converts into only by an assumption or not at all (PantryItem.keptApart)
-  """
-  KEPT_APART
   """An existing row absorbed the create"""
   MERGED
 }
@@ -7563,14 +7544,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union JoinShoppingListByShareCodeResult = ConflictError | ForbiddenError | JoinShoppingListByShareCodePayload | NotFoundError | ValidationError
 
-"""Why a pantry stack stands apart from another stack of its item."""
-enum KeptApartReason {
-  """Only an assumed density or package size relates them"""
-  ASSUMED_CONVERSION
-  """No conversion relates it to the held stack"""
-  NO_CONVERSION
-}
-
 input LeaveHomeInput {
   homeId: ID!
 }
@@ -9159,28 +9132,6 @@ type MembershipStatusStats {
   suspended: Int!
 }
 
-input MergePantryItemsInput {
-  """The stacks folded into it: its item's, in its pantry"""
-  absorbedIds: [ID!]!
-  """Confirms a conversion that rests on an assumption; false when omitted"""
-  confirmConversion: Boolean
-  idempotencyKey: ID
-  """The stack that stays"""
-  survivorId: ID!
-}
-
-type MergePantryItemsPayload {
-  """The survivor, holding every absorbed stack's stock"""
-  pantryItem: PantryItem!
-}
-
-"""
-Result of MergePantryItems. Select on MergePantryItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union MergePantryItemsResult = ConflictError | ForbiddenError | MergePantryItemsPayload | NotFoundError | ValidationError
-
 enum MfaMethod {
   BIOMETRIC
   EMAIL
@@ -9692,9 +9643,9 @@ type Mutation {
   size, portions, tags, the barcode it was scanned from, its brand and its
   history stay; its name follows the new item while it is still the old
   item's name. One transaction, recorded on the stack's history as
-  ITEM_CHANGED. A pantry already holding the new item, in any unit, refuses
-  it with DuplicatePantryItemError naming those stacks unless forceAdd is
-  set; the stack's own item is refused on `itemId`. Stock checked in from a receipt teaches the
+  ITEM_CHANGED. A pantry already holding the new item in this stack's unit
+  refuses it with DuplicatePantryItemError naming that stack; the stack's own
+  item is refused on `itemId`. Stock checked in from a receipt teaches the
   household's next receipt to read those lines as the new item.
   """
   changePantryItemItem(input: ChangePantryItemItemInput!): ChangePantryItemItemResult!
@@ -10097,15 +10048,6 @@ type Mutation {
   suggestions are affected.
   """
   markSuggestionDismissed(input: MarkSuggestionDismissedInput!): MarkSuggestionDismissedResult!
-  """
-  Fold stacks of one item in one pantry into a survivor. A stack in another
-  unit is restated into the survivor's at the same value. A conversion that
-  rests on an assumed density or package size (PantryItem.pendingMerge)
-  needs confirmConversion; a stack nothing converts is refused on
-  absorbedIds, naming the fact it lacks. Each absorbed id then reads as the
-  survivor through pantryItem(id:), and the pantry gets one MERGED event.
-  """
-  mergePantryItems(input: MergePantryItemsInput!): MergePantryItemsResult!
   """
   Move every purchased line not yet stocked to the home's default pantry; home
   lists only. The lines stay on the list, stamped
@@ -11718,12 +11660,6 @@ type PantryItem {
   such as its images.
   """
   itemUpc: String
-  """
-  Why this stack stands apart from another stack of its item in this pantry:
-  the add that opened it converts into that stack only by an assumption, or
-  not at all. Null for a stack that is its item's only one.
-  """
-  keptApart: KeptApartReason
   """The user who last changed this stack; null when unknown"""
   lastModifiedBy: User
   """
@@ -11771,11 +11707,6 @@ type PantryItem {
   pantry: Pantry!
   """The id of the pantry holding this stack"""
   pantryId: ID!
-  """
-  For an ASSUMED_CONVERSION stack: the held stack it would merge into, and
-  what it would bring there, for a member to confirm. Null otherwise.
-  """
-  pendingMerge: PendingMerge
   """
   The unit one portion is counted in (a clove); null when the stack defines no portion
   """
@@ -11867,12 +11798,6 @@ type PantryItem {
   The store this stack was bought at when it was added; a later restock's store is on its batch. Null when none was given.
   """
   storeId: ID
-  """
-  For a NO_CONVERSION stack: the catalog's package size, which, recorded as
-  this stack's, relates its count to the held stack. Null otherwise, or when
-  the catalog states none.
-  """
-  suggestedPackageSize: Measure
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
   """tareWeight in netWeightUnit, read in both unit systems; null with it."""
@@ -12842,18 +12767,6 @@ enum PasswordActionStatus {
   SENT
   """The token was valid (validatePasswordResetToken)."""
   VALIDATED
-}
-
-"""
-A merge a member can confirm: the stack this one would join, and what it would bring.
-"""
-type PendingMerge {
-  """What proposed rests on; null once facts convert it"""
-  assumption: ConversionAssumption
-  """This stack's stock in with's unit"""
-  proposed: Measure!
-  """The held stack this one would merge into"""
-  with: PantryItem!
 }
 
 """Period granularity for ledger analytics"""
