@@ -476,6 +476,55 @@ describe('useDietaryProfile', () => {
     });
   });
 
+  // The server stores a picked product as its root, so the profile lists the
+  // concept the restriction covers, never the one brand that was picked.
+  it('lists an avoided product by the root the server stored', async () => {
+    const add = recordMock(AddDietaryRestrictionDocument, {
+      data: {
+        addRestriction: {
+          __typename: 'AddRestrictionPayload',
+          dietaryRestriction: {
+            __typename: 'DietaryRestriction',
+            id: 'r-bacon',
+            diet: null,
+            intolerance: null,
+            healthGoal: null,
+            item: { __typename: 'Item', id: 'concept-bacon', name: 'Bacon' },
+            severity: RestrictionSeverity.Preference,
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), add.mock],
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.addDietaryRestriction(
+        { item: 'product-smoked-bacon-16oz' },
+        RestrictionSeverity.Preference,
+      );
+    });
+
+    expect(add.fired).toEqual([
+      {
+        input: expect.objectContaining({
+          kind: { item: 'product-smoked-bacon-16oz' },
+        }),
+      },
+    ]);
+    await waitFor(() =>
+      expect(
+        result.current.profile?.restrictions.find(r => r.id === 'r-bacon')
+          ?.item,
+      ).toMatchObject({ id: 'concept-bacon', name: 'Bacon' }),
+    );
+  });
+
   it('removeDietaryRestriction calls mutation', async () => {
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
       operationMocks: [buildGetProfileMock(), buildRemoveRestrictionMock()],
