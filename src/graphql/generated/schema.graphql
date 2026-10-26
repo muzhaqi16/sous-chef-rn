@@ -4746,7 +4746,8 @@ enum EntitlementSource {
 The photo a household's entry shows. In order: the household's own photo for
 the entry's catalog item, when it chose one and the viewer is the household's
 member; else the catalog photo the item shows everyone (Item.imageUrl); else
-none. A household upload's url is a signed link that expires: read it from the
+the viewer's own photo of the item awaiting review, newest first; else none.
+A household upload's url is a signed link that expires: read it from the
 entry each time, never store it.
 """
 type EntryImage {
@@ -4754,13 +4755,15 @@ type EntryImage {
   The ItemPhoto shown when it is one of the item's photos; null for a household upload.
   """
   catalogImageId: ID
-  """The credit a catalog photo needs; null for a household upload."""
+  """
+  The credit a catalog photo needs; null for a household upload or a pending photo.
+  """
   credit: ImageCredit
   source: EntryImageSource!
   """
-  The image sized for a row. A catalog photo, or one the household picked, is
-  that photo's thumbnail rendition (the photo itself when it has none); its
-  original is in Item.photos under catalogImageId. A household upload is
+  The image sized for a row. A catalog photo, one the household picked, or the
+  viewer's pending photo is that photo's thumbnail rendition (the photo itself
+  until it has one); its original is in Item.photos under catalogImageId. A household upload is
   served as stored, at most 1600 px on its long side: it has no rendition and
   is not among Item.photos.
   """
@@ -4775,6 +4778,10 @@ enum EntryImageSource {
   The household chose it: its own upload, or one of the item's photos it picked.
   """
   HOUSEHOLD
+  """
+  The viewer's own photo of the item, awaiting review; shown to no one else.
+  """
+  PENDING
 }
 
 """
@@ -21039,6 +21046,13 @@ type UserSettings {
   compactMode: Boolean!
   """When the settings row was created"""
   createdAt: DateTime!
+  """
+  What SYSTEM means for the requesting device, whatever preferredUnitSystem is
+  now: its registered locale's system, else the language's, else METRIC; never
+  SYSTEM. A client caches it to read SYSTEM, and a Measure's matching reading,
+  offline.
+  """
+  deviceUnitSystem: UnitSystem!
   """
   Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
   """
