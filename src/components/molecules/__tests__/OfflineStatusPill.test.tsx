@@ -28,16 +28,15 @@ describe('OfflineStatusPill', () => {
     expect(screen.queryByTestId('offline-banner')).toBeNull();
   });
 
-  it('is a polite live region carrying the status as its label', () => {
+  it('is a button carrying the status as its label', () => {
     offlineStatus.mockReturnValue(status());
 
     render(<OfflineStatusPill />);
 
     const pill = screen.getByTestId('offline-banner');
-    // Android reads the region on appearance. iOS is covered by the toast the
-    // app root fires on the transition, not by a second announcement here —
-    // two would read the same sentence twice.
-    expect(pill.props.accessibilityLiveRegion).toBe('polite');
+    // Not a live region: every mounted header has a pill, so each would read
+    // the same sentence. The app root's announcer reads the transition once.
+    expect(pill.props.accessibilityLiveRegion).toBeUndefined();
     expect(pill.props.accessibilityLabel).toBe('You are offline');
     expect(pill.props.accessibilityRole).toBe('button');
   });
