@@ -92,9 +92,9 @@ export function useAddScannedItem({
 
   /**
    * Restock the duplicate check's row by the amount stated: packages by their
-   * count, sized by the user's size or the record's, with no size at all as a
-   * forced add (`usePantryRestock`). Resolves whether it stands, the user told
-   * if not.
+   * count in the unit the user picked, sized by the user's size or the
+   * record's, with no size at all as a forced add (`usePantryRestock`).
+   * Resolves whether it stands, the user told if not.
    */
   const restockDuplicate = async (
     item: ScannedItem,
@@ -107,6 +107,7 @@ export function useAddScannedItem({
         ? {
             bought: {
               count: amount.count,
+              unitId: amount.unitId,
               packageSize: amount.size,
               item: {
                 source: scannedPantrySource(item),

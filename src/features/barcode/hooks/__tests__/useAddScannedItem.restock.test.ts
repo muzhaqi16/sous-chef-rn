@@ -70,6 +70,10 @@ const heldIn = (type: UnitType, unitId: string) => {
   return cache;
 };
 
+/** The amount the one write recorded sent. */
+const amountSent = (mock: ReturnType<typeof recordMock>) =>
+  (mock.fired[0] as { input: { amount: unknown } } | undefined)?.input.amount;
+
 const renderScan = (
   cache: ReturnType<typeof makeCache>,
   mock: ReturnType<typeof recordMock>,
@@ -80,7 +84,8 @@ const renderScan = (
   );
 
 describe('restocking the row a scan duplicated', () => {
-  it('restocks one package of the size entered', async () => {
+  // A stack held by volume refuses a package unit: the size is what lands.
+  it('restocks one package of the size entered, naming no unit', async () => {
     const restock = recordMock(RestockPantryItemDocument, {
       data: { restockPantryItem: null },
     });
@@ -94,11 +99,45 @@ describe('restocking the row a scan duplicated', () => {
       });
     });
 
-    expect(restock.fired[0]?.input).toMatchObject({
-      id: ROW_ID,
-      amount: { packages: { count: 1, size } },
+    expect(restock.fired[0]?.input).toMatchObject({ id: ROW_ID });
+    expect(amountSent(restock)).toStrictEqual({
+      packages: { count: 1, size },
     });
   });
+
+  it.each([
+    [
+      'sized',
+      { netWeight: 400, netWeightUnitId: 'unit-g' },
+      {
+        packages: {
+          count: 2,
+          size: { netWeight: 400, netWeightUnitId: 'unit-g' },
+          unitId: 'unit-jar',
+        },
+      },
+    ],
+    ['unsized', null, { measured: { quantity: 2, unitId: 'unit-jar' } }],
+  ])(
+    'restocks a counted stack by the %s packages in the unit picked',
+    async (_label, size, amount) => {
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: { restockPantryItem: null },
+      });
+      const { result } = renderScan(heldIn(UnitType.Count, 'unit-pc'), restock);
+
+      await act(async () => {
+        await result.current.restockDuplicate(SCANNED, ROW_ID, {
+          packaged: true,
+          count: 2,
+          unitId: 'unit-jar',
+          size,
+        });
+      });
+
+      expect(amountSent(restock)).toStrictEqual(amount);
+    },
+  );
 
   // A forced add, since a restock refuses packages nothing sizes.
   it.each([
@@ -109,7 +148,7 @@ describe('restocking the row a scan duplicated', () => {
       { variation: 'esm-oats' },
     ],
   ])(
-    'adds a package nothing sizes as %s, its row showing the catalog item',
+    'adds a package nothing sizes as %s in the unit picked, its row showing the catalog item',
     async (_label, scanned, sent) => {
       const cache = heldIn(UnitType.Volume, 'unit-ml');
       const create = recordMock(CreatePantryItemDocument, {
@@ -138,7 +177,7 @@ describe('restocking the row a scan duplicated', () => {
       expect(restocked).toBe(true);
       expect(create.fired[0]?.input).toMatchObject({
         item: sent,
-        amount: { packages: { count: 1 } },
+        amount: { packages: { count: 1, unitId: 'unit-pc' } },
         forceAdd: true,
       });
       expect(row).toMatchObject({ item: { id: 'item-oats' } });

@@ -39,6 +39,29 @@ describe('boughtAmountOf', () => {
     ).toStrictEqual({ packages: { count: 1, size: JAR } });
   });
 
+  it("counts in the buyer's unit, naming it wherever the stack can take it", () => {
+    const unitId = 'jar';
+    expect(boughtAmountOf(2, { heldUnit: PIECE, unitId })).toStrictEqual({
+      measured: { quantity: 2, unitId },
+    });
+    expect(
+      boughtAmountOf(2, { heldUnit: PIECE, packageSize: JAR, unitId }),
+    ).toStrictEqual({ packages: { count: 2, size: JAR, unitId } });
+    expect(boughtAmountOf(2, { heldUnit: ML, unitId })).toStrictEqual({
+      packages: { count: 2, unitId },
+    });
+    expect(boughtAmountOf(2, { heldUnit: null, unitId })).toStrictEqual({
+      packages: { count: 2, unitId },
+    });
+  });
+
+  // The API refuses a package unit on a stack held by weight or volume.
+  it('names no unit on sized packages for a stack not counted', () => {
+    expect(
+      boughtAmountOf(2, { heldUnit: ML, packageSize: JAR, unitId: 'jar' }),
+    ).toStrictEqual({ packages: { count: 2, size: JAR } });
+  });
+
   it('never states a measured amount for a weighed or volume stack', () => {
     for (const type of [UnitType.Weight, UnitType.Volume]) {
       expect(

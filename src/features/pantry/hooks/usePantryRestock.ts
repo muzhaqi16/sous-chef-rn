@@ -43,9 +43,11 @@ type RestockDetails = Pick<
   'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
 >;
 
-/** A count of the product bought with no unit; the stack's own unit decides it. */
+/** A count of the product bought, in the buyer's unit or else the stack's own. */
 interface Bought {
   count: number;
+  /** The COUNT unit the buyer counted in, when they named one. */
+  unitId?: string;
   packageSize?: PackageSizeInput | null;
   /**
    * The product, for an add when nothing sizes the packages. `itemId` is the
@@ -120,6 +122,7 @@ export function usePantryRestock(pantryId: string | undefined) {
       boughtAmountOf(bought.count, {
         heldUnit: readStackUnit(client.cache, pantryItemId),
         packageSize: bought.packageSize,
+        unitId: bought.unitId,
       });
     const refusal = fallback ?? t('errors.restockFailedRetry');
     // A restock names one stack and refuses packages nothing sizes; an add
@@ -133,7 +136,7 @@ export function usePantryRestock(pantryId: string | undefined) {
         {
           present,
           fallback: refusal,
-          ...(itemId ? { local: { itemId } } : {}),
+          ...(itemId ? { local: { itemId, unitId: bought.unitId } } : {}),
         },
       );
       return outcome.status === 'added'
