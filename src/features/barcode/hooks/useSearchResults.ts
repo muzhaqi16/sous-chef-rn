@@ -32,6 +32,7 @@ import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/types';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
 import { blocksCacheMissQueries } from '#store/slices/networkSlice';
 
@@ -96,7 +97,7 @@ const convertToScannedItem = (
   imageUrl: firstNonBlank(item.imageUrl),
   image: cardImageOf(item),
   dataAttributions: item.dataAttributions,
-  nutritionFacts: item.nutritionFacts ?? undefined,
+  nutrition: toShownNutrition(item.shownNutrition) ?? undefined,
   canEdit: item.canEdit,
   canSuggest: item.canSuggest,
   upc: scannedCode,

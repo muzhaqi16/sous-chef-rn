@@ -531,6 +531,7 @@
     "durationDays_other": "{{count}} giorni",
     "currency": "Valuta",
     "today": "Oggi",
+    "typicalFor": "Valori tipici di {{concept}}",
     "seeAll": "Vedi tutto",
     "addPantryItem": "Aggiungi articolo alla dispensa",
     "addMeal": "Aggiungi pasto",

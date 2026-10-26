@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { t } from '#/i18n';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
@@ -678,6 +679,47 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.getByText('4.8')).toBeTruthy();
     expect(screen.getByText('3.6')).toBeTruthy();
     expect(screen.getByText('Per 100 ml')).toBeTruthy();
+  });
+
+  // A product whose record states none reads its concept's values: titled as
+  // typical, and making no health claim for the product.
+  it("titles a concept's values as typical, with no highlights", async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          nutritionFacts: {
+            __typename: 'NutritionFacts',
+            id: 'nf-concept',
+            calories: 334,
+            totalFat: 1.1,
+            saturatedFat: null,
+            transFat: null,
+            cholesterol: null,
+            sodium: null,
+            totalCarbs: 70,
+            dietaryFiber: null,
+            totalSugars: null,
+            addedSugars: null,
+            protein: 10.3,
+            vitaminD: null,
+            calcium: null,
+            iron: null,
+            potassium: null,
+            servingSize: 100,
+            servingUnit: 'g',
+          },
+          typicalOf: 'flour',
+        }),
+      ],
+    });
+    expect(
+      await screen.findByText(t('labels.typicalFor', { concept: 'flour' })),
+    ).toBeTruthy();
+    expect(screen.getByText('334')).toBeTruthy();
+    expect(screen.queryByText('Nutrition')).toBeNull();
+    expect(screen.queryByText(t('recipes.healthGoal.HIGH_PROTEIN'))).toBeNull();
+    expect(screen.queryByText(t('nutritionHighlights.lowFat'))).toBeNull();
   });
 
   it('hides nutrition section when item has no nutrition data', async () => {

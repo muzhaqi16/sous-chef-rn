@@ -323,7 +323,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         )}
 
         <ScanNutritionSection
-          nutritionFacts={item.nutritionFacts}
+          nutrition={item.nutrition}
           onOpenDetails={onOpenNutrition}
         />
 

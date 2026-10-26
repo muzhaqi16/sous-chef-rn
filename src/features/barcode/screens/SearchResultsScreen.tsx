@@ -134,7 +134,7 @@ export const SearchResultsScreen: React.FC<
     }
 
     if (item) {
-      const { nutritionFacts } = item;
+      const { nutrition } = item;
       return (
         <SearchResults
           key={item.id}
@@ -159,12 +159,13 @@ export const SearchResultsScreen: React.FC<
           }
           onOpenBrandLists={toBrandLists}
           onOpenNutrition={
-            nutritionFacts
+            nutrition
               ? () =>
                   toNutritionScreen({
                     itemId: item.id,
                     itemName: item.name,
-                    nutritionFacts,
+                    nutritionFacts: nutrition.facts,
+                    typicalOf: nutrition.typicalOf,
                     dataAttributions: item.dataAttributions ?? [],
                   })
               : undefined

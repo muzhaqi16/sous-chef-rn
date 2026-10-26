@@ -48,6 +48,7 @@ jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
 }));
 jest.mock('#domain/nutrition', () => ({
+  ...jest.requireActual('#domain/nutrition'),
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/performance/useScreenTransition');

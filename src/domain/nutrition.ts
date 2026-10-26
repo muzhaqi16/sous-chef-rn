@@ -69,6 +69,28 @@ export type NutritionFactsValues = Pick<
   NutrientField | 'servingSize' | 'servingUnit'
 >;
 
+/** Nutrition to show for an item, and whose: a null `typicalOf` is the item's own. */
+export interface ShownNutritionValues {
+  facts: NutritionFactsValues;
+  /** The concept these values are typical of ("chipotle peppers in adobo sauce"). */
+  typicalOf: string | null;
+}
+
+/**
+ * The API's `shownNutrition` as the screens read it. Typical values are the
+ * concept's, never the product's: no total, allergen or health claim reads them.
+ */
+export function toShownNutrition(
+  shown:
+    | { facts: NutritionFactsValues; typicalOf?: { name: string } | null }
+    | null
+    | undefined,
+): ShownNutritionValues | null {
+  return shown
+    ? { facts: shown.facts, typicalOf: shown.typicalOf?.name ?? null }
+    : null;
+}
+
 // =============================================================================
 // PRESENCE
 // =============================================================================

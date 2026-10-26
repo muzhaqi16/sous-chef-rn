@@ -84,26 +84,33 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
             type
           }
         }
-        # The result's nutrition card, and the full sheet it opens.
-        nutritionFacts {
-          id
-          calories
-          totalFat
-          saturatedFat
-          transFat
-          cholesterol
-          sodium
-          totalCarbs
-          dietaryFiber
-          totalSugars
-          addedSugars
-          protein
-          vitaminD
-          calcium
-          iron
-          potassium
-          servingSize
-          servingUnit
+        # The result's nutrition card and the full sheet it opens: the item's
+        # own, else its concept's, marked as typical.
+        shownNutrition {
+          facts {
+            id
+            calories
+            totalFat
+            saturatedFat
+            transFat
+            cholesterol
+            sodium
+            totalCarbs
+            dietaryFiber
+            totalSugars
+            addedSugars
+            protein
+            vitaminD
+            calcium
+            iron
+            potassium
+            servingSize
+            servingUnit
+          }
+          typicalOf {
+            id
+            name
+          }
         }
         # A count unit here is the add's package unit; a measure is not.
         trackingUnit(pantry: $pantry) {
@@ -186,25 +193,32 @@ fragment useSearchResults_item on Item {
       type
     }
   }
-  nutritionFacts {
-    id
-    calories
-    totalFat
-    saturatedFat
-    transFat
-    cholesterol
-    sodium
-    totalCarbs
-    dietaryFiber
-    totalSugars
-    addedSugars
-    protein
-    vitaminD
-    calcium
-    iron
-    potassium
-    servingSize
-    servingUnit
+  # The item's own nutrition, else its concept's, marked as typical.
+  shownNutrition {
+    facts {
+      id
+      calories
+      totalFat
+      saturatedFat
+      transFat
+      cholesterol
+      sodium
+      totalCarbs
+      dietaryFiber
+      totalSugars
+      addedSugars
+      protein
+      vitaminD
+      calcium
+      iron
+      potassium
+      servingSize
+      servingUnit
+    }
+    typicalOf {
+      id
+      name
+    }
   }
   type
   storageState

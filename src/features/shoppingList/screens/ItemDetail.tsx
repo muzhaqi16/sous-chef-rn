@@ -16,7 +16,7 @@ import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoV
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
-import { hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -139,7 +139,10 @@ export const ShoppingListItemDetail: React.FC<
 
   const gallery = entryGallery(detail?.image, detail?.item?.photos);
   const itemPhotos = gallery.photos;
-  const nutritionFacts = detail?.item?.nutritionFacts ?? null;
+  const nutrition = toShownNutrition(detail?.item?.shownNutrition);
+  const nutritionFacts = nutrition?.facts ?? null;
+  // A concept's typical values, titled as such and making no health claim.
+  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages = itemPhotos.length > 0 || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
 
@@ -372,10 +375,16 @@ export const ShoppingListItemDetail: React.FC<
         </DetailSection>
 
         {!!showNutrition && (
-          <DetailSection title={t('dietary.nutritionGoals')}>
+          <DetailSection
+            title={
+              typicalOf
+                ? t('labels.typicalFor', { concept: typicalOf })
+                : t('dietary.nutritionGoals')
+            }
+          >
             <NutritionSummary
               nutritionFacts={nutritionFacts}
-              showHighlights
+              showHighlights={!typicalOf}
               compact
             />
           </DetailSection>

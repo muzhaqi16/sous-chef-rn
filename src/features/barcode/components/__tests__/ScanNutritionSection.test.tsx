@@ -37,7 +37,9 @@ const TUNA: NutritionFactsValues = {
 
 describe('ScanNutritionSection', () => {
   it('shows the calories and macros a source states', () => {
-    render(<ScanNutritionSection nutritionFacts={TUNA} />);
+    render(
+      <ScanNutritionSection nutrition={{ facts: TUNA, typicalOf: null }} />,
+    );
     expect(screen.getByText(t('barcode.nutrition.title'))).toBeTruthy();
     expect(screen.getByText('71')).toBeTruthy();
     expect(screen.getByText('10.6')).toBeTruthy();
@@ -47,7 +49,11 @@ describe('ScanNutritionSection', () => {
     ['no facts', undefined],
     ['facts with no macro', NONE],
   ])('shows nothing for %s', (_label, facts) => {
-    render(<ScanNutritionSection nutritionFacts={facts} />);
+    render(
+      <ScanNutritionSection
+        nutrition={facts ? { facts, typicalOf: null } : undefined}
+      />,
+    );
     expect(screen.queryByTestId(barcodeTestIDs.productNutrition)).toBeNull();
   });
 
@@ -55,11 +61,31 @@ describe('ScanNutritionSection', () => {
     const onOpenDetails = jest.fn();
     render(
       <ScanNutritionSection
-        nutritionFacts={TUNA}
+        nutrition={{ facts: TUNA, typicalOf: null }}
         onOpenDetails={onOpenDetails}
       />,
     );
     fireEvent.press(screen.getByText(t('labels.viewDetails')));
     expect(onOpenDetails).toHaveBeenCalledTimes(1);
+  });
+
+  // A product whose record states none reads its concept's values, titled as
+  // typical and never as the product's own.
+  it('titles a concept’s values as typical of it', () => {
+    render(
+      <ScanNutritionSection
+        nutrition={{
+          facts: TUNA,
+          typicalOf: 'chipotle peppers in adobo sauce',
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(
+        t('labels.typicalFor', { concept: 'chipotle peppers in adobo sauce' }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(t('barcode.nutrition.title'))).toBeNull();
+    expect(screen.getByText('71')).toBeTruthy();
   });
 });

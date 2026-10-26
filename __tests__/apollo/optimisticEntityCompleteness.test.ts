@@ -782,26 +782,30 @@ describe('optimistic entity completeness', () => {
           ],
           shelfLifeDays: 7,
           shelfLifeOpenedDays: 3,
-          nutritionFacts: {
-            __typename: 'NutritionFacts',
-            id: 'facts-1',
-            calories: 42,
-            totalFat: 1,
-            saturatedFat: null,
-            transFat: null,
-            cholesterol: null,
-            sodium: null,
-            totalCarbs: 5,
-            dietaryFiber: null,
-            totalSugars: null,
-            addedSugars: null,
-            protein: 3,
-            vitaminD: null,
-            calcium: null,
-            iron: null,
-            potassium: null,
-            servingSize: 100,
-            servingUnit: 'ml',
+          shownNutrition: {
+            __typename: 'ShownNutrition',
+            facts: {
+              __typename: 'NutritionFacts',
+              id: 'facts-1',
+              calories: 42,
+              totalFat: 1,
+              saturatedFat: null,
+              transFat: null,
+              cholesterol: null,
+              sodium: null,
+              totalCarbs: 5,
+              dietaryFiber: null,
+              totalSugars: null,
+              addedSugars: null,
+              protein: 3,
+              vitaminD: null,
+              calcium: null,
+              iron: null,
+              potassium: null,
+              servingSize: 100,
+              servingUnit: 'ml',
+            },
+            typicalOf: null,
           },
           categories: [
             {
@@ -849,25 +853,31 @@ describe('optimistic entity completeness', () => {
               }
               shelfLifeDays
               shelfLifeOpenedDays
-              nutritionFacts {
-                id
-                calories
-                totalFat
-                saturatedFat
-                transFat
-                cholesterol
-                sodium
-                totalCarbs
-                dietaryFiber
-                totalSugars
-                addedSugars
-                protein
-                vitaminD
-                calcium
-                iron
-                potassium
-                servingSize
-                servingUnit
+              shownNutrition {
+                facts {
+                  id
+                  calories
+                  totalFat
+                  saturatedFat
+                  transFat
+                  cholesterol
+                  sodium
+                  totalCarbs
+                  dietaryFiber
+                  totalSugars
+                  addedSugars
+                  protein
+                  vitaminD
+                  calcium
+                  iron
+                  potassium
+                  servingSize
+                  servingUnit
+                }
+                typicalOf {
+                  id
+                  name
+                }
               }
               categories {
                 id
@@ -905,7 +915,7 @@ describe('optimistic entity completeness', () => {
         expect(readItem?.imageUrl).toBe('https://example.test/milk.png');
         expect(readItem?.photos).toHaveLength(1);
         expect(readItem?.shelfLifeDays).toBe(7);
-        expect(readItem?.nutritionFacts?.calories).toBe(42);
+        expect(readItem?.shownNutrition?.facts.calories).toBe(42);
         expect(readItem?.categories?.[0]?.category?.name).toBe('Dairy');
       });
     });

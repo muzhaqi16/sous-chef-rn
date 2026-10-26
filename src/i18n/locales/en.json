@@ -531,6 +531,7 @@
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
     "today": "Today",
+    "typicalFor": "Typical for {{concept}}",
     "seeAll": "See all",
     "addPantryItem": "Add pantry item",
     "addMeal": "Add meal",

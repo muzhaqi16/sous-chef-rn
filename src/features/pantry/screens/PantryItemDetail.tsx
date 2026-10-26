@@ -44,7 +44,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
@@ -186,7 +186,10 @@ export const PantryItemDetail: React.FC<
   const pickableIndex = itemPhotos.findIndex(
     photo => photo.id !== item?.image?.catalogImageId,
   );
-  const nutritionFacts = item?.item.nutritionFacts ?? null;
+  const nutrition = toShownNutrition(item?.item.shownNutrition);
+  const nutritionFacts = nutrition?.facts ?? null;
+  // A concept's typical values, titled as such and making no health claim.
+  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages =
     itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
@@ -447,15 +450,22 @@ export const PantryItemDetail: React.FC<
         </DetailSection>
 
         {!!showNutrition && (
-          <DetailSection title={t('pantryItemDetail.nutrition')}>
+          <DetailSection
+            title={
+              typicalOf
+                ? t('labels.typicalFor', { concept: typicalOf })
+                : t('pantryItemDetail.nutrition')
+            }
+          >
             <NutritionSummary
               nutritionFacts={nutritionFacts}
-              showHighlights
+              showHighlights={!typicalOf}
               onPress={() =>
                 toNutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritionFacts,
+                  typicalOf,
                   dataAttributions: item.item.dataAttributions,
                 })
               }

@@ -62,26 +62,6 @@ fragment ItemReaders on Item {
   name
   netWeight
   netWeightKind
-  nutritionFacts {
-    id
-    addedSugars
-    calcium
-    calories
-    cholesterol
-    dietaryFiber
-    iron
-    potassium
-    protein
-    saturatedFat
-    servingSize
-    servingUnit
-    sodium
-    totalCarbs
-    totalFat
-    totalSugars
-    transFat
-    vitaminD
-  }
   packageSize {
     ...MeasureReaders
   }
@@ -106,6 +86,32 @@ fragment ItemReaders on Item {
   primaryUpc
   shelfLifeDays
   shelfLifeOpenedDays
+  shownNutrition {
+    facts {
+      id
+      addedSugars
+      calcium
+      calories
+      cholesterol
+      dietaryFiber
+      iron
+      potassium
+      protein
+      saturatedFat
+      servingSize
+      servingUnit
+      sodium
+      totalCarbs
+      totalFat
+      totalSugars
+      transFat
+      vitaminD
+    }
+    typicalOf {
+      id
+      name
+    }
+  }
   storageState
   storeDepartment
   tags

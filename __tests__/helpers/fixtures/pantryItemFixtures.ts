@@ -21,7 +21,9 @@ import {
 type UnmaskedGetPantryItemQuery = Unmasked<GetPantryItemQuery>;
 type PantryItemNode = NonNullable<UnmaskedGetPantryItemQuery['pantryItem']>;
 type UnitData = PantryItemNode['unit'];
-type NutritionFactsData = PantryItemNode['item']['nutritionFacts'];
+type NutritionFactsData = NonNullable<
+  PantryItemNode['item']['shownNutrition']
+>['facts'];
 
 export interface PantryItemFixture {
   id?: string;
@@ -48,6 +50,8 @@ export interface PantryItemFixture {
   costPerUnit?: number | null;
   totalCost?: number | null;
   nutritionFacts?: NutritionFactsData;
+  /** The concept the facts are typical of; absent, they are the item's own. */
+  typicalOf?: string;
   /** A public catalog item (`canSuggest`), which can be reported. */
   canSuggest?: boolean;
   /** The catalog item's approved main photo. */
@@ -167,7 +171,19 @@ export function pantryItemData(
         photos: fixture.photos ?? [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
-        nutritionFacts: fixture.nutritionFacts ?? null,
+        shownNutrition: fixture.nutritionFacts
+          ? {
+              __typename: 'ShownNutrition',
+              facts: fixture.nutritionFacts,
+              typicalOf: fixture.typicalOf
+                ? {
+                    __typename: 'Item',
+                    id: 'concept-1',
+                    name: fixture.typicalOf,
+                  }
+                : null,
+            }
+          : null,
         categories: fixture.categoryName
           ? [
               {

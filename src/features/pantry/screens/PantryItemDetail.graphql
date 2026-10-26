@@ -131,25 +131,32 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     name
     shelfLifeDays
     shelfLifeOpenedDays
-    nutritionFacts {
-      id
-      calories
-      totalFat
-      saturatedFat
-      transFat
-      cholesterol
-      sodium
-      totalCarbs
-      dietaryFiber
-      totalSugars
-      addedSugars
-      protein
-      vitaminD
-      calcium
-      iron
-      potassium
-      servingSize
-      servingUnit
+    # The item's own nutrition, else its concept's, marked as typical.
+    shownNutrition {
+      facts {
+        id
+        calories
+        totalFat
+        saturatedFat
+        transFat
+        cholesterol
+        sodium
+        totalCarbs
+        dietaryFiber
+        totalSugars
+        addedSugars
+        protein
+        vitaminD
+        calcium
+        iron
+        potassium
+        servingSize
+        servingUnit
+      }
+      typicalOf {
+        id
+        name
+      }
     }
     categories {
       id
