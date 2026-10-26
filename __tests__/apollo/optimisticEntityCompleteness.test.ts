@@ -915,7 +915,7 @@ describe('optimistic entity completeness', () => {
         expect(readItem?.imageUrl).toBe('https://example.test/milk.png');
         expect(readItem?.photos).toHaveLength(1);
         expect(readItem?.shelfLifeDays).toBe(7);
-        expect(readItem?.shownNutrition?.facts.calories).toBe(42);
+        expect(readItem?.shownNutrition?.facts?.calories).toBe(42);
         expect(readItem?.categories?.[0]?.category?.name).toBe('Dairy');
       });
     });
