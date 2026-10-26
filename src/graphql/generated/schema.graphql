@@ -6714,7 +6714,11 @@ type Item {
   The unit an add of this item naming no unit is counted in: the unit the
   given pantry holds it in, or last held it in, else the item's preferred
   tracking unit, retail unit, default unit or declared count unit, else piece.
-  Without a pantry, from the item alone. Requires view access to the pantry.
+  When the package size this item reports (netWeight with netWeightKind
+  PACKAGE; on a barcode lookup, the scanned one's) is known, a count stack the
+  pantry holds comes first, and past the pantry's stacks only count units
+  qualify, so one of it is one package, never one ounce. Without a pantry,
+  from the item alone. Requires view access to the pantry.
   """
   trackingUnit(pantry: ID): Unit!
   """The item's general kind, such as FOOD, DRINK or HOUSEHOLD."""
