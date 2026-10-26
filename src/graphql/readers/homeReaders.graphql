@@ -5,25 +5,6 @@ fragment HomeReaders on Home {
   createdAt
   currency
   description
-  dietaryNeeds {
-    membership {
-      id
-      displayName
-      role
-      userId
-    }
-    restrictions {
-      id
-      diet
-      healthGoal
-      intolerance
-      item {
-        id
-        name
-      }
-      severity
-    }
-  }
   isDefault
   isPublic
   joinCode
