@@ -6623,7 +6623,8 @@ type Item {
   mcg for vitamin D).
   
   Null for an item that has never been aggregated; a few items still carry
-  `nutritions` without it.
+  `nutritions` without it. Always the item's own: see shownNutrition for
+  a concept's typical values.
   """
   nutritionFacts: NutritionFacts
   """
@@ -6643,6 +6644,13 @@ type Item {
   serving or reference figure.
   """
   packageSize: Measure
+  """
+  The package packageSize reports, as the pieces its label states: "6 x
+  250mL" is 6 of 250 mL. count × each is always packageSize, so a record
+  whose pieces do not add up reads as 1 of packageSize. Null where
+  packageSize is null.
+  """
+  packs: PackStatement
   """
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
@@ -6729,6 +6737,12 @@ type Item {
   Whether this item appears in the curated onboarding list; only admins change it.
   """
   showInOnboarding: Boolean!
+  """
+  The nutrition to show: the item's own facts, else, for a product with none,
+  its concept's, marked by typicalOf as typical of that concept. Only the
+  product's own concept is read. Null when neither has facts.
+  """
+  shownNutrition: ShownNutrition
   """
   Lifecycle state of the catalog entry. Barcode lookups and curated lists return
   only ACTIVE items; a deleted or rejected item is ARCHIVED.
@@ -10378,6 +10392,8 @@ enum MutationType {
   ITEM_UNCOMPLETED
   """An existing item within a list was modified"""
   ITEM_UPDATED
+  """Resources were folded into one: the event's node is the survivor"""
+  MERGED
   """The status of a resource changed"""
   STATUS_CHANGED
   """An existing resource was modified"""
@@ -11221,6 +11237,19 @@ type OriginFact {
   value: String!
 }
 
+"""A package as the pieces it holds."""
+type PackStatement {
+  """
+  The COUNT unit one piece comes in (can, bottle, jar, bag, box, carton,
+  tub, tube), from the record's packaging list. Null where it names none.
+  """
+  container: Unit
+  """How many pieces the package holds; 1 for a single package."""
+  count: Int!
+  """One piece, as the label prints it."""
+  each: Measure!
+}
+
 type PackageBreakdown {
   contentUnit: Unit!
   count: Float!
@@ -11452,6 +11481,11 @@ type PantryEvent implements DomainEvent {
   originatorClientId: this field cannot tell your two devices apart.
   """
   actorUserId: ID
+  """
+  Set when mutation is MERGED: the stacks folded into node. Each id now reads
+  as node through pantryItem(id:), and a use or restock naming one lands on it.
+  """
+  mergedIds: [ID!]
   mutation: MutationType!
   node: PantryEventNode!
   """
@@ -17640,6 +17674,16 @@ type ShoppingListUsageStats {
   itemCount: Int!
   """Last activity timestamp"""
   lastActivityAt: DateTime
+}
+
+"""Nutrition to show for an item, and whose it is."""
+type ShownNutrition {
+  facts: NutritionFacts!
+  """
+  The concept these values are typical of, when the item states none of its
+  own (Typical for chipotle peppers in adobo sauce). Null for the item's own.
+  """
+  typicalOf: Item
 }
 
 """
