@@ -8867,9 +8867,10 @@ type Measure {
   """
   imperial: MeasureReading!
   """
-  The amount in metric units: climbed from its base to the largest unit that
-  keeps it readable, rounded at that unit's display step. A count, or a unit
-  both systems use (tbsp), reads as stored.
+  The amount in metric units: the label's own metric figure where declared
+  states one, else climbed from its base to the largest unit that keeps it
+  readable, rounded at that unit's display step. A count, or a unit both
+  systems use (tbsp), reads as stored.
   """
   metric: MeasureReading!
   """The unit value is stored in."""
@@ -8880,7 +8881,11 @@ type Measure {
 
 """One unit system's reading of an amount."""
 type MeasureReading {
+  """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
+  symbol: String!
   unit: Unit!
+  """The id of unit, so a reading needs no unit selection."""
+  unitId: ID!
   value: Float!
 }
 
