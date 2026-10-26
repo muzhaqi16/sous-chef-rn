@@ -16,28 +16,7 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   notes
   openedAt
   packageSize {
-    imperial {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    metric {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    unit {
-      id
-    }
-    value
+    ...MeasureReaders
   }
   pantryItemId
   portionsPerTrackingUnit
@@ -47,28 +26,7 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   }
   quantity
   remaining {
-    imperial {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    metric {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    unit {
-      id
-    }
-    value
+    ...MeasureReaders
   }
   remainingNetWeight
   status

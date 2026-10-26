@@ -12,28 +12,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     }
   }
   amount {
-    imperial {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    metric {
-      unit {
-        id
-        displayAsFraction
-        symbol
-        type
-      }
-      value
-    }
-    unit {
-      id
-    }
-    value
+    ...MeasureReaders
   }
   brand {
     id
