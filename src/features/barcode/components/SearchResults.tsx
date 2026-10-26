@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
@@ -23,6 +23,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
 import {
+  packageUnitFields,
   packageUnitOf,
   scanAmountDefaults,
   scanAmountOf,
@@ -99,17 +100,27 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const { addToPantry, restockDuplicate, addToShoppingList, heldUnitOf } =
     useAddScannedItem({ pantryId, shoppingListId });
   const cachedUnits = useCachedUnits();
+  // Read once: the stack the pantry held as the scan opened.
+  const [heldUnit] = useState(() => heldUnitOf(item.id));
+  const packageUnit = packageUnitOf(item, heldUnit, cachedUnits);
   // Read once: the form starts from it, and a send compares against it.
   const [prefilledAmount] = useState(() =>
-    scanAmountDefaults(
-      item,
-      packageUnitOf(item, heldUnitOf(item.id), cachedUnits),
-    ),
+    scanAmountDefaults(item, packageUnit),
   );
   const amountForm = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
     defaultValues: prefilledAmount,
   });
+  // The device's units hydrate after mount: a unit field still empty takes
+  // the package unit once they do.
+  useEffect(() => {
+    const { getValues, setValue } = amountForm;
+    if (!packageUnit || getValues('unitId') || getValues('unitDisplay')) return;
+    const fields = packageUnitFields(packageUnit);
+    setValue('unitDisplay', fields.unitDisplay);
+    setValue('unitType', fields.unitType);
+    setValue('unitId', fields.unitId, { shouldValidate: true });
+  }, [amountForm, packageUnit]);
   const cart = useStoreModeCart(
     source === 'storeMode' ? shoppingListId : undefined,
     item,

@@ -121,6 +121,17 @@ function packSizeOf(item: ScannedItem) {
     : null;
 }
 
+/** The package unit as the form holds it; with none, the field is the user's. */
+export function packageUnitFields(
+  packageUnit: UnitChoice | null,
+): Pick<ScanAmountFormValues, 'unitDisplay' | 'unitId' | 'unitType'> {
+  return {
+    unitDisplay: packageUnit?.symbol ?? '',
+    unitId: packageUnit?.id ?? null,
+    unitType: packageUnit ? UnitType.Count : null,
+  };
+}
+
 /** One package of the product, in its package unit, holding the pack's size. */
 export function scanAmountDefaults(
   item: ScannedItem,
@@ -130,9 +141,7 @@ export function scanAmountDefaults(
   return {
     packaged: true,
     quantityInput: '1',
-    unitDisplay: packageUnit?.symbol ?? '',
-    unitId: packageUnit?.id ?? null,
-    unitType: packageUnit ? UnitType.Count : null,
+    ...packageUnitFields(packageUnit),
     sizeInput: size ? formatQuantityForInput(size.value, AS_DECIMAL) : '',
     sizeUnitDisplay: size?.unit.symbol ?? '',
     sizeUnitId: size?.unit.id ?? null,

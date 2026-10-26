@@ -76,8 +76,9 @@ jest.mock('#domain/pantryItemDuplicate', () => {
 const mockCachedUnits = [
   { id: 'unit-pc', name: 'piece', symbol: 'pc', type: 'COUNT' },
 ];
+let mockUnitsNow: typeof mockCachedUnits = mockCachedUnits;
 jest.mock('#store/useAppStore', () => ({
-  useCachedUnits: () => mockCachedUnits,
+  useCachedUnits: () => mockUnitsNow,
   useAppStore: jest.fn(
     (
       selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
@@ -148,6 +149,7 @@ describe('SearchResults', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUnitsNow = mockCachedUnits;
   });
 
   it('renders item name', () => {
@@ -224,6 +226,31 @@ describe('SearchResults', () => {
     expect(firedInput).not.toHaveProperty('quantity');
     expect(firedInput).not.toHaveProperty('netWeight');
     expect(firedInput).not.toHaveProperty('unit');
+  });
+
+  // The device's units are a persisted store, which hydrates after mount.
+  it('adds in one tap when the units load after the screen opened', async () => {
+    mockUnitsNow = [];
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    const { rerender } = renderWithApollo(<SearchResults {...defaultProps} />, {
+      operationMocks: [rec.mock],
+    });
+
+    mockUnitsNow = mockCachedUnits;
+    rerender(<SearchResults {...defaultProps} />);
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual(ONE_PACKAGE);
   });
 
   it('sends a package size the user changed', async () => {
