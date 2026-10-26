@@ -2493,6 +2493,12 @@ input CreatePantryItemInput {
   amount: StockAmountInput
   brand: BrandRefInput
   """
+  The unit this household uses the stack in (a jar of honey, by the
+  tablespoon); the consume picker leads with it. Refused on consumeUnit when
+  the stack cannot be consumed in it. Omitted, the stack has none.
+  """
+  consumeUnit: UnitRefInput
+  """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
   where the field may be cleared.
   """
@@ -11499,6 +11505,13 @@ type PantryItem {
   """
   condition: ItemCondition!
   """
+  The unit this household uses the stack in (a jar of honey, by the
+  tablespoon), as a member set it. consumptionUnitsForPantryItem leads with it
+  while the stack can be consumed in it. A consumption naming no unit still
+  uses the tracking unit. Null until set.
+  """
+  consumeUnit: Unit
+  """
   The currency totalCost and costPerUnit are denominated in. Null when they
   are, and null with them when the costed batches disagree about currency —
   a sum across currencies is not a value, so none is reported.
@@ -19727,6 +19740,11 @@ input UpdatePantryInput {
 
 input UpdatePantryItemInput {
   brand: BrandRefInput
+  """
+  The unit this household uses the stack in; null clears it. Refused on
+  consumeUnit when the stack, as this update leaves it, cannot be consumed in it.
+  """
+  consumeUnit: UnitRefInput
   expirationAlert: Boolean
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -19817,7 +19835,7 @@ Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
+union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UnitEligibilityError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
   home: Home
