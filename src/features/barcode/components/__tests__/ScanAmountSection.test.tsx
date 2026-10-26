@@ -51,7 +51,7 @@ const Harness = ({
   editing?: boolean;
   onEdit?: () => void;
   createsStack?: boolean;
-  joins?: string | null;
+  joins?: { amount: string; unitId: string } | null;
 }) => {
   const form = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
@@ -76,7 +76,13 @@ describe('ScanAmountSection', () => {
 
   // USM-2: a held product joins its stack, and the summary says which.
   it('says what a held product joins', () => {
-    render(<Harness values={oneJar} createsStack={false} joins="2 jar" />);
+    render(
+      <Harness
+        values={oneJar}
+        createsStack={false}
+        joins={{ amount: '2 jar', unitId: 'unit-jar' }}
+      />,
+    );
     expect(
       screen.getByText(
         t('barcode.amount.joinsHeld', {
@@ -85,6 +91,19 @@ describe('ScanAmountSection', () => {
         }),
       ),
     ).toBeTruthy();
+  });
+
+  // In another unit the server joins only where facts convert, else it opens
+  // a stack of its own, so the summary claims no join.
+  it('claims no join in a unit other than the held stack’s', () => {
+    render(
+      <Harness
+        values={oneJar}
+        createsStack={false}
+        joins={{ amount: '2 can', unitId: 'unit-can' }}
+      />,
+    );
+    expect(screen.getByText('1 jar · 3 lb each')).toBeTruthy();
   });
 
   it('reads a package of no known size as the count alone', () => {

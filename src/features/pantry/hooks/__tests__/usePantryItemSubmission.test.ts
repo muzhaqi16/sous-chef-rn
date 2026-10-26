@@ -536,8 +536,8 @@ describe('usePantryItemSubmission', () => {
       return cache;
     };
 
-    // USM-2: an add of a held product joins its stack, or stands apart from
-    // it, on the server; the form asks nothing and never restocks itself.
+    // USM-2: an add of a held product joins its stack, or opens its own, on
+    // the server; the form asks nothing and never restocks itself.
     it.each([
       ['in the same unit', '  MILK ', 'unit-1'],
       ['in another unit', 'Milk', 'unit-2'],

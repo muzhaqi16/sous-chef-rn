@@ -34,8 +34,11 @@ interface ScanAmountSectionProps {
   onEdit: () => void;
   /** Whether the add creates a stack, which alone takes a consume unit here. */
   createsStack: boolean;
-  /** What the pantry holds of the product, as its row reads it, which the add joins. */
-  joins?: string | null;
+  /**
+   * The held stack the add joins while it is in that stack's unit, read as its
+   * row reads it. In another unit the server may open a stack of its own.
+   */
+  joins?: { amount: string; unitId: string } | null;
 }
 
 const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
@@ -57,6 +60,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
     sizeInput,
     sizeUnitDisplay,
     consumeUnitDisplay,
+    packageUnitId,
   ] = useWatch({
     control,
     name: [
@@ -66,6 +70,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
       'sizeInput',
       'sizeUnitDisplay',
       'consumeUnitDisplay',
+      'unitId',
     ],
   });
   const { fieldState: unitState } = useController({ control, name: 'unitId' });
@@ -94,9 +99,10 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
     ? t('barcode.amount.eachPackage', { amount, size })
     : amount;
   // A held product joins its stack: the summary says so ("Adds 1 can to your 2 cans").
-  const summary = joins
-    ? t('barcode.amount.joinsHeld', { amount: stated, held: joins })
-    : stated;
+  const summary =
+    joins && joins.unitId === packageUnitId
+      ? t('barcode.amount.joinsHeld', { amount: stated, held: joins.amount })
+      : stated;
   const usedIn =
     createsStack && consumeUnitDisplay.trim()
       ? t('barcode.amount.usedInSummary', { unit: consumeUnitDisplay.trim() })

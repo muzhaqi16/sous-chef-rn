@@ -37,7 +37,7 @@ const withMintedItemId = (item: PantryItemSourceInput): PantryItemSourceInput =>
 
 /**
  * What became of an add. The caller owns the toast and the animation. An add
- * of a held product joins its stack or stands apart from it (USM-2), so it is
+ * of a held product joins its stack or opens one of its own (USM-2), so it is
  * never refused as a duplicate.
  */
 export type AddPantryItemOutcome =
@@ -61,7 +61,7 @@ interface AddItemOptions {
  * The pantry's one local-first create: the row is written before the mutation
  * fires, withdrawn on a refusal, and kept when the create is queued. Every add
  * is forced: the server joins a stack of the product it holds where the amount
- * converts on facts (`MERGED`), else opens one kept apart (`KEPT_APART`).
+ * converts on facts (`MERGED`), else opens one of its own (`CREATED`).
  */
 export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();

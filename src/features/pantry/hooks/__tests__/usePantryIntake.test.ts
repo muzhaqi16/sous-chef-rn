@@ -280,7 +280,7 @@ describe('usePantryIntake', () => {
   });
 
   // USM-2: every add is forced. A held product joins its stack (the answer
-  // names it, covered above) or stands apart from it under the minted id.
+  // names it, covered above) or opens its own under the minted id.
   it('forces every add, so a held product is never refused', async () => {
     const create = createAnswering();
     const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {

@@ -197,7 +197,7 @@ export function usePantryItemSubmission({
       fallback: t('errors.addItemFailed'),
     });
     // Applied or queued — the item stays (and replays if queued offline). A
-    // held product joins its stack or stands apart from it, never refused.
+    // held product joins its stack or opens its own, never refused.
     if (outcome.status === 'added') onSuccess();
   };
 

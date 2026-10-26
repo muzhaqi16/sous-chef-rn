@@ -189,7 +189,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId && amount) {
-          // A held product joins its stack, or stands apart from it.
+          // A held product joins its stack, or opens one of its own.
           const outcome = await addToPantry(item, amount);
           if (outcome.status === 'rejected') {
             showPantryRefusal(outcome.reason, outcome.field);
@@ -296,7 +296,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             onEdit={() => setIsEditingAmount(true)}
             createsStack={heldUnit === null}
             joins={
-              heldStack ? formatHeldAmount(heldStack, readingSystem) : null
+              heldStack
+                ? {
+                    amount: formatHeldAmount(heldStack, readingSystem),
+                    unitId: heldStack.unit.id,
+                  }
+                : null
             }
           />
         )}
