@@ -1476,6 +1476,12 @@ enum CategoryType {
 }
 
 input ChangePantryItemItemInput {
+  """
+  Onto an item the pantry holds: the stack merges into the held one where
+  it converts on facts, and the payload's pantryItem is that stack; else it
+  is moved and kept apart (PantryItem.keptApart). False when omitted.
+  """
+  forceAdd: Boolean
   idempotencyKey: ID
   """
   The catalog item the stack is; an item merged into another names that one
@@ -9153,6 +9159,28 @@ type MembershipStatusStats {
   suspended: Int!
 }
 
+input MergePantryItemsInput {
+  """The stacks folded into it: its item's, in its pantry"""
+  absorbedIds: [ID!]!
+  """Confirms a conversion that rests on an assumption; false when omitted"""
+  confirmConversion: Boolean
+  idempotencyKey: ID
+  """The stack that stays"""
+  survivorId: ID!
+}
+
+type MergePantryItemsPayload {
+  """The survivor, holding every absorbed stack's stock"""
+  pantryItem: PantryItem!
+}
+
+"""
+Result of MergePantryItems. Select on MergePantryItemsPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union MergePantryItemsResult = ConflictError | ForbiddenError | MergePantryItemsPayload | NotFoundError | ValidationError
+
 enum MfaMethod {
   BIOMETRIC
   EMAIL
@@ -9664,9 +9692,9 @@ type Mutation {
   size, portions, tags, the barcode it was scanned from, its brand and its
   history stay; its name follows the new item while it is still the old
   item's name. One transaction, recorded on the stack's history as
-  ITEM_CHANGED. A pantry already holding the new item in this stack's unit
-  refuses it with DuplicatePantryItemError naming that stack; the stack's own
-  item is refused on `itemId`. Stock checked in from a receipt teaches the
+  ITEM_CHANGED. A pantry already holding the new item, in any unit, refuses
+  it with DuplicatePantryItemError naming those stacks unless forceAdd is
+  set; the stack's own item is refused on `itemId`. Stock checked in from a receipt teaches the
   household's next receipt to read those lines as the new item.
   """
   changePantryItemItem(input: ChangePantryItemItemInput!): ChangePantryItemItemResult!
@@ -10069,6 +10097,15 @@ type Mutation {
   suggestions are affected.
   """
   markSuggestionDismissed(input: MarkSuggestionDismissedInput!): MarkSuggestionDismissedResult!
+  """
+  Fold stacks of one item in one pantry into a survivor. A stack in another
+  unit is restated into the survivor's at the same value. A conversion that
+  rests on an assumed density or package size (PantryItem.pendingMerge)
+  needs confirmConversion; a stack nothing converts is refused on
+  absorbedIds, naming the fact it lacks. Each absorbed id then reads as the
+  survivor through pantryItem(id:), and the pantry gets one MERGED event.
+  """
+  mergePantryItems(input: MergePantryItemsInput!): MergePantryItemsResult!
   """
   Move every purchased line not yet stocked to the home's default pantry; home
   lists only. The lines stay on the list, stamped
