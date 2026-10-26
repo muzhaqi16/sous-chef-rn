@@ -180,7 +180,12 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
               <FormInput
                 label={t('barcode.amount.sizeLabel')}
                 value={field.value}
-                onChangeText={field.onChange}
+                onChangeText={text => {
+                  field.onChange(text);
+                  // Only a size asks for its unit, so clearing it clears that
+                  // error; re-checked only once shown, never mid-typing.
+                  if (sizeUnitState.error) void trigger('sizeUnitId');
+                }}
                 error={fieldState.error?.message}
                 placeholder={localizeNumericHint(t('labels.eG145'))}
                 keyboardType="decimal-pad"
