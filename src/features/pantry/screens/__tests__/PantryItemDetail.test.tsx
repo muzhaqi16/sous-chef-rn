@@ -708,15 +708,24 @@ describe('PantryItemDetail (integration)', () => {
         QueryDataFor<typeof GetPantryItemDocument>['pantryItem']
       >['packageSize']
     >;
-    type ReadingUnit = PackageSizeData['metric']['unit'];
+    interface ReadingUnit {
+      id: string;
+      symbol: string;
+      type: UnitType;
+    }
 
     const unit = (
       id: string,
       symbol: string,
       type = UnitType.Weight,
-    ): ReadingUnit => ({
-      __typename: 'Unit',
-      id,
+    ): ReadingUnit => ({ id, symbol, type });
+    const read = ([value, { id, symbol, type }]: [
+      number,
+      ReadingUnit,
+    ]): PackageSizeData['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unitId: id,
       symbol,
       displayAsFraction: false,
       type,
@@ -734,17 +743,9 @@ describe('PantryItemDetail (integration)', () => {
     ): PackageSizeData => ({
       __typename: 'Measure',
       value,
-      unit: { __typename: 'Unit', id: stored.id },
-      metric: {
-        __typename: 'MeasureReading',
-        value: metric[0],
-        unit: metric[1],
-      },
-      imperial: {
-        __typename: 'MeasureReading',
-        value: imperial[0],
-        unit: imperial[1],
-      },
+      unitId: stored.id,
+      metric: read(metric),
+      imperial: read(imperial),
     });
 
     /** A stack whose package size is stored as `value` `stored`. */
@@ -831,6 +832,54 @@ describe('PantryItemDetail (integration)', () => {
         operationMocks: [weighed(1360.78, g, 940), settings(UnitSystem.System)],
       });
       expect(await screen.findByText('2.07 lb')).toBeTruthy();
+    });
+
+    it('reads what it holds as the row does, not in stored grams', async () => {
+      const data = pantryItemData({
+        ...fullItem,
+        quantity: 907.18,
+        heldQuantity: 907.18,
+        unitSymbol: 'g',
+        unitName: 'gram',
+      });
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.held = measure(907.18, g, [907.18, g], [2, lb]);
+      item.held.unitId = item.unit.id;
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          recordMock(GetPantryItemDocument, { data }).mock,
+          settings(UnitSystem.Imperial),
+        ],
+      });
+      expect((await screen.findAllByText('2 lb')).length).toBeGreaterThan(0);
+      expect(screen.queryByText('907.18 g')).toBeNull();
+    });
+
+    // A "6.35 oz (180 g)" can: the API reads each system in the label's own
+    // figure, and the screen shows it as read, never a rounded 6.3 oz.
+    it.each([
+      [UnitSystem.Imperial, '6.35 oz'],
+      [UnitSystem.Metric, '180 g'],
+    ])('reads a declared can in %s as its label does', async (system, text) => {
+      const data = pantryItemData(fullItem);
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.netWeight = 180;
+      item.netWeightUnit = {
+        __typename: 'Unit',
+        id: g.id,
+        name: g.symbol,
+        symbol: g.symbol,
+      };
+      item.packageSize = measure(180, g, [180, g], [6.35, oz]);
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          recordMock(GetPantryItemDocument, { data }).mock,
+          settings(system),
+        ],
+      });
+      expect(await screen.findByText(text)).toBeTruthy();
     });
   });
 });

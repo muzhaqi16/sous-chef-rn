@@ -31,6 +31,8 @@ interface PantryDetailInfoProps {
     | FragmentType<typeof PantryDetailInfo_PantryItemFragmentDoc>
     | PantryDetailInfo_PantryItemFragment;
   brandName: string | null;
+  /** What is left, as the header shows it: the user's unit system where read. */
+  quantityText: string;
   netWeightText: string | null;
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
@@ -50,6 +52,7 @@ interface PantryDetailInfoProps {
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   itemRef,
   brandName,
+  quantityText,
   netWeightText,
   remainingNetWeightText,
   quantityBreakdownText,
@@ -113,9 +116,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Quantity Row: what is left, as the stack is shown */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${formatQuantityForDisplay(item.displayAmount.quantity)} ${
-          item.displayAmount.unit.symbol
-        }`}
+        value={quantityText}
         icon="apps-outline"
         showColon={false}
         labelTone="secondary"

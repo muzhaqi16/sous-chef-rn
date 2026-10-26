@@ -185,26 +185,20 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
   # The row reads it in the user's unit system; null on a local line.
   amount {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   sortOrder

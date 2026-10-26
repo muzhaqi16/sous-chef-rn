@@ -57,13 +57,10 @@ type DeepPartial<T> = T extends object
 const countReading = (value: number, id = 'unit-piece', symbol = 'pc') => ({
   __typename: 'MeasureReading',
   value,
-  unit: {
-    __typename: 'Unit',
-    id,
-    symbol,
-    displayAsFraction: false,
-    type: 'COUNT',
-  },
+  unitId: id,
+  symbol,
+  displayAsFraction: false,
+  type: 'COUNT',
 });
 
 function createMockPantryItem(
@@ -90,7 +87,7 @@ function createMockPantryItem(
     held: {
       __typename: 'Measure',
       value: held,
-      unit: { __typename: 'Unit', id: overrides.unit?.id ?? 'unit-piece' },
+      unitId: overrides.unit?.id ?? 'unit-piece',
       metric: countReading(held, overrides.unit?.id, overrides.unit?.symbol),
       imperial: countReading(held, overrides.unit?.id, overrides.unit?.symbol),
     },

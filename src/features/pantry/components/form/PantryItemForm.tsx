@@ -139,11 +139,11 @@ const packageSizeFields = (
     { value: item.netWeight, unitId: item.netWeightUnit?.id },
     system,
   );
-  if (reading && reading.unit.id !== item.unit.id) {
+  if (reading && reading.unitId !== item.unit.id) {
     return {
       netWeight: formatNumberForInput(reading.value),
-      netWeightUnit: getUnitDisplayText(reading.unit),
-      netWeightUnitId: reading.unit.id,
+      netWeightUnit: reading.symbol,
+      netWeightUnitId: reading.unitId,
     };
   }
   return {

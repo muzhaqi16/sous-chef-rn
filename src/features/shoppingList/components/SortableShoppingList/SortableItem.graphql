@@ -13,26 +13,20 @@ fragment SortableItem_item on ShoppingListItem {
   # user's while it is still the figure quantity holds.
   amount {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   purchaseInfo {

@@ -275,28 +275,22 @@ describe('SearchResults', () => {
           packageSize: {
             __typename: 'Measure',
             value: 1360.78,
-            unit: { __typename: 'Unit', id: 'unit-g' },
+            unitId: 'unit-g',
             metric: {
               __typename: 'MeasureReading',
               value: 1.36,
-              unit: {
-                __typename: 'Unit',
-                id: 'unit-kg',
-                symbol: 'kg',
-                displayAsFraction: false,
-                type: UnitType.Weight,
-              },
+              unitId: 'unit-kg',
+              symbol: 'kg',
+              displayAsFraction: false,
+              type: UnitType.Weight,
             },
             imperial: {
               __typename: 'MeasureReading',
               value: 3,
-              unit: {
-                __typename: 'Unit',
-                id: 'unit-lb',
-                symbol: 'lb',
-                displayAsFraction: false,
-                type: UnitType.Weight,
-              },
+              unitId: 'unit-lb',
+              symbol: 'lb',
+              displayAsFraction: false,
+              type: UnitType.Weight,
             },
           },
         }}

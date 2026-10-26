@@ -26,16 +26,12 @@ export function resolveReadingSystem(
     : UnitSystem.Metric;
 }
 
-interface ReadingUnit {
-  symbol: string;
-  displayAsFraction?: boolean | null;
-  type?: UnitType | null;
-}
-
 /** One system's figure for an amount, as the API rounds it for display. */
 export interface MeasureReadingShape {
   value: number;
-  unit: ReadingUnit;
+  symbol: string;
+  displayAsFraction?: boolean | null;
+  type?: UnitType | null;
 }
 
 /**
@@ -66,16 +62,18 @@ export function readingOf<R extends MeasureReadingShape>(
 }
 
 /** A reading's unit's own notation; a count as every count reads. */
-export function readingNotation(unit: ReadingUnit): QuantityNotation {
-  return unit.type === UnitType.Count
+export function readingNotation(
+  reading: Pick<MeasureReadingShape, 'displayAsFraction' | 'type'>,
+): QuantityNotation {
+  return reading.type === UnitType.Count
     ? 'mixed'
-    : resolveQuantityNotation(null, unit.displayAsFraction);
+    : resolveQuantityNotation(null, reading.displayAsFraction);
 }
 
 /** "3 lb", "1 1/2 cup", "1 1/2 can": a measure in its unit's own notation. */
-export function formatReading({ value, unit }: MeasureReadingShape): string {
-  return formatQuantityWithUnit(value, unit.symbol, {
-    notation: readingNotation(unit),
+export function formatReading(reading: MeasureReadingShape): string {
+  return formatQuantityWithUnit(reading.value, reading.symbol, {
+    notation: readingNotation(reading),
   });
 }
 
@@ -95,13 +93,13 @@ const SAME_FIGURE = 1e-9;
  */
 export function currentReading<R extends MeasureReadingShape>(
   measure:
-    | (MeasureShape<R> & { value: number; unit: { id: string } })
+    | (MeasureShape<R> & { value: number; unitId: string })
     | null
     | undefined,
   stored: StoredFigure,
   system: ReadingSystem,
 ): R | null {
-  if (!measure || stored.value == null || stored.unitId !== measure.unit.id) {
+  if (!measure || stored.value == null || stored.unitId !== measure.unitId) {
     return null;
   }
   const scale = Math.max(1, Math.abs(stored.value));

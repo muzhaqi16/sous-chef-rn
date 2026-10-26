@@ -132,11 +132,17 @@ fragment PantryItemReaders on PantryItem {
       symbol
     }
     count
+    perUnit {
+      ...MeasureReaders
+    }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+    }
+    total {
+      ...MeasureReaders
     }
     totalNetWeight
   }

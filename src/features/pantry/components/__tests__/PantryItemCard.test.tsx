@@ -159,12 +159,8 @@ interface BuildItemOverrides {
   held?: PantryItemCard_PantryItemFragment['held'];
 }
 
-const unitRead = (
-  id: string,
-  symbol: string,
-): PantryItemCard_PantryItemFragment['held']['metric']['unit'] => ({
-  __typename: 'Unit',
-  id,
+const unitRead = (id: string, symbol: string) => ({
+  unitId: id,
   symbol,
   displayAsFraction: false,
   type: UnitType.Weight,
@@ -174,9 +170,9 @@ const unitRead = (
 const NO_READING: PantryItemCard_PantryItemFragment['held'] = {
   __typename: 'Measure',
   value: 0,
-  unit: { __typename: 'Unit', id: '' },
-  metric: { __typename: 'MeasureReading', value: 0, unit: unitRead('', '') },
-  imperial: { __typename: 'MeasureReading', value: 0, unit: unitRead('', '') },
+  unitId: '',
+  metric: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
+  imperial: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
 };
 
 function buildItem(
@@ -524,16 +520,16 @@ describe('PantryItemCard', () => {
       held: {
         __typename: 'Measure',
         value: 1360.78,
-        unit: { __typename: 'Unit', id: 'unit-shown' },
+        unitId: 'unit-shown',
         metric: {
           __typename: 'MeasureReading',
           value: 1.36,
-          unit: unitRead('unit-kg', 'kg'),
+          ...unitRead('unit-kg', 'kg'),
         },
         imperial: {
           __typename: 'MeasureReading',
           value: 3,
-          unit: unitRead('unit-lb', 'lb'),
+          ...unitRead('unit-lb', 'lb'),
         },
       },
     } satisfies BuildItemOverrides;

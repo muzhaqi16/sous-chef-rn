@@ -9,7 +9,7 @@ import {
 interface LineAmount<R extends MeasureReadingShape> {
   quantity: number | null | undefined;
   unit?: { id: string } | null;
-  amount?: (MeasureShape<R> & { value: number; unit: { id: string } }) | null;
+  amount?: (MeasureShape<R> & { value: number; unitId: string }) | null;
 }
 
 /**
@@ -26,5 +26,5 @@ export function shownLineReading<R extends MeasureReadingShape>(
     { value: line.quantity, unitId: line.unit?.id },
     system,
   );
-  return reading && reading.unit.type !== UnitType.Count ? reading : null;
+  return reading && reading.type !== UnitType.Count ? reading : null;
 }

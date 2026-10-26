@@ -21,8 +21,8 @@ const can = {
 // The API climbs from the base whatever the stored unit: 1360.78 g and 48 oz
 // both read 3 lb.
 const honey: MeasureShape = {
-  metric: { value: 1.36, unit: kg },
-  imperial: { value: 3, unit: lb },
+  metric: { value: 1.36, ...kg },
+  imperial: { value: 3, ...lb },
 };
 
 describe('reading an amount in the user’s unit system', () => {
@@ -35,8 +35,8 @@ describe('reading an amount in the user’s unit system', () => {
 
   it('never converts a count', () => {
     const twoCans: MeasureShape = {
-      metric: { value: 2, unit: can },
-      imperial: { value: 2, unit: can },
+      metric: { value: 2, ...can },
+      imperial: { value: 2, ...can },
     };
     expect(formatReading(readingOf(twoCans, UnitSystem.Metric))).toBe('2 can');
     expect(formatReading(readingOf(twoCans, UnitSystem.Imperial))).toBe(
@@ -46,8 +46,8 @@ describe('reading an amount in the user’s unit system', () => {
 
   it('writes a unit cooks halve as a fraction', () => {
     const flour: MeasureShape = {
-      metric: { value: 180, unit: g },
-      imperial: { value: 1.5, unit: cup },
+      metric: { value: 180, ...g },
+      imperial: { value: 1.5, ...cup },
     };
     expect(formatReading(readingOf(flour, UnitSystem.Imperial))).toBe(
       '1 1/2 cup',
@@ -70,7 +70,7 @@ describe('the system an amount is read in', () => {
 describe('a reading kept only while it describes the stored figure', () => {
   const stored1360g = {
     value: 1360.78,
-    unit: { id: 'unit-g' },
+    unitId: 'unit-g',
     ...honey,
   };
 
@@ -81,7 +81,7 @@ describe('a reading kept only while it describes the stored figure', () => {
         { value: 1360.78, unitId: 'unit-g' },
         UnitSystem.Imperial,
       ),
-    ).toEqual({ value: 3, unit: lb });
+    ).toEqual({ value: 3, ...lb });
   });
 
   // A local use moved the stack to 1000 g; only the server can say what that
@@ -120,6 +120,6 @@ describe('a reading kept only while it describes the stored figure', () => {
   });
 
   it('writes half a can as every count reads', () => {
-    expect(formatReading({ value: 1.5, unit: can })).toBe('1 1/2 can');
+    expect(formatReading({ value: 1.5, ...can })).toBe('1 1/2 can');
   });
 });

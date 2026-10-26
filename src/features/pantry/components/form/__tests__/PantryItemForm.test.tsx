@@ -550,13 +550,10 @@ describe('PantryItemForm — package size in the user’s units', () => {
   const reading = (value: number, id: string, symbol: string): Reading => ({
     __typename: 'MeasureReading',
     value,
-    unit: {
-      __typename: 'Unit',
-      id,
-      symbol,
-      displayAsFraction: false,
-      type: UnitType.Weight,
-    },
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
   });
 
   // A 3 LB honey whose size the stack stores as 1360.78 g.
@@ -575,7 +572,7 @@ describe('PantryItemForm — package size in the user’s units', () => {
     stack.packageSize = {
       __typename: 'Measure',
       value: 1360.78,
-      unit: { __typename: 'Unit', id: 'unit-g' },
+      unitId: 'unit-g',
       metric: reading(1.36, 'unit-kg', 'kg'),
       imperial: reading(3, 'unit-lb', 'lb'),
     };

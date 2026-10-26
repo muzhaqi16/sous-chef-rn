@@ -81,13 +81,10 @@ type Reading = NonNullable<Batch['remaining']>['metric'];
 const reading = (value: number, id: string, symbol: string): Reading => ({
   __typename: 'MeasureReading',
   value,
-  unit: {
-    __typename: 'Unit',
-    id,
-    symbol,
-    displayAsFraction: false,
-    type: UnitType.Weight,
-  },
+  unitId: id,
+  symbol,
+  displayAsFraction: false,
+  type: UnitType.Weight,
 });
 
 const measure = (
@@ -97,7 +94,7 @@ const measure = (
 ): NonNullable<Batch['packageSize']> => ({
   __typename: 'Measure',
   value,
-  unit: { __typename: 'Unit', id: 'u-g' },
+  unitId: 'u-g',
   metric,
   imperial,
 });

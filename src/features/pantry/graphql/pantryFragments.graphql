@@ -35,51 +35,39 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   # netWeight read in each unit system, with the label's figure where it has one.
   packageSize {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   # remainingNetWeight read in each unit system.
   remaining {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   portionsPerTrackingUnit

@@ -6,7 +6,6 @@
     "noExpiry": "Sin caducidad",
     "amount": "Cantidad",
     "nutrition": "Nutrición",
-    "recipesToTry": "Recetas para probar",
     "noShoppingListSelectedTitle": "Ninguna lista de compras seleccionada",
     "noShoppingListSelectedMessage": "Por favor, selecciona primero una lista de compras.",
     "goToShoppingLists": "Ir a las listas de compras",
@@ -169,6 +168,7 @@
     "newQuantity": "Nueva cantidad",
     "reasonPlaceholder": "¿Por qué se ajusta la cantidad?",
     "remainingWeightPlaceholder": "Déjalo en blanco para ajustar automáticamente",
+    "countedAs": "Recuento: {{amount}}",
     "systemReason": {
       "stackMerged": "Ajuste tras combinar artículos",
       "stackPurged": "Retirada administrativa",

@@ -804,8 +804,7 @@ describe('SwipeableListItem (SortableItem)', () => {
   // shows the user's while that reading still describes the line.
   describe('the amount in the user\u2019s unit system', () => {
     const unit = (id: string, symbol: string, type: UnitType) => ({
-      __typename: 'Unit',
-      id,
+      unitId: id,
       symbol,
       displayAsFraction: false,
       type,
@@ -816,16 +815,16 @@ describe('SwipeableListItem (SortableItem)', () => {
       amount: {
         __typename: 'Measure',
         value: 2,
-        unit: { __typename: 'Unit', id: 'unit-lb' },
+        unitId: 'unit-lb',
         metric: {
           __typename: 'MeasureReading',
           value: 0.91,
-          unit: unit('unit-kg', 'kg', UnitType.Weight),
+          ...unit('unit-kg', 'kg', UnitType.Weight),
         },
         imperial: {
           __typename: 'MeasureReading',
           value: 2,
-          unit: unit('unit-lb', 'lb', UnitType.Weight),
+          ...unit('unit-lb', 'lb', UnitType.Weight),
         },
       },
     });
@@ -849,16 +848,16 @@ describe('SwipeableListItem (SortableItem)', () => {
           amount: {
             __typename: 'Measure',
             value: 1.1,
-            unit: { __typename: 'Unit', id: 'unit-lb' },
+            unitId: 'unit-lb',
             metric: {
               __typename: 'MeasureReading',
               value: 0.5,
-              unit: unit('unit-kg', 'kg', UnitType.Weight),
+              ...unit('unit-kg', 'kg', UnitType.Weight),
             },
             imperial: {
               __typename: 'MeasureReading',
               value: 1.1,
-              unit: unit('unit-lb', 'lb', UnitType.Weight),
+              ...unit('unit-lb', 'lb', UnitType.Weight),
             },
           },
         }),
@@ -877,16 +876,16 @@ describe('SwipeableListItem (SortableItem)', () => {
           amount: {
             __typename: 'Measure',
             value: 3,
-            unit: { __typename: 'Unit', id: 'unit-pc' },
+            unitId: 'unit-pc',
             metric: {
               __typename: 'MeasureReading',
               value: 3,
-              unit: unit('unit-pc', 'pc', UnitType.Count),
+              ...unit('unit-pc', 'pc', UnitType.Count),
             },
             imperial: {
               __typename: 'MeasureReading',
               value: 3,
-              unit: unit('unit-pc', 'pc', UnitType.Count),
+              ...unit('unit-pc', 'pc', UnitType.Count),
             },
           },
         }),

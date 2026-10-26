@@ -6,7 +6,6 @@
     "noExpiry": "Pa skadim",
     "amount": "Sasia",
     "nutrition": "Ushqyerja",
-    "recipesToTry": "Recetat për të provuar",
     "noShoppingListSelectedTitle": "Asnjë listë blerjesh e zgjedhur",
     "noShoppingListSelectedMessage": "Ju lutemi zgjidhni fillimisht një listë blerjesh.",
     "goToShoppingLists": "Shko te listat e blerjeve",
@@ -169,6 +168,7 @@
     "newQuantity": "Sasia e re",
     "reasonPlaceholder": "Pse po rregullohet sasia?",
     "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik",
+    "countedAs": "Numërimi: {{amount}}",
     "systemReason": {
       "stackMerged": "Rregullim pas bashkimit të artikujve",
       "stackPurged": "Heqje administrative",

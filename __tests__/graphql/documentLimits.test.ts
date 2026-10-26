@@ -21,8 +21,9 @@
  * which is why a page read states its size as one.
  *
  * Two caps bound the document itself: the parser refuses one over 1000 tokens
- * (400), and the request guard one over 20 000 characters. Both are measured on
- * the operation together with every fragment sent with it.
+ * (400), over HTTP and on the WebSocket subscribe alike, and the request guard
+ * one over 20 000 characters. Both are measured on the operation together with
+ * every fragment sent with it.
  *
  * One cap reads the REQUEST, not the document: the page sizes along one nested
  * path, variables resolved, multiply to at most 100 000
@@ -31,10 +32,11 @@
  *
  * ---
  * The rules and their defaults are the API's:
- * `packages/core/src/config/armorConfig.ts` (the rules, `MAX_DOCUMENT_TOKENS`),
+ * `packages/core/src/config/armorConfig.ts` (the rules, `maxDocumentTokens()`),
  * `config/sections/http.ts` and `config/sections/publicApi.ts` (the defaults):
  *
  *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
+ *     MAX_QUERY_TOKENS=1000
  *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
  *     MAX_NESTED_PAGINATION_PRODUCT=100000

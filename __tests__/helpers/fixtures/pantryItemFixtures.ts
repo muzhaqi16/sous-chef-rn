@@ -73,6 +73,24 @@ function unit(
   };
 }
 
+type HeldReading = NonNullable<
+  UnmaskedGetPantryItemQuery['pantryItem']
+>['held']['metric'];
+
+function heldReading(
+  value: number,
+  { id, symbol, displayAsFraction }: UnitData,
+): HeldReading {
+  return {
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction,
+    type: UnitType.Volume,
+  };
+}
+
 /** Build the full GetPantryItem query result. */
 export function pantryItemData(
   fixture: PantryItemFixture = {},
@@ -105,6 +123,14 @@ export function pantryItemData(
           id: trackingUnit.id,
           symbol: trackingUnit.symbol,
         },
+      },
+      // The same figure in both systems: what the screen showed before readings.
+      held: {
+        __typename: 'Measure',
+        value: held,
+        unitId: trackingUnit.id,
+        metric: heldReading(held, trackingUnit),
+        imperial: heldReading(held, trackingUnit),
       },
       costCurrency: null,
       version: 1,

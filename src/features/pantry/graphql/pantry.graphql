@@ -1126,6 +1126,25 @@ query GetPantryItemUsageHistory(
             id
             code
           }
+          # A recount stated in a unit, as stated ("2.5 lb" on a gram stack).
+          statedAmount {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
+          }
         }
       }
     }

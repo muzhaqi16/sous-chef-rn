@@ -20,6 +20,25 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       symbol
     }
   }
+  # displayAmount read in each unit system, as the row reads it.
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   version
   updatedAt
   storageState
@@ -33,50 +52,38 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   # Both read in each unit system; the label's own figure where it states it.
   packageSize {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   remaining {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   portionUnitId
@@ -184,6 +191,43 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       symbol
     }
     totalNetWeight
+    # Both weights read in the user's unit system.
+    perUnit {
+      value
+      unitId
+      metric {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+      imperial {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    total {
+      value
+      unitId
+      metric {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+      imperial {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+    }
   }
   quantityBreakdown {
     fullPackages

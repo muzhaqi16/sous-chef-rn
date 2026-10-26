@@ -17,7 +17,17 @@ import {
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
+import {
+  currentReading,
+  formatReading,
+  readingNotation,
+  type MeasureShape,
+  type ReadingSystem,
+} from '#domain/measure';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -67,29 +77,98 @@ export const getExpirationStatus = (
   return { text, type: 'normal' };
 };
 
+type BreakdownMeasure = MeasureShape & { value: number; unitId: string };
+
 interface PackageBreakdown {
   count: number;
   contentUnit: { name: string; symbol?: string | null };
   perUnitNetWeight?: number | null;
-  perUnitNetWeightUnit?: { symbol?: string | null } | null;
+  perUnitNetWeightUnit?: { id?: string; symbol?: string | null } | null;
   totalNetWeight?: number | null;
+  /** `perUnitNetWeight` read in both unit systems. */
+  perUnit?: BreakdownMeasure | null;
+  /** `totalNetWeight` read in both unit systems. */
+  total?: BreakdownMeasure | null;
+}
+
+/**
+ * A breakdown weight in the user's system while its reading still describes
+ * the stored figure, else as stored: only the server converts.
+ */
+function breakdownWeight(
+  stored: number,
+  unit: { id?: string; symbol?: string | null },
+  measure: BreakdownMeasure | null | undefined,
+  system: ReadingSystem | undefined,
+): { weight: string; weightUnit: string | null | undefined } {
+  const reading = system
+    ? currentReading(measure, { value: stored, unitId: unit.id }, system)
+    : null;
+  return reading
+    ? {
+        weight: formatQuantityForDisplay(reading.value, {
+          notation: readingNotation(reading),
+        }),
+        weightUnit: reading.symbol,
+      }
+    : {
+        weight: formatQuantityForDisplay(stored, { notation: 'decimal' }),
+        weightUnit: unit.symbol,
+      };
+}
+
+interface HeldAmountSource {
+  displayAmount: { quantity: number; unit: { id: string; symbol: string } };
+  unit: { id: string; displayAsFraction: boolean };
+  held: BreakdownMeasure;
+}
+
+/**
+ * What a stack holds, as its row shows it ("1 doz" for 12 pc): in the user's
+ * unit system while `held` still describes it; else as stored, in the stack
+ * unit's own notation when shown in that unit.
+ */
+export function formatHeldAmount(
+  item: HeldAmountSource,
+  system: ReadingSystem,
+): string {
+  const shown = item.displayAmount;
+  const reading = currentReading(
+    item.held,
+    { value: shown.quantity, unitId: shown.unit.id },
+    system,
+  );
+  if (reading) return formatReading(reading);
+  const inOwnUnit = shown.unit.id === item.unit.id;
+  const quantity = formatQuantityForDisplay(shown.quantity, {
+    notation: resolveQuantityNotation(
+      null,
+      inOwnUnit ? item.unit.displayAsFraction : null,
+    ),
+  });
+  return `${quantity} ${shown.unit.symbol}`;
 }
 
 // Unit labels are server data with no plural form, so they pass through as-is.
 export const formatPackageBreakdown = (
   breakdown: PackageBreakdown | null | undefined,
   translate: Translate,
+  system?: ReadingSystem,
 ): string | null => {
   if (!breakdown) return null;
   const unit =
     firstNonBlank(breakdown.contentUnit.symbol) ?? breakdown.contentUnit.name;
-  const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
-  if (breakdown.perUnitNetWeight && weightUnit) {
+  const storedUnit = breakdown.perUnitNetWeightUnit;
+  if (breakdown.perUnitNetWeight && storedUnit?.symbol) {
+    const { weight, weightUnit } = breakdownWeight(
+      breakdown.perUnitNetWeight,
+      storedUnit,
+      breakdown.perUnit,
+      system,
+    );
     return translate('pantryItemCard.packageContents', {
       count: breakdown.count,
-      weight: formatQuantityForDisplay(breakdown.perUnitNetWeight, {
-        notation: 'decimal',
-      }),
+      weight,
       weightUnit,
       unit,
     });
@@ -104,16 +183,21 @@ export const formatPackageBreakdown = (
 export const formatPackageBreakdownFull = (
   breakdown: PackageBreakdown | null | undefined,
   translate: Translate,
+  system?: ReadingSystem,
 ): string | null => {
-  const short = formatPackageBreakdown(breakdown, translate);
+  const short = formatPackageBreakdown(breakdown, translate, system);
   if (!breakdown || !short) return null;
-  const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
-  if (breakdown.totalNetWeight && weightUnit) {
+  const storedUnit = breakdown.perUnitNetWeightUnit;
+  if (breakdown.totalNetWeight && storedUnit?.symbol) {
+    const { weight, weightUnit } = breakdownWeight(
+      breakdown.totalNetWeight,
+      storedUnit,
+      breakdown.total,
+      system,
+    );
     return translate('pantryItemCard.packageWithTotal', {
       breakdown: short,
-      total: formatQuantityForDisplay(breakdown.totalNetWeight, {
-        notation: 'decimal',
-      }),
+      total: weight,
       weightUnit,
     });
   }

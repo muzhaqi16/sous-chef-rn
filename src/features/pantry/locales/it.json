@@ -6,7 +6,6 @@
     "noExpiry": "Nessuna scadenza",
     "amount": "Quantità",
     "nutrition": "Nutrizione",
-    "recipesToTry": "Ricette da provare",
     "noShoppingListSelectedTitle": "Nessuna lista della spesa selezionata",
     "noShoppingListSelectedMessage": "Seleziona prima una lista della spesa.",
     "goToShoppingLists": "Vai alle liste della spesa",
@@ -169,6 +168,7 @@
     "newQuantity": "Nuova quantità",
     "reasonPlaceholder": "Perché stai modificando la quantità?",
     "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente",
+    "countedAs": "Conteggio: {{amount}}",
     "systemReason": {
       "stackMerged": "Rettifica dopo l'unione di articoli",
       "stackPurged": "Rimozione amministrativa",

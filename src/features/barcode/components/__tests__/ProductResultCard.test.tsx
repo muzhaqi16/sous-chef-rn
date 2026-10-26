@@ -76,7 +76,9 @@ describe('ProductResultCard', () => {
   ])('shows the pack size in the user’s unit system (%s)', (system, text) => {
     const reading = (value: number, symbol: string) => ({
       value,
-      unit: { symbol, displayAsFraction: false, type: UnitType.Weight },
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
     });
     render(
       <ProductResultCard

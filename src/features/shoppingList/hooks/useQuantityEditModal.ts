@@ -100,7 +100,7 @@ export function useQuantityEditModal(
       : null;
   const storedUnit = selectedItemRaw?.unit ?? null;
   const shownUnit = shown
-    ? { ...shown.unit, name: shown.unit.symbol }
+    ? { id: shown.unitId, symbol: shown.symbol, name: shown.symbol }
     : storedUnit;
 
   const selectedItem: QuantityEditItem | null = selectedItemRaw

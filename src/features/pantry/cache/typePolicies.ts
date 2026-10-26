@@ -67,6 +67,11 @@ export const pantryTypePolicies: TypePolicies = {
       usageRecordsConnection: mergeConnectionByNodeId(['orderBy']),
     },
   },
+  // Only the detail reads `perUnit` and `total`: merged, a list's narrower
+  // write keeps them. A reading left stale shows nothing (`currentReading`).
+  PackageBreakdown: {
+    merge: true,
+  },
   Query: {
     fields: {
       pantry: readByIdFromCache('Pantry'),

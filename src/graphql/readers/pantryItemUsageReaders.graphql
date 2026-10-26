@@ -9,6 +9,9 @@ fragment PantryItemUsageReaders on PantryItemUsage {
   }
   purpose
   quantityUsed
+  statedAmount {
+    ...MeasureReaders
+  }
   totalCost
   usageUnit {
     id

@@ -74,7 +74,7 @@ export const CorrectPackageSizeModal: React.FC<
   // The size is edited as it reads; the server converts it back to the
   // stack's unit, except from the tracking unit, which it refuses.
   const seedReading =
-    sizeReading && sizeReading.unit.id !== pantryItem?.unit.id
+    sizeReading && sizeReading.unitId !== pantryItem?.unit.id
       ? sizeReading
       : null;
 
@@ -99,11 +99,11 @@ export const CorrectPackageSizeModal: React.FC<
             weightInput: formatNumberForInput(
               seedReading?.value ?? batch.netWeight,
             ),
-            unitDisplay: getUnitDisplayText(
-              seedReading?.unit ?? pantryItem.netWeightUnit,
-            ),
+            unitDisplay:
+              seedReading?.symbol ??
+              getUnitDisplayText(pantryItem.netWeightUnit),
             selectedUnitId:
-              seedReading?.unit.id ?? pantryItem.netWeightUnit?.id ?? null,
+              seedReading?.unitId ?? pantryItem.netWeightUnit?.id ?? null,
             reason: '',
           }
         : null,

@@ -128,18 +128,15 @@ describe('BatchListItem', () => {
     ): BatchSize['metric'] => ({
       __typename: 'MeasureReading',
       value,
-      unit: {
-        __typename: 'Unit',
-        id,
-        symbol,
-        displayAsFraction: false,
-        type: UnitType.Weight,
-      },
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
     });
     const packageSize: BatchSize = {
       __typename: 'Measure',
       value: 180,
-      unit: { __typename: 'Unit', id: 'unit-g' },
+      unitId: 'unit-g',
       metric: reading(180, 'unit-g', 'g'),
       imperial: reading(6.35, 'unit-oz', 'oz'),
     };

@@ -68,6 +68,7 @@ describe('PantryDetailInfo', () => {
   const defaultProps = {
     itemRef: baseItem,
     brandName: null as string | null,
+    quantityText: '2 L',
     netWeightText: null as string | null,
     remainingNetWeightText: null as string | null,
     quantityBreakdownText: null as string | null,
@@ -141,23 +142,7 @@ describe('PantryDetailInfo', () => {
         itemRef={{ ...baseItem, quantity: 2, ...holding(1.25) }}
       />,
     );
-    expect(screen.getByText('1 1/4 L')).toBeTruthy();
     expect(screen.getByText('Packages')).toBeTruthy();
-  });
-
-  it('shows a stack as the server shows it: 12 pc as 1 doz', () => {
-    const item: PantryDetailInfo_PantryItemFragment = {
-      ...baseItem,
-      quantity: 12,
-      heldQuantity: 12,
-      displayAmount: {
-        __typename: 'DisplayAmount',
-        quantity: 1,
-        unit: { __typename: 'Unit', id: 'u-doz', symbol: 'doz' },
-      },
-    };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('1 doz')).toBeTruthy();
   });
 
   it('shows no packages row when every package is whole', () => {
@@ -408,18 +393,6 @@ describe('PantryDetailInfo', () => {
       expect(screen.queryByText('Stock value')).toBeNull();
       expect(screen.queryByText('$0.00')).toBeNull();
     });
-  });
-
-  it('renders a fractional quantity as a cooking fraction', () => {
-    const item = { ...baseItem, quantity: 2, ...holding(1.25) };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('1 1/4 L')).toBeTruthy();
-  });
-
-  it('rounds a quantity no cooking fraction fits to three decimals', () => {
-    const item = { ...baseItem, quantity: 178, ...holding(177.4412) };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('177.441 L')).toBeTruthy();
   });
 
   it('formats the Min Stock and Restock At quantities', () => {

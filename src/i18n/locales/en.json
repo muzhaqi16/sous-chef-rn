@@ -178,6 +178,8 @@
       "netWeight": "Enter both a package size and its unit, or leave both empty.",
       "quantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
       "newQuantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
+      "newQuantityUnitId": "Count it in a unit of the same kind as this item's (weight with weight, volume with volume).",
+      "remainingNetWeightUnitId": "Enter the weight left in a weight unit, like g or oz.",
       "itemName": "Enter a name for this item.",
       "batchId": "That batch is no longer available. Refresh and try again.",
       "pantryId": "You don't have permission to add items to this pantry.",

@@ -3,12 +3,17 @@
 import {
   formatStorageState,
   getExpirationStatus,
+  formatHeldAmount,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  StorageState,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 
 // The real instance (jest.setup.js initializes it), so these assertions still
 // verify the copy in en.json rather than a stub's echo.
@@ -129,6 +134,120 @@ describe('formatPackageBreakdownFull', () => {
       t,
     );
     expect(result).toBe('12 x 12 oz cans (144 oz total)');
+  });
+
+  // 12 cans of 340.19 g, stored in grams: an imperial reader sees ounces.
+  describe('in the user’s unit system', () => {
+    const reading = (value: number, unitId: string, symbol: string) => ({
+      value,
+      unitId,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
+    const measure = (value: number, metric: number, imperial: number) => ({
+      value,
+      unitId: 'unit-g',
+      metric: reading(metric, 'unit-g', 'g'),
+      imperial: reading(imperial, 'unit-oz', 'oz'),
+    });
+    const cans = {
+      count: 12,
+      contentUnit: { name: 'cans' },
+      perUnitNetWeight: 340.19,
+      perUnitNetWeightUnit: { id: 'unit-g', symbol: 'g' },
+      totalNetWeight: 4082.28,
+      perUnit: measure(340.19, 340.19, 12),
+      total: measure(4082.28, 4082.28, 144),
+    };
+
+    it('reads each weight in ounces for an imperial reader', () => {
+      expect(formatPackageBreakdownFull(cans, t, UnitSystem.Imperial)).toBe(
+        '12 x 12 oz cans (144 oz total)',
+      );
+    });
+
+    it('reads each weight in grams for a metric reader', () => {
+      expect(formatPackageBreakdownFull(cans, t, UnitSystem.Metric)).toBe(
+        '12 x 340.19 g cans (4082.28 g total)',
+      );
+    });
+
+    // A local write moved the stored figure; only the server can re-read it.
+    it('shows a weight as stored once its reading no longer describes it', () => {
+      expect(
+        formatPackageBreakdownFull(
+          { ...cans, perUnitNetWeight: 300, totalNetWeight: 3600 },
+          t,
+          UnitSystem.Imperial,
+        ),
+      ).toBe('12 x 300 g cans (3600 g total)');
+    });
+  });
+});
+
+describe('formatHeldAmount', () => {
+  const NO_READING = {
+    value: 0,
+    unitId: 'unit-none',
+    metric: { value: 0, unitId: 'unit-none', symbol: '' },
+    imperial: { value: 0, unitId: 'unit-none', symbol: '' },
+  };
+  const liters = (quantity: number, displayAsFraction = false) => ({
+    displayAmount: { quantity, unit: { id: 'u-l', symbol: 'L' } },
+    unit: { id: 'u-l', displayAsFraction },
+    held: NO_READING,
+  });
+
+  it('reads it in the user’s system while the reading describes it', () => {
+    const weighed = {
+      displayAmount: { quantity: 100, unit: { id: 'u-g', symbol: 'g' } },
+      unit: { id: 'u-g', displayAsFraction: false },
+      held: {
+        value: 100,
+        unitId: 'u-g',
+        metric: {
+          value: 100,
+          unitId: 'u-g',
+          symbol: 'g',
+          displayAsFraction: false,
+          type: UnitType.Weight,
+        },
+        imperial: {
+          value: 3.5,
+          unitId: 'u-oz',
+          symbol: 'oz',
+          displayAsFraction: false,
+          type: UnitType.Weight,
+        },
+      },
+    };
+    expect(formatHeldAmount(weighed, UnitSystem.Imperial)).toBe('3.5 oz');
+  });
+
+  it('shows a stack as the server shows it: 12 pc as 1 doz', () => {
+    expect(
+      formatHeldAmount(
+        {
+          displayAmount: { quantity: 1, unit: { id: 'u-doz', symbol: 'doz' } },
+          unit: { id: 'u-pc', displayAsFraction: false },
+          held: NO_READING,
+        },
+        UnitSystem.Metric,
+      ),
+    ).toBe('1 doz');
+  });
+
+  it('writes a cooking fraction for a unit that shows them', () => {
+    expect(formatHeldAmount(liters(1.25, true), UnitSystem.Metric)).toBe(
+      '1 1/4 L',
+    );
+  });
+
+  it('rounds to three decimals for a unit that does not', () => {
+    expect(formatHeldAmount(liters(177.4412), UnitSystem.Metric)).toBe(
+      '177.441 L',
+    );
   });
 });
 

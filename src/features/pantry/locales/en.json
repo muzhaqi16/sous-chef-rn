@@ -6,7 +6,6 @@
     "noExpiry": "No expiry",
     "amount": "Amount",
     "nutrition": "Nutrition",
-    "recipesToTry": "Recipes to try",
     "noShoppingListSelectedTitle": "No Shopping List Selected",
     "noShoppingListSelectedMessage": "Please select a shopping list first.",
     "goToShoppingLists": "Go to Shopping Lists",
@@ -169,6 +168,7 @@
     "newQuantity": "New Quantity",
     "reasonPlaceholder": "Why is the quantity being adjusted?",
     "remainingWeightPlaceholder": "Leave blank to auto-adjust",
+    "countedAs": "Counted as {{amount}}",
     "systemReason": {
       "stackMerged": "Adjustment after merging items",
       "stackPurged": "Administrative removal",

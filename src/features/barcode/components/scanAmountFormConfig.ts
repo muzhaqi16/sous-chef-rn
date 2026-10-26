@@ -125,14 +125,13 @@ export function packageUnitOf(
   );
 }
 
-/** The scanned pack's size, as the user's unit system reads it where the API read it. */
-/** A `Measure` reading with its unit's id, which the size field records. */
+/** The scanned pack's size as the user's unit system reads it, with its unit's id for the size field. */
 const readingOfSize = (
   size: NonNullable<ScannedItem['packageSize']>,
   system: ReadingSystem,
 ) => {
-  const { value, unit } = readingOf(size, system);
-  return { value, unit: { id: unit.id, symbol: unit.symbol } };
+  const { value, unitId, symbol } = readingOf(size, system);
+  return { value, unit: { id: unitId, symbol } };
 };
 
 function packSizeOf(item: ScannedItem, system: ReadingSystem) {

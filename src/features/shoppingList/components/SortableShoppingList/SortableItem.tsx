@@ -149,13 +149,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const { showImages, readingSystem } = useShoppingListRowOptions();
   const shownReading = complete ? shownLineReading(data, readingSystem) : null;
   const unitDisplay = shownReading
-    ? shownReading.unit.symbol
+    ? shownReading.symbol
     : firstNonBlank(data.unitName, data.unit?.symbol);
   const shownQuantity = shownReading ? shownReading.value : quantity;
   const shownQuantityInput = shownReading ? null : quantityInput;
   // 0.5 kg, not "1/2 kg": a reading takes its unit's notation, as the pantry's do.
   const shownNotation = shownReading
-    ? readingNotation(shownReading.unit)
+    ? readingNotation(shownReading)
     : undefined;
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.

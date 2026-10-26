@@ -685,16 +685,14 @@ describe('useQuantityEditModal', () => {
 
 // The sheet opens on what the row shows, and saves what is typed in that unit.
 describe('useQuantityEditModal — the amount as the row reads it', () => {
-  const unit = (id: string, name: string, symbol: string) => ({
-    __typename: 'Unit',
-    id,
-    name,
+  const reading = (value: number, unitId: string, symbol: string) => ({
+    __typename: 'MeasureReading',
+    value,
+    unitId,
     symbol,
     displayAsFraction: false,
     type: UnitType.Weight,
   });
-  const lb = unit('unit-lb', 'pound', 'lb');
-  const kg = unit('unit-kg', 'kilogram', 'kg');
 
   // A 2 lb line, which a metric reader sees as 0.91 kg.
   const twoPounds = (system: UnitSystem) => {
@@ -717,9 +715,9 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
         amount: {
           __typename: 'Measure',
           value: 2,
-          unit: { __typename: 'Unit', id: 'unit-lb' },
-          metric: { __typename: 'MeasureReading', value: 0.91, unit: kg },
-          imperial: { __typename: 'MeasureReading', value: 2, unit: lb },
+          unitId: 'unit-lb',
+          metric: reading(0.91, 'unit-kg', 'kg'),
+          imperial: reading(2, 'unit-lb', 'lb'),
         },
         image: null,
         item: null,

@@ -83,18 +83,15 @@ function countHeld(value: number): PantryItemNode['held'] {
   const reading: PantryItemNode['held']['metric'] = {
     __typename: 'MeasureReading',
     value,
-    unit: {
-      __typename: 'Unit',
-      id: 'unit-piece',
-      symbol: 'pc',
-      displayAsFraction: false,
-      type: UnitType.Count,
-    },
+    unitId: 'unit-piece',
+    symbol: 'pc',
+    displayAsFraction: false,
+    type: UnitType.Count,
   };
   return {
     __typename: 'Measure',
     value,
-    unit: { __typename: 'Unit', id: 'unit-piece' },
+    unitId: 'unit-piece',
     metric: reading,
     imperial: reading,
   };

@@ -24,13 +24,10 @@ const reading = (
 ): PackageSize['metric'] => ({
   __typename: 'MeasureReading',
   value,
-  unit: {
-    __typename: 'Unit',
-    id,
-    symbol,
-    displayAsFraction: false,
-    type: UnitType.Weight,
-  },
+  unitId: id,
+  symbol,
+  displayAsFraction: false,
+  type: UnitType.Weight,
 });
 
 const honey: ScannedItem = {
@@ -46,7 +43,7 @@ const honey: ScannedItem = {
   packageSize: {
     __typename: 'Measure',
     value: 1360.78,
-    unit: { __typename: 'Unit', id: 'unit-g' },
+    unitId: 'unit-g',
     metric: reading(1.36, 'unit-kg', 'kg'),
     imperial: reading(3, 'unit-lb', 'lb'),
   },

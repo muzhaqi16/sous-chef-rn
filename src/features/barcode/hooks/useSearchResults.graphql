@@ -68,26 +68,20 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
         # label's own figure: what the card and the add's size prefill show.
         packageSize {
           value
-          unit {
-            id
-          }
+          unitId
           metric {
             value
-            unit {
-              id
-              symbol
-              displayAsFraction
-              type
-            }
+            unitId
+            symbol
+            displayAsFraction
+            type
           }
           imperial {
             value
-            unit {
-              id
-              symbol
-              displayAsFraction
-              type
-            }
+            unitId
+            symbol
+            displayAsFraction
+            type
           }
         }
         # The result's nutrition card, and the full sheet it opens.
@@ -176,26 +170,20 @@ fragment useSearchResults_item on Item {
   }
   packageSize {
     value
-    unit {
-      id
-    }
+    unitId
     metric {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
     imperial {
       value
-      unit {
-        id
-        symbol
-        displayAsFraction
-        type
-      }
+      unitId
+      symbol
+      displayAsFraction
+      type
     }
   }
   nutritionFacts {
