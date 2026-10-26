@@ -437,10 +437,18 @@ input AdjustPantryItemQuantityInput {
   than the tare, or together with remainingNetWeight.
   """
   grossWeight: Float
+  """The unit grossWeight is stated in, as remainingNetWeightUnitId."""
+  grossWeightUnitId: ID
   id: ID!
   idempotencyKey: ID
   """The actual quantity from physical count"""
   newQuantity: Float!
+  """
+  The unit newQuantity is stated in, when not the stack's: converted exactly
+  within one kind (2.5 lb onto a gram stack; dozens onto pieces). Another kind
+  is refused on this field. The recount's ledger row keeps it as stated.
+  """
+  newQuantityUnitId: ID
   """Why the adjustment was made (required for audit trail)"""
   reason: String!
   """
@@ -451,6 +459,11 @@ input AdjustPantryItemQuantityInput {
   field when no held batch records a weight.
   """
   remainingNetWeight: Float
+  """
+  The unit remainingNetWeight is stated in, when not the stack's net-weight
+  unit: one of the same kind, never the tracking unit; refused on this field otherwise.
+  """
+  remainingNetWeightUnitId: ID
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
@@ -8875,14 +8888,20 @@ type Measure {
   metric: MeasureReading!
   """The unit value is stored in."""
   unit: Unit!
+  """The id of unit, so a Measure needs no unit selection."""
+  unitId: ID!
   """The figure exactly as stored, in unit; never rounded here."""
   value: Float!
 }
 
 """One unit system's reading of an amount."""
 type MeasureReading {
+  """Whether unit shows its amounts as fractions (cups do)."""
+  displayAsFraction: Boolean!
   """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
   symbol: String!
+  """The dimension of unit: weight, volume or count."""
+  type: UnitType!
   unit: Unit!
   """The id of unit, so a reading needs no unit selection."""
   unitId: ID!
@@ -12220,6 +12239,11 @@ type PantryItemUsage {
   recipe: Recipe
   """The id of the recipe this use cooked; null when none"""
   recipeId: ID
+  """
+  A recount's count as the person stated it, in their unit (2.5 lb on a gram
+  stack). Null for every other row, and for a recount that named no unit.
+  """
+  statedAmount: Measure
   """
   On a purchase, the store it was bought at; null when none was given and on every other row
   """
