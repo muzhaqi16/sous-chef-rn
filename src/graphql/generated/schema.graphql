@@ -226,9 +226,7 @@ input AddBrandToListInput {
   brandId: ID!
   brandListId: ID!
   """
-  Optional client-generated permanent ID (CUID2) for the entry. A replay with
-  an id already applied converges on that entry; an id naming another entry
-  is a ConflictError.
+  Optional client-minted CUID2: a replay converges on that entry; an id naming another entry is a ConflictError
   """
   id: ID
   """The owner's own note, at most 500 characters"""
@@ -236,7 +234,6 @@ input AddBrandToListInput {
 }
 
 type AddBrandToListPayload {
-  """The list as it stands after the add"""
   brandList: BrandList!
   """The entry: the one already there when the brand was listed before"""
   brandListEntry: BrandListEntry!
@@ -818,8 +815,7 @@ input BrandFilters {
 }
 
 """
-A list of brands a user keeps for themselves, to be told when a product they
-look at carries one. Private to its owner; at most 20 per user.
+Brands a user wants to be told about on a product. Private to its owner; at most 20 per user.
 """
 type BrandList {
   createdAt: DateTime!
@@ -835,24 +831,20 @@ type BrandList {
   version: Int!
 }
 
-"""One brand on a user's list."""
 type BrandListEntry {
   brand: Brand!
   createdAt: DateTime!
   id: ID!
-  """The owner's own note on why the brand is listed"""
   reason: String
   version: Int!
 }
 
 """
-One of the caller's enabled lists naming a product's brand, or a brand above
-it through Brand.parent.
+One of the caller's enabled lists naming a product's brand, or a brand above it through Brand.parent.
 """
 type BrandListMatch {
   """
-  The product's brand the entry reached: the scanned barcode's brand, or one
-  of the product's own brands.
+  The product's brand the entry reached: the scanned barcode's, or one of the product's own
   """
   brand: Brand!
   brandList: BrandList!
@@ -2105,9 +2097,7 @@ input CreateBrandListInput {
   """Whether the list is matched from the start; true when omitted"""
   enabled: Boolean
   """
-  Optional client-generated permanent ID (CUID2). Offline-first clients mint
-  it so a replayed create answers IDEMPOTENT_REPLAY instead of duplicating.
-  When omitted, the server generates one.
+  Optional client-minted CUID2: a replayed create answers IDEMPOTENT_REPLAY instead of duplicating
   """
   id: ID
   """1 to 100 characters"""
@@ -4493,9 +4483,7 @@ enum Diet {
 }
 
 """
-One member restriction that a product, concept or recipe ingredient may
-break, with the strongest evidence for it. Nothing is ever stated as safe:
-the absence of an alert means only that the catalog holds no evidence.
+A member restriction a subject may break, with the strongest evidence. No alert means only no evidence, never safe.
 """
 type DietaryAlert {
   """
@@ -4506,11 +4494,8 @@ type DietaryAlert {
   The member's membership of the home; its displayName is the name to show
   """
   membership: Membership!
-  """The restriction the subject may break, as the home sees it"""
   restriction: SharedDietaryRestriction!
-  """What kind of evidence raised the alert"""
   source: DietaryAlertSource!
-  """CONTAINS or MAY_CONTAIN"""
   state: DietaryAlertState!
 }
 
@@ -4540,9 +4525,7 @@ enum DietaryAlertSource {
 How strongly the evidence says a subject holds what a restriction avoids.
 """
 enum DietaryAlertState {
-  """The evidence says the subject contains it"""
   CONTAINS
-  """The evidence says only that the subject may contain it"""
   MAY_CONTAIN
 }
 
@@ -5368,12 +5351,8 @@ type Home {
   currency: CurrencyCode
   description: String
   """
-  What this home's members cannot or will not eat: one entry per ACTIVE
-  member who shares with this home (Membership.sharesDietaryNeeds) and has at
-  least one restriction, the caller included, in the order membersConnection
-  lists them. Read live from each member's profile, so leaving, rejoining and
-  editing a restriction need nothing else. Readable by a member who can view
-  the home, guests included.
+  One entry per ACTIVE member sharing with this home (Membership.sharesDietaryNeeds) who has a restriction,
+  in membersConnection order. Read live; readable by any member who can view the home, guests included.
   """
   dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
@@ -5862,12 +5841,10 @@ type HouseholdMoneyReport {
   wasteValue: [CurrencyAmount!]
 }
 
-"""A price the household paid, as recorded."""
 type HouseholdPaidPrice {
   basis: PriceBasis
   """The price per kg, L or each, when the pack's facts allowed it"""
   normalizedPrice: Float
-  """Whether it was a recorded sale price"""
   onSale: Boolean!
   paidAt: DateTime!
   """How many units were bought; null when not known"""
@@ -5877,14 +5854,11 @@ type HouseholdPaidPrice {
   """Where it was bought; null when no store was recorded"""
   store: Store
   unit: Unit!
-  """The price per one unit"""
   unitPrice: Float!
 }
 
 """
-What a household itself paid for an item: its own purchases and receipts
-only, under the comparison's trust rules. Another household's price, a
-catalog price and a manual price never count.
+What a household itself paid: its own purchases and receipts only; other households', catalog and manual prices never count.
 """
 type HouseholdPriceSummary {
   currency: Currency!
@@ -5930,19 +5904,14 @@ type HouseholdUsualPrice {
   basis: PriceBasis!
   """The median price per basis; each day counts once, as that day's median"""
   medianPrice: Float!
-  """The days counted"""
   observations: Int!
   """
-  The usual price per one of a unit, for this item and barcode: the rules a
-  recorded price is normalized by, run in reverse over its pack. Null when
-  the unit normalizes to another basis, or only by an assumed density or
-  package size.
+  The usual price per one of a unit; null when the unit normalizes to another basis, or only by an assumed density or package size
   """
   unitPrice(
     """The unit the price is per"""
     unitId: ID!
   ): Float
-  """The window the days were counted over"""
   windowDays: Int!
 }
 
@@ -6056,10 +6025,7 @@ enum IngredientMatchConfidence {
   UNSURE
 }
 
-"""
-A curated swap: what can stand in for a concept in a recipe. Our own data,
-managed by admins.
-"""
+"""A curated swap for a concept in a recipe, managed by admins."""
 type IngredientSubstitute {
   """The concept it stands in for"""
   concept: Item!
@@ -6068,9 +6034,7 @@ type IngredientSubstitute {
   forQuantity: Float!
   forUnit: Unit!
   id: ID!
-  """A cook's note, such as when the swap does not suit"""
   note: String
-  """Its parts, in order"""
   parts: [IngredientSubstitutePart!]!
   """Curated order among one concept's substitutes, lowest first"""
   position: Int!
@@ -6085,12 +6049,9 @@ type IngredientSubstituteOption {
   The home's PREFERENCE and GOAL alerts the parts raise; an allergy or intolerance drops the option
   """
   alerts: [DietaryAlert!]!
-  """Its parts in the amounts this ingredient needs"""
   parts: [SubstitutePartAmount!]!
   """
-  Whether the parts are scaled to the ingredient's amount. False when the
-  amount converts to the substitute's unit only by an assumption, or the
-  recipe states none: the parts are then as curated, for forQuantity.
+  False when the amount converts only by an assumption, or the recipe states none: the parts are then as curated
   """
   scaled: Boolean!
   substitute: IngredientSubstitute!
@@ -6121,11 +6082,8 @@ input IngredientUsageInput {
   pantryItemId: ID
   recipeIngredientId: ID!
   """
-  A curated substitute the cook used instead of the ingredient, as
-  RecipeIngredient.substitutes offered it. The entry draws one part:
-  pantryItemId is required and must hold one of the substitute's parts. The
-  ingredient may have one such entry per part, all naming this substitute,
-  with or without exactStacks; its own stacks are then not drawn.
+  A substitute RecipeIngredient.substitutes offered; the entry draws one part from pantryItemId, required.
+  The ingredient may have one entry per part, all naming it; its own stacks are then not drawn.
   """
   substituteId: ID
 }
@@ -6385,9 +6343,7 @@ type Item {
   """
   baseDimension: BaseDimension
   """
-  Who owns the product's brand: the owner a USDA record names, else an Open
-  Food Facts brand owner. Null when none is named, or the owner is the
-  brand itself. What the brand is part of is Brand.parent.
+  Who owns the product's brand, per USDA else Open Food Facts; null when none is named or it is the brand itself
   """
   brandOwner: BrandOwnerFact
   """Brands linked to this item, at most 100; empty when none."""
@@ -6479,24 +6435,17 @@ type Item {
   """Free-text description of the item, or null when none is recorded."""
   description: String
   """
-  The home's dietary alerts for this item: one per restriction it may break,
-  among every ACTIVE member sharing with the home and the caller's own
-  restrictions, shared or not. Ordered by severity (ALLERGY to GOAL), then
-  CONTAINS before MAY_CONTAIN, then member order. A product is judged by its
-  declared allergens, its ingredients analysis and labels, its store
-  department and avoided items; a concept by the allergens its name names,
-  its department and avoided items. Unknown evidence raises nothing, and a
-  health goal never alerts. The caller must be an ACTIVE member of the home.
+  One alert per restriction it may break, among ACTIVE members sharing with the home and the
+  caller's own: by severity, then CONTAINS first, then member order. Unknown evidence raises
+  nothing and a health goal never alerts. The caller must be an ACTIVE member of the home.
   """
   dietaryAlerts(
     """The home whose members' restrictions count"""
     homeId: ID!
   ): [DietaryAlert!]!
   """
-  Other live products under this item's concept that raise no dietary alert
-  for the home and hold allergen or ingredient data, most popular first. Empty
-  for an unplaced product. Not a claim of safety: it lists products the
-  catalog holds no evidence against.
+  Other live products under this item's concept raising no alert and holding allergen or ingredient
+  data, most popular first; empty for an unplaced product. Not a claim of safety.
   """
   dietaryAlternatives(
     """At most this many: default 5, at most 20"""
@@ -6533,15 +6482,13 @@ type Item {
   """
   healthBenefits: [HealthBenefit!]!
   """
-  What the household paid for this item. The caller must be an ACTIVE member
-  of the home.
+  What the household paid for this item. The caller must be an ACTIVE member of the home.
   """
   householdPriceSummary(
     """The currency read; the caller's own when omitted"""
     currency: CurrencyCode
     """One barcode of the item; all of them when omitted"""
     gtin: String
-    """The household"""
     homeId: ID!
     """How far back usual counts: default 180 days, at most 365"""
     windowDays: Int
@@ -6588,11 +6535,8 @@ type Item {
   """
   level: ItemLevel!
   """
-  The caller's enabled brand lists naming this product's brand, or a brand
-  above it through Brand.parent: one match per list, the nearest. A product
-  reached through a scanned barcode is checked by that barcode's brand; any
-  other product by its own brands; a concept by none. Empty for an
-  anonymous caller.
+  The caller's enabled lists naming this product's brand or one above it, one match per list, the
+  nearest. A scan is checked by its barcode's brand, a concept by none; empty when anonymous.
   """
   listMatches: [BrandListMatch!]!
   """
@@ -8331,9 +8275,7 @@ type MealPlan {
   """Free text about the plan; null when none was given"""
   description: String
   """
-  The dietary profile nutritionGoalProgress measures the plan against. Null
-  when none is linked, and for any caller but the profile's owner or an
-  admin: a plan shared with a home does not show its creator's profile.
+  The dietary profile nutritionGoalProgress measures the plan against; null when none is linked, or for any caller but its owner or an admin
   """
   dietaryProfile: DietaryProfile
   """
@@ -8374,8 +8316,7 @@ type MealPlan {
   name: String!
   """
   Progress toward the linked dietary profile's nutrition goals. Null when no
-  profile is linked, and, since each target is the profile's, for any caller
-  but its owner or an admin.
+  profile is linked, or for any caller but its owner or an admin.
   """
   nutritionGoalProgress: NutritionGoalProgress
   """
@@ -8992,9 +8933,7 @@ type Membership {
   """
   role: MembershipRole!
   """
-  Whether the member's dietary restrictions appear in this home's
-  dietaryNeeds. Set only by the member (updateDietarySharing). A membership
-  starts shared; one that existed before the switch did started unshared.
+  Whether the member's restrictions appear in this home's dietaryNeeds; set only by the member. A new membership starts shared
   """
   sharesDietaryNeeds: Boolean!
   """
@@ -9511,8 +9450,7 @@ type Mutation {
   """
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
   """
-  Put a catalog brand on one of the caller's lists. A brand already there
-  converges: the entry is answered as it stands, its reason unchanged.
+  Put a catalog brand on one of the caller's lists. A brand already there converges, its reason unchanged.
   """
   addBrandToList(input: AddBrandToListInput!): AddBrandToListResult!
   """
@@ -10150,8 +10088,7 @@ type Mutation {
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
   """
-  Rename a list or switch it on or off. Another user's list is a
-  NotFoundError, as if it did not exist.
+  Rename a list or switch it on or off. Another user's list is a NotFoundError.
   """
   updateBrandList(input: UpdateBrandListInput!): UpdateBrandListResult!
   """Change an entry's reason."""
@@ -10171,14 +10108,9 @@ type Mutation {
   """Update the current user's dietary profile."""
   updateDietaryProfile(input: UpdateDietaryProfileInput!): UpdateDietaryProfileResult!
   """
-  Turn the caller's own dietary sharing with a home on or off: whether their
-  restrictions appear in that home's dietaryNeeds. Any member sets their own,
-  guests included, and nobody sets another member's. A caller with no ACTIVE
-  membership in the home is refused (ForbiddenError). Setting the value the
-  switch already holds writes nothing, and a toggle resent under an
-  idempotencyKey already applied writes nothing and answers the membership as
-  it stands, so a replay converges; a change is announced on homeEvents as
-  MEMBERSHIP_UPDATED naming sharesDietaryNeeds.
+  Turn the caller's own dietary sharing with a home on or off; any member, guests included. No ACTIVE
+  membership is a ForbiddenError. An unchanged value or a spent idempotencyKey writes nothing and answers
+  the membership as it stands; a change is announced on homeEvents as MEMBERSHIP_UPDATED.
   """
   updateDietarySharing(input: UpdateDietarySharingInput!): UpdateDietarySharingResult!
   """Update an external source mapping."""
@@ -11186,9 +11118,7 @@ type OperatingSystemStat {
 
 """One place a source stated that names a country."""
 type OriginFact {
-  """The country, ISO 3166-1 alpha-2"""
   countryCode: CountryCode!
-  """The source that stated it"""
   source: ExternalSource!
   """The place as the source stated it"""
   value: String!
@@ -12728,8 +12658,7 @@ type PriceComparisonRow {
   """The median price per basis over the window"""
   medianPrice: Float!
   """
-  Whether the row rests on enough observations (the same minimum as a
-  household's usual price) to show as a range rather than one price
+  Whether the row has the minimum observations a household's usual price needs, to show as a range
   """
   meetsMinimumSample: Boolean!
   observations: Int!
@@ -12854,9 +12783,7 @@ input ProductDetailsInput {
 }
 
 """
-Where a product comes from, as its source records state it. A stated place
-counts only when it names a country; nothing is inferred from a barcode
-prefix or from where the product is sold.
+Where a product comes from, as its records state it: only a place naming a country counts; nothing is inferred.
 """
 type ProductOrigin {
   """Its country of origin as the retailer states it: Kroger"""
@@ -13155,12 +13082,8 @@ input PurchaseTrackingInput {
   """Whether the line is purchased; null is refused"""
   isPurchased: Boolean
   """
-  The product actually bought, when it is not the line's own item, such as a
-  product scanned for a concept line in store mode. Read when this update
-  turns the line purchased: the purchase and its price observation are
-  recorded on it, with its barcode and pack, while the line keeps its item.
-  It must be the line's item or an item under it. Refused beside isPurchased
-  false.
+  The product bought when not the line's own item, such as a store-mode scan: the purchase is recorded
+  on it while the line keeps its item. The line's item or one under it; refused beside isPurchased false.
   """
   purchasedItem: PurchasedItemInput
   """The price paid per unit bought. Refused beside isPurchased false."""
@@ -15191,10 +15114,7 @@ type RecipeIngredient {
   """
   convertedQuantity: ConvertedValue
   """
-  The home's dietary alerts for this ingredient, as on Item.dietaryAlerts.
-  An ingredient is judged by the allergens its name and its linked item's
-  name name, the linked item's department, and avoided items through the
-  linked item's root; an unlinked ingredient by its name alone.
+  As on Item.dietaryAlerts, judged by the ingredient's name and its linked item; an unlinked one by its name alone
   """
   dietaryAlerts(
     """The home whose members' restrictions count"""
@@ -15226,10 +15146,8 @@ type RecipeIngredient {
   section: String
   sortOrder: Int!
   """
-  What can stand in for this ingredient: the curated substitutes for its
-  concept and every concept above it. All parts in the pantry first, then
-  some, then none. An option a home member is allergic or intolerant to is
-  not offered. The caller must be an ACTIVE member of the home.
+  Curated substitutes for this ingredient's concept and those above it, all parts held first. An
+  option a member is allergic or intolerant to is not offered. The caller must be an ACTIVE member.
   """
   substitutes(
     """The home whose members' restrictions count"""
@@ -15354,9 +15272,7 @@ type RecipeIngredientMatch {
   """
   matchKind: RecipeIngredientMatchKind!
   """
-  The stack a cook draws first: the first, in draw order, whose stock the
-  ingredient's unit can express without an assumption; when none can, the
-  first, and availableQuantity is null.
+  The first stack in draw order whose stock the unit can express without an assumption, else the first with availableQuantity null
   """
   matchedPantryItem: PantryItem
   """
@@ -16415,10 +16331,8 @@ input RestrictionKindInput @oneOf {
   """A food the user cannot tolerate, such as GLUTEN"""
   intolerance: Intolerance
   """
-  A catalog item the user avoids: an active item they can see, else
-  NotFoundError. It is stored as its root (a placed product's concept, else
-  the item itself), which must be PUBLIC (ValidationError on kind.item), and
-  covers everything at or below that root and below its same-name twins.
+  A catalog item avoided: active and visible, else NotFoundError. Stored as its root, which must be PUBLIC
+  (ValidationError on kind.item); covers everything at or below that root and its same-name twins.
   """
   item: ID
 }
@@ -16591,20 +16505,15 @@ Always include a __typename so the variant can be discriminated.
 union ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError
 
 """
-One member's restriction as a home they share with sees it: what it restricts
-and how strictly. It carries no notes and leads to no other part of the
-member's dietary profile.
+A member's restriction as a home they share with sees it: no notes, and no path to the rest of their profile.
 """
 type SharedDietaryRestriction {
-  """The diet followed, when the restriction is a diet"""
   diet: Diet
-  """The health goal pursued, when the restriction is a health goal"""
   healthGoal: HealthGoal
   """
   The restriction's identifier, the same as on its owner's DietaryRestriction
   """
   id: ID!
-  """The food not tolerated, when the restriction is an intolerance"""
   intolerance: Intolerance
   """
   The catalog item avoided, when the restriction avoids one: the root of the item picked
@@ -18495,14 +18404,9 @@ type SubstitutePartAmount {
   alternativeStacks: [PantryItem!]!
   """Whether the pantry holds a stack of it, or of an item under it"""
   inPantry: Boolean!
-  """The concept to use"""
   item: Item!
   """
-  The stack a cook would draw the part from, chosen as a cook draws an
-  ingredient: the first, in draw order (its own item, then opened, then
-  soonest expiry), whose stock converts to the part's unit without an
-  assumption; when none does, the first. The stack an ingredientsUsed entry
-  for this part names. Null when inPantry is false.
+  The first stack in draw order whose stock converts to the part's unit without an assumption, else the first; null when inPantry is false
   """
   pantryItem: PantryItem
   """
@@ -19129,8 +19033,7 @@ input UpdateBrandListInput {
   id: ID!
   name: String
   """
-  The version the client holds: the write applies only at it, and a stale one
-  is refused with VERSION_CONFLICT. Omitted, the last write wins.
+  The write applies only at this version, else VERSION_CONFLICT; omitted, the last write wins
   """
   version: Int
 }
@@ -19321,14 +19224,11 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfilePayload | ValidationError
 
-"""The caller's own sharing switch in one home."""
 input UpdateDietarySharingInput {
   """A home the caller is an ACTIVE member of"""
   homeId: ID!
   """
-  A CUID2 the client mints per toggle, for an offline queue. A toggle sent
-  again under a key already applied writes nothing and answers the membership
-  as it stands, so a late resend never undoes a later toggle. Omit online.
+  A CUID2 minted per toggle for an offline queue: a resend under a spent key writes nothing, so it never undoes a later toggle
   """
   idempotencyKey: ID
   """Whether the caller's dietary restrictions are shown to this home"""
@@ -19336,9 +19236,7 @@ input UpdateDietarySharingInput {
 }
 
 type UpdateDietarySharingPayload {
-  """The home, whose dietaryNeeds reflect the switch"""
   home: Home
-  """The caller's membership, carrying the switch as it now stands"""
   membership: Membership!
 }
 
