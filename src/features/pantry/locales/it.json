@@ -361,9 +361,7 @@
     "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "Articolo già in dispensa",
-    "body": "Questo articolo è già nella tua dispensa in questa unità. Vuoi rifornirlo?",
-    "restock": "Rifornisci"
+    "title": "Articolo già in dispensa"
   },
   "relinkItem": {
     "action": "Non è questo articolo?",

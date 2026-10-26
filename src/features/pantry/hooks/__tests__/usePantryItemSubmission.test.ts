@@ -1,22 +1,14 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import {
-  CreatePantryItemDocument,
-  RestockPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  ErrorCode,
-  StorageState,
-  UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { ReadStackUnit_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { ErrorCode, StorageState } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
@@ -34,32 +26,6 @@ jest.mock('#/utils/fractionUtils', () => ({
     return isNaN(num) ? null : num;
   }),
 }));
-
-jest.mock('#domain/pantryItemDuplicate', () => {
-  const actual = jest.requireActual('#domain/pantryItemDuplicate');
-  const isDup = jest.fn().mockReturnValue(false);
-  const getInfo = jest.fn().mockReturnValue(null);
-  return {
-    // Keep the real `promptPantryDuplicate` so it calls the (mocked)
-    // alertService with the standard duplicate copy the tests assert on; only
-    // the detection helpers are stubbed per-test.
-    ...actual,
-    isPantryItemDuplicateError: isDup,
-    getPantryItemDuplicateInfo: getInfo,
-    // Delegates to the stubbed detectors (mirrors the real impl) so the
-    // per-test override of isPantryItemDuplicateError still drives handling.
-    getPantryItemDuplicateFromResult: jest.fn(
-      (payload: { __typename?: string } | null | undefined, error: unknown) => {
-        if (payload?.__typename === 'DuplicatePantryItemError') {
-          const info = actual.getPantryItemDuplicateInfoFromPayload(payload);
-          if (info) return info;
-        }
-        if (error != null && isDup(error)) return getInfo(error);
-        return null;
-      },
-    ),
-  };
-});
 
 const mockOnSuccess = jest.fn();
 
@@ -397,158 +363,7 @@ describe('usePantryItemSubmission', () => {
     });
   });
 
-  it('handles duplicate pantry item error with restock option', async () => {
-    const {
-      isPantryItemDuplicateError,
-      getPantryItemDuplicateInfo,
-    } = require('#domain/pantryItemDuplicate');
-    isPantryItemDuplicateError.mockReturnValue(true);
-    getPantryItemDuplicateInfo.mockReturnValue({
-      existingPantryItemId: 'existing-1',
-    });
-
-    const { result } = renderHookWithApollo(() => useSubmission({}), {
-      operationMocks: [createErrorMock().mock],
-    });
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Item Already in Pantry',
-      expect.stringContaining('already in your pantry'),
-      expect.any(Array),
-    );
-  });
-
-  it('recovers a server duplicate refusal by restocking the named stack, never a second create', async () => {
-    // A forced add would land on this same stack while the row published under
-    // the minted id stayed behind as a ghost; restock is the only recovery.
-    const refused = recordMock(CreatePantryItemDocument, {
-      data: {
-        createPantryItem: {
-          __typename: 'DuplicatePantryItemError',
-          code: ErrorCode.Conflict,
-          message: 'Already in pantry',
-          existingPantryItemIds: ['existing-1'],
-        },
-      },
-    });
-    const restock = recordMock(RestockPantryItemDocument, {
-      data: {
-        restockPantryItem: { __typename: 'RestockPantryItemPayload' },
-      },
-    });
-
-    const { result } = renderHookWithApollo(() => useSubmission({}), {
-      operationMocks: [refused.mock, restock.mock],
-    });
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    expect(buttons.map(b => b.text)).toEqual(['Cancel', 'Restock']);
-
-    await act(async () => {
-      buttons[1]?.onPress?.();
-    });
-
-    await waitFor(() =>
-      expect(restock.fired).toContainEqual({
-        today: expect.any(String),
-        input: expect.objectContaining({
-          id: 'existing-1',
-          amount: { measured: { quantity: 2 } },
-          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        }),
-      }),
-    );
-    const [fired] = restock.fired;
-    expect(fired?.input).toMatchObject({ today: fired?.today });
-    await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
-    expect(refused.fired).toHaveLength(1);
-  });
-
-  const restockWithSize = async (stackUnitType: UnitType) => {
-    const refused = recordMock(CreatePantryItemDocument, {
-      data: {
-        createPantryItem: {
-          __typename: 'DuplicatePantryItemError',
-          code: ErrorCode.Conflict,
-          message: 'Already in pantry',
-          existingPantryItemIds: ['existing-1'],
-        },
-      },
-    });
-    const restock = recordMock(RestockPantryItemDocument, {
-      data: {
-        restockPantryItem: { __typename: 'RestockPantryItemPayload' },
-      },
-    });
-    const cache = makeCache();
-    cache.writeFragment({
-      fragment: ReadStackUnit_PantryItemFragmentDoc,
-      data: {
-        __typename: 'PantryItem',
-        id: 'existing-1',
-        unit: { __typename: 'Unit', id: 'unit-1', type: stackUnitType },
-      },
-    });
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          pantryNetWeight: '22',
-          pantryNetWeightUnitId: 'u-oz',
-        }),
-      { operationMocks: [refused.mock, restock.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    await act(async () => {
-      buttons[1]?.onPress?.();
-    });
-    await waitFor(() => expect(restock.fired).toHaveLength(1));
-    const [fired] = restock.fired;
-    return fired?.input;
-  };
-
-  it('restocks counted packages with the size entered, not the stack default', async () => {
-    // Two 22 oz jars restocking a stack of 32 oz jars keep their own size.
-    expect(await restockWithSize(UnitType.Count)).toMatchObject({
-      amount: {
-        packages: {
-          count: 2,
-          size: { netWeight: 22, netWeightUnitId: 'u-oz' },
-        },
-      },
-    });
-  });
-
-  it('restocks an amount, never packages, on a stack held by weight or volume', async () => {
-    // 2 cups beside a 22 oz size would otherwise read as two 22 oz packages.
-    expect(await restockWithSize(UnitType.Volume)).toMatchObject({
-      amount: { measured: { quantity: 2 } },
-    });
-  });
-
-  it('shows error when result has error but is not duplicate', async () => {
-    const {
-      isPantryItemDuplicateError,
-    } = require('#domain/pantryItemDuplicate');
-    isPantryItemDuplicateError.mockReturnValue(false);
-
+  it('shows an error alert when the create fails', async () => {
     const { result } = renderHookWithApollo(() => useSubmission({}), {
       operationMocks: [createErrorMock().mock],
     });
@@ -640,14 +455,7 @@ describe('usePantryItemSubmission', () => {
     });
   });
 
-  /**
-   * Offline-first: this form is reachable with no network, so a duplicate it
-   * could have seen in its own cache must not become a create the server will
-   * only refuse later. It sends an inline item with no catalog id, so the match
-   * is on the name plus the unit — the server refuses only the item in that
-   * unit — and it only ever prompts on that match, never acts.
-   */
-  describe('a duplicate the cache can already see', () => {
+  describe('a product the pantry already holds', () => {
     // Args are load-bearing — see the reader's own suite: the connection is
     // keyed on them, so a seed without them writes a key the app never has.
     const STOCKED_PANTRY = gql`
@@ -728,45 +536,15 @@ describe('usePantryItemSubmission', () => {
       return cache;
     };
 
-    it('prompts without firing a create', async () => {
+    // USM-2: an add of a held product joins its stack, or stands apart from
+    // it, on the server; the form asks nothing and never restocks itself.
+    it.each([
+      ['in the same unit', '  MILK ', 'unit-1'],
+      ['in another unit', 'Milk', 'unit-2'],
+    ])('goes as a forced add %s, with no prompt', async (_l, name, unitId) => {
       const m = createMock();
       const { result } = renderHookWithApollo(() => useSubmission({}), {
-        cache: seedStocked('  MILK '),
-        operationMocks: [m.mock],
-      });
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Already in Pantry',
-        expect.stringContaining('already in your pantry'),
-        expect.any(Array),
-      );
-      expect(m.fired).toHaveLength(0);
-    });
-
-    it('still fires the create when the name is not stocked', async () => {
-      const m = createMock();
-      const { result } = renderHookWithApollo(() => useSubmission({}), {
-        cache: seedStocked('Oat Milk'),
-        operationMocks: [m.mock],
-      });
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-
-      expect(m.fired).toHaveLength(1);
-      expect(mockOnSuccess).toHaveBeenCalled();
-    });
-
-    it('fires the create when the item is stocked only in another unit', async () => {
-      // A different unit is a separate stack the server accepts.
-      const m = createMock();
-      const { result } = renderHookWithApollo(() => useSubmission({}), {
-        cache: seedStocked('Milk', 'unit-litre'),
+        cache: seedStocked(name, unitId),
         operationMocks: [m.mock],
       });
 
@@ -776,108 +554,7 @@ describe('usePantryItemSubmission', () => {
 
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(m.fired).toHaveLength(1);
-      expect(mockOnSuccess).toHaveBeenCalled();
-    });
-
-    it('offers the restock for a blank unit, which the server resolves to the held stack', async () => {
-      const m = createMock();
-      const { result } = renderHookWithApollo(
-        () =>
-          useSubmission({
-            itemName: 'Eggs',
-            unit: '',
-            unitId: null,
-          }),
-        {
-          cache: seedStocked('Eggs', 'unit-piece'),
-          operationMocks: [m.mock],
-        },
-      );
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Already in Pantry',
-        expect.stringContaining('already in your pantry'),
-        expect.any(Array),
-      );
-      expect(m.fired).toHaveLength(0);
-      expect(mockOnSuccess).not.toHaveBeenCalled();
-    });
-
-    it('moves the held row at once when the restock is queued offline', async () => {
-      const cache = seedStocked('Milk');
-      // What the pantry list caches beside the row: the amount held and its unit.
-      cache.writeFragment({
-        id: 'PantryItem:pi-1',
-        fragment: gql`
-          fragment _HeldStockSeed on PantryItem {
-            heldQuantity
-            unit {
-              id
-              symbol
-            }
-          }
-        `,
-        data: {
-          __typename: 'PantryItem',
-          heldQuantity: 3,
-          unit: { __typename: 'Unit', id: 'unit-1', symbol: 'cups' },
-        },
-      });
-      // A queued local-first write: `queueLink` resolves with a null payload.
-      const queued = recordMock(RestockPantryItemDocument, {
-        data: { restockPantryItem: null },
-      });
-      const { result } = renderHookWithApollo(() => useSubmission({}), {
-        cache,
-        operationMocks: [queued.mock],
-      });
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-      const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
-        text: string;
-        onPress?: () => void;
-      }[];
-      await act(async () => {
-        buttons[1]?.onPress?.();
-      });
-
-      await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
-      expect(
-        cache.readFragment({
-          id: 'PantryItem:pi-1',
-          fragment: gql`
-            fragment _QueuedRestockProbe on PantryItem {
-              quantity
-              heldQuantity
-            }
-          `,
-        }),
-      ).toMatchObject({ quantity: 5, heldQuantity: 5 });
-    });
-
-    it('leaves a free-text unit to the server', async () => {
-      const m = createMock();
-      const { result } = renderHookWithApollo(
-        () =>
-          useSubmission({
-            unit: 'cups',
-            unitId: null,
-          }),
-        { cache: seedStocked('Milk'), operationMocks: [m.mock] },
-      );
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-
-      expect(alertService.alert).not.toHaveBeenCalled();
-      expect(m.fired).toHaveLength(1);
+      expect(m.fired[0]).toMatchObject({ input: { forceAdd: true } });
     });
   });
 });

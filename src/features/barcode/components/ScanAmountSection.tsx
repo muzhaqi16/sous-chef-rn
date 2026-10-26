@@ -34,6 +34,8 @@ interface ScanAmountSectionProps {
   onEdit: () => void;
   /** Whether the add creates a stack, which alone takes a consume unit here. */
   createsStack: boolean;
+  /** What the pantry holds of the product, as its row reads it, which the add joins. */
+  joins?: string | null;
 }
 
 const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
@@ -44,6 +46,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
   editing,
   onEdit,
   createsStack,
+  joins,
 }) => {
   const { t } = useTranslation();
   const { control, setValue, trigger } = form;
@@ -87,9 +90,13 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           AS_DECIMAL,
         )
       : null;
-  const summary = size
+  const stated = size
     ? t('barcode.amount.eachPackage', { amount, size })
     : amount;
+  // A held product joins its stack: the summary says so ("Adds 1 can to your 2 cans").
+  const summary = joins
+    ? t('barcode.amount.joinsHeld', { amount: stated, held: joins })
+    : stated;
   const usedIn =
     createsStack && consumeUnitDisplay.trim()
       ? t('barcode.amount.usedInSummary', { unit: consumeUnitDisplay.trim() })

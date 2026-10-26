@@ -361,9 +361,7 @@
     "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "Item Already in Pantry",
-    "body": "This item is already in your pantry in this unit. Would you like to restock it?",
-    "restock": "Restock"
+    "title": "Item Already in Pantry"
   },
   "relinkItem": {
     "action": "Not this item?",

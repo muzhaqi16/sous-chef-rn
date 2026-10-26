@@ -8,7 +8,6 @@ import {
 import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import { refByIdOrName } from '#/utils/refInput';
 import { stockAmountOf } from '#domain/stockAmount';
 import { useTranslation } from '#/i18n';
@@ -63,8 +62,7 @@ export function useAddScannedItem({
 }: UseAddScannedItemArgs) {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const { addItem, heldUnitOf } = usePantryIntake(pantryId);
-  const { restock } = usePantryRestock(pantryId);
+  const { addItem, heldUnitOf, heldStackOf } = usePantryIntake(pantryId);
 
   const [addToShoppingListMutation] = useMutation(
     BarcodeAddItemToShoppingListDocument,
@@ -95,38 +93,6 @@ export function useAddScannedItem({
         present: 'none',
       },
     );
-
-  /**
-   * Restock the duplicate check's row by the amount stated: packages by their
-   * count in the unit the user picked, sized by the user's size or the
-   * record's, with no size at all as a forced add (`usePantryRestock`).
-   * Resolves whether it stands, the user told if not.
-   */
-  const restockDuplicate = async (
-    item: ScannedItem,
-    existingPantryItemId: string,
-    amount: ScanAmount,
-  ): Promise<boolean> => {
-    const outcome = await restock(
-      existingPantryItemId,
-      amount.packaged
-        ? {
-            bought: {
-              count: amount.count,
-              unitId: amount.unitId,
-              packageSize: amount.size,
-              item: {
-                source: scannedPantrySource(item),
-                name: item.name,
-                itemId: item.id,
-              },
-            },
-            present: 'alert',
-          }
-        : { amount: scannedAmountOf(amount), present: 'alert' },
-    );
-    return outcome.status === 'restocked';
-  };
 
   const addToShoppingList = async (
     item: ScannedItem,
@@ -160,8 +126,8 @@ export function useAddScannedItem({
 
   return {
     addToPantry,
-    restockDuplicate,
     addToShoppingList,
     heldUnitOf,
+    heldStackOf,
   };
 }

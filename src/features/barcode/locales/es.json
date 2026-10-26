@@ -25,6 +25,7 @@
     "amount": {
       "title": "Se añade a tu despensa",
       "eachPackage": "{{amount}} · {{size}} por envase",
+      "joinsHeld": "Añade {{amount}} a lo que ya tienes ({{held}})",
       "packaged": "Por envase",
       "packagedHint": "Se cuenta por envase. Desactívalo para añadir una cantidad, como 500 g.",
       "sizeLabel": "Tamaño de un paquete",

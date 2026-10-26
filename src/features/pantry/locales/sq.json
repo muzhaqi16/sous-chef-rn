@@ -361,9 +361,7 @@
     "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "Artikulli është tashmë në qilar",
-    "body": "Ky artikull është tashmë në qilarin tënd në këtë njësi. Dëshiron ta riplotësosh?",
-    "restock": "Riplotëso"
+    "title": "Artikulli është tashmë në qilar"
   },
   "relinkItem": {
     "action": "Nuk është ky artikull?",

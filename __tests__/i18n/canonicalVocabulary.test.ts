@@ -627,7 +627,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       keys: [
         'pantryAnalytics.purposeRestock',
         'restockItem.restock',
-        'duplicateItem.restock',
         'swipeActions.restock',
       ],
       reason:
@@ -733,10 +732,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'rather than in a runtime parameter.',
     },
     {
-      keys: [
-        'homeManagement.statsMember_other',
-        'labels.members',
-      ],
+      keys: ['homeManagement.statsMember_other', 'labels.members'],
       reason:
         'The English is one word for two roles: sq "Anëtarë" vs ' +
         '"Anëtarët". One form would be wrong in the other context, so ' +

@@ -361,9 +361,7 @@
     "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "El artículo ya está en la despensa",
-    "body": "Este artículo ya está en tu despensa en esta unidad. ¿Quieres reponerlo?",
-    "restock": "Reponer"
+    "title": "El artículo ya está en la despensa"
   },
   "relinkItem": {
     "action": "¿No es este artículo?",

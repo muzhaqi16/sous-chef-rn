@@ -9,8 +9,10 @@ import {
   localIntakeRow,
   writeLocalIntake,
 } from '#features/pantry/cache/localIntake';
-import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
-import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
+import {
+  readHeldStack,
+  readHeldStackUnit,
+} from '#features/pantry/utils/pantryCacheReaders';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -33,10 +35,13 @@ const withMintedItemId = (item: PantryItemSourceInput): PantryItemSourceInput =>
     ? { inline: { ...item.inline, id: generateEntityId() } }
     : item;
 
-/** What became of an add. The caller owns the toast and the animation. */
+/**
+ * What became of an add. The caller owns the toast and the animation. An add
+ * of a held product joins its stack or stands apart from it (USM-2), so it is
+ * never refused as a duplicate.
+ */
 export type AddPantryItemOutcome =
   | { status: 'added' }
-  | { status: 'duplicate'; existingPantryItemId: string }
   /**
    * `reason` is the refusal as the user is told it; `field` names the input it
    * refused, when it named one.
@@ -54,8 +59,9 @@ interface AddItemOptions {
 
 /**
  * The pantry's one local-first create: the row is written before the mutation
- * fires, withdrawn on a refusal or a duplicate, and kept when the create is
- * queued.
+ * fires, withdrawn on a refusal, and kept when the create is queued. Every add
+ * is forced: the server joins a stack of the product it holds where the amount
+ * converts on facts (`MERGED`), else opens one kept apart (`KEPT_APART`).
  */
 export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -106,7 +112,11 @@ export function usePantryIntake(pantryId: string | undefined) {
     }
 
     const id = generateEntityId();
-    const sent = { ...input, item: withMintedItemId(input.item) };
+    const sent = {
+      ...input,
+      item: withMintedItemId(input.item),
+      forceAdd: true,
+    };
     // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
@@ -128,46 +138,26 @@ export function usePantryIntake(pantryId: string | undefined) {
       thrown = error;
     }
 
-    // A duplicate arrives as a typed member in `data` OR as the legacy
-    // top-level code; reading one alone lets it fall through as success and
-    // strands the row.
+    // Keeps the row for a queued create and for IDEMPOTENT_REPLAY. A refusal
+    // naming a field reads as its localized `errors.field.*` copy.
     const answered = result;
-    const duplicate = answered
-      ? getPantryItemDuplicateFromResult(
-          answered.data?.createPantryItem,
-          answered.error,
-        )
-      : null;
-
+    const settled = await settleMutation(
+      () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
+      {
+        document: CreatePantryItemDocument,
+        fallback,
+        onFailed: () => revertOptimisticPantryItem(client.cache, pantryId, id),
+        present,
+      },
+    );
     let outcome: AddPantryItemOutcome = { status: 'added' };
-    if (duplicate) {
-      // The server writes nothing on a refusal, so withdraw what we published.
-      revertOptimisticPantryItem(client.cache, pantryId, id);
+    if (settled.status === 'failed') {
+      const field = settled.failure?.field ?? undefined;
       outcome = {
-        status: 'duplicate',
-        existingPantryItemId: duplicate.existingPantryItemId,
+        status: 'rejected',
+        reason: settled.failure?.body ?? fallback,
+        ...(field ? { field } : {}),
       };
-    } else {
-      // Keeps the row for a queued create and for IDEMPOTENT_REPLAY. A refusal
-      // naming a field reads as its localized `errors.field.*` copy.
-      const settled = await settleMutation(
-        () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
-        {
-          document: CreatePantryItemDocument,
-          fallback,
-          onFailed: () =>
-            revertOptimisticPantryItem(client.cache, pantryId, id),
-          present,
-        },
-      );
-      if (settled.status === 'failed') {
-        const field = settled.failure?.field ?? undefined;
-        outcome = {
-          status: 'rejected',
-          reason: settled.failure?.body ?? fallback,
-          ...(field ? { field } : {}),
-        };
-      }
     }
 
     // Released on every outcome; a queued create is tracked by the offline
@@ -180,5 +170,9 @@ export function usePantryIntake(pantryId: string | undefined) {
   const heldUnitOf = (itemId: string) =>
     readHeldStackUnit(client.cache, pantryId, itemId);
 
-  return { addItem, adding, heldUnitOf };
+  /** That stack's amount, as its row shows it (`formatHeldAmount`); null if none. */
+  const heldStackOf = (itemId: string) =>
+    readHeldStack(client.cache, pantryId, itemId);
+
+  return { addItem, adding, heldUnitOf, heldStackOf };
 }

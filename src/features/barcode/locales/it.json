@@ -25,6 +25,7 @@
     "amount": {
       "title": "Si aggiunge alla dispensa",
       "eachPackage": "{{amount}} · {{size}} a confezione",
+      "joinsHeld": "Aggiunge {{amount}} a quello che hai già ({{held}})",
       "packaged": "A confezioni",
       "packagedHint": "Si conta per confezione. Disattivalo per aggiungere una quantità, come 500 g.",
       "sizeLabel": "Dimensione di una confezione",

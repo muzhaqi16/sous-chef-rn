@@ -13,6 +13,7 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { ReadHeldStack_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { usePantryIntake } from '../usePantryIntake';
 
 const PANTRY_ID = 'p-1';
@@ -278,6 +279,47 @@ describe('usePantryIntake', () => {
     );
   });
 
+  // USM-2: every add is forced. A held product joins its stack (the answer
+  // names it, covered above) or stands apart from it under the minted id.
+  it('forces every add, so a held product is never refused', async () => {
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      operationMocks: [create.mock],
+    });
+
+    await act(async () => {
+      await result.current.addItem('Milk', {
+        item: { id: 'cat-milk' },
+        quantity: 1,
+      });
+    });
+
+    expect(create.fired[0]).toMatchObject({ input: { forceAdd: true } });
+  });
+
+  it('keeps the row of an add the server stood apart, under its minted id', async () => {
+    const cache = cacheHolding('pi-held');
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+      operationMocks: [create.mock],
+    });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.addItem('Milk', {
+        item: { id: 'cat-milk' },
+        quantity: 1,
+      });
+    });
+
+    const minted = (create.fired[0]?.input as { id: string }).id;
+    expect(outcome).toEqual({ status: 'added' });
+    expect(JSON.stringify(cache.extract()[`Pantry:${PANTRY_ID}`])).toContain(
+      minted,
+    );
+  });
+
   it('tells the user about a refusal only when asked to', async () => {
     const refusal = () =>
       recordMock(CreatePantryItemDocument, {
@@ -403,5 +445,47 @@ describe('usePantryIntake', () => {
       type: UnitType.Count,
     });
     expect(result.current.heldUnitOf('cat-milk')).toBeNull();
+
+    // The same stack's amount, as its row reads it, for the add to say what it
+    // joins; none until the cache holds it complete.
+    expect(result.current.heldStackOf('cat-bananas')).toBeNull();
+    const reading = {
+      __typename: 'MeasureReading',
+      value: 4,
+      unitId: 'unit-piece',
+      symbol: 'pc',
+      displayAsFraction: false,
+      type: UnitType.Count,
+    } as const;
+    cache.writeFragment({
+      fragment: ReadHeldStack_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: 'pi-bananas',
+        unit: {
+          __typename: 'Unit',
+          id: 'unit-piece',
+          type: UnitType.Count,
+          displayAsFraction: false,
+        },
+        displayAmount: {
+          __typename: 'DisplayAmount',
+          quantity: 4,
+          unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
+        },
+        held: {
+          __typename: 'Measure',
+          value: 4,
+          unitId: 'unit-piece',
+          metric: reading,
+          imperial: reading,
+        },
+      },
+    });
+    expect(result.current.heldStackOf('cat-bananas')).toMatchObject({
+      id: 'pi-bananas',
+      displayAmount: { quantity: 4 },
+    });
+    expect(result.current.heldStackOf('cat-milk')).toBeNull();
   });
 });

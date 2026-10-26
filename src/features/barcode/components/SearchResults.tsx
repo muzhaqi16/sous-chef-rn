@@ -6,7 +6,6 @@ import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAddScannedItem } from '#features/barcode/hooks/useAddScannedItem';
-import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type {
@@ -19,6 +18,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { useCachedUnits } from '#store/useAppStore';
+import { formatHeldAmount } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
@@ -100,11 +100,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const { addToPantry, restockDuplicate, addToShoppingList, heldUnitOf } =
+  const { addToPantry, addToShoppingList, heldUnitOf, heldStackOf } =
     useAddScannedItem({ pantryId, shoppingListId });
   const cachedUnits = useCachedUnits();
   // Read once: the stack the pantry held as the scan opened.
   const [heldUnit] = useState(() => heldUnitOf(item.id));
+  const [heldStack] = useState(() => heldStackOf(item.id));
   const packageUnit = packageUnitOf(item, heldUnit, cachedUnits);
   // Read once: the form starts from it, and a send compares against it.
   const readingSystem = useReadingSystem();
@@ -158,31 +159,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     alertService.alert(t('labels.error'), t('errors.addItemFailed'));
   };
 
-  /** Offers to restock the row the pantry already holds, by the amount stated. */
-  const offerRestock = (existingPantryItemId: string, amount: ScanAmount) => {
-    promptPantryDuplicate({
-      onRestock: () => {
-        void executeWithLoadingState(
-          async () => {
-            // A refusal RESOLVES; the hook has already said so, and the button
-            // must not flip to "Added" over it.
-            if (!(await restockDuplicate(item, existingPantryItemId, amount))) {
-              return;
-            }
-            onPantryAdded();
-          },
-          setIsLoading,
-          () => {
-            alertService.alert(
-              t('labels.error'),
-              t('errors.restockFailedRetry'),
-            );
-          },
-        );
-      },
-    });
-  };
-
   /** Ticks the line the scan fulfils, else adds the product and ticks it. */
   const addToCart = async (
     paid: { quantity: number; totalPrice: number | null } | null,
@@ -213,14 +189,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId && amount) {
+          // A held product joins its stack, or stands apart from it.
           const outcome = await addToPantry(item, amount);
-
-          if (outcome.status === 'duplicate') {
-            setIsLoading(false);
-            offerRestock(outcome.existingPantryItemId, amount);
-            return;
-          }
-
           if (outcome.status === 'rejected') {
             showPantryRefusal(outcome.reason, outcome.field);
             return;
@@ -325,6 +295,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             editing={isEditingAmount}
             onEdit={() => setIsEditingAmount(true)}
             createsStack={heldUnit === null}
+            joins={
+              heldStack ? formatHeldAmount(heldStack, readingSystem) : null
+            }
           />
         )}
 

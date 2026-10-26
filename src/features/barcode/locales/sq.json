@@ -25,6 +25,7 @@
     "amount": {
       "title": "Shtohet në qilar",
       "eachPackage": "{{amount}} · {{size}} për paketë",
+      "joinsHeld": "Shton {{amount}} te ato që ke ({{held}})",
       "packaged": "Me paketa",
       "packagedHint": "Numërohet për paketë. Çaktivizoje për të shtuar një sasi, si 500 g.",
       "sizeLabel": "Madhësia e një pakete",

@@ -25,6 +25,7 @@
     "amount": {
       "title": "Adding to your pantry",
       "eachPackage": "{{amount}} · {{size}} each",
+      "joinsHeld": "Adds {{amount}} to your {{held}}",
       "packaged": "Packaged",
       "packagedHint": "Counted by the package. Turn it off to add an amount, like 500 g.",
       "sizeLabel": "Size of one package",

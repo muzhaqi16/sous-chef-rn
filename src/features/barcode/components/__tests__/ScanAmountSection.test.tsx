@@ -45,11 +45,13 @@ const Harness = ({
   editing = false,
   onEdit = () => {},
   createsStack = true,
+  joins = null,
 }: {
   values: ScanAmountFormValues;
   editing?: boolean;
   onEdit?: () => void;
   createsStack?: boolean;
+  joins?: string | null;
 }) => {
   const form = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
@@ -61,6 +63,7 @@ const Harness = ({
       editing={editing}
       onEdit={onEdit}
       createsStack={createsStack}
+      joins={joins}
     />
   );
 };
@@ -69,6 +72,19 @@ describe('ScanAmountSection', () => {
   it('reads the add as text: the package, then what each one holds', () => {
     render(<Harness values={oneJar} />);
     expect(screen.getByText('1 jar · 3 lb each')).toBeTruthy();
+  });
+
+  // USM-2: a held product joins its stack, and the summary says which.
+  it('says what a held product joins', () => {
+    render(<Harness values={oneJar} createsStack={false} joins="2 jar" />);
+    expect(
+      screen.getByText(
+        t('barcode.amount.joinsHeld', {
+          amount: '1 jar · 3 lb each',
+          held: '2 jar',
+        }),
+      ),
+    ).toBeTruthy();
   });
 
   it('reads a package of no known size as the count alone', () => {

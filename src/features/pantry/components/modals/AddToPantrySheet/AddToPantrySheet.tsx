@@ -136,14 +136,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     );
     removeSuggestion(item.id);
 
+    // A stack the local check could not see (a windowed list, a collaborator's
+    // add) is joined by the server: the add is forced.
     const outcome = await addItem(item.id, item.name);
-    if (outcome.status === 'duplicate') {
-      // Backstop for what the local check could not see — a windowed list, or a
-      // collaborator's add.
-      await runRestock(outcome.existingPantryItemId, item);
-      pendingItemIds.current.delete(item.id);
-      return;
-    }
     pendingItemIds.current.delete(item.id);
     if (outcome.status === 'rejected') {
       // The success toast has already fired; correct it.
@@ -176,9 +171,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       return;
     }
 
-    // Past the loaded window the cache cannot see the stack, but the row names
-    // it: a create would be refused as a duplicate, and dropped on an offline
-    // replay.
+    // Past the loaded window the cache cannot see the stack, but the suggestion
+    // names it: restocking it moves that row at once, offline too, where a
+    // forced add would show a second row until the server joined them.
     const heldStackId = heldStackOf(pantryItem);
     if (heldStackId) {
       await runRestock(heldStackId, catalogItem);
@@ -191,11 +186,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     );
 
     const outcome = await addItem(pantryItem.itemId, pantryItem.name);
-    if (outcome.status === 'duplicate') {
-      await runRestock(outcome.existingPantryItemId, catalogItem);
-      pendingItemIds.current.delete(pantryItem.itemId);
-      return;
-    }
     pendingItemIds.current.delete(pantryItem.itemId);
     if (outcome.status === 'rejected') {
       // Put the tile back and correct the toast that already fired.
