@@ -63,8 +63,6 @@ export interface CookSubstitute {
     quantity: number;
     unitId: string;
   }[];
-  /** Whether the parts are for the recipe's amount, so they scale with it. */
-  scaled: boolean;
 }
 
 export interface EditableMatch {
@@ -122,25 +120,6 @@ export function getAvailabilityStatus(
   return 'missing';
 }
 
-/**
- * How much of the recipe's amount the cook is making: the suggested amount over
- * the recipe's, where both are in the ingredient's own unit; else as written.
- */
-function servingsRatio(
-  match: IngredientMatch,
-  ingredient: RecipeIngredientFragment,
-) {
-  const recipeQuantity = ingredient.quantity;
-  if (
-    !recipeQuantity ||
-    match.suggestedQuantity === null ||
-    match.suggestedUnit?.id !== ingredient.unit?.id
-  ) {
-    return 1;
-  }
-  return match.suggestedQuantity / recipeQuantity;
-}
-
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
@@ -165,16 +144,23 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     nextFetchPolicy: 'network-only',
   });
 
+  /** A swap at the amount cooked: scaled parts are for the recipe as written. */
   const toCookSubstitute = (
     option: SubstituteOptionData,
+    servingsRatio: number,
   ): CookSubstitute | null => {
-    const texts = option.parts.map(part =>
+    const ratio = option.scaled ? servingsRatio : 1;
+    const parts = option.parts.map(part => ({
+      ...part,
+      quantity: part.quantity * ratio,
+    }));
+    const texts = parts.map(part =>
       t('recipes.substitutes.part', {
         amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
         name: part.item.name,
       }),
     );
-    const held = option.parts.flatMap((part, index) =>
+    const held = parts.flatMap((part, index) =>
       part.pantryItem
         ? [
             {
@@ -193,7 +179,6 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       id: option.substitute.id,
       label: texts.join(', '),
       parts: held,
-      scaled: option.scaled,
     };
   };
 
@@ -201,7 +186,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
    * Offers swaps on the rows the pantry does not cover, once the review is
    * open: a failed read leaves the rows as they are.
    */
-  const loadSubstitutes = async (uncovered: Set<string>) => {
+  const loadSubstitutes = async (uncovered: Set<string>, servings: number) => {
     if (!recipeId || !homeId || !pantryId || uncovered.size === 0) return;
     let result;
     try {
@@ -218,12 +203,15 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         operation: 'Load recipe substitutes error:',
       });
     }
+    const recipe = result?.data?.recipe;
+    if (!recipe) return;
+    // As the cook scales every amount: servings / Recipe.servings.
+    const ratio = recipe.servings > 0 ? servings / recipe.servings : 1;
     const swaps = new Map<string, CookSubstitute[]>();
-    for (const { node } of result?.data?.recipe?.ingredientsConnection.edges ??
-      []) {
+    for (const { node } of recipe.ingredientsConnection.edges) {
       if (!uncovered.has(node.id)) continue;
       const options = node.substitutes.flatMap(
-        option => toCookSubstitute(option) ?? [],
+        option => toCookSubstitute(option, ratio) ?? [],
       );
       if (options.length > 0) swaps.set(node.id, options);
     }
@@ -322,6 +310,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           })
           .map(em => em.ingredient.id),
       ),
+      servings,
     );
     return true;
   };
@@ -369,13 +358,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         if (swap) {
           if (!em.isIncluded) return [];
           // Its parts are drawn instead; the ingredient's own stacks are not.
-          const ratio = swap.scaled
-            ? servingsRatio(em.match, em.ingredient)
-            : 1;
           return swap.parts.map(part => ({
             recipeIngredientId: em.ingredient.id,
             pantryItemId: part.stack.id,
-            actualQuantity: part.quantity * ratio,
+            actualQuantity: part.quantity,
             actualUnitId: part.unitId,
             substituteId: swap.id,
           }));

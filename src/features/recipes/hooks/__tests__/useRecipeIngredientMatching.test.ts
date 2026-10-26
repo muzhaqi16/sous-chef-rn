@@ -748,9 +748,9 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       matchedPantryItem: null,
       alternativeMatches: [],
       availableQuantity: null,
-      // Twice the recipe's one cup: the cook is making a double batch.
-      suggestedQuantity: 2,
-      suggestedUnit: { id: 'u-ing-2' },
+      // Converted to the pantry's unit, so it says nothing of the servings.
+      suggestedQuantity: 473,
+      suggestedUnit: { id: 'u-ml' },
     };
     const part = (
       id: string,
@@ -768,6 +768,8 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       data: {
         recipe: {
           id: 'recipe-1',
+          // Four servings of a two-serving recipe: a double batch.
+          servings: 2,
           ingredientsConnection: {
             edges: [
               {

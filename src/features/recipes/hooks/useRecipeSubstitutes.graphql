@@ -16,6 +16,7 @@ query RecipeSubstitutes(
 ) {
   recipe(id: $recipeId) {
     id
+    servings
     ingredientsConnection(first: $ingredientsFirst) {
       edges {
         node {
