@@ -99,6 +99,8 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
     'PantryMain and the list empty state, both of which inset bare children',
   'src/features/profile/components/ProfileSkeleton.tsx':
     'ProfileScreen, a gutter="page" Screen',
+  'src/features/today/screens/TodayMain.tsx':
+    'its suggestion placeholders, inside its own gutter="page" Screen',
 };
 
 /**

@@ -26,7 +26,8 @@ export function useRecipeDiscovery(
   if (server.rows.length > 0) {
     return {
       ...catalog,
-      mode: 'pantry',
+      // Ranked with nothing the pantry holds (an empty pantry): ideas to try.
+      mode: server.fromPantry ? 'pantry' : 'random',
       rows: server.rows,
       loading: server.loading,
       refreshing: server.refreshing,

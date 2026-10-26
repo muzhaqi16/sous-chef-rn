@@ -9,6 +9,7 @@ import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { StatCard } from '#components/molecules/StatCard';
 import { ItemCard } from '#components/organisms/ItemCard';
+import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import {
   SpotlightCoachMark,
@@ -26,9 +27,10 @@ import {
   useUser,
 } from '#store/useAppStore';
 import { MealPlanItemCard } from '#features/mealPlan/ui/MealPlanItemCard';
+import { MealPlanItemCardSkeleton } from '#features/mealPlan/ui/MealPlanItemCardSkeleton';
 import { todayTestIDs } from '#features/today/testIDs';
 import { useMarkFullyDrawn } from './useMarkFullyDrawn';
-import { useTodayOverview } from './useTodayOverview';
+import { SUGGESTION_PREVIEW, useTodayOverview } from './useTodayOverview';
 
 /** The app's first tab: the household's overview and its app-wide controls. */
 export const TodayMain: React.FC = () => {
@@ -154,7 +156,7 @@ export const TodayMain: React.FC = () => {
         testID: todayTestIDs.firstRun,
       };
 
-  const { counts, meals, suggestions, shopping } = overview;
+  const { counts, meals, mealsLoading, suggestions, shopping } = overview;
 
   return (
     <Screen
@@ -170,6 +172,11 @@ export const TodayMain: React.FC = () => {
         },
       }}
       scroll="scroll"
+      scrollTestID={todayTestIDs.scroll}
+      refresh={{
+        refreshing: overview.refreshing,
+        onRefresh: overview.refresh,
+      }}
       state={{
         value: overview.state,
         onRetry: overview.retry,
@@ -230,6 +237,8 @@ export const TodayMain: React.FC = () => {
                 />
               </View>
             ))
+          ) : mealsLoading ? (
+            <MealPlanItemCardSkeleton />
           ) : (
             <ItemCard
               id="nothing-planned"
@@ -241,10 +250,14 @@ export const TodayMain: React.FC = () => {
           )}
         </View>
 
-        {suggestions.length > 0 ? (
+        {suggestions.loading || suggestions.items.length > 0 ? (
           <View>
             <SectionHeaderRow
-              title={t('recipes.basedOnPantry')}
+              title={
+                suggestions.fromPantry
+                  ? t('recipes.basedOnPantry')
+                  : t('labels.recipesToTry')
+              }
               action={{
                 label: t('labels.seeAll'),
                 onPress: toRecipeMain,
@@ -252,17 +265,21 @@ export const TodayMain: React.FC = () => {
               }}
               style={styles.sectionHeader}
             />
-            {suggestions.map(suggestion => (
-              <ItemCard
-                key={suggestion.id}
-                id={suggestion.id}
-                title={suggestion.title}
-                subtitle={suggestion.subtitle}
-                badge={suggestion.badge}
-                leftElement={<RowThumbnail uri={suggestion.imageUrl} />}
-                onPress={() => toRecipeDetail(suggestion.target)}
-              />
-            ))}
+            {suggestions.loading
+              ? Array.from({ length: SUGGESTION_PREVIEW }, (_, index) => (
+                  <ItemCardSkeleton key={index} />
+                ))
+              : suggestions.items.map(suggestion => (
+                  <ItemCard
+                    key={suggestion.id}
+                    id={suggestion.id}
+                    title={suggestion.title}
+                    subtitle={suggestion.subtitle}
+                    badge={suggestion.badge}
+                    leftElement={<RowThumbnail uri={suggestion.imageUrl} />}
+                    onPress={() => toRecipeDetail(suggestion.target)}
+                  />
+                ))}
           </View>
         ) : null}
 

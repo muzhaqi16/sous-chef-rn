@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
-import { MealPlanItemCardSkeleton } from '#features/mealPlan/components/skeletons/MealPlanItemCardSkeleton';
+import { MealPlanItemCardSkeleton } from '#features/mealPlan/ui/MealPlanItemCardSkeleton';
 import { getScrollClearancePadding } from '#constants/layout';
 import { Icon } from '#components/atoms/Icon';
 

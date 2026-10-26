@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { type } from '#/theme/foundations/type';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { RecipeItemSkeleton } from './RecipeItemSkeleton';
+import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 
 // The bars stand in for the screen's own text, so they take the heights of the
 // roles that text uses.
@@ -40,7 +40,7 @@ export const RecipeDetailSkeleton: React.FC<{ showTitle?: boolean }> = ({
     <View style={styles.section}>
       <SkeletonLine width="40%" height={HEADING} style={styles.heading} />
       {INGREDIENT_PLACEHOLDERS.map(index => (
-        <RecipeItemSkeleton key={index} />
+        <ItemCardSkeleton key={index} />
       ))}
     </View>
 

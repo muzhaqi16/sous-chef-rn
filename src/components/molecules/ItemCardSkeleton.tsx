@@ -12,18 +12,16 @@ import { type, rowType } from '#/theme/foundations/type';
 const TITLE_HEIGHT = type[rowType.title].fontSize;
 const SUBTITLE_HEIGHT = type[rowType.subtitle].fontSize;
 
-interface RecipeItemSkeletonProps {
+interface ItemCardSkeletonProps {
   /** Whether to show shimmer animation */
   animated?: boolean;
 }
 
 /**
- * Recipe Item Skeleton
- *
- * Skeleton for a single recipe list item. Reuses ListItem as wrapper
- * to stay in sync with actual item styles (height, padding, gap).
+ * The placeholder of an `ItemCard` with a row thumbnail. Built from the same
+ * `RowCard` and `ListItem`, so it keeps the row's height, padding and gap.
  */
-export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
+export const ItemCardSkeleton: React.FC<ItemCardSkeletonProps> = ({
   animated = true,
 }) => {
   return (

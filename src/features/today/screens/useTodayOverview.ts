@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { fromDateKey } from '#/utils/dateUtils';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import {
   heldFetchPolicy,
@@ -22,7 +24,7 @@ import { useUnreadNotificationCount } from '#features/notifications/hooks/useUnr
 import { TodayCountsDocument } from './useTodayOverview.generated';
 
 /** How many of Recipes' pantry suggestions Today previews. */
-const SUGGESTION_PREVIEW = 3;
+export const SUGGESTION_PREVIEW = 3;
 
 /**
  * Today's overview of the household. Every read is another tab's, so each one
@@ -57,9 +59,21 @@ export function useTodayOverview() {
   );
 
   const {
-    state: { currentPlan, mealPlans, hasResult: plansHaveResult },
+    state: {
+      currentPlan,
+      mealPlans,
+      hasResult: plansHaveResult,
+      initialLoading: plansLoading,
+    },
+    actions: { refetch: refetchPlans },
   } = useMealPlans(standDown);
-  const { items, itemDetails } = useActiveMealPlan({
+  const {
+    items,
+    itemDetails,
+    mealPlan: activePlan,
+    loading: activePlanLoading,
+    refetch: refetchPlan,
+  } = useActiveMealPlan({
     currentPlanId: currentPlan?.id ?? null,
     planIds: mealPlans.map(plan => plan.id),
     ...standDown,
@@ -81,7 +95,12 @@ export function useTodayOverview() {
     { fetchPolicy: standDown.fetchPolicy },
   );
 
-  const { lists, loading: listsLoading } = useShoppingListsLite(standDown);
+  const {
+    lists,
+    loading: listsLoading,
+    refetch: refetchLists,
+  } = useShoppingListsLite(standDown);
+  const [refreshing, setRefreshing] = useState(false);
   const activeListId = useActiveShoppingListId(lists);
   const activeList = lists.find(list => list.id === activeListId);
 
@@ -122,10 +141,35 @@ export function useTodayOverview() {
     retry: () => {
       if (pantry) void countsResult.refetch();
     },
+    refreshing,
+    /** Pull to refresh: every section asks again, and the spinner waits for all. */
+    refresh: () => {
+      void executeRefreshWithFinally(
+        () =>
+          Promise.allSettled([
+            pantry ? countsResult.refetch() : null,
+            refetchPlans(),
+            activePlan ? refetchPlan() : null,
+            refetchLists(),
+            suggestions.refresh(),
+          ]),
+        setRefreshing,
+      );
+    },
     meals,
-    suggestions: suggestionsEnabled
-      ? toDisplayItems(suggestions.rows.slice(0, SUGGESTION_PREVIEW), t)
-      : [],
+    /** Before the first answer only: a refetch keeps the meals it shows. */
+    mealsLoading: plansLoading || (activePlanLoading && !activePlan),
+    suggestions: {
+      items: suggestionsEnabled
+        ? toDisplayItems(suggestions.rows.slice(0, SUGGESTION_PREVIEW), t)
+        : [],
+      /** Asked and not yet answered: the section holds its rows' place. */
+      loading: suggestions.loading,
+      /** Until they answer, whether the pantry holds anything decides. */
+      fromPantry: suggestions.loading
+        ? (stats?.totalItems ?? 0) > 0
+        : suggestions.fromPantry,
+    },
     shopping: activeList
       ? {
           id: activeList.id,
