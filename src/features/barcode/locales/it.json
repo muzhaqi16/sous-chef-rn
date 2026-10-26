@@ -35,6 +35,9 @@
       "sizeInvalid": "Inserisci una dimensione maggiore di 0.",
       "sizeUnitRequired": "Scegli dall’elenco l’unità della dimensione."
     },
+    "nutrition": {
+      "title": "Valori nutrizionali"
+    },
     "addToCart": "Aggiungi al carrello",
     "addToCartWithPrice": "Aggiungi con prezzo",
     "alreadyInCart": "Già nel carrello",

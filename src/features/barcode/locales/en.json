@@ -35,6 +35,9 @@
       "sizeInvalid": "Enter a size greater than 0.",
       "sizeUnitRequired": "Pick the size’s unit from the list."
     },
+    "nutrition": {
+      "title": "Nutrition facts"
+    },
     "addToCart": "Add to cart",
     "addToCartWithPrice": "Add with price",
     "alreadyInCart": "Already in the cart",

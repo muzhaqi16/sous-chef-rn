@@ -5,6 +5,7 @@ import type {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { PhotoCreditValue } from '#/types/attribution';
+import type { NutritionFactsValues } from '#domain/nutrition';
 import type { DataAttributionValue } from '#/types/attribution';
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';
 
@@ -45,6 +46,8 @@ export interface ScannedItem
   image?: { url: string; credit?: PhotoCreditValue };
   /** The notices the item's catalog data asks a reader to see. */
   dataAttributions?: DataAttributionValue[];
+  /** Per 100 g, or per the serving it names; none when no source states any. */
+  nutritionFacts?: NutritionFactsValues;
   /** The code that was scanned, which is what the card shows. */
   upc: string;
   /**

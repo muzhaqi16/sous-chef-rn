@@ -66,8 +66,13 @@ export const SearchResultsScreen: React.FC<
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
   const { t } = useTranslation();
-  const { goBack, navigation, toSearchResults, toBrandLists } =
-    useAppNavigation();
+  const {
+    goBack,
+    navigation,
+    toSearchResults,
+    toBrandLists,
+    toNutritionScreen,
+  } = useAppNavigation();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -129,6 +134,7 @@ export const SearchResultsScreen: React.FC<
     }
 
     if (item) {
+      const { nutritionFacts } = item;
       return (
         <SearchResults
           key={item.id}
@@ -152,6 +158,17 @@ export const SearchResultsScreen: React.FC<
             })
           }
           onOpenBrandLists={toBrandLists}
+          onOpenNutrition={
+            nutritionFacts
+              ? () =>
+                  toNutritionScreen({
+                    itemId: item.id,
+                    itemName: item.name,
+                    nutritionFacts,
+                    dataAttributions: item.dataAttributions ?? [],
+                  })
+              : undefined
+          }
         />
       );
     }

@@ -74,6 +74,27 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
             symbol
           }
         }
+        # The result's nutrition card, and the full sheet it opens.
+        nutritionFacts {
+          id
+          calories
+          totalFat
+          saturatedFat
+          transFat
+          cholesterol
+          sodium
+          totalCarbs
+          dietaryFiber
+          totalSugars
+          addedSugars
+          protein
+          vitaminD
+          calcium
+          iron
+          potassium
+          servingSize
+          servingUnit
+        }
         # A count unit here is the add's package unit; a measure is not.
         trackingUnit(pantry: $pantry) {
           id
@@ -144,6 +165,26 @@ fragment useSearchResults_item on Item {
       name
       symbol
     }
+  }
+  nutritionFacts {
+    id
+    calories
+    totalFat
+    saturatedFat
+    transFat
+    cholesterol
+    sodium
+    totalCarbs
+    dietaryFiber
+    totalSugars
+    addedSugars
+    protein
+    vitaminD
+    calcium
+    iron
+    potassium
+    servingSize
+    servingUnit
   }
   type
   storageState

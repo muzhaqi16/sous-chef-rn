@@ -21,6 +21,7 @@ import { DataAttributionNotices } from '#components/molecules/DataAttributionNot
 import { useCachedUnits } from '#store/useAppStore';
 import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
+import { ScanNutritionSection } from './ScanNutritionSection';
 import {
   packageUnitOf,
   scanAmountDefaults,
@@ -68,6 +69,8 @@ export interface SearchResultsProps {
   onOpenBarcode?: (barcode: string) => void;
   /** Opens the user's brand lists, for a user who has none yet. */
   onOpenBrandLists?: () => void;
+  /** Opens every nutrient the scanned product's facts state. */
+  onOpenNutrition?: () => void;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -82,6 +85,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   shoppingListId,
   onOpenBarcode,
   onOpenBrandLists,
+  onOpenNutrition,
 }) => {
   const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
@@ -301,6 +305,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             onEdit={() => setIsEditingAmount(true)}
           />
         )}
+
+        <ScanNutritionSection
+          nutritionFacts={item.nutritionFacts}
+          onOpenDetails={onOpenNutrition}
+        />
 
         <ProductOriginSection {...origin} />
 
