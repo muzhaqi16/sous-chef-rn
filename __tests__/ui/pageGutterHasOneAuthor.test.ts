@@ -48,6 +48,8 @@ const AUTHORS: Record<string, string> = {
     'deliberate negation, inset rules',
   'src/features/catalog/ui/StorageLocationForm.tsx':
     'deliberate negation, chip rows bleed through the sheet gutter',
+  'src/components/molecules/HorizontalRail.tsx':
+    'deliberate negation, a rail bleeds through the page gutter and insets its first tile',
 
   // A screen whose loading or skeleton branch renders its children bare under
   // `gutter="none"`, where no list content container exists to inset them.

@@ -49,8 +49,11 @@ export const recipesTestIDs = {
   /** The recipe page's household dietary summary, and its offline note. */
   householdSummary: 'recipe-household-summary',
   householdUnchecked: 'recipe-household-unchecked',
-  /** What can stand in for an ingredient, and one swap in it. */
-  substitutesSheet: 'recipe-substitutes-sheet',
+  /** An ingredient's tile on the recipe page, keyed by its place in the list. */
+  ingredientTile: (index: number) => `recipe-ingredient-${index}`,
+  /** A flagged ingredient's sheet: who it affects, what can stand in, add. */
+  ingredientSheet: 'recipe-ingredient-sheet',
+  ingredientSheetAdd: 'recipe-ingredient-sheet-add',
   substituteOption: (substituteId: string) =>
     `recipe-substitute-${substituteId}`,
   /** A swap offered for a missing ingredient in the cook review. */

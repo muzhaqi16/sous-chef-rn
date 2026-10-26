@@ -1,16 +1,14 @@
 import React from 'react';
-import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Card } from '#components/atoms/Card';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import {
-  householdAlertKey,
-  isStrictSeverity,
+  strictestFirst,
   type HouseholdAlert,
   type HouseholdCheck,
 } from '#domain/dietary';
+import { HouseholdAlertLine } from '#features/profile/ui/HouseholdAlertLine';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
 interface HouseholdRecipeSummaryProps {
@@ -44,28 +42,9 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
   return (
     <Card style={styles.card} testID={recipesTestIDs.householdSummary}>
       <Text role="bodyStrong">{t('dietaryAlerts.title')}</Text>
-      {alerts.map(alert => {
-        const strict = isStrictSeverity(alert.severity);
-        return (
-          <View key={alert.id} style={styles.alertRow}>
-            <Icon
-              name={strict ? 'alert-circle' : 'information-circle-outline'}
-              size="sm"
-              tone={strict ? 'danger' : 'iconSecondary'}
-            />
-            <Text
-              role="body"
-              tone={strict ? 'danger' : 'secondary'}
-              style={styles.alertText}
-            >
-              {t(householdAlertKey(alert), {
-                name: alert.memberName,
-                what: alert.what,
-              })}
-            </Text>
-          </View>
-        );
-      })}
+      {strictestFirst(alerts).map(alert => (
+        <HouseholdAlertLine key={alert.id} alert={alert} />
+      ))}
       {check === 'stale' && (
         <Text role="caption" tone="secondary">
           {t('dietaryAlerts.stale')}
@@ -82,13 +61,5 @@ const styles = StyleSheet.create(theme => ({
   card: {
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
-  },
-  alertRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.sm,
-  },
-  alertText: {
-    flex: 1,
   },
 }));

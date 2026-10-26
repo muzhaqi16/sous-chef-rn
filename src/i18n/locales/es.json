@@ -787,10 +787,13 @@
   },
   "dietaryAlerts": {
     "title": "Para tu hogar",
-    "contains": "{{name}}: contiene {{what}}",
-    "mayContain": "{{name}}: puede contener {{what}}",
-    "notDiet": "{{name}}: no es {{what}}",
-    "mayNotDiet": "{{name}}: puede no ser {{what}}",
+    "reason": {
+      "contains": "Contiene {{what}}",
+      "mayContain": "Puede contener {{what}}",
+      "notDiet": "No es {{what}}",
+      "mayNotDiet": "Puede no ser {{what}}"
+    },
+    "andMore": "{{label}} +{{count}}",
     "checkLabel": "Revisa siempre la etiqueta: los datos del producto pueden estar incompletos.",
     "stale": "Comprobado antes; puede no estar al día.",
     "needsConnection": "Conéctate a internet para comprobarlo para tu hogar."

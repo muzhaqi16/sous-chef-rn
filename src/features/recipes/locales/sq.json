@@ -383,6 +383,10 @@
     "tagTooLong": "Çdo etiketë mund të ketë maksimumi {{count}} karaktere",
     "tipsTooLong": "Këshillat mund të kenë maksimumi {{count}} karaktere",
     "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish.",
+    "ingredientAlerts": {
+      "lead": "Kontrollo para se të gatuash: kjo prek njerëz në shtëpinë tënde.",
+      "hint": "Tregon kë prek në shtëpinë tënde"
+    },
     "substitutes": {
       "title": "Në vend të {{name}}",
       "open": "Zëvendësues për {{name}}",

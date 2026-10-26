@@ -36,15 +36,13 @@ describe('HouseholdAlertsSection', () => {
       />,
     );
 
+    expect(screen.getByText('Tani')).toBeTruthy();
     expect(
-      screen.getByText(
-        t('dietaryAlerts.contains', { name: 'Tani', what: 'Peanut' }),
-      ),
+      screen.getByText(t('dietaryAlerts.reason.contains', { what: 'Peanut' })),
     ).toBeTruthy();
+    expect(screen.getByText('You')).toBeTruthy();
     expect(
-      screen.getByText(
-        t('dietaryAlerts.mayNotDiet', { name: 'You', what: 'Vegan' }),
-      ),
+      screen.getByText(t('dietaryAlerts.reason.mayNotDiet', { what: 'Vegan' })),
     ).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();
     expect(screen.queryByText(t('dietaryAlerts.stale'))).toBeNull();

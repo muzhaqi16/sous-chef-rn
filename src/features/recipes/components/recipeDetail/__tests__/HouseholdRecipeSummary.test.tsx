@@ -30,15 +30,13 @@ describe('HouseholdRecipeSummary', () => {
   it('names each member and what the recipe meets, then says to check the label', () => {
     render(<HouseholdRecipeSummary check="checked" alerts={[PEANUT, BACON]} />);
 
+    expect(screen.getByText('Tani')).toBeTruthy();
     expect(
-      screen.getByText(
-        t('dietaryAlerts.contains', { name: 'Tani', what: 'Peanut' }),
-      ),
+      screen.getByText(t('dietaryAlerts.reason.contains', { what: 'Peanut' })),
     ).toBeTruthy();
+    expect(screen.getByText('You')).toBeTruthy();
     expect(
-      screen.getByText(
-        t('dietaryAlerts.contains', { name: 'You', what: 'Bacon' }),
-      ),
+      screen.getByText(t('dietaryAlerts.reason.contains', { what: 'Bacon' })),
     ).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();
     expect(screen.queryByText(t('dietaryAlerts.stale'))).toBeNull();
@@ -47,10 +45,9 @@ describe('HouseholdRecipeSummary', () => {
   it('shows the alerts it last received offline, marked as possibly out of date', () => {
     render(<HouseholdRecipeSummary check="stale" alerts={[PEANUT]} />);
 
+    expect(screen.getByText('Tani')).toBeTruthy();
     expect(
-      screen.getByText(
-        t('dietaryAlerts.contains', { name: 'Tani', what: 'Peanut' }),
-      ),
+      screen.getByText(t('dietaryAlerts.reason.contains', { what: 'Peanut' })),
     ).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.stale'))).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();

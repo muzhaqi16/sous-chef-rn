@@ -39,8 +39,10 @@ import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/Rec
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
-import { IngredientRow } from '#features/recipes/components/recipeDetail/IngredientRow';
-import { SubstitutesSheet } from '#features/recipes/components/recipeDetail/SubstitutesSheet';
+import { IngredientTile } from '#features/recipes/components/recipeDetail/IngredientTile';
+import { IngredientAlertsSheet } from '#features/recipes/components/recipeDetail/IngredientAlertsSheet';
+import { HorizontalRail } from '#components/molecules/HorizontalRail';
+import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
 import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
@@ -270,10 +272,9 @@ const RecipeDetailScreen: React.FC = () => {
     recipeId,
     household.summary.length > 0,
   );
-  const [substituting, setSubstituting] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  // The flagged ingredient whose sheet is open.
+  const [openIngredient, setOpenIngredient] =
+    useState<DisplayIngredient | null>(null);
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = () => {
@@ -651,32 +652,46 @@ const RecipeDetailScreen: React.FC = () => {
               }}
               style={styles.ingredientsSectionHeader}
             />
-            {displayData.ingredients.map((ingredient, index) => (
-              <IngredientRow
-                key={`${ingredient.id}-${index}`}
-                ingredient={ingredient}
-                isAdded={addedIngredients.has(ingredient.id)}
-                onAdd={() => handleAddSingleIngredient(ingredient)}
-                alerts={household.alertsFor(ingredient.id)}
-                onSubstitute={
-                  household.alertsFor(ingredient.id).length > 0 &&
-                  substitutes.substitutesFor(ingredient.id).length > 0
-                    ? () =>
-                        setSubstituting({
-                          id: ingredient.id,
-                          name: ingredient.name,
-                        })
-                    : undefined
-                }
-              />
-            ))}
-            <SubstitutesSheet
-              visible={!!substituting}
-              ingredientName={substituting?.name ?? ''}
-              options={
-                substituting ? substitutes.substitutesFor(substituting.id) : []
+            <HorizontalRail surface="background" bleed="page">
+              {displayData.ingredients.map((ingredient, index) => {
+                const alerts = household.alertsFor(ingredient.id);
+                return (
+                  <IngredientTile
+                    key={`${ingredient.id}-${index}`}
+                    ingredient={ingredient}
+                    isAdded={addedIngredients.has(ingredient.id)}
+                    alerts={alerts}
+                    onPress={() =>
+                      alerts.length > 0
+                        ? setOpenIngredient(ingredient)
+                        : handleAddSingleIngredient(ingredient)
+                    }
+                    testID={recipesTestIDs.ingredientTile(index)}
+                  />
+                );
+              })}
+            </HorizontalRail>
+            <IngredientAlertsSheet
+              visible={!!openIngredient}
+              ingredientName={openIngredient?.name ?? ''}
+              alerts={
+                openIngredient ? household.alertsFor(openIngredient.id) : []
               }
-              onDismiss={() => setSubstituting(null)}
+              stale={household.check === 'stale'}
+              options={
+                openIngredient
+                  ? substitutes.substitutesFor(openIngredient.id)
+                  : []
+              }
+              isAdded={
+                !!openIngredient && addedIngredients.has(openIngredient.id)
+              }
+              onAdd={() => {
+                if (openIngredient) {
+                  void handleAddSingleIngredient(openIngredient);
+                }
+              }}
+              onDismiss={() => setOpenIngredient(null)}
             />
           </View>
         )}

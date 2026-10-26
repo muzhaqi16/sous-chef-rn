@@ -383,6 +383,10 @@
     "tagTooLong": "Cada etiqueta puede tener como máximo {{count}} caracteres",
     "tipsTooLong": "Los consejos pueden tener como máximo {{count}} caracteres",
     "stepsTooLarge": "Estos pasos son demasiado largos para guardarlos. Acórtalos e inténtalo de nuevo.",
+    "ingredientAlerts": {
+      "lead": "Revisa antes de cocinar: esto afecta a personas de tu hogar.",
+      "hint": "Muestra a quién de tu hogar afecta"
+    },
     "substitutes": {
       "title": "En lugar de {{name}}",
       "open": "Sustitutos de {{name}}",

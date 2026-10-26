@@ -14,6 +14,7 @@ export interface CardProps {
   onPress?: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }
@@ -31,6 +32,7 @@ export const Card: React.FC<CardProps> = ({
   onPress,
   disabled = false,
   accessibilityLabel,
+  accessibilityHint,
   style,
   testID,
 }) => {
@@ -41,6 +43,7 @@ export const Card: React.FC<CardProps> = ({
         onPress={onPress}
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
         style={[styles.card, style]}
         testID={testID}
       >

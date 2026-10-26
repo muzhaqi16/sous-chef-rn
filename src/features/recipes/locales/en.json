@@ -383,6 +383,10 @@
     "tagTooLong": "Each tag can be at most {{count}} characters",
     "tipsTooLong": "Tips can be at most {{count}} characters",
     "stepsTooLarge": "These steps are too long to save. Shorten them and try again.",
+    "ingredientAlerts": {
+      "lead": "Check before you cook: this affects people in your household.",
+      "hint": "Shows who in your household this affects"
+    },
     "substitutes": {
       "title": "Instead of {{name}}",
       "open": "Substitutes for {{name}}",

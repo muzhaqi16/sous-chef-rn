@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
+import { SEVERITY_LABEL_KEYS } from '#domain/dietary';
 import {
   RestrictionSeverity,
   type ItemSuggestion,
@@ -24,14 +25,6 @@ const SEVERITIES: RestrictionSeverity[] = [
   RestrictionSeverity.Intolerance,
   RestrictionSeverity.Allergy,
 ];
-
-const SEVERITY_LABEL_KEYS: Partial<
-  Record<RestrictionSeverity, TranslationKey>
-> = {
-  [RestrictionSeverity.Preference]: 'dietaryProfile.avoidSeverity.preference',
-  [RestrictionSeverity.Intolerance]: 'dietaryProfile.avoidSeverity.intolerance',
-  [RestrictionSeverity.Allergy]: 'dietaryProfile.avoidSeverity.allergy',
-};
 
 interface AvoidFoodSheetProps {
   visible: boolean;

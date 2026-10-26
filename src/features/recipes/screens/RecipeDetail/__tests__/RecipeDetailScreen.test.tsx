@@ -88,23 +88,32 @@ jest.mock('#features/recipes/hooks/useRecipeSubstitutes', () => ({
     return { substitutesFor: (id: string) => mockSubstitutes[id] ?? [] };
   },
 }));
-jest.mock('#features/recipes/components/recipeDetail/SubstitutesSheet', () => {
-  const { Text } = require('react-native');
-  return {
-    SubstitutesSheet: ({
-      visible,
-      ingredientName,
-      options,
-    }: {
-      visible: boolean;
-      ingredientName: string;
-      options: unknown[];
-    }) =>
-      visible ? (
-        <Text>{`swaps for ${ingredientName}: ${options.length}`}</Text>
-      ) : null,
-  };
-});
+jest.mock(
+  '#features/recipes/components/recipeDetail/IngredientAlertsSheet',
+  () => {
+    const { Pressable, Text } = require('react-native');
+    return {
+      IngredientAlertsSheet: ({
+        visible,
+        ingredientName,
+        alerts,
+        options,
+        onAdd,
+      }: {
+        visible: boolean;
+        ingredientName: string;
+        alerts: unknown[];
+        options: unknown[];
+        onAdd: () => void;
+      }) =>
+        visible ? (
+          <Pressable accessibilityLabel="sheet add" onPress={onAdd}>
+            <Text>{`${ingredientName}: ${alerts.length} alerts, ${options.length} swaps`}</Text>
+          </Pressable>
+        ) : null,
+    };
+  },
+);
 
 jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
   useForkRecipe: jest.fn(() => ({ forkRecipe: jest.fn(), forking: false })),
@@ -586,20 +595,22 @@ describe('RecipeDetail', () => {
         ...overrides,
       });
 
-    it('lists every ingredient as a row with its own add action', () => {
+    it('lays every ingredient out as a tile in one sideways row', () => {
       renderIngredients();
 
-      for (const name of NAMES) {
+      NAMES.forEach((name, index) => {
         expect(screen.getByText(name)).toBeTruthy();
-        expect(screen.getByLabelText(`Add ${name}`)).toBeTruthy();
-      }
+        expect(
+          screen.getByTestId(recipesTestIDs.ingredientTile(index)),
+        ).toBeTruthy();
+      });
     });
 
-    it('adds one ingredient from its row', () => {
+    it('adds a plain ingredient on a tap', () => {
       const handleAddSingleIngredient = jest.fn();
       renderIngredients({ handleAddSingleIngredient });
 
-      fireEvent.press(screen.getByLabelText('Add Eggs'));
+      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(2)));
 
       expect(handleAddSingleIngredient).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'i2', name: 'Eggs' }),
@@ -633,25 +644,25 @@ describe('RecipeDetail', () => {
         mockSubstitutesWanted.length = 0;
       });
 
-      it('offers swaps on a flagged row that has some, and on no other', () => {
+      it('opens a flagged ingredient’s sheet, with its alerts and swaps, instead of adding it', () => {
         mockHousehold.check = 'checked';
         mockHousehold.summary = [BUTTER];
-        mockHousehold.rows = { i4: [BUTTER], i1: [BUTTER] };
-        // Flour has swaps but no flag; the second row a flag but no swaps.
+        mockHousehold.rows = { i4: [BUTTER] };
         mockSubstitutes.i0 = [{ id: 's-flour' }];
         mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
-        renderIngredients();
+        const handleAddSingleIngredient = jest.fn();
+        renderIngredients({ handleAddSingleIngredient });
 
         expect(mockSubstitutesWanted.at(-1)).toBe(true);
-        expect(screen.queryByLabelText('Substitutes for Flour')).toBeNull();
-        expect(
-          screen
-            .getAllByLabelText(/^Substitutes for /)
-            .map(node => node.props.accessibilityLabel),
-        ).toEqual(['Substitutes for Butter']);
+        fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(4)));
+        expect(handleAddSingleIngredient).not.toHaveBeenCalled();
+        expect(screen.getByText('Butter: 1 alerts, 2 swaps')).toBeTruthy();
 
-        fireEvent.press(screen.getByLabelText('Substitutes for Butter'));
-        expect(screen.getByText('swaps for Butter: 2')).toBeTruthy();
+        // Added anyway, from the sheet, once its alerts have been read.
+        fireEvent.press(screen.getByLabelText('sheet add'));
+        expect(handleAddSingleIngredient).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'i4', name: 'Butter' }),
+        );
       });
 
       it('asks for no swaps while nothing is flagged', () => {
@@ -659,33 +670,27 @@ describe('RecipeDetail', () => {
         renderIngredients();
 
         expect(mockSubstitutesWanted.at(-1)).toBe(false);
-        expect(screen.queryByLabelText(/^Substitutes for /)).toBeNull();
       });
 
-      it('leads with who the recipe affects and flags each row', () => {
+      it('leads with who the recipe affects and badges each flagged tile', () => {
         mockHousehold.check = 'checked';
         mockHousehold.summary = [SHRIMP, BUTTER];
         mockHousehold.rows = { i4: [BUTTER] };
-        const handleAddSingleIngredient = jest.fn();
-        renderIngredients({ handleAddSingleIngredient });
+        renderIngredients();
 
         expect(screen.getByTestId('recipe-household-summary')).toBeTruthy();
+        expect(screen.getByText('Tani')).toBeTruthy();
         expect(
           screen.getByText(
-            t('dietaryAlerts.contains', { name: 'Tani', what: 'Shellfish' }),
+            t('dietaryAlerts.reason.contains', { what: 'Shellfish' }),
           ),
         ).toBeTruthy();
-        // The summary and the butter row both say it.
+        // The summary's line and the butter tile's badge both say it.
         expect(
           screen.getAllByText(
-            t('dietaryAlerts.notDiet', { name: 'You', what: 'Vegan' }),
+            t('dietaryAlerts.reason.notDiet', { what: 'Vegan' }),
           ),
         ).toHaveLength(2);
-
-        fireEvent.press(screen.getByLabelText('Add Butter'));
-        expect(handleAddSingleIngredient).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'i4', name: 'Butter' }),
-        );
       });
 
       it('shows no summary when nobody is affected', () => {
@@ -697,10 +702,17 @@ describe('RecipeDetail', () => {
     });
 
     it('marks an added ingredient and stops adding it again', () => {
-      renderIngredients({ addedIngredients: new Set(['i0']) });
+      const handleAddSingleIngredient = jest.fn();
+      renderIngredients({
+        addedIngredients: new Set(['i0']),
+        handleAddSingleIngredient,
+      });
 
-      expect(screen.queryByLabelText('Add Flour')).toBeNull();
-      expect(screen.getByLabelText('Added')).toBeDisabled();
+      expect(
+        screen.getByTestId(recipesTestIDs.ingredientTile(0)),
+      ).toBeDisabled();
+      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
+      expect(handleAddSingleIngredient).not.toHaveBeenCalled();
     });
   });
 

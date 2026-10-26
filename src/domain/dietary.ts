@@ -217,14 +217,51 @@ export const isStrictSeverity = (severity: RestrictionSeverity): boolean =>
   severity === RestrictionSeverity.Allergy ||
   severity === RestrictionSeverity.Intolerance;
 
-/** "Ana: contains peanut", or for a diet "Sam: not vegan"; may-contain softer. */
-export function householdAlertKey(alert: HouseholdAlert): TranslationKey {
+/** Why an alert applies, "contains peanut" or for a diet "not vegan", under the member's name. */
+export function householdAlertReasonKey(alert: HouseholdAlert): TranslationKey {
   const contains = alert.state === DietaryAlertState.Contains;
   if (alert.isDiet) {
-    return contains ? 'dietaryAlerts.notDiet' : 'dietaryAlerts.mayNotDiet';
+    return contains
+      ? 'dietaryAlerts.reason.notDiet'
+      : 'dietaryAlerts.reason.mayNotDiet';
   }
-  return contains ? 'dietaryAlerts.contains' : 'dietaryAlerts.mayContain';
+  return contains
+    ? 'dietaryAlerts.reason.contains'
+    : 'dietaryAlerts.reason.mayContain';
 }
+
+/** The word a severity goes by, as the profile's avoid picker offers it; a goal has none. */
+export const SEVERITY_LABEL_KEYS: Partial<
+  Record<RestrictionSeverity, TranslationKey>
+> = {
+  [RestrictionSeverity.Preference]: 'dietaryProfile.avoidSeverity.preference',
+  [RestrictionSeverity.Intolerance]: 'dietaryProfile.avoidSeverity.intolerance',
+  [RestrictionSeverity.Allergy]: 'dietaryProfile.avoidSeverity.allergy',
+};
+
+/** The severity word an alert shows; a diet's reason ("not vegan") says it alone. */
+export const alertSeverityLabelKey = (
+  alert: HouseholdAlert,
+): TranslationKey | undefined =>
+  alert.isDiet ? undefined : SEVERITY_LABEL_KEYS[alert.severity];
+
+// Partial: the wire can carry a severity this build's enum predates.
+const SEVERITY_RANK: Partial<Record<RestrictionSeverity, number>> = {
+  [RestrictionSeverity.Allergy]: 0,
+  [RestrictionSeverity.Intolerance]: 1,
+  [RestrictionSeverity.Preference]: 2,
+  [RestrictionSeverity.Goal]: 3,
+};
+const UNRANKED = 4;
+
+const rankOf = (alert: HouseholdAlert): number =>
+  (SEVERITY_RANK[alert.severity] ?? UNRANKED) * 2 +
+  (alert.state === DietaryAlertState.Contains ? 0 : 1);
+
+/** Most serious first: an allergy before an avoided food, "contains" before "may contain". */
+export const strictestFirst = (
+  alerts: readonly HouseholdAlert[],
+): HouseholdAlert[] => [...alerts].sort((a, b) => rankOf(a) - rankOf(b));
 
 /**
  * - `checked`: the server answered just now.
