@@ -6771,13 +6771,26 @@ type Item {
     """Sort order; oldest first when omitted"""
     orderBy: ItemStoreSkuOrderBy
   ): ItemStoreSkuConnection!
+  """
+  The unit households use this product in (a stack's consume unit, or a use
+  stated in another unit than its stack's), by the same rule as
+  suggestedPackageUnit; null where nothing qualifies.
+  """
+  suggestedConsumeUnit: Unit
+  """
+  The container households count this product in, where at least three
+  independent households agree and the leader has twice the runner-up's
+  support, over the last year. A product short of that takes its concept's.
+  The same for every viewer; null where nothing qualifies.
+  """
+  suggestedPackageUnit: Unit
   """Free-form labels attached to the item; empty when none."""
   tags: [String!]!
   """
   The unit an add of this item naming no unit is counted in: the unit the
   given pantry holds it in, or last held it in, else the item's preferred
-  tracking unit, retail unit, default unit or declared count unit, else piece.
-  When the package size this item reports (netWeight with netWeightKind
+  tracking unit, retail unit, default unit or declared count unit, else
+  suggestedPackageUnit, else piece. When the package size this item reports (netWeight with netWeightKind
   PACKAGE; on a barcode lookup, the scanned one's) is known, a count stack the
   pantry holds comes first, and past the pantry's stacks only count units
   qualify, so one of it is one package, never one ounce. Without a pantry,
@@ -19133,7 +19146,7 @@ enum UnitSource {
   """Converts into the stack, with no curation for this operation"""
   AUTO
   """
-  Curated for this operation: an ItemUnit usage context or retail flag, Item.defaultConsumeUnit, or the stack's own portion unit
+  Curated for this operation: an ItemUnit usage context or retail flag, Item.defaultConsumeUnit, the stack's own portion or consume unit, or Item.suggestedConsumeUnit
   """
   CURATED
   """The stack's tracking unit"""
