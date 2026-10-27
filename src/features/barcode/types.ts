@@ -72,6 +72,8 @@ export interface ScannedItem
   packs?: NonNullable<LookupNode['packs']>;
   /** The unit an add naming no unit counts the row in. */
   trackingUnit?: TrackingUnitRef;
+  /** The container households count the product in; none below their floor. */
+  suggestedPackageUnit?: NonNullable<LookupNode['suggestedPackageUnit']>;
   /** The scanned barcode's own brand; never one picked from the item's list. */
   brandName?: string;
   brandId?: string;

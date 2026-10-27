@@ -82,6 +82,48 @@ describe('the package a scan is counted in', () => {
   it('has none to offer when the device holds no counting unit', () => {
     expect(packageUnitOf(honey, null, [cup])).toBeNull();
   });
+
+  describe('where households agree on a container', () => {
+    const learned = {
+      ...honey,
+      suggestedPackageUnit: {
+        __typename: 'Unit',
+        id: 'unit-jar',
+        symbol: 'jar',
+      },
+    } satisfies ScannedItem;
+
+    // `trackingUnit` reaches the households' container only for a sized pack.
+    it('counts in it rather than a piece when the tracking unit is a measure', () => {
+      expect(
+        packageUnitOf(
+          { ...learned, trackingUnit: { ...cup, name: 'cup' } },
+          null,
+          [piece, cup],
+        ),
+      ).toEqual({ __typename: 'Unit', ...jar });
+    });
+
+    it('still joins a counted stack the pantry holds', () => {
+      expect(
+        packageUnitOf(learned, { id: 'unit-pc', type: UnitType.Count }, [
+          piece,
+        ]),
+      ).toEqual(piece);
+    });
+
+    it('comes after a counted tracking unit', () => {
+      const bag = {
+        id: 'unit-bag',
+        name: 'bag',
+        symbol: 'bag',
+        type: UnitType.Count,
+      };
+      expect(
+        packageUnitOf({ ...learned, trackingUnit: bag }, null, [piece]),
+      ).toEqual(bag);
+    });
+  });
 });
 
 describe('the amount a scan prefills', () => {
@@ -272,6 +314,20 @@ describe('a multipack', () => {
     expect(
       packageUnitOf(sixPack, { id: 'unit-pc', type: UnitType.Count }, [piece]),
     ).toEqual(piece);
+  });
+
+  it('takes its label’s container over the one households count it in', () => {
+    const learned = {
+      ...sixPack,
+      suggestedPackageUnit: {
+        __typename: 'Unit',
+        id: 'unit-jar',
+        symbol: 'jar',
+      },
+    } satisfies ScannedItem;
+    expect(packageUnitOf(learned, null, [piece])).toMatchObject({
+      id: 'unit-can',
+    });
   });
 
   it('prefills its pieces: 6, each one piece’s size', () => {

@@ -124,6 +124,7 @@ const convertToScannedItem = (
         type: item.trackingUnit.type,
       }
     : undefined,
+  suggestedPackageUnit: item.suggestedPackageUnit ?? undefined,
   // The brand typed into the create form is the item's; a scan's is the
   // barcode's own.
   brandName: brandNameOverride ?? item.variationBrand?.name,

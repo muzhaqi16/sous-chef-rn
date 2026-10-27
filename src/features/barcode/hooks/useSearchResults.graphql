@@ -161,6 +161,12 @@ query ItemByLookup(
           type
           displayAsFraction
         }
+        # The container households count it in. `trackingUnit` ends in it only
+        # for a sized pack, so an unsized one reads it here before a piece.
+        suggestedPackageUnit {
+          id
+          symbol
+        }
         categories {
           id
           isPrimary
