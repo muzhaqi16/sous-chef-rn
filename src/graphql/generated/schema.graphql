@@ -13995,6 +13995,16 @@ type Query {
     status: BatchStatus
   ): PantryItemBatchConnection!
   """
+  pantryItem(id:) for many ids in one read: the stacks the caller may view,
+  in the order asked, each once. An id a merge absorbed reads as its
+  survivor; one naming no stack, or a stack the caller cannot view, is left
+  out. At most 100 ids; more is VALIDATION_FAILED on ids.
+  """
+  pantryItemsByIds(
+    """The ids of the PantryItems to read"""
+    ids: [ID!]!
+  ): [PantryItem!]!
+  """
   Ingredient lines a user pastes, read as a capture reads them: amount, unit,
   name, handling and catalog candidates. Writes nothing.
   """
@@ -14316,6 +14326,16 @@ type Query {
     """The id of the ShoppingListItem to read"""
     id: ID!
   ): ShoppingListItem
+  """
+  shoppingListItem(id:) for many ids in one read: the items the caller may
+  view, in the order asked, each once. One missing, removed, or on a list the
+  caller cannot view is left out. At most 100 ids; more is VALIDATION_FAILED
+  on ids.
+  """
+  shoppingListItemsByIds(
+    """The ids of the ShoppingListItems to read"""
+    ids: [ID!]!
+  ): [ShoppingListItem!]!
   """
   Where a shopping list is cheapest, by branch or by chain. Refused as a read
   of the list is to a caller who cannot read it.
@@ -18746,9 +18766,10 @@ type Subscription {
     storeId: ID!
   ): StoreEvent!
   """
-  Per-user event stream (account update, profile change, and
-  home/shopping-list membership + moderation lifecycle transitions).
-  Subscribe once and branch on subtype.
+  Per-user event stream (account update, profile change,
+  home/shopping-list membership and moderation lifecycle transitions, and a
+  receipt parse or recipe capture settling). Subscribe once and branch on
+  subtype.
   """
   userEvents(
     """The user to watch: yourself, or anyone for an admin or moderator"""
@@ -21202,9 +21223,10 @@ type UserEvent implements DomainEvent {
   """
   failedLoginCount: Int
   """
-  Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
-  and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
-  WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
+  Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED,
+  the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
+  WARNED) and the *_SETTLED subtypes; CREATED for ADDED_TO_*; DELETED for
+  REMOVED_FROM_*.
   """
   mutation: MutationType!
   node: UserEventNode
@@ -21246,6 +21268,10 @@ PROFILE_CHANGED.
 """
 type UserEventParents {
   homeId: ID
+  """The receipt parse that settled, on RECEIPT_PARSE_SETTLED."""
+  receiptParseId: ID
+  """The recipe capture that settled, on RECIPE_CAPTURE_SETTLED."""
+  recipeCaptureId: ID
   shoppingListId: ID
 }
 
@@ -21412,6 +21438,14 @@ enum UserSubtype {
   ADDED_TO_SHOPPING_LIST
   BANNED
   PROFILE_CHANGED
+  """
+  A receipt parse of yours finished, in whatever status: read it once (parents.receiptParseId).
+  """
+  RECEIPT_PARSE_SETTLED
+  """
+  A recipe capture of yours finished, in whatever status: read it once (parents.recipeCaptureId).
+  """
+  RECIPE_CAPTURE_SETTLED
   REMOVED_FROM_HOME
   REMOVED_FROM_SHOPPING_LIST
   SUSPENDED
