@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 // Import new unified autocomplete components
 import { FormInput } from '#components/atoms/FormInput';
+import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { useFieldRenderers } from './fieldRenderers';
 
@@ -285,6 +286,7 @@ export function DynamicFormFields<T extends FieldValues>({
             {!!errors[name] &&
               props?.componentType !== 'checkbox' &&
               Input !== FormInput &&
+              Input !== FormTextArea &&
               !(
                 typeof Input === 'string' && renderers[Input]?.ownsErrorDisplay
               ) && (

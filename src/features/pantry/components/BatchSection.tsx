@@ -80,6 +80,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
         })}
         expanded={expanded}
         onToggle={() => setExpanded(!expanded)}
+        inset
       >
         <View style={styles.content}>
           {shownBatches.map(batch => (

@@ -12,6 +12,8 @@ interface CollapsibleSectionProps {
   expanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  /** Pads the header in from the edges, for a host with no gutter (a flush card). */
+  inset?: boolean;
 }
 
 export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
@@ -20,11 +22,12 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   expanded,
   onToggle,
   children,
+  inset = false,
 }) => {
   // The header's bottom border is a separator between it and the content, so it
   // only shows while expanded — collapsed, it's just the header (no stray
   // divider over an empty body).
-  styles.useVariants({ expanded });
+  styles.useVariants({ expanded, inset });
   return (
     <>
       <AppPressable style={styles.header} onPress={onToggle}>
@@ -44,7 +47,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     marginTop: theme.spacing.sm,
     variants: {
@@ -53,6 +55,10 @@ const styles = StyleSheet.create(theme => ({
           borderBottomWidth: theme.borderWidth.hairline,
           borderBottomColor: theme.colors.border,
         },
+        false: {},
+      },
+      inset: {
+        true: { paddingHorizontal: theme.spacing.lg },
         false: {},
       },
     },

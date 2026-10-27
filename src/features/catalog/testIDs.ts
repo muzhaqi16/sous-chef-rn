@@ -5,6 +5,7 @@
  */
 export const catalogTestIDs = {
   addItemFormSubtitle: 'add-item-form-subtitle',
+  barcodeInfoFormat: 'barcode-info-format',
   /** The review path's required note, `fields.tsx`'s `editReason`. */
   addItemFormEditNoteInput: 'add-item-form-edit-note-input',
   reportItemReasonInput: 'report-item-reason-input',
