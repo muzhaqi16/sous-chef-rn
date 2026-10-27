@@ -333,10 +333,10 @@
       "body": "mutation CreateStore($input: CreateStoreInput!) {\n  createStore(input: $input) {\n    __typename\n    ... on CreateStorePayload {\n      outcome\n      store {\n        id\n        name\n        ...StoreReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment StoreReaders on Store {\n  id\n  address\n  chain {\n    id\n    name\n    __typename\n  }\n  name\n  storeNumber\n  __typename\n}"
     },
     {
-      "id": "b3e34db3dc80999a3fc6347e3a096510ad5c4a445b0cd7a346abfe5ff8d5948b",
+      "id": "fefd6b02f47c63f89c919606287c806efaecd5891a992b753b5c02e94d6e1a79",
       "name": "CreateUserReport",
       "type": "mutation",
-      "body": "mutation CreateUserReport($input: CreateUserReportInput!) {\n  createUserReport(input: $input) {\n    __typename\n    ... on CreateUserReportPayload {\n      outcome\n      userReport {\n        id\n        ...MyUserReportReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment MyUserReportReaders on MyUserReport {\n  id\n  contentType\n  createdAt\n  status\n  type\n  __typename\n}"
+      "body": "mutation CreateUserReport($input: CreateUserReportInput!) {\n  createUserReport(input: $input) {\n    __typename\n    ... on CreateUserReportPayload {\n      outcome\n      userReport {\n        id\n        ...MyUserReportReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment MyUserReportReaders on MyUserReport {\n  id\n  contentType\n  type\n  __typename\n}"
     },
     {
       "id": "46033b27289bbf42fa71f13e38df39042c7dc14c3e8392123dc452a274d343c3",
@@ -1017,6 +1017,12 @@
       "body": "query MyRecipes($cursor: String, $first: Int = 25) {\n  recipes(after: $cursor, first: $first) {\n    edges {\n      node {\n        id\n        name\n        description\n        ...MyRecipeCard_recipe\n        __typename\n      }\n      cursor\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}\n\nfragment MyRecipeCard_recipe on Recipe {\n  id\n  name\n  description\n  imageUrl\n  servings\n  prepTimeMinutes\n  cookTimeMinutes\n  totalTimeMinutes\n  __typename\n}"
     },
     {
+      "id": "6e43300d577399b671a2d40b15400725d4a4d33eec0e2402065544c5748c43f4",
+      "name": "MyReviewSubmissions",
+      "type": "query",
+      "body": "query MyReviewSubmissions($first: Int!, $after: String) {\n  myReviewSubmissions(first: $first, after: $after) {\n    edges {\n      node {\n        id\n        ...MyReportRow_submission\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment MyReportRow_submission on ReviewSubmission {\n  __typename\n  id\n  sentAt\n  status\n  senderNote\n  reviewNote\n  ... on UserReportSubmission {\n    report {\n      id\n      type\n      contentType\n      __typename\n    }\n    reportedUser {\n      id\n      displayName\n      __typename\n    }\n    recipe {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  ... on ItemReportSubmission {\n    item {\n      id\n      name\n      __typename\n    }\n    photo {\n      id\n      url\n      variants {\n        id\n        kind\n        url\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  ... on ItemSuggestionSubmission {\n    item {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  ... on ItemPhotoSubmission {\n    item {\n      id\n      name\n      __typename\n    }\n    photo {\n      id\n      url\n      variants {\n        id\n        kind\n        url\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "a5812225469645da46833e3abea29fa2ff08cc4678b8b6ee85b787f7f018f155",
       "name": "MySavedRecipes",
       "type": "query",
@@ -1027,12 +1033,6 @@
       "name": "MyShoppingListsEvents",
       "type": "subscription",
       "body": "subscription MyShoppingListsEvents {\n  myShoppingListsEvents {\n    subtype\n    mutation\n    listId\n    originatorClientId\n    actorUserId\n    timestamp\n    updatedFields\n    clearedItemIds\n    node {\n      __typename\n      ... on ShoppingListItem {\n        id\n        __typename\n      }\n      ... on ShoppingList {\n        id\n        __typename\n      }\n      ... on ShoppingListCollaborator {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
-    },
-    {
-      "id": "45bfa6a13452d48d4699192150f62df33d4ff54e7b6a12f71da37ba2ed8fa489",
-      "name": "MyUserReports",
-      "type": "query",
-      "body": "query MyUserReports($first: Int!, $after: String) {\n  myUserReports(first: $first, after: $after) {\n    edges {\n      node {\n        id\n        ...MyReportRow_report\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment MyReportRow_report on MyUserReport {\n  id\n  type\n  status\n  contentType\n  createdAt\n  __typename\n}"
     },
     {
       "id": "06c6255834e662551eaa1ab46aa02431cf0390fb46cb8eba0b648eedecbb1c1a",

@@ -1,7 +1,59 @@
-fragment MyReportRow_report on MyUserReport {
+fragment MyReportRow_submission on ReviewSubmission {
+  __typename
   id
-  type
+  sentAt
   status
-  contentType
-  createdAt
+  senderNote
+  reviewNote
+  ... on UserReportSubmission {
+    report {
+      id
+      type
+      contentType
+    }
+    reportedUser {
+      id
+      displayName
+    }
+    recipe {
+      id
+      name
+    }
+  }
+  ... on ItemReportSubmission {
+    item {
+      id
+      name
+    }
+    photo {
+      id
+      url
+      variants {
+        id
+        kind
+        url
+      }
+    }
+  }
+  ... on ItemSuggestionSubmission {
+    item {
+      id
+      name
+    }
+  }
+  ... on ItemPhotoSubmission {
+    item {
+      id
+      name
+    }
+    photo {
+      id
+      url
+      variants {
+        id
+        kind
+        url
+      }
+    }
+  }
 }

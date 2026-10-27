@@ -349,17 +349,26 @@
       "recipe": "Recipe report",
       "recipeReview": "Review report",
       "profile": "Profile report",
-      "user": "User report"
+      "user": "User report",
+      "item": "Item report",
+      "photo": "Photo report",
+      "suggestion": "Suggested edit",
+      "photoUpload": "Photo for review"
     },
-    "reportedOn": "Reported {{date}}",
     "status": {
       "pending": "Waiting for review",
-      "investigating": "Under review",
-      "resolved": "Upheld",
-      "dismissed": "Closed"
+      "inReview": "Under review",
+      "upheld": "Upheld",
+      "closed": "Closed",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "approved": "Approved",
+      "notApproved": "Not approved"
     },
-    "emptyTitle": "No reports yet",
-    "emptyDescription": "Reports you send to the moderators appear here, with where each one stands."
+    "emptyTitle": "Nothing sent for review yet",
+    "emptyDescription": "Reports, suggested edits and photos you send for review appear here, with where each one stands.",
+    "sentOn": "Sent {{date}}",
+    "reviewNote": "Reviewer's note: {{note}}"
   },
   "brandLists": {
     "title": "Brand lists",

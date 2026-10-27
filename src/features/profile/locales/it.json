@@ -349,17 +349,26 @@
       "recipe": "Segnalazione di una ricetta",
       "recipeReview": "Segnalazione di una recensione",
       "profile": "Segnalazione di un profilo",
-      "user": "Segnalazione di un utente"
+      "user": "Segnalazione di un utente",
+      "item": "Segnalazione di un articolo",
+      "photo": "Segnalazione di una foto",
+      "suggestion": "Modifica suggerita",
+      "photoUpload": "Foto da esaminare"
     },
-    "reportedOn": "Inviata il {{date}}",
     "status": {
       "pending": "In attesa di esame",
-      "investigating": "In esame",
-      "resolved": "Accolta",
-      "dismissed": "Chiusa"
+      "inReview": "In esame",
+      "upheld": "Accolta",
+      "closed": "Chiusa",
+      "accepted": "Accolta",
+      "declined": "Respinta",
+      "approved": "Approvata",
+      "notApproved": "Non approvata"
     },
-    "emptyTitle": "Ancora nessuna segnalazione",
-    "emptyDescription": "Le segnalazioni che invii ai moderatori compaiono qui, con lo stato di ciascuna."
+    "emptyTitle": "Non hai ancora inviato nulla da esaminare",
+    "emptyDescription": "Le segnalazioni, le modifiche suggerite e le foto che invii per l'esame compaiono qui, con lo stato di ciascuna.",
+    "sentOn": "Inviata il {{date}}",
+    "reviewNote": "Nota della revisione: {{note}}"
   },
   "brandLists": {
     "title": "Liste di marchi",
