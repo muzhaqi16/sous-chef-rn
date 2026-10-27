@@ -95,7 +95,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   remainingPortions
   activeBatchCount
   earliestBatchExpiresOn
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   # `catalogImageId` names the item photo it is, so the hero can lead with it.
   image {
     url

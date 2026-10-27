@@ -45,7 +45,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
   remainingPortions
   activeBatchCount
   updatedAt
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   image {
     url
     source

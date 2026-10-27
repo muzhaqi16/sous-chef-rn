@@ -378,6 +378,20 @@ describe('imageUtils', () => {
       );
     });
 
+    // The viewer's pending upload is in none of the item's fields.
+    it("ends on the viewer's own pending photo", () => {
+      const source = {
+        image: {
+          url: 'https://cdn.example.com/pending-thumb.jpg',
+          source: EntryImageSource.Pending,
+        },
+        item: { imageUrl: null, images: [] },
+      };
+      expect(resolveImageUrl(source)).toBe(
+        'https://cdn.example.com/pending-thumb.jpg',
+      );
+    });
+
     it('resolves from own images variants second', () => {
       const source = {
         images: [{ url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' }],
