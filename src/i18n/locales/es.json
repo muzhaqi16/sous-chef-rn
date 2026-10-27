@@ -581,13 +581,16 @@
     "syncing": "Sincronizando…"
   },
   "offlineBanner": {
-    "offlineMode": "Modo sin conexión activado — usando solo datos en caché",
-    "deviceOffline": "Sin conexión — los cambios se sincronizarán al reconectar",
-    "deviceOfflinePending_one": "Sin conexión — {{count}} cambio se sincronizará al reconectar",
-    "deviceOfflinePending_other": "Sin conexión — {{count}} cambios se sincronizarán al reconectar",
-    "apiDown": "No se puede conectar con el servidor — los cambios se sincronizarán cuando vuelva",
-    "apiDownPending_one": "No se puede conectar con el servidor — {{count}} cambio se sincronizará cuando vuelva",
-    "apiDownPending_other": "No se puede conectar con el servidor — {{count}} cambios se sincronizarán cuando vuelva",
+    "offlineModeTitle": "Modo sin conexión activado",
+    "offlineModeDetail": "Solo se usa lo guardado en este dispositivo",
+    "deviceOfflineTitle": "Sin conexión",
+    "deviceOfflineDetail": "Los cambios se sincronizarán cuando vuelvas a tener conexión",
+    "deviceOfflinePendingDetail_one": "{{count}} cambio se sincronizará cuando vuelvas a tener conexión",
+    "deviceOfflinePendingDetail_other": "{{count}} cambios se sincronizarán cuando vuelvas a tener conexión",
+    "apiDownTitle": "Sin conexión con el servidor",
+    "apiDownDetail": "Los cambios se sincronizarán cuando se restablezca",
+    "apiDownPendingDetail_one": "{{count}} cambio se sincronizará cuando se restablezca",
+    "apiDownPendingDetail_other": "{{count}} cambios se sincronizarán cuando se restablezca",
     "backOnline": "De nuevo en línea — sincronizando tus cambios"
   },
   "appUpdate": {

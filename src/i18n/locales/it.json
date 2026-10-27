@@ -581,13 +581,16 @@
     "syncing": "Sincronizzazione…"
   },
   "offlineBanner": {
-    "offlineMode": "Modalità offline attiva — solo dati memorizzati",
-    "deviceOffline": "Sei offline — le modifiche si sincronizzeranno alla riconnessione",
-    "deviceOfflinePending_one": "Sei offline — {{count}} modifica si sincronizzerà alla riconnessione",
-    "deviceOfflinePending_other": "Sei offline — {{count}} modifiche si sincronizzeranno alla riconnessione",
-    "apiDown": "Impossibile raggiungere il server — le modifiche si sincronizzeranno al ripristino",
-    "apiDownPending_one": "Impossibile raggiungere il server — {{count}} modifica si sincronizzerà al ripristino",
-    "apiDownPending_other": "Impossibile raggiungere il server — {{count}} modifiche si sincronizzeranno al ripristino",
+    "offlineModeTitle": "Modalità offline attiva",
+    "offlineModeDetail": "Vengono usati solo i dati di questo dispositivo",
+    "deviceOfflineTitle": "Sei offline",
+    "deviceOfflineDetail": "Le modifiche si sincronizzeranno quando tornerai online",
+    "deviceOfflinePendingDetail_one": "{{count}} modifica si sincronizzerà quando tornerai online",
+    "deviceOfflinePendingDetail_other": "{{count}} modifiche si sincronizzeranno quando tornerai online",
+    "apiDownTitle": "Server non raggiungibile",
+    "apiDownDetail": "Le modifiche si sincronizzeranno quando tornerà disponibile",
+    "apiDownPendingDetail_one": "{{count}} modifica si sincronizzerà quando tornerà disponibile",
+    "apiDownPendingDetail_other": "{{count}} modifiche si sincronizzeranno quando tornerà disponibile",
     "backOnline": "Di nuovo online — sincronizzazione delle modifiche"
   },
   "appUpdate": {

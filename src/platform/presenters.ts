@@ -18,6 +18,8 @@ export const TOAST_HOLD_MS = {
 
 export interface ToastOptions {
   message: string;
+  /** A smaller second line under `message`, which then reads as a short title. */
+  detail?: string;
   /**
    * Hold in ms, default `TOAST_HOLD_MS.SHORT`; prefer a `TOAST_HOLD_MS` preset.
    * The hold spans the fade-in and excludes the fade-out, so time on screen is

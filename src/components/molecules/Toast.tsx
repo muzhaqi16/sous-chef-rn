@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import React, { useState, useEffect, forwardRef } from 'react';
-import { AccessibilityInfo, Platform, type ViewProps } from 'react-native';
+import {
+  AccessibilityInfo,
+  Platform,
+  View,
+  type ViewProps,
+} from 'react-native';
 
 import Animated, {
   useSharedValue,
@@ -22,6 +27,8 @@ import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import type {
   ToastOptions,
   ToastPresenter,
@@ -113,6 +120,7 @@ const ToastCard = forwardRef<
   React.ComponentRef<typeof Animated.View>,
   {
     message?: string;
+    detail?: string;
     type: ToastType;
     actionLabel?: string;
     onActionPress: () => void;
@@ -123,6 +131,7 @@ const ToastCard = forwardRef<
 >(function ToastCardHost(
   {
     message,
+    detail,
     type,
     actionLabel,
     onActionPress,
@@ -171,7 +180,7 @@ const ToastCard = forwardRef<
       accessibilityLiveRegion="polite"
       accessible
       accessibilityRole="alert"
-      accessibilityLabel={message}
+      accessibilityLabel={accessibilityLabelOf(message, detail)}
       // Safe-area offset applied as layout, not animation — see the entry
       // effect. `marginTop` (spacing.md) is the gap below it.
       style={[
@@ -181,27 +190,44 @@ const ToastCard = forwardRef<
         animatedStyle,
       ]}
     >
-      {iconName ? (
-        <ThemedToastIcon
-          name={iconName}
-          size={18}
-          style={styles.icon}
-          uniProps={t => ({
-            color:
-              type !== 'default' && type in t.colors.alertBanner
-                ? t.colors.alertBanner[type].text
-                : t.colors.textInverse,
-          })}
-        />
-      ) : null}
-      <Text
-        role="bodyStrong"
-        style={styles.toastText}
-        testID={kitTestIDs.toastMessage}
-        numberOfLines={2}
-      >
-        {message}
-      </Text>
+      <View style={styles.content}>
+        {iconName ? (
+          // One message line tall, so the icon centres on the first line of
+          // a wrapped message or a message with a detail under it.
+          <View style={styles.iconSlot}>
+            <ThemedToastIcon
+              name={iconName}
+              uniProps={t => ({
+                size: t.sizes.icon.sm,
+                color:
+                  type !== 'default' && type in t.colors.alertBanner
+                    ? t.colors.alertBanner[type].text
+                    : t.colors.textInverse,
+              })}
+            />
+          </View>
+        ) : null}
+        <View style={styles.textColumn}>
+          <Text
+            role="bodyStrong"
+            style={styles.toastText}
+            testID={kitTestIDs.toastMessage}
+            numberOfLines={2}
+          >
+            {message}
+          </Text>
+          {detail ? (
+            <Text
+              role="caption"
+              style={styles.toastText}
+              testID={kitTestIDs.toastDetail}
+              numberOfLines={3}
+            >
+              {detail}
+            </Text>
+          ) : null}
+        </View>
+      </View>
       {actionLabel ? (
         <Pressable onPress={onActionPress} style={styles.actionButton}>
           <Text role="bodyStrong" style={styles.actionText}>
@@ -209,6 +235,7 @@ const ToastCard = forwardRef<
           </Text>
         </Pressable>
       ) : null}
+      <ThemeEpochSentinel />
     </Animated.View>
   );
 });
@@ -284,7 +311,9 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
     // Keyed on the generation, which changes on an in-place replace too, so a
     // superseding state announcement is read rather than swallowed.
     if (Platform.OS === 'ios' && current.message) {
-      AccessibilityInfo.announceForAccessibility(current.message);
+      AccessibilityInfo.announceForAccessibility(
+        accessibilityLabelOf(current.message, current.detail),
+      );
     }
     currentGeneration.set(generation);
     if (translateY.get() < TOAST.ENTER_FROM_Y) {
@@ -370,6 +399,7 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
       <GestureDetector gesture={panGesture}>
         <ToastCard
           message={displayed?.message}
+          detail={displayed?.detail}
           type={displayed?.type ?? 'default'}
           actionLabel={displayed?.action?.label}
           onActionPress={handleActionPress}
@@ -391,11 +421,20 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderCurve: 'continuous',
   },
-  icon: {
-    marginRight: theme.spacing.xs,
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+  },
+  iconSlot: {
+    height: theme.type.bodyStrong.lineHeight,
+    justifyContent: 'center',
+  },
+  textColumn: {
+    flex: 1,
   },
   toastText: {
-    flex: 1,
     color: theme.colors.textInverse,
     variants: {
       type: {

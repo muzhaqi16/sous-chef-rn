@@ -1,6 +1,7 @@
 import { useTranslation } from '#/i18n';
 import { useAppStore } from '#store/useAppStore';
 import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
+import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import type { IconName } from '#components/atoms/Icon';
 
 type IoniconName = IconName;
@@ -10,17 +11,21 @@ export interface OfflineStatus {
   offline: boolean;
   /** Icon representing the current offline cause. */
   iconName: IoniconName;
-  /** User-facing message for the current offline cause + pending count. */
+  /** The current offline cause, short enough for a toast's first line. */
+  title: string;
+  /** What happens meanwhile, with the pending count when there is one. */
+  detail: string;
+  /** `title` and `detail` as one label, for a screen reader. */
   message: string;
   /** Count of mutations queued locally, waiting to sync. */
   pendingCount: number;
 }
 
 /**
- * The icon + message for the current offline cause, shared by the pill and the
- * transition toaster so the two cannot drift. The cause is the store's DEBOUNCED
+ * The icon + copy for the current offline cause, shared by the pill and the
+ * transition announcer so the two cannot drift. The cause is the store's DEBOUNCED
  * `offlineBannerCause`: during the minimum-visible window the live flags already
- * read "online", so re-deriving would rewrite the message mid-display.
+ * read "online", so re-deriving would rewrite the copy mid-display.
  */
 export const useOfflineStatus = (): OfflineStatus => {
   const { t } = useTranslation();
@@ -30,16 +35,30 @@ export const useOfflineStatus = (): OfflineStatus => {
   const iconName: IoniconName =
     cause === 'offline-mode' ? 'airplane-outline' : 'cloud-offline-outline';
 
-  const message =
+  const title =
+    cause === 'device-offline'
+      ? t('offlineBanner.deviceOfflineTitle')
+      : cause === 'api-unreachable'
+      ? t('offlineBanner.apiDownTitle')
+      : t('offlineBanner.offlineModeTitle');
+
+  const detail =
     cause === 'device-offline'
       ? pendingCount > 0
-        ? t('offlineBanner.deviceOfflinePending', { count: pendingCount })
-        : t('offlineBanner.deviceOffline')
+        ? t('offlineBanner.deviceOfflinePendingDetail', { count: pendingCount })
+        : t('offlineBanner.deviceOfflineDetail')
       : cause === 'api-unreachable'
       ? pendingCount > 0
-        ? t('offlineBanner.apiDownPending', { count: pendingCount })
-        : t('offlineBanner.apiDown')
-      : t('offlineBanner.offlineMode');
+        ? t('offlineBanner.apiDownPendingDetail', { count: pendingCount })
+        : t('offlineBanner.apiDownDetail')
+      : t('offlineBanner.offlineModeDetail');
 
-  return { offline: cause !== null, iconName, message, pendingCount };
+  return {
+    offline: cause !== null,
+    iconName,
+    title,
+    detail,
+    message: accessibilityLabelOf(title, detail),
+    pendingCount,
+  };
 };

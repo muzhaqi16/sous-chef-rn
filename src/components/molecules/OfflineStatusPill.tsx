@@ -26,12 +26,13 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
   size = 22,
   style,
 }) => {
-  const { offline, iconName, message, pendingCount } = useOfflineStatus();
+  const { offline, iconName, title, detail, message, pendingCount } =
+    useOfflineStatus();
 
   if (!offline) return null;
 
   const handlePress = () => {
-    toastService.warning(message, { duration: TOAST.AUTO_DISMISS_LONG });
+    toastService.warning(title, { detail, duration: TOAST.AUTO_DISMISS_LONG });
   };
 
   return (
