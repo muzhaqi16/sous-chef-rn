@@ -1,5 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useToday } from '#hooks/app/useToday';
+import type { CurrentPlanAnswer } from '#features/mealPlan/types';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
@@ -113,27 +114,41 @@ export function useMealPlanDisplay(
   return planId && complete ? data : null;
 }
 
-export function useMealPlans({ skip, fetchPolicy }: StandDownOptions = {}) {
+export function useMealPlans({
+  skip,
+  fetchPolicy,
+  current: answer,
+}: StandDownOptions & { current?: CurrentPlanAnswer } = {}) {
   const list = useMealPlanList(undefined, { skip, fetchPolicy });
 
   // `filters.startDate` keeps plans ending today or later, ascending, so the
   // current plan is on page one unless a full page overlaps today. Skipped once
-  // the list holds a plan ACTIVE today, which beats any upcoming one.
+  // the list holds a plan ACTIVE today, which beats any upcoming one, and while
+  // `currentMealPlan` is asked or has named one: then only for the upcoming.
   const today = useToday();
   const listActive = list.mealPlans.some(plan => isPlanActiveOn(plan, today));
+  const answered = useMealPlanDisplay(answer?.planId ?? null);
+  const named = !!answer && (answer.waiting || answer.planId !== null);
   const current = useMealPlanList(
     { startDate: today },
     {
       orderBy: SortOrder.Asc,
       first: CURRENT_PLAN_PAGE_SIZE,
-      skip: listActive || skip,
+      skip: listActive || named || skip,
       fetchPolicy,
     },
   );
 
   // The list takes part too: offline, a new day's variant has no cached page.
   const currentPlan =
-    resolveCurrentMealPlan([...current.mealPlans, ...list.mealPlans], today) ??
+    resolveCurrentMealPlan(
+      [
+        ...(answered ? [answered] : []),
+        ...current.mealPlans,
+        ...list.mealPlans,
+      ],
+      today,
+    ) ??
     list.mealPlans[0] ??
     null;
 

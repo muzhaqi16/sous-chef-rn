@@ -15,7 +15,10 @@ import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
-import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
+import {
+  useCurrentMealPlan,
+  useMealPlan,
+} from '#features/mealPlan/screens/useMealPlan';
 import { useServerRecipeSuggestions } from '#features/recipes/hooks/useServerRecipeSuggestions';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
@@ -91,6 +94,8 @@ export function useTodayOverview() {
     `${pantry?.id ?? ''}:${today}`,
   );
 
+  // The plan covering today and its meals come with the list, not after it.
+  const current = useCurrentMealPlan(standDown);
   const {
     state: {
       currentPlan,
@@ -99,7 +104,7 @@ export function useTodayOverview() {
       initialLoading: plansLoading,
     },
     actions: { refetch: refetchPlans },
-  } = useMealPlans(standDown);
+  } = useMealPlans({ ...standDown, current });
   // The plan covering today, not the one last opened on the Meal Plan tab.
   const {
     items,
