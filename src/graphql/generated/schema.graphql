@@ -1797,6 +1797,16 @@ type ConfirmItemImageUploadPayload {
   took the primary slot shows here without a refetch.
   """
   item: Item!
+  """
+  The caller's live pantry stacks for the item, in every pantry it may view.
+  Each shows the photo where it now applies (EntryImage gives the order), so
+  a client updates its rows without a refetch.
+  """
+  pantryItems: [PantryItem!]!
+  """
+  The caller's live shopping-list lines for the item, on every list it can read; as pantryItems.
+  """
+  shoppingListItems: [ShoppingListItem!]!
   """The confirmed photo's public URL."""
   url: URL
 }
