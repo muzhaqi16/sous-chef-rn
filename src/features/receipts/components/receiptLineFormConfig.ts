@@ -1,5 +1,6 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
 import {
+  itemNameText,
   lazyMessage,
   parseMoneyInput,
   quantityRule,
@@ -41,7 +42,7 @@ const parsedQuantity = (value: string) => {
 };
 
 export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
-  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
+  itemName: itemNameText(lazyMessage('errors.itemNameRequired')),
   itemId: string().nullable().defined(),
   quantityInput: quantityRule('errors.invalidQuantity'),
   unitValue: string().defined(),

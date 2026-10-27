@@ -1,5 +1,6 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import {
+  itemNameText,
   lazyMessage,
   normalizeSmartPunctuation,
 } from '#/utils/validation/common';
@@ -29,13 +30,9 @@ const decimalText = (value: unknown, originalValue: unknown): unknown => {
 
 // --- item-specific validation rules ------------------------------------------
 
-// Item name validation
-export const itemNameRule = string()
-  .required(msg('nameRequired'))
-  .transform(normalizeSmartPunctuation)
-  .min(1, msg('nameEmpty'))
-  .max(100, msg('nameMax', { count: 100 }))
-  .matches(/^[a-zA-Z0-9\s\-_'.,()&]+$/, msg('nameChars'));
+// The API refuses no character in a name, so neither does the form: a catalog
+// name such as "Cashew Splits R/s" must survive an edit.
+export const itemNameRule = itemNameText(msg('nameRequired'));
 
 // Description validation
 export const descriptionRule = string()

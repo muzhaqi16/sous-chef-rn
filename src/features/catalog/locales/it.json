@@ -244,9 +244,6 @@
   },
   "itemValidation": {
     "nameRequired": "Il nome dell'articolo è obbligatorio",
-    "nameEmpty": "Il nome dell'articolo non può essere vuoto",
-    "nameMax": "Il nome dell'articolo non può superare {{count}} caratteri",
-    "nameChars": "Il nome dell'articolo può contenere solo lettere, numeri, spazi e punteggiatura comune",
     "descriptionMax": "La descrizione non può superare {{count}} caratteri",
     "upcDigits": "L'UPC può contenere solo numeri",
     "upcMin": "L'UPC deve avere almeno {{count}} cifre",

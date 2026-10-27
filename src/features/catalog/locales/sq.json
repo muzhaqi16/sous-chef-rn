@@ -244,9 +244,6 @@
   },
   "itemValidation": {
     "nameRequired": "Emri i artikullit është i detyrueshëm",
-    "nameEmpty": "Emri i artikullit nuk mund të jetë bosh",
-    "nameMax": "Emri i artikullit nuk mund të kalojë {{count}} karaktere",
-    "nameChars": "Emri i artikullit mund të përmbajë vetëm shkronja, numra, hapësira dhe shenja pikësimi të zakonshme",
     "descriptionMax": "Përshkrimi nuk mund të kalojë {{count}} karaktere",
     "upcDigits": "UPC-ja duhet të përmbajë vetëm numra",
     "upcMin": "UPC-ja duhet të ketë të paktën {{count}} shifra",

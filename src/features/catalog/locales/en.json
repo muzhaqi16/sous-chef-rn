@@ -244,9 +244,6 @@
   },
   "itemValidation": {
     "nameRequired": "Item name is required",
-    "nameEmpty": "Item name cannot be empty",
-    "nameMax": "Item name cannot exceed {{count}} characters",
-    "nameChars": "Item name can only contain letters, numbers, spaces, and common punctuation",
     "descriptionMax": "Description cannot exceed {{count}} characters",
     "upcDigits": "UPC must contain only numbers",
     "upcMin": "UPC must be at least {{count}} digits",

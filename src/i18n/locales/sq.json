@@ -136,6 +136,7 @@
     "queuedRemovalKeptResource": "{{resource}}: heqja nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "queuedRemovalKept": "Një heqje nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
+    "itemNameTooLong": "Emri nuk mund të kalojë {{max}} karaktere",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
     "invalidAmountPaid": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
     "itemNotFound": "Artikulli nuk u gjet",

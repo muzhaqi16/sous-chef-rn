@@ -26,6 +26,37 @@ export function normalizeSmartPunctuation(
     .replace(/[–—]/g, '-');
 }
 
+/**
+ * A typed name, cleaned rather than refused, as the API stores an item's: a
+ * control character dropped (a space if it was whitespace), ends trimmed, each
+ * run of whitespace one space. Smart punctuation is mapped too, since the API's
+ * matching tells ’ from '.
+ */
+export function cleanName(value: string | undefined): string | undefined {
+  const mapped = normalizeSmartPunctuation(value);
+  if (!mapped) return mapped;
+  return mapped
+    .replace(/\p{Cc}/gu, char => (/\s/u.test(char) ? ' ' : ''))
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/** The API's cap on an item's name once cleaned (`CreateItemInput.name`). */
+export const MAX_ITEM_NAME_LENGTH = 128;
+
+/**
+ * An item name as the API takes it: any text, cleaned, then required and at
+ * most `MAX_ITEM_NAME_LENGTH`. `required` is the caller's own message.
+ */
+export const itemNameText = (required: () => string) =>
+  string()
+    .transform(cleanName)
+    .required(required)
+    .max(
+      MAX_ITEM_NAME_LENGTH,
+      lazyMessage('errors.itemNameTooLong', { max: MAX_ITEM_NAME_LENGTH }),
+    );
+
 export function logValidationErrors(errors: FieldErrors<FieldValues>) {
   const fields = Object.entries(errors)
     .map(([key, err]) => {
