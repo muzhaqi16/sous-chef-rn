@@ -14,6 +14,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
   type QueryDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -22,7 +23,12 @@ import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import {
+  PantryItemForEventDocument,
+  PantrySummaryForEventDocument,
+} from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { todayKey } from '#/utils/dateUtils';
 
 jest.mock('#/services/auth/deviceId', () => ({
@@ -424,6 +430,66 @@ describe('usePantrySubscriptions', () => {
 
       expect(client.query).toHaveBeenCalled();
     });
+  });
+});
+
+// The gate reads the row as the LIST holds it. The read-back's own fragment is
+// wider (`version`, `minQuantity`…), so gating on it skipped every listed row:
+// a merge's survivor and a member's edit stayed stale until the next resync.
+describe('usePantrySubscriptions: a row only the list has fetched', () => {
+  const listedCache = () =>
+    seedCache([
+      {
+        data: pantryItemData({ id: 'pi1' }).pantryItem!,
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+      },
+    ]);
+  const readBacks = (query: jest.Mock) =>
+    query.mock.calls.filter(
+      ([options]) =>
+        (options as { query: unknown }).query === PantryItemForEventDocument,
+    );
+
+  it.each([
+    ['an update made elsewhere', MutationType.ItemUpdated],
+    ['a merge into it', MutationType.Merged],
+  ])('reads it back after %s', async (_label, mutation) => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const query = jest.fn().mockResolvedValue({ data: { pantryItem: null } });
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(mutation),
+        node: { __typename: 'PantryItem', id: 'pi1' },
+        mergedIds: [],
+      },
+      { cache: listedCache(), query },
+    );
+
+    expect(readBacks(query)).toEqual([
+      [expect.objectContaining({ variables: { id: 'pi1' } })],
+    ]);
+  });
+
+  it('reads it back after a low-stock alert', async () => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const query = jest.fn().mockResolvedValue({ data: { pantryItem: null } });
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(MutationType.ItemUpdated),
+        subtype: PantrySubtype.LowStockAlert,
+        node: { __typename: 'PantryItem', id: 'pi1' },
+      },
+      { cache: listedCache(), query },
+    );
+
+    expect(readBacks(query)).toHaveLength(1);
   });
 });
 

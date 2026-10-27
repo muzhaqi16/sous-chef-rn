@@ -12,6 +12,7 @@ import {
   PantryEventsDocument,
   type PantryEventsSubscription,
 } from '#features/pantry/graphql/pantry.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import {
   ExpirationNotificationForEventDocument,
   PantryItemForEventDocument,
@@ -73,13 +74,22 @@ function readCachedItem(
   });
 }
 
-/** A complete read means some mounted list holds this row, so an update to it
- *  is worth a round trip. */
-function isItemCached(
+/**
+ * A list holds this row, so an update to it is worth a round trip. Read through
+ * the list's own fragment: the read-back's wider one is complete only once a
+ * read-back or the detail has run, so a listed row would never refresh.
+ */
+function isItemListed(
   client: SubscriptionApolloClient,
   itemId: string,
 ): boolean {
-  return readCachedItem(client, itemId) !== null;
+  return (
+    client.cache.readFragment({
+      fragment: PantryItem_ListedFragmentDoc,
+      fragmentName: 'pantryItem_listed',
+      from: { __typename: 'PantryItem', id: itemId },
+    }) !== null
+  );
 }
 
 /**
@@ -148,7 +158,7 @@ async function handleItemChanged(
   }
 
   const add = isAdd(mutation);
-  if (!add && !isItemCached(client, itemId)) return;
+  if (!add && !isItemListed(client, itemId)) return;
 
   const data = await fetchEventEntity(
     client,
@@ -286,7 +296,7 @@ export function usePantrySubscriptions(userId?: string) {
         case PantrySubtype.WasteAlert:
           if (
             payload.node.__typename === 'PantryItem' &&
-            isItemCached(client, payload.node.id)
+            isItemListed(client, payload.node.id)
           ) {
             void fetchEventEntity(
               client,

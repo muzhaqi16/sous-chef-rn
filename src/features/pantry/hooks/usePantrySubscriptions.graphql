@@ -13,11 +13,8 @@ fragment usePantrySubscriptions_expirationNotification on ExpirationNotification
   }
 }
 
-# Narrow fragment for the PantryChanges subscription's `pantryItem` payload.
-# Mirrors the fields the server pushes for an ItemAdded / ItemUpdated /
-# ItemRemoved event. The subscription handler reads `item.id` to add/remove
-# the connection edge and writes the entire payload back to the entity via
-# writeFragment, so the fragment must match the subscription's selection.
+# What an item event reads back (`PantryItemForEvent`): the event carries only
+# the id, so this selection is what refreshes a changed row in the cache.
 fragment usePantrySubscriptions_pantryItem on PantryItem {
   id
   pantryId
